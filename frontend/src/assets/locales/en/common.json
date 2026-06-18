@@ -42,7 +42,8 @@
     "links": {
       "calculator": "Compliance unit calculator",
       "calculationData": "Calculation data",
-      "approvedCarbonIntensities": "Approved carbon intensities"
+      "approvedCarbonIntensities": "Approved carbon intensities",
+      "releaseNotes": "Release notes"
     }
   },
   "layout": {

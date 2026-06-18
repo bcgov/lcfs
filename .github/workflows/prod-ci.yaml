@@ -1,9 +1,10 @@
 name: LCFS 1.0.0 Prod CI
 
 permissions:
-  contents: write # Required to push git tags
+  contents: write # Required to push git tags and commit release notes
   actions: read
   issues: write # Required to create approval issues
+  pull-requests: read # Required to fetch PR data for release notes
 
 on:
   push:
@@ -669,3 +670,208 @@ jobs:
   #         body: 'This is an automated release 🚀' # Release notes
   #         draft: false # Set to true if you want a draft release
   #         prerelease: false
+
+  # ---------------------------------------------------------------------------
+  # Release Notes — runs after prod deploy, non-blocking (continue-on-error)
+  # Uses GitHub's native generateReleaseNotes API for structured data, then
+  # enhances the output with GitHub Copilot via the Models API.
+  # Commits the updated frontend/public/release-notes.json back to main
+  # with [skip ci] to avoid triggering another pipeline run.
+  # ---------------------------------------------------------------------------
+  generate-release-notes:
+    name: Generate Release Notes
+    runs-on: ubuntu-latest
+    needs: [set-pre-release, deploy-on-prod]
+    # Non-blocking: a failure here never fails the deployment pipeline
+    continue-on-error: true
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0 # Full history + all tags required
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.3.0
+        with:
+          node-version: "20"
+
+      - name: Resolve tags
+        id: tags
+        env:
+          PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
+        run: |
+          TIMESTAMP_TAG="${{ env.VERSION }}-${PRE_RELEASE}"
+          git fetch --tags --quiet
+          SEMANTIC_TAG=$(git tag --points-at HEAD \
+            | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V | tail -1 || true)
+
+          if [ -n "$SEMANTIC_TAG" ]; then
+            LATEST_TAG="$SEMANTIC_TAG"
+            # Strip leading 'v' for display (e.g. v1.3.4 → 1.3.4)
+            DISPLAY_VERSION="${SEMANTIC_TAG#v}"
+            IS_SEMANTIC=true
+            # Previous tag: the last semantic version tag that isn't this one
+            PREVIOUS_TAG=$(git tag --sort=-version:refname \
+              | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
+              | grep -v "^${LATEST_TAG}$" \
+              | head -1 || true)
+          else
+            LATEST_TAG="${TIMESTAMP_TAG}"
+            # Display version: strip the 14-digit timestamp suffix (e.g. 1.0.0-20260612120000 → 1.0.0)
+            DISPLAY_VERSION=$(echo "$LATEST_TAG" | sed 's/-[0-9]\{14\}$//')
+            IS_SEMANTIC=false
+            # Previous tag: the most-recently-created tag that is not the current one
+            PREVIOUS_TAG=$(git tag --sort=-creatordate | grep -v "^${LATEST_TAG}$" | head -1 || true)
+          fi
+
+          echo "latest=${LATEST_TAG}"         >> $GITHUB_OUTPUT
+          echo "previous=${PREVIOUS_TAG}"     >> $GITHUB_OUTPUT
+          echo "display=${DISPLAY_VERSION}"   >> $GITHUB_OUTPUT
+          echo "is_semantic=${IS_SEMANTIC}"   >> $GITHUB_OUTPUT
+
+      - name: Generate native release notes
+        id: native
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const fs = require('fs')
+            const latestTag   = '${{ steps.tags.outputs.latest }}'
+            const previousTag = '${{ steps.tags.outputs.previous }}'
+
+            const params = {
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              tag_name: latestTag
+            }
+            if (previousTag) params.previous_tag_name = previousTag
+
+            const { data } = await github.rest.repos.generateReleaseNotes(params)
+            fs.writeFileSync('/tmp/native-notes.md', data.body)
+            core.info('✅ Native release notes generated')
+            return data.body
+
+      - name: Enhance with GitHub Copilot (Models API)
+        id: enhanced
+        uses: actions/github-script@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          result-encoding: string
+          script: |
+            const fs = require('fs')
+            const nativeNotes = fs.readFileSync('/tmp/native-notes.md', 'utf8')
+
+            const SYSTEM_PROMPT = [
+              'You are a technical writer for the BC Government Low Carbon Fuel Standard (LCFS) web application.',
+              'Rewrite the provided GitHub-generated release notes into clear, professional language for a BC Government website.',
+              'The audience is fuel suppliers, compliance officers, and ministry staff — not developers.',
+              'Preserve the original ## category headings (🚀 New Features, 🐛 Bug Fixes, etc.).',
+              'Rewrite each bullet point in plain English. Remove GitHub-specific syntax such as "by @user in #PR".',
+              'Keep each item concise (one sentence). Return only the formatted markdown — no preamble or explanation.'
+            ].join(' ')
+
+            try {
+              const response = await fetch(
+                'https://models.inference.ai.azure.com/chat/completions',
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${process.env.GITHUB_TOKEN}`
+                  },
+                  body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: [
+                      { role: 'system', content: SYSTEM_PROMPT },
+                      { role: 'user',   content: nativeNotes }
+                    ],
+                    max_tokens: 2000,
+                    temperature: 0.3
+                  })
+                }
+              )
+
+              if (!response.ok) {
+                const body = await response.text()
+                core.warning(`GitHub Models API ${response.status}: ${body.slice(0, 200)} — falling back to native notes`)
+                fs.writeFileSync('/tmp/enhanced-notes.md', nativeNotes)
+                return nativeNotes
+              }
+
+              const json     = await response.json()
+              const enhanced = json.choices?.[0]?.message?.content
+              if (!enhanced) {
+                core.warning('Empty response from GitHub Models — falling back to native notes')
+                fs.writeFileSync('/tmp/enhanced-notes.md', nativeNotes)
+                return nativeNotes
+              }
+
+              core.info('✅ GitHub Copilot enhancement applied')
+              fs.writeFileSync('/tmp/enhanced-notes.md', enhanced)
+              return enhanced
+            } catch (err) {
+              core.warning(`GitHub Models API unavailable: ${err.message} — falling back to native notes`)
+              fs.writeFileSync('/tmp/enhanced-notes.md', nativeNotes)
+              return nativeNotes
+            }
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs  = require('fs')
+            const tag = '${{ steps.tags.outputs.latest }}'
+            const displayVersion = '${{ steps.tags.outputs.display }}'
+            const body = fs.readFileSync('/tmp/enhanced-notes.md', 'utf8')
+
+            // Idempotent: skip if the release already exists
+            try {
+              await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                tag
+              })
+              core.info(`Release for ${tag} already exists — skipping creation`)
+              return
+            } catch (e) {
+              if (e.status !== 404) throw e
+            }
+
+            await github.rest.repos.createRelease({
+              owner:       context.repo.owner,
+              repo:        context.repo.repo,
+              tag_name:    tag,
+              name:        displayVersion,
+              body,
+              draft:       false,
+              prerelease:  false,
+              make_latest: 'true'
+            })
+            core.info(`✅ GitHub Release created: ${tag}`)
+
+      - name: Update release-notes.json
+        # Only run for named semantic version releases (e.g. v1.3.4), not for every CI push
+        if: steps.tags.outputs.is_semantic == 'true'
+        run: |
+          node scripts/build-release-notes.mjs \
+            --tag             "${{ steps.tags.outputs.latest }}" \
+            --display-version "${{ steps.tags.outputs.display }}" \
+            --native-notes    /tmp/native-notes.md \
+            --enhanced-notes  /tmp/enhanced-notes.md
+
+      - name: Commit and push release-notes.json
+        if: steps.tags.outputs.is_semantic == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/public/release-notes.json
+          if git diff --staged --quiet; then
+            echo "release-notes.json unchanged — nothing to commit"
+          else
+            git commit -m "chore(release): update release notes for ${{ steps.tags.outputs.latest }} [skip ci]"
+            git push origin main
+          fi

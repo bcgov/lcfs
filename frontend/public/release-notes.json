@@ -1,0 +1,865 @@
+[
+  {
+    "version": "1.3.3",
+    "tag": "v1.3.3",
+    "date": "2026-05-26",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.3",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.2...v1.3.3",
+    "summary": "Adds the full CI application workflow (Steps 1–5), FSE year-over-year comparison, dual-visibility internal comments, and BCeID fuel code Excel download. Includes critical fixes to prevent duplicate compliance report submissions.",
+    "sections": {
+      "features": [
+        "CI applications workflow — Steps 1–5 now available, including proposed fuel pathways, GHGenius modelling, and document uploads (#4354, #4365, #4366).",
+        "Extended internal comments with dual visibility (government-only vs. shared) — issue #4208 (#4238).",
+        "FSE year-over-year comparison view — issue #4276 (#4333).",
+        "BCeID fuel code Excel download feature (#4358, #4395).",
+        "New fuel code fields added to the fuel code management screen (#4359).",
+        "CI application Step 1 aligned to BC layout components (#4353).",
+        "Development environment database seeder for faster local setup (#4375).",
+        "In-app notification triggered when analyst selects 'Not subject to assessment' (#4376)."
+      ],
+      "fixes": [
+        "Serialised compliance report submissions and hardened modal double-click guards to prevent duplicate Reserved transactions (#4367, #4368, #4394, #4425).",
+        "JS-level guard on BCModal close controls during in-flight actions (#4412).",
+        "Primary BCModal button disabled while an action is in progress (#4422).",
+        "Excluded Renewable naphtha from pre-2022 legacy reports — issue #4349 (#4408).",
+        "Legacy fuel supply CI options and early-issuance year corrected — issue #4349 (#4357).",
+        "ComplianceReportExporter split into sheet-specific classes to fix multi-sheet export (#4345)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "Bumped axios from 1.15.0 to 1.16.0 in /frontend (#4362).",
+        "Bumped protobufjs from 7.5.5 to 7.5.8 in /mcp-server (#4390)."
+      ],
+      "other": []
+    },
+    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+  },
+  {
+    "version": "1.3.2",
+    "tag": "v1.3.2",
+    "date": "2026-05-01",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.2",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.1...v1.3.2",
+    "summary": "Adds compliance report year-over-year navigation, FSE field validation, and column sorting. Removes legacy TFRS sync infrastructure and fixes FSE kWh save and transfer permission issues.",
+    "sections": {
+      "features": [
+        "Previous/next report year navigation on compliance reports — issue #4273 (#4311).",
+        "Comprehensive field validation for Final Supply Equipment (FSE) entries — issue #4079 (#4316).",
+        "Column sorting functionality added to IDIR tables (#4328).",
+        "Performance improvements to key listing pages (#4332).",
+        "Q1 Supplied and Canada Produced fields surfaced in Metabase analytics view (#4346)."
+      ],
+      "fixes": [
+        "Resolved 500 error when saving FSE kWh values — issue #4319 (#4320).",
+        "Transfer approval and rejection now correctly restricted to authorized roles — issue #4080 (#4315)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "Bumped uuid from 11.1.0 to 14.0.0 in /frontend (#4306).",
+        "Bumped postcss from 8.5.6 to 8.5.12 in /frontend (#4330)."
+      ],
+      "other": [
+        "Removed TFRS sync code and infrastructure — issues #4297, #4298, #4299, #4300 (#4329)."
+      ]
+    },
+    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+  },
+  {
+    "version": "1.3.1",
+    "tag": "v1.3.1",
+    "date": "2026-04-23",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.1",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.0...v1.3.1",
+    "summary": "Introduces the public LCFS information dashboard, FSE status column in Excel exports, historical FSE versions, and the CI application data model. Includes 10+ targeted bug fixes for compliance calculations, timezone handling, and role visibility.",
+    "sections": {
+      "features": [
+        "Public dashboard page added for unauthenticated users — issue #4062 (#4213).",
+        "Session-only column reordering for the Fuel Supply grid — issue #4240 (#4301).",
+        "FSE Status column added to Compliance Report Excel export — issue #4231 (#4272).",
+        "Allocating organization added to charging site card — issue #4243 (#4284).",
+        "Historical FSE versions view introduced (#4229).",
+        "CI application data model and schema — issue #4197 (#4255).",
+        "Template-based docx/PDF generator spike — issue #4059 (#4170).",
+        "System Admin-only configuration for login background, report openings, and notifications — issue #4254 (#4277).",
+        "Supplied in Q1 column added to annual fuel supply export — issue #4224 (#4236).",
+        "Exporting fuel removed from pre-2024 compliance reports — issue #4244 (#4267)."
+      ],
+      "fixes": [
+        "FSE and charging-site tabs now hidden from users without the compliance_reporting role — issue #4292 (#4296).",
+        "Penalties no longer displayed on reports recommended for exemption — issue #4269 (#4294).",
+        "Credit transfers missing from Credit Market Report due to timezone bug — issue #4215 (#4278).",
+        "Penalty caused by transfer date timezone bug neutralised — issue #4239 (#4282).",
+        "Lines 21/22 now ignore prior-assessed credits when a transaction is finalized after the deadline — issue #4235 (#4281).",
+        "Change-log toggle re-enabled for delete-only supplemental reports — issue #3864 (#4280).",
+        "Cubic metres unit label updated to include standard conditions — issue #4144 (#4228).",
+        "Incorrect charger power output for FSE Level 2 / LDV Fleet utilisation calculation corrected (#4275).",
+        "Decommissioned FSE records no longer reported in compliance reports (#4258).",
+        "Fuel supply row order preserved when adding new rows — issue #4241 (#4274).",
+        "'Return selected to draft' button hidden from BCeID users (#4303, #4308).",
+        "Compliance report Excel download issue resolved (#4312)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "Bumped lxml from 6.0.2 to 6.1.0 in /backend (#4295).",
+        "Bumped dompurify from 3.3.3 to 3.4.0 in /frontend (#4252).",
+        "Bumped axios from 1.13.5 to 1.15.0 in /frontend (#4237)."
+      ],
+      "other": []
+    },
+    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+  },
+  {
+    "version": "1.3.0",
+    "tag": "v1.3.0",
+    "date": "2026-04-15",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.0",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.2.7...v1.3.0",
+    "summary": "Major release delivering FSE Excel export, kWh upload, audit log, Initiative Agreements navigation, Bulletins 12/12a, exemption assessments, BCeID roles, System Admin IDIR role, and a custom login background. Also includes critical UTC-to-Pacific timezone fixes.",
+    "sections": {
+      "features": [
+        "FSE Excel export from the AG Grid — issue #3873 (#3913).",
+        "FSE kWh Excel upload — issue #3861 (#3962).",
+        "Ports and allocating org columns added to FSE list views — issue #3858 (#3917).",
+        "Audit Log tab (IDIR-only) added to FSE management — issue #3840 (#3894).",
+        "GJ unit option added to facility capacity — issue #3892 (#3915).",
+        "Initiative Agreements navigation and IA/signer roles — issues #3927, #3911 (#3946).",
+        "Bulletins 12 and 12a (approved carbon intensities tables) — issue #3914 (#3951).",
+        "Exemption compliance report assessments — issue #3912 (#3964).",
+        "BCeID roles added — issue #3826 (#3875).",
+        "System Admin IDIR role — issue #3845 (#3905).",
+        "Customisable login screen background — issue #3818 (#4010).",
+        "Penalty statements added to the assessment section — issue #3855 (#3895).",
+        "Compliance reporting opening configuration for government users (#3806).",
+        "FSE status display added to IDIR compliance report view — issue #3815 (#3830).",
+        "Report version display and credit ledger sort locking — issue #3802 (#3828).",
+        "Disable default notifications for IDIR and BCeID users — issue #3844 (#3857).",
+        "Historical supplemental report updates (#3945).",
+        "Improved 500 error customer support experience — issue #4005 (#4006).",
+        "Charging Site status override by IDIR — issue #3793 (#4013).",
+        "IA signer role and IDIR user page updates — issues #3925, #3928 (#4009).",
+        "Calculator label updated to 'Compliance units' — issue #4038 (#4045).",
+        "New column added to allocation export (#4012)."
+      ],
+      "fixes": [
+        "UTC-to-Pacific time conversion applied to all date fields (#3891, #4000).",
+        "Recorded and approved dates now show Pacific time in transaction export (#3991).",
+        "Line 17 exclusion logic corrected — issue #3932 (#3955).",
+        "Line 17 logic updated to exclude transactions from assessments outside the compliance period (#3972).",
+        "Exemption and non-assessment reporting made mutually exclusive — issue #4016 (#4031).",
+        "Duplicate FSE records prevented (#4019).",
+        "FSE redirect when all draft FSE set by IDIR (#4046).",
+        "FSE kWh Excel upload and undo validation fixes — issues #3861, #3963 (#4030).",
+        "FSE status filter corrected (#3899, #3904).",
+        "IDIR FSE visibility corrected — issue #3918 (#3938).",
+        "Edit button restored for validated charging sites (#3947).",
+        "Charging site filtering bugs resolved (#3965).",
+        "Historical TFRS data bugs fixed (#3762).",
+        "Fuel Code column not displaying in Change Log (#3878).",
+        "Redundant Organization ID filter bug fixed (#3880)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "Bumped follow-redirects from 1.15.11 to 1.16.0 in /frontend.",
+        "Bumped lodash from 4.17.21 to 4.18.1 in /frontend (#3796).",
+        "Bumped qs in /frontend and /mcp-server (#3924)."
+      ],
+      "other": []
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton",
+      "@kuanfandevops"
+    ]
+  },
+  {
+    "version": "1.2.7",
+    "tag": "v1.2.7",
+    "date": "2026-03-05",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.2.7",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.2.4...v1.2.7",
+    "summary": "Adds a filtering component, 30-day supplemental draft flag, FSE compliance report data model, report version display, and compliance unit total in Excel. Fixes Line 17 exclusion logic and legacy report display.",
+    "sections": {
+      "features": [
+        "Filtering component for list views — issue #3685 (#3733).",
+        "Compliance unit total added to Excel export — issue #3750 (#3785).",
+        "30-day supplemental draft flag — issue #3788 (#3800).",
+        "FSE compliance report data model (review and confirm) (#3799).",
+        "Lookup table display — issue #3772 (#3804).",
+        "Report version displayed and credit ledger sort locked — issue #3802 (#3828).",
+        "FSE status displayed on IDIR compliance report — issue #3815 (#3830).",
+        "Year-end quarter label logic updated — issue #3769 (#3786).",
+        "Routes and services upgraded to TypeScript (#3789).",
+        "FSE map status label updated — issue #3751 (#3783).",
+        "Auto-populate lat/long in FSE Excel template — issue #3817 (#3850)."
+      ],
+      "fixes": [
+        "Legacy report display logic corrected (#3777).",
+        "Line 17 logic updated to exclude transactions from assessments outside the compliance period (#3972).",
+        "Original report filter issue resolved (#3801).",
+        "Edit validated charging site re-enabled (#3980).",
+        "Recorded and approved dates now show Pacific time in transaction export (#3991).",
+        "IDIR email fields alignment corrected — issue #3764 (#3782, #3831).",
+        "30-day supplemental flag hidden on non-submitted reports — issue #3788 (#3805).",
+        "Decommissioned FSE pill colour updated to error state — issue #3811 (#3814).",
+        "Country and Province not copying when using same address (#3820).",
+        "Duplicate charging equipment on supplemental reports (#3829).",
+        "Transaction export for standalone transactions (#3869).",
+        "Out-of-range transactions on supplemental fixed — issue #3821 (#3851).",
+        "Transfer UTC-to-Pacific conversion — issue #3843 (#3860).",
+        "Fuel code lines removed from calculating data view (#3885)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "Bumped lodash-es and lodash in /frontend (#3795, #3796).",
+        "Bumped react-router and react-router-dom in /frontend (#3720)."
+      ],
+      "other": []
+    },
+    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+  },
+  {
+    "version": "1.2.4",
+    "tag": "v1.2.4",
+    "date": "2026-01-19",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.2.4",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.2.2...v1.2.4",
+    "summary": "Adds fuel code expiry notifications, FSE tab in compliance report Excel export, allocating org autocomplete, organization geocoding, and multiple grid and accessibility improvements.",
+    "sections": {
+      "features": [
+        "New fields added to compliance report Excel export — issue #3637 (#3681).",
+        "Fuel code expiry notifications — issue #3682 (#3689).",
+        "FSE tab added to compliance report Excel — (#3683).",
+        "Renewable table visibility toggle — issue #3610 (#3660).",
+        "Allocating organization autocomplete on FSE forms — issue #3671 (#3690).",
+        "BCGrid tables default column widths — issue #3636 (#3686).",
+        "Organization details validated on report submission — issue #3632 (#3680).",
+        "FSE empty state message — issue #3710 (#3721).",
+        "Organization snapshot geocoding — issue #85 (#3704).",
+        "Delete government notifications — issue #3760 (#3767).",
+        "2026 compliance report creation logic (#3735, #3740, #3755).",
+        "Fuel code expiry hotfix — issue #3682 (#3688)."
+      ],
+      "fixes": [
+        "HDRD energy density updated for 2025 reporting and compliance calculator (#3763).",
+        "Compliance year URL corrected — issue #3731 (#3770).",
+        "Fuels for other use Q1 bug fixed (#3774).",
+        "Accessibility updates to charts and forms — issue #3439 (#3687).",
+        "Missing IDIR notification email added — issue #3708 (#3725).",
+        "FSE updates and legacy transaction label corrected (#3765)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "Bumped qs in /mcp-server and /frontend (#3722, #3738).",
+        "Bumped virtualenv in /backend (#3739)."
+      ],
+      "other": []
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton",
+      "@kevin-hashimoto"
+    ]
+  },
+  {
+    "version": "1.2.2",
+    "tag": "v1.2.2",
+    "date": "2025-12-24",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.2.2",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.2.1...v1.2.2",
+    "summary": "Adds C-Proxy fuel code prefix, total compliance units on the report summary, FSE map tab, director workflow actions, bulk FSE redirect, and a duplicate row function. Several Line 6 and charging site fixes included.",
+    "sections": {
+      "features": [
+        "C-Proxy fuel code prefix support with updated summary text and FSE save fix (#3651).",
+        "Total compliance units displayed on the compliance report summary — issue #3620 (#3659).",
+        "FSE map tab added to the compliance reporting screen — issue #3600 (#3635).",
+        "Director workflow actions enabled — issue #3597 (#3645).",
+        "Bulk FSE redirect and charging site context unified — issue #3642 (#3661).",
+        "Duplicate row function for bulk FSE input form (#3641).",
+        "New FSE page title, actions, and context improvements — issue #3662 (#3663).",
+        "Summary compare mode updated to disable empty fuel categories (#3644).",
+        "Summary compare mode updated for unassessed original reports (#3622)."
+      ],
+      "fixes": [
+        "Restored FSE map toggle and permissions (#3674).",
+        "Charging site delete and summary lines 6 and 8 input issues resolved (#3670).",
+        "Line 6 values not displaying corrected (#3648, #3649).",
+        "Role switcher formatting bug fixed (#3623).",
+        "Column header renamed for clarity (#3650).",
+        "Summary lock hotfix (#3633).",
+        "Comma formatter, allocation agreement options, and select box area corrected (#3664)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [],
+      "other": []
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton",
+      "@kevin-hashimoto"
+    ]
+  },
+  {
+    "version": "1.2.1",
+    "tag": "v1.2.1",
+    "date": "2025-12-17",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.2.1",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.1.2...v1.2.1",
+    "summary": "Large feature release adding FSE/charging site data structures, organization type management, BC Geocoder, charging equipment, credit trading market, feature flags, and Lines 7 & 9 auto-populate. Includes critical director workflow and 404 supplemental report fixes.",
+    "sections": {
+      "features": [
+        "Charging Site and FSE data structure — issues #3089, #3090 (#3197).",
+        "FSE compliance reporting data structure — issue #3091 (#3198).",
+        "BCeID charging site input page — issue #3105 (#3249).",
+        "BCeID FSE list per charging site — issue #3101 (#3287).",
+        "IDIR FSE list per charging site — issue #3107 (#3279).",
+        "IDIR charging site index page (#3288).",
+        "Charging equipment management — issue #3183 (#3271).",
+        "BC Geocoder integration — issue #2405 (#3181).",
+        "Organization type dropdown — issue #3028 (#3162).",
+        "Organization type displayed on detail view (#3202).",
+        "Lines 7 and 9 auto-populate and locking — issue #2893 (#3165).",
+        "Auto-resize grid columns — issue #2915 (#3173).",
+        "EC formula added to credit calculator — issue #3096 (#3137).",
+        "Organization dashboard page (#3128).",
+        "Credit trading market (#3071, #3147).",
+        "Credit market notifications (#3097).",
+        "Non-assessment mode revisions (#3161).",
+        "Feature flags system — issue #3208 (#3215).",
+        "Regulation changes applied (#3168).",
+        "BCGridViewer replaces BCDataGridServer — issue #3085 (#3222).",
+        "2015–2030 lookup table values — issue #3157 (#3172).",
+        "Max retention, obligation/deferment summary logic — issue #3265 (#3312).",
+        "Organization index bar in IDIR org view — issue #3211 (#3313).",
+        "Inline loader for Lines 6–9 input — issue #3226 (#3301).",
+        "Obfuscated link key for secure form sharing — issue #3001 (#3131).",
+        "Optional organization address fields — issue #3182 (#3242).",
+        "Persist organization filter in session storage — issue #3291 (#3304).",
+        "Update credit market wording — issue #3192 (#3299).",
+        "Align contact info field order — issue #3238 (#3293).",
+        "Left align buttons on transfer pages — issue #3256 (#3306).",
+        "Organization Index Bar in IDIR — issue #3211 (#3313)."
+      ],
+      "fixes": [
+        "Internal server error when director attempts to record a transfer — issue #3219 (#3239).",
+        "Dashboard links not filtering recommended transactions — issue #3220 (#3237).",
+        "404 error for BCeID users creating a supplemental report after assessment — issue #3218 (#3232).",
+        "Compliance reporting page now sorted by last status update (#3163).",
+        "Duplicate FSE check corrected (#3151, #3154).",
+        "Supplemental Line 17 not carrying previous report value — issue #3289 (#3315).",
+        "'Latest Update' column on transactions page fixed — issue #3290 (#3314).",
+        "BCeID users can now see their credit balance in the credit ledger (#3308).",
+        "Role assignment changes no longer trigger last-status-update — issue #3228 (#3307).",
+        "BCeID roles formatting in Edit User — issue #3253 (#3309).",
+        "Allocation agreements change log navigation — issue fixed (#3273).",
+        "Remove export schedule from early issuance report — issue #3236 (#3298).",
+        "Issue assessment button label for non-assessment reports — issue #3231 (#3292).",
+        "Allow row selection with Enter key — issue #3270 (#3311).",
+        "Fossil fuel calculation optimised for Other Uses — issue #3170 (#3174).",
+        "Lines 6 and 8 hotfix — issue #3050 (#3114).",
+        "to_transaction_id not persisted when transfers recorded (#3099).",
+        "Column spacing and auto-resize in early issuance report — issue #3224 (#3303).",
+        "BCeID notifications 500 error — issue #3250 (#3286).",
+        "Grid layout fixes (#3305).",
+        "Transaction triggers re-added — issue #3223 (#3247)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "Bumped axios from 1.11.0 to 1.12.1 in /frontend (#3278).",
+        "Bumped tar-fs in /mcp-server.",
+        "Bumped vite from 6.3.5 to 6.3.6 in /frontend (#3268)."
+      ],
+      "other": [
+        "Celery replaced by a cronjob in the deployment pipeline (#3233)."
+      ]
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton",
+      "@kevin-hashimoto",
+      "@kuanfandevops"
+    ]
+  },
+  {
+    "version": "1.1.2",
+    "tag": "v1.1.2",
+    "date": "2025-08-13",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.1.2",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.1.1...v1.1.2",
+    "summary": "Adds non-assessment compliance reports, the public credit calculator on the login page, credit trading market, 30-day supplemental limit, and FSE model links to allocation agreements. Includes critical Lines 6 and 8 fixes.",
+    "sections": {
+      "features": [
+        "Non-assessment mode for compliance reports — issue #2587 (#3000).",
+        "Login page update, public credit calculator, and fuel filter refinements — issues #2872, #2787, #2761 (#3031).",
+        "Credit trading market — (#3071, #3147).",
+        "Credit market notifications (#3097).",
+        "30-day supplemental report limit — (#3076).",
+        "FSE model linked to allocation agreements — issues #2794, #2795 (#3077).",
+        "Improve comment layout display — issue #2449 (#3080).",
+        "Index page caching — (#3058).",
+        "Big integer quantity fields for large fuel supply volumes — issue #2668 (#3049).",
+        "Vitest coverage for grid utility functions — issue #2857 (#3043).",
+        "BCDataGrid test coverage increased from 0% to 80% (#3150).",
+        "Form component test coverage increased from 20% to 80% (#3053).",
+        "Service-layer test coverage added (#3087).",
+        "Fuel code expiry scheduled email notifications (#3022).",
+        "Organization update workflow (#3136).",
+        "View component tests added — issue #2977 (#3108).",
+        "Line 6 persistence logic updated (#3142).",
+        "Summary refresh — issue #2825 (#3088).",
+        "Duplicate detection analytics views for allocation agreements and FSE — issue #3069 (#3072)."
+      ],
+      "fixes": [
+        "Lines 6 and 8 hotfix — issue #3050 (#3114).",
+        "Fossil-derived fuel type values reverted to correct figures (#3117).",
+        "Analyst adjustment flush on delete corrected (#3122).",
+        "Fuel code notification cleanup — issue #2589 (#3073).",
+        "EffectiveDates mixin removed from Transfer model (#3074).",
+        "Correct non-assessment permission check for government users — issue #2587 (#3078).",
+        "500 error when deleting government adjustment (#3113).",
+        "FSE duplicate check scoping fixed (#3151).",
+        "Fuel code Excel download bug — issue #3070 (#3075).",
+        "FSE org name displayed correctly (#3033)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [],
+      "other": []
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton",
+      "@kevin-hashimoto"
+    ]
+  },
+  {
+    "version": "1.1.1",
+    "tag": "v1.1.1",
+    "date": "2025-07-28",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.1.1",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.1.0...v1.1.1",
+    "summary": "Adds BCeID supplemental draft, early issuance by year, credit calculator refinements, credit ledger for IDIR users, and C-prefix Canadian fuel codes. Includes 20+ fixes for FSE exports, fuel code editing, energy density, and changelog display.",
+    "sections": {
+      "features": [
+        "BCeID supplemental draft workflow — issue #2895 (#2955).",
+        "Credit calculator UI refinements — (#2829).",
+        "Credit ledger view for IDIR government users — issue #2551 (#2962).",
+        "Recommended fuel code alert on Director dashboard — issue #2590 (#2954).",
+        "C- prefix automatically prepended to Canadian fuel codes — issue #2540 (#2926).",
+        "Last Comment column added to Compliance Report Index — issue #2641 (#2959).",
+        "Director can amend penalty statements on assessments — (#2981).",
+        "Early Issuance dates and FSE default date ranges — issues #2834, #2353 (#2992).",
+        "Early issuance by report year — issue #2984 (#3015, #3016).",
+        "Fuel code workflow notifications — issue #2589 (#3010).",
+        "Predictive text trigger reduced to 1 character — issue #2980 (#3003).",
+        "Metabase export data model — issue #2793 (#3009).",
+        "Analyst assignee checkout — (#2997)."
+      ],
+      "fixes": [
+        "Grid paging null overlays — (#2943).",
+        "FSE export filename corrected — (#2949, #2950, #2951).",
+        "Transaction effective date on staging admin adjustments — (#2931).",
+        "Clear filter sorting behavior — issue #2709 (#2873).",
+        "Notional transfer duplicate validation — issue #2920 (#2965).",
+        "Fuel code filters — issue #2606 (#2957).",
+        "Action buttons hidden from IDIR analysts — issue #2940 (#2968).",
+        "Assessed filter added to Transactions page — issue #2946 (#2967).",
+        "New row auto-added after valid Fuel Supply entry — issue #2918 (#2970).",
+        "Other fuel energy density — (#2963).",
+        "File attachments accordion auto-expands after upload — issue #2917 (#2969).",
+        "Clean deletion flow without error flash — issue #2916 (#2978).",
+        "Other use input — (#2964).",
+        "Early Issuance report title — (#2961).",
+        "Assessment verdict wording ('has met'/'has not met') — issue #2938 (#2982).",
+        "Null recipients removed from notification list — (#2971).",
+        "Credit calculator options and early issuance DTO — (#2994).",
+        "useEffect freeze on fuel code forms — (#3008).",
+        "Changelog display and rendering errors — (#3011, #3013).",
+        "Fuel code edit/save restrictions — issues #3038, #3039 (#3046).",
+        "Missing migration — issue #1775 (#3048).",
+        "Edited old chip display — issue #3040 (#3047).",
+        "Government adjustment creation error — (#3056).",
+        "Migration default check for existing tables — (#3062)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "Bumped form-data from 4.0.3 to 4.0.4 in /frontend (#3024).",
+        "Bumped axios from 1.10.0 to 1.11.0 in /frontend (#3027)."
+      ],
+      "other": [
+        "State Management Stores test coverage 0% → 80% (#3020).",
+        "Layout and PublicLayout component tests added (#3018).",
+        "Route test coverage added (#3012).",
+        "FSE org name display corrected (#3017)."
+      ]
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton",
+      "@kevin-hashimoto",
+      "@kuanfandevops"
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "tag": "v1.1.0",
+    "date": "2025-06-20",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.1.0",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.0.5...v1.1.0",
+    "summary": "Large cumulative release spanning patch versions v1.0.6–v1.0.8. Adds IDIR supplemental reports, return report button, IDIR document uploads, line 22 date text, and Excel upload for allocation agreements. Over 30 fixes for line 17, transactions, FSE workflows, and compliance report calculations.",
+    "sections": {
+      "features": [
+        "IDIR supplemental report workflow — (#2562, #2619).",
+        "Return report button for IDIR staff — issue #2615 (#2644).",
+        "IDIR document uploads to compliance reports — issue #2543 (#2683).",
+        "Line 22 date text in assessment summary — issue #2679 (#2692).",
+        "Excel upload for Allocation Agreements with overwrite logic — issues #2273, #2351 (#2394).",
+        "Excel download reflects active column filters — issue #2386 (#2531).",
+        "Assessment Recommendation container box — issue #2593 (#2642, #2674).",
+        "Show all organizations in Organizations Summary Card — issue #1789 (#2759).",
+        "FSE download template available on all environments — issue #2273 (#2598).",
+        "Comprehensive LCFS Wiki documentation published — issues #2409, #2410 (#2596).",
+        "Frontend and Cypress tests for return supplemental flow — issue #2645 (#2693).",
+        "All transfer comments visible to both parties — (#2385)."
+      ],
+      "fixes": [
+        "Line 17 pulled from available balance — issue #2489 (#2575).",
+        "Line 17 and History card text — issues #2632, #2688 (#2691).",
+        "Supplemental Line 17 not persisting — issue #2632 (#2652).",
+        "Assessment visibility logic in History Card — issue #2560 (#2576, #2580).",
+        "Compliance reports awaiting review counter — issue #2685 (#2721).",
+        "Dashboard Summary Widget missing unregistered orgs — issue #1789 (#2698, #2734).",
+        "Nested transactions removed and queries optimised — (#2716, #2724, #2735).",
+        "Change log display and navigation bugs — (#2699, #2731).",
+        "Submitted report visibility for BCeID users — issue #2537 (#2572).",
+        "Fuel code country field validation — issue #2535 (#2603).",
+        "Legacy carbon intensity options removed — issue #2273 (#2609).",
+        "Schedule row paging controls — issue #2557 (#2614).",
+        "Compliance report schedule bug fixes — (#2650).",
+        "Schedule row sorting — issue #2633 (#2672).",
+        "Report history updates — issue #2654 (#2677).",
+        "Internal comments persistence across report variants — issue #2635 (#2667).",
+        "FSE form input validation — issue #2625 (#2658, #2664).",
+        "Penalties display in Compare Mode — issue #2629 (#2694).",
+        "FSE import and export issues — (#2628).",
+        "FSE edited flag — issue #2622 (#2722).",
+        "Supplemental Assessment Visibility — issue #2703 (#2742).",
+        "Analyst adjustment transaction creation — issue #2630 (#2651).",
+        "Director assessment from analyst recommendation — issue #2607 (#2643).",
+        "Download to Excel button in compliance report — (#2744).",
+        "Signing declaration visible to IDIR users — (#2738).",
+        "Assessment Recommendation section hidden from BCeID users — issue #2701 (#2720).",
+        "Schedule edit validation and imagery optimisation — (#2743).",
+        "No decimals on line 4 — issue #2613 (#2649).",
+        "FSE date editor and column data — (#2617).",
+        "Document upload in supplemental reporting — issue #2612 (#2626).",
+        "Compliance report 400 error — (#2608).",
+        "Session transaction order set consistently — (#2681)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "Bumped setuptools from 75.5.0 to 78.1.1 in /backend (#2653)."
+      ],
+      "other": []
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton",
+      "@kevin-hashimoto",
+      "@kuanfandevops"
+    ]
+  },
+  {
+    "version": "1.0.5",
+    "tag": "v1.0.5",
+    "date": "2025-05-02",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.0.5",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.0.3...v1.0.5",
+    "summary": "Adds assessment statements, togglable changelogs, analyst adjustments, BCeID credit calculator, quarterly fuel supply, early issuance reports, and MUI v6 upgrade. Covers patch versions v1.0.4–v1.0.5 with fixes for fuel supply records, allocation agreements, and schedule calculations.",
+    "sections": {
+      "features": [
+        "Assessment statement shown in the compliance report — (#2211).",
+        "Togglable changelogs on schedule rows — (#2261).",
+        "Met/not-met statements moved into compliance history card — (#2274).",
+        "Snapshot reuse when creating a supplemental report — issue #2221 (#2270).",
+        "Analyst Adjustments workflow — (#2230).",
+        "IDIR analyst can delete a draft Government Adjustment or Reassessment — issue #2206 (#2298).",
+        "BCeID credit calculator — issue #2308 (#2398, #2474, #2478).",
+        "Quarterly Fuel Supply reporting — (#2397).",
+        "Early Issuance report for BCeID and IDIR — issues #2137, #2139 (#2468).",
+        "Early Issuance Summary tab — (#2469).",
+        "Deleted schedule rows displayed in change history (LCFS-2217) — (#2296).",
+        "Data retained in lines 6, 7, 8, and 9 across report versions (LCFS-2220) — (#2267).",
+        "Front-end upgraded to MUI v6 — (#2326).",
+        "GHGenius support for pre-2024 supplemental reports — (#2324).",
+        "Export Fuel Schedule volume and RCI updates — issue #2215 (#2255).",
+        "Schedule ETL updated — issues #2019, #2242 (#2288).",
+        "Metabase Renewable fuel requirement dashboards (LCFS-2169) — (#2236).",
+        "IDIR users can delete unmapped BCeID users — issue #2085 (#2199).",
+        "Feature flag for analyst adjustments — (#2466).",
+        "Transaction deleted when report returned to supplier — (#2266).",
+        "Assessment Statement moved into compliance history — (#2456).",
+        "New report versions blocked when a draft already exists — (#2453)."
+      ],
+      "fixes": [
+        "Records within the same report deleted correctly — (#2295).",
+        "Energy density sourced from backend configuration — (#2302).",
+        "Return report to supplier cut-off date removed — issue #2343 (#2350).",
+        "Compliance report Excel download refinement — issue #2272 (#2339).",
+        "Draft information showing in history card — issue #2314 (#2344).",
+        "Fuel category added to Allocation Agreement export — (#2365, #2401).",
+        "Date restriction removed from report return — (#2366).",
+        "Address loaded from previous report in Gov Adjustments — issue #2221 (#2370).",
+        "Fuel Supply record edge cases — (#2377).",
+        "Clear filters before redirecting to Compliance Reports — (#2378).",
+        "Summary ETL query updated — (#2337).",
+        "Cache set rather than invalidated after mutations — (#2368).",
+        "Adjustment banner only shown when total was adjusted — (#2360).",
+        "Timezone applied to available balance check — (#2417).",
+        "Session timeout and 403 error handling — (#2452).",
+        "Compliance report counter and pagination — issues #2476, #2477 (#2495).",
+        "Lines 15/16 no longer continuously re-added — (#2393).",
+        "Clear filters button on IDIR Transactions page — issue #2384 (#2418).",
+        "Full report chain returned on update — (#2421).",
+        "Notification action buttons — issue #2028 (#2341).",
+        "Flash message shown once in Organization View — issue #2085 (#2578).",
+        "Report type filter options — issue #2443 (#2556)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "Bumped vite from 6.2.3 to 6.2.6 in /frontend (#2363, #2388, #2463).",
+        "Bumped jinja2 from 3.1.5 to 3.1.6 in /backend (#2170)."
+      ],
+      "other": []
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@dhaselhan",
+      "@areyeslo",
+      "@prv-proton",
+      "@kevin-hashimoto",
+      "@kuanfandevops"
+    ]
+  },
+  {
+    "version": "1.0.3",
+    "tag": "v1.0.3",
+    "date": "2025-03-20",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.0.3",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.0.2...v1.0.3",
+    "summary": "Fixes export fuel schedule volumes and RCI values, corrects the IDIR organization filter, migrates Exclusion Report records from TFRS, refactors FSE date columns, and resolves the lines 6/7/8/9 500 error.",
+    "sections": {
+      "features": [
+        "Export Fuel Schedule volume field (LCFS-20179) — (#2183).",
+        "Organization filter on the IDIR Transaction page (LCFS-2104) — (#2190).",
+        "FSE date range split into separate start and end date columns — issue #2184 (#2233).",
+        "BCeID users can delete a draft supplemental report — issue #2205 (#2225).",
+        "Exclusion Report records migrated from TFRS to Allocation Agreements — issue #1642 (#2223).",
+        "Compliance report address requirements updated — (#2213).",
+        "Documents download directly instead of opening in a new tab — (#2197).",
+        "Missing changelog logic added to Allocation Agreements — (#2192).",
+        "Transaction aggregate materialized view updated — (#2187)."
+      ],
+      "fixes": [
+        "Lines 6, 7, 8, or 9 causing a 500 error (LCFS-2256) — (#2259).",
+        "End use blank in Export Fuels (LCFS-2224) — (#2232).",
+        "Export fuel schedule RCI values (LCFS-2226) — (#2234).",
+        "PROD page not loading for rescinded transactions (LCFS-2219) — (#2243).",
+        "FSE download template postal code format — issue #2228 (#2238).",
+        "FSE grid Organization drop-down not sorted logically — issue #2229 (#2237).",
+        "Transfer available balance calculation — issue #2227 (#2241).",
+        "Email notifications for IDIR users on PROD — issue #2196 (#2204).",
+        "All transactions included in the export — issue #2068 (#2118).",
+        "Draft status hidden from IDIR users in compliance report history — issue #2074 (#2178).",
+        "Role dropdown filter on user management — issue #2188 (#2222).",
+        "Export Fuel Schedule sorting and volume — (#2183, #2195).",
+        "Transaction ID sort order — (#2186).",
+        "Stale records deleted correctly — (#2239).",
+        "Backend used for fuel supply calculations instead of client-side values — (#2252)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [],
+      "other": []
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@dhaselhan",
+      "@areyeslo",
+      "@prv-proton",
+      "@kevin-hashimoto"
+    ]
+  },
+  {
+    "version": "1.0.2",
+    "tag": "v1.0.2",
+    "date": "2025-03-06",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.0.2",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/1.0.1...v1.0.2",
+    "summary": "Adds 'Not Recommended' director status, compliance report Excel export, versioned allocation agreements, international organization headquarters, changelog display mode, and credit calculation refinements. Raises the fuel code record limit to 10,000.",
+    "sections": {
+      "features": [
+        "'Not Recommended' status in the director review workflow — (#2136).",
+        "Compliance report Excel export — (#2146).",
+        "Changelog display mode for comparing report version diffs — (#2141).",
+        "Versioned Allocation Agreements (LCFS-2005) — (#2145).",
+        "Organizations can declare an international headquarters address — (#2109).",
+        "5-digit carbon intensity values in Fuel Supply and Export schedules — (#2108).",
+        "Grid column sizing, sorting, and default width improvements — (#2122).",
+        "Fuel code record limit raised to 10,000 — (#2159).",
+        "Organization details page reformatted — issue #1962 (#2120).",
+        "Keycloak client upgraded — (#2110)."
+      ],
+      "fixes": [
+        "Export fuel schedule sorting (LCFS-2083) — (#2117).",
+        "FSE Registration Number removed from forms — issue #2155 (#2164).",
+        "Fuel code default suffix for proxy-001 values — (#2163).",
+        "Recommended status filter when a transfer is already approved — (#2123).",
+        "Compliance report join issue hotfix — (#2124).",
+        "Materialized view subquery limit added — (#2131).",
+        "Organization address null bug — (#2174).",
+        "'Indicates a required field' text remains visible — issue #1996 (#2119).",
+        "Address ETL processing — (#2175)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [],
+      "other": []
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@dhaselhan",
+      "@areyeslo",
+      "@prv-proton",
+      "@kevin-hashimoto",
+      "@kuanfandevops"
+    ]
+  },
+  {
+    "version": "1.0.1",
+    "tag": "1.0.1",
+    "date": "2025-02-27",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/1.0.1",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v0.2.0...1.0.1",
+    "summary": "First production build after the initial v0.2.0 release. Delivers TFRS data migration for Schedule B and C records, FSE export/import template, file uploads, Schedule A/B/C summaries for legacy reports, early issuance flag, compliance period column, and Rescinded transfer support.",
+    "sections": {
+      "features": [
+        "FSE export template (Excel) and download — (#1948).",
+        "Bulk import of FSE records from Excel — (#2026).",
+        "File upload support for Allocation Agreements and Initiative Agreements — (#1953).",
+        "Schedule A, B, and C summaries added to legacy compliance reports — (#1924).",
+        "Migrate Schedule B records from TFRS to Fuel Supply — (#1908).",
+        "Migrate Schedule C records from TFRS to Other Uses with version chaining (LCFS-1556) — (#1884).",
+        "Early issuance flag on compliance reports — (#1915).",
+        "Historical Rejected transfer status — (#1889).",
+        "Compliance period column on the transaction table — issue #1719 (#1799).",
+        "Activity List redesigned with new UI — (#1905).",
+        "Redirect to the originally requested page after login — (#1906).",
+        "Rescinded transfer support (LCFS-1854) — (#1904).",
+        "Changelog display mode for comparing report versions — (#1940).",
+        "Line 15/16 fuel quantity calculations — (#2039).",
+        "Feature flag for legacy details display — (#2044).",
+        "Help links added to Settings cards — (#1893).",
+        "Transfer comment table with migration of existing comments — (#1952).",
+        "ComplianceReportId set on export fuel records — (#2056).",
+        "Draft schedule records excluded from summary calculations — issue #1931 (#1998).",
+        "EnergyDensity and EnergyEffectivenessRatio refactored for annual values (LCFS-1938) — (#2031)."
+      ],
+      "fixes": [
+        "Backend filter logic on Compliance Report index — issue #1809 (#1882).",
+        "Fuel Code validation moved to the back end — (#1879).",
+        "Met/not-met text logic — (#1888).",
+        "Compliance report pagination (LCFS-1873) — (#1903).",
+        "Unauthorized access redirecting to login (LCFS-1874) — (#1939).",
+        "Credit transfer amount maximum (LCFS-1863) — (#1917, #1954).",
+        "Available balance calculation (LCFS-1863) — (#1932).",
+        "UCI summary calculation — issue #1943 (#1947).",
+        "Compliance period based on recorded date — issue #1719 (#1956).",
+        "AG Grid filters applied from Dashboard link — issue #1872 (#1913).",
+        "TFRS report pull-over filter bug — issue #1892 (#1921).",
+        "Reserve transaction logic — (#2033).",
+        "Duplicate compliance report records removed — (#1980).",
+        "Notification filter adjusted for analysts — issue #1916 (#2003).",
+        "Internal compliance report statuses hidden from BCeID users — issue #2050 (#2075).",
+        "Notional transfers method parameter — issue #2073 (#2095).",
+        "Transfer comment cleared when second supplier checks signature — issue #1977 (#2089).",
+        "Inconsistent auth token auto-refresh — issue #2021 (#2094).",
+        "Pencil icon restricted to authorized users — issue #1995 (#2066).",
+        "Transfer comment name on production — issue #2034 (#2057).",
+        "Email logo visibility and notification text alignment — issue #1930 (#2027, #2065).",
+        "Compliance report 944 join issue — (#2124).",
+        "Supporting documents accordion (LCFS-1925) — (#1933, #1941).",
+        "Fuel code production columns error — issue #1961 (#1976).",
+        "Renewable fuel target summary table to match TFRS — issue #1899 (#1966).",
+        "CR summary version fix — (#1914)."
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [],
+      "other": []
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@dhaselhan",
+      "@areyeslo",
+      "@prv-proton",
+      "@kevin-hashimoto",
+      "@kuanfandevops"
+    ]
+  },
+  {
+    "version": "0.2.0",
+    "tag": "v0.2.0",
+    "date": "2025-01-29",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v0.2.0",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v0.2.0...1.0.1",
+    "summary": "Initial public release of the Low Carbon Fuel Standard web application. Establishes the core compliance reporting, fuel code management, organization administration, and transfer workflow foundations.",
+    "sections": {
+      "features": [
+        "Core compliance reporting workflow: submission, analyst review, director decision, and supplemental reporting.",
+        "Fuel code management: create, edit, approve, and archive fuel codes.",
+        "Organization administration: manage fuel suppliers, government users, and role assignments.",
+        "Credit transfer workflow: initiate, review, and approve compliance unit transfers between organizations.",
+        "Final Supply Equipment (FSE) registration and management screens.",
+        "Public-facing pages: compliance unit calculator, approved carbon intensities bulletin, and credit trading market.",
+        "Keycloak-based authentication supporting both BCeID (industry) and IDIR (government) identity providers."
+      ],
+      "fixes": [],
+      "security": [
+        "Role-based access control enforced at both API and UI layers.",
+        "Rate limiting and proxy-header handling delegated to Uvicorn to prevent spoofed-header attacks."
+      ],
+      "breaking": [],
+      "dependencies": [],
+      "other": []
+    },
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@kuanfandevops",
+      "@airinggov",
+      "@prv-proton"
+    ]
+  }
+]
