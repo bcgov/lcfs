@@ -70,6 +70,7 @@ export const apiRoutes = {
   updateFuelCodeStatus: '/fuel-codes/:fuelCodeId',
   saveFuelCode: '/fuel-codes',
   deleteFuelCode: '/fuel-codes/:fuelCodeId',
+  getFuelCodeGroup: '/fuel-codes/:fuelCodeId/group',
   fuelCodeOptions: '/fuel-codes/table-options',
   fuelCodeSearch: '/fuel-codes/search?',
   getFuelCodes: '/fuel-codes/list',

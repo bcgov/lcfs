@@ -32,6 +32,7 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeBaseSchema,
     FuelCodeCreateUpdateSchema,
+    FuelCodeGroupDetailSchema,
     FuelCodeSchema,
     FuelCodeStatusEnumSchema,
     FuelCodesSchema,
@@ -43,6 +44,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeStatusSchema,
     FuelCodeBulletinsSchema,
     FuelCodeBulletinRowSchema,
+    VolumeDataPointSchema,
 )
 from lcfs.web.core.decorators import service_handler
 
@@ -365,6 +367,36 @@ class FuelCodeServices:
             h.fuel_status_id != 1 for h in fuel_code.history_records
         )  # if previously not recommended or approved then notes is not mandatory
         return fc_schema
+
+    @service_handler
+    async def get_fuel_code_group_detail(
+        self, fuel_code_id: int
+    ) -> FuelCodeGroupDetailSchema:
+        """Return all iterations of a fuel code group plus aggregated volume data."""
+        from fastapi import HTTPException, status as http_status
+
+        latest_fc, iteration_rows, volume_rows = (
+            await self.repo.get_fuel_code_group_detail(fuel_code_id)
+        )
+        if latest_fc is None:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f"Fuel code {fuel_code_id} not found",
+            )
+
+        return FuelCodeGroupDetailSchema(
+            latest_iteration=FuelCodeSchema.model_validate(latest_fc),
+            iterations=[
+                FuelCodeBaseSchema.model_validate(row) for row in iteration_rows
+            ],
+            volume_over_time=[
+                VolumeDataPointSchema(
+                    year=str(row.year),
+                    total_volume=float(row.total_volume or 0),
+                )
+                for row in volume_rows
+            ],
+        )
 
     @service_handler
     async def update_fuel_code_status(

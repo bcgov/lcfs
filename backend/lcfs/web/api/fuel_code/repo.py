@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Union, Optional, Sequence
 
 from lcfs.db.models.compliance import (
     AllocationAgreement,
+    ComplianceReport,
     FuelExport,
     FuelSupply,
     OtherUses,
@@ -12,6 +13,7 @@ import structlog
 from fastapi import Depends
 from sqlalchemy import (
     and_,
+    case,
     exists,
     or_,
     select,
@@ -58,7 +60,7 @@ from lcfs.web.api.base import (
     get_field_for_filter,
     apply_filter_conditions,
 )
-from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
+from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema, FuelCodeBaseSchema
 from lcfs.web.core.decorators import repo_handler
 from lcfs.utils.constants import LCFS_Constants
 
@@ -138,6 +140,7 @@ class FuelCodeRepository:
           - Approved fuel codes not in current
         """
         query = select(
+            FuelCodeListView.fuel_code_id,
             FuelCodeListView.prefix,
             FuelCodeListView.fuel_suffix,
             FuelCodeListView.fuel_type,
@@ -263,6 +266,7 @@ class FuelCodeRepository:
 
             formatted_rows.append(
                 {
+                    "fuel_code_id": r["fuel_code_id"],
                     "fuel_code": f'{r["prefix"]}{r["fuel_suffix"]}',
                     "fuel": r["fuel_type"],
                     "company": r["company"],
@@ -302,6 +306,104 @@ class FuelCodeRepository:
             )
 
         return formatted_rows, (total or 0)
+
+    @repo_handler
+    async def get_fuel_code_group_detail(
+        self, fuel_code_id: int
+    ) -> tuple:
+        """
+        Returns all iterations (same prefix + base suffix) for a fuel code group,
+        the full details of the latest iteration, and volume-over-time data.
+        """
+        # Get the source fuel code to find prefix_id and base suffix
+        source_fc = await self.db.scalar(
+            select(FuelCode).where(FuelCode.fuel_code_id == fuel_code_id)
+        )
+        if not source_fc:
+            return None, [], []
+
+        base_suffix = source_fc.fuel_suffix.split(".")[0]
+        prefix_id = source_fc.prefix_id
+
+        # Find all fuel code IDs in this group (same prefix + base number in suffix)
+        group_id_subquery = (
+            select(FuelCode.fuel_code_id)
+            .where(
+                and_(
+                    FuelCode.prefix_id == prefix_id,
+                    FuelCode.fuel_suffix.like(f"{base_suffix}.%"),
+                )
+            )
+        )
+
+        # Get all iterations from the view (sorted descending by suffix for latest first)
+        iterations_result = await self.db.execute(
+            select(FuelCodeListView)
+            .where(FuelCodeListView.fuel_code_id.in_(group_id_subquery))
+            .order_by(desc(FuelCodeListView.fuel_suffix))
+        )
+        iteration_rows = iterations_result.unique().scalars().all()
+
+        # Find the latest approved iteration, falling back to the highest suffix
+        latest_row = None
+        for row in iteration_rows:
+            if row.status == FuelCodeStatusEnum.Approved.value:
+                latest_row = row
+                break
+        if latest_row is None and iteration_rows:
+            latest_row = iteration_rows[0]
+
+        # Get full fuel code detail for the latest iteration
+        latest_fc = None
+        if latest_row is not None:
+            latest_fc = await self.db.scalar(
+                select(FuelCode)
+                .options(
+                    joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
+                        FeedstockFuelTransportMode.feedstock_fuel_transport_mode
+                    ),
+                    joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
+                        FinishedFuelTransportMode.finished_fuel_transport_mode
+                    ),
+                    joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
+                    joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
+                )
+                .where(FuelCode.fuel_code_id == latest_row.fuel_code_id)
+            )
+
+        # Aggregate volumes per compliance year across all iterations
+        volume_result = await self.db.execute(
+            select(
+                CompliancePeriod.description.label("year"),
+                func.sum(
+                    case(
+                        (FuelSupply.quantity.isnot(None), FuelSupply.quantity),
+                        else_=(
+                            coalesce(FuelSupply.q1_quantity, 0)
+                            + coalesce(FuelSupply.q2_quantity, 0)
+                            + coalesce(FuelSupply.q3_quantity, 0)
+                            + coalesce(FuelSupply.q4_quantity, 0)
+                        ),
+                    )
+                ).label("total_volume"),
+            )
+            .join(
+                ComplianceReport,
+                FuelSupply.compliance_report_id
+                == ComplianceReport.compliance_report_id,
+            )
+            .join(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
+            )
+            .where(FuelSupply.fuel_code_id.in_(group_id_subquery))
+            .group_by(CompliancePeriod.description)
+            .order_by(CompliancePeriod.description)
+        )
+        volume_rows = volume_result.all()
+
+        return latest_fc, iteration_rows, volume_rows
 
     @repo_handler
     async def get_fuel_types(self, include_legacy=False) -> List[FuelType]:
