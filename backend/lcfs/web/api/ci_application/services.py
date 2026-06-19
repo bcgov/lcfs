@@ -22,6 +22,7 @@ from lcfs.db.models.ci_application.CIApplication import (
     CI_DOC_CATEGORY_TECHNICAL_REPORT,
 )
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -55,7 +56,6 @@ from lcfs.web.api.ci_application.schema import (
     PathwayFuelCodeTypeSchema,
     PathwayInputSchema,
     PathwaySchema,
-    UnitOfMeasureSchema,
 )
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import service_handler
@@ -203,9 +203,8 @@ def _to_full_schema(
         facility_country=ci.facility_country,
         facility_iso=ci.facility_iso,
         facility_nameplate_capacity=ci.facility_nameplate_capacity,
-        facility_nameplate_capacity_unit_id=ci.facility_nameplate_capacity_unit_id,
         facility_nameplate_capacity_unit=(
-            UnitOfMeasureSchema.model_validate(ci.facility_nameplate_capacity_unit)
+            ci.facility_nameplate_capacity_unit.value
             if ci.facility_nameplate_capacity_unit
             else None
         ),
@@ -318,7 +317,11 @@ def _to_list_item(
         facility_province_state=ci.facility_province_state,
         facility_country=ci.facility_country,
         facility_nameplate_capacity=ci.facility_nameplate_capacity,
-        facility_nameplate_capacity_unit_id=ci.facility_nameplate_capacity_unit_id,
+        facility_nameplate_capacity_unit=(
+            ci.facility_nameplate_capacity_unit.value
+            if ci.facility_nameplate_capacity_unit
+            else None
+        ),
         proposed_fuel_code_effective_date=ci.proposed_fuel_code_effective_date,
         preliminary_risk_assessment=getattr(ci, "preliminary_risk_assessment", None),
         update_date=ci.update_date.isoformat() if ci.update_date else None,
@@ -626,7 +629,6 @@ class CIApplicationServices:
     @service_handler
     async def get_table_options(self) -> CITableOptionsSchema:
         statuses = await self.repo.get_statuses()
-        units = await self.repo.get_units_of_measure()
         application_types = await self.repo.get_pathway_application_types()
         fuel_code_types = await self.repo.get_pathway_fuel_code_types()
         fuel_types = await self.repo.get_fuel_types()
@@ -634,7 +636,9 @@ class CIApplicationServices:
         fuel_codes = await self.repo.get_approved_fuel_codes()
         return CITableOptionsSchema(
             statuses=[CIApplicationStatusSchema.model_validate(s) for s in statuses],
-            units_of_measure=[UnitOfMeasureSchema.model_validate(u) for u in units],
+            # Facility nameplate capacity is a physical quantity — use the same
+            # units as fuel codes (L, kg, kWh, Gj, m³), not energy densities.
+            units_of_measure=[unit.value for unit in QuantityUnitsEnum],
             pathway_application_types=[
                 PathwayApplicationTypeSchema.model_validate(t)
                 for t in application_types
@@ -896,7 +900,9 @@ class CIApplicationServices:
             facility_country=data.facility_country,
             facility_iso=data.facility_iso,
             facility_nameplate_capacity=data.facility_nameplate_capacity,
-            facility_nameplate_capacity_unit_id=data.facility_nameplate_capacity_unit_id,
+            facility_nameplate_capacity_unit=QuantityUnitsEnum(
+                data.facility_nameplate_capacity_unit
+            ),
             proposed_fuel_code_effective_date=data.proposed_fuel_code_effective_date,
             group_uuid=str(uuid.uuid4()),
             version=0,
@@ -922,8 +928,8 @@ class CIApplicationServices:
         ci_application.facility_country = data.facility_country
         ci_application.facility_iso = data.facility_iso
         ci_application.facility_nameplate_capacity = data.facility_nameplate_capacity
-        ci_application.facility_nameplate_capacity_unit_id = (
-            data.facility_nameplate_capacity_unit_id
+        ci_application.facility_nameplate_capacity_unit = QuantityUnitsEnum(
+            data.facility_nameplate_capacity_unit
         )
         ci_application.proposed_fuel_code_effective_date = (
             data.proposed_fuel_code_effective_date

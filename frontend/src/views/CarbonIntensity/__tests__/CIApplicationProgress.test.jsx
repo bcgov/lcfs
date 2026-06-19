@@ -97,6 +97,32 @@ describe('CIApplicationProgress', () => {
     vi.useRealTimers()
   })
 
+  it('keeps the 5-step wizard for BCeID users on submitted applications (ticket #4537)', () => {
+    mockHasAnyRole = vi.fn(() => false)
+    render(
+      <CIApplicationProgress
+        activeStep={0}
+        ciApplication={{
+          status: { status: 'Submitted' },
+          signatureUserDisplayName: 'Jane Submitter',
+          signatureDateTime: '2026-05-01T12:00:00Z',
+          proposedFuelCodeEffectiveDate: '2026-06-01'
+        }}
+      />,
+      { wrapper }
+    )
+
+    // The full 5-step wizard is shown, not the short government timeline.
+    expect(screen.getByText('carbonIntensity:steps.step1')).toBeInTheDocument()
+    expect(screen.getByText('carbonIntensity:steps.step5')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Proposed effective date')
+    ).not.toBeInTheDocument()
+    // Supplier steps 1-4 are marked complete; Government decision stays pending.
+    expect(screen.getByText('4')).toBeInTheDocument()
+    expect(screen.queryByText('5')).not.toBeInTheDocument()
+  })
+
   it('adds an hourglass supplier-wait step with days counted from request date', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-19T12:00:00Z'))

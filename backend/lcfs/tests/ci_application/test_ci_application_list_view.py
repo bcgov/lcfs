@@ -8,6 +8,7 @@ from lcfs.db.models.ci_application import (
     CIApplication,
     CIApplicationStatus,
 )
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.base import (
     FilterModel,
     PaginationRequestSchema,
@@ -104,7 +105,7 @@ def _application(
         facility_country="Argentina",
         facility_iso="AR",
         facility_nameplate_capacity=1000,
-        facility_nameplate_capacity_unit_id=1,
+        facility_nameplate_capacity_unit=QuantityUnitsEnum.Litres,
         proposed_fuel_code_effective_date=date(2026, 6, 1),
         priority_score=priority_score,
         verification_level=verification_level,
