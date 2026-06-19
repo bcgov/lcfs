@@ -41,6 +41,9 @@ const toUpdatePayload = (row: any) => {
   return rest
 }
 
+const replaceRow = (rows: any[], nextRow: any) =>
+  rows.map((row) => (row.id === nextRow.id ? nextRow : row))
+
 export const GeneratedFuelCodesSection = ({
   ciApplication,
   readOnly = false
@@ -91,9 +94,7 @@ export const GeneratedFuelCodesSection = ({
   }, [errors, fuelCodeOptions, readOnly])
 
   const onCellValueChanged = useCallback((params: any) => {
-    setRowData((prev) =>
-      prev.map((row) => (row.id === params.data.id ? { ...params.data } : row))
-    )
+    setRowData((prev) => replaceRow(prev, { ...params.data }))
   }, [])
 
   const onCellEditingStopped = useCallback(
@@ -110,9 +111,7 @@ export const GeneratedFuelCodesSection = ({
         })
         const nextRow = toGridRow(updatedRow)
         params.node.updateData(nextRow)
-        setRowData((prev) =>
-          prev.map((row) => (row.id === nextRow.id ? nextRow : row))
-        )
+        setRowData((prev) => replaceRow(prev, nextRow))
         setErrors((prev) => ({
           ...prev,
           [nextRow.id]: Object.keys(nextRow.validationErrors || {})

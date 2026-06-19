@@ -229,6 +229,7 @@ def _sorted_pathways(pathways: List[Pathway]) -> List[Pathway]:
     return sorted(
         pathways,
         key=lambda p: (
+            getattr(p, "create_date", None) or datetime.min,
             getattr(p, "group_uuid", "") or "",
             getattr(p, "version", 0) or 0,
             getattr(p, "pathway_id", 0) or 0,
@@ -262,7 +263,13 @@ def _latest_active_pathways(pathways: List[Pathway]) -> List[Pathway]:
         for pathway in latest_by_group.values()
         if _action_type_value(pathway.action_type) != ActionTypeEnum.DELETE.value
     ]
-    return sorted(active, key=lambda p: getattr(p, "pathway_id", 0) or 0)
+    return sorted(
+        active,
+        key=lambda p: (
+            getattr(p, "create_date", None) or datetime.min,
+            getattr(p, "pathway_id", 0) or 0,
+        ),
+    )
 
 
 def _pathway_change_logs_from_versions(
@@ -1259,31 +1266,36 @@ class CIApplicationServices:
             previous = (
                 previous_by_id.get(row.pathway_id) if is_supplemental_edit else None
             )
-            new_rows.append(
-                Pathway(
-                    application_type_id=row.application_type_id,
-                    fuel_code_type_id=row.fuel_code_type_id,
-                    operating_data_from=row.operating_data_from,
-                    operating_data_to=row.operating_data_to,
-                    fuel_code_id=row.fuel_code_id,
-                    proposed_ci=row.proposed_ci,
-                    fuel_type_id=row.fuel_type_id,
-                    feedstock=row.feedstock,
-                    feedstock_region=row.feedstock_region,
-                    feedstock_transport_mode=row.feedstock_transport_mode,
-                    feedstock_transport_distance=row.feedstock_transport_distance,
-                    coproducts=row.coproducts,
-                    finished_fuel_transport_mode=row.finished_fuel_transport_mode,
-                    finished_fuel_transport_distance=row.finished_fuel_transport_distance,
-                    group_uuid=previous.group_uuid if previous else str(uuid.uuid4()),
-                    version=((previous.version or 0) + 1) if previous else 0,
-                    action_type=(
-                        ActionTypeEnum.UPDATE if previous else ActionTypeEnum.CREATE
-                    ),
-                    create_user=user.keycloak_username,
-                    update_user=user.keycloak_username,
-                )
+            pathway = Pathway(
+                application_type_id=row.application_type_id,
+                fuel_code_type_id=row.fuel_code_type_id,
+                operating_data_from=row.operating_data_from,
+                operating_data_to=row.operating_data_to,
+                fuel_code_id=row.fuel_code_id,
+                proposed_ci=row.proposed_ci,
+                fuel_type_id=row.fuel_type_id,
+                feedstock=row.feedstock,
+                feedstock_region=row.feedstock_region,
+                feedstock_transport_mode=row.feedstock_transport_mode,
+                feedstock_transport_distance=row.feedstock_transport_distance,
+                coproducts=row.coproducts,
+                finished_fuel_transport_mode=row.finished_fuel_transport_mode,
+                finished_fuel_transport_distance=row.finished_fuel_transport_distance,
+                group_uuid=previous.group_uuid if previous else str(uuid.uuid4()),
+                version=((previous.version or 0) + 1) if previous else 0,
+                action_type=(
+                    ActionTypeEnum.UPDATE if previous else ActionTypeEnum.CREATE
+                ),
+                create_user=(
+                    previous.create_user
+                    if previous and getattr(previous, "create_user", None)
+                    else user.keycloak_username
+                ),
+                update_user=user.keycloak_username,
             )
+            if previous and getattr(previous, "create_date", None):
+                pathway.create_date = previous.create_date
+            new_rows.append(pathway)
 
         submitted_pathway_ids = {
             row.pathway_id for row in data.pathways if row.pathway_id is not None
@@ -1293,29 +1305,34 @@ class CIApplicationServices:
             for previous in previous_pathway_entities:
                 if previous.pathway_id in submitted_pathway_ids:
                     continue
-                delete_rows.append(
-                    Pathway(
-                        application_type_id=previous.application_type_id,
-                        fuel_code_type_id=previous.fuel_code_type_id,
-                        operating_data_from=previous.operating_data_from,
-                        operating_data_to=previous.operating_data_to,
-                        fuel_code_id=previous.fuel_code_id,
-                        proposed_ci=previous.proposed_ci,
-                        fuel_type_id=previous.fuel_type_id,
-                        feedstock=previous.feedstock,
-                        feedstock_region=previous.feedstock_region,
-                        feedstock_transport_mode=previous.feedstock_transport_mode,
-                        feedstock_transport_distance=previous.feedstock_transport_distance,
-                        coproducts=previous.coproducts,
-                        finished_fuel_transport_mode=previous.finished_fuel_transport_mode,
-                        finished_fuel_transport_distance=previous.finished_fuel_transport_distance,
-                        group_uuid=previous.group_uuid,
-                        version=(previous.version or 0) + 1,
-                        action_type=ActionTypeEnum.DELETE,
-                        create_user=user.keycloak_username,
-                        update_user=user.keycloak_username,
-                    )
+                pathway = Pathway(
+                    application_type_id=previous.application_type_id,
+                    fuel_code_type_id=previous.fuel_code_type_id,
+                    operating_data_from=previous.operating_data_from,
+                    operating_data_to=previous.operating_data_to,
+                    fuel_code_id=previous.fuel_code_id,
+                    proposed_ci=previous.proposed_ci,
+                    fuel_type_id=previous.fuel_type_id,
+                    feedstock=previous.feedstock,
+                    feedstock_region=previous.feedstock_region,
+                    feedstock_transport_mode=previous.feedstock_transport_mode,
+                    feedstock_transport_distance=previous.feedstock_transport_distance,
+                    coproducts=previous.coproducts,
+                    finished_fuel_transport_mode=previous.finished_fuel_transport_mode,
+                    finished_fuel_transport_distance=previous.finished_fuel_transport_distance,
+                    group_uuid=previous.group_uuid,
+                    version=(previous.version or 0) + 1,
+                    action_type=ActionTypeEnum.DELETE,
+                    create_user=(
+                        previous.create_user
+                        if getattr(previous, "create_user", None)
+                        else user.keycloak_username
+                    ),
+                    update_user=user.keycloak_username,
                 )
+                if getattr(previous, "create_date", None):
+                    pathway.create_date = previous.create_date
+                delete_rows.append(pathway)
 
         await self.repo.replace_pathways(
             ci_application.ci_application_id,

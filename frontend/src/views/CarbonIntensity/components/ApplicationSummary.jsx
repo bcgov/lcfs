@@ -239,7 +239,6 @@ export const ApplicationSummary = ({
   canEditDocuments = false,
   onEditDocuments,
   canEditPathways = false,
-  onEditPathways,
   pathwayEditorOptionsData,
   onSavePathways,
   onPathwayValidationError,
@@ -451,7 +450,6 @@ export const ApplicationSummary = ({
     })
   }
   const handleEditPathways = () => {
-    onEditPathways?.()
     setShowPathwayChangelog(false)
     setIsEditingPathways(true)
   }

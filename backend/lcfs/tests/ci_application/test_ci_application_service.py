@@ -507,9 +507,22 @@ async def test_update_step2_records_pathway_versions_for_change_log(
     ci.pathway_supplemental_edit_enabled = True
     ci.pathway_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
     ci.pathway_changes_requested_by = "idir_user"
+    first_pathway_create_date = datetime(2026, 1, 5, tzinfo=timezone.utc)
+    second_pathway_create_date = datetime(2026, 1, 6, tzinfo=timezone.utc)
     ci.pathways = [
-        _existing_pathway(pathway_id=1, group_uuid="pathway-group-1"),
-        _existing_pathway(pathway_id=2, group_uuid="pathway-group-2", feedstock="Soy"),
+        _existing_pathway(
+            pathway_id=1,
+            group_uuid="pathway-group-1",
+            create_date=first_pathway_create_date,
+            create_user="original_user",
+        ),
+        _existing_pathway(
+            pathway_id=2,
+            group_uuid="pathway-group-2",
+            feedstock="Soy",
+            create_date=second_pathway_create_date,
+            create_user="original_user",
+        ),
     ]
     _stub_step2_lookups(repo)
     repo.replace_pathways.side_effect = (
@@ -543,6 +556,9 @@ async def test_update_step2_records_pathway_versions_for_change_log(
     assert update_row.group_uuid == "pathway-group-1"
     assert update_row.version == 1
     assert update_row.action_type == ActionTypeEnum.UPDATE
+    assert update_row.create_date == first_pathway_create_date
+    assert update_row.create_user == "original_user"
+    assert update_row.update_user == mock_user.keycloak_username
     assert update_row.feedstock == "Camelina"
     assert update_row.feedstock_transport_distance == 125
 
@@ -555,6 +571,9 @@ async def test_update_step2_records_pathway_versions_for_change_log(
     assert delete_row.group_uuid == "pathway-group-2"
     assert delete_row.version == 1
     assert delete_row.action_type == ActionTypeEnum.DELETE
+    assert delete_row.create_date == second_pathway_create_date
+    assert delete_row.create_user == "original_user"
+    assert delete_row.update_user == mock_user.keycloak_username
     assert delete_row.feedstock == "Soy"
 
 
