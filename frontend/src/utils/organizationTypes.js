@@ -3,7 +3,8 @@ export const ORG_TYPE_LABELS = {
   aggregator: 'Aggregator',
   fuel_producer: 'Producer',
   exempted_supplier: 'Exempted',
-  initiative_agreement_holder: 'IA Holder'
+  initiative_agreement_holder: 'IA Holder',
+  credit_trader: 'Credit Trader'
 }
 
 const normalizeOrgTypeKey = (orgType) => {

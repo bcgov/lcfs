@@ -18,6 +18,7 @@ import { ciApplicationRoutes } from './routeConfig/ciApplicationRoutes'
 import { publicPageRoutes } from './routeConfig/publicPageRoutes'
 import { PublicPageLayout } from '@/layouts/PublicPageLayout'
 import { initiativeAgreementRoutes } from './routeConfig/initiativeAgreementRoutes'
+import { ReleaseNotes } from '@/views/ReleaseNotes'
 
 const allRoutes = [
   ...publicRoutes,
@@ -42,6 +43,16 @@ export const router = createBrowserRouter([
   {
     element: <PublicPageLayout />,
     children: publicPageRoutes as RouteObject[]
+  },
+  {
+    element: <PublicPageLayout />,
+    children: [
+      {
+        path: ROUTES.RELEASE_NOTES,
+        element: <ReleaseNotes />,
+        handle: { title: 'Release notes' }
+      }
+    ] as RouteObject[]
   },
   {
     element: <MainLayout />,

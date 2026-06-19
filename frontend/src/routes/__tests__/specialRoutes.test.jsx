@@ -388,7 +388,7 @@ describe('Special Routes', () => {
 
   describe('Route Metadata and Handles', () => {
     it('should have correct route structure', () => {
-      expect(router.routes).toHaveLength(6) // PublicLayout, PublicPageLayout, MainLayout, API docs, logout, 404
+      expect(router.routes).toHaveLength(7) // PublicLayout, PublicPageLayout, MainLayout, API docs, logout, 404, release-notes
 
       // Check for wildcard route
       const wildcardRoute = router.routes.find((route) => route.path === '*')
