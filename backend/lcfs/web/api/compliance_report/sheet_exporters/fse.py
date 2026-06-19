@@ -17,7 +17,6 @@ class FSESheetExporter(TabularSheetExporter):
     annual_columns = FSE_EXPORT_COLUMNS
     quarterly_columns = FSE_EXPORT_COLUMNS
     min_compliance_year = 2024
-    locked_columns = {1}
 
     def __init__(
         self,
