@@ -133,9 +133,13 @@ def _to_fuel_code_option(fc: FuelCode) -> FuelCodeOptionSchema:
 
 
 def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
+    action_type = getattr(pathway, "action_type", None)
     return PathwaySchema(
         pathway_id=pathway.pathway_id,
         ci_application_id=pathway.ci_application_id,
+        group_uuid=getattr(pathway, "group_uuid", None),
+        version=getattr(pathway, "version", None),
+        action_type=action_type.value if hasattr(action_type, "value") else action_type,
         application_type_id=pathway.application_type_id,
         application_type=(
             PathwayApplicationTypeSchema.model_validate(pathway.application_type)
@@ -493,6 +497,9 @@ def _to_list_item(
             else None
         ),
         proposed_fuel_code_effective_date=ci.proposed_fuel_code_effective_date,
+        pathway_supplemental_edit_enabled=bool(
+            getattr(ci, "pathway_supplemental_edit_enabled", False)
+        ),
         preliminary_risk_assessment=getattr(ci, "preliminary_risk_assessment", None),
         update_date=ci.update_date.isoformat() if ci.update_date else None,
         create_date=ci.create_date.isoformat() if ci.create_date else None,
@@ -1319,6 +1326,8 @@ class CIApplicationServices:
         ci_application.pathway_description = data.pathway_description
         if is_supplemental_edit:
             ci_application.pathway_supplemental_edit_enabled = False
+            ci_application.pathway_changes_requested_at = None
+            ci_application.pathway_changes_requested_by = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)

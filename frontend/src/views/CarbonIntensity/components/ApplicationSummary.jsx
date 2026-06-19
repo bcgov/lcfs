@@ -1,6 +1,15 @@
 import { Edit, FileDownloadOutlined } from '@mui/icons-material'
-import { Box, Divider, Grid, IconButton, Stack, Tooltip } from '@mui/material'
-import { useMemo, useRef } from 'react'
+import {
+  Box,
+  Divider,
+  FormControlLabel,
+  Grid,
+  IconButton,
+  Stack,
+  Switch,
+  Tooltip
+} from '@mui/material'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import BCButton from '@/components/BCButton'
@@ -9,7 +18,11 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
 import { useDownloadDocument } from '@/hooks/useDocuments'
 import colors from '@/themes/base/colors'
-import { ciApplicationPathwaySummaryColDefs } from '@/views/CarbonIntensity/components/_step2Schema'
+import {
+  ciApplicationPathwayChangelogColDefs,
+  ciApplicationPathwaySummaryColDefs
+} from '@/views/CarbonIntensity/components/_step2Schema'
+import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
 import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
 import { constructAddress } from '@/utils/constructAddress'
 
@@ -42,36 +55,152 @@ const formatBytes = (bytes) => {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-const humanizeField = (field) =>
-  String(field || '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-
-const formatChangeValue = (value) => {
-  if (value === null || value === undefined || value === '') return 'blank'
-  return String(value)
+const PATHWAY_CHANGELOG_FIELD_MAP = {
+  application_type_id: 'applicationTypeId',
+  fuel_code_type_id: 'fuelCodeTypeId',
+  operating_data_from: 'operatingDataFrom',
+  operating_data_to: 'operatingDataTo',
+  fuel_code_id: 'fuelCodeId',
+  proposed_ci: 'proposedCi',
+  fuel_type_id: 'fuelTypeId',
+  feedstock: 'feedstock',
+  feedstock_region: 'feedstockRegion',
+  feedstock_transport_mode: 'feedstockTransportMode',
+  feedstock_transport_distance: 'feedstockTransportDistance',
+  coproducts: 'coproducts',
+  finished_fuel_transport_mode: 'finishedFuelTransportMode',
+  finished_fuel_transport_distance: 'finishedFuelTransportDistance'
 }
 
-const summarizeChangedFields = (changedFields = {}) =>
-  Object.entries(changedFields)
-    .map(([field, change]) => {
-      const oldValue = formatChangeValue(change?.old)
-      const newValue = formatChangeValue(change?.new)
-      return `${humanizeField(field)}: ${oldValue} -> ${newValue}`
-    })
-    .join('; ')
+const toPathwayChangelogRow = (snapshot = {}) => ({
+  pathwayId: snapshot.pathway_id,
+  pathwayGroupUuid: snapshot.pathway_group_uuid,
+  applicationTypeId: snapshot.application_type_id,
+  fuelCodeTypeId: snapshot.fuel_code_type_id,
+  operatingDataFrom: snapshot.operating_data_from,
+  operatingDataTo: snapshot.operating_data_to,
+  fuelCodeId: snapshot.fuel_code_id,
+  proposedCi:
+    snapshot.proposed_ci !== null && snapshot.proposed_ci !== undefined
+      ? Number(snapshot.proposed_ci)
+      : snapshot.proposed_ci,
+  fuelTypeId: snapshot.fuel_type_id,
+  feedstock: snapshot.feedstock,
+  feedstockRegion: snapshot.feedstock_region,
+  feedstockTransportMode: snapshot.feedstock_transport_mode,
+  feedstockTransportDistance: snapshot.feedstock_transport_distance,
+  coproducts: snapshot.coproducts,
+  finishedFuelTransportMode: snapshot.finished_fuel_transport_mode,
+  finishedFuelTransportDistance: snapshot.finished_fuel_transport_distance
+})
 
-const formatActionType = (value) => {
-  switch (String(value || '').toUpperCase()) {
-    case 'CREATE':
-      return 'Added'
-    case 'UPDATE':
-      return 'Edited'
-    case 'DELETE':
-      return 'Deleted'
-    default:
-      return value || ''
+const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
+  ...pathway,
+  id:
+    pathway.pathwayId ||
+    pathway.pathway_id ||
+    pathway.groupUuid ||
+    pathway.group_uuid ||
+    `unchanged-pathway-${index}`,
+  pathwayId: pathway.pathwayId || pathway.pathway_id,
+  pathwayGroupUuid: pathway.groupUuid || pathway.group_uuid,
+  applicationTypeId: pathway.applicationTypeId || pathway.application_type_id,
+  fuelCodeTypeId: pathway.fuelCodeTypeId || pathway.fuel_code_type_id,
+  operatingDataFrom: pathway.operatingDataFrom || pathway.operating_data_from,
+  operatingDataTo: pathway.operatingDataTo || pathway.operating_data_to,
+  fuelCodeId: pathway.fuelCodeId || pathway.fuel_code_id,
+  proposedCi:
+    pathway.proposedCi !== null && pathway.proposedCi !== undefined
+      ? Number(pathway.proposedCi)
+      : pathway.proposed_ci !== null && pathway.proposed_ci !== undefined
+        ? Number(pathway.proposed_ci)
+        : pathway.proposed_ci,
+  fuelTypeId: pathway.fuelTypeId || pathway.fuel_type_id,
+  feedstock: pathway.feedstock,
+  feedstockRegion: pathway.feedstockRegion || pathway.feedstock_region,
+  feedstockTransportMode:
+    pathway.feedstockTransportMode || pathway.feedstock_transport_mode,
+  feedstockTransportDistance:
+    pathway.feedstockTransportDistance || pathway.feedstock_transport_distance,
+  coproducts: pathway.coproducts,
+  finishedFuelTransportMode:
+    pathway.finishedFuelTransportMode || pathway.finished_fuel_transport_mode,
+  finishedFuelTransportDistance:
+    pathway.finishedFuelTransportDistance ||
+    pathway.finished_fuel_transport_distance,
+  actionType: '',
+  updated: false,
+  diff: []
+})
+
+const pathwayMatchKeys = (pathway = {}) => {
+  const groupUuid =
+    pathway.pathwayGroupUuid || pathway.groupUuid || pathway.group_uuid
+  const pathwayId = pathway.pathwayId || pathway.pathway_id
+  return [
+    groupUuid ? `group:${groupUuid}` : null,
+    pathwayId ? `id:${pathwayId}` : null
+  ].filter(Boolean)
+}
+
+const pathwayChangeMatchKeys = (entry = {}) => {
+  const before = entry.beforeSnapshot || entry.before_snapshot || {}
+  const after = entry.afterSnapshot || entry.after_snapshot || {}
+  const groupUuid =
+    entry.pathwayGroupUuid ||
+    entry.pathway_group_uuid ||
+    before.pathway_group_uuid ||
+    after.pathway_group_uuid
+
+  return [
+    groupUuid ? `group:${groupUuid}` : null,
+    before.pathway_id ? `id:${before.pathway_id}` : null,
+    after.pathway_id ? `id:${after.pathway_id}` : null
+  ].filter(Boolean)
+}
+
+const changedFieldKeys = (changedFields = {}) =>
+  Object.keys(changedFields)
+    .map((field) => PATHWAY_CHANGELOG_FIELD_MAP[field] || field)
+    .filter(Boolean)
+
+const rowsForPathwayChange = (entry, index) => {
+  const actionType = String(
+    entry.actionType || entry.action_type || ''
+  ).toUpperCase()
+  const diff = changedFieldKeys(entry.changedFields || entry.changed_fields)
+  const before = entry.beforeSnapshot || entry.before_snapshot
+  const after = entry.afterSnapshot || entry.after_snapshot
+  const keyBase = `${entry.pathwayGroupUuid || entry.pathway_group_uuid || index}-${entry.changedAt || entry.changed_at || index}`
+
+  if (actionType === 'UPDATE') {
+    return [
+      {
+        ...toPathwayChangelogRow(before),
+        id: `${keyBase}-old`,
+        actionType,
+        updated: true,
+        diff
+      },
+      {
+        ...toPathwayChangelogRow(after),
+        id: `${keyBase}-new`,
+        actionType,
+        updated: false,
+        diff
+      }
+    ]
   }
+
+  return [
+    {
+      ...toPathwayChangelogRow(actionType === 'DELETE' ? before : after),
+      id: keyBase,
+      actionType,
+      updated: false,
+      diff
+    }
+  ]
 }
 
 const Labelled = ({ label, value, dataTest }) => (
@@ -110,11 +239,17 @@ export const ApplicationSummary = ({
   canEditDocuments = false,
   onEditDocuments,
   canEditPathways = false,
-  onEditPathways
+  onEditPathways,
+  pathwayEditorOptionsData,
+  onSavePathways,
+  onPathwayValidationError,
+  isSavingPathways = false
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   if (!ciApplication) return null
   const pathwayGridRef = useRef(null)
+  const [showPathwayChangelog, setShowPathwayChangelog] = useState(false)
+  const [isEditingPathways, setIsEditingPathways] = useState(false)
   const downloadDocument = useDownloadDocument(
     'ci_application',
     ciApplication?.ciApplicationId
@@ -147,14 +282,77 @@ export const ApplicationSummary = ({
 
   const documents = ciApplication.documents || []
   const pathways = ciApplication.pathways || []
-  const pathwayChangelog = ciApplication.pathwayChangelog || []
   const pathwayChangeLogs = [
-    ...(ciApplication.pathwayChangeLogs || ciApplication.pathway_change_logs || [])
+    ...(ciApplication.pathwayChangeLogs ||
+      ciApplication.pathway_change_logs ||
+      [])
   ].sort((a, b) => {
     const aTime = new Date(a.changedAt || a.changed_at || 0).getTime()
     const bTime = new Date(b.changedAt || b.changed_at || 0).getTime()
     return aTime - bTime
   })
+  const latestPathwayChangelog = useMemo(() => {
+    const groups = []
+    const groupMap = new Map()
+
+    pathwayChangeLogs.forEach((entry, index) => {
+      const changedAt = entry.changedAt || entry.changed_at || ''
+      const changedBy = entry.changedBy || entry.changed_by || ''
+      const groupKey = `${changedAt}-${changedBy}`
+      if (!groupMap.has(groupKey)) {
+        const group = {
+          key: groupKey || `pathway-change-${index}`,
+          title: [formatDateTime(changedAt), changedBy]
+            .filter(Boolean)
+            .join(' - '),
+          rows: [],
+          changes: []
+        }
+        groupMap.set(groupKey, group)
+        groups.push(group)
+      }
+      const rows = rowsForPathwayChange(entry, index)
+      const group = groupMap.get(groupKey)
+      group.rows.push(...rows)
+      group.changes.push({
+        keys: pathwayChangeMatchKeys(entry),
+        rows
+      })
+    })
+
+    const latestGroup = groups[groups.length - 1]
+    if (!latestGroup) return { title: '', rows: [] }
+
+    const changesByKey = new Map()
+    latestGroup.changes.forEach((change) => {
+      change.keys.forEach((key) => changesByKey.set(key, change))
+    })
+    const placedChanges = new Set()
+    const rows = pathways.flatMap((pathway, index) => {
+      const change = pathwayMatchKeys(pathway)
+        .map((key) => changesByKey.get(key))
+        .find(Boolean)
+      if (change && !placedChanges.has(change)) {
+        placedChanges.add(change)
+        return change.rows
+      }
+      if (change) {
+        return []
+      }
+      return [toPlainPathwayChangelogRow(pathway, index)]
+    })
+    latestGroup.changes
+      .filter((change) => !placedChanges.has(change))
+      .forEach((change) => {
+        rows.push(...change.rows)
+      })
+
+    return {
+      ...latestGroup,
+      rows
+    }
+  }, [pathwayChangeLogs, pathways])
+  const hasPathwayChangelogEntries = pathwayChangeLogs.length > 0
   const referencedPathway =
     pathways.find((pathway) => pathway?.fuelCode) || null
   const referencedFuelCode = referencedPathway?.fuelCode || null
@@ -181,6 +379,15 @@ export const ApplicationSummary = ({
   const pathwayColumnDefs = useMemo(
     () =>
       ciApplicationPathwaySummaryColDefs({
+        optionsData: ciApplication?.optionsData,
+        proposedFuelCodeEffectiveDate:
+          ciApplication?.proposedFuelCodeEffectiveDate
+      }),
+    [ciApplication?.optionsData, ciApplication?.proposedFuelCodeEffectiveDate]
+  )
+  const pathwayChangelogColumnDefs = useMemo(
+    () =>
+      ciApplicationPathwayChangelogColDefs({
         optionsData: ciApplication?.optionsData,
         proposedFuelCodeEffectiveDate:
           ciApplication?.proposedFuelCodeEffectiveDate
@@ -214,10 +421,43 @@ export const ApplicationSummary = ({
     }),
     []
   )
+  const pathwayChangelogGridOptions = useMemo(
+    () => ({
+      domLayout: 'autoHeight',
+      headerHeight: 42,
+      rowHeight: 44,
+      overlayNoRowsTemplate: t('carbonIntensity:summary.noPathwayChanges'),
+      autoSizeStrategy: {
+        type: 'fitCellContents',
+        defaultMinWidth: 50,
+        defaultMaxWidth: 600
+      },
+      enableCellTextSelection: true,
+      ensureDomOrder: true,
+      getRowStyle: (params) => {
+        if (params.data?.actionType === 'DELETE') {
+          return { backgroundColor: colors.alerts.error.background }
+        }
+        if (params.data?.actionType === 'CREATE') {
+          return { backgroundColor: colors.alerts.success.background }
+        }
+      }
+    }),
+    [t]
+  )
   const handleDownloadPathways = () => {
     pathwayGridRef.current?.api?.exportDataAsCsv({
       fileName: `ci_application_pathways_${ciApplication?.ciApplicationId || 'draft'}.csv`
     })
+  }
+  const handleEditPathways = () => {
+    onEditPathways?.()
+    setShowPathwayChangelog(false)
+    setIsEditingPathways(true)
+  }
+  const handleSavePathways = async (payload) => {
+    await onSavePathways?.(payload)
+    setIsEditingPathways(false)
   }
 
   return (
@@ -469,158 +709,146 @@ export const ApplicationSummary = ({
         >
           {t('carbonIntensity:summary.pathwaysHeader')}
         </BCTypography>
-        {canEditPathways && onEditPathways && (
+        {canEditPathways && (
           <Tooltip title={t('carbonIntensity:summary.editPathways')}>
             <IconButton
               color="primary"
               aria-label={t('carbonIntensity:summary.editPathways')}
-              onClick={onEditPathways}
+              onClick={handleEditPathways}
               size="small"
               data-test="ci-summary-pathways-edit-btn"
               sx={{ p: 0.5 }}
+              disabled={isEditingPathways}
             >
               <Edit fontSize="small" />
             </IconButton>
           </Tooltip>
         )}
       </Stack>
-      <BCButton
-        type="button"
-        variant="outlined"
-        color="primary"
-        size="medium"
-        startIcon={
-          <FileDownloadOutlined sx={{ fontSize: '1.25rem !important' }} />
-        }
-        onClick={handleDownloadPathways}
-        sx={{ mb: 2 }}
-        data-test="ci-summary-download-pathways-btn"
-      >
-        {t('carbonIntensity:summary.downloadPathways')}
-      </BCButton>
-      {pathways.length === 0 ? (
-        <BCTypography variant="body2" color="text.secondary">
-          {t('carbonIntensity:summary.noPathways')}
-        </BCTypography>
-      ) : (
-        <BCBox
-          data-test="ci-summary-pathways"
-          sx={{ width: '100%', overflowX: 'auto' }}
+      {!isEditingPathways && (
+        <BCButton
+          type="button"
+          variant="outlined"
+          color="primary"
+          size="medium"
+          startIcon={
+            <FileDownloadOutlined sx={{ fontSize: '1.25rem !important' }} />
+          }
+          onClick={handleDownloadPathways}
+          sx={{ mb: 2 }}
+          data-test="ci-summary-download-pathways-btn"
         >
-          <BCGridViewer
-            gridRef={pathwayGridRef}
-            gridKey={`ci-summary-pathways-${ciApplication?.ciApplicationId || 'new'}`}
-            columnDefs={pathwayColumnDefs}
-            queryData={pathwayQueryData}
-            dataKey="items"
-            defaultColDef={pathwayDefaultColDef}
-            gridOptions={pathwayGridOptions}
-            autoSizeStrategy={null}
-            getRowId={(params) =>
-              String(
-                params.data?.pathwayId ||
-                  `${params.data?.fuelCodeId || 'new'}-${params.data?.proposedCi || 'row'}`
-              )
+          {t('carbonIntensity:summary.downloadPathways')}
+        </BCButton>
+      )}
+      {!isEditingPathways && hasPathwayChangelogEntries && (
+        <FormControlLabel
+          sx={{ display: 'flex', width: 'fit-content', mb: 2 }}
+          control={
+            <Switch
+              checked={showPathwayChangelog}
+              onChange={(event) =>
+                setShowPathwayChangelog(event.target.checked)
+              }
+              inputProps={{
+                'aria-label': t(
+                  'carbonIntensity:summary.pathwayChangelogToggle'
+                )
+              }}
+              data-test="ci-summary-pathway-changelog-toggle"
+            />
+          }
+          label={
+            showPathwayChangelog
+              ? t('carbonIntensity:summary.pathwayChangelogOn')
+              : t('carbonIntensity:summary.pathwayChangelogOff')
+          }
+        />
+      )}
+      {isEditingPathways && (
+        <BCBox data-test="ci-summary-pathways-editor">
+          <ProposedFuelPathwaysStep
+            ciApplication={ciApplication}
+            optionsData={pathwayEditorOptionsData || ciApplication?.optionsData}
+            onSave={handleSavePathways}
+            onValidationError={onPathwayValidationError}
+            isSaving={isSavingPathways}
+            readOnly={false}
+            secondaryAction={
+              <BCButton
+                type="button"
+                variant="outlined"
+                color="secondary"
+                onClick={() => setIsEditingPathways(false)}
+                disabled={isSavingPathways}
+                data-test="ci-summary-pathways-cancel-btn"
+              >
+                {t('common:cancelBtn')}
+              </BCButton>
             }
-            suppressPagination
-            enablePageCaching={false}
-            enableCopyButton={false}
-            enableExportButton={false}
-            enableResetButton={false}
           />
         </BCBox>
       )}
-      {pathwayChangelog.length > 0 && (
-        <BCBox mt={2} data-test="ci-summary-pathway-changelog">
-          <BCTypography
-            variant="subtitle2"
-            sx={{ fontWeight: 700, color: colors.primary.main, mb: 1 }}
-          >
-            {t('carbonIntensity:summary.pathwayChangelog')}
+      {!isEditingPathways &&
+        !showPathwayChangelog &&
+        (pathways.length === 0 ? (
+          <BCTypography variant="body2" color="text.secondary">
+            {t('carbonIntensity:summary.noPathways')}
           </BCTypography>
-          <Stack spacing={0.5}>
-            {pathwayChangelog.map((entry, index) => (
-              <BCTypography
-                key={`${entry.changedAt || entry.changed_at || 'change'}-${index}`}
-                variant="body2"
-              >
-                {entry.event === 'pathway_changes_requested'
-                  ? t('carbonIntensity:summary.pathwayChangesRequested')
-                  : t('carbonIntensity:summary.supplementalPathwaysUpdated')}
-                {` - ${formatDate(entry.changedAt || entry.changed_at)}`}
-                {(entry.changedBy || entry.changed_by) &&
-                  ` - ${entry.changedBy || entry.changed_by}`}
-              </BCTypography>
-            ))}
-          </Stack>
-        </BCBox>
-      )}
-      {pathwayChangeLogs.length > 0 && (
-        <BCBox mt={2} data-test="ci-summary-pathway-change-log-details">
-          <BCTypography
-            variant="subtitle2"
-            sx={{ fontWeight: 700, color: colors.primary.main, mb: 1 }}
+        ) : (
+          <BCBox
+            data-test="ci-summary-pathways"
+            sx={{ width: '100%', overflowX: 'auto' }}
           >
-            {t('carbonIntensity:summary.pathwayChangeLogDetails')}
-          </BCTypography>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '120px 180px 180px minmax(240px, 1fr)',
-              bgcolor: 'grey.100',
-              borderBottom: 1,
-              borderColor: 'divider',
-              px: 1,
-              py: 0.75,
-              fontWeight: 700
-            }}
-          >
-            <BCTypography variant="caption">
-              {t('carbonIntensity:summary.changeAction')}
-            </BCTypography>
-            <BCTypography variant="caption">
-              {t('carbonIntensity:summary.changeDate')}
-            </BCTypography>
-            <BCTypography variant="caption">
-              {t('carbonIntensity:summary.changedBy')}
-            </BCTypography>
-            <BCTypography variant="caption">
-              {t('carbonIntensity:summary.changedFields')}
-            </BCTypography>
-          </Box>
-          {pathwayChangeLogs.map((entry) => (
-            <Box
-              key={
-                `${entry.pathwayGroupUuid || entry.pathway_group_uuid}-${entry.changedAt || entry.changed_at}`
+            <BCGridViewer
+              gridRef={pathwayGridRef}
+              gridKey={`ci-summary-pathways-${ciApplication?.ciApplicationId || 'new'}`}
+              columnDefs={pathwayColumnDefs}
+              queryData={pathwayQueryData}
+              dataKey="items"
+              defaultColDef={pathwayDefaultColDef}
+              gridOptions={pathwayGridOptions}
+              autoSizeStrategy={null}
+              getRowId={(params) =>
+                String(
+                  params.data?.pathwayId ||
+                    `${params.data?.fuelCodeId || 'new'}-${params.data?.proposedCi || 'row'}`
+                )
               }
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: '120px 180px 180px minmax(240px, 1fr)',
-                borderBottom: 1,
-                borderColor: 'divider',
-                px: 1,
-                py: 0.75,
-                alignItems: 'start'
+              suppressPagination
+              enablePageCaching={false}
+              enableCopyButton={false}
+              enableExportButton={false}
+              enableResetButton={false}
+            />
+          </BCBox>
+        ))}
+      {!isEditingPathways &&
+        showPathwayChangelog &&
+        hasPathwayChangelogEntries && (
+          <BCBox mt={2} data-test="ci-summary-pathway-change-log-details">
+            <BCGridViewer
+              gridKey="ci-pathway-changelog-latest"
+              columnDefs={pathwayChangelogColumnDefs}
+              queryData={{
+                data: { items: latestPathwayChangelog.rows },
+                isLoading: false,
+                isError: false,
+                error: null
               }}
-            >
-              <BCTypography variant="body2">
-                {formatActionType(entry.actionType || entry.action_type)}
-              </BCTypography>
-              <BCTypography variant="body2">
-                {formatDateTime(entry.changedAt || entry.changed_at)}
-              </BCTypography>
-              <BCTypography variant="body2">
-                {entry.changedBy || entry.changed_by || ''}
-              </BCTypography>
-              <BCTypography variant="body2">
-                {summarizeChangedFields(
-                  entry.changedFields || entry.changed_fields
-                )}
-              </BCTypography>
-            </Box>
-          ))}
-        </BCBox>
-      )}
+              dataKey="items"
+              defaultColDef={pathwayDefaultColDef}
+              gridOptions={pathwayChangelogGridOptions}
+              autoSizeStrategy={null}
+              getRowId={(params) => params.data.id}
+              suppressPagination
+              enablePageCaching={false}
+              enableCopyButton={false}
+              enableExportButton={false}
+              enableResetButton={false}
+            />
+          </BCBox>
+        )}
     </BCBox>
   )
 }

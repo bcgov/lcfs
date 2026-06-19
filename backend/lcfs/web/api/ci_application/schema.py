@@ -238,6 +238,9 @@ class PathwaySchema(BaseSchema):
 
     pathway_id: int
     ci_application_id: int
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    action_type: Optional[str] = None
     application_type_id: int
     application_type: Optional[PathwayApplicationTypeSchema] = None
     fuel_code_type_id: int
@@ -358,6 +361,7 @@ class CIApplicationBaseSchema(BaseSchema):
     facility_nameplate_capacity: Optional[int] = None
     facility_nameplate_capacity_unit: Optional[str] = None
     proposed_fuel_code_effective_date: Optional[date] = None
+    pathway_supplemental_edit_enabled: bool = False
     preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
     priority_score: Optional[int] = None
     assigned_analyst: Optional[CIApplicationUserSchema] = None

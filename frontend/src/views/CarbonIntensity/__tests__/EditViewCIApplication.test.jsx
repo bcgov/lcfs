@@ -140,15 +140,22 @@ vi.mock('@/views/CarbonIntensity/components/ProposedFuelPathwaysStep', () => ({
 }))
 
 vi.mock('@/views/CarbonIntensity/components/ApplicationSummary', () => ({
-  ApplicationSummary: ({ canEditPathways, onEditPathways }) => (
-    <div data-test="summary-stub">
-      {canEditPathways && (
-        <button data-test="summary-pathways-edit" onClick={onEditPathways}>
-          edit pathways
-        </button>
-      )}
-    </div>
-  )
+  ApplicationSummary: ({ canEditPathways }) => {
+    const [editing, setEditing] = React.useState(false)
+    return (
+      <div data-test="summary-stub">
+        {canEditPathways && (
+          <button
+            data-test="summary-pathways-edit"
+            onClick={() => setEditing(true)}
+          >
+            edit pathways
+          </button>
+        )}
+        {editing && <div data-test="step2-stub" data-read-only="false" />}
+      </div>
+    )
+  }
 }))
 
 // Stub the heavy step component so we can drive its props directly.
@@ -352,9 +359,6 @@ describe('EditViewCIApplication', () => {
 
     fireEvent.click(await screen.findByTestId('summary-pathways-edit'))
     await waitFor(() => {
-      expect(
-        screen.getByText('carbonIntensity:summary.editPathways')
-      ).toBeInTheDocument()
       expect(screen.getByTestId('step2-stub')).toHaveAttribute(
         'data-read-only',
         'false'

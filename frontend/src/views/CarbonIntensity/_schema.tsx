@@ -91,10 +91,38 @@ const productionFacilityLocation = (data) => {
   return cityProvince || country
 }
 
+const CI_APPLICATION_CHANGES_REQUESTED_STATUS = 'Changes Requested'
+
+const CIApplicationListStatusRenderer = (props) => {
+  const supplementalEditEnabled =
+    props.data?.pathwaySupplementalEditEnabled ||
+    props.data?.pathway_supplemental_edit_enabled
+
+  if (!supplementalEditEnabled) {
+    return <CIApplicationStatusRenderer {...props} />
+  }
+
+  return (
+    <CIApplicationStatusRenderer
+      {...props}
+      data={{
+        ...props.data,
+        status: {
+          ...props.data?.status,
+          status: CI_APPLICATION_CHANGES_REQUESTED_STATUS
+        }
+      }}
+    />
+  )
+}
+
+CIApplicationListStatusRenderer.filterPillRenderer =
+  CIApplicationStatusRenderer.filterPillRenderer
+
 const statusCol = (t) => ({
   field: 'status.status',
   headerName: t('carbonIntensity:columns.status'),
-  cellRenderer: CIApplicationStatusRenderer,
+  cellRenderer: CIApplicationListStatusRenderer,
   valueGetter: (params) => params.data?.status?.status,
   minWidth: 140,
   sortable: false,
