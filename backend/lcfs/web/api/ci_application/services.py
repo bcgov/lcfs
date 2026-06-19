@@ -242,6 +242,17 @@ def _latest_active_pathways(pathways: List[Pathway]) -> List[Pathway]:
         if current is None or (pathway.version or 0) >= (current.version or 0):
             latest_by_group[group_uuid] = pathway
 
+    if not latest_by_group:
+        return sorted(
+            [
+                pathway
+                for pathway in pathways
+                if _action_type_value(getattr(pathway, "action_type", "CREATE"))
+                != ActionTypeEnum.DELETE.value
+            ],
+            key=lambda p: getattr(p, "pathway_id", 0) or 0,
+        )
+
     active = [
         pathway
         for pathway in latest_by_group.values()
@@ -255,7 +266,10 @@ def _pathway_change_logs_from_versions(
 ) -> List[PathwayChangeLogSchema]:
     by_group: Dict[str, List[Pathway]] = {}
     for pathway in _sorted_pathways(pathways):
-        by_group.setdefault(pathway.group_uuid, []).append(pathway)
+        group_uuid = getattr(pathway, "group_uuid", None)
+        if not group_uuid:
+            continue
+        by_group.setdefault(group_uuid, []).append(pathway)
 
     logs: List[PathwayChangeLogSchema] = []
     for group_uuid, group_pathways in by_group.items():
