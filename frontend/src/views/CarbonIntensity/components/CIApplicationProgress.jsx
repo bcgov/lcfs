@@ -369,11 +369,34 @@ export const CIApplicationProgress = ({ activeStep = 0, ciApplication }) => {
   const { t } = useTranslation(['carbonIntensity'])
   const { hasAnyRole } = useCurrentUser()
 
-  if (
-    !ciApplication ||
-    (ciApplication?.status?.status === 'Draft' &&
-      !getSupplierRequestDate(ciApplication))
-  ) {
+  const showInternalSteps = Boolean(
+    hasAnyRole?.(
+      roles.government,
+      roles.analyst,
+      roles.compliance_manager,
+      roles.director
+    )
+  )
+
+  // BCeID/supplier users keep the 5-step wizard progress bar through the whole
+  // lifecycle (ticket #4537); only government users switch to the internal
+  // workflow timeline once the application leaves Draft.
+  const isDraftWizard =
+    ciApplication?.status?.status === 'Draft' &&
+    !getSupplierRequestDate(ciApplication)
+
+  if (!ciApplication || !showInternalSteps || isDraftWizard) {
+    // Once submitted, the supplier steps (1-4) are complete, so mark them done
+    // and leave Government decision pending. While drafting, follow the
+    // URL-driven active step.
+    const isSubmitted = Boolean(
+      ciApplication?.status?.status &&
+        ciApplication.status.status !== 'Draft'
+    )
+    const wizardActiveStep = isSubmitted
+      ? CI_APPLICATION_STEPS.length - 1
+      : activeStep
+
     return (
       <Stack direction="row" sx={{ mb: 3, mt: 2 }}>
         {CI_APPLICATION_STEPS.map((step, index) => (
@@ -383,8 +406,8 @@ export const CIApplicationProgress = ({ activeStep = 0, ciApplication }) => {
             step={{
               key: step.key,
               label: t(step.labelKey),
-              state: index < activeStep ? 'completed' : 'pending',
-              initials: index < activeStep ? String(index + 1) : ''
+              state: index < wizardActiveStep ? 'completed' : 'pending',
+              initials: index < wizardActiveStep ? String(index + 1) : ''
             }}
           />
         ))}
@@ -392,14 +415,6 @@ export const CIApplicationProgress = ({ activeStep = 0, ciApplication }) => {
     )
   }
 
-  const showInternalSteps = Boolean(
-    hasAnyRole?.(
-      roles.government,
-      roles.analyst,
-      roles.compliance_manager,
-      roles.director
-    )
-  )
   const workflowSteps = buildCIWorkflowSteps(ciApplication, {
     showInternalSteps
   })

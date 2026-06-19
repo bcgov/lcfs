@@ -25,10 +25,7 @@ const baseProps = {
     email: 'Zimmerman@fuelproducerltd.ar',
     phone: '+54 9 11 1234-5678'
   },
-  unitsOfMeasure: [
-    { uomId: 1, name: 'Litres' },
-    { uomId: 2, name: 'Kilograms' }
-  ]
+  unitsOfMeasure: ['L', 'kg']
 }
 
 describe('ApplicationInformationStep', () => {
@@ -51,7 +48,7 @@ describe('ApplicationInformationStep', () => {
     expect(document.getElementById('facilityCountry')).toBeInTheDocument()
     expect(document.getElementById('facilityNameplateCapacity')).toBeInTheDocument()
     expect(
-      document.getElementById('facilityNameplateCapacityUnitId')
+      document.getElementById('facilityNameplateCapacityUnit')
     ).toBeInTheDocument()
     expect(
       document.getElementById('proposedFuelCodeEffectiveDate')
@@ -133,7 +130,7 @@ describe('ApplicationInformationStep', () => {
     // MUI Select: open the listbox and click the desired option.
     const combobox = screen.getByRole('combobox')
     await user.click(combobox)
-    const option = await screen.findByRole('option', { name: 'Kilograms' })
+    const option = await screen.findByRole('option', { name: 'kg' })
     await user.click(option)
 
     fireEvent.change(document.getElementById('proposedFuelCodeEffectiveDate'), {
@@ -149,7 +146,7 @@ describe('ApplicationInformationStep', () => {
       facilityProvinceState: 'BC',
       facilityCountry: 'Canada',
       facilityNameplateCapacity: 2500,
-      facilityNameplateCapacityUnitId: 2,
+      facilityNameplateCapacityUnit: 'kg',
       proposedFuelCodeEffectiveDate: '2026-09-01'
     })
   })
@@ -161,7 +158,7 @@ describe('ApplicationInformationStep', () => {
       facilityProvinceState: 'Santa Fe',
       facilityCountry: 'Argentina',
       facilityNameplateCapacity: 1500,
-      facilityNameplateCapacityUnitId: 1,
+      facilityNameplateCapacityUnit: 'L',
       proposedFuelCodeEffectiveDate: '2026-06-01'
     }
     render(
