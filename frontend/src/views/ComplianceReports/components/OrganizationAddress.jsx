@@ -14,7 +14,7 @@ import BCButton from '@/components/BCButton/index.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import * as Yup from 'yup'
-import { PHONE_REGEX } from '@/constants/common'
+import { PHONE_REGEX, POSTAL_CODE_REGEX } from '@/constants/common'
 import BCModal from '@/components/BCModal.jsx'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes.js'
@@ -29,6 +29,24 @@ const REQUIRED_ORG_FIELDS = [
   'recordsAddress',
   'headOfficeAddress'
 ]
+
+export const addressHasPostalCode = (value) =>
+  POSTAL_CODE_REGEX.test(value || '')
+
+export const addressWithPostalCode = (addressData) => {
+  if (typeof addressData === 'string') {
+    return addressData
+  }
+
+  const fullAddress = addressData?.fullAddress || ''
+  const postalCode = addressData?.postalCode || addressData?.postal_code || ''
+
+  if (!postalCode || addressHasPostalCode(fullAddress)) {
+    return fullAddress
+  }
+
+  return `${fullAddress}, ${postalCode}`
+}
 
 export const OrganizationAddress = ({
   snapshotData,
@@ -55,8 +73,20 @@ export const OrganizationAddress = ({
     email: Yup.string()
       .required('Email address is required.')
       .email('Please enter a valid email address.'),
-    serviceAddress: Yup.string().required('Service Address is required.'),
-    recordsAddress: Yup.string().required('Records Address is required.'),
+    serviceAddress: Yup.string()
+      .required('Service Address is required.')
+      .test(
+        'postal-code',
+        'Service Address must include a valid postal code.',
+        addressHasPostalCode
+      ),
+    recordsAddress: Yup.string()
+      .required('Records Address is required.')
+      .test(
+        'postal-code',
+        'Records Address must include a valid postal code.',
+        addressHasPostalCode
+      ),
     headOfficeAddress: Yup.string().required('Head Office Address is required.')
   })
 
@@ -98,26 +128,7 @@ export const OrganizationAddress = ({
     setIsEditing(false)
   }
 
-  const onError = () => {
-    const formData = form.getValues()
-    setModalData({
-      primaryButtonAction: async () => {
-        await onSubmit(formData)
-        setModalData(null)
-      },
-      primaryButtonText: 'Confirm',
-      secondaryButtonText: t('cancelBtn'),
-      title: 'Confirm Changes',
-      content: (
-        <Stack>
-          <BCTypography mt={1} variant="body5">
-            You will need to fill out all required fields to submit the
-            Compliance Report. Are you sure you want to continue?
-          </BCTypography>
-        </Stack>
-      )
-    })
-  }
+  const onError = () => setModalData(null)
 
   const onCancel = () => {
     reset(snapshotData)
@@ -148,42 +159,28 @@ export const OrganizationAddress = ({
 
   // Helpers to select addresses
   const handleSelectServiceAddress = (addressData) => {
-    if (typeof addressData === 'string') {
-      setValue('serviceAddress', addressData)
-    } else {
-      setValue('serviceAddress', addressData.fullAddress)
-    }
+    const selectedAddress = addressWithPostalCode(addressData)
+    setValue('serviceAddress', selectedAddress, { shouldValidate: true })
+
     // If 'same as service address' is checked, automatically update records too
     if (recordsSameAsService) {
-      if (typeof addressData === 'string') {
-        setValue('recordsAddress', addressData)
-      } else {
-        setValue('recordsAddress', addressData.fullAddress)
-      }
+      setValue('recordsAddress', selectedAddress, { shouldValidate: true })
     }
     if (headOfficeSameAsService) {
-      if (typeof addressData === 'string') {
-        setValue('headOfficeAddress', addressData)
-      } else {
-        setValue('headOfficeAddress', addressData.fullAddress)
-      }
+      setValue('headOfficeAddress', selectedAddress, { shouldValidate: true })
     }
   }
 
   const handleSelectRecordsAddress = (addressData) => {
-    if (typeof addressData === 'string') {
-      setValue('recordsAddress', addressData)
-    } else {
-      setValue('recordsAddress', addressData.fullAddress)
-    }
+    setValue('recordsAddress', addressWithPostalCode(addressData), {
+      shouldValidate: true
+    })
   }
 
   const handleSelectHeadOfficeAddress = (addressData) => {
-    if (typeof addressData === 'string') {
-      setValue('headOfficeAddress', addressData)
-    } else {
-      setValue('headOfficeAddress', addressData.fullAddress)
-    }
+    setValue('headOfficeAddress', addressWithPostalCode(addressData), {
+      shouldValidate: true
+    })
   }
   // Sync state with snapshot data on load
   useEffect(() => {

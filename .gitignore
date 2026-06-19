@@ -1,6 +1,11 @@
 # Generated geocoding output files
 org_snapshot_coordinates.sql
 
+# Issue #4492 proprietary data (source workbook, mapping, manual backfill SQL) — keep out of the public repo
+4492.xlsx
+4492_correction_mapping.csv
+4492_aggregator_issuance_backfill.sql
+
 ### Python template
 
 .idea/

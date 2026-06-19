@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, asc, desc, func, select
+from sqlalchemy import and_, asc, case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -36,7 +36,6 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.TransportMode import TransportMode
-from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.Role import Role, RoleEnum
@@ -49,6 +48,12 @@ from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
 
+VERIFICATION_LEVEL_EXPR = case(
+    (CIApplication.verification_2_date.isnot(None), "VX2"),
+    (CIApplication.verification_1_date.isnot(None), "VX1"),
+    else_=None,
+)
+
 # Grid-facing filter / sort resolvers. Keys use the post-validation
 # snake_case form (FilterModel.field / SortOrder.field route incoming
 # values through camel_to_snake). Unknown fields are silently dropped.
@@ -60,7 +65,7 @@ _DIRECT_FILTER_COLUMNS = {
     "facility_nameplate_capacity": CIApplication.facility_nameplate_capacity,
     "proposed_fuel_code_effective_date": CIApplication.proposed_fuel_code_effective_date,
     "priority_score": CIApplication.priority_score,
-    "verification_level": CIApplication.verification_level,
+    "verification_level": VERIFICATION_LEVEL_EXPR,
     "update_date": CIApplication.update_date,
     "create_date": CIApplication.create_date,
 }
@@ -127,13 +132,6 @@ class CIApplicationRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
-    async def get_units_of_measure(self) -> Sequence[UnitOfMeasure]:
-        result = await self.db.execute(
-            select(UnitOfMeasure).order_by(UnitOfMeasure.uom_id)
-        )
-        return result.scalars().all()
-
-    @repo_handler
     async def get_pathway_application_types(
         self,
     ) -> Sequence[PathwayApplicationType]:
@@ -197,12 +195,12 @@ class CIApplicationRepository:
                     Organization.org_address
                 ),
                 selectinload(CIApplication.ci_application_status),
-                selectinload(CIApplication.facility_nameplate_capacity_unit),
                 selectinload(CIApplication.assigned_analyst),
                 selectinload(CIApplication.verification_1_user),
                 selectinload(CIApplication.verification_2_user),
                 selectinload(CIApplication.recommendation_user),
                 selectinload(CIApplication.approval_user),
+                selectinload(CIApplication.history_records),
                 selectinload(CIApplication.pathways).selectinload(
                     Pathway.application_type
                 ),
@@ -344,6 +342,7 @@ class CIApplicationRepository:
         )
         self.db.add(history)
         await self.db.flush()
+        await self.db.refresh(ci_application, ["history_records"])
         return history
 
     # Step 5 comment thread now lives in the shared internal_comments

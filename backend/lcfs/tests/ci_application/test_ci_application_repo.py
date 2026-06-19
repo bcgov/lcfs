@@ -10,7 +10,7 @@ from lcfs.db.models.ci_application import (
     CIApplicationHistory,
     CIApplicationStatus,
 )
-from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.base import FilterModel, PaginationRequestSchema, SortOrder
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
 
@@ -47,10 +47,6 @@ def _make_status(name="Draft", ident=1):
     )
 
 
-def _make_uom(uom_id=1, name="Litres"):
-    return UnitOfMeasure(uom_id=uom_id, name=name, description=name)
-
-
 def _make_application(
     ci_application_id=10,
     organization_id=1,
@@ -67,7 +63,7 @@ def _make_application(
         facility_country=facility_country,
         facility_iso="AR",
         facility_nameplate_capacity=facility_nameplate_capacity,
-        facility_nameplate_capacity_unit_id=1,
+        facility_nameplate_capacity_unit=QuantityUnitsEnum.Litres,
         proposed_fuel_code_effective_date=date(2026, 6, 1),
         group_uuid="abc",
         version=0,
@@ -112,17 +108,6 @@ async def test_get_status_by_name_missing(repo, mock_db):
     mock_db.execute.return_value = result
 
     assert await repo.get_status_by_name("Nope") is None
-
-
-@pytest.mark.anyio
-async def test_get_units_of_measure(repo, mock_db):
-    uoms = [_make_uom(1, "Litres"), _make_uom(2, "Kilograms")]
-    result = MagicMock()
-    result.scalars.return_value.all.return_value = uoms
-    mock_db.execute.return_value = result
-
-    items = await repo.get_units_of_measure()
-    assert items == uoms
 
 
 # ---------------------------------------------------------------------------

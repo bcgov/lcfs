@@ -69,6 +69,9 @@ export const REPORT_SCHEDULES = {
 export const PHONE_REGEX: RegExp =
   /^((\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})?$/
 
+export const POSTAL_CODE_REGEX: RegExp =
+  /\b[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z][ -]?\d[ABCEGHJ-NPRSTV-Z]\d\b/i
+
 export const HELP_GUIDE_URL =
   'https://www2.gov.bc.ca/gov/content?id=7A58AF3855154747A0793F0C9A6E9089'
 

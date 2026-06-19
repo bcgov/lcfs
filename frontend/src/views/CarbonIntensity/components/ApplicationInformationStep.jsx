@@ -45,9 +45,9 @@ const buildValidationSchema = (t) =>
       .required(t('carbonIntensity:step1.validation.capacityRequired'))
       .positive(t('carbonIntensity:step1.validation.capacityPositive'))
       .integer(t('carbonIntensity:step1.validation.capacityPositive')),
-    facilityNameplateCapacityUnitId: Yup.number()
-      .typeError(t('carbonIntensity:step1.validation.uomRequired'))
-      .required(t('carbonIntensity:step1.validation.uomRequired')),
+    facilityNameplateCapacityUnit: Yup.string().required(
+      t('carbonIntensity:step1.validation.uomRequired')
+    ),
     proposedFuelCodeEffectiveDate: Yup.string().nullable()
   })
 
@@ -56,8 +56,7 @@ const toFormValues = (data) => ({
   facilityProvinceState: data?.facilityProvinceState ?? '',
   facilityCountry: data?.facilityCountry ?? '',
   facilityNameplateCapacity: data?.facilityNameplateCapacity ?? '',
-  facilityNameplateCapacityUnitId:
-    data?.facilityNameplateCapacityUnitId ?? '',
+  facilityNameplateCapacityUnit: data?.facilityNameplateCapacityUnit ?? '',
   proposedFuelCodeEffectiveDate: data?.proposedFuelCodeEffectiveDate ?? ''
 })
 
@@ -66,9 +65,7 @@ const toApiPayload = (values) => ({
   facilityProvinceState: values.facilityProvinceState || null,
   facilityCountry: values.facilityCountry?.trim(),
   facilityNameplateCapacity: Number(values.facilityNameplateCapacity),
-  facilityNameplateCapacityUnitId: Number(
-    values.facilityNameplateCapacityUnitId
-  ),
+  facilityNameplateCapacityUnit: values.facilityNameplateCapacityUnit || null,
   proposedFuelCodeEffectiveDate: values.proposedFuelCodeEffectiveDate || null
 })
 
@@ -271,12 +268,12 @@ export const ApplicationInformationStep = forwardRef(
 
           <Grid2 size={{ xs: 12, md: 4 }}>
             <Controller
-              name="facilityNameplateCapacityUnitId"
+              name="facilityNameplateCapacityUnit"
               control={control}
               render={({ field, fieldState }) => (
                 <Box mb={2}>
                   <InputLabel
-                    htmlFor="facilityNameplateCapacityUnitId"
+                    htmlFor="facilityNameplateCapacityUnit"
                     sx={{ pb: 1 }}
                   >
                     {t('carbonIntensity:step1.unitOfMeasure')}
@@ -285,8 +282,8 @@ export const ApplicationInformationStep = forwardRef(
                   <TextField
                     {...field}
                     select
-                    id="facilityNameplateCapacityUnitId"
-                    data-test="facilityNameplateCapacityUnitId"
+                    id="facilityNameplateCapacityUnit"
+                    data-test="facilityNameplateCapacityUnit"
                     value={field.value ?? ''}
                     required
                     variant="outlined"
@@ -307,8 +304,8 @@ export const ApplicationInformationStep = forwardRef(
                       <em>{t('carbonIntensity:labels.selectPlaceholder')}</em>
                     </MenuItem>
                     {unitsOfMeasure.map((u) => (
-                      <MenuItem key={u.uomId} value={u.uomId}>
-                        {u.name}
+                      <MenuItem key={u} value={u}>
+                        {u}
                       </MenuItem>
                     ))}
                   </TextField>

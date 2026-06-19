@@ -75,11 +75,17 @@ export const PublicBreadcrumb = ({
       label: 'Approved carbon intensities',
       route: '/approved-carbon-intensities'
     },
+    'release-notes': {
+      label: 'Release notes',
+      route: '/release-notes'
+    },
     ...customBreadcrumbs
   }
 
   const pathnames = location.pathname.split('/').filter((x) => x)
   const isPublicDashboard = location.pathname === '/public'
+
+  const isUnderPublicDashboard = location.pathname.startsWith('/public')
 
   const getBreadcrumbLabel = (name: string, index: number): string => {
     const customCrumb = defaultBreadcrumbs[name]
@@ -138,25 +144,27 @@ export const PublicBreadcrumb = ({
             sx={linkSx}
           />
 
-          {/* Public dashboard — link on sub-pages, plain text on the dashboard itself */}
-          {isPublicDashboard ? (
-            <StyledBreadcrumb
-              component={Typography}
-              sx={currentSx}
-              label={
-                <BCTypography variant="body2" color="text.secondary">
-                  Public dashboard
-                </BCTypography>
-              }
-            />
-          ) : (
-            <StyledBreadcrumb
-              to="/public"
-              component={Link}
-              label="Public dashboard"
-              sx={linkSx}
-            />
-          )}
+          {/* Public dashboard — link on sub-pages, plain text on the dashboard itself.
+               Only rendered for pages that actually live under /public. */}
+          {isUnderPublicDashboard &&
+            (isPublicDashboard ? (
+              <StyledBreadcrumb
+                component={Typography}
+                sx={currentSx}
+                label={
+                  <BCTypography variant="body2" color="text.secondary">
+                    Public dashboard
+                  </BCTypography>
+                }
+              />
+            ) : (
+              <StyledBreadcrumb
+                to="/public"
+                component={Link}
+                label="Public dashboard"
+                sx={linkSx}
+              />
+            ))}
 
           {/* Current page — only shown on sub-pages */}
           {!isPublicDashboard &&

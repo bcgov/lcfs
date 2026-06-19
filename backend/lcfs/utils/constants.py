@@ -103,6 +103,7 @@ transaction_type_to_id_prefix_map = {
     "InitiativeAgreement": "IA",
     "ComplianceReport": "CR",
     "StandaloneTransaction": "ST",
+    "AggregatorIssuance": "AG",
 }
 
 id_prefix_to_transaction_type_map = {
@@ -111,6 +112,7 @@ id_prefix_to_transaction_type_map = {
     "IA": "InitiativeAgreement",
     "CR": "ComplianceReport",
     "ST": "StandaloneTransaction",
+    "AG": "AggregatorIssuance",
 }
 FUEL_CATEGORIES = ["Diesel", "Gasoline", "Jet fuel"]
 
