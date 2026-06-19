@@ -7,8 +7,8 @@ QuantityUnitsEnum (L, kg, kWh, Gj, m³), matching how fuel codes model a
 facility nameplate capacity unit.
 
 Revision ID: f3a8c1d2e4b5
-Revises: e5f7a9b1c3d4
-Create Date: 2026-06-15 00:00:00.000000
+Revises: d9c8b7a6e5f4
+Create Date: 2026-06-17 00:00:00.000000
 """
 
 from alembic import op
@@ -17,7 +17,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "f3a8c1d2e4b5"
-down_revision = "e5f7a9b1c3d4"
+down_revision = "d9c8b7a6e5f4"
 branch_labels = None
 depends_on = None
 
