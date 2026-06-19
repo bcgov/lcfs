@@ -8,7 +8,7 @@ import pytest
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.ci_application import CIApplication, CIApplicationStatus
-from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
@@ -64,10 +64,6 @@ def _status(name="Draft", ident=1):
     )
 
 
-def _uom(uom_id=1, name="Litres"):
-    return UnitOfMeasure(uom_id=uom_id, name=name, description=name)
-
-
 def _organization(org_id=1, name="Fuel Producer Ltd."):
     return SimpleNamespace(
         organization_id=org_id,
@@ -94,7 +90,7 @@ def _ci_application(
 ):
     status = status or _status()
     organization = organization or _organization()
-    unit = unit or _uom()
+    unit = unit or QuantityUnitsEnum.Litres
     return SimpleNamespace(
         ci_application_id=ci_application_id,
         organization_id=organization.organization_id,
@@ -106,7 +102,6 @@ def _ci_application(
         facility_country="Argentina",
         facility_iso="AR",
         facility_nameplate_capacity=1000,
-        facility_nameplate_capacity_unit_id=unit.uom_id,
         facility_nameplate_capacity_unit=unit,
         proposed_fuel_code_effective_date=date(2026, 6, 1),
         pathway_description=None,
@@ -131,7 +126,7 @@ def _step1_payload(**overrides):
         facility_country="Argentina",
         facility_iso="AR",
         facility_nameplate_capacity=1000,
-        facility_nameplate_capacity_unit_id=1,
+        facility_nameplate_capacity_unit="L",
         proposed_fuel_code_effective_date=date(2026, 6, 1),
     )
     base.update(overrides)
@@ -152,8 +147,6 @@ async def test_get_table_options_returns_lookup_data(service, repo):
         _status("Completed", 4),
         _status("Withdrawn", 5),
     ]
-    repo.get_units_of_measure.return_value = [_uom(1, "Litres"), _uom(2, "Kilograms")]
-
     result = await service.get_table_options()
 
     assert isinstance(result, CITableOptionsSchema)
@@ -164,7 +157,7 @@ async def test_get_table_options_returns_lookup_data(service, repo):
         CIApplicationStatusEnum.Completed,
         CIApplicationStatusEnum.Withdrawn,
     ]
-    assert {u.name for u in result.units_of_measure} == {"Litres", "Kilograms"}
+    assert set(result.units_of_measure) == {u.value for u in QuantityUnitsEnum}
 
 
 # ---------------------------------------------------------------------------
@@ -232,7 +225,7 @@ async def test_get_ci_application_returns_full_schema(service, repo):
         result.organization.address_line
         == "123 Main St, Suite 200, Victoria, BC, Canada, V8V 1A1"
     )
-    assert result.facility_nameplate_capacity_unit.name == "Litres"
+    assert result.facility_nameplate_capacity_unit == "L"
 
 
 @pytest.mark.anyio
@@ -312,7 +305,7 @@ async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_u
         facility_country="Canada",
         facility_iso="CA",
         facility_nameplate_capacity=2500,
-        facility_nameplate_capacity_unit_id=2,
+        facility_nameplate_capacity_unit="kg",
         proposed_fuel_code_effective_date=date(2027, 1, 1),
     )
 
@@ -321,7 +314,7 @@ async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_u
     assert ci.facility_city == "Vancouver"
     assert ci.facility_country == "Canada"
     assert ci.facility_nameplate_capacity == 2500
-    assert ci.facility_nameplate_capacity_unit_id == 2
+    assert ci.facility_nameplate_capacity_unit == QuantityUnitsEnum.Kilograms
     assert ci.action_type == ActionTypeEnum.UPDATE
     assert ci.update_user == "ci_applicant_user"
     assert isinstance(result, CIApplicationSchema)
