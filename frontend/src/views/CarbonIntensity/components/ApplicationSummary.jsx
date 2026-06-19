@@ -141,7 +141,7 @@ export const ApplicationSummary = ({
   const capacity =
     ciApplication.facilityNameplateCapacity != null
       ? `${ciApplication.facilityNameplateCapacity.toLocaleString()} ${
-          ciApplication.facilityNameplateCapacityUnit?.name || ''
+          ciApplication.facilityNameplateCapacityUnit || ''
         }`.trim()
       : ''
 

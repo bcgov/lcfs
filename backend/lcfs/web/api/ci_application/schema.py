@@ -18,6 +18,7 @@ from pydantic import EmailStr, Field, field_validator, model_validator
 
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.api.fuel_code.schema import (
     CoProcessedEnumSchema,
     FuelTypeQuantityUnitsEnumSchema,
@@ -51,12 +52,6 @@ class CIRiskAssessmentEnum(str, Enum):
 class CIApplicationStatusSchema(BaseSchema):
     ci_application_status_id: int
     status: CIApplicationStatusEnum
-    description: Optional[str] = None
-
-
-class UnitOfMeasureSchema(BaseSchema):
-    uom_id: int
-    name: str
     description: Optional[str] = None
 
 
@@ -153,7 +148,7 @@ class CITableOptionsSchema(BaseSchema):
     """Reference data needed to render the CI application forms."""
 
     statuses: List[CIApplicationStatusSchema]
-    units_of_measure: List[UnitOfMeasureSchema]
+    units_of_measure: List[str]
     pathway_application_types: List[PathwayApplicationTypeSchema] = []
     pathway_fuel_code_types: List[PathwayFuelCodeTypeSchema] = []
     fuel_types: List[FuelTypeOptionSchema] = []
@@ -180,7 +175,7 @@ class CIApplicationStep1Schema(BaseSchema):
     facility_country: str = Field(..., max_length=500)
     facility_iso: Optional[str] = Field(default=None, max_length=10)
     facility_nameplate_capacity: int = Field(..., gt=0)
-    facility_nameplate_capacity_unit_id: int
+    facility_nameplate_capacity_unit: FuelTypeQuantityUnitsEnumSchema
     proposed_fuel_code_effective_date: Optional[date] = None
 
 
@@ -361,7 +356,7 @@ class CIApplicationBaseSchema(BaseSchema):
     facility_province_state: Optional[str] = None
     facility_country: Optional[str] = None
     facility_nameplate_capacity: Optional[int] = None
-    facility_nameplate_capacity_unit_id: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[str] = None
     proposed_fuel_code_effective_date: Optional[date] = None
     preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
     priority_score: Optional[int] = None
@@ -388,8 +383,7 @@ class CIApplicationSchema(BaseSchema):
     facility_country: Optional[str] = None
     facility_iso: Optional[str] = None
     facility_nameplate_capacity: Optional[int] = None
-    facility_nameplate_capacity_unit_id: Optional[int] = None
-    facility_nameplate_capacity_unit: Optional[UnitOfMeasureSchema] = None
+    facility_nameplate_capacity_unit: Optional[str] = None
     proposed_fuel_code_effective_date: Optional[date] = None
 
     # Step 2

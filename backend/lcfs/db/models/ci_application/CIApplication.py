@@ -4,6 +4,7 @@ from sqlalchemy import (
     String,
     Text,
     Date,
+    Enum,
     Boolean,
     ForeignKey,
     Table,
@@ -13,6 +14,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, Versioning
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 
 # Association table linking CI applications to uploaded documents
 ci_application_document_association = Table(
@@ -127,10 +129,9 @@ class CIApplication(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Annual nameplate capacity of the fuel production facility",
     )
-    facility_nameplate_capacity_unit_id = Column(
-        Integer,
-        ForeignKey("unit_of_measure.uom_id"),
-        nullable=False,
+    facility_nameplate_capacity_unit = Column(
+        Enum(QuantityUnitsEnum),
+        nullable=True,
         comment="Unit of measure for the facility nameplate capacity",
     )
 
@@ -300,10 +301,6 @@ class CIApplication(BaseModel, Auditable, Versioning):
     assigned_analyst = relationship(
         "UserProfile",
         foreign_keys=[assigned_analyst_id],
-        lazy="selectin",
-    )
-    facility_nameplate_capacity_unit = relationship(
-        "UnitOfMeasure",
         lazy="selectin",
     )
     assigned_analyst = relationship(

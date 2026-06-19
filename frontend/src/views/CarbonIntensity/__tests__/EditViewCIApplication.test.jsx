@@ -74,7 +74,7 @@ const mockDelete = vi.fn().mockResolvedValue(undefined)
 const mockOptions = {
   data: {
     statuses: [],
-    unitsOfMeasure: [{ uomId: 1, name: 'Litres' }]
+    unitsOfMeasure: ['L']
   },
   isLoading: false
 }
@@ -164,7 +164,7 @@ vi.mock(
             onSave({
               facilityCountry: 'Argentina',
               facilityNameplateCapacity: 1000,
-              facilityNameplateCapacityUnitId: 1
+              facilityNameplateCapacityUnit: 'L'
             })
           }
         >

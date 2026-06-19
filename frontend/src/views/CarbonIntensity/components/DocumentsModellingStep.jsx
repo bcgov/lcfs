@@ -13,8 +13,7 @@ import {
 } from '@mui/material'
 import {
   CloudUpload as CloudUploadIcon,
-  Delete as DeleteIcon,
-  FileDownload as FileDownloadIcon
+  Delete as DeleteIcon
 } from '@mui/icons-material'
 
 import BCAlert from '@/components/BCAlert'
@@ -25,13 +24,11 @@ import {
   COMPLIANCE_REPORT_FILE_TYPES,
   MAX_FILE_SIZE_BYTES
 } from '@/constants/common'
-import { apiRoutes } from '@/constants/routes'
 import {
   useDeleteDocument,
   useDocuments,
   useUploadDocument
 } from '@/hooks/useDocuments'
-import { useApiService } from '@/services/useApiService'
 import colors from '@/themes/base/colors'
 import { validateFile } from '@/utils/fileValidation'
 
@@ -61,7 +58,6 @@ export const DocumentsModellingStep = ({
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const ciApplicationId = ciApplication?.ciApplicationId
-  const apiClient = useApiService()
 
   const supportingFileRef = useRef(null)
   const ghgeniusFileRef = useRef(null)
@@ -343,24 +339,6 @@ export const DocumentsModellingStep = ({
         >
           {t('carbonIntensity:step3.uploadGHGenius')}
         </BCButton>
-        <BCButton
-          type="button"
-          variant="outlined"
-          color="primary"
-          size="medium"
-          startIcon={
-            <FileDownloadIcon sx={{ fontSize: '1.5rem !important' }} />
-          }
-          onClick={async () => {
-            await apiClient.download({
-              url: apiRoutes.ciApplicationGHGeniusTemplate,
-              method: 'get'
-            })
-          }}
-          data-test="ci-step3-download-template"
-        >
-          {t('carbonIntensity:step3.downloadTemplate')}
-        </BCButton>
         <input
           ref={ghgeniusFileRef}
           type="file"
@@ -370,84 +348,6 @@ export const DocumentsModellingStep = ({
           data-test="ci-step3-ghgenius-input"
         />
       </Stack>
-
-      <BCTypography
-        variant="body2"
-        sx={{ fontWeight: 600, mb: 1 }}
-        data-test="ci-step3-modelling-instructions-header"
-      >
-        {t('carbonIntensity:step3.modellingInstructions.header')}
-      </BCTypography>
-      <BCTypography variant="body2" sx={{ mb: 0.5 }}>
-        {t('carbonIntensity:step3.modellingInstructions.inputsIntro')}
-      </BCTypography>
-      <Box component="ul" sx={{ pl: 3, mb: 1.5 }}>
-        <li>
-          <BCTypography variant="body2">
-            {t('carbonIntensity:step3.modellingInstructions.inputs.region')}
-          </BCTypography>
-        </li>
-        <li>
-          <BCTypography variant="body2">
-            {t('carbonIntensity:step3.modellingInstructions.inputs.grouping')}
-          </BCTypography>
-        </li>
-        <li>
-          <BCTypography variant="body2">
-            {t('carbonIntensity:step3.modellingInstructions.inputs.ordering')}
-          </BCTypography>
-        </li>
-        <li>
-          <BCTypography variant="body2">
-            {t(
-              'carbonIntensity:step3.modellingInstructions.inputs.descriptors'
-            )}
-          </BCTypography>
-        </li>
-      </Box>
-      <BCTypography variant="body2" sx={{ mb: 0.5 }}>
-        {t('carbonIntensity:step3.modellingInstructions.outputsIntro')}
-      </BCTypography>
-      <Box component="ul" sx={{ pl: 3, mb: 2 }}>
-        <li>
-          <BCTypography variant="body2">
-            {t(
-              'carbonIntensity:step3.modellingInstructions.outputs.copyFromTab'
-            )}
-          </BCTypography>
-        </li>
-        <li>
-          <BCTypography variant="body2">
-            {t(
-              'carbonIntensity:step3.modellingInstructions.outputs.columnLabel'
-            )}
-          </BCTypography>
-        </li>
-        <li>
-          <BCTypography variant="body2">
-            {t(
-              'carbonIntensity:step3.modellingInstructions.outputs.outOfModel'
-            )}
-          </BCTypography>
-        </li>
-        <li>
-          <BCTypography variant="body2">
-            {t(
-              'carbonIntensity:step3.modellingInstructions.outputs.sampleTable'
-            )}{' '}
-            <Link
-              href="https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/electricity-alternative-energy/transportation/renewable-low-carbon-fuels/rlcf-008.pdf"
-              target="_blank"
-              rel="noopener"
-              underline="always"
-            >
-              {t(
-                'carbonIntensity:step3.modellingInstructions.outputs.rlcfLink'
-              )}
-            </Link>
-          </BCTypography>
-        </li>
-      </Box>
 
       {!hasGHGeniusModel && (
         <BCTypography variant="body2" color="error" sx={{ mb: 2 }}>

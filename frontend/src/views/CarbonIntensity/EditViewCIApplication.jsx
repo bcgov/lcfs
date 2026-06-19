@@ -372,6 +372,7 @@ const EditViewCIApplicationBase = () => {
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
         readOnly={!isDraft}
+        showTitle={false}
       />
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step3" />
@@ -504,7 +505,9 @@ const EditViewCIApplicationBase = () => {
                   color="primary"
                   component="div"
                 >
-                  {t('carbonIntensity:step5.commentsToOrganizationHeader')}
+                  {isGovernment
+                    ? t('carbonIntensity:step5.commentsToOrganizationHeader')
+                    : t('carbonIntensity:step5.commentsToGovernmentHeader')}
                 </BCTypography>
               </AccordionSummary>
               <AccordionDetails>
