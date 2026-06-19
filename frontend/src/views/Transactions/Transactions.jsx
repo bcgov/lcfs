@@ -111,8 +111,11 @@ export const Transactions = () => {
   }, [])
 
   const shouldRenderLink = (props) => {
-    // Legacy/Standalone transactions have no detail view page
-    if (props.data.transactionType === 'StandaloneTransaction') {
+    // Legacy/Standalone and Aggregator Issuance transactions have no detail view page
+    if (
+      props.data.transactionType === 'StandaloneTransaction' ||
+      props.data.transactionType === 'AggregatorIssuance'
+    ) {
       return false
     }
     return (

@@ -114,7 +114,7 @@ const CIApplicationsBase = () => {
         mt={4}
         mb={2}
       >
-        <Role roles={[roles.ci_applicant, roles.signing_authority]}>
+        <Role roles={[roles.ci_applicant]}>
           <BCButton
             variant="contained"
             size="small"
@@ -157,7 +157,7 @@ const CIApplicationsBase = () => {
 
 export const CIApplications = withRole(
   CIApplicationsBase,
-  [roles.ci_applicant, roles.signing_authority, roles.government],
+  [roles.ci_applicant, roles.government],
   ROUTES.DASHBOARD
 )
 CIApplications.displayName = 'CIApplications'

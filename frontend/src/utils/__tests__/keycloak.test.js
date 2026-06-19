@@ -7,20 +7,22 @@ vi.mock('keycloak-js', () => {
     .fn()
     .mockImplementation(() => Promise.resolve(true))
   return {
-    default: vi.fn().mockImplementation(() => ({
-      clientId: 'mock-client-id',
-      authenticated: true,
-      token: 'mock-token',
-      idToken: 'mock-id-token',
-      tokenParsed: {
-        exp: Math.floor(Date.now() / 1000) + 300, // 5 minutes expiry
-        idToken: 'mock-id-token'
-      },
-      updateToken: mockUpdateToken,
-      endpoints: {
-        logout: () => 'mock-logout-endpoint'
+    default: vi.fn().mockImplementation(function () {
+      return {
+        clientId: 'mock-client-id',
+        authenticated: true,
+        token: 'mock-token',
+        idToken: 'mock-id-token',
+        tokenParsed: {
+          exp: Math.floor(Date.now() / 1000) + 300, // 5 minutes expiry
+          idToken: 'mock-id-token'
+        },
+        updateToken: mockUpdateToken,
+        endpoints: {
+          logout: () => 'mock-logout-endpoint'
+        }
       }
-    }))
+    })
   }
 })
 
