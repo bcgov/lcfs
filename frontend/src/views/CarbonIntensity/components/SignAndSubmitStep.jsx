@@ -15,7 +15,6 @@ import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import colors from '@/themes/base/colors'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -109,10 +108,6 @@ export const SignAndSubmitStep = ({
 
   return (
     <Box>
-      <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
-        {t('carbonIntensity:step4.title')}
-      </BCTypography>
-
       <BCTypography
         variant="subtitle1"
         sx={{ fontWeight: 600, mb: 1 }}
@@ -305,7 +300,7 @@ export const SignAndSubmitStep = ({
           variant="contained"
           color="primary"
           onClick={handleSubmit}
-          disabled={readOnly || isSaving}
+          disabled={readOnly || isSaving || !(decl1 && decl2 && decl3)}
           data-test="ci-step4-submit-btn"
         >
           {t('carbonIntensity:step4.submit')}
