@@ -1,0 +1,48 @@
+# LCFS PR Label Taxonomy
+#
+# These labels are used by .github/release.yml to auto-categorize release notes.
+# Apply at least one "type:" label to every pull request before merging.
+#
+# Sync to the repo via GitHub CLI:
+#   gh label create --repo bcgov/lcfs "type: feature" --color 0075ca --description "New feature or request"
+# Or use a label sync action in CI.
+
+- name: "type: feature"
+  color: "0075ca"
+  description: "New feature or user-facing enhancement"
+
+- name: "type: bug"
+  color: "d73a4a"
+  description: "Something isn't working correctly"
+
+- name: "type: security"
+  color: "e4e669"
+  description: "Security fix or vulnerability patch"
+
+- name: "type: breaking"
+  color: "b60205"
+  description: "Breaking change — requires migration or config update"
+
+- name: "type: chore"
+  color: "e4e4e4"
+  description: "Maintenance, refactoring, or tooling (excluded from release notes)"
+
+- name: "type: ci"
+  color: "f9d0c4"
+  description: "CI/CD pipeline changes (excluded from release notes)"
+
+- name: "type: test"
+  color: "bfd4f2"
+  description: "Test additions or fixes (excluded from release notes)"
+
+- name: "type: dependencies"
+  color: "0366d6"
+  description: "Dependency version bumps"
+
+- name: "type: docs"
+  color: "0075ca"
+  description: "Documentation-only change"
+
+- name: "ignore-for-release"
+  color: "eeeeee"
+  description: "Explicitly exclude this PR from generated release notes"
