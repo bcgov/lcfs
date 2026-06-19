@@ -17,7 +17,6 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationStatusSchema,
     CITableOptionsSchema,
     OrganizationInfoSchema,
-    UnitOfMeasureSchema,
 )
 from lcfs.web.api.base import PaginationResponseSchema
 
@@ -46,10 +45,7 @@ def _table_options() -> CITableOptionsSchema:
                 description="Recommended",
             ),
         ],
-        units_of_measure=[
-            UnitOfMeasureSchema(uom_id=1, name="Litres", description="Litres"),
-            UnitOfMeasureSchema(uom_id=2, name="Kilograms", description="Kilograms"),
-        ],
+        units_of_measure=["L", "kg"],
     )
 
 
@@ -73,10 +69,7 @@ def _ci_full_schema(ci_application_id: int = 10) -> CIApplicationSchema:
         facility_country="Argentina",
         facility_iso="AR",
         facility_nameplate_capacity=1000,
-        facility_nameplate_capacity_unit_id=1,
-        facility_nameplate_capacity_unit=UnitOfMeasureSchema(
-            uom_id=1, name="Litres", description="Litres"
-        ),
+        facility_nameplate_capacity_unit="L",
         proposed_fuel_code_effective_date=date(2026, 6, 1),
     )
 
@@ -93,7 +86,7 @@ def _ci_list_schema() -> CIApplicationsListSchema:
                 ),
                 facility_country="Argentina",
                 facility_nameplate_capacity=1000,
-                facility_nameplate_capacity_unit_id=1,
+                facility_nameplate_capacity_unit="L",
                 proposed_fuel_code_effective_date=date(2026, 6, 1),
                 update_date=datetime(2026, 5, 1, tzinfo=timezone.utc).isoformat(),
                 create_date=datetime(2026, 4, 1, tzinfo=timezone.utc).isoformat(),
@@ -123,7 +116,7 @@ def _step1_payload():
         "facilityCountry": "Argentina",
         "facilityIso": "AR",
         "facilityNameplateCapacity": 1000,
-        "facilityNameplateCapacityUnitId": 1,
+        "facilityNameplateCapacityUnit": "L",
         "proposedFuelCodeEffectiveDate": "2026-06-01",
     }
 

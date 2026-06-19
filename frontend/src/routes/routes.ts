@@ -154,7 +154,9 @@ export const ROUTES = {
   FORMS: {
     VIEW: '/forms/:formSlug/:linkKey',
     VIEW_AUTHENTICATED: '/forms/:formSlug'
-  }
+  },
+
+  RELEASE_NOTES: '/release-notes'
 } as const
 
 export type RoutesType = typeof ROUTES

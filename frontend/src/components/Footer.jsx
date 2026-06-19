@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import BCFooter from '@/components/BCFooter'
 
-// /* global __VERSION__ */
+/* global __APP_VERSION__ */
 
-const Footer = (props) => {
+const Footer = () => {
   const links = useMemo(
     () => [
       {
@@ -53,10 +53,10 @@ const Footer = (props) => {
   )
   const repoDetails = useMemo(
     () => ({
-      href: 'https://github.com/bcgov/lcfs/releases/tag/v1.3.3',
-      name: 'v1.3.3',
-      id: 'footer-about-version',
-      label: 'LCFS repository changelog'
+      route: '/release-notes',
+      name: `v${__APP_VERSION__} — Release Notes`,
+      id: 'footer-release-notes',
+      label: 'LCFS application release notes'
     }),
     []
   )

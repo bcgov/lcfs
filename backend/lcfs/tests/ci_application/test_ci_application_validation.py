@@ -7,6 +7,7 @@ import pytest
 from fastapi import HTTPException, status
 
 from lcfs.db.models.ci_application import CIApplication
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.ci_application.validation import CIApplicationValidation
 
@@ -34,7 +35,7 @@ def _application(application_id=10, organization_id=1):
         status_id=1,
         facility_country="Argentina",
         facility_nameplate_capacity=1000,
-        facility_nameplate_capacity_unit_id=1,
+        facility_nameplate_capacity_unit=QuantityUnitsEnum.Litres,
         group_uuid="abc",
         version=0,
     )
