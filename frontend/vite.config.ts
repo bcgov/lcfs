@@ -4,13 +4,22 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import svgr from 'vite-plugin-svgr'
 import path from 'path'
+import { readFileSync, existsSync } from 'fs'
+import { fileURLToPath } from 'url'
+
+const releaseNotesPath = fileURLToPath(
+  new URL('./public/release-notes.json', import.meta.url)
+)
+const appVersion: string = existsSync(releaseNotesPath)
+  ? (JSON.parse(readFileSync(releaseNotesPath, 'utf-8'))[0]?.version ?? '0.0.0')
+  : '0.0.0'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    svgr()
-  ],
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion)
+  },
+  plugins: [react(), svgr()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
