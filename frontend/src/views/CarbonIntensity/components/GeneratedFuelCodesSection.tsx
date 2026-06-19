@@ -18,13 +18,15 @@ type GeneratedFuelCodesSectionProps = {
   readOnly?: boolean
 }
 
+const getValidationStatus = (row: any) => {
+  if (row?.isValid) return 'success'
+  if (row?.validationMsg) return 'warning'
+  return undefined
+}
+
 const toGridRow = (row: any) => ({
   ...row,
-  validationStatus: row?.isValid
-    ? 'success'
-    : row?.validationMsg
-      ? 'warning'
-      : undefined
+  validationStatus: getValidationStatus(row)
 })
 
 const toUpdatePayload = (row: any) => {

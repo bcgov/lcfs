@@ -741,7 +741,7 @@ export const ApplicationSummary = ({
       )}
       {!isEditingPathways && hasPathwayChangelogEntries && (
         <FormControlLabel
-          sx={{ display: 'flex', width: 'fit-content', mb: 2 }}
+          sx={{ display: 'flex', width: 'fit-content', mb: 2, '& .MuiFormControlLabel-label': { mt: 0.8 } }}
           control={
             <Switch
               checked={showPathwayChangelog}
