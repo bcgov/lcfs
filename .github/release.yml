@@ -1,0 +1,37 @@
+# GitHub Automatic Release Notes Categorization
+# https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+#
+# Pull requests are categorized by their labels. Apply labels defined in
+# .github/labels.yml before merging. PRs without a matching label fall
+# into "Other Changes", which is still included in release notes.
+
+changelog:
+  exclude:
+    labels:
+      - "type: chore"
+      - "type: ci"
+      - "type: test"
+      - "ignore-for-release"
+  categories:
+    - title: "🚀 New Features"
+      labels:
+        - "type: feature"
+        - "enhancement"
+    - title: "🐛 Bug Fixes"
+      labels:
+        - "type: bug"
+        - "bug"
+    - title: "🔒 Security"
+      labels:
+        - "type: security"
+        - "security"
+    - title: "⚠️ Breaking Changes"
+      labels:
+        - "type: breaking"
+    - title: "📦 Dependencies"
+      labels:
+        - "dependencies"
+        - "type: dependencies"
+    - title: "🔄 Other Changes"
+      labels:
+        - "*"

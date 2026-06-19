@@ -65,9 +65,11 @@ describe('DocumentsModellingStep', () => {
       screen.getByTestId('ci-step3-upload-supporting')
     ).toBeInTheDocument()
     expect(screen.getByTestId('ci-step3-upload-ghgenius')).toBeInTheDocument()
+    // The download-template button was removed (ticket #4534) — the template
+    // is now provided earlier in the process.
     expect(
-      screen.getByTestId('ci-step3-download-template')
-    ).toBeInTheDocument()
+      screen.queryByTestId('ci-step3-download-template')
+    ).not.toBeInTheDocument()
     expect(
       screen.getByTestId('ci-step3-other-description')
     ).toBeInTheDocument()

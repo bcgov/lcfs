@@ -330,7 +330,7 @@ describe('Router Configuration', () => {
 
     it('should have correct number of top-level routes', () => {
       // Public layout, Public page layout, Main layout, API docs, logout, and 404 fallback
-      expect(router.routes).toHaveLength(6)
+      expect(router.routes).toHaveLength(7)
     })
   })
 

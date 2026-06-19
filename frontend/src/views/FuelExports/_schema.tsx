@@ -469,7 +469,7 @@ export const fuelExportColDefs = (
   {
     field: 'units',
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
-    minWidth: 100,
+    minWidth: 200,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
       options: ['L', 'kg', 'kWh', 'm³ (15°C and 1 atm)'],
@@ -738,7 +738,7 @@ export const fuelExportSummaryColDefs = (
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
     field: 'units',
-    minWidth: 80
+    minWidth: 200
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
@@ -857,7 +857,7 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
     field: 'units',
-    minWidth: 80,
+    minWidth: 200,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
   },
   {

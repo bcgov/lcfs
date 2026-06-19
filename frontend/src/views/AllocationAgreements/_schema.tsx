@@ -474,7 +474,7 @@ export const allocationAgreementColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       editable: false,
-      minWidth: 80
+      minWidth: 200
     }
   ]
 
@@ -706,7 +706,7 @@ export const allocationAgreementSummaryColDef = (
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.units'
       ),
-      minWidth: 80,
+      minWidth: 200,
       field: 'units'
     }
   ]
@@ -897,7 +897,7 @@ export const changelogCommonColDefs = (
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.units'
       ),
-      minWidth: 80,
+      minWidth: 200,
       field: 'units',
       cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
     }
@@ -1172,6 +1172,7 @@ export const allocAgrmtSummaryColDefs = (
   },
   {
     headerName: t('allocationAgreement:allocationAgreementColLabels.units'),
-    field: 'units'
+    field: 'units',
+    minWidth: 200
   }
 ]
