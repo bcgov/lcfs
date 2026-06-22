@@ -528,6 +528,85 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
 
 
 @pytest.mark.anyio
+async def test_get_total_kwh_usage_for_report_sums_same_view_and_filters(repo, fake_db):
+    """
+    The header total must sum kwh_usage over the exact same pref-view rows
+    (and identical filters) that the reporting list / Excel export returns, so
+    the displayed total cannot diverge from the rows it summarizes.
+    """
+    fake_db.scalar.return_value = 1234.5
+
+    result = await repo.get_total_kwh_usage_for_report(1, 10, "summary")
+
+    assert result == 1234.5
+
+    stmt = fake_db.scalar.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    # Same source view as the list query, summing the kWh column.
+    assert "v_fse_reporting_base_pref" in compiled
+    assert "sum(v_fse_reporting_base_pref.kwh_usage)" in compiled
+    # Same scoping/filters as the list query, including the summary is_active
+    # filter so active-only rows are counted exactly as the table shows them.
+    assert "compliance_report_id = 10" in compiled
+    assert "Decommissioned" in compiled
+    assert "charging_equipment_compliance_id IS NOT NULL" in compiled
+    assert "is_active IS true" in compiled
+
+
+@pytest.mark.anyio
+async def test_get_total_kwh_usage_for_report_excludes_is_active_when_not_summary(
+    repo, fake_db
+):
+    """In non-summary mode the inactive filter is not applied (mirrors the list)."""
+    fake_db.scalar.return_value = 0
+
+    result = await repo.get_total_kwh_usage_for_report(1, 10, "all")
+
+    assert result == 0.0
+
+    stmt = fake_db.scalar.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "is_active IS true" not in compiled
+
+
+@pytest.mark.anyio
+async def test_effective_fse_export_rows_match_total_view_and_filters(repo, fake_db):
+    """
+    The supplier (BCeID) export must draw its row set + kWh from the SAME
+    pref-view rows and SAME summary filters as the header total / UI table /
+    government export, so the supplier's Excel sum cannot diverge from the
+    total shown above the table. Equipment metadata is enriched from the latest
+    version via COALESCE.
+    """
+    data_result = MagicMock()
+    data_result.fetchall.return_value = []
+    fake_db.execute.return_value = data_result
+
+    await repo.get_effective_fse_reporting_rows_for_export(
+        organization_id=1,
+        compliance_report_id=1,
+        compliance_report_group_uuid="group-1",
+    )
+
+    stmt = fake_db.execute.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+    # kWh + row set come from the same view + summary filters as the total.
+    assert "v_fse_reporting_base_pref" in compiled
+    assert "v_fse_reporting_base_pref.kwh_usage" in compiled
+    assert "v_fse_reporting_base_pref.compliance_report_id = 1" in compiled
+    assert "Decommissioned" in compiled
+    assert "charging_equipment_compliance_id IS NOT NULL" in compiled
+    assert "is_active IS true" in compiled
+    # The old group-uuid-scoped hand-rolled selection is gone; scoping is by
+    # compliance_report_id via the view (consistent with the total).
+    assert "compliance_report_group_uuid" not in compiled
+    # Equipment metadata is enriched from the latest equipment version.
+    assert "latest_equipment_export" in compiled
+    assert "coalesce" in compiled.lower()
+
+
+@pytest.mark.anyio
 async def test_has_decommissioned_fse_in_report_true(repo, fake_db):
     fake_db.scalar.return_value = 1
 
