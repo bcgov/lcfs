@@ -1,0 +1,28 @@
+{
+  "pageTitle": "Release Notes",
+  "pageSubtitle": "Track new features, improvements, and fixes to the Low Carbon Fuel Standard portal.",
+  "loadError": "Unable to load release notes. Please try refreshing the page.",
+  "noReleases": "No release notes are available yet.",
+  "noChangesInRelease": "No categorized changes recorded for this release.",
+  "viewOnGitHub": "View release on GitHub",
+  "fullChangelog": "Full changelog",
+  "contributors": "Contributors",
+  "summaryLabel": "What's in this release",
+  "searchPlaceholder": "Search releases\u2026",
+  "searchNoResults": "No releases match \u201c{{query}}\u201d.",
+  "noFilterResults": "No releases contain {{category}} changes.",
+  "expandAll": "Expand all",
+  "collapseAll": "Collapse all",
+  "filterLabel": "Category",
+  "filterAll": "All categories",
+  "copyLink": "Copy link",
+  "linkCopied": "Link copied!",
+  "categories": {
+    "features": "Features",
+    "fixes": "Bug Fixes",
+    "security": "Security",
+    "breaking": "Breaking Changes",
+    "dependencies": "Dependencies",
+    "other": "Other"
+  }
+}

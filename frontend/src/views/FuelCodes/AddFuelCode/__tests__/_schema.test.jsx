@@ -71,6 +71,40 @@ describe('fuelCodeColDefs', () => {
     columnDefs = fuelCodeColDefs(mockOptionsData, {}, true, true, false, true)
   })
 
+  it('should handle option data that has not loaded yet', () => {
+    expect(() =>
+      fuelCodeColDefs(undefined, {}, false, true, false, true)
+    ).not.toThrow()
+
+    const loadingColumnDefs = fuelCodeColDefs(
+      undefined,
+      {},
+      false,
+      true,
+      false,
+      true
+    )
+
+    expect(
+      loadingColumnDefs.find((col) => col.field === 'feedstock')
+        .cellEditorParams.options
+    ).toEqual([])
+    expect(
+      loadingColumnDefs.find((col) => col.field === 'formerCompany')
+        .cellEditorParams.options
+    ).toEqual([])
+    expect(
+      loadingColumnDefs
+        .find((col) => col.field === 'prefix')
+        .valueGetter({ data: { prefixId: 1, prefix: 'BCLCF' } })
+    ).toBe('BCLCF')
+    expect(
+      loadingColumnDefs
+        .find((col) => col.field === 'fuelType')
+        .valueGetter({ data: { fuelTypeId: 1, fuelType: 'Diesel' } })
+    ).toBe('Diesel')
+  })
+
   describe('fuelProductionFacilityCountry field', () => {
     let countryColumn
 
