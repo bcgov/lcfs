@@ -295,6 +295,13 @@ def _verification_level_from_progress(ci: CIApplication) -> Optional[str]:
     return None
 
 
+def _effective_priority_score(ci: CIApplication) -> Optional[int]:
+    verification_2_score = getattr(ci, "verification_2_priority_score", None)
+    if verification_2_score is not None:
+        return verification_2_score
+    return getattr(ci, "priority_score", None)
+
+
 def _to_list_item(
     ci: CIApplication,
     last_comment_entry: Optional[Tuple] = None,
@@ -328,7 +335,7 @@ def _to_list_item(
         create_date=ci.create_date.isoformat() if ci.create_date else None,
         assigned_analyst=_to_assigned_analyst(getattr(ci, "assigned_analyst", None)),
         last_comment=last_comment,
-        priority_score=getattr(ci, "priority_score", None),
+        priority_score=_effective_priority_score(ci),
         verification_level=_verification_level_from_progress(ci),
     )
 
