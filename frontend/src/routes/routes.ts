@@ -51,7 +51,8 @@ export const ROUTES = {
     ADD_USER: '/organization/add-user',
     VIEW_USER: '/organization/users/:userID',
     EDIT_USER: '/organization/users/:userID/edit',
-    CREDIT_LEDGER: '/organization/credit-ledger'
+    CREDIT_LEDGER: '/organization/credit-ledger',
+    COMMENT_LOG: '/organization/comment-log'
   },
 
   ORGANIZATIONS: {
@@ -68,7 +69,8 @@ export const ROUTES = {
     PENALTY_LOG: '/organizations/:orgID/penalty-log',
     PENALTY_LOG_MANAGE: '/organizations/:orgID/penalty-log/manage',
     SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
-    COMPLIANCE_TRACKING: '/organizations/:orgID/compliance-tracking'
+    COMPLIANCE_TRACKING: '/organizations/:orgID/compliance-tracking',
+    COMMENT_LOG: '/organizations/:orgID/comment-log'
   },
 
   REPORTS: {
@@ -153,7 +155,9 @@ export const ROUTES = {
   FORMS: {
     VIEW: '/forms/:formSlug/:linkKey',
     VIEW_AUTHENTICATED: '/forms/:formSlug'
-  }
+  },
+
+  RELEASE_NOTES: '/release-notes'
 } as const
 
 export type RoutesType = typeof ROUTES

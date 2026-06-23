@@ -44,6 +44,9 @@ export const apiRoutes = {
   organizationPenaltyLogsList: '/organizations/:orgID/penalties/logs/list',
   organizationPenaltyLogs: '/organizations/:orgID/penalties/logs',
   organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
+  organizationComments: '/organizations/:orgID/comments',
+  commentCategories: '/internal_comments/categories',
+  internalComment: '/internal_comments/:commentId',
   creditMarketAuditLogsList: '/organizations/credit-market-audit-logs/list',
 
   // transactions
@@ -95,6 +98,8 @@ export const apiRoutes = {
   completeCIApplicationVerification2:
     '/ci-applications/:ciApplicationId/verification-2',
   recommendCIApplication: '/ci-applications/:ciApplicationId/recommend',
+  requestCIApplicationPathwayChanges:
+    '/ci-applications/:ciApplicationId/request-pathway-changes',
   generateCIApplicationFuelCodes:
     '/ci-applications/:ciApplicationId/fuel-codes/generate',
   updateCIApplicationGeneratedFuelCode:

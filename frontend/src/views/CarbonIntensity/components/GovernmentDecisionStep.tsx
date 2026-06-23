@@ -21,6 +21,7 @@ import {
   useCompleteCIApplicationVerification2,
   useGenerateCIApplicationFuelCodes,
   useRecommendCIApplication,
+  useRequestCIApplicationPathwayChanges,
   useRecordCIDecision
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
@@ -30,9 +31,9 @@ type GovernmentDecisionStepProps = {
   isGovernment?: boolean
   readOnly?: boolean
   onDocumentUploadClick?: (() => void) | null
-  onSupplierRequest?: ((
-    requestType: 'documentation' | 'pathwayChanges'
-  ) => void) | null
+  onSupplierRequest?:
+    | ((requestType: 'documentation' | 'pathwayChanges') => void)
+    | null
   showDecisionPanel?: boolean
   showComments?: boolean
   showTitle?: boolean
@@ -62,6 +63,10 @@ export const GovernmentDecisionStep = ({
     useCompleteCIApplicationVerification2(ciApplicationId)
   const { mutateAsync: recommendToDirector, isPending: isRecommending } =
     useRecommendCIApplication(ciApplicationId)
+  const {
+    mutateAsync: requestPathwayChanges,
+    isPending: isRequestingPathwayChanges
+  } = useRequestCIApplicationPathwayChanges(ciApplicationId)
   const { mutateAsync: generateFuelCodes, isPending: isGeneratingFuelCodes } =
     useGenerateCIApplicationFuelCodes(ciApplicationId)
 
@@ -74,6 +79,7 @@ export const GovernmentDecisionStep = ({
   const hasWorkflowRole = isAnalyst || isComplianceManager || isDirector
   const isRecommended = status === 'Recommended'
   const isSubmitted = status === 'Submitted'
+  const isWithdrawn = status === 'Withdrawn'
   const [riskAssessment, setRiskAssessment] = useState(
     ciApplication?.preliminaryRiskAssessment || 'Low'
   )
@@ -147,7 +153,9 @@ export const GovernmentDecisionStep = ({
     }
   }
 
-  const preliminaryRisk = normalizeRisk(ciApplication?.preliminaryRiskAssessment)
+  const preliminaryRisk = normalizeRisk(
+    ciApplication?.preliminaryRiskAssessment
+  )
   const verification2Risk = normalizeRisk(
     ciApplication?.verification2RiskAssessment
   )
@@ -205,7 +213,10 @@ export const GovernmentDecisionStep = ({
   const handleRequestPathwayChanges = () => {
     setRequestedPathwayChanges(true)
     onSupplierRequest?.('pathwayChanges')
-    recordDecisionFor('Draft')
+    recordWorkflowAction(
+      () => requestPathwayChanges(),
+      t('carbonIntensity:step5.workflowSuccess')
+    )
   }
 
   return (
@@ -443,24 +454,44 @@ export const GovernmentDecisionStep = ({
                     variant="outlined"
                     color="primary"
                     sx={workflowButtonSx}
-                    disabled={readOnly || requestedPathwayChanges || isDeciding}
+                    disabled={
+                      readOnly ||
+                      requestedPathwayChanges ||
+                      !!ciApplication?.pathwayChangesRequestedAt ||
+                      isRequestingPathwayChanges
+                    }
                     onClick={handleRequestPathwayChanges}
                     data-test="ci-request-pathway-changes-btn"
                   >
                     {t('carbonIntensity:step5.requestPathwayChanges')}
                   </BCButton>
-                  <BCButton
-                    type="button"
-                    variant="outlined"
-                    color="error"
-                    sx={workflowButtonSx}
-                    disabled={readOnly || isDeciding}
-                    onClick={() => recordDecisionFor('Withdrawn')}
-                    data-test="ci-step5-withdraw-btn"
-                  >
-                    {t('carbonIntensity:step5.withdrawBtn')}
-                  </BCButton>
                 </>
+              )}
+              {isGovernment && (isSubmitted || isRecommended) && (
+                <BCButton
+                  type="button"
+                  variant="outlined"
+                  color="error"
+                  sx={workflowButtonSx}
+                  disabled={readOnly || isDeciding}
+                  onClick={() => recordDecisionFor('Withdrawn')}
+                  data-test="ci-step5-withdraw-btn"
+                >
+                  {t('carbonIntensity:step5.withdrawBtn')}
+                </BCButton>
+              )}
+              {isGovernment && isWithdrawn && (
+                <BCButton
+                  type="button"
+                  variant="contained"
+                  color="primary"
+                  sx={workflowButtonSx}
+                  disabled={isDeciding}
+                  onClick={() => recordDecisionFor('Submitted')}
+                  data-test="ci-step5-reactivate-btn"
+                >
+                  {t('carbonIntensity:step5.reactivateBtn')}
+                </BCButton>
               )}
               {showDirectorDecisionPanel && (
                 <>

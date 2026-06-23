@@ -156,9 +156,6 @@ export const GeneratedFuelCodesSection = ({
       )}
 
       <Stack spacing={1} sx={{ mb: 2 }}>
-        <BCTypography variant="h6" color="primary">
-          {t('carbonIntensity:step5.generatedFuelCodesHeader')}
-        </BCTypography>
         <BCTypography variant="body2" color="text.secondary">
           {t('carbonIntensity:step5.generatedFuelCodesIntro')}
         </BCTypography>

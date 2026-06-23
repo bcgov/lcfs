@@ -349,7 +349,9 @@ describe('BCPaginationActions', () => {
 
       // Mock current date
       const mockDate = new Date('2023-01-15T10:00:00Z')
-      vi.spyOn(global, 'Date').mockImplementation(() => mockDate)
+      vi.spyOn(global, 'Date').mockImplementation(function () {
+        return mockDate
+      })
       Date.prototype.toISOString = vi.fn(() => '2023-01-15T10:00:00.000Z')
 
       renderWithTheme(<BCPaginationActions {...defaultProps} />)

@@ -110,7 +110,12 @@ SELECT
     quantity,
     price_per_unit * quantity::float AS transfer_value,
     transfer_category.category::text AS transfer_category,
-    transfer.is_a1_category
+    CASE
+        WHEN transfer.is_a1_category IS TRUE THEN TRUE
+        WHEN transfer.agreement_date IS NULL THEN FALSE
+        WHEN ABS(((coalesce(transfer.transaction_effective_date AT TIME ZONE 'UTC', transfer_history.update_date) AT TIME ZONE 'America/Vancouver')::date - transfer.agreement_date::date)::int) <= 30 THEN TRUE
+        ELSE FALSE
+    END AS is_a1_category
 FROM
     transfer
     INNER JOIN transfer_status ON transfer.current_status_id = transfer_status.transfer_status_id

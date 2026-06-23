@@ -74,7 +74,7 @@ const mockDelete = vi.fn().mockResolvedValue(undefined)
 const mockOptions = {
   data: {
     statuses: [],
-    unitsOfMeasure: [{ uomId: 1, name: 'Litres' }]
+    unitsOfMeasure: ['L']
   },
   isLoading: false
 }
@@ -134,7 +134,21 @@ vi.mock('@/views/CarbonIntensity/components/GovernmentDecisionStep', () => ({
 }))
 
 vi.mock('@/views/CarbonIntensity/components/ProposedFuelPathwaysStep', () => ({
-  ProposedFuelPathwaysStep: () => <div data-test="step2-stub" />
+  ProposedFuelPathwaysStep: ({ readOnly }) => (
+    <div data-test="step2-stub" data-read-only={String(readOnly)} />
+  )
+}))
+
+vi.mock('@/views/CarbonIntensity/components/ApplicationSummary', () => ({
+  ApplicationSummary: ({ canEditPathways, onEditPathways }) => (
+    <div data-test="summary-stub">
+      {canEditPathways && (
+        <button data-test="summary-pathways-edit" onClick={onEditPathways}>
+          edit pathways
+        </button>
+      )}
+    </div>
+  )
 }))
 
 // Stub the heavy step component so we can drive its props directly.
@@ -150,7 +164,7 @@ vi.mock(
             onSave({
               facilityCountry: 'Argentina',
               facilityNameplateCapacity: 1000,
-              facilityNameplateCapacityUnitId: 1
+              facilityNameplateCapacityUnit: 'L'
             })
           }
         >
@@ -318,5 +332,32 @@ describe('EditViewCIApplication', () => {
       ROUTES.CI_APPLICATIONS.LIST,
       expect.any(Object)
     )
+  })
+
+  it('enables supplemental pathway editing for a requested Submitted application', async () => {
+    mockParams = { ciApplicationId: '10' }
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Submitted' },
+        pathwayChangesRequestedAt: '2026-06-10T10:00:00Z',
+        pathways: []
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, { wrapper })
+
+    fireEvent.click(await screen.findByTestId('summary-pathways-edit'))
+    await waitFor(() => {
+      expect(
+        screen.getByText('carbonIntensity:summary.editPathways')
+      ).toBeInTheDocument()
+      expect(screen.getByTestId('step2-stub')).toHaveAttribute(
+        'data-read-only',
+        'false'
+      )
+    })
   })
 })

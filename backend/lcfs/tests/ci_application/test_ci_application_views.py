@@ -17,7 +17,6 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationStatusSchema,
     CITableOptionsSchema,
     OrganizationInfoSchema,
-    UnitOfMeasureSchema,
 )
 from lcfs.web.api.base import PaginationResponseSchema
 
@@ -46,10 +45,7 @@ def _table_options() -> CITableOptionsSchema:
                 description="Recommended",
             ),
         ],
-        units_of_measure=[
-            UnitOfMeasureSchema(uom_id=1, name="Litres", description="Litres"),
-            UnitOfMeasureSchema(uom_id=2, name="Kilograms", description="Kilograms"),
-        ],
+        units_of_measure=["L", "kg"],
     )
 
 
@@ -73,10 +69,7 @@ def _ci_full_schema(ci_application_id: int = 10) -> CIApplicationSchema:
         facility_country="Argentina",
         facility_iso="AR",
         facility_nameplate_capacity=1000,
-        facility_nameplate_capacity_unit_id=1,
-        facility_nameplate_capacity_unit=UnitOfMeasureSchema(
-            uom_id=1, name="Litres", description="Litres"
-        ),
+        facility_nameplate_capacity_unit="L",
         proposed_fuel_code_effective_date=date(2026, 6, 1),
     )
 
@@ -93,7 +86,7 @@ def _ci_list_schema() -> CIApplicationsListSchema:
                 ),
                 facility_country="Argentina",
                 facility_nameplate_capacity=1000,
-                facility_nameplate_capacity_unit_id=1,
+                facility_nameplate_capacity_unit="L",
                 proposed_fuel_code_effective_date=date(2026, 6, 1),
                 update_date=datetime(2026, 5, 1, tzinfo=timezone.utc).isoformat(),
                 create_date=datetime(2026, 4, 1, tzinfo=timezone.utc).isoformat(),
@@ -123,7 +116,7 @@ def _step1_payload():
         "facilityCountry": "Argentina",
         "facilityIso": "AR",
         "facilityNameplateCapacity": 1000,
-        "facilityNameplateCapacityUnitId": 1,
+        "facilityNameplateCapacityUnit": "L",
         "proposedFuelCodeEffectiveDate": "2026-06-01",
     }
 
@@ -326,9 +319,7 @@ async def test_update_step1_forbidden_for_government(
     set_user_role,
 ):
     set_user_role(RoleEnum.GOVERNMENT)
-    response = await client.put(
-        "/api/ci-applications/10/step1", json=_step1_payload()
-    )
+    response = await client.put("/api/ci-applications/10/step1", json=_step1_payload())
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -477,6 +468,34 @@ async def test_decision_endpoint_rejects_non_terminal_status(
         "/api/ci-applications/10/decision", json={"status": "Recommended"}
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.anyio
+async def test_request_pathway_changes_endpoint_keeps_submitted_workflow(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.ANALYST)
+    response_schema = _ci_full_schema(10)
+    response_schema.status = CIApplicationStatusSchema(
+        ci_application_status_id=2,
+        status=CIApplicationStatusEnum.Submitted,
+    )
+    with patch(
+        "lcfs.web.api.ci_application.validation.CIApplicationValidation.validate_access",
+        new=AsyncMock(return_value=None),
+    ), patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.request_pathway_changes"
+    ) as svc:
+        svc.return_value = response_schema
+        response = await client.post(
+            "/api/ci-applications/10/request-pathway-changes",
+            json={},
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["status"]["status"] == "Submitted"
 
 
 # The legacy /ci-applications/{id}/comments endpoints were retired when

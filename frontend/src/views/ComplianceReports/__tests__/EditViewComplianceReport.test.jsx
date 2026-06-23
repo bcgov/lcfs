@@ -1487,7 +1487,9 @@ describe('EditViewComplianceReport', () => {
 
         // Mock Date to be January of future year
         const mockDate = new Date(futureYear, 0, 15) // January 15th
-        vi.spyOn(global, 'Date').mockImplementation(() => mockDate)
+        vi.spyOn(global, 'Date').mockImplementation(function () {
+          return mockDate
+        })
 
         const futureDraftReport = {
           ...defaultReportData,
@@ -1519,7 +1521,9 @@ describe('EditViewComplianceReport', () => {
 
         // Mock Date to be January 2025 (after 2024 compliance period)
         const mockDate = new Date(2025, 0, 15) // January 15, 2025
-        vi.spyOn(global, 'Date').mockImplementation(() => mockDate)
+        vi.spyOn(global, 'Date').mockImplementation(function () {
+          return mockDate
+        })
 
         const draftReport = {
           ...defaultReportData,
@@ -1585,7 +1589,9 @@ describe('EditViewComplianceReport', () => {
 
         // Mock Date to be February 2025
         const mockDate = new Date(2025, 1, 15) // February 15, 2025
-        vi.spyOn(global, 'Date').mockImplementation(() => mockDate)
+        vi.spyOn(global, 'Date').mockImplementation(function () {
+          return mockDate
+        })
 
         const draftReport = {
           ...defaultReportData,
@@ -1617,7 +1623,9 @@ describe('EditViewComplianceReport', () => {
 
         // Mock Date to be March 2025 (well past compliance period)
         const mockDate = new Date(2025, 2, 15) // March 15, 2025
-        vi.spyOn(global, 'Date').mockImplementation(() => mockDate)
+        vi.spyOn(global, 'Date').mockImplementation(function () {
+          return mockDate
+        })
 
         const draftReport = {
           ...defaultReportData,
@@ -1650,7 +1658,9 @@ describe('EditViewComplianceReport', () => {
 
         // Mock Date to be January 2025 (11 years after 2014 compliance period)
         const mockDate = new Date(2025, 0, 15) // January 15, 2025
-        vi.spyOn(global, 'Date').mockImplementation(() => mockDate)
+        vi.spyOn(global, 'Date').mockImplementation(function () {
+          return mockDate
+        })
 
         const draftReport = {
           ...defaultReportData,

@@ -8,7 +8,7 @@ import pytest
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.ci_application import CIApplication, CIApplicationStatus
-from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
@@ -64,10 +64,6 @@ def _status(name="Draft", ident=1):
     )
 
 
-def _uom(uom_id=1, name="Litres"):
-    return UnitOfMeasure(uom_id=uom_id, name=name, description=name)
-
-
 def _organization(org_id=1, name="Fuel Producer Ltd."):
     return SimpleNamespace(
         organization_id=org_id,
@@ -94,7 +90,7 @@ def _ci_application(
 ):
     status = status or _status()
     organization = organization or _organization()
-    unit = unit or _uom()
+    unit = unit or QuantityUnitsEnum.Litres
     return SimpleNamespace(
         ci_application_id=ci_application_id,
         organization_id=organization.organization_id,
@@ -106,7 +102,6 @@ def _ci_application(
         facility_country="Argentina",
         facility_iso="AR",
         facility_nameplate_capacity=1000,
-        facility_nameplate_capacity_unit_id=unit.uom_id,
         facility_nameplate_capacity_unit=unit,
         proposed_fuel_code_effective_date=date(2026, 6, 1),
         pathway_description=None,
@@ -131,7 +126,7 @@ def _step1_payload(**overrides):
         facility_country="Argentina",
         facility_iso="AR",
         facility_nameplate_capacity=1000,
-        facility_nameplate_capacity_unit_id=1,
+        facility_nameplate_capacity_unit="L",
         proposed_fuel_code_effective_date=date(2026, 6, 1),
     )
     base.update(overrides)
@@ -152,8 +147,6 @@ async def test_get_table_options_returns_lookup_data(service, repo):
         _status("Completed", 4),
         _status("Withdrawn", 5),
     ]
-    repo.get_units_of_measure.return_value = [_uom(1, "Litres"), _uom(2, "Kilograms")]
-
     result = await service.get_table_options()
 
     assert isinstance(result, CITableOptionsSchema)
@@ -164,7 +157,7 @@ async def test_get_table_options_returns_lookup_data(service, repo):
         CIApplicationStatusEnum.Completed,
         CIApplicationStatusEnum.Withdrawn,
     ]
-    assert {u.name for u in result.units_of_measure} == {"Litres", "Kilograms"}
+    assert set(result.units_of_measure) == {u.value for u in QuantityUnitsEnum}
 
 
 # ---------------------------------------------------------------------------
@@ -197,9 +190,7 @@ async def test_list_ci_applications_passes_org_id(service, repo):
     pagination = PaginationRequestSchema(page=1, size=10)
     await service.list_ci_applications(pagination, organization_id=99)
 
-    repo.list_paginated.assert_awaited_once_with(
-        pagination, 99, exclude_draft=False
-    )
+    repo.list_paginated.assert_awaited_once_with(pagination, 99, exclude_draft=False)
 
 
 @pytest.mark.anyio
@@ -213,9 +204,7 @@ async def test_list_ci_applications_passes_exclude_draft(service, repo):
         pagination, organization_id=None, exclude_draft=True
     )
 
-    repo.list_paginated.assert_awaited_once_with(
-        pagination, None, exclude_draft=True
-    )
+    repo.list_paginated.assert_awaited_once_with(pagination, None, exclude_draft=True)
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +225,7 @@ async def test_get_ci_application_returns_full_schema(service, repo):
         result.organization.address_line
         == "123 Main St, Suite 200, Victoria, BC, Canada, V8V 1A1"
     )
-    assert result.facility_nameplate_capacity_unit.name == "Litres"
+    assert result.facility_nameplate_capacity_unit == "L"
 
 
 @pytest.mark.anyio
@@ -244,6 +233,18 @@ async def test_get_ci_application_missing_raises(service, repo):
     repo.get_by_id.return_value = None
     with pytest.raises(DataNotFoundException):
         await service.get_ci_application(123)
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_rejects_withdrawn_application(service, repo, mock_user):
+    ci = _ci_application(status=_status("Withdrawn", 5))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.assign_analyst_to_application(ci, 12, mock_user)
+
+    assert exc.value.status_code == 400
+    assert "Withdrawn" in exc.value.detail
+    repo.update.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
@@ -304,7 +305,7 @@ async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_u
         facility_country="Canada",
         facility_iso="CA",
         facility_nameplate_capacity=2500,
-        facility_nameplate_capacity_unit_id=2,
+        facility_nameplate_capacity_unit="kg",
         proposed_fuel_code_effective_date=date(2027, 1, 1),
     )
 
@@ -313,7 +314,7 @@ async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_u
     assert ci.facility_city == "Vancouver"
     assert ci.facility_country == "Canada"
     assert ci.facility_nameplate_capacity == 2500
-    assert ci.facility_nameplate_capacity_unit_id == 2
+    assert ci.facility_nameplate_capacity_unit == QuantityUnitsEnum.Kilograms
     assert ci.action_type == ActionTypeEnum.UPDATE
     assert ci.update_user == "ci_applicant_user"
     assert isinstance(result, CIApplicationSchema)
@@ -407,9 +408,7 @@ def _stub_step2_lookups(repo, *, with_fuel_code=False):
 
 
 @pytest.mark.anyio
-async def test_update_step2_replaces_pathways_and_description(
-    service, repo, mock_user
-):
+async def test_update_step2_replaces_pathways_and_description(service, repo, mock_user):
     ci = _ci_application()
     ci.pathways = []
     _stub_step2_lookups(repo)
@@ -439,9 +438,57 @@ async def test_update_step2_replaces_pathways_and_description(
 
 
 @pytest.mark.anyio
-async def test_update_step2_rejects_renewal_without_fuel_code(
+async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelog(
     service, repo, mock_user
 ):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.pathway_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
+    ci.pathways = []
+    ci.verification_1_user_id = 22
+    ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
+    _stub_step2_lookups(repo)
+    repo.replace_pathways.return_value = []
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    payload = CIApplicationStep2Schema(
+        pathways=[_new_pathway_input()],
+        pathway_description="Supplemental update",
+    )
+
+    result = await service.update_step2(ci, payload, mock_user)
+
+    assert ci.ci_application_status.status == "Submitted"
+    assert ci.verification_1_user_id == 22
+    assert ci.verification_1_date == datetime(2026, 5, 19, tzinfo=timezone.utc)
+    assert ci.pathway_changes_requested_at is None
+    repo.add_history.assert_awaited_once()
+    snapshot = repo.add_history.await_args.kwargs["snapshot"]
+    assert snapshot["event"] == "supplemental_pathways_updated"
+    assert snapshot["after"][0]["feedstock"] == "Canola"
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_update_step2_rejects_unrequested_submitted_edit(
+    service, repo, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.pathway_changes_requested_at = None
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step2(
+            ci,
+            CIApplicationStep2Schema(pathways=[_new_pathway_input()]),
+            mock_user,
+        )
+
+    assert exc.value.status_code == 400
+    repo.replace_pathways.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_update_step2_rejects_renewal_without_fuel_code(service, repo, mock_user):
     ci = _ci_application()
     _stub_step2_lookups(repo)
 
@@ -491,6 +538,7 @@ async def test_update_step2_renewal_with_valid_fuel_code(service, repo, mock_use
 @pytest.mark.anyio
 async def test_step2_schema_requires_at_least_one_pathway():
     import pydantic
+
     with pytest.raises(pydantic.ValidationError):
         CIApplicationStep2Schema(pathways=[])
 
@@ -498,6 +546,7 @@ async def test_step2_schema_requires_at_least_one_pathway():
 @pytest.mark.anyio
 async def test_pathway_input_rejects_inverted_dates():
     import pydantic
+
     with pytest.raises(pydantic.ValidationError):
         _new_pathway_input(
             operating_data_from=date(2025, 12, 31),
@@ -511,9 +560,7 @@ async def test_pathway_input_rejects_inverted_dates():
 
 
 @pytest.mark.anyio
-async def test_update_step3_succeeds_when_required_present(
-    service, repo, mock_user
-):
+async def test_update_step3_succeeds_when_required_present(service, repo, mock_user):
     ci = _ci_application()
     repo.get_document_categories.return_value = [
         "technical_report",
@@ -541,25 +588,19 @@ async def test_update_step3_rejects_when_technical_report_missing(
     from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
 
     with pytest.raises(Exception) as exc:
-        await service.update_step3(
-            ci, CIApplicationStep3Schema(), mock_user
-        )
+        await service.update_step3(ci, CIApplicationStep3Schema(), mock_user)
     assert "Technical report" in str(exc.value)
     repo.update.assert_not_called()
 
 
 @pytest.mark.anyio
-async def test_update_step3_rejects_when_ghgenius_missing(
-    service, repo, mock_user
-):
+async def test_update_step3_rejects_when_ghgenius_missing(service, repo, mock_user):
     ci = _ci_application()
     repo.get_document_categories.return_value = ["technical_report"]
     from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
 
     with pytest.raises(Exception) as exc:
-        await service.update_step3(
-            ci, CIApplicationStep3Schema(), mock_user
-        )
+        await service.update_step3(ci, CIApplicationStep3Schema(), mock_user)
     assert "GHGenius" in str(exc.value)
     repo.update.assert_not_called()
 
@@ -619,6 +660,7 @@ async def test_generate_fuel_codes_allows_high_after_verification_2(
 
 def _step4_payload(**overrides):
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
+
     base = dict(
         declaration_information_true=True,
         declaration_response_8_weeks=True,
@@ -811,6 +853,7 @@ async def test_step4_submit_clears_consultant_when_not_consented(
 async def test_step4_schema_requires_all_three_declarations():
     import pydantic
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
+
     with pytest.raises(pydantic.ValidationError):
         CIApplicationStep4Schema(
             declaration_information_true=True,
@@ -823,6 +866,7 @@ async def test_step4_schema_requires_all_three_declarations():
 async def test_step4_schema_requires_consultant_fields_when_consented():
     import pydantic
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
+
     with pytest.raises(pydantic.ValidationError):
         CIApplicationStep4Schema(
             declaration_information_true=True,
@@ -844,6 +888,7 @@ def _decision_payload(status_value="Completed", comment=None):
     from lcfs.web.api.ci_application.schema import (
         CIApplicationDecisionSchema,
     )
+
     return CIApplicationDecisionSchema(status=status_value, comment=comment)
 
 
@@ -921,9 +966,7 @@ async def test_recommend_to_director_allows_workflow_roles(
 
 
 @pytest.mark.anyio
-async def test_recommend_to_director_requires_workflow_role(
-    service, repo, mock_user
-):
+async def test_recommend_to_director_requires_workflow_role(service, repo, mock_user):
     ci = _ci_application(status=_status("Submitted", 2))
     ci.preliminary_risk_assessment = "Low"
     ci.verification_1_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
@@ -978,14 +1021,10 @@ async def test_step5_decision_can_return_recommended_to_submitted(
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize(
-    "role",
-    [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
-)
-async def test_step5_decision_can_return_submitted_to_draft_for_pathway_changes(
-    service, repo, mock_user, role
+async def test_request_pathway_changes_keeps_submitted_and_verification_work(
+    service, repo, mock_user
 ):
-    mock_user.role_names = {role}
+    mock_user.role_names = {RoleEnum.ANALYST}
     ci = _ci_application(status=_status("Submitted", 2))
     ci.assigned_analyst_id = 12
     ci.preliminary_risk_assessment = "High"
@@ -998,43 +1037,35 @@ async def test_step5_decision_can_return_submitted_to_draft_for_pathway_changes(
     ci.verification_2_priority_score = 426
     ci.recommendation_user_id = 44
     ci.recommendation_date = datetime(2026, 5, 21, tzinfo=timezone.utc)
-    draft = _status("Draft", 1)
-    repo.get_status_by_name.return_value = draft
     repo.update.side_effect = lambda obj: obj
     repo.add_history.return_value = MagicMock()
     repo.get_by_id.return_value = ci
 
-    result = await service.record_decision(
-        ci, _decision_payload("Draft"), mock_user, is_government=True
-    )
+    result = await service.request_pathway_changes(ci, mock_user)
 
-    assert ci.status_id == draft.ci_application_status_id
+    assert ci.status_id == 2
+    assert ci.ci_application_status.status == "Submitted"
     assert ci.assigned_analyst_id == 12
-    assert ci.preliminary_risk_assessment is None
-    assert ci.priority_score is None
-    assert ci.verification_1_user_id is None
-    assert ci.verification_1_date is None
-    assert ci.verification_2_user_id is None
-    assert ci.verification_2_date is None
-    assert ci.verification_2_risk_assessment is None
-    assert ci.verification_2_priority_score is None
-    assert ci.recommendation_user_id is None
-    assert ci.recommendation_date is None
-    assert ci.approval_user_id is None
-    assert ci.approval_date is None
+    assert ci.preliminary_risk_assessment == "High"
+    assert ci.priority_score == 511
+    assert ci.verification_1_user_id == 22
+    assert ci.verification_2_user_id == 33
+    assert ci.recommendation_user_id == 44
+    assert ci.pathway_changes_requested_at is not None
+    assert ci.pathway_changes_requested_by == "ci_applicant_user"
+    snapshot = repo.add_history.await_args.kwargs["snapshot"]
+    assert snapshot["event"] == "pathway_changes_requested"
     assert isinstance(result, CIApplicationSchema)
 
 
 @pytest.mark.anyio
-async def test_step5_decision_rejects_draft_pathway_change_for_non_workflow_role(
+async def test_request_pathway_changes_rejects_non_workflow_role(
     service, repo, mock_user
 ):
     ci = _ci_application(status=_status("Submitted", 2))
 
     with pytest.raises(HTTPException) as exc:
-        await service.record_decision(
-            ci, _decision_payload("Draft"), mock_user, is_government=True
-        )
+        await service.request_pathway_changes(ci, mock_user)
 
     assert exc.value.status_code == 403
 
@@ -1091,11 +1122,13 @@ async def test_step5_decision_transitions_to_completed(service, repo, mock_user)
 
 
 @pytest.mark.anyio
-async def test_step5_decision_clears_assigned_analyst_when_withdrawn(
+async def test_step5_decision_preserves_workflow_work_when_withdrawn(
     service, repo, mock_user
 ):
     ci = _ci_application(status=_status("Submitted", 2))
     ci.assigned_analyst_id = 12
+    ci.verification_1_user_id = 22
+    ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
     withdrawn = _status("Withdrawn", 5)
     repo.get_status_by_name.return_value = withdrawn
     repo.update.side_effect = lambda obj: obj
@@ -1107,14 +1140,58 @@ async def test_step5_decision_clears_assigned_analyst_when_withdrawn(
     )
 
     assert ci.status_id == withdrawn.ci_application_status_id
-    assert ci.assigned_analyst_id is None
+    assert ci.assigned_analyst_id == 12
+    assert ci.verification_1_user_id == 22
+    assert ci.verification_1_date == datetime(2026, 5, 19, tzinfo=timezone.utc)
     assert isinstance(result, CIApplicationSchema)
 
 
 @pytest.mark.anyio
-async def test_step5_decision_ignores_inline_comment_field(
+async def test_step5_decision_reactivates_withdrawn_and_preserves_work(
     service, repo, mock_user
 ):
+    ci = _ci_application(status=_status("Withdrawn", 5))
+    ci.assigned_analyst_id = 12
+    ci.verification_1_user_id = 22
+    ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
+    ci.recommendation_user_id = 44
+    ci.recommendation_date = datetime(2026, 5, 21, tzinfo=timezone.utc)
+    submitted = _status("Submitted", 2)
+    repo.get_status_by_name.return_value = submitted
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.record_decision(
+        ci, _decision_payload("Submitted"), mock_user, is_government=True
+    )
+
+    assert ci.status_id == submitted.ci_application_status_id
+    assert ci.assigned_analyst_id == 12
+    assert ci.verification_1_user_id == 22
+    assert ci.verification_1_date == datetime(2026, 5, 19, tzinfo=timezone.utc)
+    assert ci.recommendation_user_id == 44
+    assert ci.recommendation_date == datetime(2026, 5, 21, tzinfo=timezone.utc)
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step5_decision_rejects_withdrawal_after_approval(
+    service, repo, mock_user
+):
+    ci = _ci_application(status=_status("Completed", 4))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.record_decision(
+            ci, _decision_payload("Withdrawn"), mock_user, is_government=True
+        )
+
+    assert exc.value.status_code == 400
+    repo.update.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_step5_decision_ignores_inline_comment_field(service, repo, mock_user):
     """The inline `comment` field on the decision payload is intentionally
     dropped — comments now live in the shared internal_comments framework.
     """
@@ -1133,7 +1210,7 @@ async def test_step5_decision_ignores_inline_comment_field(
 
     # No legacy add_comment call should be made by the decision flow.
     assert not hasattr(repo, "add_comment") or not repo.add_comment.await_count
-    assert ci.assigned_analyst_id is None
+    assert ci.assigned_analyst_id == 12
 
 
 @pytest.mark.anyio
@@ -1142,5 +1219,6 @@ async def test_step5_decision_schema_rejects_non_terminal_status():
     from lcfs.web.api.ci_application.schema import (
         CIApplicationDecisionSchema,
     )
+
     with pytest.raises(pydantic.ValidationError):
         CIApplicationDecisionSchema(status="Recommended")

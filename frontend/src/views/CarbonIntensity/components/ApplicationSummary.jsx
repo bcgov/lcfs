@@ -65,7 +65,9 @@ export const ApplicationSummary = ({
   ciApplication,
   currentUser,
   canEditDocuments = false,
-  onEditDocuments
+  onEditDocuments,
+  canEditPathways = false,
+  onEditPathways
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   if (!ciApplication) return null
@@ -96,12 +98,13 @@ export const ApplicationSummary = ({
   const capacity =
     ciApplication.facilityNameplateCapacity != null
       ? `${ciApplication.facilityNameplateCapacity.toLocaleString()} ${
-          ciApplication.facilityNameplateCapacityUnit?.name || ''
+          ciApplication.facilityNameplateCapacityUnit || ''
         }`.trim()
       : ''
 
   const documents = ciApplication.documents || []
   const pathways = ciApplication.pathways || []
+  const pathwayChangelog = ciApplication.pathwayChangelog || []
   const referencedPathway =
     pathways.find((pathway) => pathway?.fuelCode) || null
   const referencedFuelCode = referencedPathway?.fuelCode || null
@@ -409,12 +412,28 @@ export const ApplicationSummary = ({
       <Divider sx={{ mb: 2 }} />
 
       {/* Pathways */}
-      <BCTypography
-        variant="subtitle1"
-        sx={{ fontWeight: 700, color: colors.primary.main, mb: 1 }}
-      >
-        {t('carbonIntensity:summary.pathwaysHeader')}
-      </BCTypography>
+      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+        <BCTypography
+          variant="subtitle1"
+          sx={{ fontWeight: 700, color: colors.primary.main }}
+        >
+          {t('carbonIntensity:summary.pathwaysHeader')}
+        </BCTypography>
+        {canEditPathways && onEditPathways && (
+          <Tooltip title={t('carbonIntensity:summary.editPathways')}>
+            <IconButton
+              color="primary"
+              aria-label={t('carbonIntensity:summary.editPathways')}
+              onClick={onEditPathways}
+              size="small"
+              data-test="ci-summary-pathways-edit-btn"
+              sx={{ p: 0.5 }}
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Stack>
       <BCButton
         type="button"
         variant="outlined"
@@ -459,6 +478,31 @@ export const ApplicationSummary = ({
             enableExportButton={false}
             enableResetButton={false}
           />
+        </BCBox>
+      )}
+      {pathwayChangelog.length > 0 && (
+        <BCBox mt={2} data-test="ci-summary-pathway-changelog">
+          <BCTypography
+            variant="subtitle2"
+            sx={{ fontWeight: 700, color: colors.primary.main, mb: 1 }}
+          >
+            {t('carbonIntensity:summary.pathwayChangelog')}
+          </BCTypography>
+          <Stack spacing={0.5}>
+            {pathwayChangelog.map((entry, index) => (
+              <BCTypography
+                key={`${entry.changedAt || entry.changed_at || 'change'}-${index}`}
+                variant="body2"
+              >
+                {entry.event === 'pathway_changes_requested'
+                  ? t('carbonIntensity:summary.pathwayChangesRequested')
+                  : t('carbonIntensity:summary.supplementalPathwaysUpdated')}
+                {` - ${formatDate(entry.changedAt || entry.changed_at)}`}
+                {(entry.changedBy || entry.changed_by) &&
+                  ` - ${entry.changedBy || entry.changed_by}`}
+              </BCTypography>
+            ))}
+          </Stack>
         </BCBox>
       )}
     </BCBox>

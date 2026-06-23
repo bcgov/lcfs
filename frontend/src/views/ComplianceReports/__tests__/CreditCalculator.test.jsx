@@ -936,7 +936,9 @@ describe('CreditCalculator', () => {
     it('calculates default compliance period correctly for dates before March 31', () => {
       // Mock date to February (before March 31)
       const mockDate = new Date('2023-02-15')
-      vi.spyOn(global, 'Date').mockImplementation(() => mockDate)
+      vi.spyOn(global, 'Date').mockImplementation(function () {
+        return mockDate
+      })
       
       render(
         <TestWrapper>
