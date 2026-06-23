@@ -191,4 +191,29 @@ describe('FuelCodeDetail', () => {
     expect(screen.queryByTestId('iterations-grid')).not.toBeInTheDocument()
     expect(screen.getByText('All iterations')).toBeInTheDocument()
   })
+
+  it('does not render placeholder company contact details when data is missing', () => {
+    mockUseGetFuelCodeGroup.mockReturnValue({
+      data: {
+        ...groupData,
+        latestIteration: {
+          ...latestIteration,
+          companyAddress: undefined,
+          contactPhone: undefined,
+          contactEmail: undefined
+        }
+      },
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+
+    render(<FuelCodeDetail />, { wrapper })
+
+    expect(screen.queryByText('697 Sarmiento')).not.toBeInTheDocument()
+    expect(screen.queryByText('+54 9 11 1234-5678')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Zimmerman@fuelproducerltd.ar')
+    ).not.toBeInTheDocument()
+  })
 })

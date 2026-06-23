@@ -7,7 +7,7 @@ import uuid
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.fuel import FuelCodeHistory
 import structlog
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status as http_status
 
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
@@ -373,8 +373,6 @@ class FuelCodeServices:
         self, fuel_code_id: int
     ) -> FuelCodeGroupDetailSchema:
         """Return all iterations of a fuel code group plus aggregated volume data."""
-        from fastapi import HTTPException, status as http_status
-
         latest_fc, iteration_rows, volume_rows = (
             await self.repo.get_fuel_code_group_detail(fuel_code_id)
         )

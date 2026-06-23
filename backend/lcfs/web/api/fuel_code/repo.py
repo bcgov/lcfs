@@ -19,6 +19,7 @@ from sqlalchemy import (
     select,
     func,
     cast,
+    Integer,
     String,
     text,
     update,
@@ -337,10 +338,20 @@ class FuelCodeRepository:
         )
 
         # Get all iterations from the view (sorted descending by suffix for latest first)
+        fuel_suffix_main_version = cast(
+            func.split_part(FuelCodeListView.fuel_suffix, ".", 1), Integer
+        )
+        fuel_suffix_sub_version = cast(
+            func.split_part(FuelCodeListView.fuel_suffix, ".", 2), Integer
+        )
         iterations_result = await self.db.execute(
             select(FuelCodeListView)
             .where(FuelCodeListView.fuel_code_id.in_(group_id_subquery))
-            .order_by(desc(FuelCodeListView.fuel_suffix))
+            .order_by(
+                asc(FuelCodeListView.prefix),
+                desc(fuel_suffix_main_version),
+                desc(fuel_suffix_sub_version),
+            )
         )
         iteration_rows = iterations_result.unique().scalars().all()
 

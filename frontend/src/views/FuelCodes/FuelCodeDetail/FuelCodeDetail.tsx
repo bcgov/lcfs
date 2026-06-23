@@ -110,11 +110,11 @@ const IterationCardContent = ({ data, t }) => {
     ?.map((m) => m.finishedFuelTransportMode?.transportMode)
     .filter(Boolean)
     .join(', ')
-  const notes = data.notes || t('fuelCode:detail.defaultNotes')
-  const companyAddress = data.feedstockLocation || '697 Sarmiento'
-  const companyLocation = facilityLocation || 'San Martin, Santa Fe, Argentina'
-  const companyPhone = data.contactPhone || '+54 9 11 1234-5678'
-  const companyEmail = data.contactEmail || 'Zimmerman@fuelproducerltd.ar'
+  const notes = data.notes
+  const companyAddress = data.companyAddress
+  const companyLocation = facilityLocation
+  const companyPhone = data.contactPhone
+  const companyEmail = data.contactEmail
   const showCompanyAddress =
     !!companyAddress &&
     companyAddress.trim().toLowerCase() !==
@@ -188,17 +188,19 @@ const IterationCardContent = ({ data, t }) => {
 
         {/* Right Column — company, contact, dates */}
         <BCBox display="flex" flexDirection="column">
-          <BCTypography
-            variant="body2"
-            sx={{
-              mb: 1.5,
-              display: 'block',
-              fontWeight: 700,
-              fontSize: '1rem'
-            }}
-          >
-            {data.company}
-          </BCTypography>
+          {data.company && (
+            <BCTypography
+              variant="body2"
+              sx={{
+                mb: 1.5,
+                display: 'block',
+                fontWeight: 700,
+                fontSize: '1rem'
+              }}
+            >
+              {data.company}
+            </BCTypography>
+          )}
           {showCompanyAddress && (
             <BCTypography
               variant="body2"
@@ -207,24 +209,30 @@ const IterationCardContent = ({ data, t }) => {
               {companyAddress}
             </BCTypography>
           )}
-          <BCTypography
-            variant="body2"
-            sx={{ mb: 1, display: 'block', fontSize: '1rem' }}
-          >
-            {companyLocation}
-          </BCTypography>
-          <BCTypography
-            variant="body2"
-            sx={{ mb: 1, display: 'block', fontSize: '1rem' }}
-          >
-            {companyPhone}
-          </BCTypography>
-          <BCTypography
-            variant="body2"
-            sx={{ mb: 1, display: 'block', fontSize: '1rem' }}
-          >
-            {companyEmail}
-          </BCTypography>
+          {companyLocation && (
+            <BCTypography
+              variant="body2"
+              sx={{ mb: 1, display: 'block', fontSize: '1rem' }}
+            >
+              {companyLocation}
+            </BCTypography>
+          )}
+          {companyPhone && (
+            <BCTypography
+              variant="body2"
+              sx={{ mb: 1, display: 'block', fontSize: '1rem' }}
+            >
+              {companyPhone}
+            </BCTypography>
+          )}
+          {companyEmail && (
+            <BCTypography
+              variant="body2"
+              sx={{ mb: 1, display: 'block', fontSize: '1rem' }}
+            >
+              {companyEmail}
+            </BCTypography>
+          )}
           <DetailRow
             label="Application date"
             value={formatDate(data.applicationDate)}
