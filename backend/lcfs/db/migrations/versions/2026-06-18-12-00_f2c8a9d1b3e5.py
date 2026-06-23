@@ -5,7 +5,7 @@ DocumentService/S3 attachment machinery can be reused with the
 parent_type "internal_comment" (issue #4514).
 
 Revision ID: f2c8a9d1b3e5
-Revises: f3a8c1d2e4b5
+Revises: a9c7e5f3d1b2
 Create Date: 2026-06-18 12:00:00.000000
 """
 
@@ -14,7 +14,7 @@ from alembic import op
 
 
 revision = "f2c8a9d1b3e5"
-down_revision = "f3a8c1d2e4b5"
+down_revision = "a9c7e5f3d1b2"
 branch_labels = None
 depends_on = None
 
