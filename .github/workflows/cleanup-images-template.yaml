@@ -21,6 +21,9 @@ on:
 permissions:
   contents: read
 
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
+
 jobs:
   cleanup:
     name: Cleanup images in ${{ inputs.environment }} namespace
