@@ -134,8 +134,8 @@ jobs:
             if echo "$tags_to_keep" | tr ',' '\n' | grep -qx "$tag"; then
               echo "Keeping  lcfs-backend:$tag"
             else
-              echo "Fake Deleting lcfs-backend:$tag"
-              # oc delete istag "lcfs-backend:$tag" -n "$namespace" --ignore-not-found=true
+              echo "Deleting lcfs-backend:$tag"
+              oc delete istag "lcfs-backend:$tag" -n "$namespace" --ignore-not-found=true
             fi
           done
 
@@ -152,7 +152,7 @@ jobs:
             if echo "$tags_to_keep" | tr ',' '\n' | grep -qx "$tag"; then
               echo "Keeping  lcfs-frontend:$tag"
             else
-              echo "Fake Deleting lcfs-frontend:$tag"
-              # oc delete istag "lcfs-frontend:$tag" -n "$namespace" --ignore-not-found=true
+              echo "Deleting lcfs-frontend:$tag"
+              oc delete istag "lcfs-frontend:$tag" -n "$namespace" --ignore-not-found=true
             fi
           done
