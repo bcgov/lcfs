@@ -73,6 +73,11 @@ api_router.include_router(
 api_router.include_router(
     internal_comment.router, prefix="/internal_comments", tags=["internal_comments"]
 )
+api_router.include_router(
+    internal_comment.org_comments_router,
+    prefix="/organizations",
+    tags=["internal_comments"],
+)
 api_router.include_router(fuel_code.router, prefix="/fuel-codes", tags=["fuel-codes"])
 api_router.include_router(
     ci_application.router, prefix="/ci-applications", tags=["ci_applications"]
