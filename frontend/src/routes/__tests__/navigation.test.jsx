@@ -201,6 +201,15 @@ vi.mock('@/views/FuelCodes', () => ({
         {location.pathname}
       </div>
     )
+  },
+  FuelCodeDetail: () => {
+    const params = useParams()
+    const location = useLocation()
+    return (
+      <div data-test="fuel-code-detail">
+        Fuel Code Detail - fuelCodeID: {params.fuelCodeID} - {location.pathname}
+      </div>
+    )
   }
 }))
 
@@ -211,7 +220,9 @@ vi.mock('@/views/Admin/AdminMenu', () => ({
   },
   AdminLanding: () => {
     const location = useLocation()
-    return <div data-test="admin-landing">Admin Landing - {location.pathname}</div>
+    return (
+      <div data-test="admin-landing">Admin Landing - {location.pathname}</div>
+    )
   }
 }))
 

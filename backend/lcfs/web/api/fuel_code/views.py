@@ -33,6 +33,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeStatusSchema,
     TransportModeSchema,
     FuelCodeBulletinsSchema,
+    FuelCodeGroupDetailSchema,
 )
 from lcfs.web.api.fuel_code.services import FuelCodeServices
 from lcfs.web.core.decorators import view_handler, public_view_handler
@@ -309,6 +310,17 @@ async def get_transport_modes(
 ) -> List[TransportModeSchema]:
     """Fetch all fuel code transport modes"""
     return await service.get_transport_modes()
+
+
+@router.get("/{fuel_code_id}/group", response_model=FuelCodeGroupDetailSchema, status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_fuel_code_group_detail(
+    request: Request,
+    fuel_code_id: int,
+    service: FuelCodeServices = Depends(),
+) -> FuelCodeGroupDetailSchema:
+    """Return all iterations of a fuel code group and volume-over-time data."""
+    return await service.get_fuel_code_group_detail(fuel_code_id)
 
 
 @router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)
