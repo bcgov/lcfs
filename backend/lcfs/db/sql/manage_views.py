@@ -70,7 +70,7 @@ class ViewCreator:
             "Compliance Report Assignee Breakdown View",
             "Compliance Report Queue Flow View",
             "Final Supply Equipment Base View",
-            "FSE Base View YoY",
+            "FSE Base View YoY Optimised",
             "Electricity Allocation FSE Match Query",
             "Allocation Agreement Duplicate Check",
             "Final Supply Equipment Duplicate Check",

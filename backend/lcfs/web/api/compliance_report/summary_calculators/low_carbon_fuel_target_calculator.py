@@ -70,7 +70,7 @@ class LowCarbonFuelTargetCalculator:
         )  # line 13
         compliance_units_issued = int(
             await self.repo.get_issued_compliance_units(
-                compliance_period_start, compliance_period_end, organization_id
+                transaction_start_date, transaction_end_date, organization_id
             )
         )  # line 14
 

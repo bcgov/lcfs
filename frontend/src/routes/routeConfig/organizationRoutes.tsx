@@ -1,9 +1,6 @@
 import { ReactNode } from 'react'
 import { NavigateFunction } from 'react-router-dom'
-import {
-  Organizations,
-  OrganizationView
-} from '@/views/Organizations'
+import { Organizations, OrganizationView } from '@/views/Organizations'
 import ROUTES from '../routes'
 import UserDetailsCard from '@/views/Admin/AdminMenu/components/UserDetailsCard'
 import i18n from '@/i18n'
@@ -15,6 +12,7 @@ import { PenaltyLog } from '@/views/Organizations/OrganizationView/components/Pe
 import CompanyOverview from '@/views/Organizations/OrganizationView/components/CompanyOverview'
 import { CreditLedger } from '@/views/Organizations/OrganizationView/CreditLedger'
 import { OrganizationUsers } from '@/views/Organizations/OrganizationView/OrganizationUsers'
+import { CommentLog } from '@/views/Organizations/OrganizationView/components/CommentLog'
 import { AppRouteObject } from '../types'
 
 export interface DashboardTab {
@@ -76,6 +74,11 @@ export const organizationRoutes: AppRouteObject[] = [
     handle: { title: 'Compliance tracking' }
   },
   {
+    path: ROUTES.ORGANIZATIONS.COMMENT_LOG,
+    element: <OrganizationView />,
+    handle: { title: 'Comment log' }
+  },
+  {
     path: ROUTES.ORGANIZATIONS.ADD_USER,
     element: <UserDetailsCard addMode={true} userType="bceid" />,
     handle: { title: 'New user' }
@@ -132,7 +135,8 @@ export const orgDashboardRoutes = (
     },
     {
       path: ROUTES.ORGANIZATION.USERS,
-      match: (pathname: string) => pathname.startsWith(ROUTES.ORGANIZATION.USERS),
+      match: (pathname: string) =>
+        pathname.startsWith(ROUTES.ORGANIZATION.USERS),
       label: i18n.t('org:tabs.users')
     },
     {
@@ -186,6 +190,11 @@ export const orgDashboardRoutes = (
       ),
       match: (pathname: string) => pathname.includes('/compliance-tracking'),
       label: i18n.t('org:tabs.complianceTracking')
+    },
+    {
+      path: ROUTES.ORGANIZATIONS.COMMENT_LOG.replace(':orgID', orgID || ''),
+      match: (pathname: string) => pathname.includes('/comment-log'),
+      label: i18n.t('org:tabs.commentLog')
     }
   ]
 
@@ -238,6 +247,9 @@ export const orgDashboardRenderers = (
   }
   if (currentPath.includes('/compliance-tracking')) {
     return <ComplianceTracking />
+  }
+  if (currentPath.includes('/comment-log')) {
+    return <CommentLog organizationId={orgID} />
   }
 
   // Default to dashboard
