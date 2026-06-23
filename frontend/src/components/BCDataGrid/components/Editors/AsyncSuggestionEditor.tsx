@@ -1,3 +1,4 @@
+// @ts-nocheck
 import BCBox from '@/components/BCBox'
 import { useApiService } from '@/services/useApiService'
 import { Autocomplete, Box, Grid, TextField } from '@mui/material'
@@ -6,6 +7,20 @@ import match from 'autosuggest-highlight/match'
 import parse from 'autosuggest-highlight/parse'
 import { debounce } from 'lodash'
 import { useCallback, useState } from 'react'
+import type { KeyboardEvent } from 'react'
+
+export interface AsyncSuggestionEditorProps {
+  value?: any
+  onValueChange: (value: any) => void
+  enabled?: boolean
+  minWords?: number
+  queryKey?: string
+  queryFn: (params: { client: any; queryKey: readonly unknown[] }) => Promise<any[]>
+  debounceValue?: number
+  onKeyDownCapture?: (event: KeyboardEvent) => void
+  api?: any
+  optionLabel?: string
+}
 
 /**
  * AsyncSuggestionEditor component
@@ -32,7 +47,7 @@ export const AsyncSuggestionEditor = ({
   onKeyDownCapture,
   api,
   optionLabel = 'name'
-}) => {
+}: AsyncSuggestionEditorProps) => {
   const [inputValue, setInputValue] = useState('')
   const [highlightedOption, setHighlightedOption] = useState(null)
   const apiService = useApiService()

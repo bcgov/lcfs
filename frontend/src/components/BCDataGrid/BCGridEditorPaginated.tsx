@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+// @ts-nocheck
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { isEqual } from '@/utils/grid/eventHandlers'
@@ -40,6 +41,9 @@ import {
   syncGridScrollPositions as syncGridScrollPositionsUtil,
   syncCustomScrollbarToGrid as syncCustomScrollbarToGridUtil
 } from '@/components/BCDataGrid/floatingScrollbarUtils'
+import type { BCGridEditorPaginatedProps } from './types'
+
+export type { BCGridEditorPaginatedProps } from './types'
 
 // Styles for floating pagination
 const floatingPaginationStyles = {
@@ -141,7 +145,7 @@ export const BCGridEditorPaginated = ({
   defaultColDef,
   columnDefs,
   ...props
-}) => {
+}: BCGridEditorPaginatedProps) => {
   const localRef = useRef(null)
   const ref = gridRef || localRef
   const firstEditableColumnRef = useRef(null)

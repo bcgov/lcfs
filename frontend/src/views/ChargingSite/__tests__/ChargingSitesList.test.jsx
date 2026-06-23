@@ -38,7 +38,7 @@ vi.mock('../components/ChargingSitesMap', () => ({
 }))
 
 // Mock grid to keep tests focused
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: React.forwardRef((props, ref) => (
     <div
       data-testid="bc-grid-viewer"

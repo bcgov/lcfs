@@ -48,7 +48,7 @@ vi.mock('@/components/Loading', () => ({
   default: () => <div>Loading...</div>
 }))
 
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: () => <div data-testid="bc-grid-viewer" />
 }))
 

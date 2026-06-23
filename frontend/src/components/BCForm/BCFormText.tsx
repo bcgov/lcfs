@@ -8,6 +8,19 @@ import {
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
+import type { ChangeEventHandler, ReactNode } from 'react'
+
+export interface BCFormTextProps {
+  name: string
+  control: any
+  label?: ReactNode
+  optional?: boolean
+  checkbox?: boolean
+  checkboxLabel?: ReactNode
+  onCheckboxChange?: ChangeEventHandler<HTMLInputElement>
+  isChecked?: boolean
+  disabled?: boolean
+}
 
 export const BCFormText = ({
   name,
@@ -19,16 +32,12 @@ export const BCFormText = ({
   onCheckboxChange,
   isChecked,
   disabled
-}) => {
+}: BCFormTextProps) => {
   return (
     <Controller
       name={name}
       control={control}
-      render={({
-        field: { onChange, value },
-        fieldState: { error },
-        formState
-      }) => (
+      render={({ field: { onChange, value }, fieldState: { error } }) => (
         <>
           <InputLabel htmlFor={name} component="label" className="form-label">
             <Box display="flex" gap={2} flexWrap="wrap">

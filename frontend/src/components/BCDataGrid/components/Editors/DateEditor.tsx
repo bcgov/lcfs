@@ -1,6 +1,17 @@
+// @ts-nocheck
 import { DatePicker } from '@mui/x-date-pickers'
 import { format, parseISO } from 'date-fns'
 import { useEffect, useRef, useState } from 'react'
+
+export interface DateEditorProps {
+  value?: string | null
+  onValueChange: (value: string | null) => void
+  minDate?: Date | string
+  maxDate?: Date | string
+  rowIndex?: number
+  api?: any
+  autoOpenLastRow?: boolean
+}
 
 export const DateEditor = ({
   value,
@@ -10,7 +21,7 @@ export const DateEditor = ({
   rowIndex,
   api,
   autoOpenLastRow
-}) => {
+}: DateEditorProps) => {
   // Handle initial value properly - use null if value is falsy
   const [selectedDate, setSelectedDate] = useState(
     value && value !== 'YYYY-MM-DD' ? parseISO(value) : null

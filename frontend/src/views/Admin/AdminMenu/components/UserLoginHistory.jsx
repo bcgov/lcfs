@@ -7,7 +7,7 @@ import {
   defaultSortModel
 } from '@/views/Admin/AdminMenu/components/_schema'
 import { useGetUserLoginHistory } from '@/hooks/useUser'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
 
 const initialPaginationOptions = {

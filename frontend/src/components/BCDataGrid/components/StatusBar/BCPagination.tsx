@@ -3,6 +3,21 @@ import PropTypes from 'prop-types'
 import { TablePagination } from '@mui/material'
 import { ArrowDropDown } from '@mui/icons-material'
 import { BCPaginationActions } from './BCPaginationActions'
+import type { ChangeEventHandler } from 'react'
+
+export interface BCPaginationProps {
+  total?: number
+  page?: number
+  handleChangePage: (event: unknown, page: number) => void
+  size?: number
+  handleChangeRowsPerPage: ChangeEventHandler<HTMLInputElement>
+  enableResetButton?: boolean
+  enableCopyButton?: boolean
+  enableExportButton?: boolean
+  exportName?: string
+  gridRef?: any
+  rowsPerPageOptions?: number[]
+}
 
 export const BCPagination = ({
   total = 0,
@@ -15,7 +30,7 @@ export const BCPagination = ({
   enableExportButton = false,
   exportName = 'ExportData',
   gridRef = null
-}) => {
+}: BCPaginationProps) => {
   return (
     <TablePagination
       className="ag-grid-pagination"

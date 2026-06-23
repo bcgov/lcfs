@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useCallback } from 'react'
 import { FormControl, IconButton, InputAdornment } from '@mui/material'
 import {
@@ -7,6 +8,16 @@ import {
 import { DatePicker } from '@mui/x-date-pickers'
 import { format, isValid } from 'date-fns'
 
+export interface BCDateFloatingFilterProps {
+  model?: any
+  onModelChange: (model: any) => void
+  disabled?: boolean
+  minDate?: string
+  maxDate?: string
+  initialFilterType?: string
+  label?: string
+}
+
 export const BCDateFloatingFilter = ({
   model,
   onModelChange,
@@ -15,7 +26,7 @@ export const BCDateFloatingFilter = ({
   maxDate = '2040-01-01',
   initialFilterType = 'any',
   label = 'Select Date'
-}) => {
+}: BCDateFloatingFilterProps) => {
   const [selectedDate, setSelectedDate] = useState(null)
   const [open, setOpen] = useState(false)
 

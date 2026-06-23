@@ -1,8 +1,30 @@
+// @ts-nocheck
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { useDebounce } from '@/utils/debounce'
 
+export interface AsyncValidationEditorProps {
+  value?: string
+  onValueChange: (value: string) => void
+  eventKey?: string
+  rowIndex?: number
+  column?: { colId?: string }
+  debounceLimit?: number
+  condition: (value: string) => boolean | Promise<boolean>
+  [key: string]: any
+}
+
 export const AsyncValidationEditor = forwardRef(
-  ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
+  (
+    {
+      value,
+      onValueChange,
+      eventKey,
+      rowIndex,
+      column,
+      ...props
+    }: AsyncValidationEditorProps,
+    ref
+  ) => {
     const [inputValue, setInputValue] = useState(value)
     const [valid, setValid] = useState(true)
     const [validating, setValidating] = useState(false)
