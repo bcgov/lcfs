@@ -39,7 +39,7 @@ def mock_repo():
     """
     repo = AsyncMock()
     repo.get_charging_power_output.return_value = None
-    repo.get_total_kwh_usage_for_report_group.return_value = 0
+    repo.get_total_kwh_usage_for_report.return_value = 0
     # Default: equipment is active (not decommissioned).
     repo.get_latest_equipment_status_with_date.return_value = ("Submitted", None)
     return repo
@@ -476,9 +476,7 @@ async def test_get_fse_reporting_list_paginated_success(
     mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(
         1, pagination, 10, "current"
     )
-    mock_repo.get_total_kwh_usage_for_report_group.assert_awaited_once_with(
-        "uuid-1234", only_active=False
-    )
+    mock_repo.get_total_kwh_usage_for_report.assert_awaited_once_with(1, 10, "current")
 
 
 @pytest.mark.anyio
@@ -520,7 +518,7 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
         "status": "Submitted",
     }
     mock_repo.get_fse_reporting_list_paginated.return_value = ([mock_row], 1)
-    mock_repo.get_total_kwh_usage_for_report_group.return_value = 4800
+    mock_repo.get_total_kwh_usage_for_report.return_value = 4800
     mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
         compliance_report_id=10,
         compliance_report_group_uuid="uuid-1234"
@@ -534,9 +532,7 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
     equipment = result["finalSupplyEquipments"][0]
     assert equipment.capacity_utilization_percent == 80
     assert equipment.power_output == 50
-    mock_repo.get_total_kwh_usage_for_report_group.assert_awaited_once_with(
-        "uuid-1234", only_active=True
-    )
+    mock_repo.get_total_kwh_usage_for_report.assert_awaited_once_with(1, 10, "summary")
 
 
 @pytest.mark.anyio
