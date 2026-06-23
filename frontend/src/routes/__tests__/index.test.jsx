@@ -139,7 +139,8 @@ vi.mock('@/views/FuelCodes', () => ({
   AddEditFuelCode: () => (
     <div data-test="add-edit-fuel-code">Add/Edit Fuel Code</div>
   ),
-  EditFuelCode: () => <div data-test="edit-fuel-code">Edit Fuel Code</div>
+  EditFuelCode: () => <div data-test="edit-fuel-code">Edit Fuel Code</div>,
+  FuelCodeDetail: () => <div data-test="fuel-code-detail">Fuel Code Detail</div>
 }))
 
 vi.mock('@/views/Notifications/NotificationMenu', () => ({
