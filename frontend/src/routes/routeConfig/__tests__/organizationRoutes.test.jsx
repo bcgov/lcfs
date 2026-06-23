@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { organizationRoutes, orgDashboardRenderers } from '../organizationRoutes'
+import {
+  organizationRoutes,
+  orgDashboardRenderers
+} from '../organizationRoutes'
 import * as OrganizationsModule from '@/views/Organizations'
 import * as UsersModule from '@/views/Users'
 import UserDetailsCard from '@/views/Admin/AdminMenu/components/UserDetailsCard'
@@ -64,7 +67,7 @@ vi.mock('../routes', () => ({
 describe('organizationRoutes', () => {
   it('should export an array of route configurations', () => {
     expect(Array.isArray(organizationRoutes)).toBe(true)
-    expect(organizationRoutes.length).toBe(17)
+    expect(organizationRoutes.length).toBe(18)
   })
 
   it('should have all expected route paths', () => {
@@ -79,6 +82,7 @@ describe('organizationRoutes', () => {
       '/organizations/:orgID/penalty-log/manage',
       '/organizations/:orgID/supply-history',
       '/organizations/:orgID/compliance-tracking',
+      '/organizations/:orgID/comment-log',
       '/organizations/:orgID/add-user',
       '/organizations/:orgID/users/:userID',
       '/organization',
@@ -100,7 +104,7 @@ describe('organizationRoutes', () => {
       const idirRoutes = organizationRoutes.filter((route) =>
         route.path.startsWith('/organizations')
       )
-      expect(idirRoutes.length).toBe(12)
+      expect(idirRoutes.length).toBe(13)
 
       const expectedIdirPaths = [
         '/organizations',
@@ -113,6 +117,7 @@ describe('organizationRoutes', () => {
         '/organizations/:orgID/penalty-log/manage',
         '/organizations/:orgID/supply-history',
         '/organizations/:orgID/compliance-tracking',
+        '/organizations/:orgID/comment-log',
         '/organizations/:orgID/add-user',
         '/organizations/:orgID/users/:userID'
       ]
@@ -124,7 +129,7 @@ describe('organizationRoutes', () => {
 
     it('should have correct BCeID self-service routes', () => {
       const bceidRoutes = organizationRoutes.filter(
-      (route) =>
+        (route) =>
           route.path.startsWith('/organization') &&
           !route.path.startsWith('/organizations')
       )
@@ -333,8 +338,8 @@ describe('Route Handle Properties', () => {
 
   describe('User Type Configurations', () => {
     it('should set userType="bceid" for all user-related routes', () => {
-      const allUserRoutes = organizationRoutes.filter((route) =>
-        route.path.includes('user') && route.element.props?.userType
+      const allUserRoutes = organizationRoutes.filter(
+        (route) => route.path.includes('user') && route.element.props?.userType
       )
 
       expect(allUserRoutes.length).toBe(4) // Should have 4 UserDetailsCard routes with userType

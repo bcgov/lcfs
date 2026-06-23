@@ -64,7 +64,8 @@
     "companyOverview": "Company overview",
     "penaltyLog": "Penalty log",
     "supplyHistory": "Supply history",
-    "complianceTracking": "Compliance tracking"
+    "complianceTracking": "Compliance tracking",
+    "commentLog": "Comment log"
   },
   "sections": {
     "companyOverview": {
