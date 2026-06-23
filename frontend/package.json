@@ -65,6 +65,7 @@
     "country-list": "^2.3.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
+    "dompurify": "^3.4.0",
     "dotenv": "^16.4.7",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
