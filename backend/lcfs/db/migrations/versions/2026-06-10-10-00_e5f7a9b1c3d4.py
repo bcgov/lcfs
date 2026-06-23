@@ -22,7 +22,7 @@ def upgrade() -> None:
             "pathway_changes_requested_at",
             sa.TIMESTAMP(timezone=True),
             nullable=True,
-            comment="UTC date and time supplemental pathway editing was requested.",
+            comment="UTC date and time supplemental pathway editing was enabled.",
         ),
     )
     op.add_column(
