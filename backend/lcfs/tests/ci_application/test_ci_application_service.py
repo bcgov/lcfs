@@ -20,7 +20,10 @@ from lcfs.web.api.ci_application.schema import (
     CITableOptionsSchema,
     PathwayInputSchema,
 )
-from lcfs.web.api.ci_application.services import CIApplicationServices
+from lcfs.web.api.ci_application.services import (
+    CIApplicationServices,
+    _pathway_change_logs_from_versions,
+)
 from lcfs.web.exception.exceptions import DataNotFoundException
 
 
@@ -431,6 +434,87 @@ def _stub_step2_lookups(repo, *, with_fuel_code=False):
     repo.get_fuel_codes_by_ids.return_value = (
         [_fuel_code_obj()] if with_fuel_code else []
     )
+
+
+def test_pathway_change_logs_from_versions_builds_field_diffs():
+    create_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    update_date = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    delete_date = datetime(2026, 3, 1, tzinfo=timezone.utc)
+    versions = [
+        _existing_pathway(
+            pathway_id=101,
+            ci_application_id=10,
+            group_uuid="pathway-group-1",
+            version=0,
+            action_type=ActionTypeEnum.CREATE,
+            create_date=create_date,
+            create_user="creator",
+        ),
+        _existing_pathway(
+            pathway_id=102,
+            ci_application_id=10,
+            group_uuid="pathway-group-1",
+            version=1,
+            action_type=ActionTypeEnum.UPDATE,
+            feedstock="Camelina",
+            proposed_ci=6.25,
+            create_date=update_date,
+            create_user="editor",
+        ),
+        _existing_pathway(
+            pathway_id=103,
+            ci_application_id=10,
+            group_uuid="pathway-group-1",
+            version=2,
+            action_type=ActionTypeEnum.DELETE,
+            feedstock="Camelina",
+            proposed_ci=6.25,
+            create_date=delete_date,
+            create_user="deleter",
+        ),
+    ]
+
+    logs = _pathway_change_logs_from_versions(versions)
+
+    assert [log.action_type for log in logs] == [
+        ActionTypeEnum.CREATE.value,
+        ActionTypeEnum.UPDATE.value,
+        ActionTypeEnum.DELETE.value,
+    ]
+
+    create_log = logs[0]
+    assert create_log.changed_at == create_date
+    assert create_log.changed_by == "creator"
+    assert create_log.before_snapshot is None
+    assert create_log.after_snapshot["feedstock"] == "Canola"
+    assert create_log.changed_fields["feedstock"] == {
+        "old": None,
+        "new": "Canola",
+    }
+
+    update_log = logs[1]
+    assert update_log.changed_at == update_date
+    assert update_log.changed_by == "editor"
+    assert update_log.before_snapshot["feedstock"] == "Canola"
+    assert update_log.after_snapshot["feedstock"] == "Camelina"
+    assert update_log.changed_fields == {
+        "proposed_ci": {"old": 5.61, "new": 6.25},
+        "feedstock": {"old": "Canola", "new": "Camelina"},
+    }
+
+    delete_log = logs[2]
+    assert delete_log.changed_at == delete_date
+    assert delete_log.changed_by == "deleter"
+    assert delete_log.before_snapshot["feedstock"] == "Camelina"
+    assert delete_log.after_snapshot is None
+    assert delete_log.changed_fields["feedstock"] == {
+        "old": "Camelina",
+        "new": None,
+    }
+    assert delete_log.changed_fields["proposed_ci"] == {
+        "old": 6.25,
+        "new": None,
+    }
 
 
 @pytest.mark.anyio
