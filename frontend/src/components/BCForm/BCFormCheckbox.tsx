@@ -8,20 +8,36 @@ import BCTypography from '@/components/BCTypography'
 import { Controller } from 'react-hook-form'
 import { CustomLabel } from './CustomLabel'
 import PropTypes from 'prop-types'
+import type { ReactNode } from 'react'
+
+export interface BCFormCheckboxOption {
+  value: string
+  label?: ReactNode
+  header?: ReactNode
+  text?: ReactNode
+}
+
+export interface BCFormCheckboxProps {
+  name: string
+  form: { control: any }
+  label?: ReactNode
+  options: BCFormCheckboxOption[]
+  disabled?: boolean
+  initialItems?: string[]
+}
 
 export const BCFormCheckbox = ({
   name,
   form,
   label,
   options,
-  disabled = false,
-  initialItems = []
-}) => {
+  disabled = false
+}: BCFormCheckboxProps) => {
   if (!form) {
     throw new Error('BCFormCheckbox requires a form prop')
   }
   const { control } = form
-  const handleSelect = (selectedValue) => (currentValues) => {
+  const handleSelect = (selectedValue: string) => (currentValues: string[]) => {
     if (currentValues.includes(selectedValue)) {
       return currentValues.filter((value) => value !== selectedValue)
     } else {
@@ -78,7 +94,7 @@ export const BCFormCheckbox = ({
                   option.label
                 )
               }
-              key={option.value || option.label || `option-${index}`}
+              key={option.value || String(option.label) || `option-${index}`}
             />
           )
         })}

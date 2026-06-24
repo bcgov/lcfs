@@ -1,9 +1,28 @@
+// @ts-nocheck
 import { useState, useCallback, useEffect } from 'react'
 import { IconButton } from '@mui/material'
 import { Clear as ClearIcon } from '@mui/icons-material'
 
 const ITEM_HEIGHT = 48
 const ITEM_PADDING_TOP = 8
+
+export interface BCSelectFloatingFilterProps {
+  model?: any
+  onModelChange: (model: any) => void
+  optionsQuery: (params?: any) => {
+    data?: Array<Record<string, any>>
+    isLoading?: boolean
+    isError?: boolean
+    error?: Error
+  }
+  valueKey?: string
+  labelKey?: string
+  disabled?: boolean
+  params?: any
+  initialFilterType?: string
+  multiple?: boolean
+  initialSelectedValues?: string[]
+}
 
 export const BCSelectFloatingFilter = ({
   model,
@@ -16,7 +35,7 @@ export const BCSelectFloatingFilter = ({
   initialFilterType = 'equals',
   multiple = false,
   initialSelectedValues = []
-}) => {
+}: BCSelectFloatingFilterProps) => {
   const [selectedValues, setSelectedValues] = useState(multiple ? [] : '')
   const [options, setOptions] = useState([])
   const { data: optionsData, isLoading, isError, error } = optionsQuery(params)

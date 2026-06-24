@@ -1,5 +1,5 @@
 import BCBox from '@/components/BCBox'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/ComplianceUnitsTotal'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'

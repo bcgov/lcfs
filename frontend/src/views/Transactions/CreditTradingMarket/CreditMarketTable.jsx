@@ -9,7 +9,7 @@ import React, {
 } from 'react'
 import { Box } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCreditMarketListings } from '@/hooks/useOrganization'

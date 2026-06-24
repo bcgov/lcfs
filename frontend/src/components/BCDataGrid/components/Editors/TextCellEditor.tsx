@@ -1,9 +1,32 @@
+// @ts-nocheck
 import { forwardRef, useEffect, useRef } from 'react'
 import { TextField } from '@mui/material'
 import InputMask from 'react-input-mask'
 
+export interface TextCellEditorProps {
+  value?: string
+  onValueChange: (value: string) => void
+  eventKey?: string
+  rowIndex?: number
+  column?: any
+  mask?: string
+  formatChars?: Record<string, string>
+  inputProps?: Record<string, any>
+  [key: string]: any
+}
+
 export const TextCellEditor = forwardRef(
-  ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
+  (
+    {
+      value,
+      onValueChange,
+      eventKey,
+      rowIndex,
+      column,
+      ...props
+    }: TextCellEditorProps,
+    ref
+  ) => {
     const handleTextFieldChange = (event) => {
       onValueChange(event.target.value)
     }
