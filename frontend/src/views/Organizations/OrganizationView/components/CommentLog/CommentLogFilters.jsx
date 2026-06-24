@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, useEffect } from 'react'
+import { useId, useMemo, useRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Autocomplete, Box, InputAdornment, TextField } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
@@ -32,10 +32,26 @@ export const CommentLogFilters = ({
     setLocalSearch(filters.search)
   }, [filters.search])
 
-  // Commit debounced value to the shared filter state
+  // Keep the latest setFilter in a ref so the commit effect below depends only
+  // on the debounced search value — not on setFilter's identity. setFilter is
+  // recreated whenever filters change (it closes over `filters`); depending on
+  // it caused "Clear all filters" to re-fire this effect with the still-stale
+  // debounced value and immediately re-apply the search the user just cleared.
+  const setFilterRef = useRef(setFilter)
   useEffect(() => {
-    setFilter('search', debouncedSearch)
-  }, [debouncedSearch, setFilter])
+    setFilterRef.current = setFilter
+  }, [setFilter])
+
+  // Commit the debounced value only when the user's input actually changes.
+  // Skip the initial mount so a deep-linked search/page isn't reset.
+  const didMountSearch = useRef(false)
+  useEffect(() => {
+    if (!didMountSearch.current) {
+      didMountSearch.current = true
+      return
+    }
+    setFilterRef.current('search', debouncedSearch)
+  }, [debouncedSearch])
 
   const categoryOptions = useMemo(() => buildOptions(categories), [categories])
   const yearOptions = useMemo(() => buildOptions(years), [years])
