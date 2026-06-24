@@ -270,6 +270,7 @@ class CIApplicationRepository:
         self,
         ci_application_id: int,
         pathways: List[Pathway],
+        preserve_history: bool = False,
     ) -> List[Pathway]:
         """
         Replace the full set of pathways for a CI application.
@@ -283,9 +284,10 @@ class CIApplicationRepository:
         """
         from sqlalchemy import delete
 
-        await self.db.execute(
-            delete(Pathway).where(Pathway.ci_application_id == ci_application_id)
-        )
+        if not preserve_history:
+            await self.db.execute(
+                delete(Pathway).where(Pathway.ci_application_id == ci_application_id)
+            )
         for pathway in pathways:
             pathway.ci_application_id = ci_application_id
             self.db.add(pathway)

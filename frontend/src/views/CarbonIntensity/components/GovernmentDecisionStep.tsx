@@ -457,7 +457,7 @@ export const GovernmentDecisionStep = ({
                     disabled={
                       readOnly ||
                       requestedPathwayChanges ||
-                      !!ciApplication?.pathwayChangesRequestedAt ||
+                      !!ciApplication?.pathwaySupplementalEditEnabled ||
                       isRequestingPathwayChanges
                     }
                     onClick={handleRequestPathwayChanges}

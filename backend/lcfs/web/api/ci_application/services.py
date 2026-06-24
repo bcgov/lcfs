@@ -8,6 +8,7 @@ decision (with the comments thread).
 
 import uuid
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
@@ -53,6 +54,7 @@ from lcfs.web.api.ci_application.schema import (
     LatestCommentSchema,
     OrganizationInfoSchema,
     PathwayApplicationTypeSchema,
+    PathwayChangeLogSchema,
     PathwayFuelCodeTypeSchema,
     PathwayInputSchema,
     PathwaySchema,
@@ -64,6 +66,23 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 # pathway_application_type.type values seeded by the migration
 PATHWAY_APPLICATION_TYPE_NEW = "New"
 PATHWAY_APPLICATION_TYPE_RENEWAL = "Renewal"
+
+PATHWAY_LOG_FIELDS = [
+    "application_type_id",
+    "fuel_code_type_id",
+    "operating_data_from",
+    "operating_data_to",
+    "fuel_code_id",
+    "proposed_ci",
+    "fuel_type_id",
+    "feedstock",
+    "feedstock_region",
+    "feedstock_transport_mode",
+    "feedstock_transport_distance",
+    "coproducts",
+    "finished_fuel_transport_mode",
+    "finished_fuel_transport_distance",
+]
 
 logger = structlog.get_logger(__name__)
 
@@ -114,9 +133,13 @@ def _to_fuel_code_option(fc: FuelCode) -> FuelCodeOptionSchema:
 
 
 def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
+    action_type = getattr(pathway, "action_type", None)
     return PathwaySchema(
         pathway_id=pathway.pathway_id,
         ci_application_id=pathway.ci_application_id,
+        group_uuid=getattr(pathway, "group_uuid", None),
+        version=getattr(pathway, "version", None),
+        action_type=action_type.value if hasattr(action_type, "value") else action_type,
         application_type_id=pathway.application_type_id,
         application_type=(
             PathwayApplicationTypeSchema.model_validate(pathway.application_type)
@@ -149,6 +172,152 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
         coproducts=pathway.coproducts,
         finished_fuel_transport_mode=pathway.finished_fuel_transport_mode,
         finished_fuel_transport_distance=pathway.finished_fuel_transport_distance,
+    )
+
+
+def _json_value(value: Any) -> Any:
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return str(value)
+    return value
+
+
+def _pathway_snapshot(pathway: Pathway) -> Dict[str, Any]:
+    snapshot = {
+        "pathway_id": getattr(pathway, "pathway_id", None),
+        "pathway_group_uuid": getattr(pathway, "group_uuid", None),
+    }
+    for field in PATHWAY_LOG_FIELDS:
+        snapshot[field] = _json_value(getattr(pathway, field, None))
+    return snapshot
+
+
+def _pathway_input_snapshot(
+    row: PathwayInputSchema,
+    pathway: Optional[Pathway] = None,
+    pathway_group_uuid: Optional[str] = None,
+) -> Dict[str, Any]:
+    snapshot = {
+        "pathway_id": getattr(pathway, "pathway_id", None) or row.pathway_id,
+        "pathway_group_uuid": pathway_group_uuid
+        or getattr(pathway, "group_uuid", None),
+    }
+    for field in PATHWAY_LOG_FIELDS:
+        snapshot[field] = _json_value(getattr(row, field, None))
+    return snapshot
+
+
+def _changed_fields(
+    before: Optional[Dict[str, Any]],
+    after: Optional[Dict[str, Any]],
+) -> Dict[str, Dict[str, Any]]:
+    changes: Dict[str, Dict[str, Any]] = {}
+    for field in PATHWAY_LOG_FIELDS:
+        old_value = before.get(field) if before else None
+        new_value = after.get(field) if after else None
+        if old_value != new_value:
+            changes[field] = {"old": old_value, "new": new_value}
+    return changes
+
+
+def _action_type_value(action_type: Any) -> str:
+    return action_type.value if hasattr(action_type, "value") else str(action_type)
+
+
+def _sorted_pathways(pathways: List[Pathway]) -> List[Pathway]:
+    return sorted(
+        pathways,
+        key=lambda p: (
+            getattr(p, "create_date", None) or datetime.min,
+            getattr(p, "group_uuid", "") or "",
+            getattr(p, "version", 0) or 0,
+            getattr(p, "pathway_id", 0) or 0,
+        ),
+    )
+
+
+def _latest_active_pathways(pathways: List[Pathway]) -> List[Pathway]:
+    latest_by_group: Dict[str, Pathway] = {}
+    for pathway in _sorted_pathways(pathways):
+        group_uuid = getattr(pathway, "group_uuid", None)
+        if not group_uuid:
+            continue
+        current = latest_by_group.get(group_uuid)
+        if current is None or (pathway.version or 0) >= (current.version or 0):
+            latest_by_group[group_uuid] = pathway
+
+    if not latest_by_group:
+        return sorted(
+            [
+                pathway
+                for pathway in pathways
+                if _action_type_value(getattr(pathway, "action_type", "CREATE"))
+                != ActionTypeEnum.DELETE.value
+            ],
+            key=lambda p: getattr(p, "pathway_id", 0) or 0,
+        )
+
+    active = [
+        pathway
+        for pathway in latest_by_group.values()
+        if _action_type_value(pathway.action_type) != ActionTypeEnum.DELETE.value
+    ]
+    return sorted(
+        active,
+        key=lambda p: (
+            getattr(p, "create_date", None) or datetime.min,
+            getattr(p, "pathway_id", 0) or 0,
+        ),
+    )
+
+
+def _pathway_change_logs_from_versions(
+    pathways: List[Pathway],
+) -> List[PathwayChangeLogSchema]:
+    by_group: Dict[str, List[Pathway]] = {}
+    for pathway in _sorted_pathways(pathways):
+        group_uuid = getattr(pathway, "group_uuid", None)
+        if not group_uuid:
+            continue
+        by_group.setdefault(group_uuid, []).append(pathway)
+
+    logs: List[PathwayChangeLogSchema] = []
+    for group_uuid, group_pathways in by_group.items():
+        previous_snapshot: Optional[Dict[str, Any]] = None
+        for pathway in group_pathways:
+            action_type = _action_type_value(pathway.action_type)
+            current_snapshot = (
+                None
+                if action_type == ActionTypeEnum.DELETE.value
+                else _pathway_snapshot(pathway)
+            )
+            comparison_snapshot = (
+                None if action_type == ActionTypeEnum.DELETE.value else current_snapshot
+            )
+            changed_fields = _changed_fields(previous_snapshot, comparison_snapshot)
+            if changed_fields:
+                logs.append(
+                    PathwayChangeLogSchema(
+                        ci_application_id=pathway.ci_application_id,
+                        pathway_id=pathway.pathway_id,
+                        pathway_group_uuid=group_uuid,
+                        action_type=action_type,
+                        changed_at=getattr(pathway, "create_date", None),
+                        changed_by=getattr(pathway, "create_user", None),
+                        changed_fields=changed_fields,
+                        before_snapshot=previous_snapshot,
+                        after_snapshot=current_snapshot,
+                    )
+                )
+            previous_snapshot = _pathway_snapshot(pathway)
+
+    return sorted(
+        logs,
+        key=lambda log: (
+            log.changed_at or datetime.min.replace(tzinfo=timezone.utc),
+            log.pathway_id or 0,
+        ),
     )
 
 
@@ -192,6 +361,7 @@ def _to_full_schema(
     ci: CIApplication,
     signature_user_display_name: Optional[str] = None,
 ) -> CIApplicationSchema:
+    all_pathways = list(getattr(ci, "pathways", None) or [])
     return CIApplicationSchema(
         signature_user_display_name=signature_user_display_name,
         ci_application_id=ci.ci_application_id,
@@ -210,7 +380,10 @@ def _to_full_schema(
         ),
         proposed_fuel_code_effective_date=ci.proposed_fuel_code_effective_date,
         pathway_description=ci.pathway_description,
-        pathways=[_to_pathway_schema(p) for p in (getattr(ci, "pathways", None) or [])],
+        pathways=[_to_pathway_schema(p) for p in _latest_active_pathways(all_pathways)],
+        pathway_supplemental_edit_enabled=bool(
+            getattr(ci, "pathway_supplemental_edit_enabled", False)
+        ),
         pathway_changes_requested_at=getattr(ci, "pathway_changes_requested_at", None),
         pathway_changes_requested_by=getattr(ci, "pathway_changes_requested_by", None),
         pathway_changelog=[
@@ -220,6 +393,7 @@ def _to_full_schema(
             and history.ci_application_snapshot.get("event")
             in {"pathway_changes_requested", "supplemental_pathways_updated"}
         ],
+        pathway_change_logs=_pathway_change_logs_from_versions(all_pathways),
         generated_fuel_codes=[
             _to_generated_fuel_code_schema(row)
             for row in (getattr(ci, "generated_fuel_codes", None) or [])
@@ -330,6 +504,9 @@ def _to_list_item(
             else None
         ),
         proposed_fuel_code_effective_date=ci.proposed_fuel_code_effective_date,
+        pathway_supplemental_edit_enabled=bool(
+            getattr(ci, "pathway_supplemental_edit_enabled", False)
+        ),
         preliminary_risk_assessment=getattr(ci, "preliminary_risk_assessment", None),
         update_date=ci.update_date.isoformat() if ci.update_date else None,
         create_date=ci.create_date.isoformat() if ci.create_date else None,
@@ -416,7 +593,10 @@ class CIApplicationServices:
         reserved_suffixes_by_prefix: Dict[str, set[str]] = {}
 
         generated_rows: List[dict] = []
-        for index, pathway in enumerate(ci_application.pathways or [], start=1):
+        current_pathways = _latest_active_pathways(
+            list(getattr(ci_application, "pathways", None) or [])
+        )
+        for index, pathway in enumerate(current_pathways, start=1):
             prefix_id, prefix_name, fuel_suffix = (
                 await self._resolve_generated_prefix_and_suffix(
                     pathway,
@@ -1048,8 +1228,9 @@ class CIApplicationServices:
         current_status = ci_application.ci_application_status.status
         is_supplemental_edit = (
             current_status == CIApplicationStatusEnum.Submitted.value
-            and getattr(ci_application, "pathway_changes_requested_at", None)
-            is not None
+            and bool(
+                getattr(ci_application, "pathway_supplemental_edit_enabled", False)
+            )
         )
         if (
             current_status != CIApplicationStatusEnum.Draft.value
@@ -1064,17 +1245,28 @@ class CIApplicationServices:
             )
 
         await self._validate_step2_payload(data)
+        previous_pathway_entities = (
+            _latest_active_pathways(list(ci_application.pathways or []))
+            if is_supplemental_edit
+            else []
+        )
+        previous_by_id = {
+            pathway.pathway_id: pathway
+            for pathway in previous_pathway_entities
+            if getattr(pathway, "pathway_id", None) is not None
+        }
         previous_pathways = (
-            [
-                _to_pathway_schema(pathway).model_dump(mode="json")
-                for pathway in (ci_application.pathways or [])
-            ]
+            [_pathway_snapshot(pathway) for pathway in previous_pathway_entities]
             if is_supplemental_edit
             else []
         )
 
-        new_rows: List[Pathway] = [
-            Pathway(
+        new_rows: List[Pathway] = []
+        for row in data.pathways:
+            previous = (
+                previous_by_id.get(row.pathway_id) if is_supplemental_edit else None
+            )
+            pathway = Pathway(
                 application_type_id=row.application_type_id,
                 fuel_code_type_id=row.fuel_code_type_id,
                 operating_data_from=row.operating_data_from,
@@ -1089,19 +1281,68 @@ class CIApplicationServices:
                 coproducts=row.coproducts,
                 finished_fuel_transport_mode=row.finished_fuel_transport_mode,
                 finished_fuel_transport_distance=row.finished_fuel_transport_distance,
-                group_uuid=str(uuid.uuid4()),
-                version=0,
-                action_type=ActionTypeEnum.CREATE,
-                create_user=user.keycloak_username,
+                group_uuid=previous.group_uuid if previous else str(uuid.uuid4()),
+                version=((previous.version or 0) + 1) if previous else 0,
+                action_type=(
+                    ActionTypeEnum.UPDATE if previous else ActionTypeEnum.CREATE
+                ),
+                create_user=(
+                    previous.create_user
+                    if previous and getattr(previous, "create_user", None)
+                    else user.keycloak_username
+                ),
                 update_user=user.keycloak_username,
             )
-            for row in data.pathways
-        ]
+            if previous and getattr(previous, "create_date", None):
+                pathway.create_date = previous.create_date
+            new_rows.append(pathway)
 
-        await self.repo.replace_pathways(ci_application.ci_application_id, new_rows)
+        submitted_pathway_ids = {
+            row.pathway_id for row in data.pathways if row.pathway_id is not None
+        }
+        delete_rows: List[Pathway] = []
+        if is_supplemental_edit:
+            for previous in previous_pathway_entities:
+                if previous.pathway_id in submitted_pathway_ids:
+                    continue
+                pathway = Pathway(
+                    application_type_id=previous.application_type_id,
+                    fuel_code_type_id=previous.fuel_code_type_id,
+                    operating_data_from=previous.operating_data_from,
+                    operating_data_to=previous.operating_data_to,
+                    fuel_code_id=previous.fuel_code_id,
+                    proposed_ci=previous.proposed_ci,
+                    fuel_type_id=previous.fuel_type_id,
+                    feedstock=previous.feedstock,
+                    feedstock_region=previous.feedstock_region,
+                    feedstock_transport_mode=previous.feedstock_transport_mode,
+                    feedstock_transport_distance=previous.feedstock_transport_distance,
+                    coproducts=previous.coproducts,
+                    finished_fuel_transport_mode=previous.finished_fuel_transport_mode,
+                    finished_fuel_transport_distance=previous.finished_fuel_transport_distance,
+                    group_uuid=previous.group_uuid,
+                    version=(previous.version or 0) + 1,
+                    action_type=ActionTypeEnum.DELETE,
+                    create_user=(
+                        previous.create_user
+                        if getattr(previous, "create_user", None)
+                        else user.keycloak_username
+                    ),
+                    update_user=user.keycloak_username,
+                )
+                if getattr(previous, "create_date", None):
+                    pathway.create_date = previous.create_date
+                delete_rows.append(pathway)
+
+        await self.repo.replace_pathways(
+            ci_application.ci_application_id,
+            [*new_rows, *delete_rows],
+            preserve_history=is_supplemental_edit,
+        )
 
         ci_application.pathway_description = data.pathway_description
         if is_supplemental_edit:
+            ci_application.pathway_supplemental_edit_enabled = False
             ci_application.pathway_changes_requested_at = None
             ci_application.pathway_changes_requested_by = None
         ci_application.update_user = user.keycloak_username
@@ -1123,7 +1364,8 @@ class CIApplicationServices:
                     "changed_by": user.keycloak_username,
                     "before": previous_pathways,
                     "after": [
-                        pathway.model_dump(mode="json") for pathway in data.pathways
+                        _pathway_input_snapshot(row, pathway, pathway.group_uuid)
+                        for row, pathway in zip(data.pathways, new_rows)
                     ],
                 },
             )
@@ -1148,6 +1390,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
+        ci_application.pathway_supplemental_edit_enabled = True
         ci_application.pathway_changes_requested_at = requested_at
         ci_application.pathway_changes_requested_by = user.keycloak_username
         ci_application.update_user = user.keycloak_username

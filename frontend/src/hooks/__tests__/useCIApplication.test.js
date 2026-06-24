@@ -307,6 +307,7 @@ describe('useCIApplication hooks', () => {
       const submitted = {
         ciApplicationId: 12,
         status: { status: 'Submitted' },
+        pathwaySupplementalEditEnabled: true,
         pathwayChangesRequestedAt: '2026-06-10T10:00:00Z'
       }
       mockPost.mockResolvedValue({ data: submitted })

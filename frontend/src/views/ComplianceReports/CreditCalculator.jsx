@@ -858,7 +858,9 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                               }}
                               slotProps={{
                                 input: {
-                                  style: { textAlign: 'left' },
+                                  style: { textAlign: 'left' }
+                                },
+                                htmlInput: {
                                   maxLength: 13,
                                   'data-test': 'quantity'
                                 }
@@ -930,7 +932,9 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                             }}
                             slotProps={{
                               input: {
-                                style: { textAlign: 'left' },
+                                style: { textAlign: 'left' }
+                              },
+                              htmlInput: {
                                 maxLength: 13,
                                 'data-test': 'complianceUnits'
                               }
