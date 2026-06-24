@@ -52,7 +52,6 @@ from .schema import (
 )
 from lcfs.db.models.user.Role import RoleEnum
 
-
 logger = structlog.get_logger(__name__)
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
@@ -199,8 +198,7 @@ async def get_penalty_analytics(
     """
     user = request.user
     if not user.is_government and (
-        not user.organization
-        or user.organization.organization_id != organization_id
+        not user.organization or user.organization.organization_id != organization_id
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -224,8 +222,7 @@ async def get_penalty_logs(
     """Fetch paginated penalty log entries for an organization."""
     user = request.user
     if not user.is_government and (
-        not user.organization
-        or user.organization.organization_id != organization_id
+        not user.organization or user.organization.organization_id != organization_id
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

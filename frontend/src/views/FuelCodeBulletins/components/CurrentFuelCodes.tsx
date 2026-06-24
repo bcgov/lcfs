@@ -4,6 +4,7 @@ import { DownloadButton } from '@/components/DownloadButton'
 import { Stack } from '@mui/material'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { govRoles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { buildColumnDefs, formatDate, normalizeRows } from '../_schema'
@@ -13,6 +14,7 @@ import {
   useFuelCodeBulletins
 } from '@/hooks/useFuelCode'
 import BCAlert from '@/components/BCAlert'
+import { ROUTES, buildPath } from '@/routes/routes'
 
 const initialPaginationOptions = {
   page: 1,
@@ -25,6 +27,7 @@ export const CurrentFuelCodes = () => {
   const { t } = useTranslation(['bulletins', 'fuelCode'])
   const { hasAnyRole } = useCurrentUser()
   const isIdirView = hasAnyRole(...govRoles)
+  const navigate = useNavigate()
   const gridRef = useRef<any>(null)
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState('')
@@ -54,6 +57,12 @@ export const CurrentFuelCodes = () => {
   const cutoffLabel = data?.cutoffDate
     ? formatDate(data.cutoffDate)
     : t('current.cutoffLabel')
+
+  const navigateToFuelCodeDetail = (fuelCodeId: unknown) => {
+    const id = Number(fuelCodeId)
+    if (!Number.isInteger(id) || id <= 0) return
+    navigate(buildPath(ROUTES.FUEL_CODES.VIEW, { fuelCodeID: id }))
+  }
 
   const handleDownload = async () => {
     setIsDownloading(true)
@@ -139,6 +148,14 @@ export const CurrentFuelCodes = () => {
             sortable: true
           }}
           getRowId={(params: any) => params.data.id}
+          rowStyle={isIdirView ? { cursor: 'pointer' } : undefined}
+          onRowClicked={
+            isIdirView
+              ? (params: any) => {
+                  navigateToFuelCodeDetail(params.data?.fuelCodeId)
+                }
+              : undefined
+          }
         />
       </BCBox>
     </Stack>

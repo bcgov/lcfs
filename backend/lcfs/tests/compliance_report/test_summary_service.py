@@ -39,13 +39,13 @@ def _assert_repo_calls(
     Args:
         mock_repo: Mock summary repository
         mock_trxn_repo: Mock transaction repository
-        start_date: Compliance period start date (for Line 14)
-        end_date: Compliance period end date (for Line 14)
+        start_date: Compliance period start date (used for the Line 17 balance period year)
+        end_date: Compliance period end date
         organization_id: Organization ID
-        transaction_start_date: Transaction period start date (for Lines 12 & 13). If None, uses start_date.
-        transaction_end_date: Transaction period end date (for Lines 12 & 13). If None, uses end_date.
+        transaction_start_date: Transaction period start date (for Lines 12, 13 & 14). If None, uses start_date.
+        transaction_end_date: Transaction period end date (for Lines 12, 13 & 14). If None, uses end_date.
     """
-    # For Lines 12 & 13 (transfers), use transaction dates
+    # For Lines 12, 13 & 14 (transfers and initiative agreements), use the transaction window
     trans_start = transaction_start_date if transaction_start_date else start_date
     trans_end = transaction_end_date if transaction_end_date else end_date
 
@@ -55,9 +55,9 @@ def _assert_repo_calls(
     mock_repo.get_received_compliance_units.assert_called_once_with(
         trans_start, trans_end, organization_id
     )
-    # Line 14 (issued units) still uses compliance period dates
+    # Line 14 (issued units) uses the transaction window, same as Lines 12 & 13 (issue #4556)
     mock_repo.get_issued_compliance_units.assert_called_once_with(
-        start_date, end_date, organization_id
+        trans_start, trans_end, organization_id
     )
     mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
         organization_id, start_date.year
@@ -1011,6 +1011,69 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
         organization_id, compliance_period_start.year
     )
+
+
+@pytest.mark.anyio
+async def test_line_14_issued_units_use_transaction_window(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo, mock_repo
+):
+    """Issue #4556: Line 14 (compliance units issued under Initiative Agreements) must be
+    summed over the same transaction window as Lines 12 & 13 -- Apr 1 of the reporting
+    year to Mar 31 of the following year when a prior assessed report exists -- and NOT
+    over the Jan 1 - Dec 31 compliance period. Regression guard for the date-range fix.
+    """
+    mock_repo.get_assessed_compliance_report_by_period.reset_mock()
+
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 1
+
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.configure_mock(version=0)
+    compliance_report.organization_id = organization_id
+    compliance_report.compliance_report_id = 999
+
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 0
+    mock_summary_repo.get_received_compliance_units.return_value = 0
+    mock_summary_repo.get_issued_compliance_units.return_value = 200
+
+    # A prior-year assessed report exists -> transaction window starts Apr 1.
+    mock_assessed_summary = MagicMock(
+        line_18_units_to_be_banked=0, line_19_units_to_be_exported=0
+    )
+    mock_repo.get_assessed_compliance_report_by_period.return_value = MagicMock(
+        summary=mock_assessed_summary
+    )
+
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 0
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+        return_value=0
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+        return_value=0
+    )
+
+    summary, _ = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    # Line 14 must be summed over Apr 1 (reporting year) -> Mar 31 (following year).
+    expected_start = datetime(2024, 4, 1, 0, 0, 0)
+    expected_end = datetime(2025, 3, 31, 23, 59, 59)
+    mock_summary_repo.get_issued_compliance_units.assert_called_once_with(
+        expected_start, expected_end, organization_id
+    )
+
+    # Guard against the pre-fix behaviour (Jan 1 - Dec 31 compliance period).
+    issued_call_args = mock_summary_repo.get_issued_compliance_units.call_args.args
+    assert issued_call_args[0] != compliance_period_start
+    assert issued_call_args[1] != compliance_period_end
+    assert _get_line_values(summary)[14] == 200
 
     # get_assessed_compliance_report_by_period is called TWICE:
     # 1. In _calculate_transaction_period_dates to check for previous year's report (2023)
