@@ -1,7 +1,12 @@
 // @ts-nocheck
 import { ColDef } from '@ag-grid-community/core'
 import { TFunction } from 'i18next'
+import { Link } from 'react-router-dom'
 import { fuelCodeColDefs as idirFuelCodeColDefs } from '@/views/FuelCodes/_schema'
+import { ROUTES, buildPath } from '@/routes/routes'
+import BCBadge from '@/components/BCBadge'
+import BCBox from '@/components/BCBox'
+import { getAllFuelCodeStatuses } from '@/constants/statuses'
 
 const dateFormatter = new Intl.DateTimeFormat('en-CA', {
   year: 'numeric',
@@ -33,9 +38,82 @@ export const dateSortComparator = (a: string, b: string): number => {
   return left - right
 }
 
+const fuelCodeDetailPath = (fuelCodeId: unknown): string | null => {
+  const id = Number(fuelCodeId)
+  if (!Number.isInteger(id) || id <= 0) return null
+  return buildPath(ROUTES.FUEL_CODES.VIEW, { fuelCodeID: id })
+}
+
+const linkCellRenderer = (originalRenderer?: ColDef['cellRenderer']) => {
+  return (params: any) => {
+    const path = fuelCodeDetailPath(params.data?.fuelCodeId)
+    const content =
+      typeof originalRenderer === 'function'
+        ? originalRenderer(params)
+        : params.valueFormatted || params.value || ''
+
+    if (!path) return content
+
+    return (
+      <Link
+        to={path}
+        style={{
+          color: 'inherit',
+          display: 'block',
+          height: '100%',
+          textDecoration: 'none',
+          width: '100%'
+        }}
+      >
+        {content}
+      </Link>
+    )
+  }
+}
+
+const FuelCodeStatusBadge = (params: any) => {
+  const statusArr = getAllFuelCodeStatuses()
+  const statusIndex = statusArr.indexOf(params.data?.status)
+  const statusColors = ['info', 'info', 'success', 'error']
+
+  return (
+    <BCBox sx={{ width: '100%', height: '100%' }}>
+      <BCBox mt={1} sx={{ display: 'flex', justifyContent: 'center' }}>
+        <BCBadge
+          badgeContent={statusArr[statusIndex] ?? params.data?.status}
+          color={statusColors[statusIndex] ?? 'info'}
+          variant="contained"
+          size="lg"
+          sx={{
+            '& .MuiBadge-badge': {
+              minWidth: '120px',
+              fontWeight: 'regular',
+              textTransform: 'capitalize',
+              fontSize: '0.875rem',
+              padding: '0.4em 0.6em'
+            }
+          }}
+        />
+      </BCBox>
+    </BCBox>
+  )
+}
+
+const clickableFuelCodeColDefs = (colDefs: ColDef[]): ColDef[] =>
+  colDefs.map((colDef) => ({
+    ...colDef,
+    cellRenderer: linkCellRenderer(
+      colDef.field === 'status' ? FuelCodeStatusBadge : colDef.cellRenderer
+    ),
+    cellStyle: {
+      ...(typeof colDef.cellStyle === 'object' ? colDef.cellStyle : {}),
+      cursor: 'pointer'
+    }
+  }))
+
 export const buildColumnDefs = (t: TFunction, isIdir = false): ColDef[] => {
   if (isIdir) {
-    return idirFuelCodeColDefs(t)
+    return clickableFuelCodeColDefs(idirFuelCodeColDefs(t))
   }
   return [
     {

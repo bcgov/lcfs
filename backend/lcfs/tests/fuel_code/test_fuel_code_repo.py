@@ -1,8 +1,10 @@
 from datetime import date, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from lcfs.db.models.fuel.FuelCodeListView import FuelCodeListView
 import pytest
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import NoResultFound
 
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
@@ -562,6 +564,54 @@ async def test_get_fuel_codes_paginated_skips_organization_filter_when_omitted(
     assert all(
         "fuel_code.organization_id = " not in q for q in rendered_queries
     )
+
+
+@pytest.mark.anyio
+async def test_get_fuel_code_group_detail_orders_iterations_by_numeric_suffix(
+    fuel_code_repo, mock_db
+):
+    source_fc = FuelCode(fuel_code_id=1, prefix_id=1, fuel_suffix="100.1")
+    latest_fc = FuelCode(fuel_code_id=10, prefix_id=1, fuel_suffix="100.10")
+    iteration_rows = [
+        SimpleNamespace(
+            fuel_code_id=10,
+            prefix="C-BCLCF-",
+            fuel_suffix="100.10",
+            status=FuelCodeStatusEnum.Draft.value,
+        ),
+        SimpleNamespace(
+            fuel_code_id=9,
+            prefix="C-BCLCF-",
+            fuel_suffix="100.9",
+            status=FuelCodeStatusEnum.Draft.value,
+        ),
+    ]
+    iterations_result = MagicMock()
+    iterations_result.unique.return_value.scalars.return_value.all.return_value = (
+        iteration_rows
+    )
+    volume_result = MagicMock()
+    volume_result.all.return_value = []
+    mock_db.scalar.side_effect = [source_fc, latest_fc]
+    mock_db.execute.side_effect = [iterations_result, volume_result]
+
+    latest, iterations, volume = await fuel_code_repo.get_fuel_code_group_detail(1)
+
+    assert latest == latest_fc
+    assert iterations == iteration_rows
+    assert volume == []
+
+    iteration_stmt = mock_db.execute.await_args_list[0].args[0]
+    stmt_sql = str(
+        iteration_stmt.compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+
+    assert "ORDER BY" in stmt_sql
+    assert "CAST(split_part" in stmt_sql
+    assert "AS INTEGER) DESC" in stmt_sql
+    assert "vw_fuel_code_base.fuel_suffix DESC" not in stmt_sql
 
 
 @pytest.mark.anyio

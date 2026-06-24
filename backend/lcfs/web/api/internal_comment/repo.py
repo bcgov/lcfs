@@ -1,10 +1,12 @@
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 import structlog
-from typing import List, Optional
+from datetime import date, datetime, time
+from typing import List, Optional, Tuple
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import asc, select, desc
+import sqlalchemy as sa
+from sqlalchemy import asc, case, desc, func, or_, select
 
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
@@ -13,6 +15,16 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.comment.InternalComment import InternalComment
+from lcfs.db.models.comment.CommentCategory import CommentCategory
+from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    InitiativeAgreement,
+)
+from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
+from lcfs.db.models.ci_application.CIApplication import CIApplication
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum
 from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
 from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
@@ -27,7 +39,6 @@ from lcfs.db.models.comment.ComplianceReportInternalComment import (
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
-
 
 logger = structlog.get_logger(__name__)
 
@@ -116,7 +127,10 @@ class InternalCommentRepository:
 
     @repo_handler
     async def get_internal_comments(
-        self, entity_type: EntityTypeEnum, entity_id: int, visibility_filter: Optional[str] = None
+        self,
+        entity_type: EntityTypeEnum,
+        entity_id: int,
+        visibility_filter: Optional[str] = None,
     ) -> List[dict]:
         """
         Retrieves a list of internal comments associated with a specific entity,
@@ -256,6 +270,9 @@ class InternalCommentRepository:
         new_comment_text: Optional[str] = None,
         visibility: Optional[str] = None,
         audience_scope: Optional[str] = None,
+        comment_category_id: Optional[int] = None,
+        comment_search_text: Optional[str] = None,
+        comment_search_vector=None,
     ) -> InternalComment:
         """
         Updates the text of an existing internal comment.
@@ -265,6 +282,9 @@ class InternalCommentRepository:
             new_comment_text (str, optional): The new text for the comment.
             visibility (str, optional): The visibility for the comment.
             audience_scope (str, optional): The audience scope for the comment.
+            comment_category_id (int, optional): New category FK if changed.
+            comment_search_text (str, optional): Refreshed sanitized text.
+            comment_search_vector: SQL expression / value for the tsvector.
 
         Returns:
             InternalComment: The updated internal comment object.
@@ -291,6 +311,12 @@ class InternalCommentRepository:
             internal_comment.audience_scope = audience_scope
         elif visibility is not None and str(visibility) == "Public":
             internal_comment.audience_scope = None
+        if comment_category_id is not None:
+            internal_comment.comment_category_id = comment_category_id
+        if comment_search_text is not None:
+            internal_comment.comment_search_text = comment_search_text
+        if comment_search_vector is not None:
+            internal_comment.comment_search_vector = comment_search_vector
         await self.db.flush()
         await self.db.refresh(internal_comment)
 
@@ -344,3 +370,486 @@ class InternalCommentRepository:
         )
         result = await self.db.execute(query)
         return [row[0] for row in result.all()]
+
+    @repo_handler
+    async def get_all_categories(self) -> List[str]:
+        """Return all comment category display names ordered by display_order."""
+        result = await self.db.execute(
+            select(CommentCategory.display_name).order_by(CommentCategory.display_order)
+        )
+        return [row[0] for row in result.all()]
+
+    @repo_handler
+    async def get_category_id_by_name(self, display_name: str) -> Optional[int]:
+        """Look up a ``comment_category`` row id by display name."""
+        if not display_name:
+            return None
+        result = await self.db.execute(
+            select(CommentCategory.comment_category_id).where(
+                CommentCategory.display_name == display_name
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
+    async def get_entity_org_and_year(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """
+        Derive (organization_id, compliance_year) for a source entity.
+        """
+        if entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
+            stmt = (
+                select(ComplianceReport.organization_id, CompliancePeriod.description)
+                .join(
+                    CompliancePeriod,
+                    CompliancePeriod.compliance_period_id
+                    == ComplianceReport.compliance_period_id,
+                )
+                .where(ComplianceReport.compliance_report_id == entity_id)
+            )
+            row = (await self.db.execute(stmt)).first()
+            if row is None:
+                return (None, None)
+            org_id, period_desc = row
+            try:
+                year = int(period_desc) if period_desc else None
+            except (TypeError, ValueError):
+                year = None
+            return (org_id, year)
+
+        if entity_type == EntityTypeEnum.TRANSFER:
+            stmt = select(Transfer.to_organization_id).where(
+                Transfer.transfer_id == entity_id
+            )
+        elif entity_type == EntityTypeEnum.INITIATIVE_AGREEMENT:
+            stmt = select(InitiativeAgreement.to_organization_id).where(
+                InitiativeAgreement.initiative_agreement_id == entity_id
+            )
+        elif entity_type == EntityTypeEnum.ADMIN_ADJUSTMENT:
+            stmt = select(AdminAdjustment.to_organization_id).where(
+                AdminAdjustment.admin_adjustment_id == entity_id
+            )
+        elif entity_type == EntityTypeEnum.CI_APPLICATION:
+            stmt = select(CIApplication.organization_id).where(
+                CIApplication.ci_application_id == entity_id
+            )
+        else:
+            return (None, None)
+
+        org_id = (await self.db.execute(stmt)).scalar_one_or_none()
+        return (org_id, None)
+
+    def _entity_meta_subquery(self, organization_id: Optional[int] = None):
+        """
+        Per ``internal_comment_id``, choose one (entity_type, entity_id,
+        live_org_id, live_year) tuple via ``DISTINCT ON``.
+
+        Pass *organization_id* to pre-filter rows to that org only.
+        """
+        cp_year = case(
+            (
+                CompliancePeriod.description.op("~")("^[0-9]+$"),
+                func.cast(CompliancePeriod.description, sa.Integer),
+            ),
+            else_=None,
+        )
+        return (
+            select(
+                InternalComment.internal_comment_id.label("ic_id"),
+                case(
+                    (
+                        TransferInternalComment.transfer_id.isnot(None),
+                        EntityTypeEnum.TRANSFER.value,
+                    ),
+                    (
+                        InitiativeAgreementInternalComment.initiative_agreement_id.isnot(
+                            None
+                        ),
+                        EntityTypeEnum.INITIATIVE_AGREEMENT.value,
+                    ),
+                    (
+                        AdminAdjustmentInternalComment.admin_adjustment_id.isnot(None),
+                        EntityTypeEnum.ADMIN_ADJUSTMENT.value,
+                    ),
+                    (
+                        ComplianceReportInternalComment.compliance_report_id.isnot(
+                            None
+                        ),
+                        EntityTypeEnum.COMPLIANCE_REPORT.value,
+                    ),
+                    (
+                        CIApplicationInternalComment.ci_application_id.isnot(None),
+                        EntityTypeEnum.CI_APPLICATION.value,
+                    ),
+                    else_=None,
+                ).label("entity_type"),
+                func.coalesce(
+                    TransferInternalComment.transfer_id,
+                    InitiativeAgreementInternalComment.initiative_agreement_id,
+                    AdminAdjustmentInternalComment.admin_adjustment_id,
+                    ComplianceReportInternalComment.compliance_report_id,
+                    CIApplicationInternalComment.ci_application_id,
+                ).label("entity_id"),
+                func.coalesce(
+                    Transfer.to_organization_id,
+                    InitiativeAgreement.to_organization_id,
+                    AdminAdjustment.to_organization_id,
+                    ComplianceReport.organization_id,
+                    CIApplication.organization_id,
+                ).label("live_org_id"),
+                cp_year.label("live_year"),
+            )
+            .outerjoin(
+                TransferInternalComment,
+                TransferInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
+            .outerjoin(
+                Transfer,
+                Transfer.transfer_id == TransferInternalComment.transfer_id,
+            )
+            .outerjoin(
+                InitiativeAgreementInternalComment,
+                InitiativeAgreementInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
+            .outerjoin(
+                InitiativeAgreement,
+                InitiativeAgreement.initiative_agreement_id
+                == InitiativeAgreementInternalComment.initiative_agreement_id,
+            )
+            .outerjoin(
+                AdminAdjustmentInternalComment,
+                AdminAdjustmentInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
+            .outerjoin(
+                AdminAdjustment,
+                AdminAdjustment.admin_adjustment_id
+                == AdminAdjustmentInternalComment.admin_adjustment_id,
+            )
+            .outerjoin(
+                ComplianceReportInternalComment,
+                ComplianceReportInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
+            .outerjoin(
+                ComplianceReport,
+                ComplianceReport.compliance_report_id
+                == ComplianceReportInternalComment.compliance_report_id,
+            )
+            .outerjoin(
+                CompliancePeriod,
+                CompliancePeriod.compliance_period_id
+                == ComplianceReport.compliance_period_id,
+            )
+            .outerjoin(
+                CIApplicationInternalComment,
+                CIApplicationInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
+            .outerjoin(
+                CIApplication,
+                CIApplication.ci_application_id
+                == CIApplicationInternalComment.ci_application_id,
+            )
+            .where(
+                *(
+                    [
+                        or_(
+                            Transfer.to_organization_id == organization_id,
+                            InitiativeAgreement.to_organization_id == organization_id,
+                            AdminAdjustment.to_organization_id == organization_id,
+                            ComplianceReport.organization_id == organization_id,
+                            CIApplication.organization_id == organization_id,
+                        )
+                    ]
+                    if organization_id is not None
+                    else []
+                )
+            )
+            .distinct(InternalComment.internal_comment_id)
+            .order_by(
+                InternalComment.internal_comment_id,
+                # Tiebreaker: deterministic entity-type priority for comments
+                # linked to multiple entities (e.g. via copy_internal_comments).
+                case(
+                    (TransferInternalComment.transfer_id.isnot(None), 1),
+                    (
+                        InitiativeAgreementInternalComment.initiative_agreement_id.isnot(
+                            None
+                        ),
+                        2,
+                    ),
+                    (AdminAdjustmentInternalComment.admin_adjustment_id.isnot(None), 3),
+                    (
+                        ComplianceReportInternalComment.compliance_report_id.isnot(
+                            None
+                        ),
+                        4,
+                    ),
+                    (CIApplicationInternalComment.ci_application_id.isnot(None), 5),
+                    else_=6,
+                ),
+                func.coalesce(
+                    TransferInternalComment.transfer_id,
+                    InitiativeAgreementInternalComment.initiative_agreement_id,
+                    AdminAdjustmentInternalComment.admin_adjustment_id,
+                    ComplianceReportInternalComment.compliance_report_id,
+                    CIApplicationInternalComment.ci_application_id,
+                ),
+            )
+            .subquery()
+        )
+
+    @repo_handler
+    async def get_comments_for_organization(
+        self,
+        organization_id: int,
+        page: int,
+        size: int,
+        visibility_filter: Optional[str] = None,
+        category: Optional[str] = None,
+        compliance_year: Optional[int] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
+        search: Optional[str] = None,
+        sort_by: str = "create_date",
+        sort_order: str = "desc",
+    ) -> Tuple[List[dict], int]:
+        """
+        Paginated organization comments with live-derived org/year, server-side
+        filters (category, compliance_year, date range, visibility, search) and
+        sorting. Search uses ``websearch_to_tsquery('english', ...)`` against
+        ``comment_search_vector``; with ``category='Organization details'`` it
+        also matches ``organization.name``/``operating_name``, and with
+        ``category='Person'`` it also matches the author's name / email.
+        """
+        entity_meta = self._entity_meta_subquery(organization_id)
+
+        where_clauses = []
+        if visibility_filter:
+            where_clauses.append(InternalComment.visibility == visibility_filter)
+        if compliance_year is not None:
+            where_clauses.append(
+                func.coalesce(entity_meta.c.live_year, InternalComment.compliance_year)
+                == compliance_year
+            )
+        if date_from is not None:
+            lower = (
+                datetime.combine(date_from, time.min)
+                if isinstance(date_from, date) and not isinstance(date_from, datetime)
+                else date_from
+            )
+            where_clauses.append(InternalComment.create_date >= lower)
+        if date_to is not None:
+            upper = (
+                datetime.combine(date_to, time.max)
+                if isinstance(date_to, date) and not isinstance(date_to, datetime)
+                else date_to
+            )
+            where_clauses.append(InternalComment.create_date <= upper)
+        if category:
+            where_clauses.append(CommentCategory.display_name == category)
+
+        search_term = (search or "").strip()
+        if search_term:
+            tsquery = func.websearch_to_tsquery("english", search_term)
+            fts_predicate = InternalComment.comment_search_vector.op("@@")(tsquery)
+
+            ilike_term = f"%{search_term}%"
+            search_predicates = [fts_predicate]
+
+            if category == "Organization details":
+                search_predicates.append(Organization.name.ilike(ilike_term))
+                search_predicates.append(Organization.operating_name.ilike(ilike_term))
+            elif category == "Person":
+                search_predicates.append(UserProfile.first_name.ilike(ilike_term))
+                search_predicates.append(UserProfile.last_name.ilike(ilike_term))
+                search_predicates.append(
+                    func.concat(
+                        func.coalesce(UserProfile.first_name, ""),
+                        " ",
+                        func.coalesce(UserProfile.last_name, ""),
+                    ).ilike(ilike_term)
+                )
+                search_predicates.append(UserProfile.email.ilike(ilike_term))
+
+            where_clauses.append(or_(*search_predicates))
+
+        needs_org_join_for_count = bool(
+            search_term and category == "Organization details"
+        )
+        needs_user_join_for_count = bool(search_term and category == "Person")
+
+        full_name_col = (UserProfile.first_name + " " + UserProfile.last_name).label(
+            "full_name"
+        )
+
+        base_select_from = (
+            select(InternalComment.internal_comment_id)
+            .select_from(InternalComment)
+            .join(
+                entity_meta,
+                entity_meta.c.ic_id == InternalComment.internal_comment_id,
+            )
+            .outerjoin(
+                CommentCategory,
+                CommentCategory.comment_category_id
+                == InternalComment.comment_category_id,
+            )
+        )
+        if needs_org_join_for_count:
+            base_select_from = base_select_from.outerjoin(
+                Organization,
+                Organization.organization_id == entity_meta.c.live_org_id,
+            )
+        if needs_user_join_for_count:
+            base_select_from = base_select_from.outerjoin(
+                UserProfile,
+                UserProfile.keycloak_username == InternalComment.create_user,
+            )
+        base_select_from = base_select_from.where(*where_clauses)
+
+        sort_col = (
+            InternalComment.update_date
+            if sort_by == "update_date"
+            else InternalComment.create_date
+        )
+        sort_dir = asc if str(sort_order).lower() == "asc" else desc
+
+        offset = max(page - 1, 0) * max(size, 1)
+
+        group_type_expr = func.coalesce(
+            entity_meta.c.entity_type, sa.literal("_comment")
+        )
+        group_id_expr = func.coalesce(
+            entity_meta.c.entity_id, InternalComment.internal_comment_id
+        )
+        group_type = group_type_expr.label("_group_type")
+        group_id = group_id_expr.label("_group_id")
+
+        # Window function: most recent (or oldest) comment date within each
+        # entity group.  This is the conversation sort key.  Pagination happens
+        # against distinct groups below, then expands all comments for those
+        # selected groups so a conversation does not get split at page edges.
+        group_latest = (
+            func.max(sort_col)
+            .over(partition_by=[group_type_expr, group_id_expr])
+            .label("_group_latest")
+        )
+
+        inner_q = (
+            select(
+                InternalComment.internal_comment_id,
+                InternalComment.comment,
+                InternalComment.comment_search_text.label("plain_text_comment"),
+                entity_meta.c.live_org_id.label("organization_id"),
+                func.coalesce(
+                    entity_meta.c.live_year, InternalComment.compliance_year
+                ).label("compliance_year"),
+                InternalComment.visibility,
+                InternalComment.audience_scope,
+                InternalComment.create_user,
+                InternalComment.create_date,
+                InternalComment.update_date,
+                Organization.name.label("organization_name"),
+                CommentCategory.display_name.label("category"),
+                full_name_col,
+                entity_meta.c.entity_type,
+                entity_meta.c.entity_id,
+                group_type,
+                group_id,
+                group_latest,
+            )
+            .select_from(InternalComment)
+            .join(
+                entity_meta,
+                entity_meta.c.ic_id == InternalComment.internal_comment_id,
+            )
+            .outerjoin(
+                Organization,
+                Organization.organization_id == entity_meta.c.live_org_id,
+            )
+            .outerjoin(
+                CommentCategory,
+                CommentCategory.comment_category_id
+                == InternalComment.comment_category_id,
+            )
+            .outerjoin(
+                UserProfile,
+                UserProfile.keycloak_username == InternalComment.create_user,
+            )
+            .where(*where_clauses)
+        ).subquery("inner_q")
+
+        conversation_groups = (
+            select(
+                inner_q.c._group_type,
+                inner_q.c._group_id,
+                inner_q.c._group_latest,
+            )
+            .distinct()
+            .subquery("conversation_groups")
+        )
+
+        total = (
+            await self.db.execute(select(func.count()).select_from(conversation_groups))
+        ).scalar_one()
+
+        if total == 0:
+            return ([], 0)
+
+        paged_groups = (
+            select(
+                conversation_groups.c._group_type,
+                conversation_groups.c._group_id,
+                conversation_groups.c._group_latest,
+            )
+            .order_by(
+                sort_dir(conversation_groups.c._group_latest),
+                asc(conversation_groups.c._group_type),
+                asc(conversation_groups.c._group_id),
+            )
+            .limit(size)
+            .offset(offset)
+            .subquery("paged_groups")
+        )
+
+        query = (
+            select(
+                inner_q.c.internal_comment_id,
+                inner_q.c.comment,
+                inner_q.c.plain_text_comment,
+                inner_q.c.organization_id,
+                inner_q.c.compliance_year,
+                inner_q.c.visibility,
+                inner_q.c.audience_scope,
+                inner_q.c.create_user,
+                inner_q.c.create_date,
+                inner_q.c.update_date,
+                inner_q.c.organization_name,
+                inner_q.c.category,
+                inner_q.c.full_name,
+                inner_q.c.entity_type,
+                inner_q.c.entity_id,
+            ).join(
+                paged_groups,
+                (paged_groups.c._group_type == inner_q.c._group_type)
+                & (paged_groups.c._group_id == inner_q.c._group_id),
+            )
+            # 1. Sort selected conversations by activity.
+            # 2. Keep rows in the same conversation together.
+            # 3. Within each conversation, show comments oldest-first.
+            .order_by(
+                sort_dir(paged_groups.c._group_latest),
+                asc(inner_q.c.entity_type).nulls_last(),
+                asc(inner_q.c.entity_id).nulls_last(),
+                asc(inner_q.c.create_date),
+                asc(inner_q.c.internal_comment_id),
+            )
+        )
+
+        rows = (await self.db.execute(query)).mappings().all()
+        return ([dict(r) for r in rows], int(total))

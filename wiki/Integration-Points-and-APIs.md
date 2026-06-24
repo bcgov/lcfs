@@ -10,6 +10,7 @@ This document outlines the key integration points and Application Programming In
     *   **OpenAPI JSON**: Typically available at the `/openapi.json` endpoint when the backend service is running.
     *   **Interactive API Docs (Swagger UI)**: Typically available at the `/docs` endpoint.
     *   **Interactive API Docs (ReDoc)**: Typically available at the `/redoc` endpoint.
+    *   **Narrative endpoint reference**: See **[API Endpoint Reference](API-Endpoint-Reference.md)** for a documented breakdown of all route groups, public-vs-authenticated status, role-based access requirements, common query patterns (pagination/filtering/sorting), and request/response examples.
 *   **Consumers**: Primarily the `frontend` React application. Other services or external clients could potentially consume these APIs if authorized.
 *   **Authentication**: Secured using JWTs, issued by Keycloak and validated by the backend (see [Security Architecture](Security-Architecture.md)).
 *   **Key Functionality Areas (Inferred)**:
@@ -49,5 +50,5 @@ This document outlines the key integration points and Application Programming In
 ## Further Investigation
 
 *   Analyze the frontend code (services, API call locations) to map out specific backend API endpoints being consumed.
-*   Explore the `/openapi.json` schema (once the backend is running) to get a definitive list and structure of all backend APIs.
+*   The [API Endpoint Reference](API-Endpoint-Reference.md) now documents the backend route groups, their authentication/role requirements, and example payloads. The `/openapi.json` schema (once the backend is running) remains the definitive, auto-generated source for every endpoint and schema.
 *   Investigate NiFi flow definitions (`etl/templates/`) to understand the specifics of data interaction with the TFRS and LCFS databases. 

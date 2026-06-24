@@ -360,6 +360,7 @@ class FuelCodesSchema(BaseSchema):
 
 
 class FuelCodeBulletinRowSchema(BaseSchema):
+    fuel_code_id: Optional[int] = None
     fuel_code: str
     fuel: str
     company: str
@@ -394,6 +395,17 @@ class FuelCodeBulletinsSchema(BaseSchema):
     cutoff_date: date
     fuel_codes: List[FuelCodeBulletinRowSchema]
     pagination: Optional[PaginationResponseSchema] = None
+
+
+class VolumeDataPointSchema(BaseSchema):
+    year: str
+    total_volume: float
+
+
+class FuelCodeGroupDetailSchema(BaseSchema):
+    latest_iteration: FuelCodeSchema
+    iterations: List[FuelCodeBaseSchema]
+    volume_over_time: List[VolumeDataPointSchema]
 
 
 class FuelCodeCreateUpdateSchema(BaseSchema):
