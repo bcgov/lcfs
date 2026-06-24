@@ -1,3 +1,4 @@
+// @ts-nocheck
 import BCAlert, { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
@@ -29,6 +30,9 @@ import {
   getColumnMinWidthSum,
   relaxColumnMinWidths
 } from '@/components/BCDataGrid/columnSizingUtils'
+import type { BCGridViewerProps } from './types'
+
+export type { BCGridViewerProps } from './types'
 
 // Styles for floating pagination
 const floatingPaginationStyles = {
@@ -66,7 +70,7 @@ const isIntersectionObserverSupported = () => {
   return typeof window !== 'undefined' && 'IntersectionObserver' in window
 }
 
-export const BCGridViewer = forwardRef(
+export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
   (
     {
       gridRef,

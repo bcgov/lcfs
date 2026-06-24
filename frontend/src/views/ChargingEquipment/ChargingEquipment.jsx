@@ -36,7 +36,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
 import Loading from '@/components/Loading'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { BCAlert2 } from '@/components/BCAlert'
 import { BulkActionModals } from './components/BulkActionModals'
 import {

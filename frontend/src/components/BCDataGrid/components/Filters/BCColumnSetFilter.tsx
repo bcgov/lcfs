@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
 import PropTypes from 'prop-types'
 import { Autocomplete, TextField, Box, Checkbox } from '@mui/material'
@@ -8,7 +9,17 @@ const checkedIcon = <CheckBox fontSize="small" />
 /**
  * @deprecated
  */
-export const BCColumnSetFilter = forwardRef((props, ref) => {
+export interface BCColumnSetFilterProps {
+  apiQuery: (params?: any) => { data?: any[]; isLoading?: boolean }
+  apiOptionField?: string
+  column?: any
+  parentFilterInstance: (callback: (instance: any) => void) => void
+  multiple?: boolean
+  params?: any
+  disableCloseOnSelect?: boolean
+}
+
+export const BCColumnSetFilter = forwardRef((props: BCColumnSetFilterProps, ref) => {
   const { apiQuery, params } = props
   const [options, setOptions] = useState([])
   const [currentValue, setCurrentValue] = useState(null)

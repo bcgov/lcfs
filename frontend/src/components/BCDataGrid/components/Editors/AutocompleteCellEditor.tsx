@@ -1,4 +1,12 @@
-import React, { forwardRef, useState, useEffect, useRef, useImperativeHandle } from 'react'
+// @ts-nocheck
+import React, {
+  forwardRef,
+  useState,
+  useEffect,
+  useRef,
+  useImperativeHandle
+} from 'react'
+import type { ClipboardEvent, FocusEvent, KeyboardEvent } from 'react'
 import PropTypes from 'prop-types'
 import {
   Autocomplete,
@@ -14,7 +22,31 @@ import { CheckBox, CheckBoxOutlineBlank } from '@mui/icons-material'
 const icon = <CheckBoxOutlineBlank fontSize="medium" />
 const checkedIcon = <CheckBox fontSize="medium" />
 
-export const AutocompleteCellEditor = forwardRef((props, ref) => {
+export interface AutocompleteCellEditorOption {
+  label?: string
+  name?: string
+  value?: any
+  [key: string]: any
+}
+
+export interface AutocompleteCellEditorProps {
+  value?: any
+  options?: AutocompleteCellEditorOption[]
+  limitTags?: number
+  multiple?: boolean
+  disableCloseOnSelect?: boolean
+  openOnFocus?: boolean
+  freeSolo?: boolean
+  colDef?: any
+  api?: any
+  onValueChange?: (value: any) => void
+  onKeyDownCapture?: (event: KeyboardEvent) => void
+  onBlur?: (event: FocusEvent) => void
+  onPaste?: (event: ClipboardEvent) => void
+  returnObject?: boolean
+}
+
+export const AutocompleteCellEditor = forwardRef((props: AutocompleteCellEditorProps, ref) => {
   const {
     value = '',
     options = [],

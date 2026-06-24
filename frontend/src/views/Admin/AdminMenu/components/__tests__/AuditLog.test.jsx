@@ -61,7 +61,7 @@ let capturedGridViewerProps = {}
 const mockClearFilters = vi.fn()
 let gridRefCallback = null
 
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: React.forwardRef((props, ref) => {
     capturedGridViewerProps = props
     

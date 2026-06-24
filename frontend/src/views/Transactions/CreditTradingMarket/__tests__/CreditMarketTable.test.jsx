@@ -32,7 +32,7 @@ vi.mock('../_schema', () => ({
 
 // Mock BCGridViewer component to capture all props
 const mockBCGridViewer = vi.fn()
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: (props) => {
     mockBCGridViewer(props)
     const { queryData, overlayNoRowsTemplate, columnDefs, readOnlyGrid, getRowId, onPaginationChange } = props
