@@ -1262,3 +1262,75 @@ async def test_get_internal_comments_embeds_attachments(
     assert documents[0]["fileName"] == "attachment.pdf"
     assert documents[0]["fileSize"] == 2048
     assert "documentId" in documents[0]
+
+
+@pytest.mark.anyio
+async def test_org_comments_pagination_counts_comments_not_conversations(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+):
+    """Pagination counts comments, not entity conversations.
+
+    An entity with multiple comments must contribute each comment to the
+    total and the rendered rows, so the displayed count matches the list
+    (regression: previously the total counted distinct conversations, so a
+    2-comment + 1-comment pair of transfers reported total=2 for 3 rows).
+    """
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.GOVERNMENT],
+        user_details={"keycloak_username": "IDIRUSER"},
+    )
+    await add_models(
+        [UserProfile(keycloak_username="IDIRUSER", first_name="T", last_name="U")]
+    )
+
+    # Transfer A: two comments. Transfer B: one comment. => 2 conversations,
+    # 3 comments.
+    transfer_a = _make_transfer(9101, 1)
+    transfer_b = _make_transfer(9102, 1)
+    await add_models([transfer_a, transfer_b])
+
+    for text in ("first on A", "second on A"):
+        ic = InternalComment(
+            comment=text,
+            comment_search_text=text,
+            visibility="Internal",
+            audience_scope=AudienceScopeEnum.ANALYST.value,
+            create_user="IDIRUSER",
+        )
+        await add_models([ic])
+        await add_models(
+            [
+                TransferInternalComment(
+                    transfer_id=transfer_a.transfer_id,
+                    internal_comment_id=ic.internal_comment_id,
+                )
+            ]
+        )
+
+    ic_b = InternalComment(
+        comment="only on B",
+        comment_search_text="only on B",
+        visibility="Internal",
+        audience_scope=AudienceScopeEnum.ANALYST.value,
+        create_user="IDIRUSER",
+    )
+    await add_models([ic_b])
+    await add_models(
+        [
+            TransferInternalComment(
+                transfer_id=transfer_b.transfer_id,
+                internal_comment_id=ic_b.internal_comment_id,
+            )
+        ]
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    data = (await client.get(url)).json()
+
+    assert data["pagination"]["total"] == 3
+    assert data["pagination"]["totalPages"] == 1
+    assert len(data["comments"]) == 3
