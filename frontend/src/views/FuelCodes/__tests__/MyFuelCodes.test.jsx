@@ -156,11 +156,23 @@ describe('MyFuelCodes', () => {
     expect(alertBox).toHaveTextContent('Saved successfully')
   })
 
-  it('does not turn rows into navigation links (no detail page yet)', () => {
+  it('navigates to the fuel code detail page when a row is clicked', () => {
     render(<MyFuelCodes />, { wrapper })
 
     const gridProps = mockBCGridViewer.mock.calls.at(-1)[0]
-    expect(gridProps.defaultColDef).toBeUndefined()
+    gridProps.onRowClicked({ data: { fuelCodeId: 123 } })
+
+    expect(mockNavigate).toHaveBeenCalledWith('/fuel-codes/123/view')
+    expect(gridProps.rowStyle).toEqual({ cursor: 'pointer' })
+  })
+
+  it('does not navigate when a row is missing a valid fuel code ID', () => {
+    render(<MyFuelCodes />, { wrapper })
+
+    const gridProps = mockBCGridViewer.mock.calls.at(-1)[0]
+    gridProps.onRowClicked({ data: { fuelCodeId: null } })
+
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 
   it('forwards the grid pagination changes back into the query hook', async () => {

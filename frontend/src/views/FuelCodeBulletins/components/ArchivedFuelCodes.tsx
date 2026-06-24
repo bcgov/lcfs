@@ -144,14 +144,10 @@ export const ArchivedFuelCodes = () => {
             sortable: true
           }}
           getRowId={(params: any) => params.data.id}
-          rowStyle={isIdirView ? { cursor: 'pointer' } : undefined}
-          onRowClicked={
-            isIdirView
-              ? (params: any) => {
-                  navigateToFuelCodeDetail(params.data?.fuelCodeId)
-                }
-              : undefined
-          }
+          rowStyle={{ cursor: 'pointer' }}
+          onRowClicked={(params: any) => {
+            navigateToFuelCodeDetail(params.data?.fuelCodeId)
+          }}
         />
       </BCBox>
     </Stack>

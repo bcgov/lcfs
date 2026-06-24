@@ -332,7 +332,10 @@ class FuelCodeRepository:
             .where(
                 and_(
                     FuelCode.prefix_id == prefix_id,
-                    FuelCode.fuel_suffix.like(f"{base_suffix}.%"),
+                    or_(
+                        FuelCode.fuel_suffix == base_suffix,
+                        FuelCode.fuel_suffix.like(f"{base_suffix}.%"),
+                    ),
                 )
             )
         )

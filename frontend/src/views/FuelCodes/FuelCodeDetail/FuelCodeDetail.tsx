@@ -16,7 +16,7 @@ import { useGetFuelCodeGroup } from '@/hooks/useFuelCode'
 import { useFuelCodePageStore } from '@/stores/useFuelCodePageStore'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import withRole from '@/utils/withRole'
-import { govRoles } from '@/constants/roles'
+import { govRoles, nonGovRoles } from '@/constants/roles'
 import { iterationColDefs } from './_schema'
 
 const formatDate = (value) => {
@@ -566,4 +566,7 @@ const FuelCodeDetailBase = () => {
   )
 }
 
-export const FuelCodeDetail = withRole(FuelCodeDetailBase, govRoles)
+export const FuelCodeDetail = withRole(FuelCodeDetailBase, [
+  ...govRoles,
+  ...nonGovRoles
+])

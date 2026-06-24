@@ -9,6 +9,7 @@ import { ArchivedFuelCodes } from '../components/ArchivedFuelCodes'
 const mockUseFuelCodeBulletins = vi.fn()
 const mockDownloadMutate = vi.fn()
 const mockBCGridViewer = vi.fn()
+const mockNavigate = vi.fn()
 let mockSearch = ''
 
 vi.mock('@/utils/withRole', () => ({
@@ -27,6 +28,7 @@ vi.mock('react-router-dom', async () => {
   const actual: any = await vi.importActual('react-router-dom')
   return {
     ...actual,
+    useNavigate: () => mockNavigate,
     useSearchParams: () => [new URLSearchParams(mockSearch), vi.fn()]
   }
 })
@@ -106,6 +108,7 @@ describe('FuelCodeBulletins UI', () => {
             cutoffDate: '2026-03-31T12:00:00',
             fuelCodes: [
               {
+                fuelCodeId: 264,
                 fuelCode: 'C-BCLCF264.3',
                 fuel: 'CNG',
                 company: 'FortisBC Energy Inc.',
@@ -125,6 +128,7 @@ describe('FuelCodeBulletins UI', () => {
         data: {
           fuelCodes: [
             {
+              fuelCodeId: 101,
               fuelCode: 'BCLCF101.0',
               fuel: 'HDRD',
               company: 'Neste Oil Singapore',
@@ -191,6 +195,16 @@ describe('FuelCodeBulletins UI', () => {
         filters: []
       })
     )
+  })
+
+  it('navigates non-IDIR current bulletin rows to fuel code detail', () => {
+    render(<CurrentFuelCodes />, { wrapper })
+
+    const gridProps = mockBCGridViewer.mock.calls[0][0]
+    gridProps.onRowClicked({ data: { fuelCodeId: 264 } })
+
+    expect(mockNavigate).toHaveBeenCalledWith('/fuel-codes/264/view')
+    expect(gridProps.rowStyle).toEqual({ cursor: 'pointer' })
   })
 
   it('updates pagination options after grid pagination change', async () => {

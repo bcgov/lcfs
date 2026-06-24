@@ -3,14 +3,14 @@ import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/routes/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetMyFuelCodes } from '@/hooks/useFuelCode'
 import withRole from '@/utils/withRole'
 import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'
 import Grid2 from '@mui/material/Grid2'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { myFuelCodeColDefs, defaultSortModel } from './_schema'
 
 const initialPaginationOptions = {
@@ -32,6 +32,7 @@ const MyFuelCodesBase = () => {
 
   const { t } = useTranslation(['common', 'fuelCode'])
   const location = useLocation()
+  const navigate = useNavigate()
 
   const queryData = useGetMyFuelCodes(paginationOptions, {
     cacheTime: 0,
@@ -56,6 +57,12 @@ const MyFuelCodesBase = () => {
 
   const getRowId = (params) => params.data.fuelCodeId.toString()
 
+  const navigateToFuelCodeDetail = (fuelCodeId) => {
+    const id = Number(fuelCodeId)
+    if (!Number.isInteger(id) || id <= 0) return
+    navigate(buildPath(ROUTES.FUEL_CODES.VIEW, { fuelCodeID: id }))
+  }
+
   return (
     <Grid2 className="fuel-code-container" mx={-1}>
       <FuelCodesTabs />
@@ -78,6 +85,10 @@ const MyFuelCodesBase = () => {
           overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
           queryData={queryData}
           dataKey="fuelCodes"
+          rowStyle={{ cursor: 'pointer' }}
+          onRowClicked={(params) => {
+            navigateToFuelCodeDetail(params.data?.fuelCodeId)
+          }}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({

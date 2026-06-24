@@ -612,6 +612,8 @@ async def test_get_fuel_code_group_detail_orders_iterations_by_numeric_suffix(
     assert "CAST(split_part" in stmt_sql
     assert "AS INTEGER) DESC" in stmt_sql
     assert "vw_fuel_code_base.fuel_suffix DESC" not in stmt_sql
+    assert "fuel_code.fuel_suffix = '100'" in stmt_sql
+    assert "fuel_code.fuel_suffix LIKE '100.%%'" in stmt_sql
 
 
 @pytest.mark.anyio

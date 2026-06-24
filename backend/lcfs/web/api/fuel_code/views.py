@@ -313,7 +313,20 @@ async def get_transport_modes(
 
 
 @router.get("/{fuel_code_id}/group", response_model=FuelCodeGroupDetailSchema, status_code=status.HTTP_200_OK)
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.SUPPLIER,
+        RoleEnum.MANAGE_USERS,
+        RoleEnum.TRANSFER,
+        RoleEnum.COMPLIANCE_REPORTING,
+        RoleEnum.SIGNING_AUTHORITY,
+        RoleEnum.READ_ONLY,
+        RoleEnum.CI_APPLICANT,
+        RoleEnum.IA_PROPONENT,
+        RoleEnum.IA_SIGNER,
+    ]
+)
 async def get_fuel_code_group_detail(
     request: Request,
     fuel_code_id: int,
