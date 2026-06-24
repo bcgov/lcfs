@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
+
 jobs:
   # ── Clean up images in dev / test / prod namespaces (run in parallel) ────────
   cleanup-dev:
@@ -87,8 +90,8 @@ jobs:
             if echo "$all_backend_kept" | tr ',' '\n' | grep -qx "$tag"; then
               echo "Keeping  lcfs-backend:$tag in tools"
             else
-              echo "Fake Deleting lcfs-backend:$tag from tools"
-              # oc delete istag "lcfs-backend:$tag" -n "$namespace" --ignore-not-found=true
+              echo "Deleting lcfs-backend:$tag from tools"
+              oc delete istag "lcfs-backend:$tag" -n "$namespace" --ignore-not-found=true
             fi
           done
 
@@ -101,7 +104,7 @@ jobs:
               echo "Keeping  lcfs-frontend:$tag in tools"
             else
               echo "Deleting lcfs-frontend:$tag from tools"
-              # oc delete istag "lcfs-frontend:$tag" -n "$namespace" --ignore-not-found=true
+              oc delete istag "lcfs-frontend:$tag" -n "$namespace" --ignore-not-found=true
             fi
           done
 
@@ -119,7 +122,7 @@ jobs:
               age=$((current_time - creation_timestamp))
               if [ $age -gt $expiration_seconds ]; then
                 echo "Deleting expired build: $build_name (age: $((age / 86400)) days)"
-                # oc delete build "$build_name" -n "$namespace" --ignore-not-found=true
+                oc delete build "$build_name" -n "$namespace" --ignore-not-found=true
               fi
             done
 
@@ -144,8 +147,8 @@ jobs:
                   bc_timestamp=$(date -d "$bc_creation_time" +%s)
                   bc_age=$((current_time - bc_timestamp))
                   if [ $bc_age -gt $expiration_seconds ]; then
-                    echo "Fake Deleting expired build config: $bc_name (age: $((bc_age / 86400)) days)"
-                    # oc delete buildconfig "$bc_name" -n "$namespace" --ignore-not-found=true
+                    echo "Deleting expired build config: $bc_name (age: $((bc_age / 86400)) days)"
+                    oc delete buildconfig "$bc_name" -n "$namespace" --ignore-not-found=true
                   fi
                 fi
               fi

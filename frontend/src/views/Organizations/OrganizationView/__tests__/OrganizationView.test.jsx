@@ -246,9 +246,7 @@ describe('OrganizationView', () => {
       expect(screen.getByText('Company overview')).toBeInTheDocument()
       expect(screen.getByText('Penalty log')).toBeInTheDocument()
       expect(screen.getByText('Supply history')).toBeInTheDocument()
-      expect(
-        screen.getByText('Compliance tracking')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Compliance tracking')).toBeInTheDocument()
     })
 
     it('displays organization title for government users', () => {
@@ -305,10 +303,10 @@ describe('OrganizationView', () => {
 
       // BCeID users should see dashboard, not credit-ledger
       expect(screen.queryByTestId('credit-ledger')).not.toBeInTheDocument()
-      expect(screen.getByTestId('organization-details-card')).toBeInTheDocument()
       expect(
-        screen.queryByText('Test Org — Dashboard')
-      ).not.toBeInTheDocument()
+        screen.getByTestId('organization-details-card')
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Test Org — Dashboard')).not.toBeInTheDocument()
     })
   })
 
@@ -464,15 +462,16 @@ describe('OrganizationView', () => {
       expect(creditLedger).toHaveAttribute('data-organization-id', '789')
     })
 
-    it('renders all three tabs with correct labels', () => {
+    it('renders all tabs with correct labels', () => {
       renderComponent()
 
       const tabs = screen.getAllByRole('tab')
-      expect(tabs).toHaveLength(7)
+      expect(tabs).toHaveLength(8)
 
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('Users')).toBeInTheDocument()
       expect(screen.getByText('Credit ledger')).toBeInTheDocument()
+      expect(screen.getByText('Comment log')).toBeInTheDocument()
     })
   })
 
@@ -493,6 +492,7 @@ describe('OrganizationView', () => {
       expect(screen.getByText('Penalty log')).toBeInTheDocument()
       expect(screen.getByText('Supply history')).toBeInTheDocument()
       expect(screen.getByText('Compliance tracking')).toBeInTheDocument()
+      expect(screen.getByText('Comment log')).toBeInTheDocument()
     })
   })
 

@@ -42,7 +42,8 @@ export const ProposedFuelPathwaysStep = ({
   onDelete,
   onValidationError,
   isSaving = false,
-  readOnly = false
+  readOnly = false,
+  secondaryAction = null
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const gridRef = useRef(null)
@@ -252,6 +253,7 @@ export const ProposedFuelPathwaysStep = ({
             {t('carbonIntensity:step1.deleteDraft')}
           </BCButton>
         )}
+        {secondaryAction}
       </Stack>
     </Box>
   )

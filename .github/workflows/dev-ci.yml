@@ -15,6 +15,7 @@ env:
   GIT_URL: https://github.com/bcgov/lcfs.git
   TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
   DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
