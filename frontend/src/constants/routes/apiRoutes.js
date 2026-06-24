@@ -44,6 +44,9 @@ export const apiRoutes = {
   organizationPenaltyLogsList: '/organizations/:orgID/penalties/logs/list',
   organizationPenaltyLogs: '/organizations/:orgID/penalties/logs',
   organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
+  organizationComments: '/organizations/:orgID/comments',
+  commentCategories: '/internal_comments/categories',
+  internalComment: '/internal_comments/:commentId',
   creditMarketAuditLogsList: '/organizations/credit-market-audit-logs/list',
 
   // transactions
@@ -70,6 +73,7 @@ export const apiRoutes = {
   updateFuelCodeStatus: '/fuel-codes/:fuelCodeId',
   saveFuelCode: '/fuel-codes',
   deleteFuelCode: '/fuel-codes/:fuelCodeId',
+  getFuelCodeGroup: '/fuel-codes/:fuelCodeId/group',
   fuelCodeOptions: '/fuel-codes/table-options',
   fuelCodeSearch: '/fuel-codes/search?',
   getFuelCodes: '/fuel-codes/list',
