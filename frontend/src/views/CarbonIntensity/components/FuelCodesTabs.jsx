@@ -75,7 +75,7 @@ const buildTabs = ({
   }
 
   if (
-    variant === 'internal' ||
+    (isGovernment && variant === 'internal') ||
     (isGovernment &&
       (isOnInternalFuelCodes(location) || isOnCIApplications(location)))
   ) {

@@ -267,15 +267,31 @@ describe('FuelCodesTabs', () => {
     })
   })
 
-  it('shows CI applications on the internal Fuel Codes tab set even when no role matches govRoles', () => {
+  it('does not force internal Fuel Codes tabs for non-government users', () => {
     mockHasAnyRole = () => false
     mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
 
     render(<FuelCodesTabs variant="internal" />, { wrapper })
 
     expect(
-      screen.getByText('carbonIntensity:tabs.ciApplications')
+      screen.queryByText('carbonIntensity:tabs.ciApplications')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('carbonIntensity:tabs.fuelCodes')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText('carbonIntensity:tabs.currentFuelCodes')
     ).toBeInTheDocument()
+  })
+
+  it('keeps BCeID detail-page Current tab on the public bulletins route', () => {
+    mockHasAnyRole = (...names) => names.includes(roles.ci_applicant)
+    mockLocation = { pathname: '/fuel-codes/123/view', search: '' }
+
+    render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+    fireEvent.click(screen.getByText('carbonIntensity:tabs.currentFuelCodes'))
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.BULLETINS)
   })
 
   it('navigates to the corresponding route when a tab is clicked', () => {
