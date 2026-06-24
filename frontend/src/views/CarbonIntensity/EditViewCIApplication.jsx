@@ -64,7 +64,6 @@ const EditViewCIApplicationBase = () => {
 
   const [searchParams, setSearchParams] = useSearchParams()
   const [isDocumentEditorOpen, setIsDocumentEditorOpen] = useState(false)
-  const [isPathwayEditorOpen, setIsPathwayEditorOpen] = useState(false)
   const [supplierRequestDate, setSupplierRequestDate] = useState(null)
   const stepFromUrl = (() => {
     const raw = Number.parseInt(searchParams.get('step') ?? '1', 10)
@@ -323,14 +322,14 @@ const EditViewCIApplicationBase = () => {
   const canSupplementallyEditPathways =
     !isGovernment &&
     ciApplication?.status?.status === 'Submitted' &&
-    !!ciApplication?.pathwayChangesRequestedAt
+    !!ciApplication?.pathwaySupplementalEditEnabled
 
   // Hooks must run on every render — keep this above the loading-state
   // early return so hook order stays stable across renders.
   useEffect(() => {
     if (isSubmittedOrTerminal && !didSyncSubmittedExpanded.current) {
       didSyncSubmittedExpanded.current = true
-      setExpanded(['step5', 'summary'])
+      setExpanded(['step5', 'summary', 'generatedFuelCodes'])
     }
   }, [isSubmittedOrTerminal])
 
@@ -536,7 +535,15 @@ const EditViewCIApplicationBase = () => {
                   canEditDocuments={canManageSummaryDocuments}
                   onEditDocuments={() => setIsDocumentEditorOpen(true)}
                   canEditPathways={canSupplementallyEditPathways}
-                  onEditPathways={() => setIsPathwayEditorOpen(true)}
+                  pathwayEditorOptionsData={tableOptions}
+                  onSavePathways={handleStep2Save}
+                  onPathwayValidationError={(message) =>
+                    alertRef.current?.triggerAlert?.({
+                      message,
+                      severity: 'error'
+                    })
+                  }
+                  isSavingPathways={isSaving}
                 />
               </BCBox>
             }
@@ -606,37 +613,6 @@ const EditViewCIApplicationBase = () => {
                     readOnly={false}
                     showTitle={false}
                     showSaveControls={false}
-                  />
-                )
-              }
-            : null
-        }
-      />
-      <BCModal
-        open={isPathwayEditorOpen}
-        onClose={() => setIsPathwayEditorOpen(false)}
-        data={
-          isPathwayEditorOpen
-            ? {
-                title: t('carbonIntensity:summary.editPathways'),
-                secondaryButtonText: t('common:cancelBtn'),
-                secondaryButtonAction: () => setIsPathwayEditorOpen(false),
-                content: (
-                  <ProposedFuelPathwaysStep
-                    ciApplication={ciApplication}
-                    optionsData={tableOptions}
-                    onSave={async (payload) => {
-                      await handleStep2Save(payload)
-                      setIsPathwayEditorOpen(false)
-                    }}
-                    onValidationError={(message) =>
-                      alertRef.current?.triggerAlert?.({
-                        message,
-                        severity: 'error'
-                      })
-                    }
-                    isSaving={isSaving}
-                    readOnly={false}
                   />
                 )
               }

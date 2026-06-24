@@ -42,6 +42,30 @@ export const useGetFuelCode = (
   })
 }
 
+export const useGetFuelCodeGroup = (
+  fuelCodeID: any,
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    enabled: !!fuelCodeID,
+    queryKey: ['fuel-code-group', fuelCodeID],
+    queryFn: async () => {
+      return (
+        await client.get(
+          apiRoutes.getFuelCodeGroup.replace(
+            ':fuelCodeId',
+            String(fuelCodeID ?? '')
+          )
+        )
+      ).data
+    },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    ...options
+  })
+}
+
 export const useGetFuelCodes = (
   {
     page = 1,

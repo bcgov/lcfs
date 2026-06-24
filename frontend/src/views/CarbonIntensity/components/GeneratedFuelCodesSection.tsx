@@ -18,13 +18,15 @@ type GeneratedFuelCodesSectionProps = {
   readOnly?: boolean
 }
 
+const getValidationStatus = (row: any) => {
+  if (row?.isValid) return 'success'
+  if (row?.validationMsg) return 'warning'
+  return undefined
+}
+
 const toGridRow = (row: any) => ({
   ...row,
-  validationStatus: row?.isValid
-    ? 'success'
-    : row?.validationMsg
-      ? 'warning'
-      : undefined
+  validationStatus: getValidationStatus(row)
 })
 
 const toUpdatePayload = (row: any) => {
@@ -40,6 +42,9 @@ const toUpdatePayload = (row: any) => {
   } = row
   return rest
 }
+
+const replaceRow = (rows: any[], nextRow: any) =>
+  rows.map((row) => (row.id === nextRow.id ? nextRow : row))
 
 export const GeneratedFuelCodesSection = ({
   ciApplication,
@@ -91,9 +96,7 @@ export const GeneratedFuelCodesSection = ({
   }, [errors, fuelCodeOptions, readOnly])
 
   const onCellValueChanged = useCallback((params: any) => {
-    setRowData((prev) =>
-      prev.map((row) => (row.id === params.data.id ? { ...params.data } : row))
-    )
+    setRowData((prev) => replaceRow(prev, { ...params.data }))
   }, [])
 
   const onCellEditingStopped = useCallback(
@@ -110,9 +113,7 @@ export const GeneratedFuelCodesSection = ({
         })
         const nextRow = toGridRow(updatedRow)
         params.node.updateData(nextRow)
-        setRowData((prev) =>
-          prev.map((row) => (row.id === nextRow.id ? nextRow : row))
-        )
+        setRowData((prev) => replaceRow(prev, nextRow))
         setErrors((prev) => ({
           ...prev,
           [nextRow.id]: Object.keys(nextRow.validationErrors || {})
@@ -156,9 +157,6 @@ export const GeneratedFuelCodesSection = ({
       )}
 
       <Stack spacing={1} sx={{ mb: 2 }}>
-        <BCTypography variant="h6" color="primary">
-          {t('carbonIntensity:step5.generatedFuelCodesHeader')}
-        </BCTypography>
         <BCTypography variant="body2" color="text.secondary">
           {t('carbonIntensity:step5.generatedFuelCodesIntro')}
         </BCTypography>
