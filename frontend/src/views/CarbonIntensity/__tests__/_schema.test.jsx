@@ -74,6 +74,19 @@ describe('ciApplicationsColDefs (IDIR)', () => {
     expect(status.sortable).toBe(false)
   })
 
+  it('displays Changes Requested when supplemental pathway edits are enabled', () => {
+    const cols = ciApplicationsColDefs(t, { isGovernment: true })
+    const status = cols.find((c) => c.field === 'status.status')
+    const rendererElement = status.cellRenderer({
+      data: {
+        status: { status: 'Submitted' },
+        pathwaySupplementalEditEnabled: true
+      }
+    })
+
+    expect(rendererElement.props.data.status.status).toBe('Changes Requested')
+  })
+
   it('Assigned analyst / Last comment columns are non-sortable display pills', () => {
     const cols = ciApplicationsColDefs(t, { isGovernment: true })
     const analyst = cols.find((c) => c.field === 'assignedAnalyst')

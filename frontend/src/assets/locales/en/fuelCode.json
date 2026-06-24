@@ -79,5 +79,18 @@
   "deleteSuccessMessage": "Fuel code deleted successfully.",
   "returnToAnalyst": "Return to analyst",
   "returnToAnalystSuccessMessage": "Fuel code returned to analyst successfully.",
-  "returnToAnalystConfirmText": "Are you sure you want to return this fuel code back to analyst?"
+  "returnToAnalystConfirmText": "Are you sure you want to return this fuel code back to analyst?",
+  "detail": {
+    "latestIterationTitle": "Current iteration",
+    "allIterationsTitle": "All iterations",
+    "iterationsSuffix": "iterations",
+    "volumeOverTimeTitle": "Volume Over Time",
+    "facilityLocation": "Fuel production facility",
+    "totalVolume": "Total Volume",
+    "year": "Year",
+    "noVolumeData": "No volume data available for this fuel code.",
+    "iteration": "Iteration",
+    "defaultNotes": "Here are some notes about this specific fuel code and stuff. Here are some notes about this specific fuel code and stuff. Here are some notes about this specific fuel code and stuff. Here are some notes about this specific fuel code and stuff.",
+    "chartAriaDescription": "Line chart showing total reported volume over compliance years for this fuel code group"
+  }
 }

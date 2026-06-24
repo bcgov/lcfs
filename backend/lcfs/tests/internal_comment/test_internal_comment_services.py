@@ -226,6 +226,11 @@ def _build_service_with_user_roles(role_names):
     service.repo.get_internal_comments = AsyncMock()
     service.repo.get_internal_comment_by_id = AsyncMock()
     service.repo.update_internal_comment = AsyncMock()
+    # Metadata helpers used by ``_populate_comment_metadata``. Tests that
+    # care about specific values can override these on the returned service.
+    service.repo.get_category_id_by_name = AsyncMock(return_value=99)
+    service.repo.get_entity_org_and_year = AsyncMock(return_value=(7, 2025))
+    service.repo.get_comments_for_organization = AsyncMock()
     return service
 
 
@@ -417,12 +422,12 @@ async def test_update_internal_comment_public_sets_audience_scope_to_none():
 
     await service.update_internal_comment(8, payload)
 
-    service.repo.update_internal_comment.assert_awaited_once_with(
-        internal_comment_id=8,
-        new_comment_text="updated",
-        visibility="Public",
-        audience_scope=None,
-    )
+    service.repo.update_internal_comment.assert_awaited_once()
+    call_kwargs = service.repo.update_internal_comment.await_args.kwargs
+    assert call_kwargs["internal_comment_id"] == 8
+    assert call_kwargs["new_comment_text"] == "updated"
+    assert call_kwargs["visibility"] == "Public"
+    assert call_kwargs["audience_scope"] is None
 
 
 @pytest.mark.anyio
@@ -451,9 +456,371 @@ async def test_update_internal_comment_internal_without_scope_defaults_to_analys
 
     await service.update_internal_comment(9, payload)
 
-    service.repo.update_internal_comment.assert_awaited_once_with(
-        internal_comment_id=9,
-        new_comment_text="updated",
-        visibility="Internal",
-        audience_scope="Analyst",
+    service.repo.update_internal_comment.assert_awaited_once()
+    call_kwargs = service.repo.update_internal_comment.await_args.kwargs
+    assert call_kwargs["internal_comment_id"] == 9
+    assert call_kwargs["new_comment_text"] == "updated"
+    assert call_kwargs["visibility"] == "Internal"
+    assert call_kwargs["audience_scope"] == "Analyst"
+
+
+# ======================================================================
+# Comment Log metadata helper (`_populate_comment_metadata`)
+# ======================================================================
+from lcfs.web.api.internal_comment.services import (
+    DEFAULT_CATEGORY_BY_ENTITY,
+    sanitize_comment_text,
+)
+from lcfs.db.models.comment.InternalComment import InternalComment
+
+
+def test_sanitize_comment_text_strips_html_and_collapses_whitespace():
+    assert sanitize_comment_text(None) == ""
+    assert sanitize_comment_text("") == ""
+    assert sanitize_comment_text("<p>Hello <b>world</b></p>") == "Hello world"
+    assert sanitize_comment_text("<p>a</p>\n<p>b   c</p>") == "a b c"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "entity_type,expected_category",
+    [
+        (EntityTypeEnum.COMPLIANCE_REPORT, "Compliance notes"),
+        (EntityTypeEnum.TRANSFER, "Transfer notes"),
+        (EntityTypeEnum.INITIATIVE_AGREEMENT, "IA notes"),
+        (EntityTypeEnum.ADMIN_ADJUSTMENT, "Penalty notes"),
+        (EntityTypeEnum.CI_APPLICATION, "CI application notes"),
+    ],
+)
+async def test_populate_comment_metadata_default_category_per_entity_type(
+    entity_type, expected_category
+):
+    """
+    The helper must apply the agreed default category for every supported
+    entity type when the caller does not pass an explicit override.
+    """
+    assert DEFAULT_CATEGORY_BY_ENTITY[entity_type] == expected_category
+
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_entity_org_and_year.return_value = (42, 2025)
+    service.repo.get_category_id_by_name.return_value = 11
+
+    comment = InternalComment(comment="<p>hello</p>")
+    await service._populate_comment_metadata(
+        comment,
+        entity_type=entity_type,
+        entity_id=123,
+        category_display_name=None,
     )
+
+    service.repo.get_category_id_by_name.assert_awaited_once_with(expected_category)
+    service.repo.get_entity_org_and_year.assert_awaited_once_with(entity_type, 123)
+    assert comment.organization_id == 42
+    # compliance_year is only meaningful for compliance reports; the fake
+    # returns 2025 for all but the assertion is on the helper wiring.
+    assert comment.compliance_year == 2025
+    assert comment.comment_category_id == 11
+    assert comment.comment_search_text == "hello"
+    assert comment.comment_search_vector is not None  # SQL expression
+
+
+@pytest.mark.anyio
+async def test_populate_comment_metadata_explicit_category_wins():
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_category_id_by_name.return_value = 77
+
+    comment = InternalComment(comment="<p>x</p>")
+    await service._populate_comment_metadata(
+        comment,
+        entity_type=EntityTypeEnum.TRANSFER,
+        entity_id=1,
+        category_display_name="Organization details",
+    )
+
+    service.repo.get_category_id_by_name.assert_awaited_once_with(
+        "Organization details"
+    )
+    assert comment.comment_category_id == 77
+
+
+@pytest.mark.anyio
+async def test_create_internal_comment_populates_all_metadata():
+    """AC: All five metadata columns are populated on create."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_entity_org_and_year.return_value = (3, 2024)
+    service.repo.get_category_id_by_name.return_value = 5
+    service.repo.create_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=1,
+        comment="<p>hi</p>",
+        audience_scope="Analyst",
+        visibility="Internal",
+        create_user="mockuser",
+        create_date=None,
+        update_date=None,
+        full_name="Mock User",
+    )
+
+    payload = InternalCommentCreateSchema(
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT,
+        entity_id=10,
+        comment="<p>hi</p>",
+        visibility=CommentVisibilityEnum.INTERNAL,
+    )
+    await service.create_internal_comment(payload)
+
+    created = service.repo.create_internal_comment.await_args.args[0]
+    assert created.organization_id == 3
+    assert created.compliance_year == 2024
+    assert created.comment_category_id == 5
+    assert created.comment_search_text == "hi"
+    assert created.comment_search_vector is not None
+
+
+@pytest.mark.anyio
+async def test_update_internal_comment_refreshes_search_text_and_vector():
+    """AC: search_text and search_vector are refreshed on edit."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_internal_comment_by_id.return_value = SimpleNamespace(
+        internal_comment_id=5,
+        comment="<p>old</p>",
+        audience_scope="Analyst",
+        visibility="Internal",
+    )
+    service.repo.update_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=5,
+        comment="<p>new</p>",
+        audience_scope="Analyst",
+        visibility="Internal",
+        create_user="mockuser",
+        create_date=None,
+        update_date=None,
+        full_name="Mock User",
+    )
+
+    await service.update_internal_comment(
+        5,
+        InternalCommentUpdateSchema(comment="<p>new <b>edited</b></p>"),
+    )
+
+    call_kwargs = service.repo.update_internal_comment.await_args.kwargs
+    assert call_kwargs["comment_search_text"] == "new edited"
+    assert call_kwargs["comment_search_vector"] is not None
+
+
+# ======================================================================
+# Organization Comment Log read view
+# ======================================================================
+@pytest.mark.anyio
+async def test_get_organization_comments_bcid_other_org_forbidden():
+    """AC: BCeID requesting another org's log gets 403."""
+    service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
+    service.request.user = SimpleNamespace(
+        role_names=[RoleEnum.SUPPLIER],
+        keycloak_username="bceid-user",
+        organization=SimpleNamespace(organization_id=10),
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await service.get_organization_comments(organization_id=99)
+    assert exc.value.status_code == 403
+    service.repo.get_comments_for_organization.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_bcid_own_org_public_only():
+    """AC: BCeID for own org only sees Public comments."""
+    service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
+    service.request.user = SimpleNamespace(
+        role_names=[RoleEnum.SUPPLIER],
+        keycloak_username="bceid-user",
+        organization=SimpleNamespace(organization_id=10),
+    )
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    await service.get_organization_comments(organization_id=10)
+
+    service.repo.get_comments_for_organization.assert_awaited_once()
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["organization_id"] == 10
+    assert call_kwargs["page"] == 1
+    assert call_kwargs["size"] == 25
+    assert call_kwargs["visibility_filter"] == "Public"
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_idir_sees_internal_and_public():
+    """AC: IDIR sees Internal + Public (no visibility filter)."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    await service.get_organization_comments(organization_id=10, page=2, size=25)
+
+    service.repo.get_comments_for_organization.assert_awaited_once()
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["organization_id"] == 10
+    assert call_kwargs["page"] == 2
+    assert call_kwargs["size"] == 25
+    assert call_kwargs["visibility_filter"] is None
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_pagination_metadata():
+    """AC: page/size/total/totalPages reflect the request and result count."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    sample_row = {
+        "internal_comment_id": 1,
+        "comment": "<p>x</p>",
+        "plain_text_comment": "x",
+        "organization_id": 5,
+        "organization_name": "Org",
+        "compliance_year": 2025,
+        "visibility": "Internal",
+        "audience_scope": "Analyst",
+        "create_user": "mockuser",
+        "create_date": None,
+        "update_date": None,
+        "category": "Compliance notes",
+        "full_name": "Mock User",
+        "entity_type": "complianceReport",
+        "entity_id": 42,
+    }
+    service.repo.get_comments_for_organization.return_value = ([sample_row], 51)
+
+    result = await service.get_organization_comments(organization_id=5, page=2, size=25)
+    assert result.pagination.page == 2
+    assert result.pagination.size == 25
+    assert result.pagination.total == 51
+    assert result.pagination.total_pages == 3
+    assert len(result.comments) == 1
+    # canEdit true when the requesting user created the comment.
+    assert result.comments[0].can_edit is True
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_can_edit_false_for_other_user():
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    row = {
+        "internal_comment_id": 2,
+        "comment": "x",
+        "plain_text_comment": "x",
+        "organization_id": 5,
+        "organization_name": "Org",
+        "compliance_year": 2025,
+        "visibility": "Internal",
+        "audience_scope": "Analyst",
+        "create_user": "someone-else",
+        "create_date": None,
+        "update_date": None,
+        "category": "Compliance notes",
+        "full_name": "Other User",
+        "entity_type": "complianceReport",
+        "entity_id": 1,
+    }
+    service.repo.get_comments_for_organization.return_value = ([row], 1)
+
+    result = await service.get_organization_comments(organization_id=5)
+    assert result.comments[0].can_edit is False
+
+
+# ======================================================================
+# Comment Log filters & search (tickets #4452 / #4453)
+# ======================================================================
+from datetime import date
+
+from lcfs.web.api.internal_comment.schema import (
+    CommentSortFieldEnum,
+    CommentSortOrderEnum,
+    OrganizationCommentsFilterSchema,
+)
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_passes_all_filters_to_repo():
+    """AC: every filter param is forwarded to the repository in SQL."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    filters = OrganizationCommentsFilterSchema(
+        category="Transfer notes",
+        compliance_year=2024,
+        date_from=date(2024, 1, 1),
+        date_to=date(2024, 12, 31),
+        visibility=CommentVisibilityEnum.INTERNAL,
+        search="transfer",
+        sort_by=CommentSortFieldEnum.UPDATE_DATE,
+        sort_order=CommentSortOrderEnum.ASC,
+    )
+    await service.get_organization_comments(organization_id=5, filters=filters)
+
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["category"] == "Transfer notes"
+    assert call_kwargs["compliance_year"] == 2024
+    assert call_kwargs["date_from"] == date(2024, 1, 1)
+    assert call_kwargs["date_to"] == date(2024, 12, 31)
+    assert call_kwargs["visibility_filter"] == "Internal"
+    assert call_kwargs["search"] == "transfer"
+    assert call_kwargs["sort_by"] == "update_date"
+    assert call_kwargs["sort_order"] == "asc"
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_bceid_visibility_param_ignored():
+    """AC: BCeID callers cannot escape the Public clamp via the visibility filter."""
+    service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
+    service.request.user = SimpleNamespace(
+        role_names=[RoleEnum.SUPPLIER],
+        keycloak_username="bceid-user",
+        organization=SimpleNamespace(organization_id=10),
+    )
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    filters = OrganizationCommentsFilterSchema(
+        visibility=CommentVisibilityEnum.INTERNAL,  # smuggled
+    )
+    await service.get_organization_comments(organization_id=10, filters=filters)
+
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    # Visibility forced to Public regardless of input.
+    assert call_kwargs["visibility_filter"] == "Public"
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_idir_visibility_filter_honored():
+    """AC: IDIR callers may narrow visibility via the param."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    filters = OrganizationCommentsFilterSchema(
+        visibility=CommentVisibilityEnum.INTERNAL,
+    )
+    await service.get_organization_comments(organization_id=10, filters=filters)
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["visibility_filter"] == "Internal"
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_size_capped_at_100():
+    """Service must cap page size to 100."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    await service.get_organization_comments(organization_id=1, size=10_000)
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["size"] == 100
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_defaults_when_no_filters_passed():
+    """No filters → all optional params default to None / create_date desc."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    await service.get_organization_comments(organization_id=1)
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["category"] is None
+    assert call_kwargs["compliance_year"] is None
+    assert call_kwargs["date_from"] is None
+    assert call_kwargs["date_to"] is None
+    assert call_kwargs["search"] is None
+    assert call_kwargs["sort_by"] == "create_date"
+    assert call_kwargs["sort_order"] == "desc"
