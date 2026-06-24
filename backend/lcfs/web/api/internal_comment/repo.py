@@ -784,38 +784,17 @@ class InternalCommentRepository:
             .where(*where_clauses)
         ).subquery("inner_q")
 
-        conversation_groups = (
-            select(
-                inner_q.c._group_type,
-                inner_q.c._group_id,
-                inner_q.c._group_latest,
-            )
-            .distinct()
-            .subquery("conversation_groups")
-        )
-
+        # Pagination is by comment so the count shown matches the rendered
+        # rows.  The ordering still clusters a conversation's comments together
+        # (by entity) with the most active conversations first, so threads stay
+        # visually grouped within a page; a long thread may straddle a page
+        # boundary, which the frontend renders as adjacent partial groups.
         total = (
-            await self.db.execute(select(func.count()).select_from(conversation_groups))
+            await self.db.execute(select(func.count()).select_from(inner_q))
         ).scalar_one()
 
         if total == 0:
             return ([], 0)
-
-        paged_groups = (
-            select(
-                conversation_groups.c._group_type,
-                conversation_groups.c._group_id,
-                conversation_groups.c._group_latest,
-            )
-            .order_by(
-                sort_dir(conversation_groups.c._group_latest),
-                asc(conversation_groups.c._group_type),
-                asc(conversation_groups.c._group_id),
-            )
-            .limit(size)
-            .offset(offset)
-            .subquery("paged_groups")
-        )
 
         query = (
             select(
@@ -834,21 +813,19 @@ class InternalCommentRepository:
                 inner_q.c.full_name,
                 inner_q.c.entity_type,
                 inner_q.c.entity_id,
-            ).join(
-                paged_groups,
-                (paged_groups.c._group_type == inner_q.c._group_type)
-                & (paged_groups.c._group_id == inner_q.c._group_id),
             )
-            # 1. Sort selected conversations by activity.
+            # 1. Sort conversations by activity (group_latest).
             # 2. Keep rows in the same conversation together.
             # 3. Within each conversation, show comments oldest-first.
             .order_by(
-                sort_dir(paged_groups.c._group_latest),
+                sort_dir(inner_q.c._group_latest),
                 asc(inner_q.c.entity_type).nulls_last(),
                 asc(inner_q.c.entity_id).nulls_last(),
                 asc(inner_q.c.create_date),
                 asc(inner_q.c.internal_comment_id),
             )
+            .limit(size)
+            .offset(offset)
         )
 
         rows = (await self.db.execute(query)).mappings().all()
