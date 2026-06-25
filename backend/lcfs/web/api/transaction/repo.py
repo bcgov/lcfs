@@ -41,6 +41,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.api.base import paginate_with_window_count
 
 
 class EntityType(Enum):
@@ -184,20 +185,9 @@ class TransactionRepository:
             else:
                 query = query.order_by(direction(getattr(TransactionView, order.field)))
 
-        # Execute count query for total records matching the filter
-        count_query = select(func.count(TransactionView.transaction_id)).where(
-            and_(*query_conditions)
+        transactions, total_count = await paginate_with_window_count(
+            self.db, query, offset, limit
         )
-        total_count_result = await self.db.execute(count_query)
-        total_count = total_count_result.scalar_one()
-
-        # Apply pagination
-        query = query.offset(offset).limit(limit)
-
-        # Execute the query
-        result = await self.db.execute(query)
-        transactions = result.scalars().all()
-
         return transactions, total_count
 
     @repo_handler
