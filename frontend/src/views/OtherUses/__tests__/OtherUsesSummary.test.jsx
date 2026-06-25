@@ -5,7 +5,7 @@ import { wrapper } from '@/tests/utils/wrapper'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 // Mock BCGridViewer with comprehensive props capture
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({ 
     gridKey,
     columnDefs,

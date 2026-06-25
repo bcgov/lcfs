@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Controller } from 'react-hook-form'
 import { Box, InputLabel, Stack } from '@mui/material'
 import { Info } from '@mui/icons-material'
@@ -7,9 +7,26 @@ import PropTypes from 'prop-types'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import { AddressAutocomplete } from './AddressAutocomplete'
+import type { AddressOption } from './AddressAutocomplete'
 import { POSTAL_CODE_REGEX } from '@/constants/common'
+import type { ChangeEventHandler } from 'react'
 
-export const addressHasPostalCode = (value) =>
+export type AddressValue = string | AddressOption | null | undefined
+
+export interface BCFormAddressAutocompleteProps {
+  name: string
+  control: any
+  label?: string
+  optional?: boolean
+  checkbox?: boolean
+  checkboxLabel?: string
+  onCheckboxChange?: ChangeEventHandler<HTMLInputElement>
+  isChecked?: boolean
+  disabled?: boolean
+  onSelectAddress?: (address: AddressOption | string) => void
+}
+
+export const addressHasPostalCode = (value: AddressValue) =>
   POSTAL_CODE_REGEX.test(
     typeof value === 'string'
       ? value
@@ -29,10 +46,10 @@ export const BCFormAddressAutocomplete = ({
   isChecked,
   disabled,
   onSelectAddress
-}) => {
+}: BCFormAddressAutocompleteProps) => {
   const [showTooltip, setShowTooltip] = useState(false)
 
-  const promptForPostalCode = (addressValue) => {
+  const promptForPostalCode = (addressValue: AddressValue) => {
     const shouldShowPrompt =
       Boolean(addressValue) && !addressHasPostalCode(addressValue)
 
@@ -107,11 +124,11 @@ export const BCFormAddressAutocomplete = ({
           <Box position="relative">
             <AddressAutocomplete
               value={value}
-              onChange={(newValue) => {
+              onChange={(newValue: string) => {
                 onChange(newValue)
                 promptForPostalCode(newValue)
               }}
-              onSelectAddress={(addressData) => {
+              onSelectAddress={(addressData: AddressOption | string) => {
                 if (onSelectAddress) {
                   onSelectAddress(addressData)
                 }

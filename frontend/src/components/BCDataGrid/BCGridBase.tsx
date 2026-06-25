@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+// @ts-nocheck
 import DataGridLoading from '@/components/DataGridLoading'
 import { AgGridReact } from '@ag-grid-community/react'
 import '@ag-grid-community/styles/ag-grid.css'
@@ -16,6 +17,9 @@ import {
   useState
 } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import type { BCGridBaseProps } from './types'
+
+export type { BCGridBaseProps } from './types'
 
 const ROW_HEIGHT = 45
 const defaultNoRowsOverlayTemplate = `
@@ -34,7 +38,7 @@ const defaultNoRowsOverlayTemplate = `
   </div>
 `
 
-export const BCGridBase = forwardRef(
+export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
   (
     {
       autoSizeStrategy,

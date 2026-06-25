@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { auditLogColDefs, defaultAuditLogSortModel } from './_schema'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { defaultInitialPagination } from '@/constants/schedules'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useAuditLogs } from '@/hooks/useAuditLog.js'
 
 const initialPaginationOptions = {
