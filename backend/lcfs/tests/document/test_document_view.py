@@ -62,6 +62,22 @@ class FakeDocumentService:
     async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
         return
 
+    async def verify_internal_comment_access(self, parent_id, user, write=False):
+        # Records the most recent call so tests can assert the view invoked
+        # the internal-comment access check.
+        FakeDocumentService.last_internal_comment_access = {
+            "parent_id": parent_id,
+            "write": write,
+        }
+        return None
+
+
+class FakeForbiddenDocumentService(FakeDocumentService):
+    async def verify_internal_comment_access(self, parent_id, user, write=False):
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=403, detail="Forbidden resource")
+
 
 class FakeComplianceReportValidation:
     async def validate_organization_access(self, parent_id: int):
@@ -226,3 +242,61 @@ async def test_delete_file_invalid_parent_type(fastapi_app, client):
         await client.delete(url)
     assert exc_info.value.args[0] == 403
     assert "Unable to verify authorization" in exc_info.value.args[1]
+
+
+# --- internal_comment attachments (issue #4514) ------------------------------
+
+
+@pytest.mark.anyio
+async def test_get_all_documents_internal_comment(fastapi_app, client):
+    FakeDocumentService.last_internal_comment_access = None
+    url = fastapi_app.url_path_for(
+        "get_all_documents", parent_type="internal_comment", parent_id=7
+    )
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(response.json(), list)
+    # The read access check ran with write=False.
+    assert FakeDocumentService.last_internal_comment_access == {
+        "parent_id": 7,
+        "write": False,
+    }
+
+
+@pytest.mark.anyio
+async def test_upload_file_internal_comment(fastapi_app, client):
+    url = fastapi_app.url_path_for(
+        "upload_file", parent_type="internal_comment", parent_id=7
+    )
+    files = {"file": ("note.pdf", io.BytesIO(b"data"), "application/pdf")}
+    response = await client.post(url, files=files)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["documentId"] == 2
+
+
+@pytest.mark.anyio
+async def test_delete_file_internal_comment(fastapi_app, client):
+    FakeDocumentService.last_internal_comment_access = None
+    url = fastapi_app.url_path_for(
+        "delete_file", parent_type="internal_comment", parent_id=7, document_id=100
+    )
+    response = await client.delete(url)
+    assert response.status_code == status.HTTP_200_OK
+    # Deletion is a write operation and must pass the author check.
+    assert FakeDocumentService.last_internal_comment_access == {
+        "parent_id": 7,
+        "write": True,
+    }
+
+
+@pytest.mark.anyio
+async def test_get_internal_comment_documents_forbidden(fastapi_app, client):
+    # When the access check rejects, the endpoint returns a 403 response.
+    fastapi_app.dependency_overrides[DocumentService] = (
+        lambda: FakeForbiddenDocumentService()
+    )
+    url = fastapi_app.url_path_for(
+        "get_all_documents", parent_type="internal_comment", parent_id=7
+    )
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN

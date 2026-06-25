@@ -7,6 +7,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 import sqlalchemy as sa
 from sqlalchemy import asc, case, desc, func, or_, select
+from sqlalchemy.orm import selectinload
 
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
@@ -14,7 +15,11 @@ from lcfs.web.core.decorators import repo_handler
 
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.db.models.user.UserProfile import UserProfile
-from lcfs.db.models.comment.InternalComment import InternalComment
+from lcfs.db.models.document import Document
+from lcfs.db.models.comment.InternalComment import (
+    InternalComment,
+    internal_comment_document_association,
+)
 from lcfs.db.models.comment.CommentCategory import CommentCategory
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
@@ -123,6 +128,9 @@ class InternalCommentRepository:
 
         await self.db.flush()
         await self.db.refresh(internal_comment)
+        # Load the (empty) documents relationship so response serialization
+        # does not trigger a lazy load outside the async context.
+        await self.db.refresh(internal_comment, ["documents"])
         return internal_comment
 
     @repo_handler
@@ -217,7 +225,7 @@ class InternalCommentRepository:
         # Execute the query
         results = await self.db.execute(base_query)
 
-        # Compile and return the list of internal comments with user info
+        # Compile the list of internal comments with user info
         comments_with_user_info = [
             {
                 "internal_comment_id": internal_comment.internal_comment_id,
@@ -228,9 +236,38 @@ class InternalCommentRepository:
                 "create_date": internal_comment.create_date,
                 "update_date": internal_comment.update_date,
                 "full_name": full_name,
+                "documents": [],
             }
             for internal_comment, full_name in results
         ]
+
+        # Attach any document attachments in a single batched query to avoid
+        # an N+1 across the comment list.
+        comment_ids = [c["internal_comment_id"] for c in comments_with_user_info]
+        if comment_ids:
+            docs_result = await self.db.execute(
+                select(
+                    internal_comment_document_association.c.internal_comment_id,
+                    Document,
+                )
+                .join(
+                    Document,
+                    Document.document_id
+                    == internal_comment_document_association.c.document_id,
+                )
+                .where(
+                    internal_comment_document_association.c.internal_comment_id.in_(
+                        comment_ids
+                    )
+                )
+            )
+            documents_by_comment = {}
+            for comment_id, document in docs_result.all():
+                documents_by_comment.setdefault(comment_id, []).append(document)
+            for comment in comments_with_user_info:
+                comment["documents"] = documents_by_comment.get(
+                    comment["internal_comment_id"], []
+                )
 
         return comments_with_user_info
 
@@ -250,8 +287,10 @@ class InternalCommentRepository:
         Raises:
             DataNotFoundException: If no internal comment with the given ID is found.
         """
-        base_query = select(InternalComment).where(
-            InternalComment.internal_comment_id == internal_comment_id
+        base_query = (
+            select(InternalComment)
+            .options(selectinload(InternalComment.documents))
+            .where(InternalComment.internal_comment_id == internal_comment_id)
         )
         result = await self.db.execute(base_query)
         internal_comment = result.scalars().first()
@@ -319,6 +358,9 @@ class InternalCommentRepository:
             internal_comment.comment_search_vector = comment_search_vector
         await self.db.flush()
         await self.db.refresh(internal_comment)
+        # Load documents so response serialization does not lazy-load outside
+        # the async context.
+        await self.db.refresh(internal_comment, ["documents"])
 
         # Updated the internal comment with the creator's full name.
         internal_comment.full_name = await self.user_repo.get_full_name(
@@ -784,38 +826,17 @@ class InternalCommentRepository:
             .where(*where_clauses)
         ).subquery("inner_q")
 
-        conversation_groups = (
-            select(
-                inner_q.c._group_type,
-                inner_q.c._group_id,
-                inner_q.c._group_latest,
-            )
-            .distinct()
-            .subquery("conversation_groups")
-        )
-
+        # Pagination is by comment so the count shown matches the rendered
+        # rows.  The ordering still clusters a conversation's comments together
+        # (by entity) with the most active conversations first, so threads stay
+        # visually grouped within a page; a long thread may straddle a page
+        # boundary, which the frontend renders as adjacent partial groups.
         total = (
-            await self.db.execute(select(func.count()).select_from(conversation_groups))
+            await self.db.execute(select(func.count()).select_from(inner_q))
         ).scalar_one()
 
         if total == 0:
             return ([], 0)
-
-        paged_groups = (
-            select(
-                conversation_groups.c._group_type,
-                conversation_groups.c._group_id,
-                conversation_groups.c._group_latest,
-            )
-            .order_by(
-                sort_dir(conversation_groups.c._group_latest),
-                asc(conversation_groups.c._group_type),
-                asc(conversation_groups.c._group_id),
-            )
-            .limit(size)
-            .offset(offset)
-            .subquery("paged_groups")
-        )
 
         query = (
             select(
@@ -834,21 +855,19 @@ class InternalCommentRepository:
                 inner_q.c.full_name,
                 inner_q.c.entity_type,
                 inner_q.c.entity_id,
-            ).join(
-                paged_groups,
-                (paged_groups.c._group_type == inner_q.c._group_type)
-                & (paged_groups.c._group_id == inner_q.c._group_id),
             )
-            # 1. Sort selected conversations by activity.
+            # 1. Sort conversations by activity (group_latest).
             # 2. Keep rows in the same conversation together.
             # 3. Within each conversation, show comments oldest-first.
             .order_by(
-                sort_dir(paged_groups.c._group_latest),
+                sort_dir(inner_q.c._group_latest),
                 asc(inner_q.c.entity_type).nulls_last(),
                 asc(inner_q.c.entity_id).nulls_last(),
                 asc(inner_q.c.create_date),
                 asc(inner_q.c.internal_comment_id),
             )
+            .limit(size)
+            .offset(offset)
         )
 
         rows = (await self.db.execute(query)).mappings().all()
