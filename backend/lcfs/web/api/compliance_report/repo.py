@@ -1085,6 +1085,62 @@ class ComplianceReportRepository:
         }[key]
 
     @repo_handler
+    async def get_review_compliance_units_by_fuel(
+        self, compliance_report_id: int
+    ) -> list[dict]:
+        """
+        Return current-report compliance units by fuel type and schedule.
+
+        Only schedules with authoritative compliance-unit fields are included.
+        """
+        query = text(
+            """
+            SELECT schedule, fuel_type, SUM(compliance_units) AS compliance_units
+            FROM (
+                SELECT
+                    'Fuel supply' AS schedule,
+                    COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
+                    COALESCE(compliance_units, 0) AS compliance_units
+                FROM vw_fuel_supply_analytics_base
+                WHERE compliance_report_id = :compliance_report_id
+
+                UNION ALL
+
+                SELECT
+                    'Fuel exports' AS schedule,
+                    COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
+                    COALESCE(compliance_units, 0) AS compliance_units
+                FROM vw_fuel_export_analytics_base
+                WHERE compliance_report_id = :compliance_report_id
+            ) schedule_units
+            GROUP BY schedule, fuel_type
+            HAVING SUM(compliance_units) <> 0
+            ORDER BY fuel_type, schedule
+            """
+        )
+        started_at = perf_counter()
+        result = await self.db.execute(
+            query, {"compliance_report_id": compliance_report_id}
+        )
+        rows = result.mappings().all()
+        logger.info(
+            "compliance_report_review_query_timing",
+            query_name="compliance_units_by_fuel",
+            view_name="vw_fuel_supply_analytics_base,vw_fuel_export_analytics_base",
+            compliance_report_id=compliance_report_id,
+            row_count=len(rows),
+            duration_ms=round((perf_counter() - started_at) * 1000, 1),
+        )
+        return [
+            {
+                "schedule": row["schedule"],
+                "fuel_type": row["fuel_type"],
+                "compliance_units": float(row["compliance_units"] or 0),
+            }
+            for row in rows
+        ]
+
+    @repo_handler
     async def get_report_chain_organization_id(
         self, compliance_report_id: int
     ) -> Optional[int]:

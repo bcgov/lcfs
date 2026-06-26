@@ -366,12 +366,21 @@ class ComplianceReportReviewComparisonSeriesSchema(BaseSchema):
     )
 
 
+class ComplianceReportReviewComplianceUnitPointSchema(BaseSchema):
+    fuel_type: str
+    schedule: str
+    compliance_units: float = 0
+
+
 class ComplianceReportReviewChartDataSchema(BaseSchema):
     historical_variance: List[ComplianceReportReviewComparisonSeriesSchema] = Field(
         default_factory=list
     )
     supplemental_impact: List[ComplianceReportReviewComparisonSeriesSchema] = Field(
         default_factory=list
+    )
+    compliance_units_by_fuel: List[ComplianceReportReviewComplianceUnitPointSchema] = (
+        Field(default_factory=list)
     )
 
 

@@ -16,6 +16,7 @@ from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportReviewChartDataSchema,
+    ComplianceReportReviewComplianceUnitPointSchema,
     ComplianceReportReviewComparisonPointSchema,
     ComplianceReportReviewComparisonSeriesSchema,
     ComplianceReportReviewFindingSchema,
@@ -117,6 +118,12 @@ class ComplianceReportReviewService:
                     )
                 )
 
+        compliance_units_by_fuel = await self._timed(
+            "get_compliance_units_by_fuel",
+            self.repo.get_review_compliance_units_by_fuel(compliance_report_id),
+            compliance_report_id=compliance_report_id,
+        )
+
         previous_version_report_id = await self._timed(
             "get_previous_version_report_id",
             self._get_previous_version_report_id(report),
@@ -147,6 +154,7 @@ class ComplianceReportReviewService:
             previous_version_records,
             current_summary,
             previous_version_summary,
+            compliance_units_by_fuel,
             current_label=str(report.compliance_period.description),
             previous_version_label=(
                 f"Version {report.version - 1}" if previous_version_summary else ""
@@ -658,6 +666,7 @@ class ComplianceReportReviewService:
         previous_version_records: dict[str, list] | None,
         current_summary,
         previous_summary,
+        compliance_units_by_fuel: list[dict],
         current_label: str,
         previous_version_label: str,
         current_version_label: str,
@@ -731,6 +740,10 @@ class ComplianceReportReviewService:
         return ComplianceReportReviewChartDataSchema(
             historical_variance=historical,
             supplemental_impact=supplemental,
+            compliance_units_by_fuel=[
+                ComplianceReportReviewComplianceUnitPointSchema(**point)
+                for point in compliance_units_by_fuel
+            ],
         )
 
     def _comparison_points(

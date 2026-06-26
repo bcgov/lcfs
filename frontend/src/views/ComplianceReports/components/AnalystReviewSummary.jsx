@@ -295,17 +295,82 @@ const buildHistoricalChartOptions = (group) => ({
   }))
 })
 
+const groupComplianceUnitSeries = (points = []) => {
+  const fuelTypes = new Set()
+  const schedules = new Set()
+  const values = new Map()
+
+  points.forEach((point) => {
+    fuelTypes.add(point.fuelType)
+    schedules.add(point.schedule)
+    values.set(
+      `${point.schedule}|${point.fuelType}`,
+      point.complianceUnits || 0
+    )
+  })
+
+  return {
+    fuelTypes: Array.from(fuelTypes),
+    schedules: Array.from(schedules),
+    values
+  }
+}
+
+const buildComplianceUnitChartOptions = (group) => ({
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'shadow' }
+  },
+  legend: {
+    top: 0,
+    type: 'scroll'
+  },
+  grid: {
+    left: 8,
+    right: 16,
+    bottom: 8,
+    top: 48,
+    containLabel: true
+  },
+  xAxis: {
+    type: 'category',
+    data: group.fuelTypes,
+    axisLabel: {
+      rotate: group.fuelTypes.length > 4 ? 30 : 0,
+      overflow: 'truncate',
+      width: 100
+    }
+  },
+  yAxis: {
+    type: 'value',
+    name: 'Compliance units'
+  },
+  series: group.schedules.map((schedule) => ({
+    name: schedule,
+    type: 'bar',
+    data: group.fuelTypes.map(
+      (fuelType) => group.values.get(`${schedule}|${fuelType}`) || 0
+    )
+  }))
+})
+
 const ReviewCharts = ({ chartData }) => {
   const historical = chartData?.historicalVariance || []
   const supplemental = chartData?.supplementalImpact || []
+  const complianceUnits = chartData?.complianceUnitsByFuel || []
   const groupedHistorical = groupHistoricalSeries(
     historical.filter((item) => item.points?.length > 0)
   )
   const supplementalSeries = supplemental.filter(
     (item) => item.points?.length > 0
   )
+  const complianceUnitGroup = groupComplianceUnitSeries(complianceUnits)
 
-  if (!groupedHistorical.length && !supplementalSeries.length) {
+  if (
+    !groupedHistorical.length &&
+    !supplementalSeries.length &&
+    !complianceUnits.length
+  ) {
     return null
   }
 
@@ -321,6 +386,25 @@ const ReviewCharts = ({ chartData }) => {
           gap: 2
         }}
       >
+        {complianceUnits.length > 0 && (
+          <BCBox
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              borderRadius: '4px',
+              p: 1
+            }}
+          >
+            <BCTypography variant="body2" sx={{ mb: 1 }}>
+              Compliance units by fuel and schedule
+            </BCTypography>
+            <ReactECharts
+              option={buildComplianceUnitChartOptions(complianceUnitGroup)}
+              style={{ height: 280, width: '100%' }}
+              notMerge
+              lazyUpdate
+            />
+          </BCBox>
+        )}
         {groupedHistorical.map((item) => (
           <BCBox
             key={item.title}
