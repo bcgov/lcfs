@@ -8,6 +8,7 @@ from sqlalchemy import (
     and_,
     asc,
     desc,
+    Integer,
     String,
     cast,
     or_,
@@ -16,7 +17,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased, joinedload
+from sqlalchemy.orm import aliased, joinedload, selectinload
 from typing import List, Optional, TypedDict, Type, Sequence
 
 from lcfs.db.base import ActionTypeEnum
@@ -46,6 +47,7 @@ from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
@@ -214,7 +216,10 @@ class ComplianceReportRepository:
             ComplianceReport.organization_id == organization_id,
             CompliancePeriod.description == str(period),
             ComplianceReportStatus.status.in_(
-                [ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Exempted]
+                [
+                    ComplianceReportStatusEnum.Assessed,
+                    ComplianceReportStatusEnum.Exempted,
+                ]
             ),
         ]
 
@@ -263,6 +268,76 @@ class ComplianceReportRepository:
             .first()  # Gets the latest assessed report (excluding current)
         )
         return result
+
+    @repo_handler
+    async def get_previous_assessed_compliance_reports(
+        self, organization_id: int, current_period: int, limit: int | None = None
+    ) -> list[ComplianceReport]:
+        """
+        Retrieve the latest assessed/exempted reports from prior compliance
+        years for the organization, ordered newest first.
+        """
+        latest_versions = (
+            select(
+                ComplianceReport.compliance_period_id,
+                func.max(ComplianceReport.version).label("max_version"),
+            )
+            .join(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
+            )
+            .join(
+                ComplianceReportStatus,
+                ComplianceReport.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            )
+            .where(
+                and_(
+                    ComplianceReport.organization_id == organization_id,
+                    CompliancePeriod.description.op("~")(r"^\d+$"),
+                    cast(CompliancePeriod.description, Integer) < current_period,
+                    ComplianceReportStatus.status.in_(
+                        [
+                            ComplianceReportStatusEnum.Assessed,
+                            ComplianceReportStatusEnum.Exempted,
+                        ]
+                    ),
+                )
+            )
+            .group_by(ComplianceReport.compliance_period_id)
+            .subquery()
+        )
+
+        query = (
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+            )
+            .join(
+                latest_versions,
+                and_(
+                    ComplianceReport.compliance_period_id
+                    == latest_versions.c.compliance_period_id,
+                    ComplianceReport.version == latest_versions.c.max_version,
+                ),
+            )
+            .join(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
+            )
+            .order_by(cast(CompliancePeriod.description, Integer).desc())
+        )
+
+        if limit:
+            query = query.limit(limit)
+
+        result = await self.db.execute(query)
+        return result.scalars().unique().all()
 
     @repo_handler
     async def create_compliance_report(self, report: ComplianceReport):
@@ -810,6 +885,53 @@ class ComplianceReportRepository:
         }
 
     @repo_handler
+    async def get_effective_versioned_records(
+        self, compliance_report_id: int, model: Type
+    ) -> list:
+        """
+        Return the latest active records for a versioned schedule in the report
+        chain up to and including the selected report version.
+        """
+        anchor = await self._get_report_chain_anchor(compliance_report_id)
+        if not anchor or not anchor[0]:
+            return []
+
+        group_uuid, version, _ = anchor
+        chain_report_ids = self._get_chain_report_ids_subquery(group_uuid, version)
+
+        latest_version_per_group = (
+            select(
+                model.group_uuid,
+                func.max(model.version).label("max_version"),
+            )
+            .where(model.compliance_report_id.in_(chain_report_ids))
+            .group_by(model.group_uuid)
+            .subquery()
+        )
+
+        options = []
+        if hasattr(model, "fuel_type"):
+            options.append(selectinload(model.fuel_type))
+        if hasattr(model, "fuel_code"):
+            options.append(
+                selectinload(model.fuel_code).selectinload(FuelCode.fuel_code_status)
+            )
+
+        result = await self.db.execute(
+            select(model)
+            .options(*options)
+            .join(
+                latest_version_per_group,
+                and_(
+                    model.group_uuid == latest_version_per_group.c.group_uuid,
+                    model.version == latest_version_per_group.c.max_version,
+                ),
+            )
+            .where(model.action_type != ActionTypeEnum.DELETE)
+        )
+        return result.scalars().unique().all()
+
+    @repo_handler
     async def get_report_chain_organization_id(
         self, compliance_report_id: int
     ) -> Optional[int]:
@@ -944,8 +1066,7 @@ class ComplianceReportRepository:
             user.organization.organization_id if user.organization else None
         )
         hide_gov_reassessments = (
-            user_organization_id is not None
-            and user_organization_id == organization_id
+            user_organization_id is not None and user_organization_id == organization_id
         )
 
         assessed_status_id: Optional[int] = None

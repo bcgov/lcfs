@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from pydantic import Field
-from typing import ClassVar, Optional, Union
+from typing import ClassVar, Optional, Union, Literal, Any
 from typing import List, NamedTuple
 
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
@@ -315,6 +315,75 @@ class ComplianceReportYearNavigationSchema(BaseSchema):
     current_compliance_period: str
     previous: Optional[ComplianceReportYearNavigationItemSchema] = None
     next: Optional[ComplianceReportYearNavigationItemSchema] = None
+
+
+class ComplianceReportReviewMetricSchema(BaseSchema):
+    label: str
+    value: Optional[Union[str, float, int]] = None
+    comparison_value: Optional[Union[str, float, int]] = None
+    delta: Optional[float] = None
+    percent_change: Optional[float] = None
+    units: Optional[str] = None
+
+
+class ComplianceReportReviewFindingSchema(BaseSchema):
+    review_area: str
+    severity: Literal["informational", "review", "concern"]
+    title: str
+    detail: str
+    source: str
+    evidence: List[ComplianceReportReviewMetricSchema] = Field(default_factory=list)
+    suggested_follow_up: Optional[str] = None
+    confidence: Literal["high", "medium", "low"] = "high"
+
+
+class ComplianceReportReviewSectionSchema(BaseSchema):
+    section: str
+    status: Literal["clear", "review", "concern"]
+    findings: List[ComplianceReportReviewFindingSchema] = Field(default_factory=list)
+
+
+class ComplianceReportReviewPolicySchema(BaseSchema):
+    should: List[str]
+    should_not: List[str]
+
+
+class ComplianceReportReviewComparisonPointSchema(BaseSchema):
+    label: str
+    current_value: float = 0
+    comparison_value: float = 0
+    delta: float = 0
+    percent_change: Optional[float] = None
+    units: Optional[str] = None
+
+
+class ComplianceReportReviewComparisonSeriesSchema(BaseSchema):
+    title: str
+    current_label: str
+    comparison_label: str
+    points: List[ComplianceReportReviewComparisonPointSchema] = Field(
+        default_factory=list
+    )
+
+
+class ComplianceReportReviewChartDataSchema(BaseSchema):
+    historical_variance: List[ComplianceReportReviewComparisonSeriesSchema] = Field(
+        default_factory=list
+    )
+    supplemental_impact: List[ComplianceReportReviewComparisonSeriesSchema] = Field(
+        default_factory=list
+    )
+
+
+class ComplianceReportReviewSummarySchema(BaseSchema):
+    compliance_report_id: int
+    generated_at: datetime
+    summary: str
+    sections: List[ComplianceReportReviewSectionSchema]
+    top_follow_up_questions: List[str]
+    chart_data: ComplianceReportReviewChartDataSchema
+    ai_usage_policy: ComplianceReportReviewPolicySchema
+    llm_context: dict[str, Any]
 
 
 class ComplianceReportCreateSchema(BaseSchema):
