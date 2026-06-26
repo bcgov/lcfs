@@ -1,5 +1,6 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import { Box } from '@mui/material'
 import {
   AutoAwesome,
   Description,
@@ -13,12 +14,22 @@ import {
   SwapHoriz,
   UploadFile
 } from '@mui/icons-material'
+import type { SvgIconComponent } from '@mui/icons-material'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 const HEADER_OFFSET = 96
 const CLOSE_DELAY_MS = 180
 
-const navIconMap = {
+export interface ComplianceReportPageNavItem {
+  id: string
+  label: string
+}
+
+interface ComplianceReportPageNavProps {
+  items?: ComplianceReportPageNavItem[]
+}
+
+const navIconMap: Record<string, SvgIconComponent> = {
   'report-section-analyst-review': AutoAwesome,
   'report-section-review-actions': FactCheck,
   'report-section-supportingDocs': UploadFile,
@@ -32,11 +43,13 @@ const navIconMap = {
   'report-section-assessment': Gavel
 }
 
-export const ComplianceReportPageNav = ({ items = [] }) => {
-  const [availableIds, setAvailableIds] = useState([])
+export const ComplianceReportPageNav = ({
+  items = []
+}: ComplianceReportPageNavProps) => {
+  const [availableIds, setAvailableIds] = useState<string[]>([])
   const [activeId, setActiveId] = useState('')
   const [isOpen, setIsOpen] = useState(false)
-  const closeTimerRef = useRef(null)
+  const closeTimerRef = useRef<number | null>(null)
 
   const visibleItems = useMemo(
     () => items.filter((item) => availableIds.includes(item.id)),
@@ -113,7 +126,7 @@ export const ComplianceReportPageNav = ({ items = [] }) => {
     }, CLOSE_DELAY_MS)
   }
 
-  const handleClick = (id) => {
+  const handleClick = (id: string) => {
     const element = document.getElementById(id)
     if (!element) return
 
@@ -126,6 +139,8 @@ export const ComplianceReportPageNav = ({ items = [] }) => {
   return (
     <BCBox
       aria-label="Compliance report page sections"
+      onMouseEnter={openNav}
+      onMouseLeave={closeNav}
       sx={{
         position: 'fixed',
         right: { xs: 8, xl: 18 },
@@ -152,8 +167,6 @@ export const ComplianceReportPageNav = ({ items = [] }) => {
       >
         <BCBox
           className="custom-scrollbar"
-          onMouseEnter={openNav}
-          onMouseLeave={closeNav}
           sx={{
             maxHeight: 'calc(100vh - 156px)',
             overflowY: 'auto',
@@ -189,7 +202,7 @@ export const ComplianceReportPageNav = ({ items = [] }) => {
             const isActive = activeId === item.id
             const Icon = navIconMap[item.id] || Description
             return (
-              <BCBox
+              <Box
                 key={item.id}
                 component="button"
                 type="button"
@@ -262,7 +275,7 @@ export const ComplianceReportPageNav = ({ items = [] }) => {
                     </BCTypography>
                   )}
                 </BCBox>
-              </BCBox>
+              </Box>
             )
           })}
         </BCBox>
@@ -285,12 +298,10 @@ export const ComplianceReportPageNav = ({ items = [] }) => {
         {visibleItems.map((item) => {
           const isActive = activeId === item.id
           return (
-            <BCBox
+            <Box
               key={item.id}
               component="button"
               type="button"
-              onMouseEnter={openNav}
-              onMouseLeave={closeNav}
               onFocus={openNav}
               onClick={() => handleClick(item.id)}
               aria-label={`Go to ${item.label}`}

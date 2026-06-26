@@ -26,7 +26,7 @@ import { useForm } from 'react-hook-form'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import ComplianceReportSummary from './components/ComplianceReportSummary'
 import ReportDetails from './components/ReportDetails'
-import { AnalystReviewSummary } from './components/AnalystReviewSummary'
+import { AnalystReviewSummary } from './components/AnalystReviewSummary/index'
 import { ComplianceReportPageNav } from './components/ComplianceReportPageNav'
 
 import { buttonClusterConfigFn } from './buttonConfigs'
