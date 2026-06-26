@@ -1,6 +1,7 @@
 import asyncio
 import structlog
 from datetime import datetime, timezone
+from time import perf_counter
 from fastapi import Depends
 from sqlalchemy import (
     func,
@@ -15,6 +16,7 @@ from sqlalchemy import (
     delete,
     exists,
     text,
+    bindparam,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, joinedload, selectinload
@@ -277,10 +279,18 @@ class ComplianceReportRepository:
         Retrieve the latest assessed/exempted reports from prior compliance
         years for the organization, ordered newest first.
         """
-        latest_versions = (
+        ranked_reports = (
             select(
-                ComplianceReport.compliance_period_id,
-                func.max(ComplianceReport.version).label("max_version"),
+                ComplianceReport.compliance_report_id,
+                func.row_number()
+                .over(
+                    partition_by=ComplianceReport.compliance_period_id,
+                    order_by=(
+                        ComplianceReport.version.desc(),
+                        ComplianceReport.update_date.desc(),
+                    ),
+                )
+                .label("rn"),
             )
             .join(
                 CompliancePeriod,
@@ -305,7 +315,6 @@ class ComplianceReportRepository:
                     ),
                 )
             )
-            .group_by(ComplianceReport.compliance_period_id)
             .subquery()
         )
 
@@ -318,18 +327,16 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.summary),
             )
             .join(
-                latest_versions,
-                and_(
-                    ComplianceReport.compliance_period_id
-                    == latest_versions.c.compliance_period_id,
-                    ComplianceReport.version == latest_versions.c.max_version,
-                ),
+                ranked_reports,
+                ComplianceReport.compliance_report_id
+                == ranked_reports.c.compliance_report_id,
             )
             .join(
                 CompliancePeriod,
                 ComplianceReport.compliance_period_id
                 == CompliancePeriod.compliance_period_id,
             )
+            .where(ranked_reports.c.rn == 1)
             .order_by(cast(CompliancePeriod.description, Integer).desc())
         )
 
@@ -930,6 +937,152 @@ class ComplianceReportRepository:
             .where(model.action_type != ActionTypeEnum.DELETE)
         )
         return result.scalars().unique().all()
+
+    @repo_handler
+    async def get_review_schedule_analytics_totals(
+        self, compliance_report_id: int
+    ) -> dict[str, dict[str, float]]:
+        totals_by_report = await self.get_review_schedule_analytics_totals_for_reports(
+            [compliance_report_id]
+        )
+        return totals_by_report.get(
+            compliance_report_id,
+            {
+                "fuel_supplies": {},
+                "fuel_exports": {},
+                "allocation_agreements": {},
+                "notional_transfers": {},
+                "other_uses": {},
+            },
+        )
+
+    @repo_handler
+    async def get_review_schedule_analytics_totals_for_reports(
+        self, compliance_report_ids: list[int]
+    ) -> dict[int, dict[str, dict[str, float]]]:
+        """
+        Return schedule totals from the reporting analytics views.
+
+        These views rebuild effective schedule state from the compliance report
+        group UUID and schedule row versioning, which avoids missing unchanged
+        rows carried forward from earlier report versions.
+        """
+        report_ids = list(dict.fromkeys(compliance_report_ids))
+        totals: dict[int, dict[str, dict[str, float]]] = {
+            report_id: {
+                "fuel_supplies": {},
+                "fuel_exports": {},
+                "allocation_agreements": {},
+                "notional_transfers": {},
+                "other_uses": {},
+            }
+            for report_id in report_ids
+        }
+        if not report_ids:
+            return totals
+
+        queries = {
+            "fuel_supplies": text(
+                """
+                SELECT
+                    compliance_report_id,
+                    COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
+                    SUM(
+                        CASE
+                            WHEN COALESCE(quantity, 0) > 0 THEN quantity
+                            ELSE COALESCE(q1_quantity, 0)
+                               + COALESCE(q2_quantity, 0)
+                               + COALESCE(q3_quantity, 0)
+                               + COALESCE(q4_quantity, 0)
+                        END
+                    ) AS total_quantity
+                FROM vw_fuel_supply_analytics_base
+                WHERE compliance_report_id IN :compliance_report_ids
+                GROUP BY compliance_report_id, COALESCE(fuel_type::text, 'Unknown fuel type')
+                """
+            ).bindparams(bindparam("compliance_report_ids", expanding=True)),
+            "fuel_exports": text(
+                """
+                SELECT
+                    compliance_report_id,
+                    COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
+                    SUM(COALESCE(quantity, 0)) AS total_quantity
+                FROM vw_fuel_export_analytics_base
+                WHERE compliance_report_id IN :compliance_report_ids
+                GROUP BY compliance_report_id, COALESCE(fuel_type::text, 'Unknown fuel type')
+                """
+            ).bindparams(bindparam("compliance_report_ids", expanding=True)),
+            "allocation_agreements": text(
+                """
+                SELECT
+                    compliance_report_id,
+                    COALESCE(fuel_type::text, fuel_type_other, 'Unknown fuel type') AS fuel_type,
+                    SUM(
+                        CASE
+                            WHEN COALESCE(quantity, 0) > 0 THEN quantity
+                            ELSE COALESCE(q1_quantity, 0)
+                               + COALESCE(q2_quantity, 0)
+                               + COALESCE(q3_quantity, 0)
+                               + COALESCE(q4_quantity, 0)
+                        END
+                    ) AS total_quantity
+                FROM vw_allocation_agreement_analytics_base
+                WHERE compliance_report_id IN :compliance_report_ids
+                GROUP BY compliance_report_id, COALESCE(fuel_type::text, fuel_type_other, 'Unknown fuel type')
+                """
+            ).bindparams(bindparam("compliance_report_ids", expanding=True)),
+            "notional_transfers": text(
+                """
+                SELECT
+                    compliance_report_id,
+                    COALESCE("Fuel Category"::text, 'Unknown fuel type') AS fuel_type,
+                    SUM(COALESCE("Quantity", 0)) AS total_quantity
+                FROM vw_notional_transfer_base
+                WHERE compliance_report_id IN :compliance_report_ids
+                GROUP BY compliance_report_id, COALESCE("Fuel Category"::text, 'Unknown fuel type')
+                """
+            ).bindparams(bindparam("compliance_report_ids", expanding=True)),
+            "other_uses": text(
+                """
+                SELECT
+                    compliance_report_id,
+                    COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
+                    SUM(COALESCE(quantity_supplied, 0)) AS total_quantity
+                FROM vw_fuels_other_use_base
+                WHERE compliance_report_id IN :compliance_report_ids
+                GROUP BY compliance_report_id, COALESCE(fuel_type::text, 'Unknown fuel type')
+                """
+            ).bindparams(bindparam("compliance_report_ids", expanding=True)),
+        }
+
+        for key, query in queries.items():
+            started_at = perf_counter()
+            result = await self.db.execute(query, {"compliance_report_ids": report_ids})
+            rows = result.mappings().all()
+            for row in rows:
+                totals[row["compliance_report_id"]][key][row["fuel_type"]] = float(
+                    row["total_quantity"] or 0
+                )
+            logger.info(
+                "compliance_report_review_query_timing",
+                query_name=key,
+                view_name=self._review_schedule_analytics_view_name(key),
+                compliance_report_ids=report_ids,
+                report_count=len(report_ids),
+                row_count=len(rows),
+                duration_ms=round((perf_counter() - started_at) * 1000, 1),
+            )
+
+        return totals
+
+    def _review_schedule_analytics_view_name(self, key: str) -> str:
+        return {
+            "fuel_supplies": "vw_fuel_supply_analytics_base",
+            "fuel_exports": "vw_fuel_export_analytics_base",
+            "allocation_agreements": "vw_allocation_agreement_analytics_base",
+            "notional_transfers": "vw_notional_transfer_base",
+            "other_uses": "vw_fuels_other_use_base",
+        }[key]
 
     @repo_handler
     async def get_report_chain_organization_id(

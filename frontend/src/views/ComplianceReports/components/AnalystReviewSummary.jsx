@@ -7,8 +7,10 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
+  Checkbox,
   Chip,
   Divider,
+  FormControlLabel,
   Stack
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -140,6 +142,32 @@ const formatMetric = (metric) => {
     parts.push(metric.units)
   }
   return parts.join(' | ')
+}
+
+const getAddressedStorageKey = (complianceReportId) =>
+  `analyst-review-addressed-${complianceReportId}`
+
+const getFindingId = (sectionName, finding, index) =>
+  [sectionName, finding.severity, finding.source, finding.title, index].join(
+    '|'
+  )
+
+const isActionableFinding = (finding) =>
+  finding.severity === 'concern' || finding.severity === 'review'
+
+const uniqueQuestions = (questions = []) => {
+  const seen = new Set()
+  return questions.filter((question) => {
+    const normalizedQuestion = question
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toLowerCase()
+    if (seen.has(normalizedQuestion)) {
+      return false
+    }
+    seen.add(normalizedQuestion)
+    return true
+  })
 }
 
 const buildComparisonChartOptions = (series) => ({
@@ -350,8 +378,56 @@ export const AnalystReviewSummary = ({ complianceReportId }) => {
     return robotVariants[numericId % robotVariants.length]
   }, [complianceReportId])
   const [expandedSection, setExpandedSection] = useState(null)
+  const [addressedFindingIds, setAddressedFindingIds] = useState(new Set())
   const typedSummary = useTypewriter(data?.summary || '')
   const isDrafting = !!data?.summary && typedSummary !== data.summary
+  const actionableFindingIds = useMemo(() => {
+    if (!data?.sections) {
+      return []
+    }
+
+    return data.sections.flatMap((section) =>
+      section.findings
+        .map((finding, index) =>
+          isActionableFinding(finding)
+            ? getFindingId(section.section, finding, index)
+            : null
+        )
+        .filter(Boolean)
+    )
+  }, [data?.sections])
+  const topFollowUpQuestions = useMemo(
+    () => uniqueQuestions(data?.topFollowUpQuestions),
+    [data?.topFollowUpQuestions]
+  )
+
+  useEffect(() => {
+    if (!complianceReportId) {
+      setAddressedFindingIds(new Set())
+      return
+    }
+
+    const storedValue = window.localStorage.getItem(
+      getAddressedStorageKey(complianceReportId)
+    )
+    setAddressedFindingIds(new Set(storedValue ? JSON.parse(storedValue) : []))
+  }, [complianceReportId])
+
+  const toggleFindingAddressed = (findingId) => {
+    setAddressedFindingIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(findingId)) {
+        next.delete(findingId)
+      } else {
+        next.add(findingId)
+      }
+      window.localStorage.setItem(
+        getAddressedStorageKey(complianceReportId),
+        JSON.stringify(Array.from(next))
+      )
+      return next
+    })
+  }
 
   if (isLoading) {
     return (
@@ -388,6 +464,10 @@ export const AnalystReviewSummary = ({ complianceReportId }) => {
     },
     { concern: 0, review: 0, informational: 0 }
   )
+  const actionableCount = actionableFindingIds.length
+  const addressedCount = actionableFindingIds.filter((findingId) =>
+    addressedFindingIds.has(findingId)
+  ).length
 
   return (
     <Accordion
@@ -398,7 +478,6 @@ export const AnalystReviewSummary = ({ complianceReportId }) => {
         border: '1px solid rgba(0, 0, 0, 0.18)',
         borderRadius: '8px',
         backgroundColor: '#fff',
-        mb: 6,
         '&:before': { display: 'none' }
       }}
     >
@@ -476,6 +555,16 @@ export const AnalystReviewSummary = ({ complianceReportId }) => {
               color="info"
               label={`${counts.informational || 0} info`}
             />
+            {actionableCount > 0 && (
+              <Chip
+                size="small"
+                color={
+                  addressedCount === actionableCount ? 'success' : 'default'
+                }
+                variant="outlined"
+                label={`${addressedCount}/${actionableCount} addressed`}
+              />
+            )}
           </Stack>
         </Stack>
       </AccordionSummary>
@@ -483,11 +572,12 @@ export const AnalystReviewSummary = ({ complianceReportId }) => {
       <AccordionDetails sx={{ pt: 0 }}>
         <Stack spacing={1.5}>
           <BCAlert severity="info" noFade>
-            Deterministic checks only and it must not determine compliance, approve or reject
-            reports, calculate authoritative values, or make enforcement decisions.
+            Deterministic checks only and it must not determine compliance,
+            approve or reject reports, calculate authoritative values, or make
+            enforcement decisions.
           </BCAlert>
 
-          {data.topFollowUpQuestions?.length > 0 && (
+          {topFollowUpQuestions.length > 0 && (
             <BCBox>
               <BCTypography variant="subtitle2" color="primary">
                 Top follow-up questions
@@ -497,7 +587,7 @@ export const AnalystReviewSummary = ({ complianceReportId }) => {
                 sx={{ pl: 3, mt: 0.5, mb: 0 }}
                 spacing={0.5}
               >
-                {data.topFollowUpQuestions.map((question) => (
+                {topFollowUpQuestions.map((question) => (
                   <BCTypography component="li" variant="body2" key={question}>
                     {question}
                   </BCTypography>
@@ -547,47 +637,89 @@ export const AnalystReviewSummary = ({ complianceReportId }) => {
                 </AccordionSummary>
                 <AccordionDetails>
                   <Stack spacing={1.5}>
-                    {section.findings.map((finding) => (
-                      <BCBox key={`${finding.source}-${finding.title}`}>
-                        <Stack
-                          direction="row"
-                          spacing={1}
-                          alignItems="center"
-                          flexWrap="wrap"
-                          useFlexGap
+                    {section.findings.map((finding, index) => {
+                      const findingId = getFindingId(
+                        section.section,
+                        finding,
+                        index
+                      )
+                      const isActionable = isActionableFinding(finding)
+                      const isAddressed = addressedFindingIds.has(findingId)
+
+                      return (
+                        <BCBox
+                          key={findingId}
+                          sx={{
+                            opacity: isActionable && isAddressed ? 0.7 : 1,
+                            borderLeft:
+                              isActionable && isAddressed
+                                ? '3px solid rgba(46, 125, 50, 0.55)'
+                                : '3px solid transparent',
+                            pl: isActionable ? 1 : 0
+                          }}
                         >
-                          <Chip
-                            size="small"
-                            color={severityColor[finding.severity] || 'default'}
-                            label={finding.severity}
-                          />
-                          <BCTypography variant="subtitle2">
-                            {finding.title}
-                          </BCTypography>
-                        </Stack>
-                        <BCTypography variant="body2" sx={{ mt: 0.5 }}>
-                          {finding.detail}
-                        </BCTypography>
-                        <BCTypography variant="caption" display="block">
-                          Source: {finding.source} | Confidence:{' '}
-                          {finding.confidence}
-                        </BCTypography>
-                        {finding.evidence?.map((metric) => (
-                          <BCTypography
-                            key={`${finding.title}-${metric.label}`}
-                            variant="caption"
-                            display="block"
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            flexWrap="wrap"
+                            useFlexGap
                           >
-                            {formatMetric(metric)}
-                          </BCTypography>
-                        ))}
-                        {finding.suggestedFollowUp && (
+                            <Chip
+                              size="small"
+                              color={
+                                severityColor[finding.severity] || 'default'
+                              }
+                              label={finding.severity}
+                            />
+                            <BCTypography variant="subtitle2">
+                              {finding.title}
+                            </BCTypography>
+                            {isActionable && (
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    size="small"
+                                    checked={isAddressed}
+                                    onChange={() =>
+                                      toggleFindingAddressed(findingId)
+                                    }
+                                  />
+                                }
+                                label="Addressed"
+                                sx={{
+                                  ml: 0,
+                                  '& .MuiFormControlLabel-label': {
+                                    fontSize: '0.8125rem'
+                                  }
+                                }}
+                              />
+                            )}
+                          </Stack>
                           <BCTypography variant="body2" sx={{ mt: 0.5 }}>
-                            Follow-up: {finding.suggestedFollowUp}
+                            {finding.detail}
                           </BCTypography>
-                        )}
-                      </BCBox>
-                    ))}
+                          <BCTypography variant="caption" display="block">
+                            Source: {finding.source} | Confidence:{' '}
+                            {finding.confidence}
+                          </BCTypography>
+                          {finding.evidence?.map((metric) => (
+                            <BCTypography
+                              key={`${finding.title}-${metric.label}`}
+                              variant="caption"
+                              display="block"
+                            >
+                              {formatMetric(metric)}
+                            </BCTypography>
+                          ))}
+                          {finding.suggestedFollowUp && (
+                            <BCTypography variant="body2" sx={{ mt: 0.5 }}>
+                              Follow-up: {finding.suggestedFollowUp}
+                            </BCTypography>
+                          )}
+                        </BCBox>
+                      )
+                    })}
                   </Stack>
                 </AccordionDetails>
               </Accordion>

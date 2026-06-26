@@ -1,9 +1,11 @@
 from collections import defaultdict
 from datetime import datetime, timezone, date
 from decimal import Decimal
+from time import perf_counter
 from typing import Iterable
 
 from fastapi import Depends
+import structlog
 
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.FuelExport import FuelExport
@@ -32,6 +34,8 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 MATERIAL_PERCENT_THRESHOLD = 25
 MATERIAL_VOLUME_THRESHOLD = 100_000
 
+logger = structlog.get_logger(__name__)
+
 
 class ComplianceReportReviewService:
     def __init__(
@@ -46,50 +50,99 @@ class ComplianceReportReviewService:
     async def get_review_summary(
         self, compliance_report_id: int
     ) -> ComplianceReportReviewSummarySchema:
-        report = await self.repo.get_compliance_report_by_id(compliance_report_id)
+        total_started_at = perf_counter()
+        report = await self._timed(
+            "get_compliance_report_by_id",
+            self.repo.get_compliance_report_by_id(compliance_report_id),
+            compliance_report_id=compliance_report_id,
+        )
         if not report:
             raise DataNotFoundException("Compliance report not found")
 
-        current_summary = (
-            await self.summary_service.calculate_compliance_report_summary(
+        current_summary = await self._timed(
+            "calculate_current_summary",
+            self.summary_service.calculate_compliance_report_summary(
                 compliance_report_id
-            )
+            ),
+            compliance_report_id=compliance_report_id,
         )
-        schedule_records = await self._get_schedule_records(compliance_report_id)
+        schedule_records = await self._timed(
+            "get_current_schedule_records",
+            self._get_schedule_records(compliance_report_id),
+            compliance_report_id=compliance_report_id,
+        )
 
         compliance_year = self._to_int(report.compliance_period.description)
         prior_year_report = None
-        prior_year_records = None
         prior_year_snapshots = []
+        prior_reports = []
         if compliance_year:
-            prior_reports = await self.repo.get_previous_assessed_compliance_reports(
-                report.organization_id,
-                compliance_year,
+            prior_reports = await self._timed(
+                "get_previous_assessed_compliance_reports",
+                self.repo.get_previous_assessed_compliance_reports(
+                    report.organization_id,
+                    compliance_year,
+                ),
+                compliance_report_id=compliance_report_id,
+                organization_id=report.organization_id,
+                compliance_year=compliance_year,
             )
             prior_year_report = prior_reports[0] if prior_reports else None
-            for prior_report in prior_reports:
-                prior_records = await self._get_schedule_records(
-                    prior_report.compliance_report_id
-                )
-                prior_year_snapshots.append((prior_report, prior_records))
-            if prior_year_snapshots:
-                prior_year_records = prior_year_snapshots[0][1]
 
-        previous_version_report_id = await self._get_previous_version_report_id(report)
+        comparison_report_ids = [
+            compliance_report_id,
+            *(prior_report.compliance_report_id for prior_report in prior_reports),
+        ]
+        analytics_totals_by_report = await self._timed(
+            "get_comparison_schedule_analytics_totals",
+            self.repo.get_review_schedule_analytics_totals_for_reports(
+                comparison_report_ids
+            ),
+            compliance_report_id=compliance_report_id,
+            comparison_report_count=len(comparison_report_ids),
+        )
+        current_chart_totals = analytics_totals_by_report.get(compliance_report_id, {})
+        current_chart_totals = self._with_fallback_schedule_totals(
+            current_chart_totals, schedule_records
+        )
+
+        if prior_reports:
+            for prior_report in prior_reports:
+                prior_year_snapshots.append(
+                    (
+                        prior_report,
+                        analytics_totals_by_report.get(
+                            prior_report.compliance_report_id, {}
+                        ),
+                    )
+                )
+
+        previous_version_report_id = await self._timed(
+            "get_previous_version_report_id",
+            self._get_previous_version_report_id(report),
+            compliance_report_id=compliance_report_id,
+        )
         previous_version_summary = None
         previous_version_records = None
         if previous_version_report_id:
-            previous_version_summary = (
-                await self.summary_service.calculate_compliance_report_summary(
+            previous_version_summary = await self._timed(
+                "calculate_previous_version_summary",
+                self.summary_service.calculate_compliance_report_summary(
                     previous_version_report_id
-                )
+                ),
+                compliance_report_id=previous_version_report_id,
+                current_report_id=compliance_report_id,
             )
-            previous_version_records = await self._get_schedule_records(
-                previous_version_report_id
+            previous_version_records = await self._timed(
+                "get_previous_version_schedule_records",
+                self._get_schedule_records(previous_version_report_id),
+                compliance_report_id=previous_version_report_id,
+                current_report_id=compliance_report_id,
             )
 
         chart_data = self._build_chart_data(
             schedule_records,
+            current_chart_totals,
             prior_year_snapshots,
             previous_version_records,
             current_summary,
@@ -110,9 +163,11 @@ class ComplianceReportReviewService:
         findings.extend(self._allocation_findings(schedule_records))
         findings.extend(self._summary_findings(current_summary))
 
-        if prior_year_records:
+        if prior_year_snapshots:
             findings.extend(
-                self._historical_variance_findings(schedule_records, prior_year_records)
+                self._historical_variance_findings(
+                    current_chart_totals, prior_year_snapshots[0][1]
+                )
             )
 
         if previous_version_summary:
@@ -126,7 +181,7 @@ class ComplianceReportReviewService:
         follow_ups = self._top_follow_up_questions(findings)
         summary = self._build_summary(findings, prior_year_report is not None)
 
-        return ComplianceReportReviewSummarySchema(
+        response = ComplianceReportReviewSummarySchema(
             compliance_report_id=compliance_report_id,
             generated_at=datetime.now(timezone.utc),
             summary=summary,
@@ -164,6 +219,30 @@ class ComplianceReportReviewService:
                 "review_areas": sorted({finding.review_area for finding in findings}),
             },
         )
+        self._log_timing(
+            "build_review_summary_total",
+            total_started_at,
+            compliance_report_id=compliance_report_id,
+            prior_report_count=len(prior_year_snapshots),
+            finding_count=len(findings),
+        )
+        return response
+
+    async def _timed(self, step: str, awaitable, **context):
+        started_at = perf_counter()
+        try:
+            return await awaitable
+        finally:
+            self._log_timing(step, started_at, **context)
+
+    def _log_timing(self, step: str, started_at: float, **context) -> None:
+        duration_ms = round((perf_counter() - started_at) * 1000, 1)
+        logger.info(
+            "compliance_report_review_timing",
+            step=step,
+            duration_ms=duration_ms,
+            **context,
+        )
 
     async def _get_schedule_records(self, compliance_report_id: int) -> dict[str, list]:
         (
@@ -196,6 +275,25 @@ class ComplianceReportReviewService:
             "notional_transfers": notional_transfers,
             "other_uses": other_uses,
         }
+
+    async def _get_schedule_analytics_totals(
+        self, compliance_report_id: int, fallback_records: dict[str, list]
+    ) -> dict[str, dict[str, float]]:
+        totals = await self.repo.get_review_schedule_analytics_totals(
+            compliance_report_id
+        )
+        return self._with_fallback_schedule_totals(totals, fallback_records)
+
+    def _with_fallback_schedule_totals(
+        self, totals: dict[str, dict[str, float]], fallback_records: dict[str, list]
+    ) -> dict[str, dict[str, float]]:
+        fallback_totals = self._schedule_totals_from_records(fallback_records)
+
+        for key, fallback in fallback_totals.items():
+            if not totals.get(key):
+                totals[key] = fallback
+
+        return totals
 
     async def _get_previous_version_report_id(self, report) -> int | None:
         if not report.compliance_report_group_uuid or report.version == 0:
@@ -480,18 +578,14 @@ class ComplianceReportReviewService:
         return findings
 
     def _historical_variance_findings(
-        self, current_records: dict[str, list], prior_records: dict[str, list]
+        self,
+        current_totals: dict[str, dict[str, float]],
+        prior_totals: dict[str, dict[str, float]],
     ) -> list[ComplianceReportReviewFindingSchema]:
         findings = []
-        for key, field in [
-            ("fuel_supplies", "quantity"),
-            ("fuel_exports", "quantity"),
-            ("allocation_agreements", "quantity"),
-            ("notional_transfers", "quantity"),
-            ("other_uses", "quantity_supplied"),
-        ]:
-            current = self._sum_by_fuel_type(current_records[key], field)
-            prior = self._sum_by_fuel_type(prior_records[key], field)
+        for key in self._schedule_keys():
+            current = current_totals.get(key, {})
+            prior = prior_totals.get(key, {})
 
             for fuel_type in sorted(set(current) | set(prior)):
                 current_value = current.get(fuel_type, 0)
@@ -559,7 +653,8 @@ class ComplianceReportReviewService:
     def _build_chart_data(
         self,
         current_records: dict[str, list],
-        prior_year_snapshots: list[tuple[object, dict[str, list]]],
+        current_chart_totals: dict[str, dict[str, float]],
+        prior_year_snapshots: list[tuple[object, dict[str, dict]]],
         previous_version_records: dict[str, list] | None,
         current_summary,
         previous_summary,
@@ -568,18 +663,12 @@ class ComplianceReportReviewService:
         current_version_label: str,
     ) -> ComplianceReportReviewChartDataSchema:
         historical = []
-        for prior_report, prior_records in prior_year_snapshots:
+        for prior_report, prior_totals in prior_year_snapshots:
             prior_label = str(prior_report.compliance_period.description)
-            for key, field in [
-                ("fuel_supplies", "quantity"),
-                ("fuel_exports", "quantity"),
-                ("allocation_agreements", "quantity"),
-                ("notional_transfers", "quantity"),
-                ("other_uses", "quantity_supplied"),
-            ]:
+            for key in self._schedule_keys():
                 points = self._comparison_points(
-                    self._sum_by_fuel_type(current_records[key], field),
-                    self._sum_by_fuel_type(prior_records[key], field),
+                    current_chart_totals.get(key, {}),
+                    prior_totals.get(key, {}),
                     units="reported units",
                 )
                 if points:
@@ -713,7 +802,17 @@ class ComplianceReportReviewService:
                 finding.severity
             ],
         )
-        return [finding.suggested_follow_up for finding in ordered[:3]]
+        questions = []
+        seen = set()
+        for finding in ordered:
+            normalized_question = " ".join(finding.suggested_follow_up.split()).lower()
+            if normalized_question in seen:
+                continue
+            seen.add(normalized_question)
+            questions.append(finding.suggested_follow_up)
+            if len(questions) == 3:
+                break
+        return questions
 
     def _build_summary(self, findings, has_prior_year_baseline: bool) -> str:
         concern_count = sum(1 for finding in findings if finding.severity == "concern")
@@ -728,6 +827,34 @@ class ComplianceReportReviewService:
         if review_count:
             return f"Deterministic pre-screen found {review_count} item(s) for analyst review. {baseline}"
         return f"Deterministic pre-screen did not find material concerns using the current rule set. {baseline}"
+
+    def _schedule_keys(self) -> list[str]:
+        return [
+            "fuel_supplies",
+            "fuel_exports",
+            "allocation_agreements",
+            "notional_transfers",
+            "other_uses",
+        ]
+
+    def _schedule_totals_from_records(
+        self, records: dict[str, list]
+    ) -> dict[str, dict[str, float]]:
+        return {
+            "fuel_supplies": self._sum_by_fuel_type(
+                records["fuel_supplies"], "quantity"
+            ),
+            "fuel_exports": self._sum_by_fuel_type(records["fuel_exports"], "quantity"),
+            "allocation_agreements": self._sum_by_fuel_type(
+                records["allocation_agreements"], "quantity"
+            ),
+            "notional_transfers": self._sum_by_fuel_type(
+                records["notional_transfers"], "quantity"
+            ),
+            "other_uses": self._sum_by_fuel_type(
+                records["other_uses"], "quantity_supplied"
+            ),
+        }
 
     def _sum_by_fuel_type(
         self, rows: Iterable, quantity_field: str

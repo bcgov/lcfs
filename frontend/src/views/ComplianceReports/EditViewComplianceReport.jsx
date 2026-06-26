@@ -831,7 +831,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           {isIdirUser && !location.state?.newReport && (
             <BCBox
               id="report-section-analyst-review"
-              sx={{ scrollMarginTop: 96, '& .': { marginBottom: '1rem' } }}
+              sx={{ scrollMarginTop: 96, marginBottom: '2rem' }}
             >
               <AnalystReviewSummary complianceReportId={complianceReportId} />
             </BCBox>
