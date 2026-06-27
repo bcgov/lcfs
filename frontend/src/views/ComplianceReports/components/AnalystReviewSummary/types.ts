@@ -51,6 +51,7 @@ export interface ComparisonSeries {
 
 export interface ComplianceUnitPoint {
   fuelType: string
+  fuelCategory?: string
   schedule: string
   complianceUnits: number
 }

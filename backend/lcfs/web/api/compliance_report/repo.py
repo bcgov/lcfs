@@ -919,6 +919,8 @@ class ComplianceReportRepository:
         options = []
         if hasattr(model, "fuel_type"):
             options.append(selectinload(model.fuel_type))
+        if hasattr(model, "fuel_category"):
+            options.append(selectinload(model.fuel_category))
         if hasattr(model, "fuel_code"):
             options.append(
                 selectinload(model.fuel_code).selectinload(FuelCode.fuel_code_status)
@@ -986,6 +988,8 @@ class ComplianceReportRepository:
                 """
                 SELECT
                     compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category')
+                        || ' - ' ||
                     COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
                     SUM(
                         CASE
@@ -998,24 +1002,34 @@ class ComplianceReportRepository:
                     ) AS total_quantity
                 FROM vw_fuel_supply_analytics_base
                 WHERE compliance_report_id IN :compliance_report_ids
-                GROUP BY compliance_report_id, COALESCE(fuel_type::text, 'Unknown fuel type')
+                GROUP BY
+                    compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category'),
+                    COALESCE(fuel_type::text, 'Unknown fuel type')
                 """
             ).bindparams(bindparam("compliance_report_ids", expanding=True)),
             "fuel_exports": text(
                 """
                 SELECT
                     compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category')
+                        || ' - ' ||
                     COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
                     SUM(COALESCE(quantity, 0)) AS total_quantity
                 FROM vw_fuel_export_analytics_base
                 WHERE compliance_report_id IN :compliance_report_ids
-                GROUP BY compliance_report_id, COALESCE(fuel_type::text, 'Unknown fuel type')
+                GROUP BY
+                    compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category'),
+                    COALESCE(fuel_type::text, 'Unknown fuel type')
                 """
             ).bindparams(bindparam("compliance_report_ids", expanding=True)),
             "allocation_agreements": text(
                 """
                 SELECT
                     compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category')
+                        || ' - ' ||
                     COALESCE(fuel_type::text, fuel_type_other, 'Unknown fuel type') AS fuel_type,
                     SUM(
                         CASE
@@ -1028,29 +1042,37 @@ class ComplianceReportRepository:
                     ) AS total_quantity
                 FROM vw_allocation_agreement_analytics_base
                 WHERE compliance_report_id IN :compliance_report_ids
-                GROUP BY compliance_report_id, COALESCE(fuel_type::text, fuel_type_other, 'Unknown fuel type')
+                GROUP BY
+                    compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category'),
+                    COALESCE(fuel_type::text, fuel_type_other, 'Unknown fuel type')
                 """
             ).bindparams(bindparam("compliance_report_ids", expanding=True)),
             "notional_transfers": text(
                 """
                 SELECT
                     compliance_report_id,
-                    COALESCE("Fuel Category"::text, 'Unknown fuel type') AS fuel_type,
+                    COALESCE("Fuel Category"::text, 'Unknown fuel category') AS fuel_type,
                     SUM(COALESCE("Quantity", 0)) AS total_quantity
                 FROM vw_notional_transfer_base
                 WHERE compliance_report_id IN :compliance_report_ids
-                GROUP BY compliance_report_id, COALESCE("Fuel Category"::text, 'Unknown fuel type')
+                GROUP BY compliance_report_id, COALESCE("Fuel Category"::text, 'Unknown fuel category')
                 """
             ).bindparams(bindparam("compliance_report_ids", expanding=True)),
             "other_uses": text(
                 """
                 SELECT
                     compliance_report_id,
+                    COALESCE(category::text, 'Unknown fuel category')
+                        || ' - ' ||
                     COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
                     SUM(COALESCE(quantity_supplied, 0)) AS total_quantity
                 FROM vw_fuels_other_use_base
                 WHERE compliance_report_id IN :compliance_report_ids
-                GROUP BY compliance_report_id, COALESCE(fuel_type::text, 'Unknown fuel type')
+                GROUP BY
+                    compliance_report_id,
+                    COALESCE(category::text, 'Unknown fuel category'),
+                    COALESCE(fuel_type::text, 'Unknown fuel type')
                 """
             ).bindparams(bindparam("compliance_report_ids", expanding=True)),
         }
@@ -1095,10 +1117,15 @@ class ComplianceReportRepository:
         """
         query = text(
             """
-            SELECT schedule, fuel_type, SUM(compliance_units) AS compliance_units
+            SELECT
+                schedule,
+                fuel_category,
+                fuel_type,
+                SUM(compliance_units) AS compliance_units
             FROM (
                 SELECT
                     'Fuel supply' AS schedule,
+                    COALESCE(fuel_category::text, 'Unknown fuel category') AS fuel_category,
                     COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
                     COALESCE(compliance_units, 0) AS compliance_units
                 FROM vw_fuel_supply_analytics_base
@@ -1108,14 +1135,15 @@ class ComplianceReportRepository:
 
                 SELECT
                     'Fuel exports' AS schedule,
+                    COALESCE(fuel_category::text, 'Unknown fuel category') AS fuel_category,
                     COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
                     COALESCE(compliance_units, 0) AS compliance_units
                 FROM vw_fuel_export_analytics_base
                 WHERE compliance_report_id = :compliance_report_id
             ) schedule_units
-            GROUP BY schedule, fuel_type
+            GROUP BY schedule, fuel_category, fuel_type
             HAVING SUM(compliance_units) <> 0
-            ORDER BY fuel_type, schedule
+            ORDER BY fuel_category, fuel_type, schedule
             """
         )
         started_at = perf_counter()
@@ -1134,11 +1162,84 @@ class ComplianceReportRepository:
         return [
             {
                 "schedule": row["schedule"],
+                "fuel_category": row["fuel_category"],
                 "fuel_type": row["fuel_type"],
                 "compliance_units": float(row["compliance_units"] or 0),
             }
             for row in rows
         ]
+
+    @repo_handler
+    async def get_review_fuel_supply_fuel_code_totals_for_reports(
+        self, compliance_report_ids: list[int]
+    ) -> dict[int, dict[str, float]]:
+        """
+        Return fuel supply quantities by fuel code for current and comparison reports.
+        """
+        report_ids = list(dict.fromkeys(compliance_report_ids))
+        totals: dict[int, dict[str, float]] = {
+            report_id: {} for report_id in report_ids
+        }
+        if not report_ids:
+            return totals
+
+        query = text(
+            """
+            SELECT
+                compliance_report_id,
+                COALESCE(NULLIF(fuel_code::text, ''), 'No fuel code')
+                    || ' (' ||
+                COALESCE(fuel_category::text, 'Unknown fuel category')
+                    || ' - ' ||
+                COALESCE(fuel_type::text, 'Unknown fuel type')
+                    || ')' AS fuel_code_label,
+                SUM(
+                    CASE
+                        WHEN COALESCE(quantity, 0) > 0 THEN quantity
+                        ELSE COALESCE(q1_quantity, 0)
+                           + COALESCE(q2_quantity, 0)
+                           + COALESCE(q3_quantity, 0)
+                           + COALESCE(q4_quantity, 0)
+                    END
+                ) AS total_quantity
+            FROM vw_fuel_supply_analytics_base
+            WHERE compliance_report_id IN :compliance_report_ids
+              AND NULLIF(fuel_code::text, '') IS NOT NULL
+            GROUP BY
+                compliance_report_id,
+                COALESCE(NULLIF(fuel_code::text, ''), 'No fuel code'),
+                COALESCE(fuel_category::text, 'Unknown fuel category'),
+                COALESCE(fuel_type::text, 'Unknown fuel type')
+            HAVING SUM(
+                CASE
+                    WHEN COALESCE(quantity, 0) > 0 THEN quantity
+                    ELSE COALESCE(q1_quantity, 0)
+                       + COALESCE(q2_quantity, 0)
+                       + COALESCE(q3_quantity, 0)
+                       + COALESCE(q4_quantity, 0)
+                END
+            ) <> 0
+            ORDER BY fuel_code_label
+            """
+        ).bindparams(bindparam("compliance_report_ids", expanding=True))
+
+        started_at = perf_counter()
+        result = await self.db.execute(query, {"compliance_report_ids": report_ids})
+        rows = result.mappings().all()
+        for row in rows:
+            totals[row["compliance_report_id"]][row["fuel_code_label"]] = float(
+                row["total_quantity"] or 0
+            )
+        logger.info(
+            "compliance_report_review_query_timing",
+            query_name="fuel_supply_fuel_code_totals",
+            view_name="vw_fuel_supply_analytics_base",
+            compliance_report_ids=report_ids,
+            report_count=len(report_ids),
+            row_count=len(rows),
+            duration_ms=round((perf_counter() - started_at) * 1000, 1),
+        )
+        return totals
 
     @repo_handler
     async def get_report_chain_organization_id(

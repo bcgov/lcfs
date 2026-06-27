@@ -107,6 +107,18 @@ class ComplianceReportReviewService:
             current_chart_totals, schedule_records
         )
 
+        fuel_code_totals_by_report = await self._timed(
+            "get_fuel_supply_fuel_code_totals",
+            self.repo.get_review_fuel_supply_fuel_code_totals_for_reports(
+                comparison_report_ids
+            ),
+            compliance_report_id=compliance_report_id,
+            comparison_report_count=len(comparison_report_ids),
+        )
+        current_fuel_code_totals = fuel_code_totals_by_report.get(
+            compliance_report_id, {}
+        )
+
         if prior_reports:
             for prior_report in prior_reports:
                 prior_year_snapshots.append(
@@ -155,6 +167,8 @@ class ComplianceReportReviewService:
             current_summary,
             previous_version_summary,
             compliance_units_by_fuel,
+            current_fuel_code_totals,
+            fuel_code_totals_by_report,
             current_label=str(report.compliance_period.description),
             previous_version_label=(
                 f"Version {report.version - 1}" if previous_version_summary else ""
@@ -667,6 +681,8 @@ class ComplianceReportReviewService:
         current_summary,
         previous_summary,
         compliance_units_by_fuel: list[dict],
+        current_fuel_code_totals: dict[str, float],
+        fuel_code_totals_by_report: dict[int, dict[str, float]],
         current_label: str,
         previous_version_label: str,
         current_version_label: str,
@@ -683,12 +699,27 @@ class ComplianceReportReviewService:
                 if points:
                     historical.append(
                         ComplianceReportReviewComparisonSeriesSchema(
-                            title=f"{self._source_label(key)} by fuel type",
+                            title=f"{self._source_label(key)} by fuel category and type",
                             current_label=current_label,
                             comparison_label=prior_label,
                             points=points,
                         )
                     )
+
+            fuel_code_points = self._comparison_points(
+                current_fuel_code_totals,
+                fuel_code_totals_by_report.get(prior_report.compliance_report_id, {}),
+                units="reported units",
+            )
+            if fuel_code_points:
+                historical.append(
+                    ComplianceReportReviewComparisonSeriesSchema(
+                        title="Fuel supply by fuel code",
+                        current_label=current_label,
+                        comparison_label=prior_label,
+                        points=fuel_code_points,
+                    )
+                )
 
         supplemental = []
         if previous_version_records:
@@ -700,8 +731,8 @@ class ComplianceReportReviewService:
                 ("other_uses", "quantity_supplied"),
             ]:
                 points = self._comparison_points(
-                    self._sum_by_fuel_type(current_records[key], field),
-                    self._sum_by_fuel_type(previous_version_records[key], field),
+                    self._sum_by_fuel_category(current_records[key], field),
+                    self._sum_by_fuel_category(previous_version_records[key], field),
                     units="reported units",
                 )
                 if points:
@@ -854,17 +885,19 @@ class ComplianceReportReviewService:
         self, records: dict[str, list]
     ) -> dict[str, dict[str, float]]:
         return {
-            "fuel_supplies": self._sum_by_fuel_type(
+            "fuel_supplies": self._sum_by_fuel_category(
                 records["fuel_supplies"], "quantity"
             ),
-            "fuel_exports": self._sum_by_fuel_type(records["fuel_exports"], "quantity"),
-            "allocation_agreements": self._sum_by_fuel_type(
+            "fuel_exports": self._sum_by_fuel_category(
+                records["fuel_exports"], "quantity"
+            ),
+            "allocation_agreements": self._sum_by_fuel_category(
                 records["allocation_agreements"], "quantity"
             ),
-            "notional_transfers": self._sum_by_fuel_type(
+            "notional_transfers": self._sum_by_fuel_category(
                 records["notional_transfers"], "quantity"
             ),
-            "other_uses": self._sum_by_fuel_type(
+            "other_uses": self._sum_by_fuel_category(
                 records["other_uses"], "quantity_supplied"
             ),
         }
@@ -876,6 +909,21 @@ class ComplianceReportReviewService:
         for row in rows:
             fuel_type = getattr(getattr(row, "fuel_type", None), "fuel_type", None)
             key = str(fuel_type or "Unknown fuel type")
+            totals[key] += self._number(getattr(row, quantity_field, 0))
+        return dict(totals)
+
+    def _sum_by_fuel_category(
+        self, rows: Iterable, quantity_field: str
+    ) -> dict[str, float]:
+        totals = defaultdict(float)
+        for row in rows:
+            fuel_category = getattr(
+                getattr(row, "fuel_category", None), "category", None
+            )
+            fuel_type = getattr(getattr(row, "fuel_type", None), "fuel_type", None)
+            key = str(fuel_category or "Unknown fuel category")
+            if fuel_type:
+                key = f"{key} - {fuel_type}"
             totals[key] += self._number(getattr(row, quantity_field, 0))
         return dict(totals)
 

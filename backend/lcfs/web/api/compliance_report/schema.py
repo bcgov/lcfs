@@ -368,6 +368,7 @@ class ComplianceReportReviewComparisonSeriesSchema(BaseSchema):
 
 class ComplianceReportReviewComplianceUnitPointSchema(BaseSchema):
     fuel_type: str
+    fuel_category: str = "Unknown fuel category"
     schedule: str
     compliance_units: float = 0
 
