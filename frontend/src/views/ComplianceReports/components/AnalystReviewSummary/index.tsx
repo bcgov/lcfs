@@ -273,11 +273,6 @@ export const AnalystReviewSummary = ({
               </Stack>
             </BCBox>
           )}
-
-          <ReviewCharts chartData={data.chartData} />
-
-          <Divider />
-
           <ReviewSections
             sections={data.sections}
             expandedSection={expandedSection}
@@ -285,6 +280,8 @@ export const AnalystReviewSummary = ({
             addressedFindingIds={addressedFindingIds}
             toggleFindingAddressed={toggleFindingAddressed}
           />
+          <Divider />
+          <ReviewCharts chartData={data.chartData} />
         </Stack>
       </AccordionDetails>
     </Accordion>
