@@ -29,6 +29,15 @@ const toGridRow = (row: any) => ({
   validationStatus: getValidationStatus(row)
 })
 
+const toErrorMap = (rows: any[]) =>
+  rows.reduce((acc, row) => {
+    const rowErrors = Object.keys(row?.validationErrors || {})
+    if (row?.id && rowErrors.length) {
+      acc[row.id] = rowErrors
+    }
+    return acc
+  }, {} as Record<string, string[]>)
+
 const toUpdatePayload = (row: any) => {
   const {
     id,
@@ -65,7 +74,9 @@ export const GeneratedFuelCodesSection = ({
   } | null>(null)
 
   useEffect(() => {
-    setRowData((ciApplication?.generatedFuelCodes || []).map(toGridRow))
+    const nextRows = (ciApplication?.generatedFuelCodes || []).map(toGridRow)
+    setRowData(nextRows)
+    setErrors(toErrorMap(nextRows))
   }, [ciApplication])
 
   const columnDefs = useMemo(() => {

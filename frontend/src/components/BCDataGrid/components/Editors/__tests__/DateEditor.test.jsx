@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
+import { DatePicker } from '@mui/x-date-pickers'
 import { DateEditor } from '../DateEditor'
 
 // Mock date-fns
@@ -335,6 +336,20 @@ describe('DateEditor', () => {
       
       const datePicker = screen.getByTestId('date-picker')
       expect(datePicker).toBeInTheDocument()
+    })
+
+    it('keeps the calendar popper inside the editor and stops grid event bubbling', () => {
+      render(<DateEditor {...defaultProps} />)
+
+      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+
+      expect(datePickerProps.slotProps.popper.disablePortal).toBe(true)
+      expect(datePickerProps.slotProps.popper.onMouseDown).toEqual(
+        expect.any(Function)
+      )
+      expect(datePickerProps.slotProps.popper.onClick).toEqual(
+        expect.any(Function)
+      )
     })
 
     it('renders with all prop combinations', () => {

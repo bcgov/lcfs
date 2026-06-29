@@ -13,6 +13,12 @@ export interface DateEditorProps {
   autoOpenLastRow?: boolean
 }
 
+const parseDateValue = (dateValue?: string | Date | null) => {
+  if (!dateValue || dateValue === 'YYYY-MM-DD') return null
+  if (dateValue instanceof Date) return dateValue
+  return parseISO(dateValue)
+}
+
 export const DateEditor = ({
   value,
   onValueChange,
@@ -23,9 +29,7 @@ export const DateEditor = ({
   autoOpenLastRow
 }: DateEditorProps) => {
   // Handle initial value properly - use null if value is falsy
-  const [selectedDate, setSelectedDate] = useState(
-    value && value !== 'YYYY-MM-DD' ? parseISO(value) : null
-  )
+  const [selectedDate, setSelectedDate] = useState(parseDateValue(value))
   const [isOpen, setIsOpen] = useState(() => {
     if (!autoOpenLastRow) return false
     const lastRowIndex = api.getLastDisplayedRowIndex()
@@ -97,7 +101,8 @@ export const DateEditor = ({
   }
 
   // Explicit handler for clearing the date
-  const handleClear = () => {
+  const handleClear = (e) => {
+    stopPropagation(e)
     setSelectedDate(null)
     onValueChange(null)
   }
@@ -145,7 +150,10 @@ export const DateEditor = ({
             }
           },
           popper: {
+            disablePortal: true,
             placement: 'bottom-start',
+            onMouseDown: stopPropagation,
+            onClick: stopPropagation,
             modifiers: [
               {
                 name: 'preventOverflow',
