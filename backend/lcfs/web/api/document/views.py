@@ -55,6 +55,11 @@ async def get_all_documents(
     parent_type: str,
     document_service: DocumentService = Depends(),
 ) -> List[FileResponseSchema]:
+    if parent_type == "internal_comment":
+        await document_service.verify_internal_comment_access(
+            parent_id, request.user, write=False
+        )
+
     documents = await document_service.get_by_id_and_type(parent_id, parent_type)
 
     file_responses = [
@@ -69,7 +74,14 @@ async def get_all_documents(
     response_model=FileResponseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
+@view_handler(
+    [
+        RoleEnum.SUPPLIER,
+        RoleEnum.ANALYST,
+        RoleEnum.GOVERNMENT,
+        RoleEnum.CI_APPLICANT,
+    ]
+)
 async def upload_file(
     request: Request,
     parent_id: int,
@@ -145,6 +157,11 @@ async def stream_document(
     if parent_type == "ci_application":
         await ci_validate.validate_access(parent_id)
 
+    if parent_type == "internal_comment":
+        await document_service.verify_internal_comment_access(
+            parent_id, request.user, write=False
+        )
+
     file, document = await document_service.get_object(document_id)
 
     headers = {
@@ -182,6 +199,10 @@ async def delete_file(
         await cs_validate.validate_organization_access(parent_id)
     elif parent_type == "ci_application":
         await ci_validate.validate_access(parent_id)
+    elif parent_type == "internal_comment":
+        await document_service.verify_internal_comment_access(
+            parent_id, request.user, write=True
+        )
     else:
         raise HTTPException(403, "Unable to verify authorization for document download")
 
