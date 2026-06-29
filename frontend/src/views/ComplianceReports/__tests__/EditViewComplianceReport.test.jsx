@@ -121,6 +121,10 @@ vi.mock('../components/ReportDetails', () => ({
   default: () => <div data-test="report-details" />
 }))
 
+vi.mock('../components/ComplianceReportPageNav', () => ({
+  ComplianceReportPageNav: () => <div data-test="compliance-report-page-nav" />
+}))
+
 vi.mock('../components/ActivityListCard', () => ({
   ActivityListCard: () => <div data-test="activity-list-card" />
 }))
@@ -184,8 +188,19 @@ vi.mock('@mui/material', () => ({
 }))
 
 vi.mock('@mui/icons-material', () => ({
+  AutoAwesome: () => <div data-test="auto-awesome-icon" />,
+  Description: () => <div data-test="description-icon" />,
+  ElectricBolt: () => <div data-test="electric-bolt-icon" />,
+  FactCheck: () => <div data-test="fact-check-icon" />,
+  Gavel: () => <div data-test="gavel-icon" />,
+  Handshake: () => <div data-test="handshake-icon" />,
   KeyboardArrowDown: () => <div data-test="arrow-down" />,
-  KeyboardArrowUp: () => <div data-test="arrow-up" />
+  KeyboardArrowUp: () => <div data-test="arrow-up" />,
+  LocalGasStation: () => <div data-test="local-gas-station-icon" />,
+  Recycling: () => <div data-test="recycling-icon" />,
+  Summarize: () => <div data-test="summarize-icon" />,
+  SwapHoriz: () => <div data-test="swap-horiz-icon" />,
+  UploadFile: () => <div data-test="upload-file-icon" />
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
