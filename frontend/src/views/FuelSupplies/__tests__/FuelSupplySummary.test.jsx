@@ -14,7 +14,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock BCGridViewer (this is what the component actually uses)
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
     gridKey,
     columnDefs,

@@ -84,7 +84,7 @@ vi.mock('@/components/Role', () => ({
   )
 }))
 
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
     rowData,
     queryData,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useRef } from 'react'
+import { useState, useEffect, forwardRef, useRef } from 'react'
 import { TextField, Autocomplete, Box, Grid, CircularProgress } from '@mui/material'
 import { LocationOn as LocationOnIcon } from '@mui/icons-material'
 import parse from 'autosuggest-highlight/parse'
@@ -6,20 +6,61 @@ import match from 'autosuggest-highlight/match'
 import BCTypography from '../BCTypography'
 import useGeocoder from '@/hooks/useGeocoder'
 
+export interface AddressOption {
+  fullAddress: string
+  streetAddress?: string
+  city?: string
+  localityName?: string
+  province?: string
+  postalCode?: string
+  postal_code?: string
+  latitude?: number
+  longitude?: number
+  score?: number
+}
+
+export interface AddressAutocompleteProps {
+  className?: string
+  value?: string | AddressOption | null
+  onChange?: (value: string) => void
+  onSelectAddress?: (address: AddressOption | string) => void
+  disabled?: boolean
+  minScore?: number
+  maxResults?: number
+  id?: string
+}
+
 /**
  * Enhanced AddressAutocomplete component using the consolidated geocoder service.
  * Provides better caching, error handling, and consistency across the application.
  */
-export const AddressAutocomplete = forwardRef(
-  ({ className, value, onChange, onSelectAddress, disabled, minScore = 50, maxResults = 5, id }, ref) => {
-    const [inputValue, setInputValue] = useState(value || '')
-    const [options, setOptions] = useState([])
+export const AddressAutocomplete = forwardRef<
+  HTMLDivElement,
+  AddressAutocompleteProps
+>(
+  (
+    {
+      className,
+      value,
+      onChange,
+      onSelectAddress,
+      disabled,
+      minScore = 50,
+      maxResults = 5,
+      id
+    },
+    ref
+  ) => {
+    const [inputValue, setInputValue] = useState(
+      typeof value === 'string' ? value : value?.fullAddress || ''
+    )
+    const [options, setOptions] = useState<AddressOption[]>([])
     const [isAddressSelected, setIsAddressSelected] = useState(false)
     
     const { autocompleteAddress, validateAddress } = useGeocoder()
-    const timeoutRef = useRef()
+    const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
-    const fetchAddresses = async (searchValue) => {
+    const fetchAddresses = async (searchValue: string) => {
       if (!searchValue || searchValue.length < 3) {
         setOptions([])
         return
@@ -44,7 +85,7 @@ export const AddressAutocomplete = forwardRef(
 
         if (result.suggestions) {
           // Suggestions now come as complete AddressSchema objects
-          const addresses = result.suggestions.map((addr) => ({
+          const addresses = result.suggestions.map((addr: any) => ({
             fullAddress: addr.full_address,
             streetAddress: addr.street_address || '',
             city: addr.city || '',
@@ -94,6 +135,8 @@ export const AddressAutocomplete = forwardRef(
 
     return (
       <Autocomplete
+        id={id}
+        ref={ref}
         className={className}
         sx={{
           '& .MuiOutlinedInput-root': {
@@ -132,7 +175,7 @@ export const AddressAutocomplete = forwardRef(
             setIsAddressSelected(false)
           }
         }}
-        onChange={async (event, newValue) => {
+        onChange={async (_event, newValue) => {
           if (newValue) {
             // Mark that an address has been selected
             setIsAddressSelected(true)
@@ -143,11 +186,14 @@ export const AddressAutocomplete = forwardRef(
                 try {
                   const validationResult = await validateAddress.mutateAsync({
                     addressString: newValue,
-                    minScore: 50,
+                    minScore,
                     maxResults: 1
                   })
                   
-                  if (validationResult.addresses && validationResult.addresses.length > 0) {
+                  if (
+                    validationResult.addresses &&
+                    validationResult.addresses.length > 0
+                  ) {
                     const addr = validationResult.addresses[0]
                     const addressData = {
                       fullAddress: addr.full_address || newValue,
@@ -161,7 +207,7 @@ export const AddressAutocomplete = forwardRef(
                     }
                     
                     // Auto-populate postal code in the input field
-                    const fullAddressWithPostal = addr.postal_code 
+                    const fullAddressWithPostal = addr.postal_code
                       ? `${addr.full_address}, ${addr.postal_code}`
                       : addr.full_address
                     setInputValue(fullAddressWithPostal)
@@ -191,7 +237,7 @@ export const AddressAutocomplete = forwardRef(
                 
                 // Auto-populate postal code in the input field
                 const postalCode = newValue.postalCode || newValue.postal_code
-                const fullAddressWithPostal = postalCode 
+                const fullAddressWithPostal = postalCode
                   ? `${newValue.fullAddress}, ${postalCode}`
                   : newValue.fullAddress
                 setInputValue(fullAddressWithPostal)
@@ -205,7 +251,7 @@ export const AddressAutocomplete = forwardRef(
                 onChange(newValue)
               } else {
                 const postalCode = newValue.postalCode || newValue.postal_code
-                const fullAddressWithPostal = postalCode 
+                const fullAddressWithPostal = postalCode
                   ? `${newValue.fullAddress}, ${postalCode}`
                   : newValue.fullAddress
                 setInputValue(fullAddressWithPostal)

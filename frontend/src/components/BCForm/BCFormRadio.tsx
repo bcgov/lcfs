@@ -8,6 +8,25 @@ import BCTypography from '@/components/BCTypography'
 import { Controller } from 'react-hook-form'
 import PropTypes from 'prop-types'
 import { CustomLabel } from './CustomLabel'
+import type { SxProps, Theme } from '@mui/material'
+import type { ReactNode } from 'react'
+
+export interface BCFormRadioOption {
+  value: string | number
+  label?: ReactNode
+  header?: ReactNode
+  text?: ReactNode
+}
+
+export interface BCFormRadioProps {
+  name: string
+  control: any
+  label?: ReactNode
+  options?: BCFormRadioOption[]
+  disabled?: boolean
+  orientation?: 'vertical' | 'horizontal'
+  sx?: SxProps<Theme>
+}
 
 export const BCFormRadio = ({
   name,
@@ -17,12 +36,14 @@ export const BCFormRadio = ({
   disabled,
   orientation = 'vertical',
   sx = {}
-}) => {
+}: BCFormRadioProps) => {
   const generateRadioOptions = () => {
     return options.map((singleOption, index) => (
       <FormControlLabel
         key={
-          singleOption.value || singleOption.label || `radio-option-${index}`
+          singleOption.value ||
+          String(singleOption.label) ||
+          `radio-option-${index}`
         }
         value={singleOption.value}
         label={
@@ -49,15 +70,11 @@ export const BCFormRadio = ({
       <Controller
         name={name}
         control={control}
-        render={({
-          field: { onChange, value },
-          fieldState: { error },
-          formState
-        }) => (
+        render={({ field: { onChange, value } }) => (
           <RadioGroup
             value={value}
             onChange={onChange}
-            aria-labelledby={label}
+            aria-labelledby={typeof label === 'string' ? label : undefined}
             row={orientation === 'horizontal'}
             style={{
               gap: 8,

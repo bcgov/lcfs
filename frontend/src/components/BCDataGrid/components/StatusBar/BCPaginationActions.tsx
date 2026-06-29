@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+// @ts-nocheck
 import PropTypes from 'prop-types'
 import { useCallback, useState } from 'react'
 import { Pagination, IconButton, Tooltip } from '@mui/material'
@@ -6,6 +7,17 @@ import { Replay, ContentCopy, FileDownloadOutlined } from '@mui/icons-material'
 import BCBox from '@/components/BCBox'
 import * as XLSX from 'xlsx'
 import { copyToClipboard } from '@/utils/clipboard'
+import type { TablePaginationActionsProps } from '@mui/material/TablePagination/TablePaginationActions'
+
+export interface BCPaginationActionsProps
+  extends TablePaginationActionsProps {
+  enableResetButton?: boolean
+  enableCopyButton?: boolean
+  enableExportButton?: boolean
+  exportName?: string
+  gridRef?: any
+  [key: string]: any
+}
 
 export function BCPaginationActions({
   count,
@@ -17,7 +29,7 @@ export function BCPaginationActions({
   enableExportButton,
   exportName,
   gridRef
-}) {
+}: BCPaginationActionsProps) {
   const [currentPage, setCurrentPage] = useState(page + 1)
   // Reload grid
   const reloadGrid = useCallback(() => {
