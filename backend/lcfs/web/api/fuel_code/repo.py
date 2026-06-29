@@ -397,6 +397,9 @@ class FuelCodeRepository:
                         ),
                     )
                 ).label("total_volume"),
+                func.sum(coalesce(FuelSupply.compliance_units, 0)).label(
+                    "total_compliance_units"
+                ),
             )
             .join(
                 ComplianceReport,
