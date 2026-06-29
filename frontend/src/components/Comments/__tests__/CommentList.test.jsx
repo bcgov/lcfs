@@ -9,15 +9,18 @@ const mockUserState = vi.hoisted(() => ({
   username: 'idir-user'
 }))
 
-vi.mock('react-quill', () => ({
-  default: ({ value, onChange }) => (
+vi.mock('react-quill', () => {
+  const ReactQuill = ({ value, onChange }) => (
     <textarea
       aria-label="Comment editor"
       value={value}
       onChange={(event) => onChange?.(event.target.value)}
     />
   )
-}))
+  // Mirror the real module: Quill is a static property of the default export.
+  ReactQuill.Quill = { import: () => ({}) }
+  return { default: ReactQuill }
+})
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -121,5 +124,86 @@ describe('CommentList comment filters', () => {
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     expect(screen.getByText('Internal comment body')).toBeInTheDocument()
     expect(screen.getByText('Public comment body')).toBeInTheDocument()
+  })
+})
+
+describe('CommentList attachments', () => {
+  const attachmentProps = {
+    ...baseProps,
+    enableAttachments: true,
+    attachments: [],
+    onAttachmentsChange: vi.fn(),
+    onDownloadAttachment: vi.fn(),
+    comments: [
+      {
+        internalCommentId: 7,
+        comment: 'Comment with files',
+        fullName: 'Author',
+        createDate: '2026-06-01T12:00:00Z',
+        visibility: 'Internal',
+        createUser: 'other-user',
+        documents: [
+          { documentId: 11, fileName: 'spec.pdf' },
+          { documentId: 12, fileName: 'data.csv' }
+        ]
+      }
+    ]
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUserState.roles = [roles.government]
+    mockUserState.username = 'idir-user'
+  })
+
+  it('renders attachment download links and downloads on click', () => {
+    render(<CommentList {...attachmentProps} />, { wrapper })
+
+    const link = screen.getByText('spec.pdf')
+    expect(link).toBeInTheDocument()
+    expect(screen.getByText('data.csv')).toBeInTheDocument()
+
+    fireEvent.click(link)
+    expect(attachmentProps.onDownloadAttachment).toHaveBeenCalledWith(
+      7,
+      11,
+      'spec.pdf'
+    )
+  })
+
+  it('renders the attach file input on the add form', () => {
+    const { container } = render(<CommentList {...attachmentProps} />, {
+      wrapper
+    })
+    expect(
+      container.querySelector('[data-test="comment-attachment-input"]')
+    ).toBeInTheDocument()
+  })
+
+  it('stages a valid selected file via onAttachmentsChange', () => {
+    const onAttachmentsChange = vi.fn()
+    const { container } = render(
+      <CommentList
+        {...attachmentProps}
+        onAttachmentsChange={onAttachmentsChange}
+      />,
+      { wrapper }
+    )
+    const input = container.querySelector(
+      '[data-test="comment-attachment-input"]'
+    )
+    const file = new File(['x'], 'note.pdf', { type: 'application/pdf' })
+    fireEvent.change(input, { target: { files: [file] } })
+    expect(onAttachmentsChange).toHaveBeenCalledWith([file])
+  })
+
+  it('does not render the attach input when attachments are disabled', () => {
+    const { container } = render(
+      <CommentList {...attachmentProps} enableAttachments={false} />,
+      { wrapper }
+    )
+    expect(
+      container.querySelector('[data-test="comment-attachment-input"]')
+    ).not.toBeInTheDocument()
   })
 })

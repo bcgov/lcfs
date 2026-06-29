@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import List, Optional
 from enum import Enum
 from datetime import date, datetime
 from lcfs.web.api.base import BaseSchema
+from lcfs.services.s3.schema import FileResponseSchema
 
 
 # --------------------------------------
@@ -59,6 +60,7 @@ class InternalCommentResponseSchema(BaseSchema):
     create_date: Optional[datetime] = None
     update_date: Optional[datetime] = None
     full_name: Optional[str] = None
+    documents: List[FileResponseSchema] = []
 
 
 class OrganizationCommentRecordSchema(BaseSchema):

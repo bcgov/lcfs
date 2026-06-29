@@ -27,7 +27,11 @@ const CommentList = ({
   commentMode = 'internal-only',
   visibility = 'Internal',
   onVisibilityChange,
-  allowInternalVisibility = true
+  allowInternalVisibility = true,
+  enableAttachments = false,
+  attachments = [],
+  onAttachmentsChange,
+  onDownloadAttachment
 }) => {
   const { t } = useTranslation(['internalComment'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
@@ -35,6 +39,9 @@ const CommentList = ({
   const [editCommentText, setEditCommentText] = useState('')
   const [editVisibility, setEditVisibility] = useState('Internal')
   const [commentFilter, setCommentFilter] = useState('all')
+  // Attachment changes staged while editing a comment.
+  const [editNewFiles, setEditNewFiles] = useState([])
+  const [editRemovedDocIds, setEditRemovedDocIds] = useState([])
 
   const isGov = hasAnyRole(
     roles.analyst,
@@ -48,16 +55,23 @@ const CommentList = ({
     setEditCommentId(id)
     setEditCommentText(text)
     setEditVisibility(visibilityValue)
+    setEditNewFiles([])
+    setEditRemovedDocIds([])
   }
 
   const stopEditing = () => {
     setEditCommentId(null)
     setEditCommentText('')
     setEditVisibility('Internal')
+    setEditNewFiles([])
+    setEditRemovedDocIds([])
   }
 
   const submitEdit = () => {
-    onEditComment(editCommentId, editCommentText, editVisibility)
+    onEditComment(editCommentId, editCommentText, editVisibility, {
+      newFiles: editNewFiles,
+      removedDocumentIds: editRemovedDocIds
+    })
     stopEditing()
   }
 
@@ -271,6 +285,22 @@ const CommentList = ({
                   visibility={editVisibility}
                   onVisibilityChange={setEditVisibility}
                   visibilityAlign="right"
+                  enableAttachments={enableAttachments}
+                  attachments={editNewFiles}
+                  onAttachmentsChange={setEditNewFiles}
+                  existingAttachments={(comment.documents || []).filter(
+                    (doc) => !editRemovedDocIds.includes(doc.documentId)
+                  )}
+                  onRemoveExistingAttachment={(documentId) =>
+                    setEditRemovedDocIds((ids) => [...ids, documentId])
+                  }
+                  onDownloadAttachment={(documentId, fileName) =>
+                    onDownloadAttachment?.(
+                      comment.internalCommentId,
+                      documentId,
+                      fileName
+                    )
+                  }
                 />
               ) : (
                 <BCBox>
@@ -362,6 +392,54 @@ const CommentList = ({
                     className="comment-content"
                     dangerouslySetInnerHTML={{ __html: comment.comment }}
                   />
+                  {(comment.documents || []).length > 0 && (
+                    <BCBox
+                      sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 2,
+                        mt: 0.5
+                      }}
+                      data-test="comment-attachments"
+                    >
+                      {comment.documents.map((doc) => (
+                        <BCTypography
+                          key={doc.documentId}
+                          variant="body2"
+                          component="a"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() =>
+                            onDownloadAttachment?.(
+                              comment.internalCommentId,
+                              doc.documentId,
+                              doc.fileName
+                            )
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              onDownloadAttachment?.(
+                                comment.internalCommentId,
+                                doc.documentId,
+                                doc.fileName
+                              )
+                            }
+                          }}
+                          sx={{
+                            color: '#003366',
+                            cursor: 'pointer',
+                            textDecoration: 'underline'
+                          }}
+                          aria-label={`${t('internalComment:downloadAttachment')}: ${
+                            doc.fileName
+                          }`}
+                        >
+                          {doc.fileName}
+                        </BCTypography>
+                      ))}
+                    </BCBox>
+                  )}
                 </BCBox>
               )}
             </BCBox>
@@ -381,6 +459,9 @@ const CommentList = ({
               visibility={visibility}
               onVisibilityChange={onVisibilityChange}
               visibilityAlign="right"
+              enableAttachments={enableAttachments}
+              attachments={attachments}
+              onAttachmentsChange={onAttachmentsChange}
             />
           </BCBox>
         )}
@@ -400,7 +481,8 @@ CommentList.propTypes = {
       fullName: PropTypes.string.isRequired,
       createDate: PropTypes.string.isRequired,
       updateDate: PropTypes.string,
-      visibility: PropTypes.string
+      visibility: PropTypes.string,
+      documents: PropTypes.array
     })
   ).isRequired,
   onAddComment: PropTypes.func.isRequired,
@@ -413,7 +495,11 @@ CommentList.propTypes = {
   commentMode: PropTypes.oneOf(['internal-only', 'dual']),
   visibility: PropTypes.oneOf(['Internal', 'Public']),
   onVisibilityChange: PropTypes.func,
-  allowInternalVisibility: PropTypes.bool
+  allowInternalVisibility: PropTypes.bool,
+  enableAttachments: PropTypes.bool,
+  attachments: PropTypes.array,
+  onAttachmentsChange: PropTypes.func,
+  onDownloadAttachment: PropTypes.func
 }
 
 export default CommentList
