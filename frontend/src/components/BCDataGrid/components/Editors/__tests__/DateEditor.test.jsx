@@ -73,20 +73,28 @@ vi.mock('@mui/x-date-pickers', () => ({
 describe('DateEditor', () => {
   const mockOnValueChange = vi.fn()
   const mockApi = {
-    getLastDisplayedRowIndex: vi.fn(() => 5)
+    getLastDisplayedRowIndex: vi.fn(() => 5),
+    stopEditing: vi.fn(),
+    setFocusedCell: vi.fn()
   }
 
   const defaultProps = {
     value: null,
     onValueChange: mockOnValueChange,
     rowIndex: 0,
-    api: mockApi
+    api: mockApi,
+    column: { getColId: vi.fn(() => 'approvalDate') }
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
     document.addEventListener = vi.fn()
     document.removeEventListener = vi.fn()
+    window.scrollTo = vi.fn()
+    window.requestAnimationFrame = vi.fn((callback) => {
+      callback()
+      return 1
+    })
   })
 
   afterEach(() => {
@@ -230,7 +238,8 @@ describe('DateEditor', () => {
   })
 
   describe('updateValue Function', () => {
-    it('handles valid date correctly', () => {
+    it('handles valid date correctly and stops editing to trigger grid save', () => {
+      vi.useFakeTimers()
       mockFormat.mockReturnValue('2023-12-25')
       
       render(<DateEditor {...defaultProps} />)
@@ -243,6 +252,13 @@ describe('DateEditor', () => {
       
       expect(mockFormat).toHaveBeenCalledWith(expect.any(Date), 'yyyy-MM-dd')
       expect(mockOnValueChange).toHaveBeenCalledWith('2023-12-25')
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(mockApi.stopEditing).toHaveBeenCalled()
+      expect(mockApi.setFocusedCell).toHaveBeenCalledWith(0, 'approvalDate')
+      expect(window.scrollTo).toHaveBeenCalledWith(window.scrollX, window.scrollY)
+      vi.useRealTimers()
     })
   })
 
@@ -307,7 +323,8 @@ describe('DateEditor', () => {
   })
 
   describe('handleClear Function', () => {
-    it('clears selectedDate and calls onValueChange with null', () => {
+    it('clears selectedDate, calls onValueChange with null, and stops editing', () => {
+      vi.useFakeTimers()
       render(<DateEditor {...defaultProps} value="2023-12-25" />)
       
       const clearButton = screen.getByTestId('clear-button')
@@ -318,6 +335,13 @@ describe('DateEditor', () => {
       
       expect(mockOnValueChange).toHaveBeenCalledWith(null)
       expect(screen.getByTestId('date-input')).toHaveValue('')
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(mockApi.stopEditing).toHaveBeenCalled()
+      expect(mockApi.setFocusedCell).toHaveBeenCalledWith(0, 'approvalDate')
+      expect(window.scrollTo).toHaveBeenCalledWith(window.scrollX, window.scrollY)
+      vi.useRealTimers()
     })
   })
 
@@ -338,18 +362,28 @@ describe('DateEditor', () => {
       expect(datePicker).toBeInTheDocument()
     })
 
-    it('keeps the calendar popper inside the editor and stops grid event bubbling', () => {
+    it('keeps the calendar popper portal enabled while stopping grid event bubbling', () => {
       render(<DateEditor {...defaultProps} />)
 
       const datePickerProps = DatePicker.mock.calls.at(-1)[0]
 
-      expect(datePickerProps.slotProps.popper.disablePortal).toBe(true)
+      expect(datePickerProps.slotProps.popper.disablePortal).toBeUndefined()
       expect(datePickerProps.slotProps.popper.onMouseDown).toEqual(
         expect.any(Function)
       )
       expect(datePickerProps.slotProps.popper.onClick).toEqual(
         expect.any(Function)
       )
+    })
+
+    it('disables picker focus restoration so closing the calendar does not scroll to another grid', () => {
+      render(<DateEditor {...defaultProps} />)
+
+      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+
+      expect(
+        datePickerProps.slotProps.desktopTrapFocus.disableRestoreFocus
+      ).toBe(true)
     })
 
     it('renders with all prop combinations', () => {

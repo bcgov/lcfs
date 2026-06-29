@@ -764,7 +764,7 @@ class CIApplicationServices:
                 )
 
             draft_fuel_code = FuelCode(
-                fuel_code_status=draft_status,
+                fuel_status_id=draft_status.fuel_code_status_id,
                 prefix_id=prefix_id,
                 fuel_suffix=fuel_suffix,
                 carbon_intensity=(
@@ -875,25 +875,22 @@ class CIApplicationServices:
 
         transport_modes = await self.fuel_repo.get_transport_modes()
         if feedstock_transport_modes is not None:
-            fuel_code.feedstock_fuel_transport_modes = (
-                self._fuel_code_transport_mode_links(
-                    feedstock_transport_modes,
-                    transport_modes,
-                    FeedstockFuelTransportMode,
-                )
+            self._sync_fuel_code_transport_mode_links(
+                fuel_code.feedstock_fuel_transport_modes,
+                feedstock_transport_modes,
+                transport_modes,
+                FeedstockFuelTransportMode,
             )
         if finished_transport_modes is not None:
-            fuel_code.finished_fuel_transport_modes = (
-                self._fuel_code_transport_mode_links(
-                    finished_transport_modes,
-                    transport_modes,
-                    FinishedFuelTransportMode,
-                )
+            self._sync_fuel_code_transport_mode_links(
+                fuel_code.finished_fuel_transport_modes,
+                finished_transport_modes,
+                transport_modes,
+                FinishedFuelTransportMode,
             )
 
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
-        await self.fuel_repo.update_fuel_code(fuel_code)
         await self.repo.update(ci_application)
         await self.repo.add_history(ci_application)
         updated_ci = await self.repo.get_by_id(ci_application.ci_application_id)
@@ -931,9 +928,7 @@ class CIApplicationServices:
     ) -> List[Any]:
         if selected_modes in (None, "", []):
             return []
-        mode_names = (
-            selected_modes if isinstance(selected_modes, list) else [selected_modes]
-        )
+        mode_names = self._unique_transport_mode_names(selected_modes)
         links = []
         for mode_name in mode_names:
             matching_transport_mode = next(
@@ -947,6 +942,40 @@ class CIApplicationServices:
                     )
                 )
         return links
+
+    def _sync_fuel_code_transport_mode_links(
+        self,
+        existing_links: List[Any],
+        selected_modes: Optional[Any],
+        transport_modes: List[Any],
+        link_model: Any,
+    ) -> None:
+        desired_ids = {
+            mode.transport_mode_id
+            for mode_name in self._unique_transport_mode_names(selected_modes)
+            for mode in transport_modes
+            if mode.transport_mode == mode_name
+        }
+        existing_by_id = {
+            link.transport_mode_id: link
+            for link in existing_links
+            if link.transport_mode_id is not None
+        }
+
+        existing_links[:] = [
+            link for link in existing_links if link.transport_mode_id in desired_ids
+        ]
+
+        for transport_mode_id in desired_ids - set(existing_by_id):
+            existing_links.append(link_model(transport_mode_id=transport_mode_id))
+
+    def _unique_transport_mode_names(self, selected_modes: Optional[Any]) -> List[str]:
+        if selected_modes in (None, "", []):
+            return []
+        mode_names = (
+            selected_modes if isinstance(selected_modes, list) else [selected_modes]
+        )
+        return list(dict.fromkeys(mode_name for mode_name in mode_names if mode_name))
 
     async def _get_fuel_code_prefix_map(self) -> Dict[str, Any]:
         prefixes = await self.fuel_repo.get_fuel_code_prefixes()

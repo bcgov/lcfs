@@ -10,7 +10,28 @@ export interface DateEditorProps {
   maxDate?: Date | string
   rowIndex?: number
   api?: any
+  column?: any
   autoOpenLastRow?: boolean
+}
+
+const stopEditingAfterValueChange = (
+  api?: any,
+  rowIndex?: number,
+  column?: any
+) => {
+  const scrollX = window.scrollX
+  const scrollY = window.scrollY
+  const colId = column?.getColId?.() || column?.colId || column?.colDef?.field
+
+  setTimeout(() => {
+    api?.stopEditing?.()
+    requestAnimationFrame(() => {
+      if (rowIndex !== undefined && colId) {
+        api?.setFocusedCell?.(rowIndex, colId)
+      }
+      window.scrollTo(scrollX, scrollY)
+    })
+  }, 0)
 }
 
 const parseDateValue = (dateValue?: string | Date | null) => {
@@ -26,6 +47,7 @@ export const DateEditor = ({
   maxDate,
   rowIndex,
   api,
+  column,
   autoOpenLastRow
 }: DateEditorProps) => {
   // Handle initial value properly - use null if value is falsy
@@ -39,9 +61,12 @@ export const DateEditor = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
+      const target = event.target
+      const isPickerPopperClick = target?.closest?.('.MuiPickersPopper-root')
       if (
         containerRef.current &&
-        !containerRef.current.contains(event.target)
+        !containerRef.current.contains(target) &&
+        !isPickerPopperClick
       ) {
         setIsOpen(false)
       }
@@ -73,6 +98,7 @@ export const DateEditor = ({
     )
     setSelectedDate(normalizedDate)
     onValueChange(format(normalizedDate, 'yyyy-MM-dd'))
+    stopEditingAfterValueChange(api, rowIndex, column)
   }
 
   const handleDatePickerOpen = () => {
@@ -88,15 +114,15 @@ export const DateEditor = ({
     if (e && e.stopPropagation) {
       e.stopPropagation()
     }
-    if (e && e.preventDefault) {
-      e.preventDefault()
-    }
     return false
   }
 
   // Handler for the icon click that forces the calendar to open
   const handleIconClick = (e) => {
     stopPropagation(e)
+    if (e && e.preventDefault) {
+      e.preventDefault()
+    }
     setIsOpen(true)
   }
 
@@ -105,6 +131,7 @@ export const DateEditor = ({
     stopPropagation(e)
     setSelectedDate(null)
     onValueChange(null)
+    stopEditingAfterValueChange(api, rowIndex, column)
   }
 
   return (
@@ -150,7 +177,6 @@ export const DateEditor = ({
             }
           },
           popper: {
-            disablePortal: true,
             placement: 'bottom-start',
             onMouseDown: stopPropagation,
             onClick: stopPropagation,
@@ -162,6 +188,9 @@ export const DateEditor = ({
                 }
               }
             ]
+          },
+          desktopTrapFocus: {
+            disableRestoreFocus: true
           },
           // Handle icon click specifically to open the calendar
           openPickerButton: { onClick: handleIconClick },
