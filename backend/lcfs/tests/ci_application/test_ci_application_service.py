@@ -8,6 +8,9 @@ import pytest
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.ci_application import CIApplication, CIApplicationStatus
+from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
+from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
@@ -360,7 +363,11 @@ def _pathway_fc_type(ident=1, name="1-year provisional"):
 
 
 def _fuel_type_obj(ident=1, name="Biodiesel"):
-    return SimpleNamespace(fuel_type_id=ident, fuel_type=name)
+    return FuelType(
+        fuel_type_id=ident,
+        fuel_type=name,
+        units=QuantityUnitsEnum.Litres,
+    )
 
 
 def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF"):
@@ -372,7 +379,7 @@ def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF"):
         fuel_type=_fuel_type_obj(),
         feedstock="Corn",
         feedstock_location="Ontario, CA",
-        fuel_code_prefix=SimpleNamespace(prefix=prefix),
+        fuel_code_prefix=FuelCodePrefix(prefix=prefix),
     )
 
 
@@ -935,7 +942,13 @@ def _stub_generation_dependencies(service, repo, ci):
 
     async def create_fuel_code(fuel_code):
         fuel_code.fuel_code_id = 100
-        fuel_code.fuel_code_prefix = SimpleNamespace(prefix="BCLCF")
+        fuel_code.fuel_code_prefix = FuelCodePrefix(
+            fuel_code_prefix_id=1, prefix="BCLCF"
+        )
+        fuel_code.fuel_code_status = FuelCodeStatus(
+            fuel_code_status_id=1,
+            status=FuelCodeStatusEnum.Draft,
+        )
         fuel_code.fuel_type = _fuel_type_obj()
         return fuel_code
 

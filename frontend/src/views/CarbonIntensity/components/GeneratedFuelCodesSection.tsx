@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 
 import { Box, Stack } from '@mui/material'
 
-import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { useFuelCodeOptions } from '@/hooks/useFuelCode'
@@ -91,10 +90,6 @@ export const GeneratedFuelCodesSection = ({
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [pendingUpdates, setPendingUpdates] = useState<Set<string>>(new Set())
   const [isUpdating, setIsUpdating] = useState(false)
-  const [message, setMessage] = useState<{
-    severity: 'success' | 'warning' | 'error'
-    text: string
-  } | null>(null)
 
   useEffect(() => {
     const nextRows = (ciApplication?.generatedFuelCodes || []).map(toGridRow)
@@ -184,22 +179,16 @@ export const GeneratedFuelCodesSection = ({
           payload: toUpdatePayload(updatedData)
         })
         const nextRow = toGridRow(updatedRow)
+        const nextMessage = nextRow.isValid
+          ? t('carbonIntensity:step5.generatedFuelCodeRowSaved')
+          : nextRow.validationMsg ||
+            t('carbonIntensity:step5.generatedFuelCodeRowIncomplete')
         setErrors((prev) => ({
           ...prev,
           [nextRow.id]: getValidationFields(nextRow)
         }))
-        setMessage({
-          severity: nextRow.isValid ? 'success' : 'warning',
-          text: nextRow.isValid
-            ? t('carbonIntensity:step5.generatedFuelCodeRowSaved')
-            : nextRow.validationMsg ||
-              t('carbonIntensity:step5.generatedFuelCodeRowIncomplete')
-        })
         alertRef.current?.triggerAlert?.({
-          message: nextRow.isValid
-            ? t('carbonIntensity:step5.generatedFuelCodeRowSaved')
-            : nextRow.validationMsg ||
-              t('carbonIntensity:step5.generatedFuelCodeRowIncomplete'),
+          message: nextMessage,
           severity: nextRow.isValid ? 'success' : 'warning'
         })
         return nextRow
@@ -211,10 +200,6 @@ export const GeneratedFuelCodesSection = ({
           ...prev,
           [rowId]: errorFields
         }))
-        setMessage({
-          severity: 'error',
-          text: errorMessage
-        })
         alertRef.current?.triggerAlert?.({
           message: errorMessage,
           severity: 'error'
@@ -267,12 +252,6 @@ export const GeneratedFuelCodesSection = ({
 
   return (
     <Box>
-      {message && (
-        <BCAlert severity={message.severity} sx={{ mb: 2 }}>
-          {message.text}
-        </BCAlert>
-      )}
-
       <Stack spacing={1} sx={{ mb: 2 }}>
         <BCTypography variant="body2" color="text.secondary">
           {t('carbonIntensity:step5.generatedFuelCodesIntro')}
