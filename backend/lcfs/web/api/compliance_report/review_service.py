@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from decimal import Decimal
 from time import perf_counter
 from typing import Iterable
@@ -12,6 +12,8 @@ from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
@@ -130,6 +132,22 @@ class ComplianceReportReviewService:
                     )
                 )
 
+        fse_summary = await self._timed(
+            "get_current_fse_summary",
+            self._get_fse_summary(report, compliance_year),
+            compliance_report_id=compliance_report_id,
+        )
+        prior_fse_summary = None
+        if prior_year_report:
+            prior_compliance_year = self._to_int(
+                prior_year_report.compliance_period.description
+            )
+            prior_fse_summary = await self._timed(
+                "get_prior_fse_summary",
+                self._get_fse_summary(prior_year_report, prior_compliance_year),
+                compliance_report_id=prior_year_report.compliance_report_id,
+            )
+
         compliance_units_by_fuel = await self._timed(
             "get_compliance_units_by_fuel",
             self.repo.get_review_compliance_units_by_fuel(compliance_report_id),
@@ -177,10 +195,13 @@ class ComplianceReportReviewService:
         )
 
         findings = []
-        findings.extend(self._administrative_findings(report))
+        findings.extend(self._administrative_findings(report, compliance_year))
         findings.extend(self._schedule_findings(schedule_records))
         findings.extend(
             self._fuel_code_findings(schedule_records, compliance_year=compliance_year)
+        )
+        findings.extend(
+            self._fse_findings(fse_summary, prior_fse_summary, compliance_year)
         )
         findings.extend(self._allocation_findings(schedule_records))
         findings.extend(self._summary_findings(current_summary))
@@ -298,6 +319,15 @@ class ComplianceReportReviewService:
             "other_uses": other_uses,
         }
 
+    async def _get_fse_summary(self, report, compliance_year: int | None) -> dict:
+        if not compliance_year:
+            return {}
+        return await self.repo.get_review_fse_summary(
+            report.compliance_report_id,
+            date(compliance_year, 1, 1),
+            date(compliance_year, 12, 31),
+        )
+
     async def _get_schedule_analytics_totals(
         self, compliance_report_id: int, fallback_records: dict[str, list]
     ) -> dict[str, dict[str, float]]:
@@ -335,9 +365,11 @@ class ComplianceReportReviewService:
         return previous.compliance_report_id if previous else None
 
     def _administrative_findings(
-        self, report
+        self, report, compliance_year: int | None
     ) -> list[ComplianceReportReviewFindingSchema]:
         findings = []
+        findings.extend(self._submission_timing_findings(report, compliance_year))
+
         if report.version > 0:
             findings.append(
                 self._finding(
@@ -367,6 +399,124 @@ class ComplianceReportReviewService:
                     "Compliance report metadata",
                     [self._metric("Assigned analyst", "Unassigned")],
                     None,
+                )
+            )
+
+        return findings
+
+    def _submission_timing_findings(
+        self, report, compliance_year: int | None
+    ) -> list[ComplianceReportReviewFindingSchema]:
+        findings = []
+        submitted_date = self._history_status_date(
+            report, ComplianceReportStatusEnum.Submitted
+        )
+
+        if report.version == 0:
+            if not compliance_year:
+                return findings
+
+            due_date = date(compliance_year + 1, 3, 31)
+            if not submitted_date:
+                findings.append(
+                    self._finding(
+                        "Administrative completeness",
+                        "review",
+                        "Original report submission date unavailable",
+                        "The deterministic pre-screen could not identify the submitted date needed to confirm the March 31 deadline.",
+                        "Compliance report history",
+                        [self._metric("Due date", due_date.isoformat())],
+                        "Was the original report submitted by the statutory March 31 deadline?",
+                    )
+                )
+                return findings
+
+            submitted_on = self._date_value(submitted_date)
+            is_late = submitted_on > due_date
+            findings.append(
+                self._finding(
+                    "Administrative completeness",
+                    "concern" if is_late else "informational",
+                    (
+                        "Original report submitted after March 31 deadline"
+                        if is_late
+                        else "Original report submitted by March 31 deadline"
+                    ),
+                    (
+                        f"The original {compliance_year} report was submitted on {submitted_on.isoformat()}, after the {due_date.isoformat()} deadline."
+                        if is_late
+                        else f"The original {compliance_year} report was submitted on {submitted_on.isoformat()}, on or before the {due_date.isoformat()} deadline."
+                    ),
+                    "Compliance report history",
+                    [
+                        self._metric("Submitted date", submitted_on.isoformat()),
+                        self._metric("Due date", due_date.isoformat()),
+                    ],
+                    (
+                        "Is there documented rationale for the late submission?"
+                        if is_late
+                        else None
+                    ),
+                )
+            )
+            return findings
+
+        if (
+            report.supplemental_initiator
+            == SupplementalInitiatorType.GOVERNMENT_INITIATED
+        ):
+            request_date = self._date_value(report.create_date)
+            due_date = request_date + timedelta(days=30)
+            if not submitted_date:
+                findings.append(
+                    self._finding(
+                        "Administrative completeness",
+                        "review",
+                        "Supplemental submission date unavailable",
+                        "The supplemental report was government initiated, but the submitted date was not found in report history.",
+                        "Compliance report history",
+                        [
+                            self._metric(
+                                "Supplemental requested date",
+                                request_date.isoformat(),
+                            ),
+                            self._metric("30-day due date", due_date.isoformat()),
+                        ],
+                        "Was the supplemental report submitted within 30 days of the request?",
+                    )
+                )
+                return findings
+
+            submitted_on = self._date_value(submitted_date)
+            is_late = submitted_on > due_date
+            findings.append(
+                self._finding(
+                    "Administrative completeness",
+                    "concern" if is_late else "informational",
+                    (
+                        "Supplemental report submitted after 30-day request window"
+                        if is_late
+                        else "Supplemental report submitted within 30-day request window"
+                    ),
+                    (
+                        f"The government-initiated supplemental was requested on {request_date.isoformat()} and submitted on {submitted_on.isoformat()}, after the {due_date.isoformat()} due date."
+                        if is_late
+                        else f"The government-initiated supplemental was requested on {request_date.isoformat()} and submitted on {submitted_on.isoformat()}, within the 30-day window ending {due_date.isoformat()}."
+                    ),
+                    "Compliance report history",
+                    [
+                        self._metric(
+                            "Supplemental requested date",
+                            request_date.isoformat(),
+                        ),
+                        self._metric("Submitted date", submitted_on.isoformat()),
+                        self._metric("30-day due date", due_date.isoformat()),
+                    ],
+                    (
+                        "Is there documented rationale for submitting the supplemental after the 30-day request window?"
+                        if is_late
+                        else None
+                    ),
                 )
             )
 
@@ -515,35 +665,239 @@ class ComplianceReportReviewService:
 
         return findings
 
+    def _fse_findings(
+        self,
+        fse_summary: dict | None,
+        prior_fse_summary: dict | None,
+        compliance_year: int | None,
+    ) -> list[ComplianceReportReviewFindingSchema]:
+        findings = []
+        if not fse_summary or not fse_summary.get("equipment_count"):
+            findings.append(
+                self._finding(
+                    "Electricity/FSE",
+                    "informational",
+                    "No FSE data reported",
+                    "The deterministic pre-screen did not find active FSE reporting rows for this report.",
+                    "FSE reporting view",
+                    [self._metric("FSE count", 0)],
+                    None,
+                )
+            )
+            return findings
+
+        equipment_count = fse_summary["equipment_count"]
+        active_count = fse_summary["active_count"]
+        validated_count = fse_summary["validated_count"]
+        active_full_year_count = fse_summary["active_full_year_count"]
+        level_1_count = fse_summary["level_1_count"]
+        total_kwh = fse_summary["total_kwh"]
+        avg_utilization = fse_summary["avg_capacity_utilization_percent"]
+
+        if active_count == equipment_count and active_full_year_count == equipment_count:
+            findings.append(
+                self._finding(
+                    "Electricity/FSE",
+                    "informational",
+                    "FSE active for the full compliance period",
+                    "All reported FSE rows were active and covered the full compliance year.",
+                    "FSE reporting view",
+                    [
+                        self._metric("FSE count", equipment_count),
+                        self._metric("Active full-year FSE", active_full_year_count),
+                    ],
+                    None,
+                )
+            )
+        else:
+            findings.append(
+                self._finding(
+                    "Electricity/FSE",
+                    "review",
+                    "FSE active-period coverage needs review",
+                    "One or more FSE rows were inactive or did not cover the full compliance year.",
+                    "FSE reporting view",
+                    [
+                        self._metric("FSE count", equipment_count),
+                        self._metric("Active FSE", active_count),
+                        self._metric("Active full-year FSE", active_full_year_count),
+                    ],
+                    "Were inactive or partial-year FSE rows expected, and do the reported kWh values reflect the active period only?",
+                )
+            )
+
+        if validated_count == equipment_count:
+            findings.append(
+                self._finding(
+                    "Electricity/FSE",
+                    "informational",
+                    "FSE rows are validated",
+                    "All reported FSE rows are in validated status.",
+                    "FSE reporting view",
+                    [self._metric("Validated FSE", validated_count)],
+                    None,
+                )
+            )
+        else:
+            findings.append(
+                self._finding(
+                    "Electricity/FSE",
+                    "review",
+                    "FSE validation status needs review",
+                    "One or more reported FSE rows are not in validated status.",
+                    "FSE reporting view",
+                    [
+                        self._metric("FSE count", equipment_count),
+                        self._metric("Validated FSE", validated_count),
+                    ],
+                    "Which FSE rows are not validated, and should they be resolved before recommendation or assessment?",
+                )
+            )
+
+        if level_1_count:
+            findings.append(
+                self._finding(
+                    "Electricity/FSE",
+                    "review",
+                    "Level 1 FSE may require policy-sensitive review",
+                    "Level 1 equipment can be reportable, but outlet-style or low-voltage equipment may require extra verification that the electricity is transportation use only.",
+                    "FSE reporting view",
+                    [
+                        self._metric("Level 1 FSE", level_1_count),
+                        self._metric("Total FSE", equipment_count),
+                    ],
+                    "Does the supporting evidence show the Level 1 electricity is sub-metered or otherwise limited to transportation use?",
+                    confidence="medium",
+                )
+            )
+
+        if avg_utilization is not None:
+            findings.append(
+                self._finding(
+                    "Electricity/FSE",
+                    "informational" if avg_utilization < 1 else "review",
+                    "FSE capacity utilization pre-screen",
+                    (
+                        "Average capacity utilization is below 1%; this may be reasonable for organizations with historically low utilization, but should be interpreted against prior reporting."
+                        if avg_utilization < 1
+                        else "Average capacity utilization is above the low-utilization threshold and should be reviewed for reasonableness against equipment capacity and usage evidence."
+                    ),
+                    "FSE reporting view",
+                    [
+                        self._metric(
+                            "Average capacity utilization",
+                            round(avg_utilization, 2),
+                            units="%",
+                        )
+                    ],
+                    (
+                        None
+                        if avg_utilization < 1
+                        else "Does the reported electricity supply appear reasonable for the equipment capacity and active period?"
+                    ),
+                    confidence="medium",
+                )
+            )
+
+        if prior_fse_summary and prior_fse_summary.get("equipment_count"):
+            prior_kwh = prior_fse_summary.get("total_kwh", 0)
+            percent_change = self._percent_change(total_kwh, prior_kwh)
+            delta = total_kwh - prior_kwh
+            material_change = self._is_material(delta, percent_change)
+            findings.append(
+                self._finding(
+                    "Electricity/FSE",
+                    "review" if material_change else "informational",
+                    (
+                        "Electricity supply changed materially year over year"
+                        if material_change
+                        else "Electricity supply variance appears within threshold"
+                    ),
+                    (
+                        f"Reported FSE electricity supply changed by {round(delta, 2)} kWh compared with the prior assessed report."
+                    ),
+                    "FSE reporting view",
+                    [
+                        self._metric(
+                            "Total kWh",
+                            round(total_kwh, 2),
+                            comparison_value=round(prior_kwh, 2),
+                            delta=round(delta, 2),
+                            percent_change=percent_change,
+                            units="kWh",
+                        )
+                    ],
+                    (
+                        "What changed in FSE activity, equipment, or evidence to support the electricity supply variance?"
+                        if material_change
+                        else None
+                    ),
+                )
+            )
+
+            current_regs = set(fse_summary.get("registration_numbers") or [])
+            prior_regs = set(prior_fse_summary.get("registration_numbers") or [])
+            new_count = len(current_regs - prior_regs)
+            findings.append(
+                self._finding(
+                    "Electricity/FSE",
+                    "review" if new_count else "informational",
+                    (
+                        "New FSE registrations reported"
+                        if new_count
+                        else f"No new FSE registrations identified for {compliance_year}"
+                    ),
+                    (
+                        f"{new_count} FSE registration(s) appear in the current report but not in the prior assessed report."
+                        if new_count
+                        else "The current report uses the same FSE registration set as the prior assessed report."
+                    ),
+                    "FSE reporting view",
+                    [
+                        self._metric("Current FSE registrations", len(current_regs)),
+                        self._metric("New FSE registrations", new_count),
+                    ],
+                    (
+                        "Were the new FSE added, validated, and supported by appropriate ownership and usage evidence?"
+                        if new_count
+                        else None
+                    ),
+                )
+            )
+
+        return findings
+
     def _allocation_findings(
         self, records: dict[str, list]
     ) -> list[ComplianceReportReviewFindingSchema]:
         findings = []
-        supplied_by_fuel = self._sum_by_fuel_type(records["fuel_supplies"], "quantity")
-        allocated_by_fuel = self._sum_by_fuel_type(
+        supplied_by_fuel = self._sum_by_fuel_category(
+            records["fuel_supplies"], "quantity"
+        )
+        allocated_by_fuel = self._sum_by_fuel_category(
             records["allocation_agreements"], "quantity"
         )
 
-        for fuel_type, allocated in allocated_by_fuel.items():
-            supplied = supplied_by_fuel.get(fuel_type, 0)
+        for fuel_label, allocated in allocated_by_fuel.items():
+            supplied = supplied_by_fuel.get(fuel_label, 0)
             if supplied and allocated > supplied:
                 findings.append(
                     self._finding(
                         "Allocations and transfers",
                         "concern",
                         "Allocated volume exceeds supplied volume",
-                        "Allocation agreement quantity is greater than fuel supply quantity for the same fuel type in the effective report data.",
+                        "Allocation agreement quantity is greater than fuel supply quantity for the same fuel category and fuel type in the effective report data.",
                         "Allocation agreements",
                         [
                             self._metric(
-                                fuel_type,
+                                fuel_label,
                                 allocated,
                                 comparison_value=supplied,
                                 delta=allocated - supplied,
                                 units="reported units",
                             )
                         ],
-                        "Why does allocated volume exceed reported supplied volume for this fuel type?",
+                        "Why does allocated volume exceed reported supplied volume for this fuel category and fuel type?",
                     )
                 )
 
@@ -945,6 +1299,25 @@ class ComplianceReportReviewService:
         return (not effective or effective <= end) and (
             not expiration or expiration >= start
         )
+
+    def _history_status_date(self, report, status: ComplianceReportStatusEnum):
+        history = getattr(report, "history", None) or []
+        matching_dates = [
+            entry.create_date
+            for entry in history
+            if getattr(getattr(entry, "status", None), "status", None) == status
+            and getattr(entry, "create_date", None)
+        ]
+        if not matching_dates:
+            return None
+        return min(matching_dates)
+
+    def _date_value(self, value) -> date:
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        return datetime.fromisoformat(str(value)).date()
 
     def _is_material(self, delta: float, percent_change: float | None) -> bool:
         return abs(delta) >= MATERIAL_VOLUME_THRESHOLD or (
