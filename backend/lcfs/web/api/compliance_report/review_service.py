@@ -78,6 +78,7 @@ class ComplianceReportReviewService:
         compliance_year = self._to_int(report.compliance_period.description)
         prior_year_report = None
         prior_year_snapshots = []
+        prior_fse_snapshots = []
         prior_reports = []
         if compliance_year:
             prior_reports = await self._timed(
@@ -138,7 +139,21 @@ class ComplianceReportReviewService:
             compliance_report_id=compliance_report_id,
         )
         prior_fse_summary = None
-        if prior_year_report:
+        if prior_reports:
+            for prior_report in prior_reports:
+                prior_compliance_year = self._to_int(
+                    prior_report.compliance_period.description
+                )
+                prior_summary = await self._timed(
+                    "get_prior_fse_summary",
+                    self._get_fse_summary(prior_report, prior_compliance_year),
+                    compliance_report_id=prior_report.compliance_report_id,
+                )
+                prior_fse_snapshots.append((prior_report, prior_summary))
+
+        if prior_fse_snapshots:
+            prior_fse_summary = prior_fse_snapshots[0][1]
+        elif prior_year_report:
             prior_compliance_year = self._to_int(
                 prior_year_report.compliance_period.description
             )
@@ -187,6 +202,8 @@ class ComplianceReportReviewService:
             compliance_units_by_fuel,
             current_fuel_code_totals,
             fuel_code_totals_by_report,
+            fse_summary,
+            prior_fse_snapshots,
             current_label=str(report.compliance_period.description),
             previous_version_label=(
                 f"Version {report.version - 1}" if previous_version_summary else ""
@@ -1037,11 +1054,17 @@ class ComplianceReportReviewService:
         compliance_units_by_fuel: list[dict],
         current_fuel_code_totals: dict[str, float],
         fuel_code_totals_by_report: dict[int, dict[str, float]],
+        fse_summary: dict | None,
+        prior_fse_snapshots: list[tuple[object, dict]],
         current_label: str,
         previous_version_label: str,
         current_version_label: str,
     ) -> ComplianceReportReviewChartDataSchema:
         historical = []
+        fse_summary_by_report_id = {
+            prior_report.compliance_report_id: prior_summary
+            for prior_report, prior_summary in prior_fse_snapshots
+        }
         for prior_report, prior_totals in prior_year_snapshots:
             prior_label = str(prior_report.compliance_period.description)
             for key in self._schedule_keys():
@@ -1072,6 +1095,19 @@ class ComplianceReportReviewService:
                         current_label=current_label,
                         comparison_label=prior_label,
                         points=fuel_code_points,
+                    )
+                )
+
+            prior_fse_summary = fse_summary_by_report_id.get(
+                prior_report.compliance_report_id, {}
+            )
+            if fse_summary and prior_fse_summary:
+                historical.extend(
+                    self._fse_chart_series(
+                        fse_summary,
+                        prior_fse_summary,
+                        current_label,
+                        prior_label,
                     )
                 )
 
@@ -1130,6 +1166,82 @@ class ComplianceReportReviewService:
                 for point in compliance_units_by_fuel
             ],
         )
+
+    def _fse_chart_series(
+        self,
+        current: dict,
+        prior: dict,
+        current_label: str,
+        prior_label: str,
+    ) -> list[ComplianceReportReviewComparisonSeriesSchema]:
+        series = []
+
+        electricity_points = self._comparison_points(
+            {"Total electricity supplied": current.get("total_kwh", 0)},
+            {"Total electricity supplied": prior.get("total_kwh", 0)},
+            units="kWh",
+        )
+        if electricity_points:
+            series.append(
+                ComplianceReportReviewComparisonSeriesSchema(
+                    title="FSE electricity supply",
+                    current_label=current_label,
+                    comparison_label=prior_label,
+                    points=electricity_points,
+                )
+            )
+
+        equipment_points = self._comparison_points(
+            {
+                "Total FSE": current.get("equipment_count", 0),
+                "Active FSE": current.get("active_count", 0),
+                "Validated FSE": current.get("validated_count", 0),
+                "Level 1 FSE": current.get("level_1_count", 0),
+            },
+            {
+                "Total FSE": prior.get("equipment_count", 0),
+                "Active FSE": prior.get("active_count", 0),
+                "Validated FSE": prior.get("validated_count", 0),
+                "Level 1 FSE": prior.get("level_1_count", 0),
+            },
+            units="count",
+        )
+        if equipment_points:
+            series.append(
+                ComplianceReportReviewComparisonSeriesSchema(
+                    title="FSE equipment counts",
+                    current_label=current_label,
+                    comparison_label=prior_label,
+                    points=equipment_points,
+                )
+            )
+
+        current_utilization = current.get("avg_capacity_utilization_percent")
+        prior_utilization = prior.get("avg_capacity_utilization_percent")
+        utilization_points = self._comparison_points(
+            {
+                "Average capacity utilization": (
+                    current_utilization if current_utilization is not None else 0
+                )
+            },
+            {
+                "Average capacity utilization": (
+                    prior_utilization if prior_utilization is not None else 0
+                )
+            },
+            units="%",
+        )
+        if utilization_points:
+            series.append(
+                ComplianceReportReviewComparisonSeriesSchema(
+                    title="FSE capacity utilization",
+                    current_label=current_label,
+                    comparison_label=prior_label,
+                    points=utilization_points,
+                )
+            )
+
+        return series
 
     def _comparison_points(
         self, current: dict[str, float], comparison: dict[str, float], units: str
