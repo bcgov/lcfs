@@ -245,6 +245,7 @@ export const apiRoutes = {
   OrgComplianceReportCounts: '/dashboard/org-compliance-report-counts',
   complianceReportCounts: '/dashboard/compliance-report-counts',
   fuelCodeCounts: '/dashboard/fuel-code-counts',
+  orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
 
   // audit-logs
   getAuditLogs: '/audit-log/list',

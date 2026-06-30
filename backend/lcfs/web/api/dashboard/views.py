@@ -9,7 +9,8 @@ from lcfs.web.api.dashboard.schema import (
     OrganizarionTransactionCountsSchema,
     OrgComplianceReportCountsSchema,
     ComplianceReportCountsSchema,
-    FuelCodeCountsSchema
+    FuelCodeCountsSchema,
+    OrgFuelCodeCountsSchema,
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -88,3 +89,15 @@ async def get_fuel_code_counts(
     """Endpoint to retrieve count of compliance reports pending review"""
 
     return await service.get_fuel_code_counts()
+
+
+@router.get("/org-fuel-code-counts", response_model=OrgFuelCodeCountsSchema)
+@view_handler([RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY])
+async def get_org_fuel_code_counts(
+    request: Request,
+    service: DashboardServices = Depends(),
+):
+    """Endpoint to retrieve count of in-progress (draft) fuel codes for the
+    caller's organization (CI applications not yet approved)."""
+    organization_id = request.user.organization.organization_id
+    return await service.get_org_fuel_code_counts(organization_id)
