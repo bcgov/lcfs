@@ -1,0 +1,158 @@
+# Reusable workflow to clean up unused/expired images in an LCFS OpenShift namespace.
+# Called by cleanup-images.yaml for each of the dev, test, and prod environments.
+
+name: Cleanup Images Template
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Environment name (dev, test, or prod)"
+        required: true
+        type: string
+    outputs:
+      lcfs-backend-tags-to-keep:
+        description: "Comma-separated deduplicated list of lcfs-backend image tags to keep"
+        value: ${{ jobs.cleanup.outputs.lcfs-backend-tags-to-keep }}
+      lcfs-frontend-tags-to-keep:
+        description: "Comma-separated deduplicated list of lcfs-frontend image tags to keep"
+        value: ${{ jobs.cleanup.outputs.lcfs-frontend-tags-to-keep }}
+
+permissions:
+  contents: read
+
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
+
+jobs:
+  cleanup:
+    name: Cleanup images in ${{ inputs.environment }} namespace
+    runs-on: ubuntu-latest
+    outputs:
+      lcfs-backend-tags-to-keep: ${{ steps.collect-keep.outputs.backend_tags_to_keep }}
+      lcfs-frontend-tags-to-keep: ${{ steps.collect-keep.outputs.frontend_tags_to_keep }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Restore oc CLI from cache
+        id: cache
+        uses: actions/cache@v5.0.4
+        with:
+          path: /usr/local/bin/oc
+          key: oc-cli-${{ runner.os }}
+
+      - name: Install OpenShift CLI (if not cached)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz
+          tar -xvf openshift-client-linux.tar.gz
+          sudo mv oc /usr/local/bin/
+          oc version --client
+
+      - name: Confirm OpenShift CLI is Available
+        run: oc version --client
+
+      - name: Log in to OpenShift
+        run: |
+          oc login --server="${{ secrets.OPENSHIFT_SERVER }}" --token="${{ secrets.OPENSHIFT_TOKEN }}" --insecure-skip-tls-verify=true
+          oc project "${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-${{ inputs.environment }}"
+
+      - name: Collect image tags to keep
+        id: collect-keep
+        run: |
+          namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-${{ inputs.environment }}"
+          env="${{ inputs.environment }}"
+
+          echo "=== Collecting image tags to keep in $namespace ==="
+
+          # ── Get the tag currently used by each deployment ─────────────────────
+          backend_current_image=$(oc get deployment "lcfs-backend-${env}" -n "$namespace" \
+            -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
+          backend_current_tag="${backend_current_image##*:}"
+
+          frontend_current_image=$(oc get deployment "lcfs-frontend-${env}" -n "$namespace" \
+            -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
+          frontend_current_tag="${frontend_current_image##*:}"
+
+          echo "Current lcfs-backend tag in deployment:   $backend_current_tag"
+          echo "Current lcfs-frontend tag in deployment:  $frontend_current_tag"
+
+          # ── lcfs-backend: filter release tags (x.y.z-timestamp) and keep top 3 ─
+          backend_all_tags=$(oc get is lcfs-backend -n "$namespace" \
+            -o jsonpath='{.status.tags[*].tag}' 2>/dev/null || echo "")
+          backend_release_tags=()
+          for tag in $backend_all_tags; do
+            if [[ $tag =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
+              backend_release_tags+=("$tag")
+            fi
+          done
+          if [ ${#backend_release_tags[@]} -gt 0 ]; then
+            backend_top3=$(printf '%s\n' "${backend_release_tags[@]}" | sort -V | tail -3 | tr '\n' ',')
+          else
+            backend_top3=""
+          fi
+
+          # ── lcfs-frontend: filter release tags (x.y.z-timestamp) and keep top 3 ─
+          frontend_all_tags=$(oc get is lcfs-frontend -n "$namespace" \
+            -o jsonpath='{.status.tags[*].tag}' 2>/dev/null || echo "")
+          frontend_release_tags=()
+          for tag in $frontend_all_tags; do
+            if [[ $tag =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
+              frontend_release_tags+=("$tag")
+            fi
+          done
+          if [ ${#frontend_release_tags[@]} -gt 0 ]; then
+            frontend_top3=$(printf '%s\n' "${frontend_release_tags[@]}" | sort -V | tail -3 | tr '\n' ',')
+          else
+            frontend_top3=""
+          fi
+
+          # ── Merge current deployment tag + top 3, deduplicate ─────────────────
+          backend_keep=$(printf '%s\n' "$backend_current_tag" "$backend_top3" \
+            | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
+          frontend_keep=$(printf '%s\n' "$frontend_current_tag" "$frontend_top3" \
+            | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
+
+          echo "lcfs-backend tags to keep:  $backend_keep"
+          echo "lcfs-frontend tags to keep: $frontend_keep"
+
+          echo "backend_tags_to_keep=$backend_keep"   >> $GITHUB_OUTPUT
+          echo "frontend_tags_to_keep=$frontend_keep" >> $GITHUB_OUTPUT
+
+      - name: Delete unused lcfs-backend image tags
+        run: |
+          namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-${{ inputs.environment }}"
+          tags_to_keep="${{ steps.collect-keep.outputs.backend_tags_to_keep }}"
+
+          echo "=== Deleting unused lcfs-backend image tags from $namespace ==="
+          all_tags=$(oc get is lcfs-backend -n "$namespace" \
+            -o jsonpath='{.status.tags[*].tag}' 2>/dev/null || echo "")
+
+          for tag in $all_tags; do
+            if echo "$tags_to_keep" | tr ',' '\n' | grep -qx "$tag"; then
+              echo "Keeping  lcfs-backend:$tag"
+            else
+              echo "Deleting lcfs-backend:$tag"
+              oc delete istag "lcfs-backend:$tag" -n "$namespace" --ignore-not-found=true
+            fi
+          done
+
+      - name: Delete unused lcfs-frontend image tags
+        run: |
+          namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-${{ inputs.environment }}"
+          tags_to_keep="${{ steps.collect-keep.outputs.frontend_tags_to_keep }}"
+
+          echo "=== Deleting unused lcfs-frontend image tags from $namespace ==="
+          all_tags=$(oc get is lcfs-frontend -n "$namespace" \
+            -o jsonpath='{.status.tags[*].tag}' 2>/dev/null || echo "")
+
+          for tag in $all_tags; do
+            if echo "$tags_to_keep" | tr ',' '\n' | grep -qx "$tag"; then
+              echo "Keeping  lcfs-frontend:$tag"
+            else
+              echo "Deleting lcfs-frontend:$tag"
+              oc delete istag "lcfs-frontend:$tag" -n "$namespace" --ignore-not-found=true
+            fi
+          done

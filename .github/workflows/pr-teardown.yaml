@@ -7,6 +7,7 @@ on:
 env:
   DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
   PR_NUMBER: ${{ github.event.pull_request.number }}
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -56,12 +57,9 @@ jobs:
           key: oc-cli-${{ runner.os }}
 
       - name: Log in to Openshift
-        uses: redhat-actions/oc-login@v1.3
-        with:
-          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
-          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
-          insecure_skip_tls_verify: true
-          namespace: ${{ env.DEV_NAMESPACE }}
+        run: |
+          oc login --server="${{ secrets.OPENSHIFT_SERVER }}" --token="${{ secrets.OPENSHIFT_TOKEN }}" --insecure-skip-tls-verify=true
+          oc project "${{ env.DEV_NAMESPACE }}"
 
       - name: Teardown the pull request
         run: |

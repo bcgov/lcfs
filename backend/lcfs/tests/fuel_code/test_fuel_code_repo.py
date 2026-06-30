@@ -1,8 +1,10 @@
 from datetime import date, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from lcfs.db.models.fuel.FuelCodeListView import FuelCodeListView
 import pytest
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import NoResultFound
 
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
@@ -410,46 +412,35 @@ async def test_get_expected_use_type_by_name(fuel_code_repo, mock_db):
 
 @pytest.mark.anyio
 async def test_get_fuel_codes_paginated(fuel_code_repo, mock_db):
-    fc = FuelCodeListView(fuel_code_id=1, fuel_suffix="101.0")
-    mock_db.execute.side_effect = [
-        MagicMock(scalar=MagicMock(return_value=1)),  # Count query result
-        MagicMock(  # Main query result
-            unique=MagicMock(
-                return_value=MagicMock(
-                    scalars=MagicMock(
-                        return_value=MagicMock(all=MagicMock(return_value=[fc]))
-                    )
-                )
-            )
-        ),
-    ]
+    # Window function returns Row objects with a _wf_total attribute.
+    fc = MagicMock()
+    fc._wf_total = 1
+    fc.fuel_code_id = 1
+    fc.fuel_suffix = "101.0"
+    mock_result = MagicMock()
+    mock_result.all.return_value = [fc]
+    mock_db.execute.return_value = mock_result
+
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
     result, count = await fuel_code_repo.get_fuel_codes_paginated(pagination)
     assert len(result) == 1
     assert result[0] == fc
     assert count == 1
+    assert mock_db.execute.call_count == 1
 
 
-def _make_paginate_side_effect():
-    return [
-        MagicMock(scalar=MagicMock(return_value=0)),
-        MagicMock(
-            unique=MagicMock(
-                return_value=MagicMock(
-                    scalars=MagicMock(
-                        return_value=MagicMock(all=MagicMock(return_value=[]))
-                    )
-                )
-            )
-        ),
-    ]
+def _make_paginate_mock():
+    """Return a mock execute result for the window-function pagination pattern (empty page)."""
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    return mock_result
 
 
 @pytest.mark.anyio
 async def test_get_fuel_codes_paginated_exclude_archived_filters_by_date(
     fuel_code_repo, mock_db
 ):
-    mock_db.execute.side_effect = _make_paginate_side_effect()
+    mock_db.execute.return_value = _make_paginate_mock()
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
 
     result, count = await fuel_code_repo.get_fuel_codes_paginated(
@@ -469,7 +460,7 @@ async def test_get_fuel_codes_paginated_exclude_archived_filters_by_date(
 async def test_get_fuel_codes_paginated_no_date_filter_by_default(
     fuel_code_repo, mock_db
 ):
-    mock_db.execute.side_effect = _make_paginate_side_effect()
+    mock_db.execute.return_value = _make_paginate_mock()
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
 
     await fuel_code_repo.get_fuel_codes_paginated(pagination)
@@ -484,7 +475,7 @@ async def test_get_fuel_codes_paginated_no_date_filter_by_default(
 async def test_get_fuel_codes_paginated_compliance_period_end_is_march_31(
     fuel_code_repo, mock_db
 ):
-    mock_db.execute.side_effect = _make_paginate_side_effect()
+    mock_db.execute.return_value = _make_paginate_mock()
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
 
     await fuel_code_repo.get_fuel_codes_paginated(
@@ -505,63 +496,84 @@ async def test_get_fuel_codes_paginated_compliance_period_end_is_march_31(
 async def test_get_fuel_codes_paginated_filters_by_organization_id(
     fuel_code_repo, mock_db
 ):
-    fc = FuelCodeListView(fuel_code_id=1, fuel_suffix="101.0")
-    mock_db.execute.side_effect = [
-        MagicMock(scalar=MagicMock(return_value=1)),
-        MagicMock(
-            unique=MagicMock(
-                return_value=MagicMock(
-                    scalars=MagicMock(
-                        return_value=MagicMock(all=MagicMock(return_value=[fc]))
-                    )
-                )
-            )
-        ),
-    ]
+    fc = MagicMock()
+    fc._wf_total = 1
+    mock_result = MagicMock()
+    mock_result.all.return_value = [fc]
+    mock_db.execute.return_value = mock_result
+
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
     result, count = await fuel_code_repo.get_fuel_codes_paginated(
         pagination, organization_id=42
     )
     assert len(result) == 1
     assert count == 1
+    assert mock_db.execute.call_count == 1
 
-    rendered_queries = [
-        str(call.args[0]) for call in mock_db.execute.call_args_list
-    ]
-    assert all(
-        "fuel_code.organization_id = " in q for q in rendered_queries
-    )
-    assert all(
-        "lower(vw_fuel_code_base.company)" not in q for q in rendered_queries
-    )
+    # The organization_id filter appears inside the windowed subquery SQL
+    stmt_sql = str(mock_db.execute.call_args_list[0].args[0])
+    assert "fuel_code.organization_id = " in stmt_sql
+    assert "lower(vw_fuel_code_base.company)" not in stmt_sql
 
 
 @pytest.mark.anyio
 async def test_get_fuel_codes_paginated_skips_organization_filter_when_omitted(
     fuel_code_repo, mock_db
 ):
-    fc = FuelCodeListView(fuel_code_id=1, fuel_suffix="101.0")
-    mock_db.execute.side_effect = [
-        MagicMock(scalar=MagicMock(return_value=1)),
-        MagicMock(
-            unique=MagicMock(
-                return_value=MagicMock(
-                    scalars=MagicMock(
-                        return_value=MagicMock(all=MagicMock(return_value=[fc]))
-                    )
-                )
-            )
-        ),
-    ]
+    mock_db.execute.return_value = _make_paginate_mock()
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
     await fuel_code_repo.get_fuel_codes_paginated(pagination)
 
-    rendered_queries = [
-        str(call.args[0]) for call in mock_db.execute.call_args_list
+    stmt_sql = str(mock_db.execute.call_args_list[0].args[0])
+    assert "fuel_code.organization_id = " not in stmt_sql
+
+
+@pytest.mark.anyio
+async def test_get_fuel_code_group_detail_orders_iterations_by_numeric_suffix(
+    fuel_code_repo, mock_db
+):
+    source_fc = FuelCode(fuel_code_id=1, prefix_id=1, fuel_suffix="100.1")
+    latest_fc = FuelCode(fuel_code_id=10, prefix_id=1, fuel_suffix="100.10")
+    iteration_rows = [
+        SimpleNamespace(
+            fuel_code_id=10,
+            prefix="C-BCLCF-",
+            fuel_suffix="100.10",
+            status=FuelCodeStatusEnum.Draft.value,
+        ),
+        SimpleNamespace(
+            fuel_code_id=9,
+            prefix="C-BCLCF-",
+            fuel_suffix="100.9",
+            status=FuelCodeStatusEnum.Draft.value,
+        ),
     ]
-    assert all(
-        "fuel_code.organization_id = " not in q for q in rendered_queries
+    iterations_result = MagicMock()
+    iterations_result.unique.return_value.scalars.return_value.all.return_value = (
+        iteration_rows
     )
+    volume_result = MagicMock()
+    volume_result.all.return_value = []
+    mock_db.scalar.side_effect = [source_fc, latest_fc]
+    mock_db.execute.side_effect = [iterations_result, volume_result]
+
+    latest, iterations, volume = await fuel_code_repo.get_fuel_code_group_detail(1)
+
+    assert latest == latest_fc
+    assert iterations == iteration_rows
+    assert volume == []
+
+    iteration_stmt = mock_db.execute.await_args_list[0].args[0]
+    stmt_sql = str(
+        iteration_stmt.compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+
+    assert "ORDER BY" in stmt_sql
+    assert "CAST(split_part" in stmt_sql
+    assert "AS INTEGER) DESC" in stmt_sql
+    assert "vw_fuel_code_base.fuel_suffix DESC" not in stmt_sql
 
 
 @pytest.mark.anyio

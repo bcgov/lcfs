@@ -8,6 +8,7 @@ from lcfs.db.models.ci_application import (
     CIApplication,
     CIApplicationStatus,
 )
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.base import (
     FilterModel,
     PaginationRequestSchema,
@@ -17,6 +18,7 @@ from lcfs.web.api.ci_application.repo import (
     CIApplicationRepository,
     _DIRECT_FILTER_COLUMNS,
     _NESTED_FILTER_BUILDERS,
+    PRIORITY_SCORE_EXPR,
     _resolve_value,
 )
 from lcfs.web.api.ci_application.schema import (
@@ -29,6 +31,7 @@ from lcfs.web.api.ci_application.services import (
     _initials,
     _to_assigned_analyst,
     _to_list_item,
+    _verification_level_from_progress,
 )
 
 
@@ -90,7 +93,10 @@ def _application(
     assigned_analyst=None,
     organization=None,
     priority_score=None,
+    verification_2_priority_score=None,
     verification_level=None,
+    verification_1_date=None,
+    verification_2_date=None,
 ):
     ci = CIApplication(
         ci_application_id=ci_application_id,
@@ -101,10 +107,13 @@ def _application(
         facility_country="Argentina",
         facility_iso="AR",
         facility_nameplate_capacity=1000,
-        facility_nameplate_capacity_unit_id=1,
+        facility_nameplate_capacity_unit=QuantityUnitsEnum.Litres,
         proposed_fuel_code_effective_date=date(2026, 6, 1),
         priority_score=priority_score,
+        verification_2_priority_score=verification_2_priority_score,
         verification_level=verification_level,
+        verification_1_date=verification_1_date,
+        verification_2_date=verification_2_date,
         group_uuid="abc",
         version=0,
     )
@@ -209,6 +218,10 @@ class TestFilterResolver:
         conds = repo._apply_filters(pagination)
         assert len(conds) == 1
         assert "priority_score" in str(conds[0]).lower()
+        assert "verification_2_priority_score" in str(conds[0]).lower()
+
+    def test_priority_score_filter_uses_effective_score(self):
+        assert _DIRECT_FILTER_COLUMNS["priority_score"].compare(PRIORITY_SCORE_EXPR)
 
     def test_apply_filters_returns_clause_for_nested_status_field(self, repo):
         pagination = PaginationRequestSchema(
@@ -399,12 +412,48 @@ class TestToListItem:
         ci = _application(
             assigned_analyst=_user(user_profile_id=2, first="Hamed", last="Bayeki"),
             priority_score=511,
-            verification_level="VX2 - High",
+            verification_2_date=datetime(2026, 5, 20, tzinfo=timezone.utc),
         )
         out = _to_list_item(ci, last_comment_entry=None)
         assert out.assigned_analyst.initials == "HB"
         assert out.priority_score == 511
-        assert out.verification_level == "VX2 - High"
+        assert out.verification_level == "VX2"
+
+    def test_priority_score_prefers_verification_2_score(self):
+        ci = _application(
+            priority_score=511,
+            verification_2_priority_score=426,
+            verification_2_date=datetime(2026, 5, 20, tzinfo=timezone.utc),
+        )
+
+        out = _to_list_item(ci, last_comment_entry=None)
+
+        assert out.priority_score == 426
+        assert out.verification_level == "VX2"
+
+    @pytest.mark.parametrize(
+        "verification_1_date,verification_2_date,expected",
+        [
+            (None, None, None),
+            (datetime(2026, 5, 19, tzinfo=timezone.utc), None, "VX1"),
+            (
+                datetime(2026, 5, 19, tzinfo=timezone.utc),
+                datetime(2026, 5, 20, tzinfo=timezone.utc),
+                "VX2",
+            ),
+        ],
+    )
+    def test_verification_level_follows_progress_dates(
+        self, verification_1_date, verification_2_date, expected
+    ):
+        ci = _application(
+            verification_level="VX2 - High",
+            verification_1_date=verification_1_date,
+            verification_2_date=verification_2_date,
+        )
+
+        assert _verification_level_from_progress(ci) == expected
+        assert _to_list_item(ci).verification_level == expected
 
     def test_populates_last_comment_when_provided(self):
         ci = _application()

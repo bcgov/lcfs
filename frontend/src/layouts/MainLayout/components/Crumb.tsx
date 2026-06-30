@@ -6,6 +6,7 @@ import Chip from '@mui/material/Chip'
 import { isNumeric } from '@/utils/formatters'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import { useFuelCodePageStore } from '@/stores/useFuelCodePageStore'
 
 type RouteTitleResolver = (args: {
   params: Record<string, string | undefined>
@@ -79,6 +80,7 @@ const Crumb = () => {
   const activeTabLabel = useOrganizationPageStore(
     (state) => state.activeTabLabel
   )
+  const fuelCodeTitle = useFuelCodePageStore((state) => state.fuelCodeTitle)
 
   // Get the actual compliance period from the cached report data (not the URL)
   // This prevents URL manipulation from showing incorrect year in breadcrumbs
@@ -133,7 +135,8 @@ const Crumb = () => {
     },
     'admin-adjustment': { label: 'Transactions', route: '/transactions' },
     'org-admin-adjustment': { label: 'Transactions', route: '/transactions' },
-    'ci-applications': { label: 'CI applications', route: '/ci-applications' }
+    'ci-applications': { label: 'CI applications', route: '/ci-applications' },
+    'fuel-codes': { label: 'Fuel codes', route: '/fuel-codes' }
   }
 
   return (
@@ -190,6 +193,11 @@ const Crumb = () => {
             return null
           }
 
+          // Skip numeric ID crumb for fuel-code detail routes (e.g., /fuel-codes/:id/view)
+          if (isNumeric(name) && pathnames[index - 1] === 'fuel-codes') {
+            return null
+          }
+
           const isOrgIdSegment =
             isOrganizationRoute && orgID && name === orgID && !isLast
           if (isOrgIdSegment) {
@@ -199,8 +207,7 @@ const Crumb = () => {
           const shouldUseOrgLabelForLast =
             organizationContextLabel &&
             isOrganizationRoute &&
-            (ORG_TAB_SEGMENTS.has(name) ||
-              (orgID && name === orgID && isLast))
+            (ORG_TAB_SEGMENTS.has(name) || (orgID && name === orgID && isLast))
 
           if (isLast && shouldUseOrgLabelForLast) {
             return (
@@ -245,16 +252,21 @@ const Crumb = () => {
             )
           }
 
+          const isFuelCodeViewLast =
+            isLast && name === 'view' && pathnames[0] === 'fuel-codes'
+
           return isLast ? (
             <StyledBreadcrumb
               component={Typography}
               sx={{ textTransform: 'none', padding: 0, '&>*': { padding: 0 } }}
               label={
-                title && title !== ''
-                  ? title
-                  : isNumeric(name)
-                    ? 'ID: ' + name
-                    : displayName
+                isFuelCodeViewLast && fuelCodeTitle
+                  ? fuelCodeTitle
+                  : title && title !== ''
+                    ? title
+                    : isNumeric(name)
+                      ? 'ID: ' + name
+                      : displayName
               }
               key={name}
             />

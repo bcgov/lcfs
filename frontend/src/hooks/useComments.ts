@@ -7,11 +7,34 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 const DEFAULT_STALE_TIME = 5 * 60 * 1000
 const DEFAULT_CACHE_TIME = 15 * 60 * 1000
 
-export const useComments = (entityType: any, entityId: any, options: Record<string, any> = {}) => {
+export const useComments = (
+  entityType: any,
+  entityId: any,
+  options: Record<string, any> = {}
+) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
   const { hasAnyRole } = useCurrentUser()
   const [commentInput, setCommentInput] = useState('')
+  // Files staged in the "add comment" form. They can only be uploaded once the
+  // comment exists (and has an id), so they are held here until submit.
+  const [attachments, setAttachments] = useState<File[]>([])
+
+  // Attachments live on the comment via parent_type "internal_comment" in the
+  // shared document API; upload one staged file against a known comment id.
+  const uploadAttachment = useCallback(
+    async (commentId: any, file: File) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('filename', file.name)
+      return apiService.post(
+        `/documents/internal_comment/${commentId}`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      )
+    },
+    [apiService]
+  )
 
   const {
     staleTime = DEFAULT_STALE_TIME,
@@ -24,12 +47,11 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
     ...restOptions
   } = options
 
-  const isGov = useMemo(
-    () => hasAnyRole(roles.government),
-    [hasAnyRole]
-  )
+  const isGov = useMemo(() => hasAnyRole(roles.government), [hasAnyRole])
   const hasInternalAudienceScopeRole = useMemo(
-    () => isGov || hasAnyRole(roles.director, roles.analyst, roles.compliance_manager),
+    () =>
+      isGov ||
+      hasAnyRole(roles.director, roles.analyst, roles.compliance_manager),
     [hasAnyRole, isGov]
   )
 
@@ -37,9 +59,7 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
 
   // Visibility state for dual mode (gov users can toggle, BCeID forced to Public)
   const [visibility, setVisibility] = useState(
-    isDualMode && !isGov
-      ? 'Public'
-      : 'Internal'
+    isDualMode && !isGov ? 'Public' : 'Internal'
   )
 
   useEffect(() => {
@@ -48,11 +68,14 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
     }
   }, [isDualMode, isGov, visibility])
 
-  const handleVisibilityChange = useCallback((newVisibility: any) => {
-    // BCeID users cannot switch to Internal
-    if (!isGov && newVisibility === 'Internal') return
-    setVisibility(newVisibility)
-  }, [isGov])
+  const handleVisibilityChange = useCallback(
+    (newVisibility: any) => {
+      // BCeID users cannot switch to Internal
+      if (!isGov && newVisibility === 'Internal') return
+      setVisibility(newVisibility)
+    },
+    [isGov]
+  )
 
   // Memoize audience scope
   const audienceScope = useMemo(() => {
@@ -110,7 +133,15 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
   })
 
   const addCommentMutation = useMutation({
-    mutationFn: async (commentText: any) => {
+    mutationFn: async (variables: any) => {
+      // Callers may pass a bare comment string (legacy) or
+      // { commentText, files } so staged attachments are uploaded after the
+      // comment is created and has an id.
+      const { commentText, files } =
+        typeof variables === 'string'
+          ? { commentText: variables, files: [] as File[] }
+          : { commentText: variables?.commentText, files: variables?.files || [] }
+
       if (!commentText?.trim()) {
         throw new Error('Comment text is required')
       }
@@ -127,12 +158,26 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
       }
 
       const response = await apiService.post('/internal_comments/', payload)
-      return response.data
+      const createdComment = response.data
+      const commentId = createdComment?.internalCommentId
+
+      if (commentId && files.length > 0) {
+        for (const file of files) {
+          await uploadAttachment(commentId, file)
+        }
+      }
+
+      return createdComment
     },
-    onMutate: async (commentText) => {
+    onMutate: async (variables) => {
       if (!optimisticUpdates) return
 
-      await queryClient.cancelQueries({ queryKey: [ 'internal-comments', entityType, entityId ] })
+      const commentText =
+        typeof variables === 'string' ? variables : variables?.commentText || ''
+
+      await queryClient.cancelQueries({
+        queryKey: ['internal-comments', entityType, entityId]
+      })
 
       const previousComments = queryClient.getQueryData([
         'internal-comments',
@@ -147,6 +192,7 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
           comment: commentText.trim(),
           audience_scope: audienceScope,
           visibility: isDualMode ? visibility : 'Internal',
+          documents: [],
           createdAt: new Date().toISOString(),
           isOptimistic: true
         }
@@ -215,14 +261,27 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
       )
 
       setCommentInput('')
+      setAttachments([])
+      // Reset visibility to Internal after submitting (gov users in dual mode only)
+      if (isDualMode && isGov) {
+        setVisibility('Internal')
+      }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['internal-comments', entityType, entityId] })
+      queryClient.invalidateQueries({
+        queryKey: ['internal-comments', entityType, entityId]
+      })
     }
   })
 
   const editCommentMutation = useMutation({
-    mutationFn: async ({ commentId: commentId, commentText: commentText, visibility: editVisibility }: any) => {
+    mutationFn: async ({
+      commentId: commentId,
+      commentText: commentText,
+      visibility: editVisibility,
+      newFiles = [],
+      removedDocumentIds = []
+    }: any) => {
       if (!commentId) {
         throw new Error('Comment ID is required for editing')
       }
@@ -241,12 +300,29 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
         `/internal_comments/${commentId}`,
         payload
       )
+
+      // Apply staged attachment changes against the now-saved comment.
+      for (const documentId of removedDocumentIds) {
+        await apiService.delete(
+          `/documents/internal_comment/${commentId}/${documentId}`
+        )
+      }
+      for (const file of newFiles) {
+        await uploadAttachment(commentId, file)
+      }
+
       return response.data
     },
-    onMutate: async ({ commentId, commentText, visibility: editVisibility }) => {
+    onMutate: async ({
+      commentId,
+      commentText,
+      visibility: editVisibility
+    }) => {
       if (!optimisticUpdates) return
 
-      await queryClient.cancelQueries({ queryKey: [ 'internal-comments', entityType, entityId ] })
+      await queryClient.cancelQueries({
+        queryKey: ['internal-comments', entityType, entityId]
+      })
 
       const previousComments = queryClient.getQueryData([
         'internal-comments',
@@ -297,7 +373,9 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
       )
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['internal-comments', entityType, entityId] })
+      queryClient.invalidateQueries({
+        queryKey: ['internal-comments', entityType, entityId]
+      })
     }
   })
 
@@ -315,7 +393,9 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
     onMutate: async (commentId: any) => {
       if (!optimisticUpdates) return
 
-      await queryClient.cancelQueries({ queryKey: [ 'internal-comments', entityType, entityId ] })
+      await queryClient.cancelQueries({
+        queryKey: ['internal-comments', entityType, entityId]
+      })
 
       const previousComments = queryClient.getQueryData([
         'internal-comments',
@@ -355,7 +435,9 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
       )
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['internal-comments', entityType, entityId] })
+      queryClient.invalidateQueries({
+        queryKey: ['internal-comments', entityType, entityId]
+      })
     }
   })
 
@@ -363,21 +445,59 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
     setCommentInput(value)
   }, [])
 
+  const handleAttachmentsChange = useCallback((files: File[]) => {
+    setAttachments(files)
+  }, [])
+
+  const clearAttachments = useCallback(() => {
+    setAttachments([])
+  }, [])
+
   const handleAddComment = useCallback(async () => {
     if (commentInput.trim()) {
-      await addCommentMutation.mutateAsync(commentInput)
+      return await addCommentMutation.mutateAsync({
+        commentText: commentInput,
+        files: attachments
+      })
     }
-  }, [commentInput, addCommentMutation])
+  }, [commentInput, attachments, addCommentMutation])
 
   const handleEditComment = useCallback(
-    ({ commentId, commentText, visibility: editVisibility }: any) => {
+    ({
+      commentId,
+      commentText,
+      visibility: editVisibility,
+      newFiles = [],
+      removedDocumentIds = []
+    }: any) => {
       return editCommentMutation.mutateAsync({
         commentId,
         commentText,
-        visibility: editVisibility
+        visibility: editVisibility,
+        newFiles,
+        removedDocumentIds
       })
     },
     [editCommentMutation]
+  )
+
+  // Download an attachment that belongs to a saved comment.
+  const downloadCommentAttachment = useCallback(
+    async (commentId: any, documentId: any, filename?: string) => {
+      const response = await apiService.get(
+        `/documents/internal_comment/${commentId}/${documentId}`,
+        { responseType: 'blob' }
+      )
+      const fileURL = URL.createObjectURL(response.data)
+      const link = document.createElement('a')
+      link.href = fileURL
+      link.download = filename || `document_${documentId}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      setTimeout(() => URL.revokeObjectURL(fileURL), 100)
+    },
+    [apiService]
   )
 
   const handleDeleteComment = useCallback(
@@ -409,6 +529,7 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
     comments: commentsQuery.data || [],
     audienceScope,
     commentInput,
+    attachments,
     visibility,
     allowInternalVisibility: hasInternalAudienceScopeRole,
 
@@ -436,6 +557,11 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
     handleCommentInputChange,
     clearCommentInput,
 
+    // Attachment management
+    handleAttachmentsChange,
+    clearAttachments,
+    downloadCommentAttachment,
+
     // Visibility management (dual mode)
     handleVisibilityChange,
 
@@ -444,7 +570,9 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
 
     // Query utilities
     invalidateComments: () =>
-      queryClient.invalidateQueries({ queryKey: [ 'internal-comments', entityType, entityId ] }),
+      queryClient.invalidateQueries({
+        queryKey: ['internal-comments', entityType, entityId]
+      }),
     prefetchComments: () =>
       queryClient.prefetchQuery({
         queryKey: ['internal-comments', entityType, entityId, { sortOrder }],
@@ -454,4 +582,3 @@ export const useComments = (entityType: any, entityId: any, options: Record<stri
       })
   }
 }
-

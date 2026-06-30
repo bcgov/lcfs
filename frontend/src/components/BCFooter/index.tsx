@@ -1,7 +1,8 @@
 import { Link } from '@mui/material'
+import { Link as RouterLink } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import { GitHub } from '@mui/icons-material'
+import { GitHub, NewReleases } from '@mui/icons-material'
 import typography from '@/themes/base/typography'
 
 type FooterLink = {
@@ -12,7 +13,10 @@ type FooterLink = {
 }
 
 type RepoDetails = {
-  href: string
+  /** External URL — opens in new tab. Mutually exclusive with `route`. */
+  href?: string
+  /** Internal React-Router path — client-side navigation. Mutually exclusive with `href`. */
+  route?: string
   name: string
   id: string
   label: string
@@ -24,10 +28,10 @@ export interface BCFooterProps {
 }
 
 const defaultRepoDetails: RepoDetails = {
-  href: 'https://github.com/bcgov/lcfs/releases/tag/v1.3.4',
-  name: 'v1.3.4',
-  id: 'footer-about-version',
-  label: 'LCFS repository changelog'
+  route: '/release-notes',
+  name: 'Release Notes',
+  id: 'footer-release-notes',
+  label: 'LCFS release notes'
 }
 
 const defaultLinks: FooterLink[] = [
@@ -135,23 +139,48 @@ function Footer({
           flexWrap: 'wrap'
         }}
       >
-        <Link
-          href={repoDetails.href}
-          target="_blank"
-          aria-label={repoDetails.label}
-          id={repoDetails.id}
-          data-test={repoDetails.id}
-        >
-          <GitHub fontSize="small" />
-          <BCTypography
-            ml={1}
-            variant="button"
-            fontWeight="medium"
-            sx={{ textDecoration: 'underline' }}
+        {repoDetails.route ? (
+          <RouterLink
+            to={repoDetails.route}
+            id={repoDetails.id}
+            data-test={repoDetails.id}
+            aria-label={repoDetails.label}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              color: 'inherit',
+              textDecoration: 'none'
+            }}
           >
-            {repoDetails.name}
-          </BCTypography>
-        </Link>
+            <NewReleases fontSize="small" />
+            <BCTypography
+              ml={1}
+              variant="button"
+              fontWeight="medium"
+              sx={{ textDecoration: 'underline' }}
+            >
+              {repoDetails.name}
+            </BCTypography>
+          </RouterLink>
+        ) : (
+          <Link
+            href={repoDetails.href}
+            target="_blank"
+            aria-label={repoDetails.label}
+            id={repoDetails.id}
+            data-test={repoDetails.id}
+          >
+            <GitHub fontSize="small" />
+            <BCTypography
+              ml={1}
+              variant="button"
+              fontWeight="medium"
+              sx={{ textDecoration: 'underline' }}
+            >
+              {repoDetails.name}
+            </BCTypography>
+          </Link>
+        )}
       </BCBox>
     </BCBox>
   )

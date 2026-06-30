@@ -25,7 +25,7 @@ import { govRoles, roles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
 import Loading from '@/components/Loading'
 import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import {
   useGetTransactionList,
   useDownloadTransactions
@@ -111,8 +111,11 @@ export const Transactions = () => {
   }, [])
 
   const shouldRenderLink = (props) => {
-    // Legacy/Standalone transactions have no detail view page
-    if (props.data.transactionType === 'StandaloneTransaction') {
+    // Legacy/Standalone and Aggregator Issuance transactions have no detail view page
+    if (
+      props.data.transactionType === 'StandaloneTransaction' ||
+      props.data.transactionType === 'AggregatorIssuance'
+    ) {
       return false
     }
     return (

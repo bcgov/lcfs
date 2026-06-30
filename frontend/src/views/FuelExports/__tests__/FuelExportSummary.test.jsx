@@ -12,7 +12,7 @@ vi.mock('react-i18next', () => ({
 
 // Mock BCGridViewer with enhanced mock to capture function calls
 let mockOnPaginationChange = vi.fn()
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
     gridKey,
     columnDefs,

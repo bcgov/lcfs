@@ -139,7 +139,8 @@ vi.mock('@/views/FuelCodes', () => ({
   AddEditFuelCode: () => (
     <div data-test="add-edit-fuel-code">Add/Edit Fuel Code</div>
   ),
-  EditFuelCode: () => <div data-test="edit-fuel-code">Edit Fuel Code</div>
+  EditFuelCode: () => <div data-test="edit-fuel-code">Edit Fuel Code</div>,
+  FuelCodeDetail: () => <div data-test="fuel-code-detail">Fuel Code Detail</div>
 }))
 
 vi.mock('@/views/Notifications/NotificationMenu', () => ({
@@ -330,7 +331,7 @@ describe('Router Configuration', () => {
 
     it('should have correct number of top-level routes', () => {
       // Public layout, Public page layout, Main layout, API docs, logout, and 404 fallback
-      expect(router.routes).toHaveLength(6)
+      expect(router.routes).toHaveLength(7)
     })
   })
 

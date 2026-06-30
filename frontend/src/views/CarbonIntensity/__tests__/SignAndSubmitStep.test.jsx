@@ -42,14 +42,23 @@ describe('SignAndSubmitStep', () => {
     )
   })
 
-  it('blocks submission when not all declarations are checked', async () => {
+  it('disables submission until all required declarations are checked', () => {
     const onSave = vi.fn()
     render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, { wrapper })
+
+    // Submit is gated on the three required declarations (ticket #4536).
+    expect(screen.getByTestId('ci-step4-submit-btn')).toBeDisabled()
     fireEvent.click(screen.getByTestId('ci-step4-submit-btn'))
-    await waitFor(() => {
-      expect(screen.getByTestId('ci-step4-decl-error')).toBeInTheDocument()
-    })
     expect(onSave).not.toHaveBeenCalled()
+
+    // Checking only some of the required declarations keeps it disabled.
+    fireEvent.click(screen.getByTestId('ci-step4-decl-1'))
+    fireEvent.click(screen.getByTestId('ci-step4-decl-2'))
+    expect(screen.getByTestId('ci-step4-submit-btn')).toBeDisabled()
+
+    // All three required declarations enable the button.
+    fireEvent.click(screen.getByTestId('ci-step4-decl-3'))
+    expect(screen.getByTestId('ci-step4-submit-btn')).toBeEnabled()
   })
 
   it('calls onSave with the correct payload when all declarations are checked', async () => {

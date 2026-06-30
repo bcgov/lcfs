@@ -5,6 +5,8 @@ import {
   RequiredHeader
 } from '@/components/BCDataGrid/components'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
+import colors from '@/themes/base/colors'
 import BCTypography from '@/components/BCTypography'
 import i18n from '@/i18n'
 
@@ -83,7 +85,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       }),
       pinned: 'left',
       maxWidth: 120,
-      minWidth: 100,
+      minWidth: 120,
       editable: false,
       suppressKeyboardEvent,
       filter: false
@@ -147,7 +149,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         params.data.fuelCodeTypeId = match.pathwayFuelCodeTypeId
         return true
       },
-      minWidth: 200
+      minWidth: 225
     },
     {
       field: 'operatingDataFrom',
@@ -161,7 +163,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
           {params.value || 'YYYY-MM-DD'}
         </BCTypography>
       ),
-      minWidth: 200
+      minWidth: 250
     },
     {
       field: 'operatingDataTo',
@@ -175,7 +177,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
           {params.value || 'YYYY-MM-DD'}
         </BCTypography>
       ),
-      minWidth: 200
+      minWidth: 230
     },
     {
       field: 'fuelCodeId',
@@ -235,17 +237,15 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       field: 'proposedCi',
       headerName: i18n.t('carbonIntensity:step2.proposedCi'),
       headerComponent: canEdit ? RequiredHeader : undefined,
-      editable: lockedOnRenewal,
+      // Proposed CI must stay editable for both New and Renewal applications
+      // (ticket #4532) — it is never carried over from the existing fuel code.
+      editable: canEdit,
       cellEditor: 'agNumberCellEditor',
       cellEditorParams: { precision: 2, showStepperButtons: false },
       type: 'numericColumn',
       cellRenderer: renderNumberPlaceholder,
-      cellStyle: (params) => {
-        const base = cellErrorStyle(params)
-        if (isRenewal(params)) return { ...base, backgroundColor: '#f5f5f5' }
-        return base
-      },
-      minWidth: 180
+      cellStyle: cellErrorStyle,
+      minWidth: 195
     },
     {
       field: 'fuelTypeId',
@@ -322,7 +322,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       cellEditorParams: { precision: 0, min: 0, showStepperButtons: false },
       type: 'numericColumn',
       cellRenderer: renderNumberPlaceholder,
-      minWidth: 240
+      minWidth: 275
     },
     {
       field: 'coproducts',
@@ -358,7 +358,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       cellEditorParams: { precision: 0, min: 0, showStepperButtons: false },
       type: 'numericColumn',
       cellRenderer: renderNumberPlaceholder,
-      minWidth: 260
+      minWidth: 300
     }
   ].map((colDef) => ({
     cellStyle: cellErrorStyle,
@@ -416,7 +416,7 @@ export const ciApplicationPathwaySummaryColDefs = ({
       field: 'fuelCodeTypeId',
       headerName: i18n.t('carbonIntensity:step2.proposedFuelCodeType'),
       valueGetter: ({ data }) => fuelCodeTypeLabel(data),
-      minWidth: 200
+      minWidth: 220
     },
     {
       field: 'operatingDataFrom',
@@ -490,6 +490,37 @@ export const ciApplicationPathwaySummaryColDefs = ({
     }
   ]
 }
+
+export const ciApplicationPathwayChangelogColDefs = ({
+  optionsData,
+  proposedFuelCodeEffectiveDate
+}) => [
+  {
+    field: 'actionType',
+    headerName: i18n.t('carbonIntensity:summary.changeAction'),
+    minWidth: 140,
+    valueGetter: ({ data }) => {
+      if (data?.actionType === 'UPDATE') {
+        return data?.updated ? 'Edited old' : 'Edited new'
+      }
+      if (data?.actionType === 'DELETE') return 'Deleted'
+      if (data?.actionType === 'CREATE') return 'Added'
+      return data?.actionType || ''
+    },
+    cellStyle: (params) => {
+      if (params.data?.actionType === 'UPDATE') {
+        return { backgroundColor: colors.alerts.warning.background }
+      }
+    }
+  },
+  ...ciApplicationPathwaySummaryColDefs({
+    optionsData,
+    proposedFuelCodeEffectiveDate
+  }).map((colDef) => ({
+    ...colDef,
+    cellStyle: (params) => changelogCellStyle(params, colDef.field)
+  }))
+]
 
 export const defaultColDef = {
   editable: false,

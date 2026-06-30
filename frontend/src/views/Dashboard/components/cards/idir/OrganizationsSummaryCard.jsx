@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Box, MenuItem, Select } from '@mui/material'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
@@ -9,6 +9,10 @@ import { useTranslation } from 'react-i18next'
 const OrganizationsSummaryCard = () => {
   const { data: organizations, isLoading } = useOrganizationNames()
   const { t } = useTranslation(['common', 'transaction'])
+  const organizationList = useMemo(
+    () => (Array.isArray(organizations) ? organizations : []),
+    [organizations]
+  )
 
   const [formattedOrgs, setFormattedOrgs] = useState([])
   const [selectedOrganization, setSelectedOrganization] = useState({
@@ -19,33 +23,39 @@ const OrganizationsSummaryCard = () => {
 
   useEffect(() => {
     if (!isLoading) {
-      const formattedOrgs = organizations.map((org) => ({
+      const formattedOrgs = organizationList.map((org) => ({
         name: org.name,
-        totalBalance: org.totalBalance,
-        reservedBalance: Math.abs(org.reservedBalance)
+        totalBalance: org.totalBalance || 0,
+        reservedBalance: Math.abs(org.reservedBalance || 0)
       }))
 
       setFormattedOrgs(formattedOrgs)
-      setAllOrgSelected()
+      setAllOrgSelected(organizationList)
     }
-  }, [organizations, isLoading])
+  }, [organizationList, isLoading])
 
   const onSelectOrganization = (event) => {
     const orgName = event.target.value
     if (orgName === t('txn:allOrganizations')) {
-      setAllOrgSelected()
+      setAllOrgSelected(organizationList)
     } else {
       const selectedOrg = formattedOrgs.find((org) => org.name === orgName)
-      setSelectedOrganization(selectedOrg)
+      setSelectedOrganization(
+        selectedOrg || {
+          name: t('txn:allOrganizations'),
+          totalBalance: 0,
+          reservedBalance: 0
+        }
+      )
     }
   }
 
-  const setAllOrgSelected = () => {
-    const totalBalance = organizations.reduce((total, org) => {
-      return total + org.totalBalance
+  const setAllOrgSelected = (orgs = organizationList) => {
+    const totalBalance = orgs.reduce((total, org) => {
+      return total + (org.totalBalance || 0)
     }, 0)
-    const reservedBalance = organizations.reduce((total, org) => {
-      return total + Math.abs(org.reservedBalance)
+    const reservedBalance = orgs.reduce((total, org) => {
+      return total + Math.abs(org.reservedBalance || 0)
     }, 0)
 
     setSelectedOrganization({

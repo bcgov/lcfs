@@ -90,7 +90,9 @@ const mockNonGovUser = { hasRoles: () => false }
 describe('OrganizationDetailsCard', () => {
   afterEach(() => {
     cleanup()
-    vi.restoreAllMocks()
+    // vitest 4: restoreAllMocks only affects vi.spyOn spies, so use
+    // resetAllMocks to return vi.fn(impl) module mocks to their defaults
+    vi.resetAllMocks()
   })
 
   it('renders core org fields', () => {

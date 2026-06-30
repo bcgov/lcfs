@@ -75,7 +75,9 @@ describe('MapComponents', () => {
     }
 
     vi.mocked(useMap).mockReturnValue(mockMap)
-    vi.mocked(Control).mockImplementation(() => mockControl)
+    vi.mocked(Control).mockImplementation(function () {
+      return mockControl
+    })
     vi.mocked(DomUtil.create).mockReturnValue(mockSection)
   })
 

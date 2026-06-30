@@ -1,5 +1,13 @@
 import React from 'react'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi
+} from 'vitest'
 import {
   cleanup,
   fireEvent,
@@ -66,7 +74,7 @@ const mockDelete = vi.fn().mockResolvedValue(undefined)
 const mockOptions = {
   data: {
     statuses: [],
-    unitsOfMeasure: [{ uomId: 1, name: 'Litres' }]
+    unitsOfMeasure: ['L']
   },
   isLoading: false
 }
@@ -94,6 +102,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
   })),
+  useGenerateCIApplicationFuelCodes: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
+    isPending: false
+  })),
   useRecordCIDecision: vi.fn(() => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
@@ -109,33 +121,42 @@ vi.mock('@/hooks/useCIApplication', () => ({
   }))
 }))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/DocumentsModellingStep',
-  () => ({
-    DocumentsModellingStep: () => <div data-test="step3-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/DocumentsModellingStep', () => ({
+  DocumentsModellingStep: () => <div data-test="step3-stub" />
+}))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/SignAndSubmitStep',
-  () => ({
-    SignAndSubmitStep: () => <div data-test="step4-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/SignAndSubmitStep', () => ({
+  SignAndSubmitStep: () => <div data-test="step4-stub" />
+}))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/GovernmentDecisionStep',
-  () => ({
-    GovernmentDecisionStep: () => <div data-test="step5-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/GovernmentDecisionStep', () => ({
+  GovernmentDecisionStep: () => <div data-test="step5-stub" />
+}))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/ProposedFuelPathwaysStep',
-  () => ({
-    ProposedFuelPathwaysStep: () => <div data-test="step2-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/ProposedFuelPathwaysStep', () => ({
+  ProposedFuelPathwaysStep: ({ readOnly }) => (
+    <div data-test="step2-stub" data-read-only={String(readOnly)} />
+  )
+}))
+
+vi.mock('@/views/CarbonIntensity/components/ApplicationSummary', () => ({
+  ApplicationSummary: ({ canEditPathways }) => {
+    const [editing, setEditing] = React.useState(false)
+    return (
+      <div data-test="summary-stub">
+        {canEditPathways && (
+          <button
+            data-test="summary-pathways-edit"
+            onClick={() => setEditing(true)}
+          >
+            edit pathways
+          </button>
+        )}
+        {editing && <div data-test="step2-stub" data-read-only="false" />}
+      </div>
+    )
+  }
+}))
 
 // Stub the heavy step component so we can drive its props directly.
 vi.mock(
@@ -150,7 +171,7 @@ vi.mock(
             onSave({
               facilityCountry: 'Argentina',
               facilityNameplateCapacity: 1000,
-              facilityNameplateCapacityUnitId: 1
+              facilityNameplateCapacityUnit: 'L'
             })
           }
         >
@@ -318,5 +339,30 @@ describe('EditViewCIApplication', () => {
       ROUTES.CI_APPLICATIONS.LIST,
       expect.any(Object)
     )
+  })
+
+  it('enables supplemental pathway editing for a requested Submitted application', async () => {
+    mockParams = { ciApplicationId: '10' }
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Submitted' },
+        pathwaySupplementalEditEnabled: true,
+        pathwayChangesRequestedAt: '2026-06-10T10:00:00Z',
+        pathways: []
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, { wrapper })
+
+    fireEvent.click(await screen.findByTestId('summary-pathways-edit'))
+    await waitFor(() => {
+      expect(screen.getByTestId('step2-stub')).toHaveAttribute(
+        'data-read-only',
+        'false'
+      )
+    })
   })
 })

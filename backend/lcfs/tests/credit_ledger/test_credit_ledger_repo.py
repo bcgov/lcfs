@@ -24,12 +24,14 @@ def repo(mock_session: MagicMock) -> CreditLedgerRepository:
 async def test_get_rows_default_sort(
     repo: CreditLedgerRepository, mock_session: MagicMock
 ):
+    # Row has _wf_total for the window-function count; repo strips it and returns
+    # 2-tuples so callers can still unpack as (ledger_view, version).
     fake_row = MagicMock()
+    fake_row._wf_total = 1
     execute_result = MagicMock()
     execute_result.all.return_value = [fake_row]
 
     mock_session.execute.return_value = execute_result
-    mock_session.scalar.return_value = 1
 
     rows, total = await repo.get_rows_paginated(
         offset=0,
@@ -38,23 +40,25 @@ async def test_get_rows_default_sort(
         sort_orders=[],
     )
 
-    assert rows == [fake_row]
+    assert len(rows) == 1
+    assert rows[0] == (fake_row[0], fake_row[1])
     assert total == 1
-
+    # Single execute; scalar no longer called (count from window function)
     mock_session.execute.assert_called_once()
-    mock_session.scalar.assert_called_once()
+    mock_session.scalar.assert_not_called()
 
 
 @pytest.mark.anyio
 async def test_get_rows_with_sort_and_paging(
     repo: CreditLedgerRepository, mock_session: MagicMock
 ):
-    fake_rows = [MagicMock(), MagicMock()]
+    row1, row2 = MagicMock(), MagicMock()
+    row1._wf_total = 2
+    row2._wf_total = 2
     execute_result = MagicMock()
-    execute_result.all.return_value = fake_rows
+    execute_result.all.return_value = [row1, row2]
 
     mock_session.execute.return_value = execute_result
-    mock_session.scalar.return_value = 2
 
     sort_orders = [SortOrder(field="update_date", direction="desc")]
 
@@ -65,11 +69,12 @@ async def test_get_rows_with_sort_and_paging(
         sort_orders=sort_orders,
     )
 
-    assert rows == fake_rows
+    assert len(rows) == 2
+    assert rows[0] == (row1[0], row1[1])
+    assert rows[1] == (row2[0], row2[1])
     assert total == 2
-
     mock_session.execute.assert_called_once()
-    mock_session.scalar.assert_called_once()
+    mock_session.scalar.assert_not_called()
 
 
 @pytest.mark.anyio

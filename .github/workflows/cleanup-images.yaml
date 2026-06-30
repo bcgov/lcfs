@@ -1,93 +1,152 @@
-name: Scheduled cleanup unused images
+name: Cleanup Unused/Expired Images and Build Configs
+
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 0"
-# At 00:00 on Sunday.
+    # Run at 1am PST (UTC-8) every Thursday → 9am UTC
+    - cron: "0 9 * * 4"
+
+permissions:
+  contents: read
+
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
 
 jobs:
-  cleanup-images:
+  # ── Clean up images in dev / test / prod namespaces (run in parallel) ────────
+  cleanup-dev:
+    uses: ./.github/workflows/cleanup-images-template.yaml
+    with:
+      environment: dev
+    secrets: inherit
+
+  cleanup-test:
+    uses: ./.github/workflows/cleanup-images-template.yaml
+    with:
+      environment: test
+    secrets: inherit
+
+  cleanup-prod:
+    uses: ./.github/workflows/cleanup-images-template.yaml
+    with:
+      environment: prod
+    secrets: inherit
+
+  # ── Clean up tools namespace after all env cleanups have reported kept tags ──
+  cleanup-tools:
+    needs: [cleanup-dev, cleanup-test, cleanup-prod]
     runs-on: ubuntu-latest
+
     steps:
-      - name: Log in to Openshift
-        uses: redhat-actions/oc-login@v1.3
+      - name: Check out repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Restore oc CLI from cache
+        id: cache
+        uses: actions/cache@v5.0.4
         with:
-          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
-          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
-          insecure_skip_tls_verify: true
-          namespace: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
+          path: /usr/local/bin/oc
+          key: oc-cli-${{ runner.os }}
 
-      - name: cleanup-images
-        continue-on-error: true
+      - name: Install OpenShift CLI (if not cached)
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
+          curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz
+          tar -xvf openshift-client-linux.tar.gz
+          sudo mv oc /usr/local/bin/
+          oc version --client
 
-          #!/bin/bash
+      - name: Confirm OpenShift CLI is Available
+        run: oc version --client
 
-          # This script will delete all image tags for both frontend and backend except the one being referenced
+      - name: Log in to OpenShift
+        run: |
+          oc login --server="${{ secrets.OPENSHIFT_SERVER }}" --token="${{ secrets.OPENSHIFT_TOKEN }}" --insecure-skip-tls-verify=true
+          oc project "${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools"
 
-          # The sample of search_string is lcfs-backend:1.0.0-20240403221450
-          # The sample of oc_output could include
-            # lcfs-backend:1.0.0-20240403210040
-            # lcfs-backend:1.0.0-20240403211844
-            # lcfs-backend:1.0.0-20240403221450
-          # The script will remove the first two image tags
+      - name: Cleanup unused images in tools namespace
+        run: |
+          namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools"
 
-          delete_resources() {
-              local search_string="$1"
-              local oc_output="$2"
-              local namepace="$3"
-              
-              # Check if the oc_output is empty
-              if [ -z "$oc_output" ]; then
-                  echo "Error: No output provided."
-                  return 1
+          # Union of all kept tags reported by the three environment jobs
+          all_backend_kept="${{ needs.cleanup-dev.outputs.lcfs-backend-tags-to-keep }},${{ needs.cleanup-test.outputs.lcfs-backend-tags-to-keep }},${{ needs.cleanup-prod.outputs.lcfs-backend-tags-to-keep }}"
+          all_frontend_kept="${{ needs.cleanup-dev.outputs.lcfs-frontend-tags-to-keep }},${{ needs.cleanup-test.outputs.lcfs-frontend-tags-to-keep }},${{ needs.cleanup-prod.outputs.lcfs-frontend-tags-to-keep }}"
+
+          # Deduplicate
+          all_backend_kept=$(echo "$all_backend_kept" | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
+          all_frontend_kept=$(echo "$all_frontend_kept" | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
+
+          echo "Kept lcfs-backend tags (union):  $all_backend_kept"
+          echo "Kept lcfs-frontend tags (union): $all_frontend_kept"
+
+          # ── lcfs-backend ─────────────────────────────────────────────────────
+          echo "=== Cleaning up lcfs-backend in tools namespace ==="
+          backend_all_tags=$(oc get is lcfs-backend -n "$namespace" \
+            -o jsonpath='{.status.tags[*].tag}' 2>/dev/null || echo "")
+          for tag in $backend_all_tags; do
+            if echo "$all_backend_kept" | tr ',' '\n' | grep -qx "$tag"; then
+              echo "Keeping  lcfs-backend:$tag in tools"
+            else
+              echo "Deleting lcfs-backend:$tag from tools"
+              oc delete istag "lcfs-backend:$tag" -n "$namespace" --ignore-not-found=true
+            fi
+          done
+
+          # ── lcfs-frontend ────────────────────────────────────────────────────
+          echo "=== Cleaning up lcfs-frontend in tools namespace ==="
+          frontend_all_tags=$(oc get is lcfs-frontend -n "$namespace" \
+            -o jsonpath='{.status.tags[*].tag}' 2>/dev/null || echo "")
+          for tag in $frontend_all_tags; do
+            if echo "$all_frontend_kept" | tr ',' '\n' | grep -qx "$tag"; then
+              echo "Keeping  lcfs-frontend:$tag in tools"
+            else
+              echo "Deleting lcfs-frontend:$tag from tools"
+              oc delete istag "lcfs-frontend:$tag" -n "$namespace" --ignore-not-found=true
+            fi
+          done
+
+      - name: Cleanup expired builds in tools namespace
+        run: |
+          namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools"
+          current_time=$(date +%s)
+          expiration_seconds=$((7 * 86400))
+
+          echo "=== Deleting expired builds (not Running, older than 7 days) ==="
+          oc get builds -n "$namespace" -o json | \
+            jq -r '.items[] | select(.status.phase != "Running") | "\(.metadata.name)|\(.metadata.creationTimestamp)"' | \
+            while IFS='|' read -r build_name creation_time; do
+              creation_timestamp=$(date -d "$creation_time" +%s)
+              age=$((current_time - creation_timestamp))
+              if [ $age -gt $expiration_seconds ]; then
+                echo "Deleting expired build: $build_name (age: $((age / 86400)) days)"
+                oc delete build "$build_name" -n "$namespace" --ignore-not-found=true
               fi
+            done
 
-              # Loop through each line in the oc output
-              while IFS= read -r line; do
-                  # Check if the line contains the search string
-                  if [[ "$line" != *"$search_string"* ]]; then
-                      # Extract the name of the resource from the line
-                      resource_name=$(echo "$line" | awk '{print $1}')
-                      # Delete the resource
-                      oc -n "$namepace" delete imagetag/"$resource_name"
+      - name: Cleanup expired build configs in tools namespace
+        run: |
+          namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools"
+          current_time=$(date +%s)
+          expiration_seconds=$((7 * 86400))
+
+          echo "=== Deleting expired build configs (no running builds, older than 7 days) ==="
+          oc get buildconfigs -n "$namespace" -o json | \
+            jq -r '.items[].metadata.name' | \
+            while read -r bc_name; do
+              running_builds=$(oc get builds -n "$namespace" -l "buildconfig=$bc_name" \
+                -o json 2>/dev/null | \
+                jq '[.items[] | select(.status.phase == "Running")] | length')
+
+              if [ "${running_builds}" = "0" ]; then
+                bc_creation_time=$(oc get buildconfig "$bc_name" -n "$namespace" \
+                  -o jsonpath='{.metadata.creationTimestamp}' 2>/dev/null || echo "")
+                if [ -n "$bc_creation_time" ]; then
+                  bc_timestamp=$(date -d "$bc_creation_time" +%s)
+                  bc_age=$((current_time - bc_timestamp))
+                  if [ $bc_age -gt $expiration_seconds ]; then
+                    echo "Deleting expired build config: $bc_name (age: $((bc_age / 86400)) days)"
+                    oc delete buildconfig "$bc_name" -n "$namespace" --ignore-not-found=true
                   fi
-              done <<< "$oc_output"
-          }
-
-          # Define the search string
-          search_string=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev describe deployment/lcfs-backend-dev | grep Image | awk -F '/' '{print $NF}')
-          # Run the oc command and store the output in a variable
-          oc_output=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev get imagetags | grep lcfs-backend | awk '{print $1}')
-          namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev"
-          echo "Will delete all lcfs-bakcend image tags in ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev except $search_string"
-          delete_resources "$search_string" "$oc_output" "$namespace"
-
-          # Define the search string
-          search_string=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev describe deployment/lcfs-frontend-dev | grep Image | awk -F '/' '{print $NF}')
-          # Run the oc command and store the output in a variable
-          oc_output=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev get imagetags | grep lcfs-frontend | awk '{print $1}')
-          echo "Will delete all lcfs-frontend image tags in ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev except $search_string"
-          namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev"
-          delete_resources "$search_string" "$oc_output" "$namespace"
-
-          echo "will delete images in tools env"
-          frontendimages=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-frontend | awk '{print $1}')
-          if [ ! -z "$frontendimages" ]; then
-            oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-frontend | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete imagetag 
-          fi
-
-          backendimages=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-backend | awk '{print $1}')
-          if [ ! -z "$backendimages" ]; then
-            oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-backend | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete imagetag
-          fi
-
-          echo "Cleaning up Completed pods on Dev except CrunchyDB pods"
-          oc -n  ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev get pods | grep Completed | grep -v crunchy | awk '{print $1}' | xargs oc -n  ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev delete pod || true
-
-          echo "Cleaning up Complete and Failed builds on Tools"
-          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get builds | grep Complete | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete build || true
-          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get builds | grep Failed | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete build || true
-
-          echo "Cleaning up buildconfigs on Tools"
-          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get buildconfig | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete buildconfig || true
+                fi
+              fi
+            done

@@ -6,7 +6,6 @@ import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import colors from '@/themes/base/colors'
 
 import {
   apiToRow,
@@ -43,7 +42,8 @@ export const ProposedFuelPathwaysStep = ({
   onDelete,
   onValidationError,
   isSaving = false,
-  readOnly = false
+  readOnly = false,
+  secondaryAction = null
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const gridRef = useRef(null)
@@ -75,11 +75,10 @@ export const ProposedFuelPathwaysStep = ({
 
   const onCellValueChanged = useCallback(
     (params) => {
-      setRowData((prev) =>
-        prev.map((row) =>
-          row.id === params.data.id ? { ...params.data } : row
-        )
-      )
+      // ag-grid owns the row data (rows are added/removed via transactions);
+      // mirroring edits back into React state re-syncs the grid to a stale
+      // rowData prop, which drops transaction-added rows. Only the per-row
+      // error state needs updating here.
       setErrors((prev) => {
         if (!prev[params.data.id]) return prev
         const applicationTypes = optionsData?.pathwayApplicationTypes || []
@@ -97,35 +96,28 @@ export const ProposedFuelPathwaysStep = ({
     [optionsData]
   )
 
-  const onAction = useCallback(async (action, params) => {
+  // ag-grid is the source of truth for rows; BCGridEditor applies the returned
+  // transaction and the grid is read back via collectGridRows() on save. State
+  // is NOT mirrored here — doing so adds each row twice (state + transaction).
+  const onAction = useCallback((action, params) => {
     switch (action) {
-      case 'add': {
-        const newRow = createEmptyRow()
-        // Mirror the grid transaction into React state — otherwise the next
-        // re-render makes ag-grid re-sync to the stale rowData prop and the
-        // newly-added row vanishes from the grid.
-        setRowData((prev) => [...prev, newRow])
-        return { add: [newRow] }
-      }
-      case 'duplicate': {
-        const original = params.data
-        const copy = { ...original, id: uuid(), pathwayId: null }
-        setRowData((prev) => [...prev, copy])
-        return { add: [copy] }
-      }
-      case 'delete':
-        params.api.applyTransaction({ remove: [params.data] })
-        setRowData((prev) => prev.filter((r) => r.id !== params.data.id))
+      case 'add':
+        return { add: [createEmptyRow()] }
+      case 'duplicate':
+        return { add: [{ ...params.data, id: uuid(), pathwayId: null }] }
+      case 'delete': {
+        // Remove via the controlled rowData prop (read the live grid rows, then
+        // drop the deleted one) rather than a bare transaction. This keeps the
+        // grid, the rowData prop, and the autoHeight calc in sync — a
+        // transaction-only remove leaves the grid sized for the old row count.
+        const rows = []
+        params.api.forEachNode((node) => rows.push(node.data))
+        setRowData(rows.filter((r) => r.id !== params.data.id))
         return null
+      }
       default:
         return null
     }
-  }, [])
-
-  const handleAddRow = useCallback(() => {
-    const newRow = createEmptyRow()
-    setRowData((prev) => [...prev, newRow])
-    gridRef.current?.api?.applyTransaction({ add: [newRow] })
   }, [])
 
   const collectGridRows = () => {
@@ -201,10 +193,6 @@ export const ProposedFuelPathwaysStep = ({
 
   return (
     <Box>
-      <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
-        {t('carbonIntensity:step2.title')}
-      </BCTypography>
-
       <BCGridEditor
         gridRef={gridRef}
         columnDefs={columnDefs}
@@ -213,7 +201,6 @@ export const ProposedFuelPathwaysStep = ({
         onCellValueChanged={onCellValueChanged}
         onAction={onAction}
         showAddRowsButton={canEdit}
-        onAddRows={handleAddRow}
         context={{ errors }}
         showMandatoryColumns={canEdit}
         getRowId={(params) => params.data.id}
@@ -223,7 +210,11 @@ export const ProposedFuelPathwaysStep = ({
         <BCTypography variant="subtitle2" sx={{ pb: 1 }}>
           {t('carbonIntensity:step2.descriptionLabel')}
         </BCTypography>
-        <BCTypography variant="caption" color="text.secondary" sx={{ pb: 1, display: 'block' }}>
+        <BCTypography
+          variant="caption"
+          color="text.secondary"
+          sx={{ pb: 1, display: 'block' }}
+        >
           {t('carbonIntensity:step2.descriptionHelp')}
         </BCTypography>
         <TextField
@@ -246,7 +237,9 @@ export const ProposedFuelPathwaysStep = ({
           onClick={handleSave}
           disabled={readOnly || isSaving}
         >
-          {t('carbonIntensity:step2.saveAndProceed')}
+          {ciApplication?.status?.status === 'Submitted'
+            ? t('carbonIntensity:step2.saveSupplementalChanges')
+            : t('carbonIntensity:step2.saveAndProceed')}
         </BCButton>
         {ciApplication?.ciApplicationId && onDelete && (
           <BCButton
@@ -260,6 +253,7 @@ export const ProposedFuelPathwaysStep = ({
             {t('carbonIntensity:step1.deleteDraft')}
           </BCButton>
         )}
+        {secondaryAction}
       </Stack>
     </Box>
   )

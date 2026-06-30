@@ -1,7 +1,7 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { QueryOptions } from './types'
+import type { PaginationParams, QueryOptions } from './types'
 
 const QUERY_KEYS = {
   options: ['ci-application-options'],
@@ -9,33 +9,41 @@ const QUERY_KEYS = {
   detail: (id: any) => ['ci-application', String(id)]
 }
 
-const updateCIApplicationListCaches = (queryClient: any, updatedCIApplication: any) => {
+const updateCIApplicationListCaches = (
+  queryClient: any,
+  updatedCIApplication: any
+) => {
   if (!updatedCIApplication?.ciApplicationId) return
 
-  queryClient.setQueriesData({ queryKey: ['ci-applications'] }, (current: any) => {
-    if (!current?.ciApplications) return current
+  queryClient.setQueriesData(
+    { queryKey: ['ci-applications'] },
+    (current: any) => {
+      if (!current?.ciApplications) return current
 
-    return {
-      ...current,
-      ciApplications: current.ciApplications.map((item: any) =>
-        item.ciApplicationId === updatedCIApplication.ciApplicationId
-          ? {
-              ...item,
-              assignedAnalyst:
-                updatedCIApplication.assignedAnalyst ?? item.assignedAnalyst,
-              preliminaryRiskAssessment:
-                updatedCIApplication.preliminaryRiskAssessment ??
-                item.preliminaryRiskAssessment,
-              priorityScore:
-                updatedCIApplication.priorityScore ?? item.priorityScore
-            }
-          : item
-      )
+      return {
+        ...current,
+        ciApplications: current.ciApplications.map((item: any) =>
+          item.ciApplicationId === updatedCIApplication.ciApplicationId
+            ? {
+                ...item,
+                assignedAnalyst:
+                  updatedCIApplication.assignedAnalyst ?? item.assignedAnalyst,
+                preliminaryRiskAssessment:
+                  updatedCIApplication.preliminaryRiskAssessment ??
+                  item.preliminaryRiskAssessment,
+                priorityScore:
+                  updatedCIApplication.priorityScore ?? item.priorityScore
+              }
+            : item
+        )
+      }
     }
-  })
+  )
 }
 
-export const useCIApplicationOptions = (options: QueryOptions<unknown> = {}) => {
+export const useCIApplicationOptions = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: QUERY_KEYS.options,
@@ -47,15 +55,20 @@ export const useCIApplicationOptions = (options: QueryOptions<unknown> = {}) => 
   })
 }
 
-export const useCIApplicationStatuses = (options: QueryOptions<unknown> = {}) => {
+export const useCIApplicationStatuses = (
+  options: QueryOptions<unknown> = {}
+) => {
   const result = useCIApplicationOptions(options)
   return {
     ...result,
-    data: result.data?.statuses ?? []
+    data: (result.data as any)?.statuses ?? []
   }
 }
 
-export const useGetCIApplications = ({ page = 1, size = 10, sortOrders = [], filters = [] }: PaginationParams = {}, options: QueryOptions<unknown>) => {
+export const useGetCIApplications = (
+  { page = 1, size = 10, sortOrders = [], filters = [] }: PaginationParams = {},
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: QUERY_KEYS.list({ page, size, sortOrders, filters }),
@@ -74,7 +87,10 @@ export const useGetCIApplications = ({ page = 1, size = 10, sortOrders = [], fil
   })
 }
 
-export const useGetCIApplication = (ciApplicationId: number | string | undefined | null, options: QueryOptions<unknown>) => {
+export const useGetCIApplication = (
+  ciApplicationId: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   return useQuery({
     enabled: !!ciApplicationId,
@@ -110,7 +126,9 @@ export const useCreateCIApplication = () => {
   })
 }
 
-export const useUpdateCIApplicationStep1 = (ciApplicationId: number | string | undefined | null) => {
+export const useUpdateCIApplicationStep1 = (
+  ciApplicationId: number | string | undefined | null
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
@@ -132,7 +150,9 @@ export const useUpdateCIApplicationStep1 = (ciApplicationId: number | string | u
   })
 }
 
-export const useUpdateCIApplicationStep2 = (ciApplicationId: number | string | undefined | null) => {
+export const useUpdateCIApplicationStep2 = (
+  ciApplicationId: number | string | undefined | null
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
@@ -154,7 +174,9 @@ export const useUpdateCIApplicationStep2 = (ciApplicationId: number | string | u
   })
 }
 
-export const useUpdateCIApplicationStep3 = (ciApplicationId: number | string | undefined | null) => {
+export const useUpdateCIApplicationStep3 = (
+  ciApplicationId: number | string | undefined | null
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
@@ -176,7 +198,9 @@ export const useUpdateCIApplicationStep3 = (ciApplicationId: number | string | u
   })
 }
 
-export const useSubmitCIApplication = (ciApplicationId: number | string | undefined | null) => {
+export const useSubmitCIApplication = (
+  ciApplicationId: number | string | undefined | null
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
@@ -198,7 +222,9 @@ export const useSubmitCIApplication = (ciApplicationId: number | string | undefi
   })
 }
 
-export const useRecordCIDecision = (ciApplicationId: number | string | undefined | null) => {
+export const useRecordCIDecision = (
+  ciApplicationId: number | string | undefined | null
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
@@ -222,7 +248,9 @@ export const useRecordCIDecision = (ciApplicationId: number | string | undefined
   })
 }
 
-export const useGetCIApplicationAnalysts = (options: QueryOptions<unknown>) => {
+export const useGetCIApplicationAnalysts = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['ci-application-analysts'],
@@ -233,16 +261,18 @@ export const useGetCIApplicationAnalysts = (options: QueryOptions<unknown>) => {
   })
 }
 
-export const useAssignCIApplicationAnalyst = (ciApplicationId: number | string | undefined | null) => {
+export const useAssignCIApplicationAnalyst = (
+  ciApplicationId: number | string | undefined | null
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (assignedAnalystId) => {
+    mutationFn: async (assignedAnalystId: any) => {
       return (
         await client.put(
           apiRoutes.assignCIApplicationAnalyst.replace(
             ':ciApplicationId',
-            ciApplicationId
+            String(ciApplicationId ?? '')
           ),
           { assignedAnalystId }
         )
@@ -256,16 +286,18 @@ export const useAssignCIApplicationAnalyst = (ciApplicationId: number | string |
   })
 }
 
-export const useCompleteCIApplicationVerification1 = (ciApplicationId: number | string | undefined | null) => {
+export const useCompleteCIApplicationVerification1 = (
+  ciApplicationId: number | string | undefined | null
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ preliminaryRiskAssessment, priorityScore }) => {
+    mutationFn: async ({ preliminaryRiskAssessment, priorityScore }: any) => {
       return (
         await client.post(
           apiRoutes.completeCIApplicationVerification1.replace(
             ':ciApplicationId',
-            ciApplicationId
+            String(ciApplicationId ?? '')
           ),
           { preliminaryRiskAssessment, priorityScore }
         )
@@ -278,16 +310,21 @@ export const useCompleteCIApplicationVerification1 = (ciApplicationId: number | 
   })
 }
 
-export const useCompleteCIApplicationVerification2 = (ciApplicationId: number | string | undefined | null) => {
+export const useCompleteCIApplicationVerification2 = (
+  ciApplicationId: number | string | undefined | null
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ preliminaryRiskAssessment, priorityScore } = {}) => {
+    mutationFn: async ({
+      preliminaryRiskAssessment,
+      priorityScore
+    }: any = {}) => {
       return (
         await client.post(
           apiRoutes.completeCIApplicationVerification2.replace(
             ':ciApplicationId',
-            ciApplicationId
+            String(ciApplicationId ?? '')
           ),
           { preliminaryRiskAssessment, priorityScore }
         )
@@ -300,7 +337,9 @@ export const useCompleteCIApplicationVerification2 = (ciApplicationId: number | 
   })
 }
 
-export const useRecommendCIApplication = (ciApplicationId: number | string | undefined | null) => {
+export const useRecommendCIApplication = (
+  ciApplicationId: number | string | undefined | null
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
@@ -309,7 +348,55 @@ export const useRecommendCIApplication = (ciApplicationId: number | string | und
         await client.post(
           apiRoutes.recommendCIApplication.replace(
             ':ciApplicationId',
-            ciApplicationId
+            String(ciApplicationId ?? '')
+          ),
+          {}
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useRequestCIApplicationPathwayChanges = (
+  ciApplicationId: number | string | undefined | null
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      return (
+        await client.post(
+          apiRoutes.requestCIApplicationPathwayChanges.replace(
+            ':ciApplicationId',
+            String(ciApplicationId ?? '')
+          ),
+          {}
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useGenerateCIApplicationFuelCodes = (
+  ciApplicationId: number | string | undefined | null
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      return (
+        await client.post(
+          apiRoutes.generateCIApplicationFuelCodes.replace(
+            ':ciApplicationId',
+            String(ciApplicationId ?? '')
           )
         )
       ).data
@@ -317,6 +404,37 @@ export const useRecommendCIApplication = (ciApplicationId: number | string | und
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
       queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+      updateCIApplicationListCaches(queryClient, data)
+    }
+  })
+}
+
+export const useUpdateCIApplicationGeneratedFuelCode = (
+  ciApplicationId: number | string | undefined | null
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      generatedFuelCodeId,
+      payload
+    }: {
+      generatedFuelCodeId: string
+      payload: any
+    }) => {
+      return (
+        await client.put(
+          apiRoutes.updateCIApplicationGeneratedFuelCode
+            .replace(':ciApplicationId', String(ciApplicationId ?? ''))
+            .replace(':generatedFuelCodeId', String(generatedFuelCodeId)),
+          payload
+        )
+      ).data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.detail(ciApplicationId)
+      })
     }
   })
 }

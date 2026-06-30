@@ -5,7 +5,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useForm, FormProvider } from 'react-hook-form'
-import { BCFormAddressAutocomplete } from '../BCFormAddressAutocomplete'
+import {
+  addressHasPostalCode,
+  BCFormAddressAutocomplete
+} from '../BCFormAddressAutocomplete'
 import { AppWrapper, getByDataTest } from '@/tests/utils'
 
 // Mock BCTypography
@@ -85,6 +88,29 @@ describe('BCFormAddressAutocomplete', () => {
     name: 'testAddress',
     label: 'Test Address'
   }
+
+  describe('Postal code detection', () => {
+    it('recognizes Canadian postal codes in address strings', () => {
+      expect(addressHasPostalCode('123 Test St, Vancouver, BC V6B 1A1')).toBe(
+        true
+      )
+      expect(addressHasPostalCode('123 Test St, Vancouver, BC V6B1A1')).toBe(
+        true
+      )
+      expect(
+        addressHasPostalCode({
+          fullAddress: '123 Test St, Vancouver, BC',
+          postalCode: 'V6B 1A1'
+        })
+      ).toBe(true)
+    })
+
+    it('does not treat addresses without postal codes as complete', () => {
+      expect(addressHasPostalCode('123 Test St, Vancouver, BC')).toBe(false)
+      expect(addressHasPostalCode('')).toBe(false)
+      expect(addressHasPostalCode(undefined)).toBe(false)
+    })
+  })
 
   const renderBCFormAddressAutocomplete = (props = {}, formDefaults = {}) => {
     const finalDefaults = { [props.name || defaultProps.name]: '', ...formDefaults }

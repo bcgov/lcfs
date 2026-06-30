@@ -30,11 +30,11 @@ class CreditLedgerRepository:
         conditions: List[any],
         sort_orders: List[any],
     ) -> tuple[List[tuple], int]:
-        # Base query - join with compliance_report to get version for ComplianceReport transactions
         stmt = (
             select(
                 CreditLedgerView,
                 ComplianceReport.version.label("compliance_report_version"),
+                func.count().over().label("_wf_total"),
             )
             .outerjoin(
                 ComplianceReport,
@@ -45,23 +45,17 @@ class CreditLedgerRepository:
                 ),
             )
             .where(and_(*conditions))
+            .order_by(CreditLedgerView.update_date.desc())
+            .offset(offset)
+            .limit(limit)
         )
-
-        # Always sort by update_date DESC - sorting is not allowed on credit ledger
-        stmt = stmt.order_by(CreditLedgerView.update_date.desc())
-
-        # Count before pagination
-        count_stmt = select(func.count()).select_from(
-            select(CreditLedgerView).where(and_(*conditions)).subquery()
-        )
-        total = await self.db.scalar(count_stmt)
-
-        # Pagination
-        stmt = stmt.offset(offset).limit(limit)
 
         result = await self.db.execute(stmt)
-        rows = result.all()
-        return rows, total or 0
+        all_rows = result.all()
+        total = all_rows[0]._wf_total if all_rows else 0
+        # Strip _wf_total so callers can still unpack as (ledger_view, version)
+        rows = [(row[0], row[1]) for row in all_rows]
+        return rows, total
 
     @repo_handler
     async def get_distinct_years(

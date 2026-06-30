@@ -4,13 +4,17 @@ from sqlalchemy import (
     String,
     Text,
     Date,
+    Enum,
+    Boolean,
     ForeignKey,
     Table,
     TIMESTAMP,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, Versioning
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 
 # Association table linking CI applications to uploaded documents
 ci_application_document_association = Table(
@@ -125,10 +129,9 @@ class CIApplication(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Annual nameplate capacity of the fuel production facility",
     )
-    facility_nameplate_capacity_unit_id = Column(
-        Integer,
-        ForeignKey("unit_of_measure.uom_id"),
-        nullable=False,
+    facility_nameplate_capacity_unit = Column(
+        Enum(QuantityUnitsEnum),
+        nullable=True,
         comment="Unit of measure for the facility nameplate capacity",
     )
 
@@ -154,6 +157,28 @@ class CIApplication(BaseModel, Auditable, Versioning):
         Text,
         nullable=True,
         comment="Free-text description of the CI pathway",
+    )
+    pathway_supplemental_edit_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="True when supplemental edits are enabled for CI pathway records.",
+    )
+    pathway_changes_requested_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="UTC date and time supplemental pathway editing was requested.",
+    )
+    pathway_changes_requested_by = Column(
+        String(500),
+        nullable=True,
+        comment="Username of the IDIR user who requested pathway changes.",
+    )
+    generated_fuel_codes = Column(
+        JSONB,
+        nullable=True,
+        comment="Draft fuel code rows generated from CI pathways for internal review.",
     )
     supporting_document_other = Column(
         String(1000),
@@ -276,10 +301,6 @@ class CIApplication(BaseModel, Auditable, Versioning):
     assigned_analyst = relationship(
         "UserProfile",
         foreign_keys=[assigned_analyst_id],
-        lazy="selectin",
-    )
-    facility_nameplate_capacity_unit = relationship(
-        "UnitOfMeasure",
         lazy="selectin",
     )
     assigned_analyst = relationship(

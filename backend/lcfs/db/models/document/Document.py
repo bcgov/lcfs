@@ -17,6 +17,9 @@ from lcfs.db.models.compliance.ChargingSite import (
 from lcfs.db.models.ci_application.CIApplication import (
     ci_application_document_association,
 )
+from lcfs.db.models.comment.InternalComment import (
+    internal_comment_document_association,
+)
 
 
 class Document(BaseModel, Auditable):
@@ -63,5 +66,10 @@ class Document(BaseModel, Auditable):
     ci_applications = relationship(
         "CIApplication",
         secondary=ci_application_document_association,
+        back_populates="documents",
+    )
+    internal_comments = relationship(
+        "InternalComment",
+        secondary=internal_comment_document_association,
         back_populates="documents",
     )

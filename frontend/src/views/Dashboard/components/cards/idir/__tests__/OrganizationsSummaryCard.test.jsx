@@ -161,6 +161,19 @@ describe('OrganizationsSummaryCard', () => {
     expect(screen.queryByText('Org A')).not.toBeInTheDocument()
   })
 
+  it('handles undefined organizations data', () => {
+    useOrganizationNames.mockReturnValue({
+      data: undefined,
+      isLoading: false
+    })
+
+    render(<OrganizationsSummaryCard />, { wrapper })
+
+    expect(screen.getAllByText('txn:allOrganizations')).toHaveLength(2)
+    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(screen.getByText('(0 in reserve)')).toBeInTheDocument()
+  })
+
   it('processes organizations data when useEffect dependency changes', async () => {
     const { rerender } = render(<OrganizationsSummaryCard />, { wrapper })
 

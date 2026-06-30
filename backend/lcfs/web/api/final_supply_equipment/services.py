@@ -557,12 +557,13 @@ class FinalSupplyEquipmentServices:
             organization_id
         )
 
-        total_kwh_usage = 0
-        if report.compliance_report_group_uuid:
-            total_kwh_usage = await self.repo.get_total_kwh_usage_for_report_group(
-                report.compliance_report_group_uuid,
-                only_active=(mode == "summary"),
-            )
+        # Total kWh must be summed over the same rows the table/Excel export
+        # show, so it is derived from the same view and filters as the list
+        # query below (not a separate group-level aggregate, which could count
+        # a different effective row set and diverge from the rows).
+        total_kwh_usage = await self.repo.get_total_kwh_usage_for_report(
+            organization_id, report.compliance_report_id, mode
+        )
 
         data, total = await self.repo.get_fse_reporting_list_paginated(
             organization_id, pagination, report.compliance_report_id, mode

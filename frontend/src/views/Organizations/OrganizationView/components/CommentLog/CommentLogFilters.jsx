@@ -1,0 +1,258 @@
+import { useId, useMemo, useRef, useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Autocomplete, Box, InputAdornment, TextField } from '@mui/material'
+import SearchIcon from '@mui/icons-material/Search'
+import BCTypography from '@/components/BCTypography'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
+import { useDebounce } from '@/utils/debounce'
+
+import { FilterToolbar } from '@/components/FilterToolbar'
+
+const buildOptions = (values) =>
+  values.map((v) => ({ label: String(v), value: v }))
+
+/**
+ * Filter bar for the organization Comment Log.
+ */
+export const CommentLogFilters = ({
+  filters,
+  setFilter,
+  clearFilters,
+  categories,
+  years
+}) => {
+  const { t } = useTranslation(['internalComment'])
+  const searchId = useId()
+
+  const [localSearch, setLocalSearch] = useState(filters.search)
+  const debouncedSearch = useDebounce(localSearch, 300)
+
+  // Sync local input when filter is cleared externally (e.g. "Clear all")
+  useEffect(() => {
+    setLocalSearch(filters.search)
+  }, [filters.search])
+
+  // Keep the latest setFilter in a ref so the commit effect below depends only
+  // on the debounced search value — not on setFilter's identity. setFilter is
+  // recreated whenever filters change (it closes over `filters`); depending on
+  // it caused "Clear all filters" to re-fire this effect with the still-stale
+  // debounced value and immediately re-apply the search the user just cleared.
+  const setFilterRef = useRef(setFilter)
+  useEffect(() => {
+    setFilterRef.current = setFilter
+  }, [setFilter])
+
+  // Commit the debounced value only when the user's input actually changes.
+  // Skip the initial mount so a deep-linked search/page isn't reset.
+  const didMountSearch = useRef(false)
+  useEffect(() => {
+    if (!didMountSearch.current) {
+      didMountSearch.current = true
+      return
+    }
+    setFilterRef.current('search', debouncedSearch)
+  }, [debouncedSearch])
+
+  const categoryOptions = useMemo(() => buildOptions(categories), [categories])
+  const yearOptions = useMemo(() => buildOptions(years), [years])
+
+  const pills = useMemo(() => {
+    const out = []
+    const push = (id, key, label, value, onRemove) => {
+      out.push({
+        id,
+        label,
+        value,
+        type: 'select',
+        onRemove,
+        renderContent: () => (
+          <span data-test={`comment-log-chip-${key}`}>
+            {label}: {value}
+          </span>
+        )
+      })
+    }
+    if (filters.category) {
+      push(
+        'pill-category',
+        'category',
+        t('internalComment:log.filters.categoryLabel'),
+        filters.category,
+        () => setFilter('category', null)
+      )
+    }
+    if (filters.complianceYear !== null) {
+      push(
+        'pill-year',
+        'complianceYear',
+        t('internalComment:log.filters.yearLabel'),
+        String(filters.complianceYear),
+        () => setFilter('complianceYear', null)
+      )
+    }
+    if (filters.search?.trim()) {
+      push(
+        'pill-search',
+        'search',
+        t('internalComment:log.filters.searchLabel'),
+        filters.search.trim(),
+        () => setFilter('search', '')
+      )
+    }
+    return out
+  }, [filters, setFilter, t])
+
+  const showClearAll = pills.length > 0
+
+  return (
+    <Box component="section" aria-label={t('internalComment:log.title')}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: 2,
+          width: '100%'
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'flex-end',
+            gap: 2,
+            minWidth: 0
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <BCTypography variant="body2" sx={{ fontWeight: 500 }}>
+              {t('internalComment:log.filters.searchLabel')}:
+            </BCTypography>
+            <TextField
+              id={searchId}
+              data-test="comment-log-search"
+              size="small"
+              placeholder={t('internalComment:log.filters.searchPlaceholder')}
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              inputProps={{ maxLength: 500 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" aria-hidden="true" />
+                  </InputAdornment>
+                )
+              }}
+              sx={{
+                width: 220,
+                '& .MuiOutlinedInput-root': { height: '40px' }
+              }}
+            />
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <BCTypography variant="body2" sx={{ fontWeight: 500 }}>
+              {t('internalComment:log.filters.categoryLabel')}:
+            </BCTypography>
+            <Autocomplete
+              size="small"
+              disablePortal
+              options={categoryOptions}
+              value={
+                categoryOptions.find((o) => o.value === filters.category) ??
+                null
+              }
+              onChange={(_, option) =>
+                setFilter('category', option?.value ?? null)
+              }
+              getOptionLabel={(o) =>
+                typeof o === 'string' ? o : (o?.label ?? '')
+              }
+              sx={{ width: 200 }}
+              slotProps={{
+                input: {
+                  'data-test': 'comment-log-category',
+                  'aria-label': t('internalComment:log.filters.categoryLabel')
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder={t('internalComment:log.filters.categoryLabel')}
+                  sx={{ '& .MuiOutlinedInput-root': { height: '40px' } }}
+                />
+              )}
+            />
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <BCTypography variant="body2" sx={{ fontWeight: 500 }}>
+              {t('internalComment:log.filters.yearLabel')}:
+            </BCTypography>
+            <Autocomplete
+              size="small"
+              disablePortal
+              options={yearOptions}
+              value={
+                yearOptions.find((o) => o.value === filters.complianceYear) ??
+                null
+              }
+              onChange={(_, option) =>
+                setFilter('complianceYear', option?.value ?? null)
+              }
+              getOptionLabel={(o) =>
+                typeof o === 'string' ? o : (o?.label ?? '')
+              }
+              sx={{ width: 120 }}
+              slotProps={{
+                input: {
+                  'data-test': 'comment-log-year',
+                  'aria-label': t('internalComment:log.filters.yearLabel')
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder={t('internalComment:log.filters.yearLabel')}
+                  sx={{ '& .MuiOutlinedInput-root': { height: '40px' } }}
+                />
+              )}
+            />
+          </Box>
+
+          {pills.length > 0 && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <FilterToolbar
+                selectFilters={[]}
+                pills={pills}
+                onClearAll={clearFilters}
+                showClearAll={false}
+                sx={{
+                  border: 'none',
+                  padding: 0,
+                  boxShadow: 'none',
+                  backgroundColor: 'transparent',
+                  minWidth: 0
+                }}
+              />
+            </Box>
+          )}
+        </Box>
+
+        {showClearAll && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0.5,
+              ml: 'auto',
+              flexShrink: 0
+            }}
+          >
+            <Box sx={{ minHeight: '24px' }} />
+            <ClearFiltersButton onClick={clearFilters} size="medium" />
+          </Box>
+        )}
+      </Box>
+    </Box>
+  )
+}

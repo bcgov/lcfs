@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import asyncio
 
 from lcfs.db.models import UserProfile
+from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
@@ -345,7 +346,7 @@ async def test_get_internal_comments_multiple_comments(
 
     comments = []
     base_time = datetime.now()
-    
+
     for i in range(3):
         # Create comments with different update times to ensure ordering
         internal_comment = InternalComment(
@@ -353,7 +354,8 @@ async def test_get_internal_comments_multiple_comments(
             comment=f"Comment {i}",
             audience_scope=AudienceScopeEnum.ANALYST.value,
             create_user="IDIRUSER",
-            create_date=base_time - timedelta(seconds=i)  # Each comment has a later update_date
+            create_date=base_time
+            - timedelta(seconds=i),  # Each comment has a later update_date
         )
         await add_models([internal_comment])
         association = TransferInternalComment(
@@ -362,7 +364,7 @@ async def test_get_internal_comments_multiple_comments(
         )
         await add_models([association])
         comments.append(internal_comment)
-        
+
         # Small delay to ensure different timestamps
         await asyncio.sleep(0.001)
 
@@ -493,3 +495,842 @@ async def test_update_internal_comment_nonexistent(
     response = await client.put(url, json=update_payload)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ======================================================================
+# Organization Comment Log endpoint
+# GET /organizations/{organization_id}/comments
+# ======================================================================
+def _make_transfer(transfer_id: int, to_org_id: int) -> Transfer:
+    """Minimal Transfer fixture so the live org derivation can find it."""
+    return Transfer(
+        transfer_id=transfer_id,
+        from_organization_id=1,
+        to_organization_id=to_org_id,
+        agreement_date=datetime.now(),
+        transaction_effective_date=datetime.now(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1,
+        current_status_id=1,
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True,
+    )
+
+
+async def _seed_org_comment(
+    add_models,
+    *,
+    transfer_id: int,
+    to_org_id: int,
+    visibility: str,
+    create_user: str,
+    audience_scope: str | None = None,
+    comment: str = "<p>x</p>",
+) -> InternalComment:
+    """Seed Transfer + InternalComment + association so the live-derive
+    read path can find the comment by ``to_org_id``."""
+    transfer = _make_transfer(transfer_id, to_org_id)
+    await add_models([transfer])
+    ic = InternalComment(
+        comment=comment,
+        comment_search_text=comment,
+        visibility=visibility,
+        audience_scope=audience_scope,
+        create_user=create_user,
+    )
+    await add_models([ic])
+    await add_models(
+        [
+            TransferInternalComment(
+                transfer_id=transfer.transfer_id,
+                internal_comment_id=ic.internal_comment_id,
+            )
+        ]
+    )
+    return ic
+
+
+@pytest.mark.anyio
+async def test_org_comments_idir_sees_internal_and_public(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+):
+    """AC: IDIR sees Internal + Public comments for the organization."""
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.GOVERNMENT],
+        user_details={"keycloak_username": "IDIRUSER"},
+    )
+    await add_models(
+        [UserProfile(keycloak_username="IDIRUSER", first_name="Test", last_name="User")]
+    )
+
+    await _seed_org_comment(
+        add_models,
+        transfer_id=1001,
+        to_org_id=1,
+        visibility="Internal",
+        audience_scope=AudienceScopeEnum.ANALYST.value,
+        create_user="IDIRUSER",
+        comment="internal",
+    )
+    await _seed_org_comment(
+        add_models,
+        transfer_id=1002,
+        to_org_id=1,
+        visibility="Public",
+        create_user="IDIRUSER",
+        comment="public",
+    )
+    await _seed_org_comment(
+        add_models,
+        transfer_id=1003,
+        to_org_id=2,
+        visibility="Internal",
+        audience_scope=AudienceScopeEnum.ANALYST.value,
+        create_user="IDIRUSER",
+        comment="other",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["pagination"]["total"] == 2
+    visibilities = sorted(c["visibility"] for c in data["comments"])
+    assert visibilities == ["Internal", "Public"]
+
+
+@pytest.mark.anyio
+async def test_org_comments_bcid_own_org_public_only(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+):
+    """AC: BCeID for own org sees only Public comments."""
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.SUPPLIER],
+        user_details={"keycloak_username": "BCEIDUSER", "organization_id": 1},
+    )
+    await add_models(
+        [
+            UserProfile(
+                keycloak_username="BCEIDUSER",
+                first_name="BC",
+                last_name="User",
+                organization_id=1,
+            )
+        ]
+    )
+
+    await _seed_org_comment(
+        add_models,
+        transfer_id=2001,
+        to_org_id=1,
+        visibility="Internal",
+        audience_scope=AudienceScopeEnum.ANALYST.value,
+        create_user="IDIRUSER",
+    )
+    await _seed_org_comment(
+        add_models,
+        transfer_id=2002,
+        to_org_id=1,
+        visibility="Public",
+        create_user="BCEIDUSER",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["pagination"]["total"] == 1
+    assert data["comments"][0]["visibility"] == "Public"
+    # canEdit true for own comment
+    assert data["comments"][0]["canEdit"] is True
+
+
+@pytest.mark.anyio
+async def test_org_comments_bcid_other_org_forbidden(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+):
+    """AC: BCeID requesting another org's log gets 403."""
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.SUPPLIER],
+        user_details={"keycloak_username": "BCEIDUSER", "organization_id": 1},
+    )
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=99)
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_org_comments_pagination_metadata(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+):
+    """AC: page=2&size=25 returns correct pagination block."""
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.GOVERNMENT],
+        user_details={"keycloak_username": "IDIRUSER"},
+    )
+    await add_models(
+        [UserProfile(keycloak_username="IDIRUSER", first_name="T", last_name="U")]
+    )
+
+    for i in range(30):
+        await _seed_org_comment(
+            add_models,
+            transfer_id=3000 + i,
+            to_org_id=1,
+            visibility="Internal",
+            audience_scope=AudienceScopeEnum.ANALYST.value,
+            create_user="IDIRUSER",
+            comment=f"c{i}",
+        )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    response = await client.get(url, params={"page": 2, "size": 25})
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["pagination"]["page"] == 2
+    assert data["pagination"]["size"] == 25
+    assert data["pagination"]["total"] == 30
+    assert data["pagination"]["totalPages"] == 2
+    assert len(data["comments"]) == 5
+
+
+@pytest.mark.anyio
+async def test_org_comments_reflect_parent_update(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+    dbsession,
+):
+    """Live derivation: changing the parent's to_organization_id moves
+    the comment to the new org's Comment Log without any sync code."""
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.GOVERNMENT],
+        user_details={"keycloak_username": "IDIRUSER"},
+    )
+    await add_models(
+        [
+            UserProfile(keycloak_username="IDIRUSER", first_name="T", last_name="U"),
+            Organization(organization_id=7, name="Org Seven"),
+        ]
+    )
+
+    ic = await _seed_org_comment(
+        add_models,
+        transfer_id=4001,
+        to_org_id=1,
+        visibility="Internal",
+        audience_scope=AudienceScopeEnum.ANALYST.value,
+        create_user="IDIRUSER",
+        comment="moved",
+    )
+
+    url1 = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    assert (await client.get(url1)).json()["pagination"]["total"] == 1
+
+    # Reassign the parent transfer to org 7 — no sync code involved.
+    from sqlalchemy import update as sa_update
+
+    await dbsession.execute(
+        sa_update(Transfer)
+        .where(Transfer.transfer_id == 4001)
+        .values(to_organization_id=7)
+    )
+    await dbsession.flush()
+
+    assert (await client.get(url1)).json()["pagination"]["total"] == 0
+    url7 = fastapi_app.url_path_for("get_organization_comments", organization_id=7)
+    body = (await client.get(url7)).json()
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["internalCommentId"] == ic.internal_comment_id
+
+
+# ======================================================================
+# Comment Log filters & search (tickets #4452 / #4453)
+# ======================================================================
+from sqlalchemy import func, select as sa_select
+from lcfs.db.models.comment.CommentCategory import CommentCategory
+
+
+async def _seed_org_comment_full(
+    add_models,
+    dbsession,
+    *,
+    transfer_id: int,
+    to_org_id: int,
+    visibility: str = "Internal",
+    create_user: str = "IDIRUSER",
+    audience_scope: str | None = AudienceScopeEnum.ANALYST.value,
+    comment: str = "<p>hello world</p>",
+    plain_text: str = "hello world",
+    category_name: str | None = None,
+    compliance_year: int | None = None,
+) -> InternalComment:
+    """Seed an InternalComment with denormalized metadata + tsvector so
+    the Comment Log filter / search path can query it as production does.
+    """
+    transfer = _make_transfer(transfer_id, to_org_id)
+    await add_models([transfer])
+
+    category_id = None
+    if category_name is not None:
+        row = (
+            await dbsession.execute(
+                sa_select(CommentCategory.comment_category_id).where(
+                    CommentCategory.display_name == category_name
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            cat = CommentCategory(display_name=category_name, display_order=0)
+            await add_models([cat])
+            row = cat.comment_category_id
+        category_id = row
+
+    ic = InternalComment(
+        comment=comment,
+        comment_search_text=plain_text,
+        comment_search_vector=func.to_tsvector("english", plain_text),
+        visibility=visibility,
+        audience_scope=audience_scope,
+        create_user=create_user,
+        comment_category_id=category_id,
+        compliance_year=compliance_year,
+    )
+    await add_models([ic])
+    await add_models(
+        [
+            TransferInternalComment(
+                transfer_id=transfer.transfer_id,
+                internal_comment_id=ic.internal_comment_id,
+            )
+        ]
+    )
+    await dbsession.refresh(ic)
+    return ic
+
+
+async def _gov_setup(fastapi_app, set_mock_user, add_models):
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.GOVERNMENT],
+        user_details={"keycloak_username": "IDIRUSER"},
+    )
+    await add_models(
+        [UserProfile(keycloak_username="IDIRUSER", first_name="T", last_name="U")]
+    )
+
+
+@pytest.mark.anyio
+async def test_org_comments_filter_by_category(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: category=Transfer notes returns only Transfer notes comments."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5001, to_org_id=1,
+        comment="<p>t</p>", plain_text="t",
+        category_name="Transfer notes",
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5002, to_org_id=1,
+        comment="<p>c</p>", plain_text="c",
+        category_name="Compliance notes",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"category": "Transfer notes"})
+    assert resp.status_code == status.HTTP_200_OK
+    body = resp.json()
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["category"] == "Transfer notes"
+
+
+@pytest.mark.anyio
+async def test_org_comments_filter_by_compliance_year(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: compliance_year=2024 returns only 2024 comments."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5101, to_org_id=1,
+        comment="<p>a</p>", plain_text="a",
+        compliance_year=2024,
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5102, to_org_id=1,
+        comment="<p>b</p>", plain_text="b",
+        compliance_year=2025,
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"compliance_year": 2024})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["complianceYear"] == 2024
+
+
+@pytest.mark.anyio
+async def test_org_comments_filter_by_date_range_inclusive(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: date_from / date_to are inclusive on create_date."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    ic_old = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5201, to_org_id=1,
+        comment="<p>old</p>", plain_text="old",
+    )
+    ic_in = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5202, to_org_id=1,
+        comment="<p>in</p>", plain_text="in",
+    )
+    ic_new = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5203, to_org_id=1,
+        comment="<p>new</p>", plain_text="new",
+    )
+
+    # Force known create_dates via SQL update.
+    from sqlalchemy import update as sa_update
+    await dbsession.execute(
+        sa_update(InternalComment)
+        .where(InternalComment.internal_comment_id == ic_old.internal_comment_id)
+        .values(create_date=datetime(2024, 1, 1, 0, 0, 0))
+    )
+    await dbsession.execute(
+        sa_update(InternalComment)
+        .where(InternalComment.internal_comment_id == ic_in.internal_comment_id)
+        .values(create_date=datetime(2024, 6, 15, 12, 0, 0))
+    )
+    await dbsession.execute(
+        sa_update(InternalComment)
+        .where(InternalComment.internal_comment_id == ic_new.internal_comment_id)
+        .values(create_date=datetime(2025, 1, 1, 0, 0, 0))
+    )
+    await dbsession.flush()
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(
+        url, params={"date_from": "2024-01-01", "date_to": "2024-12-31"}
+    )
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    # Inclusive: old (Jan 1) and in (Jun 15) — but NOT new (Jan 1, 2025)
+    assert body["pagination"]["total"] == 2
+
+
+@pytest.mark.anyio
+async def test_org_comments_filter_combined_intersection(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: multiple filters compose as an AND intersection."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5301, to_org_id=1,
+        comment="<p>match</p>", plain_text="match",
+        category_name="Transfer notes",
+        compliance_year=2024,
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5302, to_org_id=1,
+        comment="<p>wrong year</p>", plain_text="wrong year",
+        category_name="Transfer notes",
+        compliance_year=2023,
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5303, to_org_id=1,
+        comment="<p>wrong cat</p>", plain_text="wrong cat",
+        category_name="Compliance notes",
+        compliance_year=2024,
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(
+        url, params={"category": "Transfer notes", "compliance_year": 2024}
+    )
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+
+
+@pytest.mark.anyio
+async def test_org_comments_visibility_filter_idir(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: IDIR can narrow by visibility=Internal."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5401, to_org_id=1, visibility="Internal",
+        comment="<p>i</p>", plain_text="i",
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5402, to_org_id=1, visibility="Public",
+        audience_scope=None,
+        comment="<p>p</p>", plain_text="p",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"visibility": "Internal"})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["visibility"] == "Internal"
+
+
+@pytest.mark.anyio
+async def test_org_comments_bceid_visibility_param_ignored(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: BCeID passing visibility=Internal still gets Public only."""
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.SUPPLIER],
+        user_details={"keycloak_username": "BCEIDUSER", "organization_id": 1},
+    )
+    await add_models(
+        [
+            UserProfile(
+                keycloak_username="BCEIDUSER",
+                first_name="BC",
+                last_name="User",
+                organization_id=1,
+            )
+        ]
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5501, to_org_id=1, visibility="Internal",
+        comment="<p>i</p>", plain_text="i",
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5502, to_org_id=1, visibility="Public",
+        audience_scope=None, create_user="BCEIDUSER",
+        comment="<p>p</p>", plain_text="p",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"visibility": "Internal"})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["visibility"] == "Public"
+
+
+@pytest.mark.anyio
+async def test_org_comments_sort_create_date_asc(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    ic_a = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5601, to_org_id=1,
+        comment="<p>a</p>", plain_text="a",
+    )
+    ic_b = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5602, to_org_id=1,
+        comment="<p>b</p>", plain_text="b",
+    )
+
+    from sqlalchemy import update as sa_update
+    await dbsession.execute(
+        sa_update(InternalComment)
+        .where(InternalComment.internal_comment_id == ic_a.internal_comment_id)
+        .values(create_date=datetime(2024, 1, 1, 0, 0, 0))
+    )
+    await dbsession.execute(
+        sa_update(InternalComment)
+        .where(InternalComment.internal_comment_id == ic_b.internal_comment_id)
+        .values(create_date=datetime(2025, 1, 1, 0, 0, 0))
+    )
+    await dbsession.flush()
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"sort_by": "create_date", "sort_order": "asc"})
+    body = resp.json()
+    ids = [c["internalCommentId"] for c in body["comments"]]
+    assert ids == [ic_a.internal_comment_id, ic_b.internal_comment_id]
+
+    resp_desc = await client.get(
+        url, params={"sort_by": "create_date", "sort_order": "desc"}
+    )
+    ids_desc = [c["internalCommentId"] for c in resp_desc.json()["comments"]]
+    assert ids_desc == [ic_b.internal_comment_id, ic_a.internal_comment_id]
+
+
+# ----------------------------------------------------------------------
+# Search (ticket #4453)
+# ----------------------------------------------------------------------
+@pytest.mark.anyio
+async def test_org_comments_search_basic_match(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: search=transfer matches comment_search_vector."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    ic = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=6001, to_org_id=1,
+        comment="<p>transfer agreement signed</p>",
+        plain_text="transfer agreement signed",
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=6002, to_org_id=1,
+        comment="<p>nothing here</p>", plain_text="nothing here",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"search": "transfer"})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["internalCommentId"] == ic.internal_comment_id
+
+
+@pytest.mark.anyio
+async def test_org_comments_search_empty_returns_all(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: empty search → no FTS predicate is applied."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession, transfer_id=6101, to_org_id=1,
+        comment="<p>x</p>", plain_text="x",
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession, transfer_id=6102, to_org_id=1,
+        comment="<p>y</p>", plain_text="y",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"search": "   "})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 2
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "term",
+    ["!@#$%^&*()", "über café", "naïve résumé", "中文 测试", "\"unbalanced"],
+)
+async def test_org_comments_search_special_chars_no_500(
+    client, fastapi_app, set_mock_user, add_models, dbsession, term
+):
+    """AC: special characters / Unicode never cause a 500."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=6200 + abs(hash(term)) % 50,
+        to_org_id=1, comment="<p>safe</p>", plain_text="safe",
+    )
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"search": term})
+    assert resp.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.anyio
+async def test_org_comments_search_org_details_expands_to_org_name(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: category=Organization details + search also matches Organization.name."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    # Create an org with a recognisable name; the entity_meta join uses
+    # transfer.to_organization_id, so the seeded transfer's target org will
+    # be matched against Organization.name.
+    await add_models(
+        [Organization(organization_id=42, name="Acme Fuels Limited")]
+    )
+    ic = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=6301, to_org_id=42,
+        comment="<p>random body</p>",
+        plain_text="random body",
+        category_name="Organization details",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=42)
+    resp = await client.get(
+        url, params={"category": "Organization details", "search": "Acme"}
+    )
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["internalCommentId"] == ic.internal_comment_id
+
+
+@pytest.mark.anyio
+async def test_get_internal_comments_embeds_attachments(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+):
+    """
+    A comment's attached documents are embedded in the comment list response
+    (issue #4514), so the UI can render and re-load attachments in one request.
+    """
+    from lcfs.db.models.document.Document import Document
+
+    set_mock_user(
+        fastapi_app, [RoleEnum.GOVERNMENT], user_details={"username": "IDIRUSER"}
+    )
+
+    transfer = Transfer(
+        transfer_id=4514,
+        from_organization_id=1,
+        to_organization_id=2,
+        agreement_date=datetime.now(),
+        transaction_effective_date=datetime.now(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1,
+        current_status_id=1,
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True,
+    )
+    user = UserProfile(
+        keycloak_username="IDIRUSER", first_name="Test", last_name="User"
+    )
+    await add_models([transfer, user])
+
+    document = Document(
+        file_key="lcfs-docs/internal_comment/45140/abc",
+        file_name="attachment.pdf",
+        file_size=2048,
+        mime_type="application/pdf",
+    )
+    internal_comment = InternalComment(
+        internal_comment_id=45140,
+        comment="Comment with attachment",
+        audience_scope=AudienceScopeEnum.ANALYST.value,
+        create_user="IDIRUSER",
+    )
+    # Linking via the relationship inserts the association row on flush.
+    internal_comment.documents = [document]
+    await add_models([document, internal_comment])
+    await add_models(
+        [
+            TransferInternalComment(
+                transfer_id=transfer.transfer_id,
+                internal_comment_id=internal_comment.internal_comment_id,
+            )
+        ]
+    )
+
+    url = fastapi_app.url_path_for(
+        "get_comments",
+        entity_type=EntityTypeEnum.TRANSFER.value,
+        entity_id=transfer.transfer_id,
+    )
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert len(data) == 1
+    documents = data[0]["documents"]
+    assert len(documents) == 1
+    assert documents[0]["fileName"] == "attachment.pdf"
+    assert documents[0]["fileSize"] == 2048
+    assert "documentId" in documents[0]
+
+
+@pytest.mark.anyio
+async def test_org_comments_pagination_counts_comments_not_conversations(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+):
+    """Pagination counts comments, not entity conversations.
+
+    An entity with multiple comments must contribute each comment to the
+    total and the rendered rows, so the displayed count matches the list
+    (regression: previously the total counted distinct conversations, so a
+    2-comment + 1-comment pair of transfers reported total=2 for 3 rows).
+    """
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.GOVERNMENT],
+        user_details={"keycloak_username": "IDIRUSER"},
+    )
+    await add_models(
+        [UserProfile(keycloak_username="IDIRUSER", first_name="T", last_name="U")]
+    )
+
+    # Transfer A: two comments. Transfer B: one comment. => 2 conversations,
+    # 3 comments.
+    transfer_a = _make_transfer(9101, 1)
+    transfer_b = _make_transfer(9102, 1)
+    await add_models([transfer_a, transfer_b])
+
+    for text in ("first on A", "second on A"):
+        ic = InternalComment(
+            comment=text,
+            comment_search_text=text,
+            visibility="Internal",
+            audience_scope=AudienceScopeEnum.ANALYST.value,
+            create_user="IDIRUSER",
+        )
+        await add_models([ic])
+        await add_models(
+            [
+                TransferInternalComment(
+                    transfer_id=transfer_a.transfer_id,
+                    internal_comment_id=ic.internal_comment_id,
+                )
+            ]
+        )
+
+    ic_b = InternalComment(
+        comment="only on B",
+        comment_search_text="only on B",
+        visibility="Internal",
+        audience_scope=AudienceScopeEnum.ANALYST.value,
+        create_user="IDIRUSER",
+    )
+    await add_models([ic_b])
+    await add_models(
+        [
+            TransferInternalComment(
+                transfer_id=transfer_b.transfer_id,
+                internal_comment_id=ic_b.internal_comment_id,
+            )
+        ]
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    data = (await client.get(url)).json()
+
+    assert data["pagination"]["total"] == 3
+    assert data["pagination"]["totalPages"] == 1
+    assert len(data["comments"]) == 3

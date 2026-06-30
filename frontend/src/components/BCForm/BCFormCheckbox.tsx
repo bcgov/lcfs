@@ -1,0 +1,114 @@
+import {
+  Checkbox,
+  FormControl,
+  FormControlLabel,
+  FormLabel
+} from '@mui/material'
+import BCTypography from '@/components/BCTypography'
+import { Controller } from 'react-hook-form'
+import { CustomLabel } from './CustomLabel'
+import PropTypes from 'prop-types'
+import type { ReactNode } from 'react'
+
+export interface BCFormCheckboxOption {
+  value: string
+  label?: ReactNode
+  header?: ReactNode
+  text?: ReactNode
+}
+
+export interface BCFormCheckboxProps {
+  name: string
+  form: { control: any }
+  label?: ReactNode
+  options: BCFormCheckboxOption[]
+  disabled?: boolean
+  initialItems?: string[]
+}
+
+export const BCFormCheckbox = ({
+  name,
+  form,
+  label,
+  options,
+  disabled = false
+}: BCFormCheckboxProps) => {
+  if (!form) {
+    throw new Error('BCFormCheckbox requires a form prop')
+  }
+  const { control } = form
+  const handleSelect = (selectedValue: string) => (currentValues: string[]) => {
+    if (currentValues.includes(selectedValue)) {
+      return currentValues.filter((value) => value !== selectedValue)
+    } else {
+      return [...currentValues, selectedValue]
+    }
+  }
+
+  return (
+    <FormControl component="fieldset">
+      {label && (
+        <FormLabel component="legend">
+          <BCTypography variant="label" component="span">
+            {label}
+          </BCTypography>
+        </FormLabel>
+      )}
+
+      <div style={{ marginTop: label ? 8 : 0 }}>
+        {options.map((option, index) => {
+          return (
+            <FormControlLabel
+              sx={{ marginY: 1 }}
+              control={
+                <Controller
+                  name={name}
+                  render={({ field: { onChange, value } }) => {
+                    return (
+                      <Checkbox
+                        id={
+                          option.value
+                            ? option.value.toLowerCase().replace(/\s/g, '-')
+                            : `checkbox-${option.label || 'unlabeled'}`
+                        }
+                        sx={{ marginTop: 0.5 }}
+                        checked={
+                          value && option.value
+                            ? value.includes(option.value)
+                            : false
+                        }
+                        onChange={() =>
+                          onChange(handleSelect(option.value)(value))
+                        }
+                        disabled={disabled}
+                      />
+                    )
+                  }}
+                  control={control}
+                />
+              }
+              label={
+                option.header ? (
+                  <CustomLabel header={option.header} text={option.text} />
+                ) : (
+                  option.label
+                )
+              }
+              key={option.value || String(option.label) || `option-${index}`}
+            />
+          )
+        })}
+      </div>
+    </FormControl>
+  )
+}
+
+BCFormCheckbox.displayName = 'BCFormCheckbox'
+BCFormCheckbox.propTypes = {
+  name: PropTypes.string.isRequired,
+  form: PropTypes.any.isRequired,
+  label: PropTypes.string,
+  options: PropTypes.array.isRequired,
+  disabled: PropTypes.bool,
+  initialItems: PropTypes.array
+}
