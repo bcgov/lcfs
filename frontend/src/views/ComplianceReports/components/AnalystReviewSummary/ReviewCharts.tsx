@@ -68,6 +68,9 @@ const getHistoricalChartModeLabel = (group: HistoricalChartGroup) => {
 const isFuelCodeSunburstGroup = (group: HistoricalChartGroup) =>
   group.title === 'Fuel supply by fuel code'
 
+const isFseUsageUtilizationGroup = (group: HistoricalChartGroup) =>
+  group.title === 'FSE kWh usage and capacity utilization'
+
 const buildSupplementalImpactChartOptions = (series: ComparisonSeries) => ({
   tooltip: {
     trigger: 'axis',
@@ -167,6 +170,9 @@ const buildHistoricalChartOptions = (group: HistoricalChartGroup) => {
       fuelType: ALL_FILTER_VALUE
     })
   }
+  if (isFseUsageUtilizationGroup(group)) {
+    return buildFseUsageUtilizationChartOptions(group)
+  }
 
   const mode = getHistoricalChartMode(group)
 
@@ -254,6 +260,42 @@ const buildHistoricalChartOptions = (group: HistoricalChartGroup) => {
     }))
   }
 }
+
+const buildFseUsageUtilizationChartOptions = (group: HistoricalChartGroup) => ({
+  tooltip: { trigger: 'axis' },
+  legend: { top: 0, type: 'scroll' },
+  grid: {
+    ...chartGrid,
+    right: 56
+  },
+  xAxis: {
+    type: 'category',
+    data: group.periodLabels
+  },
+  yAxis: [
+    {
+      type: 'value',
+      name: 'kWh usage'
+    },
+    {
+      type: 'value',
+      name: 'Utilization %',
+      axisLabel: {
+        formatter: '{value}%'
+      }
+    }
+  ],
+  series: group.labels.map((label) => ({
+    name: label,
+    type: 'line',
+    smooth: true,
+    symbolSize: 7,
+    yAxisIndex: label === 'Average capacity utilization' ? 1 : 0,
+    data: group.periodLabels.map(
+      (period) => group.valuesByPeriod.get(period)?.get(label) || 0
+    )
+  }))
+})
 
 const parseFuelCodeLabel = (label: string) => {
   const match = label.match(/^(.*?) \((.*?) - (.*?)\)$/)

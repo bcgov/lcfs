@@ -707,7 +707,7 @@ class ComplianceReportReviewService:
         active_count = fse_summary["active_count"]
         validated_count = fse_summary["validated_count"]
         active_full_year_count = fse_summary["active_full_year_count"]
-        level_1_count = fse_summary["level_1_count"]
+        level_counts = fse_summary.get("level_counts") or {}
         total_kwh = fse_summary["total_kwh"]
         avg_utilization = fse_summary["avg_capacity_utilization_percent"]
 
@@ -771,19 +771,31 @@ class ComplianceReportReviewService:
                 )
             )
 
-        if level_1_count:
+        if level_counts:
+            has_level_1 = any("level 1" in level.lower() for level in level_counts)
             findings.append(
                 self._finding(
                     "Electricity/FSE",
-                    "review",
-                    "Level 1 FSE may require policy-sensitive review",
-                    "Level 1 equipment can be reportable, but outlet-style or low-voltage equipment may require extra verification that the electricity is transportation use only.",
+                    "review" if has_level_1 else "informational",
+                    (
+                        "FSE level mix includes Level 1 equipment"
+                        if has_level_1
+                        else "FSE level mix identified"
+                    ),
+                    "Reported FSE include one or more equipment levels. Level 1 or outlet-style equipment may require extra verification that the electricity is transportation use only.",
                     "FSE reporting view",
                     [
-                        self._metric("Level 1 FSE", level_1_count),
+                        *[
+                            self._metric(f"{level} FSE", count)
+                            for level, count in sorted(level_counts.items())
+                        ],
                         self._metric("Total FSE", equipment_count),
                     ],
-                    "Does the supporting evidence show the Level 1 electricity is sub-metered or otherwise limited to transportation use?",
+                    (
+                        "Does the supporting evidence show the reported FSE electricity is sub-metered or otherwise limited to transportation use, especially for Level 1 or outlet-style equipment?"
+                        if has_level_1
+                        else None
+                    ),
                     confidence="medium",
                 )
             )
@@ -810,7 +822,7 @@ class ComplianceReportReviewService:
                     (
                         None
                         if avg_utilization < 1
-                        else "Does the reported electricity supply appear reasonable for the equipment capacity and active period?"
+                        else "Does the reported kWh usage appear reasonable for the equipment capacity and active period?"
                     ),
                     confidence="medium",
                 )
@@ -831,7 +843,7 @@ class ComplianceReportReviewService:
                         else "Electricity supply variance appears within threshold"
                     ),
                     (
-                        f"Reported FSE electricity supply changed by {round(delta, 2)} kWh compared with the prior assessed report."
+                        f"Reported FSE kWh usage changed by {round(delta, 2)} kWh compared with the prior assessed report."
                     ),
                     "FSE reporting view",
                     [
@@ -845,7 +857,7 @@ class ComplianceReportReviewService:
                         )
                     ],
                     (
-                        "What changed in FSE activity, equipment, or evidence to support the electricity supply variance?"
+                        "What changed in FSE activity, equipment, or evidence to support the kWh usage variance?"
                         if material_change
                         else None
                     ),
@@ -1176,34 +1188,60 @@ class ComplianceReportReviewService:
     ) -> list[ComplianceReportReviewComparisonSeriesSchema]:
         series = []
 
-        electricity_points = self._comparison_points(
-            {"Total electricity supplied": current.get("total_kwh", 0)},
-            {"Total electricity supplied": prior.get("total_kwh", 0)},
-            units="kWh",
-        )
-        if electricity_points:
-            series.append(
-                ComplianceReportReviewComparisonSeriesSchema(
-                    title="FSE electricity supply",
-                    current_label=current_label,
-                    comparison_label=prior_label,
-                    points=electricity_points,
+        current_utilization = current.get("avg_capacity_utilization_percent")
+        prior_utilization = prior.get("avg_capacity_utilization_percent")
+        usage_points = [
+            self._comparison_point(
+                "Total kWh usage",
+                current.get("total_kwh", 0),
+                prior.get("total_kwh", 0),
+                units="kWh",
+            )
+        ]
+        if current_utilization is not None or prior_utilization is not None:
+            usage_points.append(
+                self._comparison_point(
+                    "Average capacity utilization",
+                    current_utilization if current_utilization is not None else 0,
+                    prior_utilization if prior_utilization is not None else 0,
+                    units="%",
                 )
             )
 
+        if usage_points:
+            series.append(
+                ComplianceReportReviewComparisonSeriesSchema(
+                    title="FSE kWh usage and capacity utilization",
+                    current_label=current_label,
+                    comparison_label=prior_label,
+                    points=usage_points,
+                )
+            )
+
+        current_equipment_counts = {
+            "Total FSE": current.get("equipment_count", 0),
+            "Active FSE": current.get("active_count", 0),
+            "Validated FSE": current.get("validated_count", 0),
+        }
+        prior_equipment_counts = {
+            "Total FSE": prior.get("equipment_count", 0),
+            "Active FSE": prior.get("active_count", 0),
+            "Validated FSE": prior.get("validated_count", 0),
+        }
+        for level in sorted(
+            set(current.get("level_counts") or {})
+            | set(prior.get("level_counts") or {})
+        ):
+            current_equipment_counts[f"{level} FSE"] = (
+                current.get("level_counts") or {}
+            ).get(level, 0)
+            prior_equipment_counts[f"{level} FSE"] = (
+                prior.get("level_counts") or {}
+            ).get(level, 0)
+
         equipment_points = self._comparison_points(
-            {
-                "Total FSE": current.get("equipment_count", 0),
-                "Active FSE": current.get("active_count", 0),
-                "Validated FSE": current.get("validated_count", 0),
-                "Level 1 FSE": current.get("level_1_count", 0),
-            },
-            {
-                "Total FSE": prior.get("equipment_count", 0),
-                "Active FSE": prior.get("active_count", 0),
-                "Validated FSE": prior.get("validated_count", 0),
-                "Level 1 FSE": prior.get("level_1_count", 0),
-            },
+            current_equipment_counts,
+            prior_equipment_counts,
             units="count",
         )
         if equipment_points:
@@ -1213,31 +1251,6 @@ class ComplianceReportReviewService:
                     current_label=current_label,
                     comparison_label=prior_label,
                     points=equipment_points,
-                )
-            )
-
-        current_utilization = current.get("avg_capacity_utilization_percent")
-        prior_utilization = prior.get("avg_capacity_utilization_percent")
-        utilization_points = self._comparison_points(
-            {
-                "Average capacity utilization": (
-                    current_utilization if current_utilization is not None else 0
-                )
-            },
-            {
-                "Average capacity utilization": (
-                    prior_utilization if prior_utilization is not None else 0
-                )
-            },
-            units="%",
-        )
-        if utilization_points:
-            series.append(
-                ComplianceReportReviewComparisonSeriesSchema(
-                    title="FSE capacity utilization",
-                    current_label=current_label,
-                    comparison_label=prior_label,
-                    points=utilization_points,
                 )
             )
 
