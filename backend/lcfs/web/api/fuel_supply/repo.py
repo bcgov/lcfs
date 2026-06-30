@@ -1,7 +1,7 @@
 import structlog
 from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, delete, func
+from sqlalchemy import and_, or_, select, delete, func, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload, aliased
 from typing import List, Optional, Sequence, Any
@@ -758,16 +758,28 @@ class FuelSupplyRepository:
                         FuelType.fuel_type.ilike(f"%{filter_value}%")
                     )
                 elif field == "fuel_category":
+                    # category is a Postgres enum; cast to text so ILIKE works
+                    # (otherwise the pattern is cast to the enum type and fails).
                     query = query.where(
-                        FuelCategory.category.ilike(f"%{filter_value}%")
+                        cast(FuelCategory.category, String).ilike(
+                            f"%{filter_value}%"
+                        )
                     )
                 elif field == "provision_of_the_act":
                     query = query.where(
                         ProvisionOfTheAct.name.ilike(f"%{filter_value}%")
                     )
                 elif field == "fuel_code":
-                    query = query.where(
-                        FuelCode.fuel_code.ilike(f"%{filter_value}%")
+                    # FuelCode.fuel_code is a Python property (prefix + suffix),
+                    # not a column, so it can't be used in SQL. Join the prefix
+                    # table and match the concatenated value instead.
+                    query = query.join(
+                        FuelCodePrefix,
+                        FuelCode.prefix_id == FuelCodePrefix.fuel_code_prefix_id,
+                    ).where(
+                        func.concat(
+                            FuelCodePrefix.prefix, FuelCode.fuel_suffix
+                        ).ilike(f"%{filter_value}%")
                     )
 
         # Get total count before pagination
@@ -871,25 +883,43 @@ class FuelSupplyRepository:
                 if not filter_value:
                     continue
 
+                # The base query already outerjoins each of these tables, so the
+                # filters only add a WHERE clause. Re-joining (e.g.
+                # ``query.join(FuelType)``) emits a second, unaliased join of the
+                # same table — SQLAlchemy infers it off the most recent entity
+                # (fuel_code) — which Postgres rejects with
+                # "table name ... specified more than once" (issue #4601).
                 if field == "compliance_period":
                     query = query.where(
                         CompliancePeriod.description.ilike(f"%{filter_value}%")
                     )
                 elif field == "fuel_type":
-                    query = query.join(FuelType).where(
+                    query = query.where(
                         FuelType.fuel_type.ilike(f"%{filter_value}%")
                     )
                 elif field == "fuel_category":
-                    query = query.join(FuelCategory).where(
-                        FuelCategory.category.ilike(f"%{filter_value}%")
+                    # category is a Postgres enum; cast to text so ILIKE works
+                    # (otherwise the pattern is cast to the enum type and fails).
+                    query = query.where(
+                        cast(FuelCategory.category, String).ilike(
+                            f"%{filter_value}%"
+                        )
                     )
                 elif field == "provision_of_the_act":
-                    query = query.join(ProvisionOfTheAct).where(
+                    query = query.where(
                         ProvisionOfTheAct.name.ilike(f"%{filter_value}%")
                     )
                 elif field == "fuel_code":
-                    query = query.join(FuelCode).where(
-                        FuelCode.fuel_code.ilike(f"%{filter_value}%")
+                    # FuelCode.fuel_code is a Python property (prefix + suffix),
+                    # not a column, so it can't be used in SQL. Join the prefix
+                    # table and match the concatenated value instead.
+                    query = query.join(
+                        FuelCodePrefix,
+                        FuelCode.prefix_id == FuelCodePrefix.fuel_code_prefix_id,
+                    ).where(
+                        func.concat(
+                            FuelCodePrefix.prefix, FuelCode.fuel_suffix
+                        ).ilike(f"%{filter_value}%")
                     )
 
         # Execute query
