@@ -42,7 +42,7 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 vi.mock('@/hooks/useChargingSite')
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: React.forwardRef((props, ref) => (
     (lastGridProps = props,
     <div data-testid="bc-grid-viewer">

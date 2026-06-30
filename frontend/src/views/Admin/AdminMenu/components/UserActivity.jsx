@@ -8,7 +8,7 @@ import {
 } from '@/views/Admin/AdminMenu/components/_schema'
 import { useGetUserActivities } from '@/hooks/useUser'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
 import ROUTES, { buildPath } from '@/routes/routes.js'
 

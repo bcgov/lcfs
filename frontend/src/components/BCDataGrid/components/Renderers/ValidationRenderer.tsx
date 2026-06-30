@@ -1,7 +1,20 @@
 import { IconButton, Tooltip, Stack } from '@mui/material'
 import { Warning, DoneAll, Save } from '@mui/icons-material'
 
-export const ValidationRenderer = ({ data, ...props }) => {
+export interface ValidationRendererProps {
+  data: {
+    isValid?: boolean
+    validationMsg?: string
+    [key: string]: any
+  }
+  api?: any
+  enableSave?: boolean
+}
+
+export const ValidationRenderer = ({
+  data,
+  ...props
+}: ValidationRendererProps) => {
   return (
     <Stack direction="row" spacing={0.1} m={0}>
       {!data.isValid && (

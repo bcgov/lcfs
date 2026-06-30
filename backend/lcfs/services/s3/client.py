@@ -30,6 +30,10 @@ from lcfs.db.models.ci_application.CIApplication import (
     ci_application_document_association,
 )
 from lcfs.db.models.document import Document
+from lcfs.db.models.comment.InternalComment import (
+    InternalComment,
+    internal_comment_document_association,
+)
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
@@ -82,6 +86,8 @@ class DocumentService:
             await self._verify_initiative_agreement_access(parent_id, user)
         elif parent_type == "charging_site":
             await self._verify_charging_site_access(parent_id, user)
+        elif parent_type == "internal_comment":
+            await self.verify_internal_comment_access(parent_id, user, write=True)
         elif parent_type == "ci_application":
             # Access checks for CI application uploads live in the
             # ci_application validation layer; the views.py wrapper invokes
@@ -232,6 +238,20 @@ class DocumentService:
                 document_category=document_category or CI_DOC_CATEGORY_SUPPORTING,
             )
             await self.db.execute(stmt)
+        elif parent_type == "internal_comment":
+            internal_comment = await self.db.get(InternalComment, parent_id)
+            if not internal_comment:
+                raise Exception("Internal comment not found")
+
+            self.db.add(document)
+            await self.db.flush()
+
+            # Insert the association
+            stmt = internal_comment_document_association.insert().values(
+                internal_comment_id=internal_comment.internal_comment_id,
+                document_id=document.document_id,
+            )
+            await self.db.execute(stmt)
         else:
             raise ServiceException(f"Invalid Type {parent_type}")
 
@@ -311,6 +331,41 @@ class DocumentService:
             detail="Only Analysts and Government Staff and related Organization users can upload files to Charging Sites.",
         )
 
+    async def verify_internal_comment_access(self, parent_id, user, write=False):
+        """Authorise attachment access for an internal comment.
+
+        Attachment visibility follows the comment itself ("match comment
+        permissions"):
+
+        * write (add/remove attachment): only the comment's author, mirroring
+          internal comment edit permissions.
+        * read (list/download): government staff see everything; everyone else
+          only Public comments.
+        """
+        comment = await self.db.get(InternalComment, parent_id)
+        if not comment:
+            raise HTTPException(status_code=404, detail="Internal comment not found")
+
+        is_government = RoleEnum.GOVERNMENT in user.role_names
+
+        if write:
+            if comment.create_user != user.keycloak_username:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only the comment author can modify its attachments.",
+                )
+        else:
+            visibility = (
+                str(comment.visibility) if comment.visibility is not None else None
+            )
+            if not is_government and visibility != "Public":
+                raise HTTPException(
+                    status_code=403,
+                    detail="You do not have access to this comment's attachments.",
+                )
+
+        return comment
+
     @repo_handler
     async def generate_presigned_url(self, document_id: int):
         document = await self.db.get_one(Document, document_id)
@@ -353,6 +408,10 @@ class DocumentService:
             "ci_application": (
                 ci_application_document_association,
                 "ci_application_id",
+            ),
+            "internal_comment": (
+                internal_comment_document_association,
+                "internal_comment_id",
             ),
         }
 
@@ -414,6 +473,10 @@ class DocumentService:
             "ci_application": (
                 ci_application_document_association,
                 "ci_application_id",
+            ),
+            "internal_comment": (
+                internal_comment_document_association,
+                "internal_comment_id",
             ),
         }
 

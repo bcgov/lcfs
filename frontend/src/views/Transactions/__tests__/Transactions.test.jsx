@@ -69,7 +69,7 @@ vi.mock('@/components/ClearFiltersButton', () => ({
 }))
 
 // SINGLE BCGridViewer mock - no duplicates
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
     onPaginationChange,
     queryData,

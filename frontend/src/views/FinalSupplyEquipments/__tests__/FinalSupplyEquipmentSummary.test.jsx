@@ -19,7 +19,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 let gridViewerProps
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: (props) => {
     gridViewerProps = props
     return <div data-test="bc-grid-viewer" />

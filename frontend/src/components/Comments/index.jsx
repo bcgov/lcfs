@@ -4,7 +4,12 @@ import { useComments } from '@/hooks/useComments'
 import CommentList from './CommentList'
 import Loading from '@/components/Loading'
 
-const Comments = ({ entityType, entityId, commentMode = 'internal-only' }) => {
+const Comments = ({
+  entityType,
+  entityId,
+  commentMode = 'internal-only',
+  enableAttachments = true
+}) => {
   const { t } = useTranslation(['internalComment'])
   const {
     comments,
@@ -16,6 +21,9 @@ const Comments = ({ entityType, entityId, commentMode = 'internal-only' }) => {
     isEditingComment,
     commentInput,
     handleCommentInputChange,
+    attachments,
+    handleAttachmentsChange,
+    downloadCommentAttachment,
     visibility,
     handleVisibilityChange,
     allowInternalVisibility
@@ -38,8 +46,13 @@ const Comments = ({ entityType, entityId, commentMode = 'internal-only' }) => {
     await addComment()
   }
 
-  const handleEditComment = async (commentId, commentText, visibility) => {
-    await editComment({ commentId, commentText, visibility })
+  const handleEditComment = async (
+    commentId,
+    commentText,
+    visibility,
+    fileChanges = {}
+  ) => {
+    await editComment({ commentId, commentText, visibility, ...fileChanges })
   }
 
   return (
@@ -56,6 +69,10 @@ const Comments = ({ entityType, entityId, commentMode = 'internal-only' }) => {
       visibility={visibility}
       onVisibilityChange={handleVisibilityChange}
       allowInternalVisibility={allowInternalVisibility}
+      enableAttachments={enableAttachments}
+      attachments={attachments}
+      onAttachmentsChange={handleAttachmentsChange}
+      onDownloadAttachment={downloadCommentAttachment}
     />
   )
 }
@@ -67,7 +84,8 @@ Comments.propTypes = {
     PropTypes.string,
     PropTypes.oneOf([null])
   ]),
-  commentMode: PropTypes.oneOf(['internal-only', 'dual'])
+  commentMode: PropTypes.oneOf(['internal-only', 'dual']),
+  enableAttachments: PropTypes.bool
 }
 
 export default Comments
