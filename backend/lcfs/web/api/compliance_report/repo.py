@@ -53,6 +53,7 @@ from lcfs.web.api.base import (
     PaginationRequestSchema,
     apply_filter_conditions,
     get_field_for_filter,
+    paginate_with_window_count,
 )
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
@@ -396,16 +397,9 @@ class ComplianceReportRepository:
                 )
             query = query.order_by(sort_method(order.field))
 
-        # Execute query with offset and limit for pagination
-        query_result = (
-            (await self.db.execute(query.offset(offset).limit(limit)))
-            .unique()
-            .scalars()
-            .all()
+        query_result, total_count = await paginate_with_window_count(
+            self.db, query, offset, limit
         )
-        # Calculate total number of compliance reports available
-        total_count_query = select(func.count()).select_from(query)
-        total_count = (await self.db.execute(total_count_query)).scalar()
 
         # Transform results into Pydantic schemas and fetch latest comments
         reports = []
