@@ -3,12 +3,34 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Table,
     Text,
 )
 from sqlalchemy.dialects.postgresql import ENUM, TSVECTOR
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
+
+# Association table linking internal comments to their attached documents.
+# Mirrors the per-parent document association pattern (e.g.
+# compliance_report_document_association) so attachments reuse the shared
+# DocumentService/S3 machinery keyed on parent_type "internal_comment".
+internal_comment_document_association = Table(
+    "internal_comment_document_association",
+    BaseModel.metadata,
+    Column(
+        "internal_comment_id",
+        Integer,
+        ForeignKey("internal_comment.internal_comment_id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "document_id",
+        Integer,
+        ForeignKey("document.document_id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
 
 # ENUM for audience scope
 audience_scope_enum = ENUM(
@@ -116,4 +138,9 @@ class InternalComment(BaseModel, Auditable):
     )
     ci_application_internal_comments = relationship(
         "CIApplicationInternalComment", back_populates="internal_comment"
+    )
+    documents = relationship(
+        "Document",
+        secondary=internal_comment_document_association,
+        back_populates="internal_comments",
     )

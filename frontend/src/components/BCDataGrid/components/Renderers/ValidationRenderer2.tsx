@@ -1,8 +1,17 @@
+// @ts-nocheck
 import { DoneAll, Warning } from '@mui/icons-material'
 import { Icon, Tooltip } from '@mui/material'
 import CircularProgress from '@mui/material/CircularProgress'
 
-export const ValidationRenderer2 = ({ data }) => {
+export interface ValidationRenderer2Props {
+  data: {
+    validationStatus?: 'warning' | 'error' | 'success' | 'pending' | string
+    validationMsg?: string
+    [key: string]: any
+  }
+}
+
+export const ValidationRenderer2 = ({ data }: ValidationRenderer2Props) => {
   switch (data.validationStatus) {
     case 'warning':
       return (

@@ -1,10 +1,19 @@
+// @ts-nocheck
 import { forwardRef, useState, useCallback, useLayoutEffect } from 'react'
 import InputBase from '@mui/material/InputBase'
 import Popper from '@mui/material/Popper'
 import Paper from '@mui/material/Paper'
 
+export interface LargeTextareaEditorProps {
+  value?: string
+  onValueChange: (value: string) => void
+  column: { actualWidth: number }
+  api?: any
+  [key: string]: any
+}
+
 export const LargeTextareaEditor = forwardRef(
-  ({ value, onValueChange, column, ...props }, ref) => {
+  ({ value, onValueChange, column, ...props }: LargeTextareaEditorProps, ref) => {
     const [valueState, setValueState] = useState(value)
     const [anchorEl, setAnchorEl] = useState()
     const [inputRef, setInputRef] = useState(null)

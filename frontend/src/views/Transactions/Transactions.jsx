@@ -25,7 +25,7 @@ import { govRoles, roles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
 import Loading from '@/components/Loading'
 import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import {
   useGetTransactionList,
   useDownloadTransactions

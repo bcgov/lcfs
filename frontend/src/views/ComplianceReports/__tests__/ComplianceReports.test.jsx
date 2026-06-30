@@ -77,7 +77,7 @@ vi.mock('../components/_schema', () => ({
   defaultSortModel: []
 }))
 
-vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: React.forwardRef((props, ref) => {
     React.useEffect(() => {
       if (ref && typeof ref === 'object') {

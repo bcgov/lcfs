@@ -1,5 +1,5 @@
 import BCBox from '@/components/BCBox'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useMemo, useRef, useState } from 'react'
