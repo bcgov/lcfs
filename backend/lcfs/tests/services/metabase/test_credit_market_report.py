@@ -3,7 +3,6 @@ import io
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import requests
 from openpyxl import load_workbook
 
 from lcfs.services.jobs.jobs import send_monthly_credit_market_report
@@ -27,7 +26,6 @@ def test_builds_workbook_with_only_report_data_tabs():
         dashboard_name="Credit Market",
         dashboard_description=None,
         dashboard_url="https://metabase.example/dashboard/1",
-        subscriber_emails=[],
         tables=[
             MetabaseTable(
                 name="Annual Report Data",
@@ -106,7 +104,6 @@ def test_workbook_formats_annual_year_and_quarter_effective_dates():
         dashboard_name="Credit Market",
         dashboard_description=None,
         dashboard_url="https://metabase.example/dashboard/1",
-        subscriber_emails=[],
         tables=[
             MetabaseTable(
                 name="Annual Market Report",
@@ -137,7 +134,6 @@ def test_builds_dashboard_email_context():
         dashboard_name="Credit Market",
         dashboard_description=None,
         dashboard_url="https://metabase.example/dashboard/1",
-        subscriber_emails=[],
         tables=[
             MetabaseTable(
                 name="Transfers (Number)",
@@ -225,7 +221,6 @@ def test_report_column_display_names_are_normalized():
         dashboard_name="Credit Market",
         dashboard_description=None,
         dashboard_url="https://metabase.example/dashboard/1",
-        subscriber_emails=[],
         tables=[
             MetabaseTable(
                 name="Credit Trade Volume",
@@ -263,7 +258,6 @@ def test_dashboard_metric_cards_compare_current_month_to_same_month_last_year():
         dashboard_name="Credit Market",
         dashboard_description=None,
         dashboard_url="https://metabase.example/dashboard/1",
-        subscriber_emails=[],
         tables=[
             MetabaseTable(
                 name="Monthly Market Report",
@@ -325,29 +319,12 @@ def test_metabase_client_prefers_api_key_authentication():
     assert client.session.headers["X-API-Key"] == "test-key"
 
 
-def test_metabase_client_ignores_missing_subscription_endpoint():
-    response = requests.Response()
-    response.status_code = 404
-    http_error = requests.HTTPError(response=response)
-
-    with patch("lcfs.services.metabase.client.settings") as mock_settings:
-        mock_settings.metabase_base_url = "https://metabase.example"
-        mock_settings.metabase_request_timeout_seconds = 30
-
-        client = MetabaseClient()
-        with patch.object(client, "_get_json", side_effect=http_error):
-            recipients = client.fetch_dashboard_subscriber_emails(211)
-
-    assert recipients == []
-
-
 @pytest.mark.anyio
-async def test_monthly_report_merges_metabase_and_configured_recipients(mock_app):
+async def test_monthly_report_uses_notification_table_email_subscriptions(mock_app):
     report = MetabaseDashboardReport(
         dashboard_name="Credit Market",
         dashboard_description=None,
         dashboard_url="https://metabase.example/dashboard/1",
-        subscriber_emails=["one@example.com", "shared@example.com"],
         tables=[
             MetabaseTable(name="Credits", columns=["Name"], rows=[["Org A"]]),
         ],
@@ -358,19 +335,13 @@ async def test_monthly_report_merges_metabase_and_configured_recipients(mock_app
     )
 
     with patch("lcfs.services.jobs.jobs.MetabaseClient") as mock_client_class, patch(
-        "lcfs.services.jobs.jobs.configured_credit_market_report_recipients"
-    ) as mock_configured_recipients, patch(
         "lcfs.services.jobs.jobs.CHESEmailRepository"
     ) as mock_email_repo_class, patch(
         "lcfs.services.jobs.jobs.CHESEmailService"
     ) as mock_email_service_class:
         mock_client_class.return_value.fetch_credit_market_report.return_value = report
-        mock_configured_recipients.return_value = [
-            "shared@example.com",
-            "two@example.com",
-        ]
         mock_email_repo = MagicMock()
-        mock_email_repo.filter_subscribed_user_emails = AsyncMock(
+        mock_email_repo.get_subscribed_user_emails = AsyncMock(
             return_value=["one@example.com", "two@example.com"]
         )
         mock_email_repo_class.return_value = mock_email_repo
@@ -383,9 +354,8 @@ async def test_monthly_report_merges_metabase_and_configured_recipients(mock_app
         result = await send_monthly_credit_market_report(mock_app)
 
     assert result is True
-    mock_email_repo.filter_subscribed_user_emails.assert_awaited_once_with(
-        "PUBLIC__CREDIT_MARKET_MONTHLY_REPORT",
-        ["one@example.com", "shared@example.com", "two@example.com"],
+    mock_email_repo.get_subscribed_user_emails.assert_awaited_once_with(
+        "PUBLIC__CREDIT_MARKET_MONTHLY_REPORT"
     )
     mock_email_service.send_credit_market_report_email.assert_called_once()
     recipients = mock_email_service.send_credit_market_report_email.call_args.kwargs[
@@ -399,12 +369,11 @@ async def test_monthly_report_merges_metabase_and_configured_recipients(mock_app
 
 
 @pytest.mark.anyio
-async def test_monthly_report_can_send_only_to_configured_recipients(mock_app):
+async def test_monthly_report_skips_when_no_email_subscriptions(mock_app):
     report = MetabaseDashboardReport(
         dashboard_name="Credit Market",
         dashboard_description=None,
         dashboard_url="https://metabase.example/dashboard/1",
-        subscriber_emails=["subscriber@example.com"],
         tables=[
             MetabaseTable(name="Credits", columns=["Name"], rows=[["Org A"]]),
         ],
@@ -414,25 +383,14 @@ async def test_monthly_report_can_send_only_to_configured_recipients(mock_app):
         mock_session
     )
 
-    with patch("lcfs.services.jobs.jobs.settings") as mock_settings, patch(
-        "lcfs.services.jobs.jobs.MetabaseClient"
-    ) as mock_client_class, patch(
-        "lcfs.services.jobs.jobs.configured_credit_market_report_recipients"
-    ) as mock_configured_recipients, patch(
+    with patch("lcfs.services.jobs.jobs.MetabaseClient") as mock_client_class, patch(
         "lcfs.services.jobs.jobs.CHESEmailRepository"
     ) as mock_email_repo_class, patch(
         "lcfs.services.jobs.jobs.CHESEmailService"
     ) as mock_email_service_class:
-        mock_settings.credit_market_report_use_metabase_subscribers = False
-        mock_settings.credit_market_report_notification_type = (
-            "IDIR_ANALYST__GOVERNMENT_NOTIFICATION"
-        )
         mock_client_class.return_value.fetch_credit_market_report.return_value = report
-        mock_configured_recipients.return_value = ["prashanth.venkateshappa@gov.bc.ca"]
         mock_email_repo = MagicMock()
-        mock_email_repo.filter_subscribed_user_emails = AsyncMock(
-            return_value=["prashanth.venkateshappa@gov.bc.ca"]
-        )
+        mock_email_repo.get_subscribed_user_emails = AsyncMock(return_value=[])
         mock_email_repo_class.return_value = mock_email_repo
         mock_email_service = MagicMock()
         mock_email_service.send_credit_market_report_email = AsyncMock(
@@ -442,12 +400,8 @@ async def test_monthly_report_can_send_only_to_configured_recipients(mock_app):
 
         result = await send_monthly_credit_market_report(mock_app)
 
-    assert result is True
-    mock_email_repo.filter_subscribed_user_emails.assert_awaited_once_with(
-        "IDIR_ANALYST__GOVERNMENT_NOTIFICATION",
-        ["prashanth.venkateshappa@gov.bc.ca"],
+    assert result is False
+    mock_email_repo.get_subscribed_user_emails.assert_awaited_once_with(
+        "PUBLIC__CREDIT_MARKET_MONTHLY_REPORT"
     )
-    recipients = mock_email_service.send_credit_market_report_email.call_args.kwargs[
-        "recipients"
-    ]
-    assert recipients == ["prashanth.venkateshappa@gov.bc.ca"]
+    mock_email_service.send_credit_market_report_email.assert_not_called()

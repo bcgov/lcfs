@@ -23,7 +23,6 @@ from lcfs.web.api.email.repo import CHESEmailRepository
 from lcfs.services.metabase.client import (
     CreditMarketReportBuilder,
     MetabaseClient,
-    configured_credit_market_report_recipients,
 )
 from lcfs.web.api.notification.repo import NotificationRepository
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
@@ -263,26 +262,11 @@ async def send_monthly_credit_market_report(app: FastAPI):
     try:
         report = MetabaseClient().fetch_credit_market_report()
         builder = CreditMarketReportBuilder()
-        metabase_recipients = (
-            report.subscriber_emails
-            if settings.credit_market_report_use_metabase_subscribers
-            else []
-        )
-        candidate_recipients = list(
-            dict.fromkeys(
-                metabase_recipients + configured_credit_market_report_recipients()
-            )
-        )
-
-        if not candidate_recipients:
-            logger.info("Skipping monthly credit market report: no recipients found")
-            return False
 
         async with session_factory() as session:
             email_repo = CHESEmailRepository(session)
-            recipients = await email_repo.filter_subscribed_user_emails(
-                settings.credit_market_report_notification_type,
-                candidate_recipients,
+            recipients = await email_repo.get_subscribed_user_emails(
+                settings.credit_market_report_notification_type
             )
             if not recipients:
                 logger.info(

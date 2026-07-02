@@ -7,7 +7,7 @@ from lcfs.db.models.notification.NotificationChannel import (
 from lcfs.web.api.base import AudienceType
 from lcfs.web.core.decorators import repo_handler
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, select, or_, and_
+from sqlalchemy import select, or_, and_
 from typing import List
 from lcfs.db.dependencies import get_async_db_session
 from fastapi import Depends
@@ -93,61 +93,6 @@ class CHESEmailRepository:
             row[0] for row in result.fetchall() if row[0]
         ]  # Filter out None emails
         return emails
-
-    @repo_handler
-    async def filter_subscribed_user_emails(
-        self, notification_type: str, candidate_emails: List[str]
-    ) -> List[str]:
-        """
-        Return candidate emails that still have an enabled EMAIL subscription
-        for the specified notification type.
-        """
-        from lcfs.db.models.user.UserProfile import UserProfile
-
-        ordered_candidates = [
-            email.strip()
-            for email in candidate_emails
-            if isinstance(email, str) and email.strip()
-        ]
-        if not ordered_candidates:
-            return []
-
-        lower_candidate_order = {
-            email.lower(): index for index, email in enumerate(ordered_candidates)
-        }
-
-        query = (
-            select(UserProfile.email)
-            .join(
-                NotificationChannelSubscription,
-                NotificationChannelSubscription.user_profile_id
-                == UserProfile.user_profile_id,
-            )
-            .join(
-                NotificationType,
-                NotificationType.notification_type_id
-                == NotificationChannelSubscription.notification_type_id,
-            )
-            .join(
-                NotificationChannel,
-                NotificationChannel.notification_channel_id
-                == NotificationChannelSubscription.notification_channel_id,
-            )
-            .filter(
-                NotificationType.name == notification_type,
-                NotificationChannelSubscription.is_enabled == True,
-                NotificationChannel.channel_name == ChannelEnum.EMAIL.value,
-                func.lower(UserProfile.email).in_(list(lower_candidate_order.keys())),
-            )
-        )
-
-        result = await self.db.execute(query)
-        subscribed = {row[0].lower(): row[0] for row in result.fetchall() if row[0]}
-        return [
-            subscribed[email.lower()]
-            for email in ordered_candidates
-            if email.lower() in subscribed
-        ]
 
     @repo_handler
     async def get_notification_template(self, notification_type: str) -> str:

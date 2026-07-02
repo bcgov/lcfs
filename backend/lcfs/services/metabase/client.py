@@ -26,7 +26,6 @@ logger = structlog.get_logger(__name__)
 
 EXCEL_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 INVALID_SHEET_TITLE_CHARS = re.compile(r"[\[\]\*:/\\?]")
-EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 WORKBOOK_REPORT_KEYWORDS = (
     "annual",
     "quarterly",
@@ -54,7 +53,6 @@ class MetabaseDashboardReport:
     dashboard_description: Optional[str]
     dashboard_url: str
     tables: List[MetabaseTable]
-    subscriber_emails: List[str]
 
 
 class MetabaseClient:
@@ -77,45 +75,12 @@ class MetabaseClient:
             for table in (self._fetch_table(dashboard_id, card) for card in cards)
             if table
         ]
-        subscribers = self.fetch_dashboard_subscriber_emails(dashboard_id)
-
         return MetabaseDashboardReport(
             dashboard_name=dashboard.get("name") or "Credit Market Report",
             dashboard_description=dashboard.get("description"),
             dashboard_url=f"{self.base_url}/dashboard/{dashboard_id}",
             tables=tables,
-            subscriber_emails=subscribers,
         )
-
-    def fetch_dashboard_subscriber_emails(self, dashboard_id: int) -> List[str]:
-        """
-        Best-effort extraction of Metabase dashboard subscription recipients.
-
-        Metabase versions expose dashboard subscriptions in slightly different
-        endpoints. If none are available, callers can still use configured
-        fallback recipients.
-        """
-        recipients = set()
-        for path in (
-            f"/api/dashboard/{dashboard_id}/subscriptions",
-            f"/api/pulse?dashboard_id={dashboard_id}",
-        ):
-            try:
-                payload = self._get_json(path)
-            except requests.HTTPError as exc:
-                status_code = (
-                    exc.response.status_code if exc.response is not None else None
-                )
-                if status_code in (400, 404, 405):
-                    continue
-                raise
-            except requests.RequestException:
-                logger.warning("Unable to read Metabase subscriptions", path=path)
-                continue
-
-            recipients.update(self._extract_emails(payload))
-
-        return sorted(recipients)
 
     def _validate_configuration(self) -> None:
         missing = []
@@ -232,24 +197,6 @@ class MetabaseClient:
             return dashboard_card["card_id"]
         card = dashboard_card.get("card") or {}
         return card.get("id")
-
-    def _extract_emails(self, payload: Any) -> List[str]:
-        emails = set()
-
-        def visit(value: Any) -> None:
-            if isinstance(value, dict):
-                for key, child in value.items():
-                    if key in {"email", "email_address"} and isinstance(child, str):
-                        if EMAIL_PATTERN.match(child):
-                            emails.add(child)
-                    else:
-                        visit(child)
-            elif isinstance(value, list):
-                for child in value:
-                    visit(child)
-
-        visit(payload)
-        return sorted(emails)
 
 
 class CreditMarketReportBuilder:
@@ -1390,11 +1337,3 @@ class SimplePngChart:
         png.extend(chunk(b"IDAT", compressed))
         png.extend(chunk(b"IEND", b""))
         return bytes(png)
-
-
-def configured_credit_market_report_recipients() -> List[str]:
-    return [
-        email.strip()
-        for email in settings.credit_market_report_recipient_emails.split(",")
-        if email.strip()
-    ]
