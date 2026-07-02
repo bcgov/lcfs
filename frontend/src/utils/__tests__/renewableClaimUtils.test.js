@@ -25,6 +25,26 @@ const mockOptionsData = {
           fuelProductionFacilityCountry: 'United States'
         }
       ]
+    },
+    {
+      fuelType: 'Ethanol',
+      renewable: true,
+      fuelCodes: []
+    },
+    {
+      fuelType: 'Renewable gasoline',
+      renewable: true,
+      fuelCodes: []
+    },
+    {
+      fuelType: 'Renewable naphtha',
+      renewable: true,
+      fuelCodes: []
+    },
+    {
+      fuelType: 'Fossil gasoline',
+      renewable: false,
+      fuelCodes: []
     }
   ]
 }
@@ -233,6 +253,68 @@ describe('renewableClaimEligibility utilities', () => {
           {
             ...defaultCiRenewableDieselRow,
             provisionOfTheAct: APPROVED_FUEL_CODE
+          },
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(false)
+    })
+
+    it.each(['Ethanol', 'Renewable gasoline', 'Renewable naphtha'])(
+      'allows editing for eligible renewable gasoline fuel %s with Default CI in 2026',
+      (fuelType) => {
+        expect(
+          canEditCanadianProduced(
+            {
+              fuelType,
+              fuelCategory: 'Gasoline',
+              provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+            },
+            '2026',
+            mockOptionsData
+          )
+        ).toBe(true)
+      }
+    )
+
+    it.each(['Ethanol', 'Renewable gasoline', 'Renewable naphtha'])(
+      'does not allow editing for eligible renewable gasoline fuel %s before 2026',
+      (fuelType) => {
+        expect(
+          canEditCanadianProduced(
+            {
+              fuelType,
+              fuelCategory: 'Gasoline',
+              provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+            },
+            '2025',
+            mockOptionsData
+          )
+        ).toBe(false)
+      }
+    )
+
+    it('does not allow editing for renewable gasoline when Default CI is not selected', () => {
+      expect(
+        canEditCanadianProduced(
+          {
+            fuelType: 'Renewable gasoline',
+            fuelCategory: 'Gasoline',
+            provisionOfTheAct: APPROVED_FUEL_CODE
+          },
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(false)
+    })
+
+    it('does not allow editing for non-renewable gasoline in 2026', () => {
+      expect(
+        canEditCanadianProduced(
+          {
+            fuelType: 'Fossil gasoline',
+            fuelCategory: 'Gasoline',
+            provisionOfTheAct: DEFAULT_CI_FUEL_CODE
           },
           '2026',
           mockOptionsData
