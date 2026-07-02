@@ -21,7 +21,7 @@ fi
 
 # Run Python seed script using Poetry
 echo "Running Python seed script."
-# poetry run python /app/lcfs/db/seeders/seed_database.py $APP_ENVIRONMENT
+poetry run python /app/lcfs/db/seeders/seed_database.py $APP_ENVIRONMENT
 echo "Running Python views creation script."
 poetry run python /app/lcfs/db/sql/manage_views.py $APP_ENVIRONMENT
 
