@@ -18,22 +18,18 @@ def audit_log_repo(mock_db):
 
 @pytest.mark.anyio
 async def test_get_audit_logs_paginated_success(audit_log_repo, mock_db):
-    # Arrange
-    expected_audit_logs = [AuditLog(audit_log_id=1), AuditLog(audit_log_id=2)]
+    # Arrange — window function returns rows with a _wf_total attribute
     expected_total_count = 2
+    row1 = MagicMock(spec=["audit_log_id", "_wf_total"])
+    row1.audit_log_id = 1
+    row1._wf_total = expected_total_count
+    row2 = MagicMock(spec=["audit_log_id", "_wf_total"])
+    row2.audit_log_id = 2
+    row2._wf_total = expected_total_count
 
-    # Mock total_count_result for count query
-    mock_total_count_result = MagicMock()
-    mock_total_count_result.scalar_one.return_value = expected_total_count
-
-    # Mock result for the data query
     mock_result = MagicMock()
-    mock_scalars = MagicMock()
-    mock_scalars.all.return_value = expected_audit_logs
-    mock_result.scalars.return_value = mock_scalars
-
-    # Mock execute to return the total count result and the data result
-    mock_db.execute.side_effect = [mock_total_count_result, mock_result]
+    mock_result.all.return_value = [row1, row2]
+    mock_db.execute.return_value = mock_result
 
     # Act
     offset = 0
@@ -44,12 +40,10 @@ async def test_get_audit_logs_paginated_success(audit_log_repo, mock_db):
         offset, limit, conditions, sort_orders
     )
 
-    # Assert
-    assert audit_logs == expected_audit_logs
+    # Assert — single execute (window function; no separate count query)
+    assert audit_logs == [row1, row2]
     assert total_count == expected_total_count
-    assert (
-        mock_db.execute.call_count == 2
-    )  # One for the count query, one for the data query
+    assert mock_db.execute.call_count == 1
 
 
 @pytest.mark.anyio
