@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import text
 from fastapi import FastAPI
 
+from lcfs.settings import settings
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import ComplianceReportUpdateSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
@@ -19,6 +20,11 @@ from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.api.email.repo import CHESEmailRepository
+from lcfs.services.metabase.client import (
+    CreditMarketReportBuilder,
+    MetabaseClient,
+    configured_credit_market_report_recipients,
+)
 from lcfs.web.api.notification.repo import NotificationRepository
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
@@ -245,3 +251,51 @@ async def reindex_compliance_report_tables(app: FastAPI):
         await conn.close()
 
     logger.info("Finished compliance-report table reindex job")
+
+
+async def send_monthly_credit_market_report(app: FastAPI):
+    """
+    Sends the monthly Metabase credit market dashboard report through CHES.
+    """
+    logger.info("Starting monthly credit market report job")
+    session_factory = app.state.db_session_factory
+
+    try:
+        report = MetabaseClient().fetch_credit_market_report()
+        builder = CreditMarketReportBuilder()
+        metabase_recipients = (
+            report.subscriber_emails
+            if settings.credit_market_report_use_metabase_subscribers
+            else []
+        )
+        recipients = list(
+            dict.fromkeys(
+                metabase_recipients + configured_credit_market_report_recipients()
+            )
+        )
+
+        if not recipients:
+            logger.info("Skipping monthly credit market report: no recipients found")
+            return False
+
+        async with session_factory() as session:
+            email_service = CHESEmailService(CHESEmailRepository(session))
+            result = await email_service.send_credit_market_report_email(
+                recipients=recipients,
+                context=builder.build_email_context(report),
+                attachments=[builder.build_attachment(report)],
+            )
+
+        logger.info(
+            "Finished monthly credit market report job: sent=%s recipient_count=%s table_count=%s",
+            result,
+            len(recipients),
+            len(report.tables),
+        )
+        return result
+    except Exception as exc:
+        logger.error(
+            f"Monthly credit market report job failed: {exc}",
+            exc_info=True,
+        )
+        raise
