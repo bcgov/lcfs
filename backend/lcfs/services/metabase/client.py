@@ -649,9 +649,9 @@ class CreditMarketReportBuilder:
     def _display_column_name(self, column: str) -> str:
         normalized = re.sub(r"\s+", " ", str(column)).strip().lower()
         if normalized == "sum of quantity":
-            return "Transfers"
-        if normalized == "count":
             return "Volume (Credits)"
+        if normalized == "count":
+            return "Transfers (Number)"
         return str(column)
 
     def _flatten_values(self, rows: List[List[Any]]) -> List[Any]:

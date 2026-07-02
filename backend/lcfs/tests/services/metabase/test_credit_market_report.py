@@ -360,6 +360,8 @@ async def test_monthly_report_merges_metabase_and_configured_recipients(mock_app
     with patch("lcfs.services.jobs.jobs.MetabaseClient") as mock_client_class, patch(
         "lcfs.services.jobs.jobs.configured_credit_market_report_recipients"
     ) as mock_configured_recipients, patch(
+        "lcfs.services.jobs.jobs.CHESEmailRepository"
+    ) as mock_email_repo_class, patch(
         "lcfs.services.jobs.jobs.CHESEmailService"
     ) as mock_email_service_class:
         mock_client_class.return_value.fetch_credit_market_report.return_value = report
@@ -367,6 +369,11 @@ async def test_monthly_report_merges_metabase_and_configured_recipients(mock_app
             "shared@example.com",
             "two@example.com",
         ]
+        mock_email_repo = MagicMock()
+        mock_email_repo.filter_subscribed_user_emails = AsyncMock(
+            return_value=["one@example.com", "two@example.com"]
+        )
+        mock_email_repo_class.return_value = mock_email_repo
         mock_email_service = MagicMock()
         mock_email_service.send_credit_market_report_email = AsyncMock(
             return_value=True
@@ -376,11 +383,15 @@ async def test_monthly_report_merges_metabase_and_configured_recipients(mock_app
         result = await send_monthly_credit_market_report(mock_app)
 
     assert result is True
+    mock_email_repo.filter_subscribed_user_emails.assert_awaited_once_with(
+        "PUBLIC__CREDIT_MARKET_MONTHLY_REPORT",
+        ["one@example.com", "shared@example.com", "two@example.com"],
+    )
     mock_email_service.send_credit_market_report_email.assert_called_once()
     recipients = mock_email_service.send_credit_market_report_email.call_args.kwargs[
         "recipients"
     ]
-    assert recipients == ["one@example.com", "shared@example.com", "two@example.com"]
+    assert recipients == ["one@example.com", "two@example.com"]
     attachments = mock_email_service.send_credit_market_report_email.call_args.kwargs[
         "attachments"
     ]
@@ -408,11 +419,21 @@ async def test_monthly_report_can_send_only_to_configured_recipients(mock_app):
     ) as mock_client_class, patch(
         "lcfs.services.jobs.jobs.configured_credit_market_report_recipients"
     ) as mock_configured_recipients, patch(
+        "lcfs.services.jobs.jobs.CHESEmailRepository"
+    ) as mock_email_repo_class, patch(
         "lcfs.services.jobs.jobs.CHESEmailService"
     ) as mock_email_service_class:
         mock_settings.credit_market_report_use_metabase_subscribers = False
+        mock_settings.credit_market_report_notification_type = (
+            "IDIR_ANALYST__GOVERNMENT_NOTIFICATION"
+        )
         mock_client_class.return_value.fetch_credit_market_report.return_value = report
         mock_configured_recipients.return_value = ["prashanth.venkateshappa@gov.bc.ca"]
+        mock_email_repo = MagicMock()
+        mock_email_repo.filter_subscribed_user_emails = AsyncMock(
+            return_value=["prashanth.venkateshappa@gov.bc.ca"]
+        )
+        mock_email_repo_class.return_value = mock_email_repo
         mock_email_service = MagicMock()
         mock_email_service.send_credit_market_report_email = AsyncMock(
             return_value=True
@@ -422,6 +443,10 @@ async def test_monthly_report_can_send_only_to_configured_recipients(mock_app):
         result = await send_monthly_credit_market_report(mock_app)
 
     assert result is True
+    mock_email_repo.filter_subscribed_user_emails.assert_awaited_once_with(
+        "IDIR_ANALYST__GOVERNMENT_NOTIFICATION",
+        ["prashanth.venkateshappa@gov.bc.ca"],
+    )
     recipients = mock_email_service.send_credit_market_report_email.call_args.kwargs[
         "recipients"
     ]

@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     credit_market_report_run_on_startup: bool = False
     credit_market_report_recipient_emails: str = ""
     credit_market_report_use_metabase_subscribers: bool = True
+    credit_market_report_notification_type: str = "PUBLIC__CREDIT_MARKET_MONTHLY_REPORT"
 
     metabase_base_url: str = ""
     metabase_api_key: str = ""

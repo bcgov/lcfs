@@ -15,6 +15,8 @@ const BCeIDNotificationSettings = () => {
       title: 'bceid.categories.transfers.title',
       BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE:
         'bceid.categories.transfers.creditsListedForSale',
+      PUBLIC__CREDIT_MARKET_MONTHLY_REPORT:
+        'bceid.categories.transfers.creditMarketMonthlyReport',
       BCEID__TRANSFER__PARTNER_ACTIONS:
         'bceid.categories.transfers.partnerActions',
       BCEID__TRANSFER__DIRECTOR_DECISION:

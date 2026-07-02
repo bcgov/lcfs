@@ -268,18 +268,29 @@ async def send_monthly_credit_market_report(app: FastAPI):
             if settings.credit_market_report_use_metabase_subscribers
             else []
         )
-        recipients = list(
+        candidate_recipients = list(
             dict.fromkeys(
                 metabase_recipients + configured_credit_market_report_recipients()
             )
         )
 
-        if not recipients:
+        if not candidate_recipients:
             logger.info("Skipping monthly credit market report: no recipients found")
             return False
 
         async with session_factory() as session:
-            email_service = CHESEmailService(CHESEmailRepository(session))
+            email_repo = CHESEmailRepository(session)
+            recipients = await email_repo.filter_subscribed_user_emails(
+                settings.credit_market_report_notification_type,
+                candidate_recipients,
+            )
+            if not recipients:
+                logger.info(
+                    "Skipping monthly credit market report: no subscribed recipients found"
+                )
+                return False
+
+            email_service = CHESEmailService(email_repo)
             result = await email_service.send_credit_market_report_email(
                 recipients=recipients,
                 context=builder.build_email_context(report),
