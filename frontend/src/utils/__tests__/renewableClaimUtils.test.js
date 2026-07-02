@@ -3,8 +3,10 @@ import {
   isEligibleRenewableFuel,
   isFuelCodeCanadian,
   calculateRenewableClaimColumnVisibility,
-  applyRenewableClaimColumnVisibility
+  applyRenewableClaimColumnVisibility,
+  canEditCanadianProduced
 } from '../renewableClaimUtils'
+import { DEFAULT_CI_FUEL_CODE } from '@/constants/common'
 
 const APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -185,6 +187,57 @@ describe('renewableClaimEligibility utilities', () => {
       })
 
       expect(setColumnsVisible).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('canEditCanadianProduced', () => {
+    const defaultCiRenewableDieselRow = {
+      fuelType: 'Biodiesel',
+      fuelCategory: 'Diesel',
+      provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+    }
+
+    it('does not allow editing before 2025', () => {
+      expect(
+        canEditCanadianProduced(
+          defaultCiRenewableDieselRow,
+          '2024',
+          mockOptionsData
+        )
+      ).toBe(false)
+    })
+
+    it('allows editing for eligible renewable diesel with Default CI in 2025', () => {
+      expect(
+        canEditCanadianProduced(
+          defaultCiRenewableDieselRow,
+          '2025',
+          mockOptionsData
+        )
+      ).toBe(true)
+    })
+
+    it('allows editing for eligible renewable diesel with Default CI after 2025', () => {
+      expect(
+        canEditCanadianProduced(
+          defaultCiRenewableDieselRow,
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(true)
+    })
+
+    it('does not allow editing when Default CI is not selected', () => {
+      expect(
+        canEditCanadianProduced(
+          {
+            ...defaultCiRenewableDieselRow,
+            provisionOfTheAct: APPROVED_FUEL_CODE
+          },
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(false)
     })
   })
 })
