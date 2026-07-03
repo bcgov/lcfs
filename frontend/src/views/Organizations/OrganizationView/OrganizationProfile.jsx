@@ -7,7 +7,7 @@ import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 import { useTranslation } from 'react-i18next'
 import { phoneNumberFormatter } from '@/utils/formatters'
 import { constructAddress } from '@/utils/constructAddress'
-import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
+import { getCurrentEarlyIssuanceYear } from '@/constants/common'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { LinkKeyManagement } from './components/LinkKeyManagement'
 
@@ -96,7 +96,7 @@ export const OrganizationProfile = ({
             <BCTypography variant="body4">
               <strong>
                 {t('org:earlyIssuanceIndicator', {
-                  year: CURRENT_COMPLIANCE_YEAR
+                  year: getCurrentEarlyIssuanceYear()
                 })}
                 :
               </strong>{' '}

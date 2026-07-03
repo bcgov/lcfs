@@ -37,7 +37,7 @@ import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { AddressAutocomplete } from '@/components/BCForm/index.js'
 import colors from '@/themes/base/colors'
-import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
+import { getCurrentEarlyIssuanceYear } from '@/constants/common'
 import ReferenceCompareBox from './ReferenceCompareBox'
 
 // Component for adding a new organization
@@ -739,7 +739,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                         <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
                           <BCTypography variant="body4">
                             {t('org:earlyIssuanceLabel', {
-                              year: CURRENT_COMPLIANCE_YEAR
+                              year: getCurrentEarlyIssuanceYear()
                             })}
                             :
                           </BCTypography>
