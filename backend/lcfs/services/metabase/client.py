@@ -421,7 +421,7 @@ class CreditMarketReportBuilder:
         if "category" in normalized:
             return False
         return normalized in {
-            "sum of quantity",
+            "count",
             "transfers",
             "transfers number",
             "transfers #",
@@ -433,7 +433,7 @@ class CreditMarketReportBuilder:
         if "category" in normalized:
             return False
         return normalized in {
-            "count",
+            "sum of quantity",
             "volume credits",
             "volumes credits",
             "credit volume",
@@ -658,9 +658,9 @@ class CreditMarketReportBuilder:
     def _display_column_name(self, column: str) -> str:
         normalized = re.sub(r"\s+", " ", str(column)).strip().lower()
         if normalized == "sum of quantity":
-            return "Transfers"
-        if normalized == "count":
             return "Volume (Credits)"
+        if normalized == "count":
+            return "Transfers"
         return str(column)
 
     def _flatten_values(self, rows: List[List[Any]]) -> List[Any]:
@@ -1096,9 +1096,9 @@ class SimplePngChart:
     def _display_column_name(self, column: str) -> str:
         normalized = re.sub(r"\s+", " ", str(column)).strip().lower()
         if normalized == "sum of quantity":
-            return "Transfers"
-        if normalized == "count":
             return "Volume (Credits)"
+        if normalized == "count":
+            return "Transfers"
         return str(column)
 
     def _legend_label(self, name: str) -> str:

@@ -54,8 +54,8 @@ def test_builds_workbook_with_only_report_data_tabs():
                 rows=[
                     [
                         "June, 2026",
-                        6,
                         75491,
+                        6,
                         "$143.32",
                         "$108.50",
                         "$169.92",
@@ -85,6 +85,8 @@ def test_builds_workbook_with_only_report_data_tabs():
     ]
     assert workbook["Monthly Market Report"]["B1"].value == "Transfers"
     assert workbook["Monthly Market Report"]["C1"].value == "Volume (Credits)"
+    assert workbook["Monthly Market Report"]["B2"].value == 6
+    assert workbook["Monthly Market Report"]["C2"].value == 75491
     assert workbook["Monthly Market Report"]["G1"].value == "Category A1 - Transfers"
     assert (
         workbook["Monthly Market Report"]["H1"].value == "Category A1 - Credit Volume"
@@ -232,14 +234,14 @@ def test_report_column_display_names_are_normalized():
                 name="Credit Trade Volume",
                 columns=["Month/Year", "Sum of Quantity", "Count"],
                 rows=[
-                    ["January 2026", 6, 75491],
-                    ["February 2026", 12, 177020],
+                    ["January 2026", 75491, 6],
+                    ["February 2026", 177020, 12],
                 ],
             ),
             MetabaseTable(
                 name="Monthly Market Report",
                 columns=["Month", "Sum of Quantity", "Count"],
-                rows=[["January 2026", 6, 75491]],
+                rows=[["January 2026", 75491, 6]],
             ),
         ],
     )
@@ -252,11 +254,13 @@ def test_report_column_display_names_are_normalized():
 
     assert context["chart_sections"][0]["columns"] == [
         "Month/Year",
-        "Transfers",
         "Volume (Credits)",
+        "Transfers",
     ]
     assert workbook["Monthly Market Report"]["B1"].value == "Transfers"
     assert workbook["Monthly Market Report"]["C1"].value == "Volume (Credits)"
+    assert workbook["Monthly Market Report"]["B2"].value == 6
+    assert workbook["Monthly Market Report"]["C2"].value == 75491
 
 
 def test_dashboard_metric_cards_compare_current_month_to_same_month_last_year():
