@@ -29,13 +29,24 @@ def test_builds_workbook_with_only_report_data_tabs():
         tables=[
             MetabaseTable(
                 name="Annual Report Data",
-                columns=["Year", "Volume (Credits)", "Transfers (#)"],
-                rows=[[2026, 100, 2]],
+                columns=[
+                    "Year",
+                    "Volume (Credits)",
+                    "Transfers (#)",
+                    "Weighted average",
+                    "Sum of Transfer Value (CA$)",
+                ],
+                rows=[[2026, 100, 2, "152.98", "129299893.93"]],
             ),
             MetabaseTable(
                 name="Quarterly Market Report",
-                columns=["Quarter", "Volume (Credits)", "Transfers (#)"],
-                rows=[["Q1, 2026", 75, 3]],
+                columns=[
+                    "Quarter",
+                    "Volume (Credits)",
+                    "Transfers (#)",
+                    "Weighted average price",
+                ],
+                rows=[["Q1, 2026", 75, 3, "160.28"]],
             ),
             MetabaseTable(
                 name="Monthly Market Report",
@@ -87,6 +98,15 @@ def test_builds_workbook_with_only_report_data_tabs():
     assert workbook["Monthly Market Report"]["C1"].value == "Volume (Credits)"
     assert workbook["Monthly Market Report"]["B2"].value == 6
     assert workbook["Monthly Market Report"]["C2"].value == 75491
+    assert workbook["Monthly Market Report"]["D2"].value == 143.32
+    assert workbook["Monthly Market Report"]["D2"].number_format == "$#,##0.00"
+    assert workbook["Monthly Market Report"]["E2"].value == 108.5
+    assert workbook["Monthly Market Report"]["E2"].number_format == "$#,##0.00"
+    assert workbook["Monthly Market Report"]["F2"].value == 169.92
+    assert workbook["Monthly Market Report"]["F2"].number_format == "$#,##0.00"
+    assert workbook["Monthly Market Report"]["G2"].value == 2
+    assert workbook["Monthly Market Report"]["I2"].value == 120.3
+    assert workbook["Monthly Market Report"]["I2"].number_format == "$#,##0.00"
     assert workbook["Monthly Market Report"]["G1"].value == "Category A1 - Transfers"
     assert (
         workbook["Monthly Market Report"]["H1"].value == "Category A1 - Credit Volume"
@@ -99,10 +119,16 @@ def test_builds_workbook_with_only_report_data_tabs():
     assert workbook["Quarterly Market Report"]["C1"].value == "Volume (Credits)"
     assert workbook["Quarterly Market Report"]["B2"].value == 3
     assert workbook["Quarterly Market Report"]["C2"].value == 75
+    assert workbook["Quarterly Market Report"]["D2"].value == 160.28
+    assert workbook["Quarterly Market Report"]["D2"].number_format == "$#,##0.00"
     assert workbook["Annual Report Data"]["B1"].value == "Transfers (#)"
     assert workbook["Annual Report Data"]["C1"].value == "Volume (Credits)"
     assert workbook["Annual Report Data"]["B2"].value == 2
     assert workbook["Annual Report Data"]["C2"].value == 100
+    assert workbook["Annual Report Data"]["D2"].value == 152.98
+    assert workbook["Annual Report Data"]["D2"].number_format == "$#,##0.00"
+    assert workbook["Annual Report Data"]["E2"].value == 129299893.93
+    assert workbook["Annual Report Data"]["E2"].number_format == "$#,##0.00"
     assert attachment["filename"].startswith("credit-market-report-")
     assert attachment["encoding"] == "base64"
 

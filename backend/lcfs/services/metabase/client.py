@@ -266,19 +266,26 @@ class CreditMarketReportBuilder:
 
         for row_index, row in enumerate(table.rows, start=2):
             for column_index, value in enumerate(row, start=1):
-                sheet.cell(
+                column_name = (
+                    table.columns[column_index - 1]
+                    if len(table.columns) >= column_index
+                    else ""
+                )
+                cell = sheet.cell(
                     row=row_index,
                     column=column_index,
                     value=self._excel_value(
                         value,
                         table_name=table.name,
-                        column_name=(
-                            table.columns[column_index - 1]
-                            if len(table.columns) >= column_index
-                            else ""
-                        ),
+                        column_name=column_name,
                     ),
                 )
+                number_format = self._excel_number_format(
+                    table_name=table.name,
+                    column_name=column_name,
+                )
+                if number_format:
+                    cell.number_format = number_format
 
         sheet.freeze_panes = "A2"
         sheet.auto_filter.ref = sheet.dimensions
@@ -321,7 +328,25 @@ class CreditMarketReportBuilder:
                 return f"Q{quarter}, {month.year}"
         if month:
             return self._month_label(month, value)
+        if self._is_currency_workbook_column(table_name, column_name):
+            numeric = self._numeric_value(value)
+            if numeric is not None:
+                return float(numeric.quantize(Decimal("0.01")))
         return value
+
+    def _excel_number_format(self, table_name: str, column_name: str) -> Optional[str]:
+        if self._is_currency_workbook_column(table_name, column_name):
+            return "$#,##0.00"
+        return None
+
+    def _is_currency_workbook_column(self, table_name: str, column_name: str) -> bool:
+        lower_table = table_name.lower()
+        lower_column = re.sub(r"\s+", " ", str(column_name)).strip().lower()
+        if "price" in lower_column:
+            return True
+        if "weighted average" in lower_column:
+            return True
+        return "annual" in lower_table and "sum of transfer value" in lower_column
 
     def _workbook_tables(self, report: MetabaseDashboardReport) -> List[MetabaseTable]:
         tables = [
