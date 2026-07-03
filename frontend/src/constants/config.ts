@@ -135,9 +135,9 @@ export const CONFIG: AppConfig = {
     // CI applications is in active development — default ON for dev/test,
     // OFF in prod until the feature is signed off and the tenant repo flag
     // flips it on for production.
-    ciApplications: true,
-      // window.lcfs_config.feature_flags.ciApplications ??
-      // !isProductionEnvironment,
+    ciApplications:
+      window.lcfs_config.feature_flags.ciApplications ??
+      !isProductionEnvironment,
     internalCommentSearch:
       window.lcfs_config.feature_flags.internalCommentSearch ?? false
   }
