@@ -30,6 +30,7 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
+from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -45,9 +46,11 @@ class ComplianceReportReviewService:
         self,
         repo: ComplianceReportRepository = Depends(),
         summary_service: ComplianceReportSummaryService = Depends(),
+        fse_repo: FinalSupplyEquipmentRepository = Depends(),
     ) -> None:
         self.repo = repo
         self.summary_service = summary_service
+        self.fse_repo = fse_repo
 
     @service_handler
     async def get_review_summary(
@@ -339,7 +342,8 @@ class ComplianceReportReviewService:
     async def _get_fse_summary(self, report, compliance_year: int | None) -> dict:
         if not compliance_year:
             return {}
-        return await self.repo.get_review_fse_summary(
+        return await self.fse_repo.get_review_fse_summary_for_report(
+            report.organization_id,
             report.compliance_report_id,
             date(compliance_year, 1, 1),
             date(compliance_year, 12, 31),
@@ -695,7 +699,7 @@ class ComplianceReportReviewService:
                     "Electricity/FSE",
                     "informational",
                     "No FSE data reported",
-                    "The deterministic pre-screen did not find active FSE reporting rows for this report.",
+                    "The deterministic pre-screen did not find FSE reporting rows in the grid-backed row set for this report.",
                     "FSE reporting view",
                     [self._metric("FSE count", 0)],
                     None,
