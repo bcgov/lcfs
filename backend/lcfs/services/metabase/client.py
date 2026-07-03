@@ -344,10 +344,13 @@ class CreditMarketReportBuilder:
         return 3
 
     def _workbook_table(self, table: MetabaseTable) -> MetabaseTable:
-        if not self._is_monthly_report_table(table):
+        order = self._workbook_column_order(table.columns)
+        if self._is_monthly_report_table(table):
+            order = self._monthly_workbook_column_order(table.columns, order)
+
+        if order == list(range(len(table.columns))):
             return table
 
-        order = self._monthly_workbook_column_order(table.columns)
         return MetabaseTable(
             name=table.name,
             columns=[
@@ -361,21 +364,80 @@ class CreditMarketReportBuilder:
             display=table.display,
         )
 
-    def _monthly_workbook_column_order(self, columns: List[str]) -> List[int]:
+    def _workbook_column_order(self, columns: List[str]) -> List[int]:
         indexed_columns = list(enumerate(columns))
-        a1_indexes = [
+        transfer_indexes = [
             index
             for index, column in indexed_columns
+            if self._is_transfer_count_column(column)
+        ]
+        volume_indexes = [
+            index
+            for index, column in indexed_columns
+            if self._is_credit_volume_column(column)
+        ]
+        prioritized = []
+        if transfer_indexes:
+            prioritized.append(transfer_indexes[0])
+        if volume_indexes:
+            prioritized.append(volume_indexes[0])
+
+        if not prioritized:
+            return [index for index, _ in indexed_columns]
+
+        leading = [
+            index
+            for index, _ in indexed_columns
+            if index < prioritized[0] and index not in prioritized
+        ]
+        remaining = [
+            index
+            for index, _ in indexed_columns
+            if index not in set(leading + prioritized)
+        ]
+        return leading + prioritized + remaining
+
+    def _monthly_workbook_column_order(
+        self, columns: List[str], order: List[int]
+    ) -> List[int]:
+        a1_indexes = [
+            index
+            for index in order
+            for column in [columns[index]]
             if self._is_category_a1_column(column)
         ]
         non_a1_indexes = [
             index
-            for index, column in indexed_columns
+            for index in order
+            for column in [columns[index]]
             if not self._is_category_a1_column(column)
         ]
         front = non_a1_indexes[:6]
         back = non_a1_indexes[6:]
         return front + a1_indexes + back
+
+    def _is_transfer_count_column(self, column: str) -> bool:
+        normalized = re.sub(r"[^a-z0-9]+", " ", str(column).lower()).strip()
+        if "category" in normalized:
+            return False
+        return normalized in {
+            "sum of quantity",
+            "transfers",
+            "transfers number",
+            "transfers #",
+            "number of transfers",
+        }
+
+    def _is_credit_volume_column(self, column: str) -> bool:
+        normalized = re.sub(r"[^a-z0-9]+", " ", str(column).lower()).strip()
+        if "category" in normalized:
+            return False
+        return normalized in {
+            "count",
+            "volume credits",
+            "volumes credits",
+            "credit volume",
+        }
 
     def _is_category_a1_column(self, column: str) -> bool:
         normalized = column.lower().replace(" ", "")
@@ -596,9 +658,9 @@ class CreditMarketReportBuilder:
     def _display_column_name(self, column: str) -> str:
         normalized = re.sub(r"\s+", " ", str(column)).strip().lower()
         if normalized == "sum of quantity":
-            return "Volume (Credits)"
+            return "Transfers"
         if normalized == "count":
-            return "Transfers (Number)"
+            return "Volume (Credits)"
         return str(column)
 
     def _flatten_values(self, rows: List[List[Any]]) -> List[Any]:
