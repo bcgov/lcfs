@@ -26,10 +26,13 @@ const getFieldOptions = (optionsData?: OptionsData) => ({
 })
 
 const cellErrorStyle = (params) => {
-  if (
-    params.data.validationMsg &&
-    params.data.validationMsg[params.colDef.field]
-  ) {
+  const validationFields =
+    params.data.validationErrors ||
+    (typeof params.data.validationMsg === 'object'
+      ? params.data.validationMsg
+      : null)
+
+  if (validationFields?.[params.colDef.field]) {
     return { borderColor: 'red' }
   }
   return { borderColor: 'unset' }

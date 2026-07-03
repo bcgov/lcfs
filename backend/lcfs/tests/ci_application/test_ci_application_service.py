@@ -8,6 +8,9 @@ import pytest
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.ci_application import CIApplication, CIApplicationStatus
+from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
+from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
@@ -72,6 +75,7 @@ def _organization(org_id=1, name="Fuel Producer Ltd."):
         organization_id=org_id,
         name=name,
         operating_name=f"{name} (DBA)",
+        edrms_record="EDRMS-123",
         email="hello@example.com",
         phone="+1 555 0100",
         org_address=SimpleNamespace(
@@ -359,7 +363,11 @@ def _pathway_fc_type(ident=1, name="1-year provisional"):
 
 
 def _fuel_type_obj(ident=1, name="Biodiesel"):
-    return SimpleNamespace(fuel_type_id=ident, fuel_type=name)
+    return FuelType(
+        fuel_type_id=ident,
+        fuel_type=name,
+        units=QuantityUnitsEnum.Litres,
+    )
 
 
 def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF"):
@@ -371,7 +379,7 @@ def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF"):
         fuel_type=_fuel_type_obj(),
         feedstock="Corn",
         feedstock_location="Ontario, CA",
-        fuel_code_prefix=SimpleNamespace(prefix=prefix),
+        fuel_code_prefix=FuelCodePrefix(prefix=prefix),
     )
 
 
@@ -806,18 +814,17 @@ from fastapi import HTTPException
 
 
 @pytest.mark.anyio
-async def test_generate_fuel_codes_allows_moderate_after_verification_1(
+async def test_generate_fuel_codes_requires_verification_2_for_moderate_risk(
     service, repo, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _submitted_ci_for_generation("Medium")
-    _stub_generation_dependencies(service, repo, ci)
 
-    result = await service.generate_fuel_codes(ci, mock_user)
+    with pytest.raises(HTTPException) as exc:
+        await service.generate_fuel_codes(ci, mock_user)
 
-    assert isinstance(result, CIApplicationSchema)
-    assert len(ci.generated_fuel_codes) == 1
-    repo.update.assert_awaited_once()
+    assert exc.value.status_code == 400
+    assert "Required verification" in exc.value.detail
 
 
 @pytest.mark.anyio
@@ -847,7 +854,10 @@ async def test_generate_fuel_codes_allows_high_after_verification_2(
     result = await service.generate_fuel_codes(ci, mock_user)
 
     assert isinstance(result, CIApplicationSchema)
-    assert len(ci.generated_fuel_codes) == 1
+    assert len(ci.generated_fuel_code_associations) == 1
+    created_fuel_code = ci.generated_fuel_code_associations[0].fuel_code
+    assert created_fuel_code.edrms == "EDRMS-123"
+    assert created_fuel_code.fuel_code_status.status.value == "Draft"
     repo.update.assert_awaited_once()
 
 
@@ -910,6 +920,7 @@ def _submitted_ci_for_generation(risk="Medium"):
     ci.verification_2_risk_assessment = None
     ci.verification_2_priority_score = None
     ci.generated_fuel_codes = []
+    ci.generated_fuel_code_associations = []
     ci.pathways = [_generation_pathway()]
     return ci
 
@@ -919,7 +930,29 @@ def _stub_generation_dependencies(service, repo, ci):
     service.fuel_repo.get_fuel_code_prefixes.return_value = [
         SimpleNamespace(fuel_code_prefix_id=1, prefix="BCLCF")
     ]
+    service.fuel_repo.get_fuel_status_by_status.return_value = SimpleNamespace(
+        fuel_code_status_id=1,
+        status=SimpleNamespace(value="Draft"),
+    )
+    service.fuel_repo.get_transport_modes.return_value = [
+        SimpleNamespace(transport_mode_id=1, transport_mode="Truck"),
+        SimpleNamespace(transport_mode_id=2, transport_mode="Rail"),
+    ]
     service.fuel_repo.get_next_available_fuel_code_by_prefix.return_value = "001.0"
+
+    async def create_fuel_code(fuel_code):
+        fuel_code.fuel_code_id = 100
+        fuel_code.fuel_code_prefix = FuelCodePrefix(
+            fuel_code_prefix_id=1, prefix="BCLCF"
+        )
+        fuel_code.fuel_code_status = FuelCodeStatus(
+            fuel_code_status_id=1,
+            status=FuelCodeStatusEnum.Draft,
+        )
+        fuel_code.fuel_type = _fuel_type_obj()
+        return fuel_code
+
+    service.fuel_repo.create_fuel_code.side_effect = create_fuel_code
     repo.update.side_effect = lambda obj: obj
     repo.add_history.return_value = MagicMock()
     repo.get_by_id.return_value = ci

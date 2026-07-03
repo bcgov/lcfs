@@ -19,6 +19,7 @@ from sqlalchemy.orm import selectinload
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.ci_application import (
     CIApplication,
+    CIApplicationFuelCodeAssociation,
     CIApplicationHistory,
     CIApplicationStatus,
     Pathway,
@@ -33,6 +34,8 @@ from lcfs.db.models.comment.CIApplicationInternalComment import (
 )
 from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
+from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.TransportMode import TransportMode
@@ -219,6 +222,26 @@ class CIApplicationRepository:
                 selectinload(CIApplication.pathways)
                 .selectinload(Pathway.fuel_code)
                 .selectinload(FuelCode.fuel_type),
+                selectinload(
+                    CIApplication.generated_fuel_code_associations
+                ).selectinload(CIApplicationFuelCodeAssociation.pathway),
+                selectinload(CIApplication.generated_fuel_code_associations)
+                .selectinload(CIApplicationFuelCodeAssociation.fuel_code)
+                .selectinload(FuelCode.fuel_code_status),
+                selectinload(CIApplication.generated_fuel_code_associations)
+                .selectinload(CIApplicationFuelCodeAssociation.fuel_code)
+                .selectinload(FuelCode.fuel_code_prefix),
+                selectinload(CIApplication.generated_fuel_code_associations)
+                .selectinload(CIApplicationFuelCodeAssociation.fuel_code)
+                .selectinload(FuelCode.fuel_type),
+                selectinload(CIApplication.generated_fuel_code_associations)
+                .selectinload(CIApplicationFuelCodeAssociation.fuel_code)
+                .selectinload(FuelCode.feedstock_fuel_transport_modes)
+                .selectinload(FeedstockFuelTransportMode.feedstock_fuel_transport_mode),
+                selectinload(CIApplication.generated_fuel_code_associations)
+                .selectinload(CIApplicationFuelCodeAssociation.fuel_code)
+                .selectinload(FuelCode.finished_fuel_transport_modes)
+                .selectinload(FinishedFuelTransportMode.finished_fuel_transport_mode),
             )
             .where(CIApplication.ci_application_id == ci_application_id)
         )
