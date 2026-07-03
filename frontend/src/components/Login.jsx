@@ -22,30 +22,60 @@ export const Login = () => {
   const redirectUri = window.location.origin
   const { message, severity } = location.state || {}
 
-  const [bgUrl, setBgUrl] = useState(bgFallbackImage)
+  // Start with no image so the bundled default never flashes before the
+  // selected background finishes loading. A neutral color fills the gap.
+  const [bgUrl, setBgUrl] = useState(null)
   const [credits, setCredits] = useState(null)
 
   useEffect(() => {
+    let cancelled = false
+
+    // Resolve only once the image is fully decoded, so we swap it in without a flash.
+    const preload = (url) =>
+      new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve()
+        img.onerror = reject
+        img.src = url
+      })
+
+    const showFallback = () => {
+      preload(bgFallbackImage)
+        .then(() => {
+          if (!cancelled) setBgUrl(bgFallbackImage)
+        })
+        .catch(() => {})
+    }
+
     const activeUrl = `${CONFIG.API_BASE}${apiRoutes.loginBgImageActive}`
     fetch(activeUrl)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
+        if (cancelled) return
         if (data?.loginBgImageId) {
           const streamUrl = `${CONFIG.API_BASE}${apiRoutes.loginBgImageStream.replace(':imageId', data.loginBgImageId)}`
-          setBgUrl(streamUrl)
-          const creditParts = [data.displayName, data.caption].filter(Boolean)
-          setCredits(creditParts.length ? creditParts.join(' — ') : null)
+          return preload(streamUrl).then(() => {
+            if (cancelled) return
+            setBgUrl(streamUrl)
+            const creditParts = [data.displayName, data.caption].filter(Boolean)
+            setCredits(creditParts.length ? creditParts.join(' — ') : null)
+          })
         }
+        // No active image configured — fall back to the bundled default.
+        showFallback()
       })
-      .catch(() => {
-        // keep fallback
-      })
+      .catch(showFallback)
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const styles = useMemo(
     () => ({
       loginBackground: {
-        backgroundImage: `url(${bgUrl})`,
+        backgroundColor: '#2a3b4c',
+        backgroundImage: bgUrl ? `url(${bgUrl})` : 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
