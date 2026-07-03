@@ -125,6 +125,10 @@ vi.mock('../components/ComplianceReportPageNav', () => ({
   ComplianceReportPageNav: () => <div data-test="compliance-report-page-nav" />
 }))
 
+vi.mock('../components/AnalystReviewSummary/index', () => ({
+  AnalystReviewSummary: () => <div data-test="analyst-review-summary" />
+}))
+
 vi.mock('../components/ActivityListCard', () => ({
   ActivityListCard: () => <div data-test="activity-list-card" />
 }))
@@ -234,6 +238,7 @@ import {
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
+import { CONFIG } from '@/constants/config'
 import { buttonClusterConfigFn } from '../buttonConfigs'
 
 describe('EditViewComplianceReport', () => {
@@ -242,6 +247,8 @@ describe('EditViewComplianceReport', () => {
   const mockMutate = vi.fn()
   const mockSetValue = vi.fn()
   const mockHandleSubmit = vi.fn((fn) => fn)
+  const originalDeterministicReportSummaryFlag =
+    CONFIG.feature_flags.deterministicReportSummary
 
   // Default mock data
   const defaultReportData = {
@@ -279,6 +286,8 @@ describe('EditViewComplianceReport', () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks()
+    CONFIG.feature_flags.deterministicReportSummary =
+      originalDeterministicReportSummaryFlag
 
     // Mock window properties
     window.scrollTo = vi.fn()
@@ -357,6 +366,8 @@ describe('EditViewComplianceReport', () => {
   })
 
   afterEach(() => {
+    CONFIG.feature_flags.deterministicReportSummary =
+      originalDeterministicReportSummaryFlag
     vi.restoreAllMocks()
   })
 
@@ -713,6 +724,44 @@ describe('EditViewComplianceReport', () => {
       render(<EditViewComplianceReport />)
 
       expect(screen.getByTestId('entity-comments')).toBeInTheDocument()
+    })
+
+    it('renders analyst review summary for government users when feature flag is enabled', () => {
+      CONFIG.feature_flags.deterministicReportSummary = true
+      useCurrentUser.mockReturnValue({
+        data: {
+          ...defaultUser,
+          isGovernmentUser: true,
+          organization: {}
+        },
+        isLoading: false,
+        hasRoles: vi.fn(),
+        hasAnyRole: vi.fn()
+      })
+
+      render(<EditViewComplianceReport />)
+
+      expect(screen.getByTestId('analyst-review-summary')).toBeInTheDocument()
+    })
+
+    it('hides analyst review summary when feature flag is disabled', () => {
+      CONFIG.feature_flags.deterministicReportSummary = false
+      useCurrentUser.mockReturnValue({
+        data: {
+          ...defaultUser,
+          isGovernmentUser: true,
+          organization: {}
+        },
+        isLoading: false,
+        hasRoles: vi.fn(),
+        hasAnyRole: vi.fn()
+      })
+
+      render(<EditViewComplianceReport />)
+
+      expect(
+        screen.queryByTestId('analyst-review-summary')
+      ).not.toBeInTheDocument()
     })
 
     it('renders scroll FAB', () => {

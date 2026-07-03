@@ -45,6 +45,7 @@ import colors from '@/themes/base/colors.js'
 import ROUTES from '@/routes/routes.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 import { FILTER_KEYS, REPORT_SCHEDULES } from '@/constants/common'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { isQuarterEditable } from '@/utils/grid/cellEditables'
 import ComplianceReportEarlyIssuanceSummary from '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx'
 import { DateTime } from 'luxon'
@@ -71,6 +72,9 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const alertRef = useRef()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const isDeterministicReportSummaryEnabled = isFeatureEnabled(
+    FEATURE_FLAGS.DETERMINISTIC_REPORT_SUMMARY
+  )
 
   // Store if we've already shown an alert for this location state to prevent duplicates
   const [hasProcessedLocationAlert, setHasProcessedLocationAlert] =
@@ -828,14 +832,16 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           </BCTypography>
         </BCBox>
         <Stack direction="column" mt={2}>
-          {isIdirUser && !location.state?.newReport && (
-            <BCBox
-              id="report-section-analyst-review"
-              sx={{ scrollMarginTop: 96, marginBottom: '2rem' }}
-            >
-              <AnalystReviewSummary complianceReportId={complianceReportId} />
-            </BCBox>
-          )}
+          {isDeterministicReportSummaryEnabled &&
+            isIdirUser &&
+            !location.state?.newReport && (
+              <BCBox
+                id="report-section-analyst-review"
+                sx={{ scrollMarginTop: 96, marginBottom: '2rem' }}
+              >
+                <AnalystReviewSummary complianceReportId={complianceReportId} />
+              </BCBox>
+            )}
           <Stack
             id="report-section-review-actions"
             direction={{ md: 'column', lg: 'row' }}
