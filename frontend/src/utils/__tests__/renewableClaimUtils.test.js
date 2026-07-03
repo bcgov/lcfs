@@ -3,8 +3,10 @@ import {
   isEligibleRenewableFuel,
   isFuelCodeCanadian,
   calculateRenewableClaimColumnVisibility,
-  applyRenewableClaimColumnVisibility
+  applyRenewableClaimColumnVisibility,
+  canEditCanadianProduced
 } from '../renewableClaimUtils'
+import { DEFAULT_CI_FUEL_CODE } from '@/constants/common'
 
 const APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -23,6 +25,26 @@ const mockOptionsData = {
           fuelProductionFacilityCountry: 'United States'
         }
       ]
+    },
+    {
+      fuelType: 'Ethanol',
+      renewable: true,
+      fuelCodes: []
+    },
+    {
+      fuelType: 'Renewable gasoline',
+      renewable: true,
+      fuelCodes: []
+    },
+    {
+      fuelType: 'Renewable naphtha',
+      renewable: true,
+      fuelCodes: []
+    },
+    {
+      fuelType: 'Fossil gasoline',
+      renewable: false,
+      fuelCodes: []
     }
   ]
 }
@@ -185,6 +207,119 @@ describe('renewableClaimEligibility utilities', () => {
       })
 
       expect(setColumnsVisible).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('canEditCanadianProduced', () => {
+    const defaultCiRenewableDieselRow = {
+      fuelType: 'Biodiesel',
+      fuelCategory: 'Diesel',
+      provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+    }
+
+    it('does not allow editing before 2025', () => {
+      expect(
+        canEditCanadianProduced(
+          defaultCiRenewableDieselRow,
+          '2024',
+          mockOptionsData
+        )
+      ).toBe(false)
+    })
+
+    it('allows editing for eligible renewable diesel with Default CI in 2025', () => {
+      expect(
+        canEditCanadianProduced(
+          defaultCiRenewableDieselRow,
+          '2025',
+          mockOptionsData
+        )
+      ).toBe(true)
+    })
+
+    it('allows editing for eligible renewable diesel with Default CI after 2025', () => {
+      expect(
+        canEditCanadianProduced(
+          defaultCiRenewableDieselRow,
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(true)
+    })
+
+    it('does not allow editing when Default CI is not selected', () => {
+      expect(
+        canEditCanadianProduced(
+          {
+            ...defaultCiRenewableDieselRow,
+            provisionOfTheAct: APPROVED_FUEL_CODE
+          },
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(false)
+    })
+
+    it.each(['Ethanol', 'Renewable gasoline', 'Renewable naphtha'])(
+      'allows editing for eligible renewable gasoline fuel %s with Default CI in 2026',
+      (fuelType) => {
+        expect(
+          canEditCanadianProduced(
+            {
+              fuelType,
+              fuelCategory: 'Gasoline',
+              provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+            },
+            '2026',
+            mockOptionsData
+          )
+        ).toBe(true)
+      }
+    )
+
+    it.each(['Ethanol', 'Renewable gasoline', 'Renewable naphtha'])(
+      'does not allow editing for eligible renewable gasoline fuel %s before 2026',
+      (fuelType) => {
+        expect(
+          canEditCanadianProduced(
+            {
+              fuelType,
+              fuelCategory: 'Gasoline',
+              provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+            },
+            '2025',
+            mockOptionsData
+          )
+        ).toBe(false)
+      }
+    )
+
+    it('does not allow editing for renewable gasoline when Default CI is not selected', () => {
+      expect(
+        canEditCanadianProduced(
+          {
+            fuelType: 'Renewable gasoline',
+            fuelCategory: 'Gasoline',
+            provisionOfTheAct: APPROVED_FUEL_CODE
+          },
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(false)
+    })
+
+    it('does not allow editing for non-renewable gasoline in 2026', () => {
+      expect(
+        canEditCanadianProduced(
+          {
+            fuelType: 'Fossil gasoline',
+            fuelCategory: 'Gasoline',
+            provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+          },
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(false)
     })
   })
 })

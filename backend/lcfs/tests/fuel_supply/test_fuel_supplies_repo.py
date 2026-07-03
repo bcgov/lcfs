@@ -716,3 +716,43 @@ async def test_get_effective_fuel_supplies_empty_result(
 
     # Verify mock was called
     assert mock_db_session.execute.call_count > 0
+
+
+@pytest.mark.anyio
+async def test_get_organization_fuel_supply_analytics_filters_no_duplicate_join(
+    dbsession,
+):
+    """Regression (#4601): filtering the org fuel-supply analytics query must
+    not emit a duplicate, unaliased join.
+
+    The base query already outerjoins fuel_type / fuel_category /
+    provision_of_the_act / fuel_code; re-joining them in the filter loop made
+    Postgres raise ``DuplicateAliasError: table name ... specified more than
+    once`` (a 500 on the Supply History tab). Runs against the real test DB so
+    the SQL is actually prepared and executed.
+    """
+    from lcfs.web.api.base import FilterModel
+
+    repo = FuelSupplyRepository(db=dbsession)
+
+    for field in ("fuelType", "fuelCategory", "provisionOfTheAct", "fuelCode"):
+        filters = [
+            FilterModel(
+                field=field, filter="x", type="contains", filter_type="text"
+            )
+        ]
+
+        # Analytics (charts) path.
+        result = await repo.get_organization_fuel_supply_analytics(1, filters)
+        assert isinstance(result, dict)
+        assert "total_volume" in result
+
+        # Paginated (table) path — same filter columns.
+        pagination = PaginationRequestSchema(
+            page=1, size=10, filters=filters, sort_orders=[]
+        )
+        rows, total = await repo.get_organization_fuel_supply_paginated(
+            1, pagination
+        )
+        assert isinstance(rows, list)
+        assert isinstance(total, int)
