@@ -182,7 +182,9 @@ export const GovernmentDecisionStep = ({
     !ciApplication?.recommendationDate &&
     generatedFuelCodesReady
   const canGenerateAfterVerification1 =
-    ciApplication?.verification1Date && isLowOrModerateRisk(preliminaryRisk)
+    ciApplication?.verification1Date &&
+    !requiresVerification2 &&
+    isLowOrModerateRisk(preliminaryRisk)
   const canGenerateAfterVerification2 =
     ciApplication?.verification2Date &&
     isLowModerateOrHighRisk(verification2Risk || preliminaryRisk)

@@ -252,9 +252,9 @@ describe('GovernmentDecisionStep', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows Generate fuel codes after Verification 1 for moderate risk', () => {
+  it('waits for Verification 2 before showing Generate fuel codes for moderate risk', () => {
     mockUserRoles = [{ name: roles.analyst }]
-    render(
+    const { rerender } = render(
       <GovernmentDecisionStep
         ciApplication={{
           ...baseCi,
@@ -264,6 +264,23 @@ describe('GovernmentDecisionStep', () => {
         isGovernment={true}
       />,
       { wrapper }
+    )
+
+    expect(
+      screen.queryByTestId('ci-generate-fuel-codes-btn')
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Medium',
+          verification1Date: '2026-05-19T12:00:00Z',
+          verification2Date: '2026-05-20T12:00:00Z',
+          verification2RiskAssessment: 'Medium'
+        }}
+        isGovernment={true}
+      />
     )
 
     expect(screen.getByTestId('ci-generate-fuel-codes-btn')).toBeInTheDocument()
