@@ -332,11 +332,19 @@ class CreditMarketReportBuilder:
             numeric = self._numeric_value(value)
             if numeric is not None:
                 return float(numeric.quantize(Decimal("0.01")))
+        if self._is_volume_workbook_column(column_name):
+            numeric = self._numeric_value(value)
+            if numeric is not None:
+                return (
+                    int(numeric) if numeric == numeric.to_integral() else float(numeric)
+                )
         return value
 
     def _excel_number_format(self, table_name: str, column_name: str) -> Optional[str]:
         if self._is_currency_workbook_column(table_name, column_name):
             return "$#,##0.00"
+        if self._is_volume_workbook_column(column_name):
+            return "#,##0"
         return None
 
     def _is_currency_workbook_column(self, table_name: str, column_name: str) -> bool:
@@ -347,6 +355,22 @@ class CreditMarketReportBuilder:
         if "weighted average" in lower_column:
             return True
         return "annual" in lower_table and "sum of transfer value" in lower_column
+
+    def _is_volume_workbook_column(self, column_name: str) -> bool:
+        lower_column = re.sub(r"\s+", " ", str(column_name)).strip().lower()
+        return (
+            lower_column
+            in {
+                "sum of quantity",
+                "volume (credits)",
+                "credit volume",
+                "category a1 - credit volume",
+                "category a - credit volume",
+                "category b - credit volume",
+                "category c - credit volume",
+            }
+            and "transfer" not in lower_column
+        )
 
     def _workbook_tables(self, report: MetabaseDashboardReport) -> List[MetabaseTable]:
         tables = [
