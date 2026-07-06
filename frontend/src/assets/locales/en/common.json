@@ -65,6 +65,12 @@
       "avgPriceCaption": "avg price (VWAP), {{period}}",
       "explore": "Explore the full market data"
     },
+    "intro": {
+      "programTitle": "About the Low Carbon Fuel Standard",
+      "programBody": "The Low Carbon Fuels Act and its two regulations form British Columbia's Low Carbon Fuel Standard, which sets requirements that encourage the use of renewable and low carbon fuels and offers incentives to organizations that supply them, based on how much these fuels reduce greenhouse gas emissions compared to conventional fuels.",
+      "siteTitle": "Using this site",
+      "siteBody": "This site provides public access to program tools and data — including the compliance unit calculator, approved carbon intensities, and credit market information. Registered fuel suppliers and government staff can log in to file and review compliance reports."
+    },
     "toolsTitle": "Public tools",
     "toolsSubtitle": "Open data and calculators — available to everyone.",
     "legislation": {
@@ -117,7 +123,7 @@
       "calculatorDesc": "Estimate credits for a fuel and quantity.",
       "calculationDataDesc": "Carbon intensities and energy density factors.",
       "approvedCarbonIntensitiesDesc": "Published fuel code bulletins.",
-      "formsDesc": "Downloadable forms and guidance."
+      "releaseNotesDesc": "Recent updates and change history."
     },
     "login": {
       "prompt": "Are you a fuel supplier or government analyst? Log in to file and review compliance reports.",

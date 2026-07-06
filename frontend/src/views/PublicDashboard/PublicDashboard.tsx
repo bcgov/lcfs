@@ -253,7 +253,9 @@ export const PublicDashboard = () => {
       key: 'releaseNotes',
       icon: <DescriptionOutlinedIcon sx={{ fontSize: 30, color: NAVY }} />,
       title: t('publicDashboard.links.releaseNotes'),
-      description: t('publicDashboard.tools.formsDesc'),
+      description: t('publicDashboard.tools.releaseNotesDesc', {
+        defaultValue: 'Recent updates and change history.'
+      }),
       route: ROUTES.RELEASE_NOTES
     }
   ]
@@ -335,7 +337,7 @@ export const PublicDashboard = () => {
             gridTemplateColumns: { xs: '1fr', md: '1fr minmax(0, 520px)' },
             gap: { xs: 4, md: 7 },
             alignItems: 'center',
-            py: { xs: 5, md: 6 }
+            py: { xs: 6, md: 12 }
           }}
         >
           <BCBox>
@@ -575,9 +577,74 @@ export const PublicDashboard = () => {
         )}
       </BCBox>
 
-      {/* Public tools + legislation */}
+      {/* Intro + public tools + legislation */}
       <BCBox sx={{ ...fullBleed }}>
         <BCBox sx={{ ...innerContainer, py: { xs: 4, md: 4.5 } }}>
+          {/* About the program + using this site */}
+          <BCBox
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: { xs: 3, md: 5 },
+              mb: 4
+            }}
+          >
+            <BCBox
+              sx={{
+                background: '#fff',
+                border: '1px solid #D8D8D8',
+                borderRadius: '8px',
+                p: { xs: 2.5, md: 3 },
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                height: '100%'
+              }}
+            >
+              <BCTypography
+                variant="h2"
+                sx={{ fontSize: 22, fontWeight: 700, color: DARK, mb: 1 }}
+              >
+                {t('publicDashboard.intro.programTitle', {
+                  defaultValue: 'About the Low Carbon Fuel Standard'
+                })}
+              </BCTypography>
+              <BCTypography
+                sx={{ fontSize: 16, color: MUTED, lineHeight: 1.6 }}
+              >
+                {t('publicDashboard.intro.programBody', {
+                  defaultValue:
+                    "The Low Carbon Fuels Act and its two regulations form British Columbia's Low Carbon Fuel Standard, which sets requirements that encourage the use of renewable and low carbon fuels and offers incentives to organizations that supply them, based on how much these fuels reduce greenhouse gas emissions compared to conventional fuels."
+                })}
+              </BCTypography>
+            </BCBox>
+            <BCBox
+              sx={{
+                background: '#fff',
+                border: '1px solid #D8D8D8',
+                borderRadius: '8px',
+                p: { xs: 2.5, md: 3 },
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                height: '100%'
+              }}
+            >
+              <BCTypography
+                variant="h2"
+                sx={{ fontSize: 22, fontWeight: 700, color: DARK, mb: 1 }}
+              >
+                {t('publicDashboard.intro.siteTitle', {
+                  defaultValue: 'Using this site'
+                })}
+              </BCTypography>
+              <BCTypography
+                sx={{ fontSize: 16, color: MUTED, lineHeight: 1.6 }}
+              >
+                {t('publicDashboard.intro.siteBody', {
+                  defaultValue:
+                    'This site provides public access to program tools and data — including the compliance unit calculator, approved carbon intensities, and credit market information. Registered fuel suppliers and government staff can log in to file and review compliance reports.'
+                })}
+              </BCTypography>
+            </BCBox>
+          </BCBox>
+
           <BCTypography
             variant="h2"
             sx={{ fontSize: 22, fontWeight: 700, color: DARK, mb: 0.75 }}
