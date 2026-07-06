@@ -176,7 +176,7 @@ export const canEditCanadianProduced = (row, compliancePeriod, optionsData) => {
     complianceYear
   )
   const isDefaultCI = (row.provisionOfTheAct?.name || row.provisionOfTheAct) === DEFAULT_CI_FUEL_CODE
-  return complianceYear === NEW_REGULATION_YEAR && isEligible && isDefaultCI
+  return complianceYear >= NEW_REGULATION_YEAR && isEligible && isDefaultCI
 }
 
 export const isNotionalTransferRenewableClaimEditable = (
