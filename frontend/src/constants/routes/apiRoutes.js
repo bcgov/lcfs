@@ -246,6 +246,11 @@ export const apiRoutes = {
   complianceReportCounts: '/dashboard/compliance-report-counts',
   fuelCodeCounts: '/dashboard/fuel-code-counts',
 
+  // credit market
+  creditMarketOverview: '/credit-market/overview',
+  creditMarketPublicOverview: '/credit-market/public-overview',
+  creditMarketPublicReport: '/credit-market/public-report',
+
   // audit-logs
   getAuditLogs: '/audit-log/list',
   getAuditLog: '/audit-log/:auditLogId',

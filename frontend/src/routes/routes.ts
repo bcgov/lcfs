@@ -10,6 +10,8 @@ export const ROUTES = {
   CALCULATION_DATA: '/calculation-data',
   APPROVED_CARBON_INTENSITIES: '/approved-carbon-intensities',
   FILE_SUBMISSION: '/file-submissions',
+  CREDIT_MARKET: '/credit-market',
+  PUBLIC_MARKET_DATA: '/market-data',
 
   AUTH: {
     LOGIN: '/login',
