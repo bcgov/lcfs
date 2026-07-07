@@ -16,7 +16,10 @@ import BCAlert from '@/components/BCAlert'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { Role } from '@/components/Role'
 import { TogglePanel } from '@/components/TogglePanel.jsx'
-import { REPORT_SCHEDULES, LEGISLATION_TRANSITION_YEAR } from '@/constants/common'
+import {
+  REPORT_SCHEDULES,
+  LEGISLATION_TRANSITION_YEAR
+} from '@/constants/common'
 import { roles } from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
@@ -684,8 +687,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
 
         return (
           <Accordion
-            sx={accordionStyles}
+            sx={{ ...accordionStyles, scrollMarginTop: 96 }}
             key={index}
+            id={`report-section-${activity.key}`}
             expanded={isExpanded}
             onChange={onExpand(panelId)}
             disabled={!showEditIcon && isDisabled}
