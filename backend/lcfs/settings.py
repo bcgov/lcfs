@@ -60,7 +60,7 @@ class Settings(BaseSettings):
 
     credit_market_report_enabled: bool = False
     credit_market_report_day: int = 1
-    credit_market_report_hour: int = 0
+    credit_market_report_hour: int = 10
     credit_market_report_minute: int = 0
     credit_market_report_notification_type: str = "PUBLIC__CREDIT_MARKET_MONTHLY_REPORT"
 
