@@ -183,7 +183,10 @@ async def update_comment(
         raise HTTPException(status_code=404, detail="Internal comment not found.")
 
     current_username = request.user.keycloak_username
-    if existing_comment.create_user != current_username:
+    # Administrators may edit any comment; everyone else only their own.
+    user_role_names = request.user.role_names
+    is_admin = RoleEnum.ADMINISTRATOR in user_role_names
+    if existing_comment.create_user != current_username and not is_admin:
         raise HTTPException(
             status_code=403, detail="User is not the creator of the comment."
         )
