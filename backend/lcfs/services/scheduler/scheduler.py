@@ -114,19 +114,6 @@ def start_scheduler(app: FastAPI):
                 },
             )
 
-        if settings.credit_market_report_run_on_startup:
-            scheduler.add_job(
-                send_monthly_credit_market_report,
-                "date",
-                run_date=datetime.now(utc),
-                id="send_monthly_credit_market_report_startup",
-                replace_existing=True,
-                args=[app],
-            )
-            logger.info(
-                "Added one-time startup job: 'send_monthly_credit_market_report_startup'"
-            )
-
 
 def shutdown_scheduler():
     """

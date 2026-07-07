@@ -43,6 +43,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(
         f"""
+        DELETE FROM notification_channel_subscription
+        WHERE notification_type_id = (
+            SELECT notification_type_id FROM notification_type
+            WHERE name = '{NOTIFICATION_TYPE}'
+        );
+
         DELETE FROM notification_type
         WHERE name = '{NOTIFICATION_TYPE}';
         """

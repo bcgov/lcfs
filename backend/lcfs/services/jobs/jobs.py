@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -53,6 +54,32 @@ COMPLIANCE_REINDEX_TABLES = (
     "final_supply_equipment",
 )
 COMPLIANCE_REINDEX_LOCK_ID = 60271451
+CREDIT_MARKET_REPORT_LOCK_ID = 60271452
+CREDIT_MARKET_REPORT_MAX_ATTEMPTS = 3
+CREDIT_MARKET_REPORT_RETRY_DELAY_SECONDS = 60
+
+
+async def _retry_credit_market_step(step_name: str, operation):
+    for attempt in range(1, CREDIT_MARKET_REPORT_MAX_ATTEMPTS + 1):
+        try:
+            return await operation()
+        except Exception:
+            if attempt == CREDIT_MARKET_REPORT_MAX_ATTEMPTS:
+                logger.exception(
+                    "Monthly credit market report step failed after retries: %s",
+                    step_name,
+                )
+                raise
+            logger.warning(
+                "Monthly credit market report step failed; retrying",
+                extra={
+                    "step": step_name,
+                    "attempt": attempt,
+                    "max_attempts": CREDIT_MARKET_REPORT_MAX_ATTEMPTS,
+                    "retry_delay_seconds": CREDIT_MARKET_REPORT_RETRY_DELAY_SECONDS,
+                },
+            )
+            await asyncio.sleep(CREDIT_MARKET_REPORT_RETRY_DELAY_SECONDS)
 
 
 async def submit_supplemental_report(report_id: int, app: FastAPI):
@@ -258,9 +285,27 @@ async def send_monthly_credit_market_report(app: FastAPI):
     """
     logger.info("Starting monthly credit market report job")
     session_factory = app.state.db_session_factory
+    conn = await app.state.db_engine.connect()
+    lock_acquired = False
 
     try:
-        report = MetabaseClient().fetch_credit_market_report()
+        lock_acquired = await conn.scalar(
+            text("SELECT pg_try_advisory_lock(:lock_id)"),
+            {"lock_id": CREDIT_MARKET_REPORT_LOCK_ID},
+        )
+
+        if not lock_acquired:
+            logger.info(
+                "Skipping monthly credit market report because another instance holds the lock"
+            )
+            return False
+
+        report = await _retry_credit_market_step(
+            "fetch_metabase_report",
+            lambda: asyncio.to_thread(
+                lambda: MetabaseClient().fetch_credit_market_report()
+            ),
+        )
         builder = CreditMarketReportBuilder()
 
         async with session_factory() as session:
@@ -275,10 +320,13 @@ async def send_monthly_credit_market_report(app: FastAPI):
                 return False
 
             email_service = CHESEmailService(email_repo)
-            result = await email_service.send_credit_market_report_email(
-                recipients=recipients,
-                context=builder.build_email_context(report),
-                attachments=[builder.build_attachment(report)],
+            result = await _retry_credit_market_step(
+                "send_ches_email",
+                lambda: email_service.send_credit_market_report_email(
+                    recipients=recipients,
+                    context=builder.build_email_context(report),
+                    attachments=[builder.build_attachment(report)],
+                ),
             )
 
         logger.info(
@@ -294,3 +342,13 @@ async def send_monthly_credit_market_report(app: FastAPI):
             exc_info=True,
         )
         raise
+    finally:
+        if lock_acquired:
+            try:
+                await conn.execute(
+                    text("SELECT pg_advisory_unlock(:lock_id)"),
+                    {"lock_id": CREDIT_MARKET_REPORT_LOCK_ID},
+                )
+            except Exception:
+                logger.debug("Monthly credit market report advisory unlock skipped")
+        await conn.close()

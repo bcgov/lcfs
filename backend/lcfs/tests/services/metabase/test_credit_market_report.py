@@ -18,6 +18,12 @@ from lcfs.services.metabase.client import (
 def mock_app():
     app = MagicMock()
     app.state.db_session_factory = MagicMock()
+    app.state.db_engine.connect = AsyncMock()
+    conn = AsyncMock()
+    conn.scalar = AsyncMock(return_value=True)
+    conn.execute = AsyncMock()
+    conn.close = AsyncMock()
+    app.state.db_engine.connect.return_value = conn
     return app
 
 
@@ -249,10 +255,20 @@ def test_builds_dashboard_email_context():
     assert context["chart_sections"][0]["image_data_uri"].startswith(
         "data:image/png;base64,"
     )
+    assert context["chart_sections"][0]["rows"][0] == [
+        "2023",
+        "CA$200.00",
+        "CA$510.00",
+        "CA$471.86",
+    ]
     assert context["chart_sections"][1]["name"] == "Credit Trade Volume"
     assert context["chart_sections"][1]["image_data_uri"].startswith(
         "data:image/png;base64,"
     )
+    assert context["chart_sections"][1]["rows"][0] == [
+        "January 2025",
+        "456.4k",
+    ]
 
 
 def test_report_column_display_names_are_normalized():
@@ -310,9 +326,9 @@ def test_dashboard_metric_cards_compare_current_month_to_same_month_last_year():
                     "Category A1 - Average Price",
                 ],
                 rows=[
-                    ["2026-06-01T00:00:00-07:00", 6, 75491, "$143.32", "$120.30"],
                     ["May, 2026", 12, 177020, "$129.91", "$106.00"],
                     ["2025-06-01T00:00:00-07:00", 4, 122825, "$273.67", "$237.00"],
+                    ["2026-06-01T00:00:00-07:00", 6, 75491, "$143.32", "$120.30"],
                 ],
             ),
         ],
@@ -350,7 +366,6 @@ def test_metabase_client_prefers_api_key_authentication():
         mock_settings.metabase_base_url = "https://metabase.example"
         mock_settings.metabase_request_timeout_seconds = 30
         mock_settings.metabase_api_key = "test-key"
-        mock_settings.metabase_session_token = ""
         mock_settings.metabase_username = ""
         mock_settings.metabase_password = ""
 
@@ -358,6 +373,57 @@ def test_metabase_client_prefers_api_key_authentication():
         client._authenticate()
 
     assert client.session.headers["X-API-Key"] == "test-key"
+
+
+def test_metabase_client_retries_accepted_query_response():
+    accepted_response = MagicMock()
+    accepted_response.status_code = 202
+    accepted_response.raise_for_status = MagicMock()
+    completed_response = MagicMock()
+    completed_response.status_code = 200
+    completed_response.raise_for_status = MagicMock()
+    completed_response.json.return_value = {"data": {"rows": [[1]], "cols": []}}
+
+    with patch("lcfs.services.metabase.client.settings") as mock_settings, patch(
+        "lcfs.services.metabase.client.time.sleep"
+    ) as mock_sleep:
+        mock_settings.metabase_base_url = "https://metabase.example"
+        mock_settings.metabase_request_timeout_seconds = 30
+        mock_settings.metabase_query_poll_attempts = 2
+        mock_settings.metabase_query_poll_interval_seconds = 5
+        client = MetabaseClient()
+        client.session.post = MagicMock(
+            side_effect=[accepted_response, completed_response]
+        )
+
+        result = client._post_json("/api/card/1/query")
+
+    assert result == {"data": {"rows": [[1]], "cols": []}}
+    assert client.session.post.call_count == 2
+    mock_sleep.assert_called_once_with(5)
+    completed_response.raise_for_status.assert_called_once()
+
+
+def test_metabase_client_uses_data_from_accepted_query_response():
+    accepted_response = MagicMock()
+    accepted_response.status_code = 202
+    accepted_response.json.return_value = {"data": {"rows": [[1]], "cols": []}}
+
+    with patch("lcfs.services.metabase.client.settings") as mock_settings, patch(
+        "lcfs.services.metabase.client.time.sleep"
+    ) as mock_sleep:
+        mock_settings.metabase_base_url = "https://metabase.example"
+        mock_settings.metabase_request_timeout_seconds = 30
+        mock_settings.metabase_query_poll_attempts = 2
+        mock_settings.metabase_query_poll_interval_seconds = 5
+        client = MetabaseClient()
+        client.session.post = MagicMock(return_value=accepted_response)
+
+        result = client._post_json("/api/card/1/query")
+
+    assert result == {"data": {"rows": [[1]], "cols": []}}
+    client.session.post.assert_called_once()
+    mock_sleep.assert_not_called()
 
 
 @pytest.mark.anyio

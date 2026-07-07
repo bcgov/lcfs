@@ -282,6 +282,7 @@ async def test_scheduler_adds_monthly_credit_market_report_when_enabled(mock_app
 
             added_job_ids = [call.kwargs["id"] for call in mock_add_job.call_args_list]
             assert "send_monthly_credit_market_report" in added_job_ids
+            assert "send_monthly_credit_market_report_startup" not in added_job_ids
         finally:
             settings.credit_market_report_enabled = original_value
             scheduler._state = 0

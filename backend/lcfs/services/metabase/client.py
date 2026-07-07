@@ -2,12 +2,11 @@ import base64
 import io
 import json
 import re
-import struct
-import zlib
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import requests
 import structlog
@@ -17,7 +16,7 @@ from openpyxl.utils import get_column_letter
 
 try:
     from PIL import Image, ImageDraw, ImageFont
-except ImportError:  # pragma: no cover - manual PNG fallback still works.
+except ImportError:  # pragma: no cover - chart fallback is table-only without Pillow.
     Image = ImageDraw = ImageFont = None
 
 from lcfs.settings import settings
@@ -90,11 +89,10 @@ class MetabaseClient:
             missing.append("metabase_credit_market_dashboard_id")
         if (
             not settings.metabase_api_key
-            and not settings.metabase_session_token
             and not (settings.metabase_username and settings.metabase_password)
         ):
             missing.append(
-                "metabase_api_key, metabase_session_token, or metabase_username/metabase_password"
+                "metabase_api_key or metabase_username/metabase_password"
             )
 
         if missing:
@@ -103,12 +101,6 @@ class MetabaseClient:
     def _authenticate(self) -> None:
         if settings.metabase_api_key:
             self.session.headers.update({"X-API-Key": settings.metabase_api_key})
-            return
-
-        if settings.metabase_session_token:
-            self.session.headers.update(
-                {"X-Metabase-Session": settings.metabase_session_token}
-            )
             return
 
         response = self.session.post(
@@ -131,13 +123,42 @@ class MetabaseClient:
         return response.json()
 
     def _post_json(self, path: str, payload: Optional[Dict[str, Any]] = None) -> Any:
-        response = self.session.post(
-            f"{self.base_url}{path}",
-            json=payload or {},
-            timeout=self.timeout,
-        )
+        url = f"{self.base_url}{path}"
+        for attempt in range(1, settings.metabase_query_poll_attempts + 1):
+            response = self.session.post(
+                url,
+                json=payload or {},
+                timeout=self.timeout,
+            )
+            result = self._response_json(response)
+            if isinstance(result, dict) and result.get("data"):
+                return result
+
+            if response.status_code != requests.codes.accepted:
+                response.raise_for_status()
+                return result
+
+            logger.info(
+                "Metabase query accepted but still running; retrying",
+                path=path,
+                attempt=attempt,
+                max_attempts=settings.metabase_query_poll_attempts,
+                retry_delay_seconds=settings.metabase_query_poll_interval_seconds,
+            )
+            if attempt < settings.metabase_query_poll_attempts:
+                time.sleep(settings.metabase_query_poll_interval_seconds)
+
         response.raise_for_status()
-        return response.json()
+        raise TimeoutError(
+            "Metabase query did not complete after "
+            f"{settings.metabase_query_poll_attempts} attempts: {path}"
+        )
+
+    def _response_json(self, response: requests.Response) -> Any:
+        try:
+            return response.json()
+        except ValueError:
+            return None
 
     def _extract_cards(self, dashboard: Dict[str, Any]) -> List[Dict[str, Any]]:
         cards = dashboard.get("dashcards") or dashboard.get("ordered_cards") or []
@@ -517,6 +538,11 @@ class CreditMarketReportBuilder:
                 for table in report.tables
                 if self._is_compact_table(table)
             ][:3]
+            if not metric_cards:
+                logger.warning(
+                    "Credit market report did not find expected metric card data",
+                    dashboard_name=report.dashboard_name,
+                )
 
         shown_names = {
             section["name"] for section in metric_cards + summary_cards + chart_sections
@@ -527,6 +553,16 @@ class CreditMarketReportBuilder:
             if table.name not in shown_names and table.rows
         ]
         chart_sections.extend(remaining_tables[:2])
+        if not summary_cards:
+            logger.warning(
+                "Credit market report did not find expected summary table data",
+                dashboard_name=report.dashboard_name,
+            )
+        if not chart_sections:
+            logger.warning(
+                "Credit market report did not find expected trend or volume table data",
+                dashboard_name=report.dashboard_name,
+            )
 
         return {
             "metric_cards": metric_cards[:3],
@@ -546,11 +582,18 @@ class CreditMarketReportBuilder:
             None,
         )
         if not monthly_table:
+            logger.warning(
+                "Credit market report did not find monthly market report data",
+                dashboard_name=report.dashboard_name,
+            )
             return []
 
-        current_row = monthly_table.rows[0]
         month_index = self._column_index(monthly_table, ["month"])
-        if month_index is None or len(current_row) <= month_index:
+        if month_index is None:
+            return []
+
+        current_row = self._latest_month_row(monthly_table, month_index)
+        if not current_row or len(current_row) <= month_index:
             return []
 
         current_month = self._parse_month(current_row[month_index])
@@ -772,6 +815,22 @@ class CreditMarketReportBuilder:
                 return row
         return None
 
+    def _latest_month_row(
+        self, table: MetabaseTable, month_index: int
+    ) -> Optional[List[Any]]:
+        dated_rows = []
+        for row in table.rows:
+            if len(row) <= month_index:
+                continue
+            row_month = self._parse_month(row[month_index])
+            if row_month:
+                dated_rows.append(
+                    ((row_month.year, row_month.month, row_month.day), row)
+                )
+        if not dated_rows:
+            return table.rows[0] if table.rows else None
+        return max(dated_rows, key=lambda item: item[0])[1]
+
     def _month_label(self, month: Optional[datetime], fallback: Any) -> str:
         if not month:
             return self._format_value(fallback)
@@ -816,12 +875,8 @@ class CreditMarketReportBuilder:
         lower_name = table.name.lower()
         if "trend" not in lower_name and "volume" not in lower_name:
             return None
-
-        chart = SimplePngChart()
-        image = (
-            chart.render_bar_chart(table)
-            if "volume" in lower_name
-            else chart.render_line_chart(table)
+        image = ChartImageRenderer().render(
+            table, chart_type="bar" if "volume" in lower_name else "line"
         )
         if not image:
             return None
@@ -829,9 +884,7 @@ class CreditMarketReportBuilder:
         return f"data:image/png;base64,{encoded}"
 
 
-class SimplePngChart:
-    """Dependency-free PNG chart renderer for email-safe chart images."""
-
+class ChartImageRenderer:
     width = 980
     height = 320
     margin_left = 56
@@ -843,138 +896,38 @@ class SimplePngChart:
     grid = (232, 235, 240)
     line_colors = [(166, 133, 203), (247, 159, 92), (247, 204, 67)]
     bar_color = (93, 154, 222)
-    font = {
-        " ": ["000", "000", "000", "000", "000"],
-        "$": ["010", "111", "110", "011", "111"],
-        ".": ["0", "0", "0", "0", "1"],
-        ",": ["0", "0", "0", "1", "1"],
-        "-": ["000", "000", "111", "000", "000"],
-        "0": ["111", "101", "101", "101", "111"],
-        "1": ["010", "110", "010", "010", "111"],
-        "2": ["111", "001", "111", "100", "111"],
-        "3": ["111", "001", "111", "001", "111"],
-        "4": ["101", "101", "111", "001", "001"],
-        "5": ["111", "100", "111", "001", "111"],
-        "6": ["111", "100", "111", "101", "111"],
-        "7": ["111", "001", "001", "010", "010"],
-        "8": ["111", "101", "111", "101", "111"],
-        "9": ["111", "101", "111", "001", "111"],
-        "A": ["010", "101", "111", "101", "101"],
-        "B": ["110", "101", "110", "101", "110"],
-        "C": ["111", "100", "100", "100", "111"],
-        "D": ["110", "101", "101", "101", "110"],
-        "E": ["111", "100", "110", "100", "111"],
-        "F": ["111", "100", "110", "100", "100"],
-        "G": ["111", "100", "101", "101", "111"],
-        "H": ["101", "101", "111", "101", "101"],
-        "I": ["111", "010", "010", "010", "111"],
-        "J": ["001", "001", "001", "101", "111"],
-        "K": ["101", "101", "110", "101", "101"],
-        "L": ["100", "100", "100", "100", "111"],
-        "M": ["101", "111", "111", "101", "101"],
-        "N": ["101", "111", "111", "111", "101"],
-        "O": ["111", "101", "101", "101", "111"],
-        "P": ["111", "101", "111", "100", "100"],
-        "Q": ["111", "101", "101", "111", "001"],
-        "R": ["110", "101", "110", "101", "101"],
-        "S": ["111", "100", "111", "001", "111"],
-        "T": ["111", "010", "010", "010", "010"],
-        "U": ["101", "101", "101", "101", "111"],
-        "V": ["101", "101", "101", "101", "010"],
-        "W": ["101", "101", "111", "111", "101"],
-        "X": ["101", "101", "010", "101", "101"],
-        "Y": ["101", "101", "010", "010", "010"],
-        "Z": ["111", "001", "010", "100", "111"],
-    }
 
-    def render_line_chart(self, table: MetabaseTable) -> Optional[bytes]:
+    def render(self, table: MetabaseTable, chart_type: str) -> Optional[bytes]:
+        if Image is None:
+            logger.warning("Pillow is unavailable; rendering chart table fallback")
+            return None
         series = self._series(table)
         if not series:
             return None
-        if Image is not None:
-            return self._render_line_chart_with_pillow(table, series)
-
-        canvas = self._canvas()
-        self._draw_grid(canvas)
-        self._draw_legend_canvas(
-            canvas, self._series_names(table)[:3], chart_type="line"
+        return (
+            self._render_bar_chart(table, series[0])
+            if chart_type == "bar"
+            else self._render_line_chart(table, series[:3])
         )
-        for index, values in enumerate(series[:3]):
-            points = self._points(values)
-            color = self.line_colors[index % len(self.line_colors)]
-            for start, end in zip(points, points[1:]):
-                self._line(canvas, start, end, color)
-            for point_index, point in enumerate(points):
-                self._circle(canvas, point[0], point[1], 4, color)
-                if self._should_label_point(point_index, len(points)):
-                    self._draw_centered_text_canvas(
-                        canvas,
-                        self._format_chart_number(values[point_index], currency=True),
-                        point[0],
-                        max(self.margin_top - 2, point[1] - 14),
-                        color,
-                    )
-        self._draw_x_labels_canvas(canvas, self._labels(table))
-        return self._png(canvas)
 
-    def render_bar_chart(self, table: MetabaseTable) -> Optional[bytes]:
-        series = self._series(table)
-        if not series:
-            return None
-        if Image is not None:
-            return self._render_bar_chart_with_pillow(table, series)
-
-        values = series[0]
-        max_value = max(values) if values else 0
-        if max_value <= 0:
-            return None
-
-        canvas = self._canvas()
-        self._draw_grid(canvas)
-        self._draw_legend_canvas(
-            canvas, self._series_names(table)[:1], chart_type="bar"
-        )
-        chart_width = self.width - self.margin_left - self.margin_right
-        usable_height = self.height - self.margin_top - self.margin_bottom
-        step = chart_width / max(len(values), 1)
-        bar_width = max(2, int(step * 0.58))
-        base_y = self.height - self.margin_bottom
-        labeled_bar_indexes = self._bar_label_indexes(values)
-        for index, value in enumerate(values):
-            x = int(self.margin_left + index * step + (step - bar_width) / 2)
-            bar_height = int((value / max_value) * usable_height)
-            top_y = base_y - bar_height
-            self._rect(canvas, x, top_y, x + bar_width, base_y)
-            if index in labeled_bar_indexes:
-                self._draw_centered_text_canvas(
-                    canvas,
-                    self._format_chart_number(value, currency=False),
-                    x + int(bar_width / 2),
-                    max(self.margin_top - 2, top_y - 12),
-                    (76, 87, 115),
-                )
-        self._draw_x_labels_canvas(canvas, self._labels(table))
-        return self._png(canvas)
-
-    def _render_line_chart_with_pillow(
-        self, table: MetabaseTable, series: List[List[float]]
+    def _render_line_chart(
+        self, table: MetabaseTable, series: List[Dict[str, Any]]
     ) -> bytes:
         image = Image.new("RGB", (self.width, self.height), self.bg)
         draw = ImageDraw.Draw(image)
         font = self._font(12)
         small_font = self._font(10)
-        self._draw_grid_pillow(draw)
-        self._draw_legend_pillow(
-            draw, self._series_names(table)[:3], chart_type="line", font=small_font
-        )
+        self._draw_grid(draw)
+        self._draw_legend(draw, series, chart_type="line", font=small_font)
 
-        values_for_scale = [value for values in series[:3] for value in values]
+        values_for_scale = [value for item in series for value in item["values"]]
         min_value = min(values_for_scale)
         max_value = max(values_for_scale)
         if max_value == min_value:
             max_value += 1
 
-        for index, values in enumerate(series[:3]):
+        for index, item in enumerate(series):
+            values = item["values"]
             color = self.line_colors[index % len(self.line_colors)]
             points = self._scaled_points(values, min_value, max_value)
             for start, end in zip(points, points[1:]):
@@ -988,7 +941,9 @@ class SimplePngChart:
                 if self._should_label_point(point_index, len(points)):
                     self._draw_centered_text(
                         draw,
-                        self._format_chart_number(values[point_index], currency=True),
+                        self._format_chart_number(
+                            values[point_index], currency=item["currency"]
+                        ),
                         point[0],
                         max(self.margin_top - 2, point[1] - 18),
                         font,
@@ -998,30 +953,23 @@ class SimplePngChart:
         self._draw_x_labels(draw, self._labels(table), small_font)
         return self._image_png(image)
 
-    def _render_bar_chart_with_pillow(
-        self, table: MetabaseTable, series: List[List[float]]
-    ) -> bytes:
-        values = series[0]
+    def _render_bar_chart(self, table: MetabaseTable, item: Dict[str, Any]) -> bytes:
+        values = item["values"]
         max_value = max(values) if values else 0
-        if max_value <= 0:
-            return self._image_png(Image.new("RGB", (self.width, self.height), self.bg))
-
         image = Image.new("RGB", (self.width, self.height), self.bg)
         draw = ImageDraw.Draw(image)
         font = self._font(11)
         small_font = self._font(10)
-        self._draw_grid_pillow(draw)
-        self._draw_legend_pillow(
-            draw, self._series_names(table)[:1], chart_type="bar", font=small_font
-        )
+        self._draw_grid(draw)
+        self._draw_legend(draw, [item], chart_type="bar", font=small_font)
+        if max_value <= 0:
+            return self._image_png(image)
 
         chart_width = self.width - self.margin_left - self.margin_right
         usable_height = self.height - self.margin_top - self.margin_bottom
         step = chart_width / max(len(values), 1)
         bar_width = max(2, int(step * 0.58))
         base_y = self.height - self.margin_bottom
-        labeled_bar_indexes = self._bar_label_indexes(values)
-
         for index, value in enumerate(values):
             x = int(self.margin_left + index * step + (step - bar_width) / 2)
             bar_height = int((value / max_value) * usable_height)
@@ -1031,10 +979,10 @@ class SimplePngChart:
                 fill=self.bar_color,
                 outline=self.bar_color,
             )
-            if index in labeled_bar_indexes:
+            if index in self._bar_label_indexes(values):
                 self._draw_centered_text(
                     draw,
-                    self._format_chart_number(value, currency=False),
+                    self._format_chart_number(value, currency=item["currency"]),
                     x + int(bar_width / 2),
                     max(self.margin_top - 2, top_y - 16),
                     font,
@@ -1044,7 +992,7 @@ class SimplePngChart:
         self._draw_x_labels(draw, self._labels(table), small_font)
         return self._image_png(image)
 
-    def _draw_grid_pillow(self, draw) -> None:
+    def _draw_grid(self, draw) -> None:
         left = self.margin_left
         right = self.width - self.margin_right
         top = self.margin_top
@@ -1055,12 +1003,12 @@ class SimplePngChart:
         draw.line((left, bottom, right, bottom), fill=self.axis, width=1)
         draw.line((left, top, left, bottom), fill=self.axis, width=1)
 
-    def _draw_legend_pillow(
-        self, draw, names: List[str], chart_type: str, font
+    def _draw_legend(
+        self, draw, series: List[Dict[str, Any]], chart_type: str, font
     ) -> None:
         x = self.margin_left
         y = 16
-        for index, name in enumerate(names):
+        for index, item in enumerate(series):
             color = (
                 self.bar_color
                 if chart_type == "bar"
@@ -1071,23 +1019,35 @@ class SimplePngChart:
             else:
                 draw.line((x, y + 8, x + 16, y + 8), fill=color, width=3)
                 draw.ellipse((x + 6, y + 4, x + 12, y + 10), fill=color)
-            label = self._legend_label(name)
+            label = self._legend_label(item["name"])
             draw.text((x + 22, y), label, fill=(76, 87, 115), font=font)
             x += 22 + self._estimate_text_width(label)
 
-    def _scaled_points(
-        self, values: List[float], min_value: float, max_value: float
-    ) -> List[Tuple[int, int]]:
-        chart_width = self.width - self.margin_left - self.margin_right
-        usable_height = self.height - self.margin_top - self.margin_bottom
-        points = []
-        for index, value in enumerate(values):
-            x = self.margin_left + int((index / max(len(values) - 1, 1)) * chart_width)
-            y = self.margin_top + int(
-                (1 - ((value - min_value) / (max_value - min_value))) * usable_height
-            )
-            points.append((x, y))
-        return points
+    def _series(self, table: MetabaseTable) -> List[Dict[str, Any]]:
+        numeric_columns = []
+        for column_index, column in enumerate(table.columns):
+            column_name = column.lower()
+            if any(
+                keyword in column_name
+                for keyword in ("date", "month", "year", "period")
+            ):
+                continue
+            values = []
+            for row in table.rows:
+                if len(row) <= column_index:
+                    continue
+                parsed = self._number(row[column_index])
+                if parsed is not None:
+                    values.append(parsed)
+            if len(values) >= 2:
+                numeric_columns.append(
+                    {
+                        "name": self._display_column_name(column),
+                        "values": values,
+                        "currency": self._is_currency_column(column),
+                    }
+                )
+        return numeric_columns
 
     def _labels(self, table: MetabaseTable) -> List[str]:
         label_index = 0
@@ -1113,7 +1073,7 @@ class SimplePngChart:
             return f"{parsed.strftime('%b')} {parsed.year}"
         except ValueError:
             pass
-        for date_format in ("%B, %Y", "%B %Y", "%b, %Y", "%b %Y", "%Y-%m", "%Y-%m-%d"):
+        for date_format in ("%B, %Y", "%B %Y", "%b, %Y", "%Y-%m", "%Y-%m-%d"):
             try:
                 parsed = datetime.strptime(text, date_format)
                 return f"{parsed.strftime('%b')} {parsed.year}"
@@ -1121,26 +1081,30 @@ class SimplePngChart:
                 continue
         return text
 
-    def _series_names(self, table: MetabaseTable) -> List[str]:
-        names = []
-        for column_index, column in enumerate(table.columns):
-            column_name = column.lower()
-            if any(
-                keyword in column_name
-                for keyword in ("date", "month", "year", "period")
-            ):
-                continue
-            values = []
-            for row in table.rows:
-                if len(row) <= column_index:
-                    continue
-                parsed = self._number(row[column_index])
-                if parsed is not None:
-                    values.append(parsed)
-            if len(values) < 2:
-                continue
-            names.append(self._display_column_name(column))
-        return names
+    def _number(self, value: Any) -> Optional[float]:
+        if isinstance(value, (int, float)):
+            return float(value)
+        if value is None:
+            return None
+        text = str(value).strip().replace(",", "")
+        multiplier = 1
+        if text.lower().endswith("k"):
+            multiplier = 1000
+            text = text[:-1]
+        text = re.sub(r"[^0-9.\-]", "", text)
+        if text in {"", "-", "."}:
+            return None
+        try:
+            return float(text) * multiplier
+        except ValueError:
+            return None
+
+    def _is_currency_column(self, column: str) -> bool:
+        lower_column = column.lower()
+        return any(
+            keyword in lower_column
+            for keyword in ("price", "ca$", "cad", "transfer value", "weighted average")
+        )
 
     def _display_column_name(self, column: str) -> str:
         normalized = re.sub(r"\s+", " ", str(column)).strip().lower()
@@ -1159,13 +1123,26 @@ class SimplePngChart:
     def _estimate_text_width(self, text: str) -> int:
         return max(24, len(text) * 7)
 
+    def _scaled_points(
+        self, values: List[float], min_value: float, max_value: float
+    ) -> List[tuple]:
+        chart_width = self.width - self.margin_left - self.margin_right
+        usable_height = self.height - self.margin_top - self.margin_bottom
+        points = []
+        for index, value in enumerate(values):
+            x = self.margin_left + int((index / max(len(values) - 1, 1)) * chart_width)
+            y = self.margin_top + int(
+                (1 - ((value - min_value) / (max_value - min_value))) * usable_height
+            )
+            points.append((x, y))
+        return points
+
     def _draw_x_labels(self, draw, labels: List[str], font) -> None:
         if not labels:
             return
         chart_width = self.width - self.margin_left - self.margin_right
-        indexes = self._x_label_indexes(len(labels))
         y = self.height - self.margin_bottom + 8
-        for index in indexes:
+        for index in self._x_label_indexes(len(labels)):
             x = self.margin_left + int((index / max(len(labels) - 1, 1)) * chart_width)
             self._draw_centered_text(draw, labels[index], x, y, font, (76, 87, 115))
 
@@ -1208,79 +1185,6 @@ class SimplePngChart:
         width = bbox[2] - bbox[0]
         draw.text((x - int(width / 2), y), text, fill=fill, font=font)
 
-    def _draw_x_labels_canvas(
-        self, canvas: List[List[Tuple[int, int, int]]], labels: List[str]
-    ) -> None:
-        if not labels:
-            return
-        chart_width = self.width - self.margin_left - self.margin_right
-        indexes = self._x_label_indexes(len(labels))
-        y = self.height - self.margin_bottom + 8
-        for index in indexes:
-            x = self.margin_left + int((index / max(len(labels) - 1, 1)) * chart_width)
-            self._draw_centered_text_canvas(canvas, labels[index], x, y, (76, 87, 115))
-
-    def _draw_legend_canvas(
-        self,
-        canvas: List[List[Tuple[int, int, int]]],
-        names: List[str],
-        chart_type: str,
-    ) -> None:
-        x = self.margin_left
-        y = 16
-        for index, name in enumerate(names):
-            color = (
-                self.bar_color
-                if chart_type == "bar"
-                else self.line_colors[index % len(self.line_colors)]
-            )
-            if chart_type == "bar":
-                self._rect(canvas, x, y + 2, x + 12, y + 12)
-            else:
-                self._line(canvas, (x, y + 7), (x + 16, y + 7), color)
-                self._circle(canvas, x + 8, y + 7, 3, color)
-            label = self._legend_label(name)
-            self._draw_text_canvas(canvas, label, x + 22, y + 2, (76, 87, 115))
-            x += 22 + self._text_width(label) + 16
-
-    def _draw_centered_text_canvas(
-        self,
-        canvas: List[List[Tuple[int, int, int]]],
-        text: str,
-        x: int,
-        y: int,
-        color: Tuple[int, int, int],
-    ) -> None:
-        text = text.upper()
-        width = self._text_width(text)
-        self._draw_text_canvas(canvas, text, x - int(width / 2), y, color)
-
-    def _draw_text_canvas(
-        self,
-        canvas: List[List[Tuple[int, int, int]]],
-        text: str,
-        x: int,
-        y: int,
-        color: Tuple[int, int, int],
-    ) -> None:
-        cursor = x
-        for char in text.upper():
-            glyph = self.font.get(char, self.font[" "])
-            for row_index, row in enumerate(glyph):
-                for column_index, pixel in enumerate(row):
-                    if pixel == "1":
-                        self._set_pixel(
-                            canvas, cursor + column_index, y + row_index, color
-                        )
-            cursor += len(glyph[0]) + 1
-
-    def _text_width(self, text: str) -> int:
-        width = 0
-        for char in text.upper():
-            glyph = self.font.get(char, self.font[" "])
-            width += len(glyph[0]) + 1
-        return max(0, width - 1)
-
     def _font(self, size: int):
         try:
             return ImageFont.truetype("DejaVuSans.ttf", size)
@@ -1291,160 +1195,3 @@ class SimplePngChart:
         output = io.BytesIO()
         image.save(output, format="PNG")
         return output.getvalue()
-
-    def _series(self, table: MetabaseTable) -> List[List[float]]:
-        numeric_columns = []
-        for column_index in range(len(table.columns)):
-            column_name = table.columns[column_index].lower()
-            if any(
-                keyword in column_name
-                for keyword in ("date", "month", "year", "period")
-            ):
-                continue
-            values = []
-            for row in table.rows:
-                if len(row) <= column_index:
-                    continue
-                parsed = self._number(row[column_index])
-                if parsed is not None:
-                    values.append(parsed)
-            if len(values) >= 2:
-                numeric_columns.append(values)
-        return numeric_columns
-
-    def _number(self, value: Any) -> Optional[float]:
-        if isinstance(value, (int, float)):
-            return float(value)
-        if value is None:
-            return None
-        text = str(value).strip().replace(",", "")
-        multiplier = 1
-        if text.lower().endswith("k"):
-            multiplier = 1000
-            text = text[:-1]
-        text = re.sub(r"[^0-9.\-]", "", text)
-        if text in {"", "-", "."}:
-            return None
-        try:
-            return float(text) * multiplier
-        except ValueError:
-            return None
-
-    def _points(self, values: List[float]) -> List[Tuple[int, int]]:
-        chart_width = self.width - self.margin_left - self.margin_right
-        usable_height = self.height - self.margin_top - self.margin_bottom
-        min_value = min(values)
-        max_value = max(values)
-        if max_value == min_value:
-            max_value += 1
-
-        points = []
-        for index, value in enumerate(values):
-            x = self.margin_left + int((index / max(len(values) - 1, 1)) * chart_width)
-            y = self.margin_top + int(
-                (1 - ((value - min_value) / (max_value - min_value))) * usable_height
-            )
-            points.append((x, y))
-        return points
-
-    def _canvas(self) -> List[List[Tuple[int, int, int]]]:
-        return [[self.bg for _ in range(self.width)] for _ in range(self.height)]
-
-    def _draw_grid(self, canvas: List[List[Tuple[int, int, int]]]) -> None:
-        left = self.margin_left
-        right = self.width - self.margin_right
-        top = self.margin_top
-        bottom = self.height - self.margin_bottom
-        for index in range(6):
-            y = top + int(((bottom - top) / 5) * index)
-            self._line(canvas, (left, y), (right, y), self.grid)
-        self._line(canvas, (left, bottom), (right, bottom), self.axis)
-        self._line(canvas, (left, top), (left, bottom), self.axis)
-
-    def _rect(
-        self,
-        canvas: List[List[Tuple[int, int, int]]],
-        x1: int,
-        y1: int,
-        x2: int,
-        y2: int,
-    ) -> None:
-        for y in range(max(0, y1), min(self.height, y2)):
-            for x in range(max(0, x1), min(self.width, x2)):
-                canvas[y][x] = self.bar_color
-
-    def _line(
-        self,
-        canvas: List[List[Tuple[int, int, int]]],
-        start: Tuple[int, int],
-        end: Tuple[int, int],
-        color: Tuple[int, int, int],
-    ) -> None:
-        x1, y1 = start
-        x2, y2 = end
-        dx = abs(x2 - x1)
-        dy = -abs(y2 - y1)
-        sx = 1 if x1 < x2 else -1
-        sy = 1 if y1 < y2 else -1
-        error = dx + dy
-        while True:
-            self._set_pixel(canvas, x1, y1, color)
-            self._set_pixel(canvas, x1 + 1, y1, color)
-            self._set_pixel(canvas, x1, y1 + 1, color)
-            if x1 == x2 and y1 == y2:
-                break
-            error2 = 2 * error
-            if error2 >= dy:
-                error += dy
-                x1 += sx
-            if error2 <= dx:
-                error += dx
-                y1 += sy
-
-    def _circle(
-        self,
-        canvas: List[List[Tuple[int, int, int]]],
-        cx: int,
-        cy: int,
-        radius: int,
-        color: Tuple[int, int, int],
-    ) -> None:
-        for y in range(cy - radius, cy + radius + 1):
-            for x in range(cx - radius, cx + radius + 1):
-                if (x - cx) ** 2 + (y - cy) ** 2 <= radius**2:
-                    self._set_pixel(canvas, x, y, color)
-
-    def _set_pixel(
-        self,
-        canvas: List[List[Tuple[int, int, int]]],
-        x: int,
-        y: int,
-        color: Tuple[int, int, int],
-    ) -> None:
-        if 0 <= x < self.width and 0 <= y < self.height:
-            canvas[y][x] = color
-
-    def _png(self, canvas: List[List[Tuple[int, int, int]]]) -> bytes:
-        raw = bytearray()
-        for row in canvas:
-            raw.append(0)
-            for red, green, blue in row:
-                raw.extend((red, green, blue))
-        compressed = zlib.compress(bytes(raw), level=9)
-
-        def chunk(kind: bytes, data: bytes) -> bytes:
-            checksum = zlib.crc32(kind + data) & 0xFFFFFFFF
-            return (
-                struct.pack(">I", len(data)) + kind + data + struct.pack(">I", checksum)
-            )
-
-        png = bytearray(b"\x89PNG\r\n\x1a\n")
-        png.extend(
-            chunk(
-                b"IHDR",
-                struct.pack(">IIBBBBB", self.width, self.height, 8, 2, 0, 0, 0),
-            )
-        )
-        png.extend(chunk(b"IDAT", compressed))
-        png.extend(chunk(b"IEND", b""))
-        return bytes(png)
