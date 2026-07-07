@@ -117,9 +117,10 @@ async def test_concentration_empty_market(service):
 
 @pytest.mark.anyio
 async def test_public_overview_is_aggregated_and_headline(service, mock_repo):
-    mock_repo.get_price_index.return_value = [
-        _price_row(datetime(2024, 1, 1), 360.0, 358.0, 335.0, 388.0, 500, 3),
-        _price_row(datetime(2024, 4, 1), 395.0, 392.0, 372.0, 420.0, 620, 5),
+    # Snapshot reuses the suppressed, effective-date report aggregation.
+    mock_repo.get_report_periods.return_value = [
+        _report_row(datetime(2024, 1, 1), 10, 500, 180000, 360.0, 4, 3),
+        _report_row(datetime(2024, 4, 1), 8, 620, 244000, 395.0, 4, 3),
     ]
     mock_repo.get_holder_balances.return_value = [
         SimpleNamespace(organization_id=1, balance=400),
@@ -133,12 +134,23 @@ async def test_public_overview_is_aggregated_and_headline(service, mock_repo):
     assert result.outstanding_credits == 700
     assert result.participating_organizations == 2
     assert result.total_credits_issued == 4200
-    # Public price points expose only aggregate fields (no median/trade_count).
+    # Public price points expose aggregate price/volume only — never min/max.
     point = result.price_index[0]
     assert point.period == "2024-Q1"
-    assert point.low == 335.0
-    assert point.high == 388.0
-    assert not hasattr(point, "median_price")
+    assert point.vwap == 360.0
+    assert point.low is None
+    assert point.high is None
+
+
+@pytest.mark.anyio
+async def test_public_overview_suppresses_low_count_periods(service, mock_repo):
+    mock_repo.get_report_periods.return_value = [
+        _report_row(datetime(2024, 1, 1), 10, 500, 180000, 360.0, 4, 3),
+        # withheld: too few transfers / sellers
+        _report_row(datetime(2024, 4, 1), 2, 50, 20000, 395.0, 2, 1),
+    ]
+    result = await service.get_public_overview("quarter")
+    assert [p.period for p in result.price_index] == ["2024-Q1"]
 
 
 @pytest.mark.anyio

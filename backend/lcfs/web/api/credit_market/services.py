@@ -106,16 +106,21 @@ class CreditMarketServices:
                 ]
             )
 
-        rows = await self.repo.get_price_index(interval)
+        # Reuse the same effective-date, monthly-cutoff, suppressed aggregation
+        # as the market report so the public snapshot and the full report agree
+        # and only complete, publishable periods are shown. Individual min/max
+        # prices are never exposed publicly.
+        rows = await self.repo.get_report_periods(interval)
         price_index = [
             PublicPricePointSchema(
                 period=_period_label(row.period, interval),
-                vwap=_to_float(row.vwap),
-                low=_to_float(row.min_price),
-                high=_to_float(row.max_price),
+                vwap=_to_float(row.wavg),
+                low=None,
+                high=None,
                 volume=_to_int(row.volume),
             )
             for row in rows
+            if _publishable(row)
         ]
 
         latest_vwap = next(

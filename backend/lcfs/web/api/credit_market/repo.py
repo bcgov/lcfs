@@ -20,16 +20,30 @@ class CreditMarketRepository:
         self.db = db
 
     @repo_handler
-    async def get_price_index(self, interval: str):
+    async def get_price_index(self, interval: str, cutoff_current_month: bool = False):
         """
         Volume-weighted price statistics for recorded (settled) transfers,
         bucketed by ``interval`` on the transfer agreement date.
 
         Only ``Recorded`` transfers with a positive price and quantity are
         included, so nominal / non-arm's-length transfers do not distort the
-        market price signal.
+        market price signal. When ``cutoff_current_month`` is set, the current
+        in-progress month is excluded (used for public, monthly-published data).
         """
         period = func.date_trunc(interval, Transfer.agreement_date).label("period")
+        conditions = [
+            TransferStatus.status == TransferStatusEnum.Recorded,
+            Transfer.price_per_unit.isnot(None),
+            Transfer.price_per_unit > 0,
+            Transfer.quantity.isnot(None),
+            Transfer.quantity > 0,
+            Transfer.agreement_date.isnot(None),
+        ]
+        if cutoff_current_month:
+            conditions.append(
+                Transfer.agreement_date
+                < func.date_trunc("month", func.current_date())
+            )
         query = (
             select(
                 period,
@@ -49,14 +63,7 @@ class CreditMarketRepository:
                 TransferStatus,
                 Transfer.current_status_id == TransferStatus.transfer_status_id,
             )
-            .where(
-                TransferStatus.status == TransferStatusEnum.Recorded,
-                Transfer.price_per_unit.isnot(None),
-                Transfer.price_per_unit > 0,
-                Transfer.quantity.isnot(None),
-                Transfer.quantity > 0,
-                Transfer.agreement_date.isnot(None),
-            )
+            .where(*conditions)
             .group_by(period)
             .order_by(period)
         )
@@ -120,7 +127,12 @@ class CreditMarketRepository:
         return result.scalar() or 0
 
     def _recorded_transfer_filters(self):
-        """Shared filters: settled, priced, arm's-length-quantified transfers."""
+        """
+        Shared filters: settled, priced, arm's-length-quantified transfers.
+        The public report is published monthly, so only transfers effective up
+        to the end of last month are included (the current, in-progress month
+        is excluded).
+        """
         return [
             TransferStatus.status == TransferStatusEnum.Recorded,
             Transfer.price_per_unit.isnot(None),
@@ -128,6 +140,8 @@ class CreditMarketRepository:
             Transfer.quantity.isnot(None),
             Transfer.quantity > 0,
             Transfer.transaction_effective_date.isnot(None),
+            Transfer.transaction_effective_date
+            < func.date_trunc("month", func.current_date()),
         ]
 
     @repo_handler
