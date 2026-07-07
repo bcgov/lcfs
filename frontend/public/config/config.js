@@ -22,6 +22,7 @@ export const config = {
     manageChargingSites: true,
     manageFse: true,
     legacySupplementalLock: false,
+    deterministicReportSummary: true,
     internalCommentSearch: true
   }
 }

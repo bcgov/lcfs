@@ -554,6 +554,50 @@ async def test_get_total_kwh_usage_for_report_sums_same_view_and_filters(repo, f
 
 
 @pytest.mark.anyio
+async def test_review_fse_summary_uses_same_view_and_filters_as_grid(repo, fake_db):
+    """
+    Analyst review FSE totals must be based on the same pref-view rows and
+    summary filters as the FSE grid/header total.
+    """
+    result = MagicMock()
+    result.mappings.return_value.one.return_value = {
+        "equipment_count": 2,
+        "active_count": 2,
+        "validated_count": 1,
+        "level_counts": {"Level 2": 2},
+        "active_full_year_count": 2,
+        "null_utilization_count": 0,
+        "total_kwh": 1234.5,
+        "avg_capacity_utilization_percent": 0.5,
+        "registration_numbers": ["FSE-1", "FSE-2"],
+    }
+    fake_db.execute.return_value = result
+
+    summary = await repo.get_review_fse_summary_for_report(
+        1,
+        10,
+        datetime(2025, 1, 1).date(),
+        datetime(2025, 12, 31).date(),
+    )
+
+    assert summary["equipment_count"] == 2
+    assert summary["total_kwh"] == 1234.5
+
+    stmt, params = fake_db.execute.call_args.args
+    sql = str(stmt)
+    assert "v_fse_reporting_base_pref" in sql
+    assert "fse_review_summary_counts" in sql
+    assert "fse_review_level_counts" in sql
+    assert "GROUP BY COALESCE(level_of_equipment, 'Unknown level')" in sql
+    assert "charging_equipment_compliance_id IS NOT NULL" in sql
+    assert "is_active IS TRUE" in sql
+    assert "SUM(kwh_usage)" in sql
+    assert params["organization_id"] == 1
+    assert params["compliance_report_id"] == 10
+    assert params["include_decommissioned_attached"] is True
+
+
+@pytest.mark.anyio
 async def test_get_total_kwh_usage_for_report_excludes_is_active_when_not_summary(
     repo, fake_db
 ):
