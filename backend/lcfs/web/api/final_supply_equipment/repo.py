@@ -1255,6 +1255,130 @@ class FinalSupplyEquipmentRepository:
         return float(total or 0)
 
     @repo_handler
+    async def get_review_fse_summary_for_report(
+        self,
+        organization_id: int,
+        compliance_report_id: int,
+        period_start,
+        period_end,
+        include_decommissioned_attached: bool = True,
+    ) -> dict:
+        """
+        Return deterministic FSE pre-screen metrics from the same row set used
+        by the FSE reporting grid/header total.
+        """
+        query = sa.text(
+            """
+            WITH fse_review_rows AS (
+                SELECT
+                    charging_equipment_compliance_id,
+                    level_of_equipment,
+                    is_active,
+                    charging_equipment_status,
+                    supply_from_date,
+                    supply_to_date,
+                    capacity_utilization_percent,
+                    kwh_usage,
+                    registration_number
+                FROM v_fse_reporting_base_pref
+                WHERE organization_id = :organization_id
+                  AND compliance_report_id = :compliance_report_id
+                  AND (
+                      (
+                          CAST(:include_decommissioned_attached AS boolean) IS TRUE
+                          AND (
+                              charging_equipment_status != 'Decommissioned'
+                              OR charging_equipment_compliance_id IS NOT NULL
+                          )
+                      )
+                      OR (
+                          CAST(:include_decommissioned_attached AS boolean) IS FALSE
+                          AND charging_equipment_status != 'Decommissioned'
+                      )
+                  )
+                  AND is_active IS TRUE
+            ),
+            fse_review_summary_counts AS (
+                SELECT
+                    COUNT(*) AS equipment_count,
+                    COUNT(*) FILTER (WHERE is_active IS TRUE) AS active_count,
+                    COUNT(*) FILTER (
+                        WHERE lower(COALESCE(charging_equipment_status, '')) =
+                            'validated'
+                    ) AS validated_count,
+                    COUNT(*) FILTER (
+                        WHERE is_active IS TRUE
+                          AND supply_from_date::date <= CAST(:period_start AS date)
+                          AND supply_to_date::date >= CAST(:period_end AS date)
+                    ) AS active_full_year_count,
+                    COUNT(*) FILTER (WHERE capacity_utilization_percent IS NULL)
+                        AS null_utilization_count,
+                    COALESCE(SUM(kwh_usage), 0) AS total_kwh,
+                    AVG(capacity_utilization_percent)
+                        AS avg_capacity_utilization_percent,
+                    ARRAY_REMOVE(ARRAY_AGG(DISTINCT registration_number), NULL)
+                        AS registration_numbers
+                FROM fse_review_rows
+            ),
+            fse_review_level_counts AS (
+                SELECT
+                    COALESCE(level_of_equipment, 'Unknown level')
+                        AS level_of_equipment_label,
+                    COUNT(*) AS level_count
+                FROM fse_review_rows
+                GROUP BY COALESCE(level_of_equipment, 'Unknown level')
+            ),
+            fse_review_level_json AS (
+                SELECT
+                    COALESCE(
+                        jsonb_object_agg(level_of_equipment_label, level_count),
+                        '{}'::jsonb
+                    ) AS level_counts
+                FROM fse_review_level_counts
+            )
+            SELECT
+                summary.equipment_count,
+                summary.active_count,
+                summary.validated_count,
+                levels.level_counts,
+                summary.active_full_year_count,
+                summary.null_utilization_count,
+                summary.total_kwh,
+                summary.avg_capacity_utilization_percent,
+                summary.registration_numbers
+            FROM fse_review_summary_counts summary
+            CROSS JOIN fse_review_level_json levels
+            """
+        )
+        row = (
+            await self.db.execute(
+                query,
+                {
+                    "organization_id": organization_id,
+                    "compliance_report_id": compliance_report_id,
+                    "include_decommissioned_attached": include_decommissioned_attached,
+                    "period_start": period_start,
+                    "period_end": period_end,
+                },
+            )
+        ).mappings().one()
+        return {
+            "equipment_count": int(row["equipment_count"] or 0),
+            "active_count": int(row["active_count"] or 0),
+            "validated_count": int(row["validated_count"] or 0),
+            "level_counts": dict(row["level_counts"] or {}),
+            "active_full_year_count": int(row["active_full_year_count"] or 0),
+            "null_utilization_count": int(row["null_utilization_count"] or 0),
+            "total_kwh": float(row["total_kwh"] or 0),
+            "avg_capacity_utilization_percent": (
+                float(row["avg_capacity_utilization_percent"])
+                if row["avg_capacity_utilization_percent"] is not None
+                else None
+            ),
+            "registration_numbers": row["registration_numbers"] or [],
+        }
+
+    @repo_handler
     async def get_fse_reporting_list_paginated(
         self,
         organization_id: int,

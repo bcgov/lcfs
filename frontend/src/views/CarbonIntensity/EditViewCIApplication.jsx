@@ -34,6 +34,7 @@ import {
   CI_APPLICATION_STEPS,
   CIApplicationProgress
 } from './components/CIApplicationProgress'
+import { getCIResumeStep } from './ciResumeStep'
 import { ApplicationInformationStep } from './components/ApplicationInformationStep'
 import { ApplicationSummary } from './components/ApplicationSummary'
 import { ProposedFuelPathwaysStep } from './components/ProposedFuelPathwaysStep'
@@ -65,26 +66,40 @@ const EditViewCIApplicationBase = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [isDocumentEditorOpen, setIsDocumentEditorOpen] = useState(false)
   const [supplierRequestDate, setSupplierRequestDate] = useState(null)
+  // First incomplete step of the saved draft — where the applicant should
+  // resume (#4588). Derived from the persisted application, so it is stable
+  // across sessions and identical for any user opening the same draft.
+  const resumeStep = useMemo(
+    () => getCIResumeStep(ciApplication),
+    [ciApplication]
+  )
+
+  // An explicit `?step=N` always wins: deep links, browser back/forward, and
+  // every in-wizard navigation write it. Only the very first open of a draft
+  // (no `step` param yet) falls back to the resume step instead of Step 1.
+  const stepParam = searchParams.get('step')
   const stepFromUrl = (() => {
-    const raw = Number.parseInt(searchParams.get('step') ?? '1', 10)
+    if (stepParam == null) return null
+    const raw = Number.parseInt(stepParam, 10)
     if (Number.isNaN(raw)) return 0
     return Math.max(0, Math.min(STEP_KEYS.length - 1, raw - 1))
   })()
-  const activeStep = stepFromUrl
+  const activeStep = stepFromUrl ?? resumeStep
 
-  const [expanded, setExpanded] = useState([STEP_KEYS[stepFromUrl]])
+  const [expanded, setExpanded] = useState([STEP_KEYS[activeStep]])
   const [modalData, setModalData] = useState(null)
 
-  // Sync the expanded accordion when the URL step changes after mount
-  // (back/forward navigation). Initial value is already correct via useState.
+  // Sync the expanded accordion when the active step changes after mount
+  // (back/forward navigation, or the resume step resolving once the draft
+  // loads). Initial value is already correct via useState.
   const didMount = useRef(false)
   useEffect(() => {
     if (!didMount.current) {
       didMount.current = true
       return
     }
-    setExpanded([STEP_KEYS[stepFromUrl]])
-  }, [stepFromUrl])
+    setExpanded([STEP_KEYS[activeStep]])
+  }, [activeStep])
 
   // Once a submitted/terminal application loads, surface the Government
   // decision panel by default — the wizard accordions for Steps 1–4 are
