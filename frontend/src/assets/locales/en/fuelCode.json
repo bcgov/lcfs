@@ -85,12 +85,16 @@
     "allIterationsTitle": "All iterations",
     "iterationsSuffix": "iterations",
     "volumeOverTimeTitle": "Volume Over Time",
+    "complianceUnitsOverTimeTitle": "Compliance Units Generated Over Time",
     "facilityLocation": "Fuel production facility",
     "totalVolume": "Total Volume",
+    "totalComplianceUnits": "Compliance Units",
     "year": "Year",
     "noVolumeData": "No volume data available for this fuel code.",
+    "noComplianceUnitsData": "No compliance unit data available for this fuel code.",
     "iteration": "Iteration",
     "defaultNotes": "Here are some notes about this specific fuel code and stuff. Here are some notes about this specific fuel code and stuff. Here are some notes about this specific fuel code and stuff. Here are some notes about this specific fuel code and stuff.",
-    "chartAriaDescription": "Line chart showing total reported volume over compliance years for this fuel code group"
+    "chartAriaDescription": "Line chart showing total reported volume over compliance years for this fuel code group",
+    "complianceUnitsChartAriaDescription": "Line chart showing compliance units generated from fuel supply by compliance period for this fuel code group"
   }
 }

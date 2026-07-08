@@ -131,6 +131,9 @@ class InternalCommentRepository:
         # Load the (empty) documents relationship so response serialization
         # does not trigger a lazy load outside the async context.
         await self.db.refresh(internal_comment, ["documents"])
+
+        # On create the editor equals the author.
+        internal_comment.update_full_name = internal_comment.full_name
         return internal_comment
 
     @repo_handler
@@ -235,11 +238,35 @@ class InternalCommentRepository:
                 "create_user": internal_comment.create_user,
                 "create_date": internal_comment.create_date,
                 "update_date": internal_comment.update_date,
+                "update_user": internal_comment.update_user,
+                "update_full_name": None,
                 "full_name": full_name,
                 "documents": [],
             }
             for internal_comment, full_name in results
         ]
+
+        # Batched lookup of editor names (avoids N+1 on the comment list).
+        update_usernames = {
+            c["update_user"] for c in comments_with_user_info if c.get("update_user")
+        }
+        if update_usernames:
+            update_users_result = await self.db.execute(
+                select(
+                    UserProfile.keycloak_username,
+                    (UserProfile.first_name + " " + UserProfile.last_name).label(
+                        "full_name"
+                    ),
+                ).where(UserProfile.keycloak_username.in_(update_usernames))
+            )
+            full_name_by_username = {
+                row.keycloak_username: row.full_name
+                for row in update_users_result.all()
+            }
+            for comment in comments_with_user_info:
+                username = comment.get("update_user")
+                if username:
+                    comment["update_full_name"] = full_name_by_username.get(username)
 
         # Attach any document attachments in a single batched query to avoid
         # an N+1 across the comment list.
@@ -362,10 +389,19 @@ class InternalCommentRepository:
         # the async context.
         await self.db.refresh(internal_comment, ["documents"])
 
-        # Updated the internal comment with the creator's full name.
+        # Attach creator + editor names; reuse creator on self-edit to skip a lookup.
         internal_comment.full_name = await self.user_repo.get_full_name(
             internal_comment.create_user
         )
+        update_user = internal_comment.update_user
+        if not update_user:
+            internal_comment.update_full_name = None
+        elif update_user == internal_comment.create_user:
+            internal_comment.update_full_name = internal_comment.full_name
+        else:
+            internal_comment.update_full_name = await self.user_repo.get_full_name(
+                update_user
+            )
         return internal_comment
 
     @repo_handler

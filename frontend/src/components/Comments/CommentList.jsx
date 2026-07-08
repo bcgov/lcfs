@@ -49,6 +49,8 @@ const CommentList = ({
     roles.compliance_manager,
     roles.government
   )
+  // Administrators may edit any comment regardless of authorship.
+  const isAdmin = hasAnyRole(roles.administrator)
   const isDualMode = commentMode === 'dual'
 
   const startEditing = (id, text, visibilityValue = 'Internal') => {
@@ -92,16 +94,32 @@ const CommentList = ({
     return new Date(dateString).toLocaleDateString(undefined, options)
   }
 
-  const CommentTimestamp = ({ createDate, updateDate }) => {
+  const CommentTimestamp = ({
+    createDate,
+    updateDate,
+    updateFullName,
+    updateUser,
+    createUser
+  }) => {
     const isEdited = updateDate && createDate !== updateDate
+    const editorName = updateFullName || updateUser
+    // Only show editor when different from author (e.g. admin correction).
+    const showEditor =
+      isEdited && editorName && updateUser && updateUser !== createUser
+    const editedLabel = showEditor
+      ? t('internalComment:editedBy', { name: editorName })
+      : t('internalComment:edited')
+    const tooltipLabel = `Edited ${formatDate(updateDate)}`
     return (
       <span>
         {formatDate(createDate)}
         {isEdited && (
           <>
             <span>&nbsp;-&nbsp;</span>
-            <span style={{ color: 'red' }}>{t('internalComment:edited')}</span>
-            <Tooltip title={`Edited ${formatDate(updateDate)}`} arrow>
+            <span style={{ color: 'red' }} data-test="comment-edited-indicator">
+              {editedLabel}
+            </span>
+            <Tooltip title={tooltipLabel} arrow>
               <span style={{ marginLeft: '4px' }}>
                 <InfoOutlinedIcon
                   fontSize="medium"
@@ -272,36 +290,51 @@ const CommentList = ({
               }}
             >
               {editCommentId === comment.internalCommentId ? (
-                <CommentForm
-                  title={t('internalComment:editComment')}
-                  commentText={editCommentText}
-                  onSubmit={submitEdit}
-                  onCancel={stopEditing}
-                  onCommentChange={handleEditCommentChange}
-                  isEditing={true}
-                  isSubmitting={isEditingComment}
-                  showAddCommentBtn={true}
-                  showVisibilityToggle={showVisibilityToggle}
-                  visibility={editVisibility}
-                  onVisibilityChange={setEditVisibility}
-                  visibilityAlign="right"
-                  enableAttachments={enableAttachments}
-                  attachments={editNewFiles}
-                  onAttachmentsChange={setEditNewFiles}
-                  existingAttachments={(comment.documents || []).filter(
-                    (doc) => !editRemovedDocIds.includes(doc.documentId)
-                  )}
-                  onRemoveExistingAttachment={(documentId) =>
-                    setEditRemovedDocIds((ids) => [...ids, documentId])
-                  }
-                  onDownloadAttachment={(documentId, fileName) =>
-                    onDownloadAttachment?.(
-                      comment.internalCommentId,
-                      documentId,
-                      fileName
-                    )
-                  }
-                />
+                <>
+                  {isAdmin &&
+                    comment.createUser &&
+                    comment.createUser !== currentUser?.keycloakUsername && (
+                      <BCTypography
+                        variant="subtitle2"
+                        sx={{ mb: 0.5, color: '#a12622' }}
+                        data-test="admin-edit-notice"
+                      >
+                        {t('internalComment:editingOthersComment', {
+                          name: comment.fullName || comment.createUser
+                        })}
+                      </BCTypography>
+                    )}
+                  <CommentForm
+                    title={t('internalComment:editComment')}
+                    commentText={editCommentText}
+                    onSubmit={submitEdit}
+                    onCancel={stopEditing}
+                    onCommentChange={handleEditCommentChange}
+                    isEditing={true}
+                    isSubmitting={isEditingComment}
+                    showAddCommentBtn={true}
+                    showVisibilityToggle={showVisibilityToggle}
+                    visibility={editVisibility}
+                    onVisibilityChange={setEditVisibility}
+                    visibilityAlign="right"
+                    enableAttachments={enableAttachments}
+                    attachments={editNewFiles}
+                    onAttachmentsChange={setEditNewFiles}
+                    existingAttachments={(comment.documents || []).filter(
+                      (doc) => !editRemovedDocIds.includes(doc.documentId)
+                    )}
+                    onRemoveExistingAttachment={(documentId) =>
+                      setEditRemovedDocIds((ids) => [...ids, documentId])
+                    }
+                    onDownloadAttachment={(documentId, fileName) =>
+                      onDownloadAttachment?.(
+                        comment.internalCommentId,
+                        documentId,
+                        fileName
+                      )
+                    }
+                  />
+                </>
               ) : (
                 <BCBox>
                   <BCBox
@@ -322,9 +355,13 @@ const CommentList = ({
                         <CommentTimestamp
                           createDate={comment.createDate}
                           updateDate={comment.updateDate}
+                          updateUser={comment.updateUser}
+                          updateFullName={comment.updateFullName}
+                          createUser={comment.createUser}
                         />
                       </BCTypography>
-                      {currentUser?.keycloakUsername === comment.createUser && (
+                      {(currentUser?.keycloakUsername === comment.createUser ||
+                        isAdmin) && (
                         <BCTypography
                           variant="body2"
                           component="a"
@@ -481,6 +518,9 @@ CommentList.propTypes = {
       fullName: PropTypes.string.isRequired,
       createDate: PropTypes.string.isRequired,
       updateDate: PropTypes.string,
+      updateUser: PropTypes.string,
+      updateFullName: PropTypes.string,
+      createUser: PropTypes.string,
       visibility: PropTypes.string,
       documents: PropTypes.array
     })
