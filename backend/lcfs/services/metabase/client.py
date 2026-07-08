@@ -131,11 +131,11 @@ class MetabaseClient:
                 timeout=self.timeout,
             )
             result = self._response_json(response)
+            response.raise_for_status()
             if isinstance(result, dict) and result.get("data"):
                 return result
 
             if response.status_code != requests.codes.accepted:
-                response.raise_for_status()
                 return result
 
             logger.info(
@@ -148,7 +148,6 @@ class MetabaseClient:
             if attempt < settings.metabase_query_poll_attempts:
                 time.sleep(settings.metabase_query_poll_interval_seconds)
 
-        response.raise_for_status()
         raise TimeoutError(
             "Metabase query did not complete after "
             f"{settings.metabase_query_poll_attempts} attempts: {path}"

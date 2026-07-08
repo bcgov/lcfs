@@ -266,7 +266,7 @@ def test_builds_dashboard_email_context():
         "data:image/png;base64,"
     )
     assert context["chart_sections"][1]["rows"][0] == [
-        "January 2025",
+        "Jan 2025",
         "456.4k",
     ]
 
