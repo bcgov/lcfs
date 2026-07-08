@@ -16,7 +16,7 @@ end_use_type rows/labels are left untouched. EER is unchanged: the after rows
 copy the same ratio as their matching before end use.
 
 Revision ID: c5e1a9d3b7f2
-Revises: f2c8a9d1b3e5
+Revises: b1d4e7a2c8f9
 Create Date: 2026-07-02 10:00:00.000000
 """
 
@@ -24,7 +24,10 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "c5e1a9d3b7f2"
-down_revision = "f2c8a9d1b3e5"
+# Re-pointed onto the current develop head (was "f2c8a9d1b3e5") so this
+# migration follows develop's b1c2d3e4f5a6 -> b1d4e7a2c8f9 instead of forking
+# a second head off f2c8a9d1b3e5.
+down_revision = "b1d4e7a2c8f9"
 branch_labels = None
 depends_on = None
 
