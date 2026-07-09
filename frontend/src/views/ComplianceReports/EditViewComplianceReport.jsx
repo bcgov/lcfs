@@ -26,6 +26,8 @@ import { useForm } from 'react-hook-form'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import ComplianceReportSummary from './components/ComplianceReportSummary'
 import ReportDetails from './components/ReportDetails'
+import { AnalystReviewSummary } from './components/AnalystReviewSummary/index'
+import { ComplianceReportPageNav } from './components/ComplianceReportPageNav'
 
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { ActivityListCard } from './components/ActivityListCard'
@@ -43,6 +45,7 @@ import colors from '@/themes/base/colors.js'
 import ROUTES from '@/routes/routes.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 import { FILTER_KEYS, REPORT_SCHEDULES } from '@/constants/common'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { isQuarterEditable } from '@/utils/grid/cellEditables'
 import ComplianceReportEarlyIssuanceSummary from '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx'
 import { DateTime } from 'luxon'
@@ -69,6 +72,9 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const alertRef = useRef()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const isDeterministicReportSummaryEnabled = isFeatureEnabled(
+    FEATURE_FLAGS.DETERMINISTIC_REPORT_SUMMARY
+  )
 
   // Store if we've already shown an alert for this location state to prevent duplicates
   const [hasProcessedLocationAlert, setHasProcessedLocationAlert] =
@@ -136,6 +142,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   } = useCurrentUser()
 
   const isGovernmentUser = currentUser?.isGovernmentUser
+  const isIdirUser =
+    isGovernmentUser && !currentUser?.organization?.organizationId
   const currentStatus = reportData?.report?.currentStatus?.status
   const canEdit =
     (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT &&
@@ -299,7 +307,10 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           // kebab-case (`compliance-report`); the previous camelCase key
           // here was a silent no-op, leaving stale data on the page.
           queryClient.invalidateQueries(['compliance-reports'])
-          queryClient.invalidateQueries(['compliance-report', complianceReportId])
+          queryClient.invalidateQueries([
+            'compliance-report',
+            complianceReportId
+          ])
           queryClient.invalidateQueries([
             'compliance-report-summary',
             complianceReportId
@@ -320,7 +331,9 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           navigate(ROUTES.REPORTS.LIST, {
             state: {
               message: t('report:savedSuccessText', {
-                status: updatedStatus.toLowerCase().replace('return', 'returned')
+                status: updatedStatus
+                  .toLowerCase()
+                  .replace('return', 'returned')
               }),
               severity: 'success'
             }
@@ -337,7 +350,10 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         // confusing "error" toast that pushes them to retry.
         if (error?.response?.status === 409) {
           queryClient.invalidateQueries(['compliance-reports'])
-          queryClient.invalidateQueries(['compliance-report', complianceReportId])
+          queryClient.invalidateQueries([
+            'compliance-report',
+            complianceReportId
+          ])
           queryClient.invalidateQueries([
             'compliance-report-summary',
             complianceReportId
@@ -358,8 +374,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
           alertRef.current?.triggerAlert({
             message:
-              error?.response?.data?.detail ??
-              t('report:alreadyAdvancedText'),
+              error?.response?.data?.detail ?? t('report:alreadyAdvancedText'),
             severity: 'info'
           })
           return
@@ -664,6 +679,47 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     hasEligibleRenewableFuel
   ])
 
+  const pageNavItems = useMemo(
+    () => [
+      { id: 'report-section-analyst-review', label: 'Analyst pre-screen' },
+      { id: 'report-section-review-actions', label: 'Review actions' },
+      {
+        id: 'report-section-supportingDocs',
+        label: t('report:supportingDocs')
+      },
+      {
+        id: 'report-section-fuelSupplies',
+        label: t('report:activityLists.supplyOfFuel')
+      },
+      {
+        id: 'report-section-finalSupplyEquipments',
+        label: t('finalSupplyEquipment:fseTitle')
+      },
+      {
+        id: 'report-section-allocationAgreements',
+        label: t('report:activityLists.allocationAgreements')
+      },
+      {
+        id: 'report-section-notionalTransfers',
+        label: t('report:activityLists.notionalTransfers')
+      },
+      { id: 'report-section-otherUses', label: t('otherUses:summaryTitle') },
+      {
+        id: 'report-section-fuelExports',
+        label: t('fuelExport:fuelExportTitle')
+      },
+      {
+        id: 'report-section-summary',
+        label: t('report:summaryAndDeclaration')
+      },
+      {
+        id: 'report-section-assessment',
+        label: t('report:assessmentRecommendation')
+      }
+    ],
+    [t]
+  )
+
   useEffect(() => {
     // Don't process alerts if report is being deleted
     if (isDeleted || isDeleting) return
@@ -718,6 +774,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   return (
     <>
       <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
+      <ComplianceReportPageNav items={pageNavItems} />
       <BCBox>
         <BCModal
           open={!!modalData}
@@ -775,7 +832,23 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           </BCTypography>
         </BCBox>
         <Stack direction="column" mt={2}>
-          <Stack direction={{ md: 'column', lg: 'row' }} spacing={2} pb={2}>
+          {isDeterministicReportSummaryEnabled &&
+            isIdirUser &&
+            !location.state?.newReport && (
+              <BCBox
+                id="report-section-analyst-review"
+                sx={{ scrollMarginTop: 96, marginBottom: '2rem' }}
+              >
+                <AnalystReviewSummary complianceReportId={complianceReportId} />
+              </BCBox>
+            )}
+          <Stack
+            id="report-section-review-actions"
+            direction={{ md: 'column', lg: 'row' }}
+            spacing={2}
+            pb={2}
+            sx={{ scrollMarginTop: 96 }}
+          >
             {canEdit && (
               <ActivityListCard
                 name={orgData?.name}
@@ -812,34 +885,44 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               />
               {!showEarlyIssuanceSummary &&
                 !reportData?.report?.isNonAssessment && (
-                  <ComplianceReportSummary
-                    reportID={complianceReportId}
-                    enableCompareMode={reportData?.chain?.length > 1}
-                    canEdit={canEdit}
-                    currentStatus={currentStatus}
-                    compliancePeriodYear={reportCompliancePeriod}
-                    isSigningAuthorityDeclared={isSigningAuthorityDeclared}
-                    setIsSigningAuthorityDeclared={
-                      setIsSigningAuthorityDeclared
-                    }
-                    hasEligibleRenewableFuel={hasEligibleRenewableFuel}
-                    setHasEligibleRenewableFuel={setHasEligibleRenewableFuel}
-                    buttonClusterConfig={buttonClusterConfig}
-                    methods={methods}
-                    alertRef={alertRef}
-                    isRenewableFuelExempted={
-                      methods.watch('isRenewableFuelExempted') || false
-                    }
-                    isLowCarbonFuelExempted={
-                      methods.watch('isLowCarbonFuelExempted') || false
-                    }
-                  />
+                  <BCBox
+                    id="report-section-summary"
+                    sx={{ scrollMarginTop: 96 }}
+                  >
+                    <ComplianceReportSummary
+                      reportID={complianceReportId}
+                      enableCompareMode={reportData?.chain?.length > 1}
+                      canEdit={canEdit}
+                      currentStatus={currentStatus}
+                      compliancePeriodYear={reportCompliancePeriod}
+                      isSigningAuthorityDeclared={isSigningAuthorityDeclared}
+                      setIsSigningAuthorityDeclared={
+                        setIsSigningAuthorityDeclared
+                      }
+                      hasEligibleRenewableFuel={hasEligibleRenewableFuel}
+                      setHasEligibleRenewableFuel={setHasEligibleRenewableFuel}
+                      buttonClusterConfig={buttonClusterConfig}
+                      methods={methods}
+                      alertRef={alertRef}
+                      isRenewableFuelExempted={
+                        methods.watch('isRenewableFuelExempted') || false
+                      }
+                      isLowCarbonFuelExempted={
+                        methods.watch('isLowCarbonFuelExempted') || false
+                      }
+                    />
+                  </BCBox>
                 )}
               {showEarlyIssuanceSummary &&
                 !reportData?.report?.isNonAssessment && (
-                  <ComplianceReportEarlyIssuanceSummary
-                    reportData={reportData}
-                  />
+                  <BCBox
+                    id="report-section-summary"
+                    sx={{ scrollMarginTop: 96 }}
+                  >
+                    <ComplianceReportEarlyIssuanceSummary
+                      reportData={reportData}
+                    />
+                  </BCBox>
                 )}
             </>
           )}
@@ -863,10 +946,12 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           )}
           {(shouldShowAssessmentSectionTitle || isGovernmentUser) && (
             <BCBox
+              id="report-section-assessment"
               sx={{
                 border: '1px solid rgba(0, 0, 0, 0.28)',
                 padding: '20px',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.28)'
+                boxShadow: '0 1px 2px rgba(0,0,0,0.28)',
+                scrollMarginTop: 96
               }}
             >
               {shouldShowAssessmentStatement && (

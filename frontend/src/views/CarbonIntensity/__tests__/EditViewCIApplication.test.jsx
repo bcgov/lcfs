@@ -122,7 +122,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
 }))
 
 vi.mock('@/views/CarbonIntensity/components/DocumentsModellingStep', () => ({
-  DocumentsModellingStep: () => <div data-test="step3-stub" />
+  DocumentsModellingStep: () => <div data-test="step3-stub" />,
+  DOC_CATEGORY_TECHNICAL_REPORT: 'technical_report',
+  DOC_CATEGORY_GHGENIUS_MODEL: 'ghgenius_model',
+  DOC_CATEGORY_SUPPORTING: 'supporting'
 }))
 
 vi.mock('@/views/CarbonIntensity/components/SignAndSubmitStep', () => ({
@@ -224,6 +227,10 @@ describe('EditViewCIApplication', () => {
     }
     mockParams = {}
     mockGetCIApplication = { data: undefined, isLoading: false }
+    // The wrapper uses BrowserRouter, so `?step=N` written by a prior test's
+    // navigation lingers on the shared jsdom URL. Reset it so each test starts
+    // without an explicit step param (mirrors opening a draft afresh).
+    window.history.pushState({}, '', '/')
   })
   afterEach(cleanup)
 
@@ -338,6 +345,66 @@ describe('EditViewCIApplication', () => {
     expect(mockNavigate).toHaveBeenCalledWith(
       ROUTES.CI_APPLICATIONS.LIST,
       expect.any(Object)
+    )
+  })
+
+  it('resumes a draft on the first incomplete step (Steps 1–2 saved -> Step 3)', async () => {
+    mockParams = { ciApplicationId: '10' }
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Draft' },
+        // Step 1 required fields saved
+        facilityCountry: 'Canada',
+        facilityNameplateCapacity: 1000,
+        facilityNameplateCapacityUnit: 'L',
+        // Step 2 saved
+        pathways: [{ pathwayId: 1 }],
+        // Step 3 not yet complete (no documents)
+        documents: []
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, { wrapper })
+
+    await waitFor(() => {
+      // Step 3 accordion is expanded; Steps 1 and 2 are collapsed.
+      expect(screen.getByTestId('ci-step-accordion-step3')).toHaveClass(
+        'Mui-expanded'
+      )
+    })
+    expect(screen.getByTestId('ci-step-accordion-step1')).not.toHaveClass(
+      'Mui-expanded'
+    )
+    expect(screen.getByTestId('ci-step-accordion-step2')).not.toHaveClass(
+      'Mui-expanded'
+    )
+  })
+
+  it('opens a brand-new draft (nothing saved) on Step 1', async () => {
+    mockParams = { ciApplicationId: '10' }
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Draft' },
+        pathways: [],
+        documents: []
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ci-step-accordion-step1')).toHaveClass(
+        'Mui-expanded'
+      )
+    })
+    expect(screen.getByTestId('ci-step-accordion-step3')).not.toHaveClass(
+      'Mui-expanded'
     )
   })
 

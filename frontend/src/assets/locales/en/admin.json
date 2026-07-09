@@ -74,7 +74,7 @@
     "status": "status",
     "activeLabel": "Active, user can login to LCFS portal",
     "inactiveLabel": "Inactive, user cannot login to LCFS portal",
-    "administrator": "can add/edit IDIR users and assign roles and add/edit organizations, BCeID users and assign roles.",
+    "administrator": "can add/edit IDIR users and assign roles and add/edit organizations, BCeID users and assign roles; can also edit any comments.",
     "analyst": "can make recommendations on transfers, transactions and compliance reports, manage and recommend CI applications and fuel codes.",
     "compliance_manager": "can make recommendations on compliance reports.",
     "director": "can assess compliance reports, approve transactions, fuel codes, initiative agreements and designated actions.",
