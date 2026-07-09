@@ -35,8 +35,10 @@ async def test_org_fuel_code_counts_success_for_ci_applicant(
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == {"draft": 4, "submitted": 2}
-        # Org is resolved from the caller, not a query param.
-        assert mock.await_args.args[1] is not None
+        # Org is resolved from the caller, not a query param. Patching the
+        # class method with a mock does not pass ``self``, so the resolved
+        # organization_id is the first positional arg.
+        assert mock.await_args.args[0] is not None
 
 
 @pytest.mark.anyio
