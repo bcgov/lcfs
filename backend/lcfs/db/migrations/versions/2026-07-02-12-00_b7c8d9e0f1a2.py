@@ -1,7 +1,7 @@
 """Add credit market monthly report notification type.
 
 Revision ID: b7c8d9e0f1a2
-Revises: b1d4e7a2c8f9
+Revises: c5e1a9d3b7f2
 Create Date: 2026-07-02 12:00:00.000000
 """
 
@@ -9,7 +9,7 @@ from alembic import op
 
 
 revision = "b7c8d9e0f1a2"
-down_revision = "b1d4e7a2c8f9"
+down_revision = "c5e1a9d3b7f2"
 branch_labels = None
 depends_on = None
 
