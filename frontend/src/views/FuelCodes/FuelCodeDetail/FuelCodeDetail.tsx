@@ -349,8 +349,102 @@ const VolumeChart = ({ data, t }) => {
     <ReactECharts
       option={option}
       notMerge
-      style={{ height: 320 }}
+      style={{ height: 360, width: '100%' }}
+      opts={{ renderer: 'svg' }}
       aria-label={t('fuelCode:detail.chartAriaDescription')}
+    />
+  )
+}
+
+const ComplianceUnitsChart = ({ data, t }) => {
+  if (!data || data.length === 0) {
+    return (
+      <BCTypography variant="body2" color="text.secondary">
+        {t('fuelCode:detail.noComplianceUnitsData')}
+      </BCTypography>
+    )
+  }
+
+  const years = data.map((d) => d.year)
+  const units = data.map((d) => Number(d.totalComplianceUnits ?? 0))
+  const chartBlue = '#5b8def'
+  const chartFill = 'rgba(91, 141, 239, 0.18)'
+  const chartGrid = '#e6edf7'
+  const chartText = '#5f6b7a'
+
+  const option = {
+    color: [chartBlue],
+    aria: {
+      enabled: true,
+      label: {
+        description: t('fuelCode:detail.complianceUnitsChartAriaDescription')
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params) => {
+        const p = params[0]
+        return `${p.name}<br/>${t('fuelCode:detail.totalComplianceUnits')}: ${Number(p.value).toLocaleString()}`
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: years,
+      boundaryGap: false,
+      name: t('fuelCode:detail.year'),
+      nameLocation: 'middle',
+      nameGap: 30,
+      axisLine: { lineStyle: { color: '#9aa4b2' } },
+      axisTick: { lineStyle: { color: '#9aa4b2' } },
+      axisLabel: { color: chartText }
+    },
+    yAxis: {
+      type: 'value',
+      name: '',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: chartGrid } },
+      axisLabel: {
+        color: chartText,
+        formatter: (v) => (Number(v) === 0 ? '' : Number(v).toLocaleString())
+      }
+    },
+    graphic: [
+      {
+        type: 'text',
+        left: '11%',
+        top: 18,
+        style: {
+          text: t('fuelCode:detail.totalComplianceUnits'),
+          fill: chartText,
+          fontSize: 12,
+          fontWeight: 600
+        }
+      }
+    ],
+    series: [
+      {
+        name: t('fuelCode:detail.totalComplianceUnits'),
+        type: 'line',
+        data: units,
+        smooth: false,
+        symbol: 'circle',
+        symbolSize: 7,
+        lineStyle: { color: chartBlue, width: 3 },
+        itemStyle: { color: chartBlue, borderColor: '#ffffff', borderWidth: 1 },
+        areaStyle: { color: chartFill }
+      }
+    ],
+    grid: { left: '11%', right: '6%', bottom: '16%', top: 50 }
+  }
+
+  return (
+    <ReactECharts
+      option={option}
+      notMerge
+      style={{ height: 360, width: '100%' }}
+      opts={{ renderer: 'svg' }}
+      aria-label={t('fuelCode:detail.complianceUnitsChartAriaDescription')}
     />
   )
 }
@@ -374,6 +468,7 @@ const FuelCodeDetailBase = () => {
   const latest = data?.latestIteration
   const iterations = data?.iterations ?? []
   const volumeOverTime = data?.volumeOverTime ?? []
+  const complianceUnitsOverTime = data?.complianceUnitsOverTime ?? []
 
   const prefix = latest?.fuelCodePrefix?.prefix ?? ''
   const suffix = latest?.fuelSuffix ?? ''
@@ -548,19 +643,58 @@ const FuelCodeDetailBase = () => {
           )}
         </BCBox>
 
-        {/* Volume over time chart */}
-        <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
-          {t('fuelCode:detail.volumeOverTimeTitle')}
-        </BCTypography>
-        <Card elevation={1} sx={{ mb: 4, width: '100%', maxWidth: '940px' }}>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton variant="rounded" height={320} />
-            ) : (
-              <VolumeChart data={volumeOverTime} t={t} />
-            )}
-          </CardContent>
-        </Card>
+        {/* Charts: side-by-side when ≥750px viewport, stacked below */}
+        {/* Charts: stacked under 750px, side-by-side above */}
+        <BCBox
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr)',
+            '@media (min-width:750px)': {
+              gridTemplateColumns: 'repeat(2, minmax(320px, 1fr))'
+            },
+            columnGap: { xs: 2, md: 3 },
+            rowGap: { xs: 2, md: 3 },
+            mb: 4,
+            width: '100%',
+            maxWidth: '2160px'
+          }}
+        >
+          {/* Volume over time chart */}
+          <BCBox sx={{ minWidth: 0 }}>
+            <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
+              {t('fuelCode:detail.volumeOverTimeTitle')}
+            </BCTypography>
+            <Card elevation={1} sx={{ width: '100%', height: '100%' }}>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton variant="rounded" height={360} />
+                ) : (
+                  <VolumeChart data={volumeOverTime} t={t} />
+                )}
+              </CardContent>
+            </Card>
+          </BCBox>
+
+          {/* Compliance units over time chart */}
+          <BCBox sx={{ minWidth: 0 }}>
+            <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
+              {t('fuelCode:detail.complianceUnitsOverTimeTitle')}
+            </BCTypography>
+            <Card
+              elevation={1}
+              sx={{ width: '100%', height: '100%' }}
+              data-test="compliance-units-chart-card"
+            >
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton variant="rounded" height={360} />
+                ) : (
+                  <ComplianceUnitsChart data={complianceUnitsOverTime} t={t} />
+                )}
+              </CardContent>
+            </Card>
+          </BCBox>
+        </BCBox>
       </BCBox>
     </BCBox>
   )

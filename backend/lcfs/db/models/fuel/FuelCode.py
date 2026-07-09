@@ -22,6 +22,7 @@ class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
     email was sent for this fuel code. This prevents duplicate notifications
     from being sent on subsequent scheduler runs.
     """
+
     __tablename__ = "fuel_code"
     __table_args__ = {"comment": "Contains a list of all of fuel codes"}
 
@@ -122,6 +123,12 @@ class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
     )
     fuel_type = relationship("FuelType", back_populates="fuel_codes", lazy="selectin")
     organization = relationship("Organization", lazy="selectin")
+    ci_application_associations = relationship(
+        "CIApplicationFuelCodeAssociation",
+        back_populates="fuel_code",
+        cascade="all, delete, delete-orphan",
+        lazy="selectin",
+    )
 
     feedstock_fuel_transport_modes = relationship(
         "FeedstockFuelTransportMode",

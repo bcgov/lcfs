@@ -45,6 +45,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeBulletinsSchema,
     FuelCodeBulletinRowSchema,
     VolumeDataPointSchema,
+    ComplianceUnitsDataPointSchema,
 )
 from lcfs.web.core.decorators import service_handler
 
@@ -391,6 +392,15 @@ class FuelCodeServices:
                 VolumeDataPointSchema(
                     year=str(row.year),
                     total_volume=float(row.total_volume or 0),
+                )
+                for row in volume_rows
+            ],
+            compliance_units_over_time=[
+                ComplianceUnitsDataPointSchema(
+                    year=str(row.year),
+                    total_compliance_units=float(
+                        getattr(row, "total_compliance_units", 0) or 0
+                    ),
                 )
                 for row in volume_rows
             ],
