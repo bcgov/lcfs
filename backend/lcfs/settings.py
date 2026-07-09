@@ -58,6 +58,21 @@ class Settings(BaseSettings):
     compliance_reindex_minute: int = 15
     compliance_reindex_run_on_startup: bool = False
 
+    credit_market_report_enabled: bool = False
+    credit_market_report_day: int = 1
+    credit_market_report_hour: int = 10
+    credit_market_report_minute: int = 0
+    credit_market_report_notification_type: str = "PUBLIC__CREDIT_MARKET_MONTHLY_REPORT"
+
+    metabase_base_url: str = ""
+    metabase_api_key: str = ""
+    metabase_username: str = ""
+    metabase_password: str = ""
+    metabase_credit_market_dashboard_id: int = 0
+    metabase_request_timeout_seconds: int = 30
+    metabase_query_poll_attempts: int = 60
+    metabase_query_poll_interval_seconds: int = 10
+
     # Variables for Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
