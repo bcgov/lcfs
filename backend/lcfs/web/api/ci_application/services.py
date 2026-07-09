@@ -21,40 +21,35 @@ from lcfs.db.models.ci_application import (
     CIApplicationFuelCodeAssociation,
     Pathway,
 )
-from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.ci_application.CIApplication import (
     CI_DOC_CATEGORY_GHGENIUS_MODEL,
     CI_DOC_CATEGORY_TECHNICAL_REPORT,
 )
-from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
+from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.schema import FileResponseSchema
-from lcfs.web.api.base import (
-    PaginationRequestSchema,
-    PaginationResponseSchema,
-)
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
-from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.api.ci_application.schema import (
     AssignedAnalystSchema,
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
-    CIGeneratedFuelCodeSchema,
-    CIGeneratedFuelCodeUpdateSchema,
     CIApplicationSchema,
-    CIApplicationUserSchema,
-    CIRiskAssessmentEnum,
+    CIApplicationsListSchema,
     CIApplicationStatusEnum,
     CIApplicationStatusSchema,
-    CIApplicationsListSchema,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
     CIApplicationStep4Schema,
+    CIApplicationUserSchema,
+    CIGeneratedFuelCodeSchema,
+    CIGeneratedFuelCodeUpdateSchema,
+    CIRiskAssessmentEnum,
     CITableOptionsSchema,
     FuelCodeOptionSchema,
     FuelTypeOptionSchema,
@@ -66,7 +61,9 @@ from lcfs.web.api.ci_application.schema import (
     PathwayInputSchema,
     PathwaySchema,
 )
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -1037,13 +1034,17 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
 
     @service_handler
-    async def get_table_options(self) -> CITableOptionsSchema:
+    async def get_table_options(
+        self, organization_id: Optional[int] = None
+    ) -> CITableOptionsSchema:
         statuses = await self.repo.get_statuses()
         application_types = await self.repo.get_pathway_application_types()
         fuel_code_types = await self.repo.get_pathway_fuel_code_types()
         fuel_types = await self.repo.get_fuel_types()
         transport_modes = await self.repo.get_transport_modes()
-        fuel_codes = await self.repo.get_approved_fuel_codes()
+        # Renewal iterations are scoped to the caller's organization for
+        # supplier/CI-applicant users; government callers pass None (all).
+        fuel_codes = await self.repo.get_approved_fuel_codes(organization_id)
         return CITableOptionsSchema(
             statuses=[CIApplicationStatusSchema.model_validate(s) for s in statuses],
             # Facility nameplate capacity is a physical quantity — use the same
@@ -1362,6 +1363,7 @@ class CIApplicationServices:
     async def _validate_step2_payload(
         self,
         data: CIApplicationStep2Schema,
+        organization_id: Optional[int] = None,
     ) -> dict:
         """
         Cross-row validation of Step 2:
@@ -1424,6 +1426,19 @@ class CIApplicationServices:
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Row {index}: invalid fuel code iteration.",
                     )
+                # Renewals must reference a fuel code owned by the
+                # application's organization.
+                if (
+                    organization_id is not None
+                    and fuel_codes[row.fuel_code_id].organization_id != organization_id
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=(
+                            f"Row {index}: the selected fuel code iteration "
+                            "belongs to another organization."
+                        ),
+                    )
             else:
                 # New (or any other non-Renewal) row must not reference a fuel code.
                 if row.fuel_code_id is not None:
@@ -1467,7 +1482,7 @@ class CIApplicationServices:
                 ),
             )
 
-        await self._validate_step2_payload(data)
+        await self._validate_step2_payload(data, ci_application.organization_id)
         previous_pathway_entities = (
             _latest_active_pathways(list(ci_application.pathways or []))
             if is_supplemental_edit

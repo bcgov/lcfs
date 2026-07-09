@@ -52,6 +52,7 @@
     "operatingDataFrom": "Operating data collection from",
     "operatingDataTo": "Operating data collection to",
     "fuelCodeIteration": "Fuel code iteration",
+    "noEligibleFuelCodes": "No fuel code iterations are available to renew. Only approved fuel codes owned by your organization can be renewed — the latest iteration of each is shown here.",
     "proposedCi": "Proposed CI (gCO2e/MJ)",
     "fuelType": "Fuel type",
     "feedstock": "Feedstock",

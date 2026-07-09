@@ -370,7 +370,7 @@ def _fuel_type_obj(ident=1, name="Biodiesel"):
     )
 
 
-def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF"):
+def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF", organization_id=1):
     return SimpleNamespace(
         fuel_code_id=ident,
         fuel_suffix=suffix,
@@ -380,6 +380,7 @@ def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF"):
         feedstock="Corn",
         feedstock_location="Ontario, CA",
         fuel_code_prefix=FuelCodePrefix(prefix=prefix),
+        organization_id=organization_id,
     )
 
 
@@ -734,6 +735,30 @@ async def test_update_step2_renewal_with_valid_fuel_code(service, repo, mock_use
     result = await service.update_step2(ci, payload, mock_user)
     assert isinstance(result, CIApplicationSchema)
     repo.replace_pathways.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_update_step2_renewal_rejects_other_org_fuel_code(
+    service, repo, mock_user
+):
+    """A renewal cannot reference a fuel code owned by another organization."""
+    ci = _ci_application()  # organization_id == 1
+    ci.pathways = []
+    _stub_step2_lookups(repo, with_fuel_code=True)
+    # Fuel code 42 is owned by a different organization.
+    repo.get_fuel_codes_by_ids.return_value = [_fuel_code_obj(organization_id=2)]
+    repo.replace_pathways.return_value = []
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    payload = CIApplicationStep2Schema(
+        pathways=[_new_pathway_input(application_type_id=2, fuel_code_id=42)],
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step2(ci, payload, mock_user)
+    assert exc.value.status_code == 403
+    repo.replace_pathways.assert_not_awaited()
 
 
 @pytest.mark.anyio
