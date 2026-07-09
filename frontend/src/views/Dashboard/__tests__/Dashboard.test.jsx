@@ -49,6 +49,9 @@ vi.mock('../components/cards', () => ({
       Org Compliance Reports Card
     </div>
   ),
+  OrgFuelCodeCard: () => (
+    <div data-test="org-fuel-code-card">Org Fuel Code Card</div>
+  ),
   OrgUserSettingsCard: () => (
     <div data-test="org-user-settings-card">Org User Settings Card</div>
   )
