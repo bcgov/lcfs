@@ -17,7 +17,9 @@ const IDIRAnalystNotificationSettings = () => {
       IDIR_ANALYST__TRANSFER__DIRECTOR_RECORDED:
         'idirAnalyst.categories.transfers.directorRecorded',
       IDIR_ANALYST__TRANSFER__RETURNED_TO_ANALYST:
-        'idirAnalyst.categories.initiativeAgreements.returnedToAnalyst'
+        'idirAnalyst.categories.initiativeAgreements.returnedToAnalyst',
+      PUBLIC__CREDIT_MARKET_MONTHLY_REPORT:
+        'idirAnalyst.categories.transfers.creditMarketMonthlyReport'
     },
     'idirAnalyst.categories.initiativeAgreements': {
       title: 'idirAnalyst.categories.initiativeAgreements.title',

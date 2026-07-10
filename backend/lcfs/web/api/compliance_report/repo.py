@@ -1,6 +1,7 @@
 import asyncio
 import structlog
 from datetime import datetime, timezone
+from time import perf_counter
 from fastapi import Depends
 from sqlalchemy import (
     func,
@@ -8,15 +9,17 @@ from sqlalchemy import (
     and_,
     asc,
     desc,
+    Integer,
     String,
     cast,
     or_,
     delete,
     exists,
     text,
+    bindparam,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased, joinedload
+from sqlalchemy.orm import aliased, joinedload, selectinload
 from typing import List, Optional, TypedDict, Type, Sequence
 
 from lcfs.db.base import ActionTypeEnum
@@ -46,6 +49,7 @@ from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
@@ -215,7 +219,10 @@ class ComplianceReportRepository:
             ComplianceReport.organization_id == organization_id,
             CompliancePeriod.description == str(period),
             ComplianceReportStatus.status.in_(
-                [ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Exempted]
+                [
+                    ComplianceReportStatusEnum.Assessed,
+                    ComplianceReportStatusEnum.Exempted,
+                ]
             ),
         ]
 
@@ -264,6 +271,81 @@ class ComplianceReportRepository:
             .first()  # Gets the latest assessed report (excluding current)
         )
         return result
+
+    @repo_handler
+    async def get_previous_assessed_compliance_reports(
+        self, organization_id: int, current_period: int, limit: int | None = None
+    ) -> list[ComplianceReport]:
+        """
+        Retrieve the latest assessed/exempted reports from prior compliance
+        years for the organization, ordered newest first.
+        """
+        ranked_reports = (
+            select(
+                ComplianceReport.compliance_report_id,
+                func.row_number()
+                .over(
+                    partition_by=ComplianceReport.compliance_period_id,
+                    order_by=(
+                        ComplianceReport.version.desc(),
+                        ComplianceReport.update_date.desc(),
+                    ),
+                )
+                .label("rn"),
+            )
+            .join(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
+            )
+            .join(
+                ComplianceReportStatus,
+                ComplianceReport.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            )
+            .where(
+                and_(
+                    ComplianceReport.organization_id == organization_id,
+                    CompliancePeriod.description.op("~")(r"^\d+$"),
+                    cast(CompliancePeriod.description, Integer) < current_period,
+                    ComplianceReportStatus.status.in_(
+                        [
+                            ComplianceReportStatusEnum.Assessed,
+                            ComplianceReportStatusEnum.Exempted,
+                        ]
+                    ),
+                )
+            )
+            .subquery()
+        )
+
+        query = (
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+            )
+            .join(
+                ranked_reports,
+                ComplianceReport.compliance_report_id
+                == ranked_reports.c.compliance_report_id,
+            )
+            .join(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
+            )
+            .where(ranked_reports.c.rn == 1)
+            .order_by(cast(CompliancePeriod.description, Integer).desc())
+        )
+
+        if limit:
+            query = query.limit(limit)
+
+        result = await self.db.execute(query)
+        return result.scalars().unique().all()
 
     @repo_handler
     async def create_compliance_report(self, report: ComplianceReport):
@@ -804,6 +886,356 @@ class ComplianceReportRepository:
         }
 
     @repo_handler
+    async def get_effective_versioned_records(
+        self, compliance_report_id: int, model: Type
+    ) -> list:
+        """
+        Return the latest active records for a versioned schedule in the report
+        chain up to and including the selected report version.
+        """
+        anchor = await self._get_report_chain_anchor(compliance_report_id)
+        if not anchor or not anchor[0]:
+            return []
+
+        group_uuid, version, _ = anchor
+        chain_report_ids = self._get_chain_report_ids_subquery(group_uuid, version)
+
+        latest_version_per_group = (
+            select(
+                model.group_uuid,
+                func.max(model.version).label("max_version"),
+            )
+            .where(model.compliance_report_id.in_(chain_report_ids))
+            .group_by(model.group_uuid)
+            .subquery()
+        )
+
+        options = []
+        if hasattr(model, "fuel_type"):
+            options.append(selectinload(model.fuel_type))
+        if hasattr(model, "fuel_category"):
+            options.append(selectinload(model.fuel_category))
+        if hasattr(model, "fuel_code"):
+            options.append(
+                selectinload(model.fuel_code).selectinload(FuelCode.fuel_code_status)
+            )
+
+        result = await self.db.execute(
+            select(model)
+            .options(*options)
+            .join(
+                latest_version_per_group,
+                and_(
+                    model.group_uuid == latest_version_per_group.c.group_uuid,
+                    model.version == latest_version_per_group.c.max_version,
+                ),
+            )
+            .where(model.action_type != ActionTypeEnum.DELETE)
+        )
+        return result.scalars().unique().all()
+
+    @repo_handler
+    async def get_review_schedule_analytics_totals(
+        self, compliance_report_id: int
+    ) -> dict[str, dict[str, float]]:
+        totals_by_report = await self.get_review_schedule_analytics_totals_for_reports(
+            [compliance_report_id]
+        )
+        return totals_by_report.get(
+            compliance_report_id,
+            {
+                "fuel_supplies": {},
+                "fuel_exports": {},
+                "allocation_agreements": {},
+                "notional_transfers": {},
+                "other_uses": {},
+            },
+        )
+
+    @repo_handler
+    async def get_review_schedule_analytics_totals_for_reports(
+        self, compliance_report_ids: list[int]
+    ) -> dict[int, dict[str, dict[str, float]]]:
+        """
+        Return schedule totals from the reporting analytics views.
+
+        These views rebuild effective schedule state from the compliance report
+        group UUID and schedule row versioning, which avoids missing unchanged
+        rows carried forward from earlier report versions.
+        """
+        report_ids = list(dict.fromkeys(compliance_report_ids))
+        totals: dict[int, dict[str, dict[str, float]]] = {
+            report_id: {
+                "fuel_supplies": {},
+                "fuel_exports": {},
+                "allocation_agreements": {},
+                "notional_transfers": {},
+                "other_uses": {},
+            }
+            for report_id in report_ids
+        }
+        if not report_ids:
+            return totals
+
+        queries = {
+            "fuel_supplies": text(
+                """
+                SELECT
+                    compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category')
+                        || ' - ' ||
+                    COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
+                    SUM(
+                        CASE
+                            WHEN COALESCE(quantity, 0) > 0 THEN quantity
+                            ELSE COALESCE(q1_quantity, 0)
+                               + COALESCE(q2_quantity, 0)
+                               + COALESCE(q3_quantity, 0)
+                               + COALESCE(q4_quantity, 0)
+                        END
+                    ) AS total_quantity
+                FROM vw_fuel_supply_analytics_base
+                WHERE compliance_report_id IN :compliance_report_ids
+                GROUP BY
+                    compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category'),
+                    COALESCE(fuel_type::text, 'Unknown fuel type')
+                """
+            ).bindparams(bindparam("compliance_report_ids", expanding=True)),
+            "fuel_exports": text(
+                """
+                SELECT
+                    compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category')
+                        || ' - ' ||
+                    COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
+                    SUM(COALESCE(quantity, 0)) AS total_quantity
+                FROM vw_fuel_export_analytics_base
+                WHERE compliance_report_id IN :compliance_report_ids
+                GROUP BY
+                    compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category'),
+                    COALESCE(fuel_type::text, 'Unknown fuel type')
+                """
+            ).bindparams(bindparam("compliance_report_ids", expanding=True)),
+            "allocation_agreements": text(
+                """
+                SELECT
+                    compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category')
+                        || ' - ' ||
+                    COALESCE(fuel_type::text, fuel_type_other, 'Unknown fuel type') AS fuel_type,
+                    SUM(
+                        CASE
+                            WHEN COALESCE(quantity, 0) > 0 THEN quantity
+                            ELSE COALESCE(q1_quantity, 0)
+                               + COALESCE(q2_quantity, 0)
+                               + COALESCE(q3_quantity, 0)
+                               + COALESCE(q4_quantity, 0)
+                        END
+                    ) AS total_quantity
+                FROM vw_allocation_agreement_analytics_base
+                WHERE compliance_report_id IN :compliance_report_ids
+                GROUP BY
+                    compliance_report_id,
+                    COALESCE(fuel_category::text, 'Unknown fuel category'),
+                    COALESCE(fuel_type::text, fuel_type_other, 'Unknown fuel type')
+                """
+            ).bindparams(bindparam("compliance_report_ids", expanding=True)),
+            "notional_transfers": text(
+                """
+                SELECT
+                    compliance_report_id,
+                    COALESCE("Fuel Category"::text, 'Unknown fuel category') AS fuel_type,
+                    SUM(COALESCE("Quantity", 0)) AS total_quantity
+                FROM vw_notional_transfer_base
+                WHERE compliance_report_id IN :compliance_report_ids
+                GROUP BY compliance_report_id, COALESCE("Fuel Category"::text, 'Unknown fuel category')
+                """
+            ).bindparams(bindparam("compliance_report_ids", expanding=True)),
+            "other_uses": text(
+                """
+                SELECT
+                    compliance_report_id,
+                    COALESCE(category::text, 'Unknown fuel category')
+                        || ' - ' ||
+                    COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
+                    SUM(COALESCE(quantity_supplied, 0)) AS total_quantity
+                FROM vw_fuels_other_use_base
+                WHERE compliance_report_id IN :compliance_report_ids
+                GROUP BY
+                    compliance_report_id,
+                    COALESCE(category::text, 'Unknown fuel category'),
+                    COALESCE(fuel_type::text, 'Unknown fuel type')
+                """
+            ).bindparams(bindparam("compliance_report_ids", expanding=True)),
+        }
+
+        for key, query in queries.items():
+            started_at = perf_counter()
+            result = await self.db.execute(query, {"compliance_report_ids": report_ids})
+            rows = result.mappings().all()
+            for row in rows:
+                totals[row["compliance_report_id"]][key][row["fuel_type"]] = float(
+                    row["total_quantity"] or 0
+                )
+            logger.info(
+                "compliance_report_review_query_timing",
+                query_name=key,
+                view_name=self._review_schedule_analytics_view_name(key),
+                compliance_report_ids=report_ids,
+                report_count=len(report_ids),
+                row_count=len(rows),
+                duration_ms=round((perf_counter() - started_at) * 1000, 1),
+            )
+
+        return totals
+
+    def _review_schedule_analytics_view_name(self, key: str) -> str:
+        return {
+            "fuel_supplies": "vw_fuel_supply_analytics_base",
+            "fuel_exports": "vw_fuel_export_analytics_base",
+            "allocation_agreements": "vw_allocation_agreement_analytics_base",
+            "notional_transfers": "vw_notional_transfer_base",
+            "other_uses": "vw_fuels_other_use_base",
+        }[key]
+
+    @repo_handler
+    async def get_review_compliance_units_by_fuel(
+        self, compliance_report_id: int
+    ) -> list[dict]:
+        """
+        Return current-report compliance units by fuel type and schedule.
+
+        Only schedules with authoritative compliance-unit fields are included.
+        """
+        query = text(
+            """
+            SELECT
+                schedule,
+                fuel_category,
+                fuel_type,
+                SUM(compliance_units) AS compliance_units
+            FROM (
+                SELECT
+                    'Fuel supply' AS schedule,
+                    COALESCE(fuel_category::text, 'Unknown fuel category') AS fuel_category,
+                    COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
+                    COALESCE(compliance_units, 0) AS compliance_units
+                FROM vw_fuel_supply_analytics_base
+                WHERE compliance_report_id = :compliance_report_id
+
+                UNION ALL
+
+                SELECT
+                    'Fuel exports' AS schedule,
+                    COALESCE(fuel_category::text, 'Unknown fuel category') AS fuel_category,
+                    COALESCE(fuel_type::text, 'Unknown fuel type') AS fuel_type,
+                    COALESCE(compliance_units, 0) AS compliance_units
+                FROM vw_fuel_export_analytics_base
+                WHERE compliance_report_id = :compliance_report_id
+            ) schedule_units
+            GROUP BY schedule, fuel_category, fuel_type
+            HAVING SUM(compliance_units) <> 0
+            ORDER BY fuel_category, fuel_type, schedule
+            """
+        )
+        started_at = perf_counter()
+        result = await self.db.execute(
+            query, {"compliance_report_id": compliance_report_id}
+        )
+        rows = result.mappings().all()
+        logger.info(
+            "compliance_report_review_query_timing",
+            query_name="compliance_units_by_fuel",
+            view_name="vw_fuel_supply_analytics_base,vw_fuel_export_analytics_base",
+            compliance_report_id=compliance_report_id,
+            row_count=len(rows),
+            duration_ms=round((perf_counter() - started_at) * 1000, 1),
+        )
+        return [
+            {
+                "schedule": row["schedule"],
+                "fuel_category": row["fuel_category"],
+                "fuel_type": row["fuel_type"],
+                "compliance_units": float(row["compliance_units"] or 0),
+            }
+            for row in rows
+        ]
+
+    @repo_handler
+    async def get_review_fuel_supply_fuel_code_totals_for_reports(
+        self, compliance_report_ids: list[int]
+    ) -> dict[int, dict[str, float]]:
+        """
+        Return fuel supply quantities by fuel code for current and comparison reports.
+        """
+        report_ids = list(dict.fromkeys(compliance_report_ids))
+        totals: dict[int, dict[str, float]] = {
+            report_id: {} for report_id in report_ids
+        }
+        if not report_ids:
+            return totals
+
+        query = text(
+            """
+            SELECT
+                compliance_report_id,
+                COALESCE(NULLIF(fuel_code::text, ''), 'No fuel code')
+                    || ' (' ||
+                COALESCE(fuel_category::text, 'Unknown fuel category')
+                    || ' - ' ||
+                COALESCE(fuel_type::text, 'Unknown fuel type')
+                    || ')' AS fuel_code_label,
+                SUM(
+                    CASE
+                        WHEN COALESCE(quantity, 0) > 0 THEN quantity
+                        ELSE COALESCE(q1_quantity, 0)
+                           + COALESCE(q2_quantity, 0)
+                           + COALESCE(q3_quantity, 0)
+                           + COALESCE(q4_quantity, 0)
+                    END
+                ) AS total_quantity
+            FROM vw_fuel_supply_analytics_base
+            WHERE compliance_report_id IN :compliance_report_ids
+              AND NULLIF(fuel_code::text, '') IS NOT NULL
+            GROUP BY
+                compliance_report_id,
+                COALESCE(NULLIF(fuel_code::text, ''), 'No fuel code'),
+                COALESCE(fuel_category::text, 'Unknown fuel category'),
+                COALESCE(fuel_type::text, 'Unknown fuel type')
+            HAVING SUM(
+                CASE
+                    WHEN COALESCE(quantity, 0) > 0 THEN quantity
+                    ELSE COALESCE(q1_quantity, 0)
+                       + COALESCE(q2_quantity, 0)
+                       + COALESCE(q3_quantity, 0)
+                       + COALESCE(q4_quantity, 0)
+                END
+            ) <> 0
+            ORDER BY fuel_code_label
+            """
+        ).bindparams(bindparam("compliance_report_ids", expanding=True))
+
+        started_at = perf_counter()
+        result = await self.db.execute(query, {"compliance_report_ids": report_ids})
+        rows = result.mappings().all()
+        for row in rows:
+            totals[row["compliance_report_id"]][row["fuel_code_label"]] = float(
+                row["total_quantity"] or 0
+            )
+        logger.info(
+            "compliance_report_review_query_timing",
+            query_name="fuel_supply_fuel_code_totals",
+            view_name="vw_fuel_supply_analytics_base",
+            compliance_report_ids=report_ids,
+            report_count=len(report_ids),
+            row_count=len(rows),
+            duration_ms=round((perf_counter() - started_at) * 1000, 1),
+        )
+        return totals
+
+    @repo_handler
     async def get_report_chain_organization_id(
         self, compliance_report_id: int
     ) -> Optional[int]:
@@ -938,8 +1370,7 @@ class ComplianceReportRepository:
             user.organization.organization_id if user.organization else None
         )
         hide_gov_reassessments = (
-            user_organization_id is not None
-            and user_organization_id == organization_id
+            user_organization_id is not None and user_organization_id == organization_id
         )
 
         assessed_status_id: Optional[int] = None

@@ -11,7 +11,9 @@ const IDIRDirectorNotificationSettings = () => {
     'idirDirector.categories.transfers': {
       title: 'idirDirector.categories.transfers.title',
       IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION:
-        'idirDirector.categories.transfers.analystRecommendation'
+        'idirDirector.categories.transfers.analystRecommendation',
+      PUBLIC__CREDIT_MARKET_MONTHLY_REPORT:
+        'idirDirector.categories.transfers.creditMarketMonthlyReport'
     },
     'idirDirector.categories.initiativeAgreements': {
       title: 'idirDirector.categories.initiativeAgreements.title',

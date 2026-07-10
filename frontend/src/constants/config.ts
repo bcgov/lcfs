@@ -11,6 +11,7 @@ export interface FeatureFlagsConfig {
   legacySupplementalLock?: boolean
   ciApplications?: boolean
   internalCommentSearch?: boolean
+  deterministicReportSummary?: boolean
 }
 
 export interface KeycloakConfig {
@@ -78,7 +79,8 @@ export const FEATURE_FLAGS = {
   MANAGE_FSE: 'manageFse',
   LEGACY_SUPPLEMENTAL_LOCK: 'legacySupplementalLock',
   CI_APPLICATIONS: 'ciApplications',
-  INTERNAL_COMMENT_SEARCH: 'internalCommentSearch'
+  INTERNAL_COMMENT_SEARCH: 'internalCommentSearch',
+  DETERMINISTIC_REPORT_SUMMARY: 'deterministicReportSummary'
 } as const
 
 export type FeatureFlagValue =
@@ -139,6 +141,9 @@ export const CONFIG: AppConfig = {
       window.lcfs_config.feature_flags.ciApplications ??
       !isProductionEnvironment,
     internalCommentSearch:
-      window.lcfs_config.feature_flags.internalCommentSearch ?? false
+      window.lcfs_config.feature_flags.internalCommentSearch ?? false,
+    deterministicReportSummary:
+      window.lcfs_config.feature_flags.deterministicReportSummary ??
+      !isProductionEnvironment
   }
 }
