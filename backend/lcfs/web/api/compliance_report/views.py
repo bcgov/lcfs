@@ -15,6 +15,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportStatusSchema,
     ComplianceReportSummarySchema,
     ComplianceReportYearNavigationSchema,
+    ComplianceReportReviewSummarySchema,
     ChainedComplianceReportSchema,
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
@@ -25,6 +26,7 @@ from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
+from lcfs.web.api.compliance_report.review_service import ComplianceReportReviewService
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.core.decorators import view_handler
@@ -91,7 +93,14 @@ async def get_compliance_report_statuses(
     response_model=List[AssignedAnalystSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
 async def get_available_analysts(
     request: Request,
     service: ComplianceReportServices = Depends(),
@@ -176,6 +185,34 @@ async def get_compliance_report_summary(
     """
     await validate.validate_organization_access(report_id)
     return await summary_service.calculate_compliance_report_summary(report_id)
+
+
+@router.get(
+    "/{report_id}/review-summary",
+    response_model=ComplianceReportReviewSummarySchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def get_compliance_report_review_summary(
+    request: Request,
+    report_id: int,
+    review_service: ComplianceReportReviewService = Depends(),
+    validate: ComplianceReportValidation = Depends(),
+) -> ComplianceReportReviewSummarySchema:
+    """
+    Retrieve deterministic analyst pre-screen findings for a compliance report.
+    This endpoint does not determine compliance or make assessment decisions.
+    """
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
+    return await review_service.get_review_summary(report_id)
 
 
 @router.put(
@@ -383,7 +420,14 @@ async def get_changelog(
     response_model=ChainedComplianceReportSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
 async def assign_analyst_to_report(
     request: Request,
     report_id: int,

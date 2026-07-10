@@ -4,7 +4,7 @@ import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
-import type { QueryOptions, ExtMutationOptions} from './types'
+import type { QueryOptions, ExtMutationOptions } from './types'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
@@ -37,7 +37,10 @@ export const useCompliancePeriod = (options: QueryOptions<unknown> = {}) => {
   })
 }
 
-export const useListComplianceReports = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useListComplianceReports = (
+  orgID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -53,7 +56,10 @@ export const useListComplianceReports = (orgID: number | string | undefined | nu
       if (!orgID) {
         throw new Error('Organization ID is required')
       }
-      const path = apiRoutes.getOrgComplianceReports.replace(':orgID', String(orgID ?? ''))
+      const path = apiRoutes.getOrgComplianceReports.replace(
+        ':orgID',
+        String(orgID ?? '')
+      )
       const response = await client.post(path, {
         page: 0,
         size: 20,
@@ -71,7 +77,10 @@ export const useListComplianceReports = (orgID: number | string | undefined | nu
   })
 }
 
-export const useCreateComplianceReport = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useCreateComplianceReport = (
+  orgID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -87,7 +96,10 @@ export const useCreateComplianceReport = (orgID: number | string | undefined | n
       if (!orgID) {
         throw new Error('Organization ID is required')
       }
-      const path = apiRoutes.createComplianceReport.replace(':orgID', String(orgID ?? ''))
+      const path = apiRoutes.createComplianceReport.replace(
+        ':orgID',
+        String(orgID ?? '')
+      )
       return await client.post(path, data)
     },
     onSuccess: (data, variables, context) => {
@@ -104,7 +116,11 @@ export const useCreateComplianceReport = (orgID: number | string | undefined | n
   })
 }
 
-export const useGetComplianceReport = (orgID: number | string | undefined | null, reportID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useGetComplianceReport = (
+  orgID: number | string | undefined | null,
+  reportID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const { setCurrentReport, cacheReport } = useComplianceReportStore()
 
@@ -126,7 +142,10 @@ export const useGetComplianceReport = (orgID: number | string | undefined | null
         ? apiRoutes.getOrgComplianceReport
             .replace(':orgID', String(orgID ?? ''))
             .replace(':reportID', String(reportID ?? ''))
-        : apiRoutes.getComplianceReport.replace(':reportID', String(reportID ?? ''))
+        : apiRoutes.getComplianceReport.replace(
+            ':reportID',
+            String(reportID ?? '')
+          )
 
       const { data } = await client.get(path)
       setCurrentReport(data)
@@ -142,7 +161,10 @@ export const useGetComplianceReport = (orgID: number | string | undefined | null
   })
 }
 
-export const useComplianceReportWithCache = (reportId: any, options: QueryOptions<unknown> = {}) => {
+export const useComplianceReportWithCache = (
+  reportId: any,
+  options: QueryOptions<unknown> = {}
+) => {
   const { getCachedReport, shouldFetchReport } = useComplianceReportStore()
 
   const cachedReport = getCachedReport(reportId)
@@ -167,7 +189,10 @@ export const useComplianceReportWithCache = (reportId: any, options: QueryOption
   }
 }
 
-export const useGetComplianceReportSummary = (reportID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useGetComplianceReportSummary = (
+  reportID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -183,7 +208,10 @@ export const useGetComplianceReportSummary = (reportID: number | string | undefi
       if (!reportID) {
         throw new Error('Report ID is required')
       }
-      const path = apiRoutes.getComplianceReportSummary.replace(':reportID', String(reportID ?? ''))
+      const path = apiRoutes.getComplianceReportSummary.replace(
+        ':reportID',
+        String(reportID ?? '')
+      )
       const response = await client.get(path)
       return response.data
     },
@@ -196,7 +224,45 @@ export const useGetComplianceReportSummary = (reportID: number | string | undefi
   })
 }
 
-export const useComplianceReportScheduleOverview = (reportID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useGetComplianceReportReviewSummary = (
+  reportID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['compliance-report-review-summary', reportID],
+    queryFn: async () => {
+      if (!reportID) {
+        throw new Error('Report ID is required')
+      }
+      const path = apiRoutes.getComplianceReportReviewSummary.replace(
+        ':reportID',
+        String(reportID ?? '')
+      )
+      const response = await client.get(path)
+      return response.data
+    },
+    enabled: enabled && !!reportID,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useComplianceReportScheduleOverview = (
+  reportID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -213,7 +279,10 @@ export const useComplianceReportScheduleOverview = (reportID: number | string | 
         throw new Error('Report ID is required')
       }
 
-      const path = apiRoutes.getComplianceReportScheduleOverview.replace(':reportID', String(reportID ?? ''))
+      const path = apiRoutes.getComplianceReportScheduleOverview.replace(
+        ':reportID',
+        String(reportID ?? '')
+      )
       const response = await client.get(path)
       return response.data
     },
@@ -226,7 +295,10 @@ export const useComplianceReportScheduleOverview = (reportID: number | string | 
   })
 }
 
-export const useUpdateComplianceReportSummary = (reportID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateComplianceReportSummary = (
+  reportID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -237,22 +309,32 @@ export const useUpdateComplianceReportSummary = (reportID: number | string | und
       if (!reportID) {
         throw new Error('Report ID is required')
       }
-      const path = apiRoutes.updateComplianceReportSummary.replace(':reportID', String(reportID ?? ''))
+      const path = apiRoutes.updateComplianceReportSummary.replace(
+        ':reportID',
+        String(reportID ?? '')
+      )
       return await client.put(path, data)
     },
     onSuccess: (data, variables, context) => {
-      queryClient.invalidateQueries({ queryKey: ['compliance-report-summary', reportID] })
+      queryClient.invalidateQueries({
+        queryKey: ['compliance-report-summary', reportID]
+      })
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
-      queryClient.invalidateQueries({ queryKey: ['compliance-report-summary', reportID] })
+      queryClient.invalidateQueries({
+        queryKey: ['compliance-report-summary', reportID]
+      })
       onError?.(error, variables, context)
     },
     ...restOptions
   })
 }
 
-export const useUpdateComplianceReport = (reportID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateComplianceReport = (
+  reportID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const { removeReport, cacheReport, setCurrentReport } =
     useComplianceReportStore()
@@ -279,7 +361,10 @@ export const useUpdateComplianceReport = (reportID: number | string | undefined 
       if (!reportID) {
         throw new Error('Report ID is required')
       }
-      const path = apiRoutes.updateComplianceReport.replace(':reportID', String(reportID ?? ''))
+      const path = apiRoutes.updateComplianceReport.replace(
+        ':reportID',
+        String(reportID ?? '')
+      )
       return await client.put(path, data)
     },
     onSuccess: (data, variables, context) => {
@@ -304,14 +389,20 @@ export const useUpdateComplianceReport = (reportID: number | string | undefined 
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
-      queryClient.invalidateQueries({ queryKey: ['compliance-report', reportID] })
+      queryClient.invalidateQueries({
+        queryKey: ['compliance-report', reportID]
+      })
       onError?.(error, variables, context)
     },
     ...restOptions
   })
 }
 
-export const useDeleteComplianceReport = (orgID: number | string | undefined | null, reportID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useDeleteComplianceReport = (
+  orgID: number | string | undefined | null,
+  reportID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const { hasRoles } = useCurrentUser()
   const queryClient = useQueryClient()
@@ -328,7 +419,10 @@ export const useDeleteComplianceReport = (orgID: number | string | undefined | n
       const path = (
         hasRoles(roles.government)
           ? apiRoutes.deleteComplianceReport
-          : apiRoutes.deleteSupplementalReport.replace(':orgID', String(orgID ?? ''))
+          : apiRoutes.deleteSupplementalReport.replace(
+              ':orgID',
+              String(orgID ?? '')
+            )
       ).replace(':reportID', String(reportID ?? ''))
 
       return await client.delete(path)
@@ -360,7 +454,10 @@ export const useDeleteComplianceReport = (orgID: number | string | undefined | n
   })
 }
 
-export const useComplianceReportDocuments = (parentID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useComplianceReportDocuments = (
+  parentID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -393,7 +490,10 @@ export const useComplianceReportDocuments = (parentID: number | string | undefin
   })
 }
 
-export const useCreateSupplementalReport = (reportID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useCreateSupplementalReport = (
+  reportID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -409,7 +509,10 @@ export const useCreateSupplementalReport = (reportID: number | string | undefine
       if (!reportID) {
         throw new Error('Report ID is required')
       }
-      const path = apiRoutes.createSupplementalReport.replace(':reportID', String(reportID ?? ''))
+      const path = apiRoutes.createSupplementalReport.replace(
+        ':reportID',
+        String(reportID ?? '')
+      )
       return await client.post(path)
     },
     onSuccess: (data, variables, context) => {
@@ -426,7 +529,10 @@ export const useCreateSupplementalReport = (reportID: number | string | undefine
   })
 }
 
-export const useCreateAnalystAdjustment = (reportID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useCreateAnalystAdjustment = (
+  reportID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -442,7 +548,10 @@ export const useCreateAnalystAdjustment = (reportID: number | string | undefined
       if (!reportID) {
         throw new Error('Report ID is required')
       }
-      const path = apiRoutes.createAnalystAdjustment.replace(':reportID', String(reportID ?? ''))
+      const path = apiRoutes.createAnalystAdjustment.replace(
+        ':reportID',
+        String(reportID ?? '')
+      )
       return await client.post(path)
     },
     onSuccess: (data, variables, context) => {
@@ -459,7 +568,10 @@ export const useCreateAnalystAdjustment = (reportID: number | string | undefined
   })
 }
 
-export const useCreateIdirSupplementalReport = (reportID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useCreateIdirSupplementalReport = (
+  reportID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -475,13 +587,18 @@ export const useCreateIdirSupplementalReport = (reportID: number | string | unde
       if (!reportID) {
         throw new Error('Report ID is required')
       }
-      const path = apiRoutes.createIdirSupplementalReport.replace(':reportID', String(reportID ?? ''))
+      const path = apiRoutes.createIdirSupplementalReport.replace(
+        ':reportID',
+        String(reportID ?? '')
+      )
       return await client.post(path)
     },
     onSuccess: (data, variables, context) => {
       if (invalidateRelatedQueries) {
         queryClient.invalidateQueries({ queryKey: ['compliance-reports-list'] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', reportID] })
+        queryClient.invalidateQueries({
+          queryKey: ['compliance-report', reportID]
+        })
       }
       onSuccess?.(data, variables, context)
     },
@@ -492,7 +609,10 @@ export const useCreateIdirSupplementalReport = (reportID: number | string | unde
   })
 }
 
-export const useComplianceReportYearNavigation = (reportID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useComplianceReportYearNavigation = (
+  reportID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -508,7 +628,10 @@ export const useComplianceReportYearNavigation = (reportID: number | string | un
       if (!reportID) {
         throw new Error('Report ID is required')
       }
-      const path = apiRoutes.getComplianceReportNavigation.replace(':reportID', String(reportID ?? ''))
+      const path = apiRoutes.getComplianceReportNavigation.replace(
+        ':reportID',
+        String(reportID ?? '')
+      )
       const response = await client.get(path)
       return response.data
     },
@@ -521,7 +644,10 @@ export const useComplianceReportYearNavigation = (reportID: number | string | un
   })
 }
 
-export const useGetComplianceReportList = ({ page = 1, size = 10, sortOrders = [], filters = [] }: any = {}, options: QueryOptions<unknown> = {}) => {
+export const useGetComplianceReportList = (
+  { page = 1, size = 10, sortOrders = [], filters = [] }: any = {},
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const {
     data: currentUser,
@@ -547,7 +673,10 @@ export const useGetComplianceReportList = ({ page = 1, size = 10, sortOrders = [
         }
 
         const response = await client.post(
-          apiRoutes.getOrgComplianceReports.replace(':orgID', String(orgId ?? '')),
+          apiRoutes.getOrgComplianceReports.replace(
+            ':orgID',
+            String(orgId ?? '')
+          ),
           { page, size, sort_orders: sortOrders, filters }
         )
         return response.data
@@ -574,7 +703,9 @@ export const useGetComplianceReportList = ({ page = 1, size = 10, sortOrders = [
   })
 }
 
-export const useGetComplianceReportStatuses = (options: QueryOptions<unknown> = {}) => {
+export const useGetComplianceReportStatuses = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -599,7 +730,10 @@ export const useGetComplianceReportStatuses = (options: QueryOptions<unknown> = 
   })
 }
 
-export const useGetChangeLog = ({ complianceReportGroupUuid, dataType }: any, options: QueryOptions<unknown> = {}) => {
+export const useGetChangeLog = (
+  { complianceReportGroupUuid, dataType }: any,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -619,7 +753,10 @@ export const useGetChangeLog = ({ complianceReportGroupUuid, dataType }: any, op
       }
 
       const path = apiRoutes.getChangelog
-        .replace(':complianceReportGroupUuid', String(complianceReportGroupUuid ?? ''))
+        .replace(
+          ':complianceReportGroupUuid',
+          String(complianceReportGroupUuid ?? '')
+        )
         .replace(':dataType', String(dataType ?? ''))
 
       const response = await client.get(path)
@@ -634,7 +771,9 @@ export const useGetChangeLog = ({ complianceReportGroupUuid, dataType }: any, op
   })
 }
 
-export const useGetAvailableAnalysts = (options: QueryOptions<unknown> = {}) => {
+export const useGetAvailableAnalysts = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -659,7 +798,9 @@ export const useGetAvailableAnalysts = (options: QueryOptions<unknown> = {}) => 
   })
 }
 
-export const useAssignAnalyst = (options: ExtMutationOptions<unknown, any> = {}) => {
+export const useAssignAnalyst = (
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -672,7 +813,10 @@ export const useAssignAnalyst = (options: ExtMutationOptions<unknown, any> = {})
 
   return useMutation({
     mutationFn: async ({ reportId, assignedAnalystId }: any) => {
-      const path = apiRoutes.assignAnalyst.replace(':reportId', String(reportId ?? ''))
+      const path = apiRoutes.assignAnalyst.replace(
+        ':reportId',
+        String(reportId ?? '')
+      )
       return await client.put(path, { assignedAnalystId })
     },
     onSuccess: async (data, variables, context) => {

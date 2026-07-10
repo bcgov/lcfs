@@ -17,6 +17,8 @@ from lcfs.db.models.compliance.ComplianceReportCountView import (
 )
 from lcfs.db.models.fuel.FuelCodeCountView import FuelCodeCountView
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.ci_application.CIApplication import CIApplication
+from lcfs.db.models.ci_application.CIApplicationStatus import CIApplicationStatus
 
 logger = structlog.get_logger(__name__)
 
@@ -109,3 +111,31 @@ class DashboardRepository:
         row = result.fetchone()
 
         return {"draft_fuel_codes": getattr(row, "count", 0)}
+
+    @repo_handler
+    async def get_org_fuel_code_counts(self, organization_id: int):
+        # CI applicants create CI applications that become fuel codes once
+        # approved. Scope by CIApplication.organization_id (always set), since
+        # FuelCode.organization_id is unreliable (often NULL). Return the
+        # in-draft and submitted-for-review counts in a single query.
+        query = (
+            select(
+                func.count(CIApplication.ci_application_id)
+                .filter(CIApplicationStatus.status == "Draft")
+                .label("draft"),
+                func.count(CIApplication.ci_application_id)
+                .filter(CIApplicationStatus.status == "Submitted")
+                .label("submitted"),
+            )
+            .select_from(CIApplication)
+            .join(
+                CIApplicationStatus,
+                CIApplication.status_id
+                == CIApplicationStatus.ci_application_status_id,
+            )
+            .where(CIApplication.organization_id == organization_id)
+        )
+
+        result = await self.db.execute(query)
+        row = result.one()
+        return {"draft": row.draft or 0, "submitted": row.submitted or 0}
