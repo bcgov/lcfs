@@ -8,11 +8,12 @@ Government decision) plug into the same data-access surface.
 """
 
 import math
+import re
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, asc, case, desc, func, select
+from sqlalchemy import String, and_, asc, case, cast, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -85,6 +86,19 @@ def _resolve_value(f):
     return f.filter
 
 
+def _build_ci_application_id_condition(f):
+    """Filter ci_application_id while ignoring non-digit input characters."""
+    raw = _resolve_value(f)
+    if raw is None:
+        return None
+    digits_only = re.sub(r"\D", "", str(raw))
+    if not digits_only:
+        return None
+
+    raw_id = cast(CIApplication.ci_application_id, String)
+    return apply_filter_conditions(raw_id, digits_only, f.type, "text")
+
+
 def _build_status_condition(f):
     inner = apply_filter_conditions(
         CIApplicationStatus.status, _resolve_value(f), f.type, f.filter_type
@@ -111,6 +125,7 @@ def _build_production_facility_location_condition(f):
 
 
 _NESTED_FILTER_BUILDERS = {
+    "ci_application_id": _build_ci_application_id_condition,
     "status.status": _build_status_condition,
     "organization.name": _build_organization_condition,
     "production_facility_location": _build_production_facility_location_condition,
