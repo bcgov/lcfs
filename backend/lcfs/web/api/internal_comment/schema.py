@@ -59,6 +59,8 @@ class InternalCommentResponseSchema(BaseSchema):
     create_user: Optional[str] = None
     create_date: Optional[datetime] = None
     update_date: Optional[datetime] = None
+    update_user: Optional[str] = None
+    update_full_name: Optional[str] = None
     full_name: Optional[str] = None
     documents: List[FileResponseSchema] = []
 

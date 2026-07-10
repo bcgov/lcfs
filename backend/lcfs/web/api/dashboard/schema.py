@@ -31,3 +31,8 @@ class ComplianceReportCountsSchema(BaseSchema):
 
 class FuelCodeCountsSchema(BaseSchema):
     draft_fuel_codes: int = Field(default=0)
+
+
+class OrgFuelCodeCountsSchema(BaseSchema):
+    draft: int = Field(default=0)
+    submitted: int = Field(default=0)

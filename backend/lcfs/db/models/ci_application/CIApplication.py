@@ -334,6 +334,13 @@ class CIApplication(BaseModel, Auditable, Versioning):
         cascade="all, delete, delete-orphan",
         lazy="selectin",
     )
+    generated_fuel_code_associations = relationship(
+        "CIApplicationFuelCodeAssociation",
+        back_populates="ci_application",
+        cascade="all, delete, delete-orphan",
+        lazy="selectin",
+        order_by="CIApplicationFuelCodeAssociation.display_order",
+    )
     documents = relationship(
         "Document",
         secondary=ci_application_document_association,

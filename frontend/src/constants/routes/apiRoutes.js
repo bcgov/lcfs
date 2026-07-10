@@ -118,6 +118,7 @@ export const apiRoutes = {
   deleteComplianceReport: '/reports/:reportID',
   getComplianceReportNavigation: '/reports/:reportID/navigation',
   getComplianceReportSummary: '/reports/:reportID/summary',
+  getComplianceReportReviewSummary: '/reports/:reportID/review-summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
   exportComplianceReport: '/reports/:reportID/export',
   createSupplementalReport: '/reports/:reportID/supplemental',
@@ -245,6 +246,7 @@ export const apiRoutes = {
   OrgComplianceReportCounts: '/dashboard/org-compliance-report-counts',
   complianceReportCounts: '/dashboard/compliance-report-counts',
   fuelCodeCounts: '/dashboard/fuel-code-counts',
+  orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
 
   // credit market
   creditMarketOverview: '/credit-market/overview',

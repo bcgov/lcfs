@@ -1,7 +1,8 @@
 from typing import Any, List, Optional
 from enum import Enum
 from typing_extensions import deprecated
-from sqlalchemy import and_, cast, Date, func, String
+from sqlalchemy import and_, cast, Date, func, select, String
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from fastapi import HTTPException, Query, Request, Response
 from fastapi_cache import FastAPICache
@@ -131,6 +132,35 @@ def validate_pagination(pagination: PaginationRequestSchema):
     if not pagination.filters:
         pagination.filters = []
     return pagination
+
+
+async def paginate_with_window_count(
+    db: AsyncSession,
+    query,
+    offset: int,
+    limit: int,
+) -> tuple[list, int]:
+    """
+    Execute a paginated query in a single database round-trip using a window function.
+
+    Wraps *query* (filters + sort applied, no LIMIT/OFFSET yet) in a subquery,
+    adds ``COUNT(*) OVER()`` so every row carries the total filtered count, then
+    applies OFFSET/LIMIT.  This replaces the two-query pattern
+    (separate ``SELECT COUNT(*)`` + data query) that all paginated endpoints
+    previously used.
+
+    Returns ``(rows, total_count)``.  Each row supports the same named-attribute
+    access as the original ORM objects, so callers using ``model_validate(row)``
+    or ``row.field_name`` require no changes.
+
+    Best applied to view-based queries (no ``joinedload`` / ORM relationship
+    loading) on large tables where the extra count round-trip is measurable.
+    """
+    inner = query.subquery("_paginate_inner")
+    windowed = select(inner, func.count().over().label("_wf_total"))
+    result = await db.execute(windowed.offset(offset).limit(limit))
+    rows = result.all()
+    return rows, (rows[0]._wf_total if rows else 0)
 
 
 def get_field_for_filter(model, field):
@@ -448,6 +478,7 @@ class NotificationTypeEnum(Enum):
     BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE = (
         "BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE"
     )
+    PUBLIC__CREDIT_MARKET_MONTHLY_REPORT = "PUBLIC__CREDIT_MARKET_MONTHLY_REPORT"
     BCEID__GOVERNMENT_NOTIFICATION = "BCEID__GOVERNMENT_NOTIFICATION"
     IDIR_ANALYST__GOVERNMENT_NOTIFICATION = "IDIR_ANALYST__GOVERNMENT_NOTIFICATION"
     IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION = (

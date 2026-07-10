@@ -60,6 +60,7 @@ from lcfs.web.api.base import (
     PaginationRequestSchema,
     get_field_for_filter,
     apply_filter_conditions,
+    paginate_with_window_count,
 )
 from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema, FuelCodeBaseSchema
 from lcfs.web.core.decorators import repo_handler
@@ -397,6 +398,9 @@ class FuelCodeRepository:
                         ),
                     )
                 ).label("total_volume"),
+                func.sum(coalesce(FuelSupply.compliance_units, 0)).label(
+                    "total_compliance_units"
+                ),
             )
             .join(
                 ComplianceReport,
@@ -803,21 +807,16 @@ class FuelCodeRepository:
         # Construct the base query with conditions
         base_query = query.where(and_(*conditions))
 
-        # Execute the count query - use select(func.count()) from the filtered base query
-        count_query = select(func.count()).select_from(base_query.subquery())
-        total_count = (await self.db.execute(count_query)).scalar()
-
         # Apply sorting to the main query
         for order in pagination.sort_orders:
             direction = asc if order.direction == "asc" else desc
             field = getattr(FuelCodeListView, order.field)
             base_query = base_query.order_by(direction(field))
-        # Apply default sort order
         base_query = base_query.order_by(desc(FuelCodeListView.last_updated))
 
-        # Execute the main query to retrieve all fuel codes
-        result = await self.db.execute(base_query.offset(offset).limit(limit))
-        fuel_codes = result.unique().scalars().all()
+        fuel_codes, total_count = await paginate_with_window_count(
+            self.db, base_query, offset, limit
+        )
         return fuel_codes, total_count
 
     @repo_handler
