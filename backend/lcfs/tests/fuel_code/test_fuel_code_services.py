@@ -97,8 +97,8 @@ async def test_get_fuel_code_group_detail_returns_iterations_and_volume(service,
             _iteration(99, "100.1", carbon_intensity=48.55),
         ],
         [
-            SimpleNamespace(year="2025", total_volume=1234),
-            SimpleNamespace(year="2026", total_volume=None),
+            SimpleNamespace(year="2025", total_volume=1234, total_compliance_units=56.5),
+            SimpleNamespace(year="2026", total_volume=None, total_compliance_units=None),
         ],
     )
 
@@ -111,6 +111,9 @@ async def test_get_fuel_code_group_detail_returns_iterations_and_volume(service,
     assert result.volume_over_time[0].year == "2025"
     assert result.volume_over_time[0].total_volume == 1234.0
     assert result.volume_over_time[1].total_volume == 0.0
+    assert result.compliance_units_over_time[0].year == "2025"
+    assert result.compliance_units_over_time[0].total_compliance_units == 56.5
+    assert result.compliance_units_over_time[1].total_compliance_units == 0.0
     repo.get_fuel_code_group_detail.assert_awaited_once_with(100)
 
 

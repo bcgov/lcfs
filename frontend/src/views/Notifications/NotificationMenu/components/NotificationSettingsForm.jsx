@@ -32,6 +32,10 @@ import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
 import { Mail, Notifications, Info } from '@mui/icons-material'
 
+const EMAIL_ONLY_NOTIFICATION_TYPES = new Set([
+  'PUBLIC__CREDIT_MARKET_MONTHLY_REPORT'
+])
+
 const NotificationSettingsForm = ({
   categories,
   showEmailField = false,
@@ -313,6 +317,13 @@ const NotificationSettingsForm = ({
                             notificationTypeName.includes(
                               'GOVERNMENT_NOTIFICATION'
                             )
+                          const isEmailOnlyNotification =
+                            EMAIL_ONLY_NOTIFICATION_TYPES.has(
+                              notificationTypeName
+                            )
+                          const inAppUnavailableMessage = isEmailOnlyNotification
+                            ? 'emailOnlyNotificationNoInApp'
+                            : 'governmentNotificationNoInApp'
 
                           const renderNotificationCheckbox =
                             (channel) =>
@@ -381,7 +392,7 @@ const NotificationSettingsForm = ({
                                   )}
                                 />
                               </TableCell>
-                              {/* In-App Checkbox - not available for government notifications */}
+                              {/* In-App Checkbox - not available for email-only notifications */}
                               <TableCell
                                 align="center"
                                 sx={{
@@ -390,9 +401,10 @@ const NotificationSettingsForm = ({
                                   padding: '4px'
                                 }}
                               >
-                                {isGovernmentNotification ? (
+                                {isGovernmentNotification ||
+                                isEmailOnlyNotification ? (
                                   <Tooltip
-                                    title={t('governmentNotificationNoInApp')}
+                                    title={t(inAppUnavailableMessage)}
                                     arrow
                                     placement="top"
                                   >

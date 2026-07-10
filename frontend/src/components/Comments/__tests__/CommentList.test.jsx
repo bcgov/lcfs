@@ -24,7 +24,7 @@ vi.mock('react-quill', () => {
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => {
+    t: (key, options) => {
       const translations = {
         'internalComment:addComment': 'Add comment',
         'internalComment:allComments': 'All comments',
@@ -37,6 +37,9 @@ vi.mock('react-i18next', () => ({
         'internalComment:internalComments': 'Internal comments',
         'internalComment:public': 'Public',
         'internalComment:publicComments': 'Public comments'
+      }
+      if (key === 'internalComment:editedBy') {
+        return `Edited by ${options?.name}`
       }
       return translations[key] || key
     }
@@ -205,5 +208,163 @@ describe('CommentList attachments', () => {
     expect(
       container.querySelector('[data-test="comment-attachment-input"]')
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('CommentList admin edit mode', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUserState.username = 'idir-user'
+  })
+
+  it('only shows the edit link for the original author when the user is not an admin', () => {
+    mockUserState.roles = [roles.government, roles.analyst]
+    mockUserState.username = 'analyst-user'
+
+    const props = {
+      ...baseProps,
+      comments: [
+        {
+          internalCommentId: 10,
+          comment: 'Mine',
+          fullName: 'Analyst User',
+          createDate: '2026-06-01T12:00:00Z',
+          visibility: 'Internal',
+          createUser: 'analyst-user'
+        },
+        {
+          internalCommentId: 11,
+          comment: 'Theirs',
+          fullName: 'Other User',
+          createDate: '2026-06-02T12:00:00Z',
+          visibility: 'Internal',
+          createUser: 'someone-else'
+        }
+      ]
+    }
+
+    render(<CommentList {...props} />, { wrapper })
+
+    const editLinks = screen.getAllByTestId('comment-edit-link')
+    // Only the author's own comment should expose an edit affordance.
+    expect(editLinks).toHaveLength(1)
+  })
+
+  it('shows the edit link on every comment when the user has the Administrator role', () => {
+    mockUserState.roles = [roles.government, roles.administrator]
+    mockUserState.username = 'admin-user'
+
+    const props = {
+      ...baseProps,
+      comments: [
+        {
+          internalCommentId: 20,
+          comment: 'One',
+          fullName: 'Alice',
+          createDate: '2026-06-01T12:00:00Z',
+          visibility: 'Internal',
+          createUser: 'alice'
+        },
+        {
+          internalCommentId: 21,
+          comment: 'Two',
+          fullName: 'Bob',
+          createDate: '2026-06-02T12:00:00Z',
+          visibility: 'Public',
+          createUser: 'bob'
+        }
+      ]
+    }
+
+    render(<CommentList {...props} />, { wrapper })
+
+    const editLinks = screen.getAllByTestId('comment-edit-link')
+    // Admin can edit every comment regardless of author.
+    expect(editLinks).toHaveLength(2)
+  })
+
+  it("does not show the edit link on other users' comments when the user only has the System Admin role", () => {
+    mockUserState.roles = [roles.system_admin]
+    mockUserState.username = 'sysadmin'
+
+    const props = {
+      ...baseProps,
+      comments: [
+        {
+          internalCommentId: 30,
+          comment: 'One',
+          fullName: 'Alice',
+          createDate: '2026-06-01T12:00:00Z',
+          visibility: 'Internal',
+          createUser: 'alice'
+        },
+        {
+          internalCommentId: 31,
+          comment: 'Two',
+          fullName: 'Bob',
+          createDate: '2026-06-02T12:00:00Z',
+          visibility: 'Public',
+          createUser: 'bob'
+        }
+      ]
+    }
+
+    render(<CommentList {...props} />, { wrapper })
+
+    expect(screen.queryAllByTestId('comment-edit-link')).toHaveLength(0)
+  })
+
+  it("shows the editor name on the edited indicator when an admin edited another user's comment", () => {
+    mockUserState.roles = [roles.government]
+    mockUserState.username = 'reader'
+
+    const props = {
+      ...baseProps,
+      comments: [
+        {
+          internalCommentId: 40,
+          comment: 'Edited by admin',
+          fullName: 'Alice',
+          createDate: '2026-06-01T12:00:00Z',
+          updateDate: '2026-06-15T08:30:00Z',
+          updateUser: 'admin-user',
+          updateFullName: 'Admin User',
+          visibility: 'Internal',
+          createUser: 'alice'
+        }
+      ]
+    }
+
+    render(<CommentList {...props} />, { wrapper })
+
+    const indicator = screen.getByTestId('comment-edited-indicator')
+    expect(indicator.textContent).toContain('Edited by Admin User')
+  })
+
+  it('shows the plain "Edited" indicator when the author edited their own comment', () => {
+    mockUserState.roles = [roles.government]
+    mockUserState.username = 'reader'
+
+    const props = {
+      ...baseProps,
+      comments: [
+        {
+          internalCommentId: 50,
+          comment: 'Self-edited',
+          fullName: 'Alice',
+          createDate: '2026-06-01T12:00:00Z',
+          updateDate: '2026-06-15T08:30:00Z',
+          updateUser: 'alice',
+          updateFullName: 'Alice',
+          visibility: 'Internal',
+          createUser: 'alice'
+        }
+      ]
+    }
+
+    render(<CommentList {...props} />, { wrapper })
+
+    const indicator = screen.getByTestId('comment-edited-indicator')
+    expect(indicator.textContent).toBe('Edited')
   })
 })

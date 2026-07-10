@@ -166,7 +166,8 @@ vi.mock('@/constants/statuses', () => ({
 }))
 
 vi.mock('@/constants/common', () => ({
-  CURRENT_COMPLIANCE_YEAR: 2024
+  CURRENT_COMPLIANCE_YEAR: 2024,
+  getCurrentEarlyIssuanceYear: () => '2026'
 }))
 
 vi.mock('@/constants/config', () => ({
