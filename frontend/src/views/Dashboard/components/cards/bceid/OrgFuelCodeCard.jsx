@@ -10,13 +10,18 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import { useOrgFuelCodeCounts } from '@/hooks/useDashboard'
 
-const CountDisplay = ({ count }) => (
+// When `hidden`, the number is rendered invisibly but still occupies layout,
+// so plain links (with no count) share the same indent and row height as the
+// counted links above them.
+const CountDisplay = ({ count, hidden = false }) => (
   <BCTypography
     component="span"
     variant="h3"
+    aria-hidden={hidden || undefined}
     sx={{
       color: 'success.main',
-      marginX: 3
+      marginX: 3,
+      ...(hidden && { visibility: 'hidden' })
     }}
   >
     {count}
@@ -44,7 +49,12 @@ const OrgFuelCodeCard = () => {
     return count > 0 ? (
       <ListItemButton component="a" onClick={onClick}>
         <CountDisplay count={count} />
-        <BCTypography variant="body2" color="link" sx={linkSx} onClick={onClick}>
+        <BCTypography
+          variant="body2"
+          color="link"
+          sx={linkSx}
+          onClick={onClick}
+        >
           {text}
         </BCTypography>
       </ListItemButton>
@@ -52,7 +62,8 @@ const OrgFuelCodeCard = () => {
   }
 
   const renderPlainLink = (text, onClick) => (
-    <ListItemButton component="a" sx={{ pl: '4.2rem' }} onClick={onClick}>
+    <ListItemButton component="a" onClick={onClick}>
+      <CountDisplay count={0} hidden />
       <BCTypography variant="body2" color="link" sx={linkSx} onClick={onClick}>
         {text}
       </BCTypography>
