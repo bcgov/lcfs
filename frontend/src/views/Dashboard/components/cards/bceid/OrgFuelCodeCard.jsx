@@ -6,7 +6,9 @@ import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import withRole from '@/utils/withRole'
+import { withFeatureFlag } from '@/utils/withFeatureFlag'
 import { roles } from '@/constants/roles'
+import { FEATURE_FLAGS } from '@/constants/config'
 import { ROUTES } from '@/routes/routes'
 import { useOrgFuelCodeCounts } from '@/hooks/useDashboard'
 
@@ -125,4 +127,13 @@ const OrgFuelCodeCard = () => {
 const AllowedRoles = [roles.ci_applicant]
 const OrgFuelCodeCardWithRole = withRole(OrgFuelCodeCard, AllowedRoles)
 
-export default OrgFuelCodeCardWithRole
+// Gate the card behind the CI applications feature flag (off in prod) so it
+// only appears where the feature is enabled — mirroring the flag gating on the
+// CI application routes. No redirect: this is a dashboard card, not a route, so
+// it simply renders nothing when the flag is off.
+const OrgFuelCodeCardGated = withFeatureFlag(
+  OrgFuelCodeCardWithRole,
+  FEATURE_FLAGS.CI_APPLICATIONS
+)
+
+export default OrgFuelCodeCardGated
