@@ -10,6 +10,7 @@
   "emailNotification": "Email notification",
   "inAppNotification": "In-app notification",
   "governmentNotificationNoInApp": "Government notifications are displayed on the dashboard and don't require in-app alerts",
+  "emailOnlyNotificationNoInApp": "This notification is only available for email subscriptions",
   "saveButton": "Save",
   "notificationsEmail": "Notifications email",
   "messages": {
@@ -39,7 +40,8 @@
         "title": "Transfers",
         "partnerActions": "Transfer partner proposed, declined, rescinded or signed & submitted",
         "directorDecision": "Director recorded/refused",
-        "creditsListedForSale": "Credits listed for sale on the credit market"
+        "creditsListedForSale": "Credits listed for sale on the credit market",
+        "creditMarketMonthlyReport": "Monthly credit market report"
       },
       "initiativeAgreements": {
         "title": "Initiative agreements and other transactions",
@@ -61,7 +63,8 @@
         "title": "Transfers",
         "submittedForReview": "Submitted to government for analyst review",
         "rescindedAction": "Rescinded by either transfer partner",
-        "directorRecorded": "Director recorded/refused"
+        "directorRecorded": "Director recorded/refused",
+        "creditMarketMonthlyReport": "Monthly credit market report"
       },
       "initiativeAgreements": {
         "title": "Initiative agreements and other transactions",
@@ -86,6 +89,10 @@
         "title": "Government notifications",
         "subscription": "Government notifications (alerts, deadlines & outages)"
       },
+      "transfers": {
+        "title": "Transfers",
+        "creditMarketMonthlyReport": "Monthly credit market report"
+      },
       "complianceReports": {
         "title": "Compliance & supplemental reports",
         "submittedForReview": "Submitted to government for analyst review",
@@ -102,7 +109,8 @@
       },
       "transfers": {
         "title": "Transfers",
-        "analystRecommendation": "Analyst recommendation"
+        "analystRecommendation": "Analyst recommendation",
+        "creditMarketMonthlyReport": "Monthly credit market report"
       },
       "initiativeAgreements": {
         "title": "Initiative agreements and other transactions",

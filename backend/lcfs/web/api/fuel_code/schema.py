@@ -402,10 +402,16 @@ class VolumeDataPointSchema(BaseSchema):
     total_volume: float
 
 
+class ComplianceUnitsDataPointSchema(BaseSchema):
+    year: str
+    total_compliance_units: float
+
+
 class FuelCodeGroupDetailSchema(BaseSchema):
     latest_iteration: FuelCodeSchema
     iterations: List[FuelCodeBaseSchema]
     volume_over_time: List[VolumeDataPointSchema]
+    compliance_units_over_time: List[ComplianceUnitsDataPointSchema]
 
 
 class FuelCodeCreateUpdateSchema(BaseSchema):

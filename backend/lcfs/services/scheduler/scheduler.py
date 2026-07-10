@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from lcfs.services.jobs.jobs import (
     check_overdue_supplemental_reports,
     reindex_compliance_report_tables,
+    send_monthly_credit_market_report,
 )
 from lcfs.settings import settings
 
@@ -18,11 +19,16 @@ logger = logging.getLogger(__name__)
 
 # Initialize scheduler
 scheduler = AsyncIOScheduler(
-    jobstores={'default': MemoryJobStore()},
-    executors={'default': AsyncIOExecutor()},
-    job_defaults={'coalesce': False, 'max_instances': 1, 'misfire_grace_time': 600}, # 10 minutes grace time
-    timezone=utc
+    jobstores={"default": MemoryJobStore()},
+    executors={"default": AsyncIOExecutor()},
+    job_defaults={
+        "coalesce": False,
+        "max_instances": 1,
+        "misfire_grace_time": 600,
+    },  # 10 minutes grace time
+    timezone=utc,
 )
+
 
 def start_scheduler(app: FastAPI):
     """
@@ -86,6 +92,28 @@ def start_scheduler(app: FastAPI):
             logger.info(
                 "Added one-time startup job: 'reindex_compliance_report_tables_startup'"
             )
+
+        if settings.credit_market_report_enabled:
+            scheduler.add_job(
+                send_monthly_credit_market_report,
+                "cron",
+                day=settings.credit_market_report_day,
+                hour=settings.credit_market_report_hour,
+                minute=settings.credit_market_report_minute,
+                timezone=ZoneInfo("America/Vancouver"),
+                id="send_monthly_credit_market_report",
+                replace_existing=True,
+                args=[app],
+            )
+            logger.info(
+                "Added job: 'send_monthly_credit_market_report'",
+                extra={
+                    "day": settings.credit_market_report_day,
+                    "hour": settings.credit_market_report_hour,
+                    "minute": settings.credit_market_report_minute,
+                },
+            )
+
 
 def shutdown_scheduler():
     """
