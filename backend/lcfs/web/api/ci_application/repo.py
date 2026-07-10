@@ -82,6 +82,10 @@ _DIRECT_FILTER_COLUMNS = {
 def _resolve_value(f):
     if f.filter_type == "set":
         return f.values or []
+    if f.filter_type == "date":
+        if f.type == "inRange":
+            return [f.date_from, f.date_to or f.date_from]
+        return f.filter or f.date_from
     return f.filter
 
 

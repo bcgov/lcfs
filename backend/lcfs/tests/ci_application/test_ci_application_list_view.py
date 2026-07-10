@@ -168,6 +168,25 @@ class TestFilterResolver:
         f = FilterModel(filter_type="set", type="set", values=None, field="anything")
         assert _resolve_value(f) == []
 
+    def test_resolve_value_picks_date_from_for_date_filters(self):
+        f = FilterModel(
+            filter_type="date",
+            type="equals",
+            field="proposedFuelCodeEffectiveDate",
+            date_from="2026-07-10",
+        )
+        assert _resolve_value(f) == "2026-07-10"
+
+    def test_resolve_value_picks_date_range_for_date_filters(self):
+        f = FilterModel(
+            filter_type="date",
+            type="inRange",
+            field="updateDate",
+            date_from="2026-07-01",
+            date_to="2026-07-10",
+        )
+        assert _resolve_value(f) == ["2026-07-01", "2026-07-10"]
+
     def test_camel_to_snake_conversion_normalises_grid_field_names(self):
         # Pin the validator-side conversion the resolver lookup relies on.
         f = FilterModel(
@@ -219,6 +238,45 @@ class TestFilterResolver:
         assert len(conds) == 1
         assert "priority_score" in str(conds[0]).lower()
         assert "verification_2_priority_score" in str(conds[0]).lower()
+
+    def test_apply_filters_returns_clause_for_effective_date_field(self, repo):
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[],
+            filters=[
+                FilterModel(
+                    filter_type="date",
+                    type="equals",
+                    field="proposedFuelCodeEffectiveDate",
+                    date_from="2026-07-10",
+                )
+            ],
+        )
+        conds = repo._apply_filters(pagination)
+        assert len(conds) == 1
+        assert "proposed_fuel_code_effective_date" in str(conds[0]).lower()
+
+    def test_apply_filters_returns_clause_for_last_updated_field(self, repo):
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[],
+            filters=[
+                FilterModel(
+                    filter_type="date",
+                    type="inRange",
+                    field="updateDate",
+                    date_from="2026-07-01",
+                    date_to="2026-07-10",
+                )
+            ],
+        )
+        conds = repo._apply_filters(pagination)
+        assert len(conds) == 1
+        rendered = str(conds[0]).lower()
+        assert "update_date" in rendered
+        assert "and" in rendered
 
     def test_priority_score_filter_uses_effective_score(self):
         assert _DIRECT_FILTER_COLUMNS["priority_score"].compare(PRIORITY_SCORE_EXPR)
