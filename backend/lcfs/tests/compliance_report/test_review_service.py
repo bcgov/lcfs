@@ -136,3 +136,40 @@ def test_fse_chart_series_merges_kwh_usage_and_capacity_utilization():
         "Total FSE",
         "Level 2 FSE",
     }
+
+
+def test_supplemental_line_20_finding_uses_magnitude_gap_delta():
+    service = _service()
+    current_summary = SimpleNamespace(
+        low_carbon_fuel_target_summary=[SimpleNamespace(line=20, value=890)]
+    )
+    previous_summary = SimpleNamespace(
+        low_carbon_fuel_target_summary=[SimpleNamespace(line=20, value=-180)]
+    )
+
+    findings = service._supplemental_summary_findings(
+        current_summary,
+        previous_summary,
+    )
+
+    assert len(findings) == 1
+    metric = findings[0].evidence[0]
+    assert metric.value == 890
+    assert metric.comparison_value == -180
+    assert metric.delta == 710
+
+
+def test_comparison_point_can_use_magnitude_gap_delta_mode():
+    service = _service()
+
+    point = service._comparison_point(
+        "Line 20",
+        890,
+        -180,
+        units="compliance units",
+        delta_mode="magnitude_gap",
+    )
+
+    assert point.current_value == 890
+    assert point.comparison_value == -180
+    assert point.delta == 710
