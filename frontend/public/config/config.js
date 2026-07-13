@@ -1,5 +1,6 @@
 export const config = {
   api_base: 'http://localhost:8000/api',
+  analyst_review_assistant_name: 'Fuelbert',
   tfrs_base: 'http://localhost:3000',
   environment: 'development',
   keycloak: {

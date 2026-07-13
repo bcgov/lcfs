@@ -1038,7 +1038,11 @@ class ComplianceReportReviewService:
         if current_line_20 == previous_line_20:
             return []
 
-        delta = (current_line_20 or 0) - (previous_line_20 or 0)
+        delta = self._magnitude_gap(current_line_20 or 0, previous_line_20 or 0)
+        percent_change = self._percent_change(
+            abs(current_line_20 or 0),
+            abs(previous_line_20 or 0),
+        )
         return [
             self._finding(
                 "Supplemental impacts",
@@ -1052,6 +1056,7 @@ class ComplianceReportReviewService:
                         current_line_20,
                         comparison_value=previous_line_20,
                         delta=delta,
+                        percent_change=percent_change,
                         units="compliance units",
                     )
                 ],
@@ -1168,6 +1173,7 @@ class ComplianceReportReviewService:
                             "Line 20",
                             current_line_20 or 0,
                             previous_line_20 or 0,
+                            delta_mode="magnitude_gap",
                             units="compliance units",
                         )
                     ],
@@ -1285,14 +1291,23 @@ class ComplianceReportReviewService:
         current_value: float,
         comparison_value: float,
         units: str,
+        delta_mode: str = "signed",
     ) -> ComplianceReportReviewComparisonPointSchema:
-        delta = current_value - comparison_value
+        if delta_mode == "magnitude_gap":
+            delta = self._magnitude_gap(current_value, comparison_value)
+            percent_change = self._percent_change(
+                abs(current_value),
+                abs(comparison_value),
+            )
+        else:
+            delta = current_value - comparison_value
+            percent_change = self._percent_change(current_value, comparison_value)
         return ComplianceReportReviewComparisonPointSchema(
             label=label,
             current_value=current_value,
             comparison_value=comparison_value,
             delta=delta,
-            percent_change=self._percent_change(current_value, comparison_value),
+            percent_change=percent_change,
             units=units,
         )
 
@@ -1520,6 +1535,9 @@ class ComplianceReportReviewService:
         if isinstance(value, Decimal):
             return float(value)
         return float(value)
+
+    def _magnitude_gap(self, current_value, comparison_value) -> float:
+        return abs(abs(self._number(current_value)) - abs(self._number(comparison_value)))
 
     def _to_int(self, value) -> int | None:
         try:
