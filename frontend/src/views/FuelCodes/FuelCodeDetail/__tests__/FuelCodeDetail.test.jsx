@@ -11,9 +11,13 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 vi.mock('echarts-for-react', () => ({
-  default: ({ option }) => (
-    <div data-test="volume-chart">{option?.series?.[0]?.data?.join(',')}</div>
-  )
+  default: ({ option }) => {
+    const seriesName = option?.series?.[0]?.name ?? ''
+    const testId = /compliance/i.test(seriesName)
+      ? 'compliance-units-chart'
+      : 'volume-chart'
+    return <div data-test={testId}>{option?.series?.[0]?.data?.join(',')}</div>
+  }
 }))
 
 vi.mock('@/utils/withRole', () => ({
@@ -39,10 +43,16 @@ vi.mock('react-i18next', () => ({
         'fuelCode:detail.latestIterationTitle': 'Latest iteration',
         'fuelCode:detail.defaultNotes': 'No notes provided',
         'fuelCode:detail.noVolumeData': 'No volume data',
+        'fuelCode:detail.noComplianceUnitsData': 'No compliance unit data',
         'fuelCode:detail.chartAriaDescription': 'Volume over time',
+        'fuelCode:detail.complianceUnitsChartAriaDescription':
+          'Compliance units over time',
         'fuelCode:detail.totalVolume': 'Total Volume',
+        'fuelCode:detail.totalComplianceUnits': 'Compliance Units',
         'fuelCode:detail.year': 'Year',
         'fuelCode:detail.volumeOverTimeTitle': 'Volume over time',
+        'fuelCode:detail.complianceUnitsOverTimeTitle':
+          'Compliance units over time',
         'fuelCode:fuelCodeColLabels.status': 'Status',
         'fuelCode:fuelCodeColLabels.prefix': 'Prefix',
         'fuelCode:fuelCodeColLabels.applicationDate': 'Application date',
@@ -127,6 +137,10 @@ const groupData = {
   volumeOverTime: [
     { year: '2025', totalVolume: 1234 },
     { year: '2026', totalVolume: 2345 }
+  ],
+  complianceUnitsOverTime: [
+    { year: '2025', totalComplianceUnits: 100 },
+    { year: '2026', totalComplianceUnits: 250 }
   ]
 }
 
@@ -153,6 +167,9 @@ describe('FuelCodeDetail', () => {
     expect(screen.getByText('C-BCLCF-100')).toBeInTheDocument()
     expect(screen.getByText('C-BCLCF-100 Iterations')).toBeInTheDocument()
     expect(screen.getByTestId('volume-chart')).toHaveTextContent('1234,2345')
+    expect(screen.getByTestId('compliance-units-chart')).toHaveTextContent(
+      '100,250'
+    )
   })
 
   it('passes pagination and stable filter props to the iterations grid', () => {

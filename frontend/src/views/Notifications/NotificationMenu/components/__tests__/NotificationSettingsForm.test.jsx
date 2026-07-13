@@ -20,7 +20,9 @@ vi.mock('react-i18next', () => ({
         saveButton: 'Save',
         email: 'Email',
         emailNotification: 'Email Notification',
-        inAppNotification: 'In-App Notification'
+        inAppNotification: 'In-App Notification',
+        emailOnlyNotificationNoInApp:
+          'This notification is only available for email subscriptions'
       }
       return translations[key] || key
     },
@@ -32,7 +34,9 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/constants/notificationTypes', () => ({
   notificationTypes: {
     notificationType1: 'NOTIFICATION_TYPE_1',
-    notificationType2: 'NOTIFICATION_TYPE_2'
+    notificationType2: 'NOTIFICATION_TYPE_2',
+    PUBLIC__CREDIT_MARKET_MONTHLY_REPORT:
+      'PUBLIC__CREDIT_MARKET_MONTHLY_REPORT'
   },
   notificationChannels: {
     EMAIL: 'EMAIL',
@@ -261,6 +265,31 @@ describe('NotificationSettingsForm Component', () => {
       
       // Should have checkboxes for different combinations
       expect(checkboxes).toHaveLength(4)
+    })
+
+    it('renders public credit market monthly report as email-only', () => {
+      const categories = {
+        transfers: {
+          title: 'general.title',
+          PUBLIC__CREDIT_MARKET_MONTHLY_REPORT:
+            'notifications:creditMarketMonthlyReport'
+        }
+      }
+      setupDefaultMocks({ subscriptionsData: [] })
+
+      customRender(<NotificationSettingsForm categories={categories} />)
+
+      expect(
+        screen.queryByTestId(
+          'notification-toggle-PUBLIC__CREDIT_MARKET_MONTHLY_REPORT-in_app'
+        )
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByLabelText(
+          'This notification is only available for email subscriptions'
+        )
+      ).toBeInTheDocument()
+      expect(screen.getAllByRole('checkbox')).toHaveLength(1)
     })
   })
 })

@@ -61,15 +61,31 @@ class FSESheetExporter(TabularSheetExporter):
             return [headers]
 
         if is_government:
-            reporting_result = await self.fse_repo.get_fse_reporting_list_paginated(
-                organization_id=organization_id,
-                pagination=PaginationRequestSchema(
-                    page=1, size=1000, filters=[], sort_orders=[]
-                ),
-                compliance_report_id=cid,
-                mode="summary",
+            # Exports must include every FSE record. Fetch the first page to
+            # learn the true total, then re-fetch with size=total when the
+            # report has more rows than the initial page so nothing is capped.
+            initial_size = 1000
+            reporting_rows, total = (
+                await self.fse_repo.get_fse_reporting_list_paginated(
+                    organization_id=organization_id,
+                    pagination=PaginationRequestSchema(
+                        page=1, size=initial_size, filters=[], sort_orders=[]
+                    ),
+                    compliance_report_id=cid,
+                    mode="summary",
+                )
             )
-            reporting_rows = reporting_result[0]
+            if total > len(reporting_rows):
+                reporting_rows = (
+                    await self.fse_repo.get_fse_reporting_list_paginated(
+                        organization_id=organization_id,
+                        pagination=PaginationRequestSchema(
+                            page=1, size=total, filters=[], sort_orders=[]
+                        ),
+                        compliance_report_id=cid,
+                        mode="summary",
+                    )
+                )[0]
         else:
             reporting_rows = (
                 await self.fse_repo.get_effective_fse_reporting_rows_for_export(

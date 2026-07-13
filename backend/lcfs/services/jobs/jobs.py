@@ -1,9 +1,11 @@
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from sqlalchemy import text
 from fastapi import FastAPI
 
+from lcfs.settings import settings
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import ComplianceReportUpdateSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
@@ -19,6 +21,10 @@ from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.api.email.repo import CHESEmailRepository
+from lcfs.services.metabase.client import (
+    CreditMarketReportBuilder,
+    MetabaseClient,
+)
 from lcfs.web.api.notification.repo import NotificationRepository
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
@@ -48,6 +54,32 @@ COMPLIANCE_REINDEX_TABLES = (
     "final_supply_equipment",
 )
 COMPLIANCE_REINDEX_LOCK_ID = 60271451
+CREDIT_MARKET_REPORT_LOCK_ID = 60271452
+CREDIT_MARKET_REPORT_MAX_ATTEMPTS = 3
+CREDIT_MARKET_REPORT_RETRY_DELAY_SECONDS = 60
+
+
+async def _retry_credit_market_step(step_name: str, operation):
+    for attempt in range(1, CREDIT_MARKET_REPORT_MAX_ATTEMPTS + 1):
+        try:
+            return await operation()
+        except Exception:
+            if attempt == CREDIT_MARKET_REPORT_MAX_ATTEMPTS:
+                logger.exception(
+                    "Monthly credit market report step failed after retries: %s",
+                    step_name,
+                )
+                raise
+            logger.warning(
+                "Monthly credit market report step failed; retrying",
+                extra={
+                    "step": step_name,
+                    "attempt": attempt,
+                    "max_attempts": CREDIT_MARKET_REPORT_MAX_ATTEMPTS,
+                    "retry_delay_seconds": CREDIT_MARKET_REPORT_RETRY_DELAY_SECONDS,
+                },
+            )
+            await asyncio.sleep(CREDIT_MARKET_REPORT_RETRY_DELAY_SECONDS)
 
 
 async def submit_supplemental_report(report_id: int, app: FastAPI):
@@ -245,3 +277,78 @@ async def reindex_compliance_report_tables(app: FastAPI):
         await conn.close()
 
     logger.info("Finished compliance-report table reindex job")
+
+
+async def send_monthly_credit_market_report(app: FastAPI):
+    """
+    Sends the monthly Metabase credit market dashboard report through CHES.
+    """
+    logger.info("Starting monthly credit market report job")
+    session_factory = app.state.db_session_factory
+    conn = await app.state.db_engine.connect()
+    lock_acquired = False
+
+    try:
+        lock_acquired = await conn.scalar(
+            text("SELECT pg_try_advisory_lock(:lock_id)"),
+            {"lock_id": CREDIT_MARKET_REPORT_LOCK_ID},
+        )
+
+        if not lock_acquired:
+            logger.info(
+                "Skipping monthly credit market report because another instance holds the lock"
+            )
+            return False
+
+        report = await _retry_credit_market_step(
+            "fetch_metabase_report",
+            lambda: asyncio.to_thread(
+                lambda: MetabaseClient().fetch_credit_market_report()
+            ),
+        )
+        builder = CreditMarketReportBuilder()
+
+        async with session_factory() as session:
+            email_repo = CHESEmailRepository(session)
+            recipients = await email_repo.get_subscribed_user_emails(
+                settings.credit_market_report_notification_type
+            )
+            if not recipients:
+                logger.info(
+                    "Skipping monthly credit market report: no subscribed recipients found"
+                )
+                return False
+
+            email_service = CHESEmailService(email_repo)
+            result = await _retry_credit_market_step(
+                "send_ches_email",
+                lambda: email_service.send_credit_market_report_email(
+                    recipients=recipients,
+                    context=builder.build_email_context(report),
+                    attachments=[builder.build_attachment(report)],
+                ),
+            )
+
+        logger.info(
+            "Finished monthly credit market report job: sent=%s recipient_count=%s table_count=%s",
+            result,
+            len(recipients),
+            len(report.tables),
+        )
+        return result
+    except Exception as exc:
+        logger.error(
+            f"Monthly credit market report job failed: {exc}",
+            exc_info=True,
+        )
+        raise
+    finally:
+        if lock_acquired:
+            try:
+                await conn.execute(
+                    text("SELECT pg_advisory_unlock(:lock_id)"),
+                    {"lock_id": CREDIT_MARKET_REPORT_LOCK_ID},
+                )
+            except Exception:
+                logger.debug("Monthly credit market report advisory unlock skipped")
+        await conn.close()
