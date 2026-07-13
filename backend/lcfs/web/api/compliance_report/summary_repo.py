@@ -8,6 +8,7 @@ from sqlalchemy import (
     select,
     update,
     func,
+    Date,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -25,6 +26,7 @@ from lcfs.db.models import (
 )
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.transfer import TransferHistory
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryUpdateSchema,
 )
@@ -368,6 +370,28 @@ class ComplianceReportSummaryRepository:
             return previous_report.summary
         return None
 
+    @staticmethod
+    def _transfer_effective_date():
+        # Some recorded transfers (e.g. zero-dollar Category D, whose category is
+        # assigned before the director records them) never had
+        # transaction_effective_date stamped. Fall back to the Pacific date the
+        # transfer was recorded, mirroring mv_transaction_aggregate.
+        recorded_date = (
+            select(func.min(TransferHistory.create_date))
+            .where(
+                TransferHistory.transfer_id == Transfer.transfer_id,
+                TransferHistory.transfer_status_id == 6,  # Recorded
+            )
+            .correlate(Transfer)
+            .scalar_subquery()
+        )
+        # create_date is timestamptz, so a single AT TIME ZONE yields the
+        # Pacific wall-clock time (the double UTC hop only suits naive columns).
+        return func.coalesce(
+            Transfer.transaction_effective_date,
+            func.cast(func.timezone("America/Vancouver", recorded_date), Date),
+        )
+
     @repo_handler
     async def get_transferred_out_compliance_units(
         self,
@@ -377,7 +401,7 @@ class ComplianceReportSummaryRepository:
     ) -> int:
         result = await self.db.scalar(
             select(func.sum(Transfer.quantity)).where(
-                Transfer.transaction_effective_date.between(
+                self._transfer_effective_date().between(
                     compliance_period_start, compliance_period_end
                 ),
                 Transfer.from_organization_id == organization_id,
@@ -395,7 +419,7 @@ class ComplianceReportSummaryRepository:
     ) -> int:
         result = await self.db.scalar(
             select(func.sum(Transfer.quantity)).where(
-                Transfer.transaction_effective_date.between(
+                self._transfer_effective_date().between(
                     compliance_period_start, compliance_period_end
                 ),
                 Transfer.to_organization_id == organization_id,
