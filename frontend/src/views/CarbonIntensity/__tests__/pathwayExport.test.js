@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as XLSX from 'xlsx'
 
-import { exportRowsToXlsx } from '@/views/CarbonIntensity/components/applicationSummaryExport'
+import { exportRowsToXlsx } from '@/views/CarbonIntensity/components/pathwayExport'
 
 vi.mock('xlsx', () => ({
   utils: {
@@ -12,7 +12,7 @@ vi.mock('xlsx', () => ({
   writeFile: vi.fn()
 }))
 
-describe('applicationSummaryExport', () => {
+describe('pathwayExport', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
