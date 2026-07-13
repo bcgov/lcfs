@@ -1274,9 +1274,9 @@ async def test_org_comments_sort_create_date_asc(
 async def test_org_comments_search_basic_match(
     client, fastapi_app, set_mock_user, add_models, dbsession
 ):
-    """AC: search=transfer matches comment_search_vector."""
+    """AC: search=transfer matches all visible comment text variants."""
     await _gov_setup(fastapi_app, set_mock_user, add_models)
-    ic = await _seed_org_comment_full(
+    transfer = await _seed_org_comment_full(
         add_models,
         dbsession,
         transfer_id=6001,
@@ -1284,10 +1284,34 @@ async def test_org_comments_search_basic_match(
         comment="<p>transfer agreement signed</p>",
         plain_text="transfer agreement signed",
     )
-    await _seed_org_comment_full(
+    transferred = await _seed_org_comment_full(
         add_models,
         dbsession,
         transfer_id=6002,
+        to_org_id=1,
+        comment="<p>Units were transferred yesterday</p>",
+        plain_text="Units were transferred yesterday",
+    )
+    credit_transfer = await _seed_org_comment_full(
+        add_models,
+        dbsession,
+        transfer_id=6003,
+        to_org_id=1,
+        comment="<p>CREDIT TRANSFER approved</p>",
+        plain_text="CREDIT TRANSFER approved",
+    )
+    punctuated_credit_transfer = await _seed_org_comment_full(
+        add_models,
+        dbsession,
+        transfer_id=6004,
+        to_org_id=1,
+        comment="<p>credit-transfer reissued</p>",
+        plain_text="credit-transfer reissued",
+    )
+    await _seed_org_comment_full(
+        add_models,
+        dbsession,
+        transfer_id=6005,
         to_org_id=1,
         comment="<p>nothing here</p>",
         plain_text="nothing here",
@@ -1297,8 +1321,61 @@ async def test_org_comments_search_basic_match(
     resp = await client.get(url, params={"search": "transfer"})
     body = resp.json()
     assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 4
+    assert {c["internalCommentId"] for c in body["comments"]} == {
+        transfer.internal_comment_id,
+        transferred.internal_comment_id,
+        credit_transfer.internal_comment_id,
+        punctuated_credit_transfer.internal_comment_id,
+    }
+
+    resp = await client.get(url, params={"search": "credit transfer"})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 2
+    assert {c["internalCommentId"] for c in body["comments"]} == {
+        credit_transfer.internal_comment_id,
+        punctuated_credit_transfer.internal_comment_id,
+    }
+
+
+@pytest.mark.anyio
+async def test_org_comments_search_matches_when_search_text_is_stale(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """Regression: search must match the authoritative ``comment`` column even
+    when the denormalized ``comment_search_text`` is stale or corrupt.
+
+    Reproduces the original defect where a backfill wrote a corrupt
+    ``comment_search_text`` (e.g. "tran fer" instead of "transfer"), which
+    silently dropped matches. Here the caller supplies a deliberately wrong
+    ``comment_search_text``; the term must still be found because search runs
+    against the raw ``comment`` body."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    # Denormalized text is corrupt, but the raw comment contains the term.
+    stale = await _seed_org_comment_full(
+        add_models,
+        dbsession,
+        transfer_id=6201,
+        to_org_id=1,
+        comment="<p>I recommend recording this transfer.</p>",
+        plain_text="tran fer",  # corrupt denormalized value
+    )
+    await _seed_org_comment_full(
+        add_models,
+        dbsession,
+        transfer_id=6202,
+        to_org_id=1,
+        comment="<p>nothing relevant here</p>",
+        plain_text="",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"search": "transfer"})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert body["pagination"]["total"] == 1
-    assert body["comments"][0]["internalCommentId"] == ic.internal_comment_id
+    assert body["comments"][0]["internalCommentId"] == stale.internal_comment_id
 
 
 @pytest.mark.anyio
