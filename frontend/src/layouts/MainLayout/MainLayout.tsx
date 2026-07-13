@@ -1,10 +1,5 @@
 import { useEffect } from 'react'
-import {
-  Outlet,
-  useLocation,
-  useMatches,
-  useNavigate
-} from 'react-router-dom'
+import { Outlet, useLocation, useMatches, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { Container, Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
@@ -70,8 +65,15 @@ export const MainLayout = () => {
     refreshToken(true)
   }, [location.pathname])
 
+  // Logged-out visitors to the app root land on the public dashboard;
+  // deep links to other protected routes still go to the login screen.
+  const unauthRedirect =
+    location.pathname === ROUTES.DASHBOARD
+      ? ROUTES.PUBLIC_DASHBOARD
+      : ROUTES.AUTH.LOGIN
+
   return (
-    <RequireAuth redirectTo={ROUTES.AUTH.LOGIN}>
+    <RequireAuth redirectTo={unauthRedirect}>
       <BCBox display="flex" flexDirection="column" minHeight="100vh">
         <BCTypography variant="h1" className="visually-hidden">
           {pageTitle}
