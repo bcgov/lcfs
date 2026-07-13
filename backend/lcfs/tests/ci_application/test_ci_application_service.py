@@ -969,6 +969,33 @@ def _reloaded_ci(ci):
 
 
 @pytest.mark.anyio
+async def test_update_generated_fuel_code_clearing_required_date_raises_validation(
+    service, repo, mock_user
+):
+    """Clearing a required NOT NULL field returns a validation error, not a 500 (#4653)."""
+    from lcfs.web.api.ci_application.schema import CIGeneratedFuelCodeUpdateSchema
+    from lcfs.web.exception.exceptions import ValidationErrorException
+
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    _stub_generation_dependencies(service, repo, ci)
+    await service.generate_fuel_codes(ci, mock_user)
+    fuel_code_id = ci.generated_fuel_code_associations[0].fuel_code_id
+    repo.update.reset_mock()
+
+    payload = CIGeneratedFuelCodeUpdateSchema(applicationDate=None)
+
+    with pytest.raises(ValidationErrorException) as exc:
+        await service.update_generated_fuel_code(
+            ci, str(fuel_code_id), payload, mock_user
+        )
+
+    assert exc.value.errors["errors"][0]["fields"] == ["applicationDate"]
+    # The cleared value never reached the database.
+    repo.update.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_step4_submit_validates_status_must_be_draft(service, repo, mock_user):
     ci = _ci_application(status=_status("Submitted", 2))
     ci.pathways = [object()]

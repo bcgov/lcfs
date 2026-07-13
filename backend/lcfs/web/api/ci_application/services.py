@@ -68,7 +68,11 @@ from lcfs.web.api.ci_application.schema import (
 )
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.exception.exceptions import (
+    DataNotFoundException,
+    ValidationErrorException,
+)
+from pydantic.alias_generators import to_camel
 
 # pathway_application_type.type values seeded by the migration
 PATHWAY_APPLICATION_TYPE_NEW = "New"
@@ -867,6 +871,33 @@ class CIApplicationServices:
             unit = updates["facility_nameplate_capacity_unit"]
             updates["facility_nameplate_capacity_unit"] = (
                 QuantityUnitsEnum(unit) if unit else None
+            )
+
+        # Clearing a required field sends null (the grid's DateEditor emits null
+        # on clear). Writing null to a NOT NULL column raises an IntegrityError
+        # on flush and surfaces as a 500 (#4653). Reject the clear with a
+        # field-level validation error the grid renders inline; genuinely
+        # nullable fields fall through and are flagged by the row validator.
+        non_nullable_columns = {
+            column.name
+            for column in FuelCode.__table__.columns
+            if not column.nullable
+        }
+        cleared_required = [
+            field
+            for field, value in updates.items()
+            if field in non_nullable_columns and value in (None, "", [])
+        ]
+        if cleared_required:
+            raise ValidationErrorException(
+                {
+                    "errors": [
+                        {
+                            "fields": [to_camel(field) for field in cleared_required],
+                            "message": "This field is required and cannot be cleared.",
+                        }
+                    ]
+                }
             )
 
         for field, value in updates.items():
