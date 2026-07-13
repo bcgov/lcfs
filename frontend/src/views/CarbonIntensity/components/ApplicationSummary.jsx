@@ -25,7 +25,7 @@ import {
 import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
 import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
 import { constructAddress } from '@/utils/constructAddress'
-import { exportRowsToXlsx } from './applicationSummaryExport'
+import { exportRowsToXlsx } from './pathwayExport'
 
 const formatDate = (value) => {
   if (!value) return ''
