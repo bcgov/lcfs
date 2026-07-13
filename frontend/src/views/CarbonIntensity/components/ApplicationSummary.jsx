@@ -355,9 +355,11 @@ export const ApplicationSummary = ({
   const referencedPathway =
     pathways.find((pathway) => pathway?.fuelCode) || null
   const referencedFuelCode = referencedPathway?.fuelCode || null
-  const referenceNumber =
-    referencedFuelCode?.fuelCode ||
-    (ciApplication.ciApplicationId ? `CI${ciApplication.ciApplicationId}` : '')
+  // Reference number is always the system-generated CI# increment, never a
+  // referenced fuel code number (see #4657).
+  const referenceNumber = ciApplication.ciApplicationId
+    ? `CI${ciApplication.ciApplicationId}`
+    : ''
   const previousFuelCodeExpiryDate = formatDate(
     referencedPathway?.operatingDataTo ||
       referencedPathway?.operating_data_to ||
