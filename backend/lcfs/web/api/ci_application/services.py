@@ -1760,6 +1760,40 @@ class CIApplicationServices:
     # Step 5 — Government decision & comments
     # ------------------------------------------------------------------
 
+    async def _approve_generated_fuel_codes(
+        self, ci_application: CIApplication
+    ) -> None:
+        """
+        Advance the fuel codes generated for a CI application from Draft to
+        Approved when the application is approved (Completed), so their status
+        reflects the application decision instead of remaining stuck in Draft
+        (see #4654). Codes that are already Approved are left untouched, and the
+        ``approval_date`` mirrors the application's approval date.
+        """
+        associations = (
+            getattr(ci_application, "generated_fuel_code_associations", None) or []
+        )
+        if not associations:
+            return
+
+        approved_status = await self.fuel_repo.get_fuel_status_by_status(
+            FuelCodeStatusEnum.Approved
+        )
+        approval_date = (
+            ci_application.approval_date or datetime.now(timezone.utc)
+        ).date()
+
+        for association in associations:
+            fuel_code = association.fuel_code
+            if fuel_code is None:
+                continue
+            if fuel_code.fuel_status_id == approved_status.fuel_code_status_id:
+                continue
+            fuel_code.fuel_code_status = approved_status
+            fuel_code.fuel_status_id = approved_status.fuel_code_status_id
+            fuel_code.approval_date = approval_date
+            fuel_code.action_type = ActionTypeEnum.UPDATE
+
     @service_handler
     async def record_decision(
         self,
@@ -1836,6 +1870,7 @@ class CIApplicationServices:
         if data.status == CIApplicationStatusEnum.Completed:
             ci_application.approval_user_id = user.user_profile_id
             ci_application.approval_date = datetime.now(timezone.utc)
+            await self._approve_generated_fuel_codes(ci_application)
         elif (
             data.status == CIApplicationStatusEnum.Submitted
             and current_status == CIApplicationStatusEnum.Recommended.value
