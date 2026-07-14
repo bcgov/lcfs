@@ -452,10 +452,12 @@ export const CreditCalculator = () => {
   const handleCopy = async () => {
     try {
       const ciEntries = Object.entries(ciParameterLabels)
-      const ciLabels = ciEntries.map(([key, label]) => `${key.toUpperCase()} - ${label}`)
+      const ciLabels = ciEntries.map(
+        ([key, label]) => `${key.toUpperCase()} - ${label}`
+      )
       const maxLabelLen = Math.max(...ciLabels.map((l) => l.length))
       const ciRows = ciEntries
-        .map(([, ], i) => {
+        .map(([,], i) => {
           const value = Object.values(resultData.formulaValues)[i]
           return `${ciLabels[i].padEnd(maxLabelLen + 2)}${value}`
         })
@@ -582,7 +584,17 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
       <FormProvider {...methods}>
         <BCWidgetCard
           component="div"
+          color="primary"
           title={t('report:calcTitle')}
+          headerSx={{
+            borderRadius: '4px',
+            borderBottom: '3px solid #FCBA19'
+          }}
+          sx={{
+            border: '1px solid #D8D8D8',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+          }}
           content={
             <>
               <Grid container flexDirection={'column'} rowSpacing={1}>
@@ -799,7 +811,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                     gap={4}
                     justifyContent={'center'}
                     sx={{
-                      backgroundColor: colors.secondary.nav,
+                      backgroundColor: colors.primary.main,
                       color: colors.white.main,
                       textAlign: 'center'
                     }}
@@ -962,7 +974,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                     py={8}
                     gap={2}
                     sx={{
-                      backgroundColor: 'rgba(218, 218, 218, 0.6)'
+                      backgroundColor: '#F2F2F2'
                     }}
                   >
                     <BCBox>
@@ -1036,7 +1048,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                     >
                       <BCButton
                         variant="outlined"
-                        color="dark"
+                        color="primary"
                         size="small"
                         onClick={handleClear}
                       >
@@ -1044,7 +1056,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       </BCButton>
                       <BCButton
                         variant={copySuccess ? 'contained' : 'outlined'}
-                        color={copySuccess ? 'success' : 'dark'}
+                        color={copySuccess ? 'success' : 'primary'}
                         size="small"
                         onClick={handleCopy}
                         startIcon={

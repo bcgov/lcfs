@@ -2,6 +2,7 @@ import ROUTES from '../routes'
 import { CalculatorMenu } from '@/views/ComplianceReports/CalculatorMenu'
 import FormView from '@/views/Forms/FormView'
 import PublicDashboard from '@/views/PublicDashboard/PublicDashboard'
+import { PublicMarketData } from '@/views/PublicMarketData'
 import { FuelCodeBulletinsBase } from '@/views/FuelCodeBulletins/FuelCodeBulletins'
 import { AppRouteObject } from '../types'
 
@@ -11,7 +12,14 @@ export const publicPageRoutes: AppRouteObject[] = [
     key: 'public-dashboard',
     path: ROUTES.PUBLIC_DASHBOARD,
     element: <PublicDashboard />,
-    handle: { title: 'LCFS program information' }
+    handle: { title: 'LCFS program information', hideBreadcrumb: true }
+  },
+  {
+    name: 'Credit market data',
+    key: 'public-market-data',
+    path: ROUTES.PUBLIC_MARKET_DATA,
+    element: <PublicMarketData />,
+    handle: { title: 'Credit market data' }
   },
   {
     name: 'Compliance unit calculator',
