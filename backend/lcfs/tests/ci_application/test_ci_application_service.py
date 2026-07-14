@@ -1335,6 +1335,41 @@ async def test_step5_decision_accepts_recommended_status(service, repo, mock_use
 
 
 @pytest.mark.anyio
+async def test_step5_completed_approves_generated_fuel_codes(
+    service, repo, mock_user
+):
+    """Approving a CI application moves its generated fuel codes to Approved (#4654)."""
+    # Generate Draft fuel codes through the real generation flow.
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    _stub_generation_dependencies(service, repo, ci)
+    await service.generate_fuel_codes(ci, mock_user)
+
+    generated_fuel_code = ci.generated_fuel_code_associations[0].fuel_code
+    assert generated_fuel_code.fuel_code_status.status == FuelCodeStatusEnum.Draft
+    assert generated_fuel_code.approval_date is None
+
+    # Now approve the application as a Director.
+    mock_user.role_names = {RoleEnum.DIRECTOR}
+    ci.ci_application_status = _status("Recommended", 3)
+    approved_status = FuelCodeStatus(
+        fuel_code_status_id=3, status=FuelCodeStatusEnum.Approved
+    )
+    service.fuel_repo.get_fuel_status_by_status.return_value = approved_status
+    repo.get_status_by_name.return_value = _status("Completed", 4)
+
+    result = await service.record_decision(
+        ci, _decision_payload("Completed"), mock_user, is_government=True
+    )
+
+    assert generated_fuel_code.fuel_code_status == approved_status
+    assert generated_fuel_code.fuel_status_id == 3
+    assert generated_fuel_code.approval_date is not None
+    assert generated_fuel_code.action_type == ActionTypeEnum.UPDATE
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
 async def test_step5_decision_can_return_recommended_to_submitted(
     service, repo, mock_user
 ):
