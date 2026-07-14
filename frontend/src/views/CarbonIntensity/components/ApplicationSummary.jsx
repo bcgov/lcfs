@@ -25,6 +25,7 @@ import {
 import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
 import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
 import { constructAddress } from '@/utils/constructAddress'
+import { exportRowsToXlsx } from './pathwayExport'
 
 const formatDate = (value) => {
   if (!value) return ''
@@ -355,9 +356,11 @@ export const ApplicationSummary = ({
   const referencedPathway =
     pathways.find((pathway) => pathway?.fuelCode) || null
   const referencedFuelCode = referencedPathway?.fuelCode || null
-  const referenceNumber =
-    referencedFuelCode?.fuelCode ||
-    (ciApplication.ciApplicationId ? `CI${ciApplication.ciApplicationId}` : '')
+  // Reference number is always the system-generated CI# increment, never a
+  // referenced fuel code number (see #4657).
+  const referenceNumber = ciApplication.ciApplicationId
+    ? `CI${ciApplication.ciApplicationId}`
+    : ''
   const previousFuelCodeExpiryDate = formatDate(
     referencedPathway?.operatingDataTo ||
       referencedPathway?.operating_data_to ||
@@ -445,8 +448,16 @@ export const ApplicationSummary = ({
     [t]
   )
   const handleDownloadPathways = () => {
-    pathwayGridRef.current?.api?.exportDataAsCsv({
-      fileName: `ci_application_pathways_${ciApplication?.ciApplicationId || 'draft'}.csv`
+    const rows = []
+    pathwayGridRef.current?.api?.forEachNodeAfterFilterAndSort((node) => {
+      rows.push(node.data)
+    })
+
+    exportRowsToXlsx({
+      rows: rows.length ? rows : pathways,
+      columnDefs: pathwayColumnDefs,
+      fileName: `ci_application_pathways_${ciApplication?.ciApplicationId || 'draft'}.xlsx`,
+      sheetName: 'Pathways'
     })
   }
   const handleEditPathways = () => {
@@ -741,7 +752,12 @@ export const ApplicationSummary = ({
       )}
       {!isEditingPathways && hasPathwayChangelogEntries && (
         <FormControlLabel
-          sx={{ display: 'flex', width: 'fit-content', mb: 2, '& .MuiFormControlLabel-label': { mt: 0.8 } }}
+          sx={{
+            display: 'flex',
+            width: 'fit-content',
+            mb: 2,
+            '& .MuiFormControlLabel-label': { mt: 0.8 }
+          }}
           control={
             <Switch
               checked={showPathwayChangelog}
