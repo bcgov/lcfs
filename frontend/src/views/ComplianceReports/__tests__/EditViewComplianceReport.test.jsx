@@ -604,6 +604,103 @@ describe('EditViewComplianceReport', () => {
     })
   })
 
+  describe('30-day warning after first submission (#4630)', () => {
+    // A Draft history record is written when a supplemental is created, so the
+    // earliest history entry supplies the creation date the 30-day clock runs
+    // from. Never-submitted reports have only that Draft entry.
+    const draftHistory = [
+      { status: { status: 'Draft' }, createDate: '2024-01-01T10:00:00Z' }
+    ]
+    const submittedHistory = [
+      { status: { status: 'Draft' }, createDate: '2024-01-01T10:00:00Z' },
+      { status: { status: 'Submitted' }, createDate: '2024-01-10T10:00:00Z' }
+    ]
+
+    // A supplier-created supplemental in Draft that has never been submitted.
+    // `status: 'Draft'` matches the COMPLIANCE_REPORT_STATUSES enum value (the
+    // other fixtures use 'DRAFT', which never satisfies the real comparison,
+    // so their alerts silently never render).
+    const supplierDraftSupplemental = (overrides = {}) => ({
+      ...defaultReportData,
+      report: {
+        ...defaultReportData.report,
+        version: 1,
+        supplementalInitiator: 'Supplier Supplemental',
+        currentStatus: { status: 'Draft' },
+        history: draftHistory,
+        ...overrides
+      }
+    })
+
+    // The component reads the report via an inline selector
+    // (`state.getCachedReport(id)`), so the store must be mocked at the
+    // selector level for `reportData` to resolve to the object rather than a
+    // function (the default `mockReturnValue(() => data)` leaves it a function).
+    const mockReport = (report) =>
+      useComplianceReportStore.mockImplementation((selector) =>
+        selector({ getCachedReport: () => report })
+      )
+
+    // The warning renders the (mock-passthrough) i18n key as its body text.
+    const WARNING_TEXT = 'report:supplementalExpiryWarningText'
+
+    it('shows the warning for a supplemental that has never been submitted', () => {
+      mockReport(supplierDraftSupplemental())
+
+      render(<EditViewComplianceReport />)
+
+      expect(screen.getByText(WARNING_TEXT)).toBeInTheDocument()
+    })
+
+    it('shows the warning for an analyst-requested (Government Initiated) supplemental', () => {
+      mockReport(
+        supplierDraftSupplemental({
+          supplementalInitiator: 'Government Initiated'
+        })
+      )
+
+      render(<EditViewComplianceReport />)
+
+      expect(screen.getByText(WARNING_TEXT)).toBeInTheDocument()
+    })
+
+    it('does not show the warning for a Government Reassessment (analyst adjustment)', () => {
+      mockReport(
+        supplierDraftSupplemental({
+          supplementalInitiator: 'Government Reassessment'
+        })
+      )
+
+      render(<EditViewComplianceReport />)
+
+      expect(screen.queryByText(WARNING_TEXT)).not.toBeInTheDocument()
+    })
+
+    it('permanently hides the warning once the report has been submitted', () => {
+      mockReport(supplierDraftSupplemental({ history: submittedHistory }))
+
+      render(<EditViewComplianceReport />)
+
+      expect(screen.queryByText(WARNING_TEXT)).not.toBeInTheDocument()
+    })
+
+    it('keeps the warning hidden after the report is returned to Draft', () => {
+      // Return-to-supplier flips status back to Draft on the same report row;
+      // the prior Submitted history entry persists, so across any number of
+      // return/resubmit cycles the warning must stay suppressed.
+      mockReport(
+        supplierDraftSupplemental({
+          currentStatus: { status: 'Draft' },
+          history: submittedHistory
+        })
+      )
+
+      render(<EditViewComplianceReport />)
+
+      expect(screen.queryByText(WARNING_TEXT)).not.toBeInTheDocument()
+    })
+  })
+
   describe('qReport Logic', () => {
     it('handles quarterly reports', () => {
       const quarterlyReport = {
