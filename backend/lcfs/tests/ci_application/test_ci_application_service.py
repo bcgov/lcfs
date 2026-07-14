@@ -5,6 +5,8 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import HTTPException
+from pydantic import ValidationError
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.ci_application import CIApplication, CIApplicationStatus
@@ -20,6 +22,9 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationStatusEnum,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
+    CIApplicationVerification1Schema,
+    CIApplicationVerification2Schema,
+    CIRiskAssessmentEnum,
     CITableOptionsSchema,
     PathwayInputSchema,
 )
@@ -33,6 +38,90 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+)
+def test_verification_priority_score_requires_whole_number_1_to_999(schema):
+    payload = {"priorityScore": 120}
+    if schema is CIApplicationVerification1Schema:
+        payload["preliminaryRiskAssessment"] = "Low"
+
+    result = schema.model_validate(payload)
+
+    assert result.priority_score == 120
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+)
+@pytest.mark.parametrize("payload", [{}, {"priorityScore": None}])
+def test_verification_priority_score_schema_allows_null_when_not_completing_status(
+    schema, payload
+):
+    data = dict(payload)
+    if schema is CIApplicationVerification1Schema:
+        data["preliminaryRiskAssessment"] = "Low"
+
+    result = schema.model_validate(data)
+
+    assert result.priority_score is None
+
+
+@pytest.mark.parametrize(
+    "priority_score",
+    [0, 1000, 10.5, "10"],
+)
+@pytest.mark.parametrize(
+    "schema",
+    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+)
+def test_verification_priority_score_rejects_decimal_and_out_of_range(
+    schema, priority_score
+):
+    payload = {"priorityScore": priority_score}
+    if schema is CIApplicationVerification1Schema:
+        payload["preliminaryRiskAssessment"] = "Low"
+
+    with pytest.raises(ValidationError):
+        schema.model_validate(payload)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("priority_score", [None, 0, 1000, 10.5])
+async def test_complete_verification_1_requires_valid_priority_score(
+    service, mock_user, priority_score
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.complete_verification_1(
+            ci, CIRiskAssessmentEnum.Low, priority_score, mock_user
+        )
+
+    assert exc.value.status_code == 400
+    assert "Priority score is required" in exc.value.detail
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("priority_score", [None, 0, 1000, 10.5])
+async def test_complete_verification_2_requires_valid_priority_score(
+    service, mock_user, priority_score
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.Medium.value
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.complete_verification_2(
+            ci, CIRiskAssessmentEnum.Medium, priority_score, mock_user
+        )
+
+    assert exc.value.status_code == 400
+    assert "Priority score is required" in exc.value.detail
 
 
 @pytest.fixture
@@ -809,8 +898,6 @@ async def test_update_step3_rejects_when_ghgenius_missing(service, repo, mock_us
 # ---------------------------------------------------------------------------
 # Step 4 — Sign & submit
 # ---------------------------------------------------------------------------
-
-from fastapi import HTTPException
 
 
 @pytest.mark.anyio
