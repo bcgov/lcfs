@@ -8,6 +8,11 @@ const IDIRComplianceManagerNotificationSettings = () => {
       IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION:
         'idirComplianceManager.categories.governmentNotifications.subscription'
     },
+    'idirComplianceManager.categories.transfers': {
+      title: 'idirComplianceManager.categories.transfers.title',
+      PUBLIC__CREDIT_MARKET_MONTHLY_REPORT:
+        'idirComplianceManager.categories.transfers.creditMarketMonthlyReport'
+    },
     'idirComplianceManager.categories.complianceReports': {
       title: 'idirComplianceManager.categories.complianceReports.title',
       IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW:

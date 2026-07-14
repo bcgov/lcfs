@@ -35,12 +35,17 @@ class CHESEmailService:
             autoescape=True,  # Enable autoescaping for security
         )
 
-    def determine_audience_type(self, notification_type: NotificationTypeEnum) -> AudienceType:
+    def determine_audience_type(
+        self, notification_type: NotificationTypeEnum
+    ) -> AudienceType:
         """
         Determine the target audience type based on the notification type.
         Business logic for notification audience determination is centralized here.
         """
-        if notification_type == NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE:
+        if (
+            notification_type
+            == NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE
+        ):
             # For credit market notifications, notify OTHER organizations (not the posting org)
             # Exclude government users for this notification type
             return AudienceType.OTHER_ORGANIZATIONS
@@ -143,6 +148,37 @@ class CHESEmailService:
         return await self.send_email(email_payload)
 
     @service_handler
+    async def send_credit_market_report_email(
+        self,
+        recipients: List[str],
+        context: Dict[str, Any],
+        attachments: Optional[List[Dict[str, Any]]] = None,
+    ) -> bool:
+        """
+        Send the monthly credit market report email with a consolidated workbook.
+        """
+        if not settings.ches_enabled:
+            return False
+
+        if not self._validate_configuration():
+            return False
+
+        if not recipients:
+            logger.info("No recipients for monthly credit market report.")
+            return False
+
+        context["environment"] = settings.environment.lower()
+        template = self.template_env.get_template("credit_market_report.html")
+        email_body = template.render(**context).strip()
+        email_payload = self._build_email_payload(
+            recipients,
+            context,
+            email_body,
+            attachments=attachments,
+        )
+        return await self.send_email(email_payload)
+
+    @service_handler
     async def send_email(self, payload: Dict[str, Any]) -> bool:
         """
         Send an email using CHES.
@@ -202,6 +238,7 @@ class CHESEmailService:
         context: Dict[str, Any],
         body: str,
         extra_bcc: Optional[List[str]] = None,
+        attachments: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         payload = {
             "to": ["donotreply@gov.bc.ca"],
@@ -225,6 +262,9 @@ class CHESEmailService:
             payload["bcc"] = list(dict.fromkeys(bcc_recipients))
         else:
             logger.warning("Attempted to send email with no valid BCC recipients.")
+
+        if attachments:
+            payload["attachments"] = attachments
 
         return payload
 

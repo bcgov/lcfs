@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, AsyncMock
 
 from lcfs.db.models.compliance import (
@@ -17,7 +17,7 @@ from lcfs.db.models.fuel import (
     ExpectedUseType,
 )
 from lcfs.db.models.initiative_agreement import InitiativeAgreement
-from lcfs.db.models.transfer import Transfer
+from lcfs.db.models.transfer import Transfer, TransferHistory
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummarySchema,
 )
@@ -537,6 +537,127 @@ async def test_get_received_compliance_units_not_found(summary_repo):
         compliance_period_start=datetime.strptime("2025-01-01", "%Y-%m-%d").date(),
         compliance_period_end=datetime.strptime("2026-01-01", "%Y-%m-%d").date(),
         organization_id=None,
+    )
+
+    assert units == 0
+
+
+async def _add_null_date_transfer(
+    dbsession, organizations, recorded_at, direction="from", quantity=7
+):
+    """
+    Create a recorded transfer with no transaction_effective_date (the
+    zero-dollar Category D scenario) plus its Recorded history row.
+    """
+    org_kwargs = (
+        {"from_organization_id": organizations[0].organization_id}
+        if direction == "from"
+        else {"to_organization_id": organizations[0].organization_id}
+    )
+    transfer = Transfer(
+        transfer_id=985,
+        agreement_date=date,
+        transaction_effective_date=None,
+        current_status_id=6,
+        quantity=quantity,
+        price_per_unit=0,
+        **org_kwargs,
+    )
+    dbsession.add(transfer)
+    await dbsession.flush()
+    if recorded_at is not None:
+        dbsession.add(
+            TransferHistory(
+                transfer_history_id=985,
+                transfer_id=transfer.transfer_id,
+                transfer_status_id=6,
+                create_date=recorded_at,
+            )
+        )
+    await dbsession.commit()
+    return transfer
+
+
+@pytest.mark.anyio
+async def test_transferred_out_includes_null_effective_date_in_window(
+    summary_repo, dbsession, organizations
+):
+    """Zero-dollar Category D transfers (no effective date stamped) must fall
+    back to their recorded date and still count towards Line 12."""
+    await _add_null_date_transfer(
+        dbsession,
+        organizations,
+        recorded_at=datetime(2024, 6, 15, 12, 0, 0, tzinfo=timezone.utc),
+        direction="from",
+    )
+
+    units = await summary_repo.get_transferred_out_compliance_units(
+        compliance_period_start=datetime(2024, 4, 1, 0, 0, 0),
+        compliance_period_end=datetime(2025, 3, 31, 23, 59, 59),
+        organization_id=organizations[0].organization_id,
+    )
+
+    assert units == 7
+
+
+@pytest.mark.anyio
+async def test_received_includes_null_effective_date_in_window(
+    summary_repo, dbsession, organizations
+):
+    """Same fallback applies to Line 13 (transfers received)."""
+    await _add_null_date_transfer(
+        dbsession,
+        organizations,
+        recorded_at=datetime(2024, 6, 15, 12, 0, 0, tzinfo=timezone.utc),
+        direction="to",
+    )
+
+    units = await summary_repo.get_received_compliance_units(
+        compliance_period_start=datetime(2024, 4, 1, 0, 0, 0),
+        compliance_period_end=datetime(2025, 3, 31, 23, 59, 59),
+        organization_id=organizations[0].organization_id,
+    )
+
+    assert units == 7
+
+
+@pytest.mark.anyio
+async def test_null_effective_date_recorded_outside_window_excluded(
+    summary_repo, dbsession, organizations
+):
+    """The recorded-date fallback must still respect the reporting window.
+    2024-04-01 03:00 UTC is 2024-03-31 in Pacific time, so a window starting
+    April 1 excludes it — proving the UTC→Pacific conversion is applied."""
+    await _add_null_date_transfer(
+        dbsession,
+        organizations,
+        recorded_at=datetime(2024, 4, 1, 3, 0, 0, tzinfo=timezone.utc),
+        direction="from",
+    )
+
+    units = await summary_repo.get_transferred_out_compliance_units(
+        compliance_period_start=datetime(2024, 4, 1, 0, 0, 0),
+        compliance_period_end=datetime(2025, 3, 31, 23, 59, 59),
+        organization_id=organizations[0].organization_id,
+    )
+
+    assert units == 0
+
+
+@pytest.mark.anyio
+async def test_null_effective_date_without_recorded_history_excluded(
+    summary_repo, dbsession, organizations
+):
+    """No effective date and no Recorded history row → nothing to date the
+    transfer by, so it stays out of the totals (and the query must not error)."""
+    await _add_null_date_transfer(
+        dbsession, organizations, recorded_at=None, direction="from"
+    )
+
+    units = await summary_repo.get_transferred_out_compliance_units(
+        compliance_period_start=datetime(2024, 4, 1, 0, 0, 0),
+        compliance_period_end=datetime(2025, 3, 31, 23, 59, 59),
+        organization_id=organizations[0].organization_id,
     )
 
     assert units == 0
