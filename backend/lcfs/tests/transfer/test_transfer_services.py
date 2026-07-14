@@ -69,6 +69,7 @@ def dummy_transfer():
         to_organization_id="org2",
         to_transaction=None,
         category="Existing",
+        transaction_effective_date=None,
     )
     return transfer
 
@@ -358,6 +359,57 @@ async def test_no_category_update_when_category_exists(
 
     assert dummy_transfer.to_transaction.transaction_id == 123
     assert dummy_transfer.category == "Existing"
+    # Even without auto-categorization the recorded date must be stamped,
+    # otherwise Lines 12/13 of the compliance report summary miss the transfer.
+    assert dummy_transfer.transaction_effective_date is not None
+
+
+@pytest.mark.anyio
+async def test_effective_date_stamped_when_category_preassigned(
+    transfer_service, dummy_transfer, mock_director
+):
+    """
+    Zero-dollar Category D transfers get their category assigned before the
+    director records them, which skips auto-categorization. The recorded date
+    must still be stamped so summary Lines 12/13 include the transfer.
+    """
+    from zoneinfo import ZoneInfo
+
+    dummy_transfer.transfer_category.category = "D"
+    dummy_transfer.price_per_unit = 0.0
+
+    transfer_service.transaction_repo.confirm_transaction = AsyncMock(
+        return_value=True
+    )
+    transfer_service.org_service.adjust_balance = AsyncMock(
+        return_value=SimpleNamespace(transaction_id=123)
+    )
+
+    await transfer_service.director_record_transfer(dummy_transfer, mock_director)
+
+    expected_date = datetime.now(ZoneInfo("America/Vancouver")).date()
+    assert dummy_transfer.transaction_effective_date == expected_date
+
+
+@pytest.mark.anyio
+async def test_effective_date_not_overwritten_when_already_set(
+    transfer_service, dummy_transfer, mock_director
+):
+    """A pre-existing effective date must survive the director recording."""
+    existing_date = date(2024, 6, 15)
+    dummy_transfer.transfer_category.category = "D"
+    dummy_transfer.transaction_effective_date = existing_date
+
+    transfer_service.transaction_repo.confirm_transaction = AsyncMock(
+        return_value=True
+    )
+    transfer_service.org_service.adjust_balance = AsyncMock(
+        return_value=SimpleNamespace(transaction_id=123)
+    )
+
+    await transfer_service.director_record_transfer(dummy_transfer, mock_director)
+
+    assert dummy_transfer.transaction_effective_date == existing_date
 
 
 @pytest.mark.anyio
@@ -438,6 +490,7 @@ async def test_director_record_transfer_persists_to_transaction_id(
         to_transaction_id=None,  # It starts as None
         from_organization=SimpleNamespace(organization_id=1, name="From Org"),
         to_organization=SimpleNamespace(organization_id=2, name="To Org"),
+        transaction_effective_date=None,
     )
 
     # Mock the creation of the receiving transaction

@@ -129,6 +129,14 @@ export const NEW_REGULATION_YEAR = 2025
 export const CURRENT_COMPLIANCE_YEAR = (
   LEGISLATION_TRANSITION_YEAR + 1
 ).toString()
+
+// Early issuance reporting tracks the current calendar year and must roll
+// over on January 1 (e.g. 2025 -> 2026). This mirrors the backend's
+// EarlyIssuanceYear.get_current_compliance_year() (str(datetime.now().year))
+// and is deliberately separate from CURRENT_COMPLIANCE_YEAR, which is the
+// fixed legislation-based reporting year used elsewhere (e.g. lookup tables).
+export const getCurrentEarlyIssuanceYear = (): string =>
+  new Date().getFullYear().toString()
 export const DEFAULT_CI_FUEL_CODE =
   'Default carbon intensity - section 19 (b) (ii)'
 

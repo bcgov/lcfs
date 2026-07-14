@@ -342,6 +342,65 @@ class TestFilterResolver:
         assert "facility_city" in rendered
         assert "facility_country" in rendered
 
+    def test_apply_filters_returns_clause_for_prefixed_ci_application_id(self, repo):
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[],
+            filters=[
+                FilterModel(
+                    filter_type="text",
+                    type="contains",
+                    filter="CI15",
+                    field="ciApplicationId",
+                )
+            ],
+        )
+        conds = repo._apply_filters(pagination)
+        assert len(conds) == 1
+        rendered = str(conds[0]).lower()
+        assert "ci_application_id" in rendered
+        assert "ci15" not in rendered
+
+    def test_apply_filters_returns_clause_for_numeric_ci_application_id(self, repo):
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[],
+            filters=[
+                FilterModel(
+                    filter_type="text",
+                    type="startsWith",
+                    filter="15",
+                    field="ciApplicationId",
+                )
+            ],
+        )
+        conds = repo._apply_filters(pagination)
+        assert len(conds) == 1
+        rendered = str(conds[0]).lower()
+        assert "ci_application_id" in rendered
+
+    def test_apply_filters_ignores_all_non_digits_for_ci_application_id(self, repo):
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[],
+            filters=[
+                FilterModel(
+                    filter_type="text",
+                    type="equals",
+                    filter="C-I 2.0",
+                    field="ciApplicationId",
+                )
+            ],
+        )
+        conds = repo._apply_filters(pagination)
+        assert len(conds) == 1
+        rendered = str(conds[0]).lower()
+        assert "ci_application_id" in rendered
+        assert "c-i" not in rendered
+
     def test_apply_sorting_uses_default_when_no_orders(self, repo):
         pagination = PaginationRequestSchema(page=1, size=10, sort_orders=[], filters=[])
         clauses = repo._apply_sorting(pagination)
