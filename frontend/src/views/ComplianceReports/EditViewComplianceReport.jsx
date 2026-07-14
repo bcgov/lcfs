@@ -151,15 +151,36 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     (currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT &&
       hasRoles(roles.analyst))
 
+  // The 30-day submission warning only encourages the *initial* submission of
+  // a supplemental report. Once it has been submitted for the first time the
+  // warning is permanently retired: returning it to Draft for analyst-requested
+  // revisions (any number of return/resubmit cycles) must not re-trigger it
+  // (#4630). A prior Submitted entry in the report's history is the signal.
+  const hasBeenSubmitted = useMemo(
+    () =>
+      (reportData?.report?.history ?? []).some(
+        (h) => h.status?.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      ),
+    [reportData?.report?.history]
+  )
+
   const supplierSupplementalInfo = useMemo(() => {
-    const isSupplementalCreatedBySupplier =
-      reportData?.report?.supplementalInitiator === 'Supplier Supplemental'
+    // The 30-day notice applies to supplementals the supplier is expected to
+    // submit: their own ("Supplier Supplemental") and analyst-requested ones
+    // ("Government Initiated", created by the ministry for the supplier to
+    // edit). "Government Reassessment" (analyst adjustment) is excluded — the
+    // government does that work, not the supplier.
+    const isSupplierSubmittableSupplemental = [
+      'Supplier Supplemental',
+      'Government Initiated'
+    ].includes(reportData?.report?.supplementalInitiator)
     const isDraftStatus = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
     if (
       isGovernmentUser ||
       !isDraftStatus ||
       !reportData?.report ||
-      !isSupplementalCreatedBySupplier
+      !isSupplierSubmittableSupplemental ||
+      hasBeenSubmitted
     ) {
       return {
         isSupplementalExpiring: false,
@@ -169,10 +190,26 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       }
     }
 
+    // The 30-day clock runs from the supplemental's *creation*, per both the
+    // notice text ("30 days from the date of creation") and #4630 — not its
+    // last edit. The detail payload carries no report-level create date, but a
+    // Draft history record is written when the supplemental is created, so the
+    // earliest history entry's createDate is its creation date.
+    const creationDate = (reportData?.report?.history ?? [])
+      .map((h) => h.createDate)
+      .filter(Boolean)
+      .reduce(
+        (earliest, d) =>
+          !earliest || DateTime.fromISO(d) < DateTime.fromISO(earliest)
+            ? d
+            : earliest,
+        null
+      )
+
     const shouldShowAlert =
-      isSupplementalCreatedBySupplier &&
+      isSupplierSubmittableSupplemental &&
       isDraftStatus &&
-      reportData.report.updateDate &&
+      !!creationDate &&
       !isGovernmentUser
 
     let submissionDeadline = null
@@ -180,13 +217,11 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     let warningText = ''
 
     if (shouldShowAlert) {
-      const updateDate = DateTime.fromISO(reportData.report.updateDate)
-      submissionDeadline = updateDate.plus({ days: 30 })
+      submissionDeadline = DateTime.fromISO(creationDate).plus({ days: 30 })
       daysRemaining = Math.ceil(submissionDeadline.diffNow('days').days)
       warningText = t('report:supplementalExpiryWarningText', {
         deadlineDate: submissionDeadline.toLocaleString(DateTime.DATE_FULL)
       })
-      console.log(warningText)
     }
 
     return {
@@ -195,7 +230,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       daysRemaining,
       warningText
     }
-  }, [reportData, currentStatus, isGovernmentUser])
+  }, [reportData, currentStatus, isGovernmentUser, hasBeenSubmitted])
 
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report?.organizationId,
@@ -275,24 +310,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       setHasDraftSupplemental(false)
     }
   }, [reportData, isDeleted, isDeleting])
-
-  // Determine if the current report is a draft supplemental for the 30-day notice
-  const isDraftSupplemental =
-    reportData?.report?.currentStatus?.status ===
-      COMPLIANCE_REPORT_STATUSES.DRAFT && reportData?.report?.version > 0
-
-  let submissionDeadline = null
-  let daysRemaining = null
-  if (
-    isDraftSupplemental &&
-    reportData?.report?.createTimestamp &&
-    !isDeleted &&
-    !isDeleting
-  ) {
-    const creationDate = DateTime.fromISO(reportData.report.createTimestamp)
-    submissionDeadline = creationDate.plus({ days: 30 })
-    daysRemaining = Math.ceil(submissionDeadline.diffNow('days').days)
-  }
 
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
@@ -982,22 +999,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                 </BCBox>
               )}
             </BCBox>
-          )}
-          {/* 30-Day Submission Notice for BCeID on Draft Supplementals */}
-          {!isGovernmentUser && isDraftSupplemental && submissionDeadline && (
-            <Alert
-              severity={daysRemaining < 0 ? 'error' : 'info'}
-              sx={{ mb: 2 }}
-            >
-              <AlertTitle>
-                {daysRemaining < 0
-                  ? 'Submission Period Overdue'
-                  : 'Supplemental Report Submission'}
-              </AlertTitle>
-              {daysRemaining >= 0
-                ? `Please submit this supplemental report by ${submissionDeadline.toLocaleString(DateTime.DATE_FULL)} (${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining). After 30 days from the date of creation government will be alerted and may lead to a discretionary penalty.`
-                : 'The suggested 30-day submission period for this supplemental report has passed. Government has been alerted and this may lead to a discretionary penalty.'}
-            </Alert>
           )}
           {/* Action Buttons */}
           {buttonClusterConfig[currentStatus]?.length > 0 &&
