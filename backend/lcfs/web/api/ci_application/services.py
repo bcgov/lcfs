@@ -1169,6 +1169,7 @@ class CIApplicationServices:
         user: UserProfile,
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
+        self._validate_priority_score(priority_score)
         ci_application.preliminary_risk_assessment = risk_assessment.value
         ci_application.priority_score = priority_score
         ci_application.verification_1_user_id = user.user_profile_id
@@ -1191,6 +1192,7 @@ class CIApplicationServices:
         user: UserProfile,
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
+        self._validate_priority_score(priority_score)
         if ci_application.preliminary_risk_assessment not in {
             CIRiskAssessmentEnum.Medium.value,
             CIRiskAssessmentEnum.High.value,
@@ -1275,6 +1277,18 @@ class CIApplicationServices:
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
         return await self._to_full_schema_with_user(ci)
+
+    def _validate_priority_score(self, priority_score: Optional[int]) -> None:
+        if (
+            not isinstance(priority_score, int)
+            or isinstance(priority_score, bool)
+            or priority_score < 1
+            or priority_score > 999
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Priority score is required and must be a whole number from 1 to 999.",
+            )
 
     def _require_submitted_workflow(self, ci_application: CIApplication) -> None:
         if (

@@ -145,6 +145,7 @@
     "workflowHeader": "Workflow",
     "riskAssessment": "Risk assessment",
     "priorityScore": "Priority score",
+    "priorityScoreInvalid": "Priority score is required and must be a whole number from 1 to 999.",
     "numberOfFuelPathways": "Number of fuel pathways",
     "verification1Complete": "Verification 1 complete",
     "verification2Complete": "Verification 2 complete",

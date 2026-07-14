@@ -427,9 +427,7 @@ async def complete_ci_application_verification_1(
 async def complete_ci_application_verification_2(
     request: Request,
     ci_application_id: int,
-    data: CIApplicationVerification2Schema = Body(
-        default=CIApplicationVerification2Schema()
-    ),
+    data: CIApplicationVerification2Schema = Body(...),
     service: CIApplicationServices = Depends(),
     validate: CIApplicationValidation = Depends(),
 ) -> CIApplicationSchema:
