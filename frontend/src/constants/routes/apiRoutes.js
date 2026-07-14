@@ -44,6 +44,8 @@ export const apiRoutes = {
   organizationPenaltyLogsList: '/organizations/:orgID/penalties/logs/list',
   organizationPenaltyLogs: '/organizations/:orgID/penalties/logs',
   organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
+  organizationAllocationAgreementAnalytics:
+    '/organizations/:orgID/allocation-agreements/analytics',
   organizationComments: '/organizations/:orgID/comments',
   commentCategories: '/internal_comments/categories',
   internalComment: '/internal_comments/:commentId',

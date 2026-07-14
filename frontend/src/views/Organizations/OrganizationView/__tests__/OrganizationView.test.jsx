@@ -142,6 +142,11 @@ vi.mock('@/hooks/useOrganization', () => ({
       reservedBalance: 500
     },
     isLoading: false
+  })),
+  useOrganizationAllocationAgreementAnalytics: vi.fn(() => ({
+    data: { years: [] },
+    isLoading: false,
+    isError: false
   }))
 }))
 
@@ -246,6 +251,7 @@ describe('OrganizationView', () => {
       expect(screen.getByText('Company overview')).toBeInTheDocument()
       expect(screen.getByText('Penalty log')).toBeInTheDocument()
       expect(screen.getByText('Supply history')).toBeInTheDocument()
+      expect(screen.getByText('Allocation agreements')).toBeInTheDocument()
       expect(screen.getByText('Compliance tracking')).toBeInTheDocument()
     })
 
@@ -466,7 +472,7 @@ describe('OrganizationView', () => {
       renderComponent()
 
       const tabs = screen.getAllByRole('tab')
-      expect(tabs).toHaveLength(8)
+      expect(tabs).toHaveLength(9)
 
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('Users')).toBeInTheDocument()
@@ -491,6 +497,7 @@ describe('OrganizationView', () => {
       expect(screen.getByText('Company overview')).toBeInTheDocument()
       expect(screen.getByText('Penalty log')).toBeInTheDocument()
       expect(screen.getByText('Supply history')).toBeInTheDocument()
+      expect(screen.getByText('Allocation agreements')).toBeInTheDocument()
       expect(screen.getByText('Compliance tracking')).toBeInTheDocument()
       expect(screen.getByText('Comment log')).toBeInTheDocument()
     })

@@ -34,6 +34,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 
 from .repo import OrganizationsRepository
 from .schema import (
+    AllocationAgreementAnalyticsResponseSchema,
     OrganizationCreateSchema,
     OrganizationDetailsSchema,
     OrganizationListSchema,
@@ -612,6 +613,13 @@ class OrganizationsService:
         )
 
         return new_transaction
+
+    @service_handler
+    async def get_allocation_agreement_analytics(
+        self, organization_id: int
+    ) -> AllocationAgreementAnalyticsResponseSchema:
+        data = await self.repo.get_allocation_agreement_analytics(organization_id)
+        return AllocationAgreementAnalyticsResponseSchema.model_validate(data)
 
     @service_handler
     async def search_organization_details(
