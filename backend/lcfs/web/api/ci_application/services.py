@@ -21,40 +21,35 @@ from lcfs.db.models.ci_application import (
     CIApplicationFuelCodeAssociation,
     Pathway,
 )
-from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.ci_application.CIApplication import (
     CI_DOC_CATEGORY_GHGENIUS_MODEL,
     CI_DOC_CATEGORY_TECHNICAL_REPORT,
 )
-from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
+from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.schema import FileResponseSchema
-from lcfs.web.api.base import (
-    PaginationRequestSchema,
-    PaginationResponseSchema,
-)
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
-from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.api.ci_application.schema import (
     AssignedAnalystSchema,
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
-    CIGeneratedFuelCodeSchema,
-    CIGeneratedFuelCodeUpdateSchema,
     CIApplicationSchema,
-    CIApplicationUserSchema,
-    CIRiskAssessmentEnum,
+    CIApplicationsListSchema,
     CIApplicationStatusEnum,
     CIApplicationStatusSchema,
-    CIApplicationsListSchema,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
     CIApplicationStep4Schema,
+    CIApplicationUserSchema,
+    CIGeneratedFuelCodeSchema,
+    CIGeneratedFuelCodeUpdateSchema,
+    CIRiskAssessmentEnum,
     CITableOptionsSchema,
     FuelCodeOptionSchema,
     FuelTypeOptionSchema,
@@ -66,9 +61,15 @@ from lcfs.web.api.ci_application.schema import (
     PathwayInputSchema,
     PathwaySchema,
 )
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.exception.exceptions import (
+    DataNotFoundException,
+    ValidationErrorException,
+)
+from pydantic.alias_generators import to_camel
 
 # pathway_application_type.type values seeded by the migration
 PATHWAY_APPLICATION_TYPE_NEW = "New"
@@ -869,6 +870,33 @@ class CIApplicationServices:
                 QuantityUnitsEnum(unit) if unit else None
             )
 
+        # Clearing a required field sends null (the grid's DateEditor emits null
+        # on clear). Writing null to a NOT NULL column raises an IntegrityError
+        # on flush and surfaces as a 500 (#4653). Reject the clear with a
+        # field-level validation error the grid renders inline; genuinely
+        # nullable fields fall through and are flagged by the row validator.
+        non_nullable_columns = {
+            column.name
+            for column in FuelCode.__table__.columns
+            if not column.nullable
+        }
+        cleared_required = [
+            field
+            for field, value in updates.items()
+            if field in non_nullable_columns and value in (None, "", [])
+        ]
+        if cleared_required:
+            raise ValidationErrorException(
+                {
+                    "errors": [
+                        {
+                            "fields": [to_camel(field) for field in cleared_required],
+                            "message": "This field is required and cannot be cleared.",
+                        }
+                    ]
+                }
+            )
+
         for field, value in updates.items():
             if hasattr(fuel_code, field):
                 setattr(fuel_code, field, value)
@@ -1037,13 +1065,17 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
 
     @service_handler
-    async def get_table_options(self) -> CITableOptionsSchema:
+    async def get_table_options(
+        self, organization_id: Optional[int] = None
+    ) -> CITableOptionsSchema:
         statuses = await self.repo.get_statuses()
         application_types = await self.repo.get_pathway_application_types()
         fuel_code_types = await self.repo.get_pathway_fuel_code_types()
         fuel_types = await self.repo.get_fuel_types()
         transport_modes = await self.repo.get_transport_modes()
-        fuel_codes = await self.repo.get_approved_fuel_codes()
+        # Renewal iterations are scoped to the caller's organization for
+        # supplier/CI-applicant users; government callers pass None (all).
+        fuel_codes = await self.repo.get_approved_fuel_codes(organization_id)
         return CITableOptionsSchema(
             statuses=[CIApplicationStatusSchema.model_validate(s) for s in statuses],
             # Facility nameplate capacity is a physical quantity — use the same
@@ -1168,6 +1200,7 @@ class CIApplicationServices:
         user: UserProfile,
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
+        self._validate_priority_score(priority_score)
         ci_application.preliminary_risk_assessment = risk_assessment.value
         ci_application.priority_score = priority_score
         ci_application.verification_1_user_id = user.user_profile_id
@@ -1190,6 +1223,7 @@ class CIApplicationServices:
         user: UserProfile,
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
+        self._validate_priority_score(priority_score)
         if ci_application.preliminary_risk_assessment not in {
             CIRiskAssessmentEnum.Medium.value,
             CIRiskAssessmentEnum.High.value,
@@ -1274,6 +1308,18 @@ class CIApplicationServices:
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
         return await self._to_full_schema_with_user(ci)
+
+    def _validate_priority_score(self, priority_score: Optional[int]) -> None:
+        if (
+            not isinstance(priority_score, int)
+            or isinstance(priority_score, bool)
+            or priority_score < 1
+            or priority_score > 999
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Priority score is required and must be a whole number from 1 to 999.",
+            )
 
     def _require_submitted_workflow(self, ci_application: CIApplication) -> None:
         if (
@@ -1362,6 +1408,7 @@ class CIApplicationServices:
     async def _validate_step2_payload(
         self,
         data: CIApplicationStep2Schema,
+        organization_id: Optional[int] = None,
     ) -> dict:
         """
         Cross-row validation of Step 2:
@@ -1424,6 +1471,19 @@ class CIApplicationServices:
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Row {index}: invalid fuel code iteration.",
                     )
+                # Renewals must reference a fuel code owned by the
+                # application's organization.
+                if (
+                    organization_id is not None
+                    and fuel_codes[row.fuel_code_id].organization_id != organization_id
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=(
+                            f"Row {index}: the selected fuel code iteration "
+                            "belongs to another organization."
+                        ),
+                    )
             else:
                 # New (or any other non-Renewal) row must not reference a fuel code.
                 if row.fuel_code_id is not None:
@@ -1467,7 +1527,7 @@ class CIApplicationServices:
                 ),
             )
 
-        await self._validate_step2_payload(data)
+        await self._validate_step2_payload(data, ci_application.organization_id)
         previous_pathway_entities = (
             _latest_active_pathways(list(ci_application.pathways or []))
             if is_supplemental_edit
@@ -1760,6 +1820,40 @@ class CIApplicationServices:
     # Step 5 — Government decision & comments
     # ------------------------------------------------------------------
 
+    async def _approve_generated_fuel_codes(
+        self, ci_application: CIApplication
+    ) -> None:
+        """
+        Advance the fuel codes generated for a CI application from Draft to
+        Approved when the application is approved (Completed), so their status
+        reflects the application decision instead of remaining stuck in Draft
+        (see #4654). Codes that are already Approved are left untouched, and the
+        ``approval_date`` mirrors the application's approval date.
+        """
+        associations = (
+            getattr(ci_application, "generated_fuel_code_associations", None) or []
+        )
+        if not associations:
+            return
+
+        approved_status = await self.fuel_repo.get_fuel_status_by_status(
+            FuelCodeStatusEnum.Approved
+        )
+        approval_date = (
+            ci_application.approval_date or datetime.now(timezone.utc)
+        ).date()
+
+        for association in associations:
+            fuel_code = association.fuel_code
+            if fuel_code is None:
+                continue
+            if fuel_code.fuel_status_id == approved_status.fuel_code_status_id:
+                continue
+            fuel_code.fuel_code_status = approved_status
+            fuel_code.fuel_status_id = approved_status.fuel_code_status_id
+            fuel_code.approval_date = approval_date
+            fuel_code.action_type = ActionTypeEnum.UPDATE
+
     @service_handler
     async def record_decision(
         self,
@@ -1836,6 +1930,7 @@ class CIApplicationServices:
         if data.status == CIApplicationStatusEnum.Completed:
             ci_application.approval_user_id = user.user_profile_id
             ci_application.approval_date = datetime.now(timezone.utc)
+            await self._approve_generated_fuel_codes(ci_application)
         elif (
             data.status == CIApplicationStatusEnum.Submitted
             and current_status == CIApplicationStatusEnum.Recommended.value

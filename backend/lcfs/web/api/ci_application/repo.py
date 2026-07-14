@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import String, and_, asc, case, cast, desc, func, select
+from sqlalchemy import Integer, and_, asc, case, cast, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -34,20 +34,17 @@ from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
 from lcfs.db.models.comment.InternalComment import InternalComment
-from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
+from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.organization.Organization import Organization
-from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.Role import Role, RoleEnum
+from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
-from lcfs.web.api.base import (
-    PaginationRequestSchema,
-    apply_filter_conditions,
-)
+from lcfs.web.api.base import PaginationRequestSchema, apply_filter_conditions
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -185,13 +182,33 @@ class CIApplicationRepository:
         return result.scalars().all()
 
     @repo_handler
-    async def get_approved_fuel_codes(self) -> Sequence[FuelCode]:
+    async def get_approved_fuel_codes(
+        self, organization_id: Optional[int] = None
+    ) -> Sequence[FuelCode]:
         """
         Approved fuel codes the applicant can renew. Eagerly loads the
         prefix (for display string assembly) and the fuel type (used to
         auto-populate locked grid cells when a renewal row is selected).
+
+        Only the *latest iteration* of each fuel code group is returned. A
+        group is a shared prefix + base suffix (the part before the ``.`` in
+        ``fuel_suffix``, e.g. ``102`` in ``102.3``); iterations are the numeric
+        sub-versions, and a renewal always continues from the most recent one.
+        This covers both current and archived fuel codes — an "archived" code
+        is still ``Approved`` status, only its effective/expiration dates place
+        it outside the current compliance period — so an expired series is
+        still renewable from its last iteration.
+
+        When ``organization_id`` is provided, only iterations owned by that
+        organization are returned — BCeID CI applicants must not see other
+        organizations' fuel codes. ``None`` returns all approved codes
+        (government callers).
         """
-        result = await self.db.execute(
+        base_suffix = func.split_part(FuelCode.fuel_suffix, ".", 1)
+        main_version = cast(base_suffix, Integer)
+        sub_version = cast(func.split_part(FuelCode.fuel_suffix, ".", 2), Integer)
+
+        query = (
             select(FuelCode)
             .options(
                 selectinload(FuelCode.fuel_code_prefix),
@@ -200,8 +217,19 @@ class CIApplicationRepository:
             )
             .join(FuelCode.fuel_code_status)
             .where(FuelCodeStatus.status == FuelCodeStatusEnum.Approved)
-            .order_by(FuelCode.fuel_code_id)
+            # One row per (prefix, base suffix) group, keeping the highest
+            # iteration — DISTINCT ON needs the leading ORDER BY to match.
+            .distinct(FuelCode.prefix_id, base_suffix)
+            .order_by(
+                FuelCode.prefix_id,
+                base_suffix,
+                desc(main_version),
+                desc(sub_version),
+            )
         )
+        if organization_id is not None:
+            query = query.where(FuelCode.organization_id == organization_id)
+        result = await self.db.execute(query)
         return result.scalars().all()
 
     # ------------------------------------------------------------------

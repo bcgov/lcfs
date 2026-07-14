@@ -14,7 +14,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import EmailStr, Field, field_validator, model_validator
+from pydantic import EmailStr, Field, StrictInt, field_validator, model_validator
 
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
@@ -442,12 +442,12 @@ class CIApplicationAnalystAssignmentSchema(BaseSchema):
 
 class CIApplicationVerification1Schema(BaseSchema):
     preliminary_risk_assessment: CIRiskAssessmentEnum
-    priority_score: Optional[int] = Field(default=None, ge=0)
+    priority_score: Optional[StrictInt] = Field(default=None, ge=1, le=999)
 
 
 class CIApplicationVerification2Schema(BaseSchema):
     preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
-    priority_score: Optional[int] = Field(default=None, ge=0)
+    priority_score: Optional[StrictInt] = Field(default=None, ge=1, le=999)
 
 
 # ---------------------------------------------------------------------------
