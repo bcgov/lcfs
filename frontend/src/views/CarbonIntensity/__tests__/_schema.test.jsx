@@ -97,6 +97,25 @@ describe('ciApplicationsColDefs (IDIR)', () => {
     expect(typeof comment.cellRenderer).toBe('function')
   })
 
+  it('uses AG Grid date filters for date columns', () => {
+    const cols = ciApplicationsColDefs(t, { isGovernment: true })
+    const effectiveDate = cols.find(
+      (c) => c.field === 'proposedFuelCodeEffectiveDate'
+    )
+    const lastUpdated = cols.find((c) => c.field === 'updateDate')
+
+    expect(effectiveDate.filter).toBe('agDateColumnFilter')
+    expect(lastUpdated.filter).toBe('agDateColumnFilter')
+    expect(effectiveDate.floatingFilterComponent).toBeDefined()
+    expect(lastUpdated.floatingFilterComponent).toBeDefined()
+    expect(effectiveDate.floatingFilterComponentParams).toMatchObject({
+      initialFilterType: 'equals'
+    })
+    expect(lastUpdated.floatingFilterComponentParams).toMatchObject({
+      initialFilterType: 'equals'
+    })
+  })
+
   it('passes onRefresh through to the assigned analyst cell renderer', () => {
     const onRefresh = vi.fn()
     const cols = ciApplicationsColDefs(t, { isGovernment: true, onRefresh })

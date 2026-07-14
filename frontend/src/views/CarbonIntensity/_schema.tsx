@@ -77,6 +77,10 @@ const DATE_FILTER_PARAMS = {
   buttons: ['clear']
 }
 
+const DATE_FLOATING_FILTER_PARAMS = {
+  initialFilterType: 'equals'
+}
+
 // "Production facility Location" matches the wireframe: city + optional
 // province/state, then country. We bake this in the frontend rather than on
 // the API because each piece is already on the row.
@@ -153,9 +157,10 @@ const proposedEffectiveCol = (t) => ({
   headerName: t('carbonIntensity:columns.proposedEffectiveDate'),
   minWidth: 300,
   valueFormatter: dateFormatter,
-  filter: BCDateFloatingFilter,
+  filter: 'agDateColumnFilter',
   filterParams: DATE_FILTER_PARAMS,
   floatingFilterComponent: BCDateFloatingFilter,
+  floatingFilterComponentParams: DATE_FLOATING_FILTER_PARAMS,
   suppressFloatingFilterButton: true
 })
 
@@ -176,12 +181,13 @@ const productionFacilityLocationCol = (t) => ({
 const lastUpdatedCol = (t) => ({
   field: 'updateDate',
   headerName: t('carbonIntensity:columns.lastUpdated'),
-  minWidth: 220,
+  minWidth: 300,
   valueFormatter: dateFormatter,
   sort: 'desc',
-  filter: BCDateFloatingFilter,
+  filter: 'agDateColumnFilter',
   filterParams: DATE_FILTER_PARAMS,
   floatingFilterComponent: BCDateFloatingFilter,
+  floatingFilterComponentParams: DATE_FLOATING_FILTER_PARAMS,
   suppressFloatingFilterButton: true
 })
 
