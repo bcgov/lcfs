@@ -499,6 +499,13 @@ class TransferServices:
                 transfer.transfer_category.category == TransferCategoryEnum.A
                 or transfer.transfer_category.category == TransferCategoryEnum.A.value
             ) and self.is_a1_transfer(transfer)
+            # A pre-assigned category (e.g. zero-dollar Category D) skips the
+            # auto-categorization above, so stamp the recorded date here too —
+            # summary Lines 12/13 filter transfers by this date.
+            if transfer.transaction_effective_date is None:
+                transfer.transaction_effective_date = datetime.now(
+                    ZoneInfo("America/Vancouver")
+                ).date()
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(
