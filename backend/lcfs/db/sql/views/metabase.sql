@@ -3542,6 +3542,160 @@ FROM
   LEFT JOIN finished_fuel_transport_modes_agg finishedftma ON fc.fuel_code_id = finishedftma.fuel_code_id
   LEFT JOIN feedstock_fuel_transport_modes_agg feedstockftma ON fc.fuel_code_id = feedstockftma.fuel_code_id;
 GRANT SELECT ON vw_fuel_supply_analytics_base TO basic_lcfs_reporting_role;
+
+-- ==========================================
+-- Fuel Supply Annual Aggregate View
+-- ==========================================
+DROP VIEW IF EXISTS vw_fuel_supply_annual CASCADE;
+CREATE OR REPLACE VIEW vw_fuel_supply_annual AS
+SELECT
+  compliance_year::int AS reporting_year,
+  fuel_category::text AS fuel_category,
+  fuel_type::text AS fuel_type,
+  fuel_units::text AS fuel_units,
+  SUM(
+    CASE
+      WHEN COALESCE(quantity, 0) > 0 THEN quantity
+      ELSE COALESCE(q1_quantity, 0)
+        + COALESCE(q2_quantity, 0)
+        + COALESCE(q3_quantity, 0)
+        + COALESCE(q4_quantity, 0)
+    END
+  ) AS total_volume,
+  SUM(COALESCE(energy_content, 0)) AS total_energy_content,
+  SUM(COALESCE(compliance_units, 0)) AS total_compliance_units
+FROM vw_fuel_supply_analytics_base
+WHERE compliance_year ~ '^[0-9]{4}$'
+GROUP BY
+  compliance_year::int,
+  fuel_category::text,
+  fuel_type::text,
+  fuel_units::text;
+
+GRANT SELECT ON vw_fuel_supply_annual TO basic_lcfs_reporting_role;
+
+-- ==========================================
+-- Fuel Supply YoY View
+-- ==========================================
+DROP VIEW IF EXISTS vw_fuel_supply_yoy;
+CREATE OR REPLACE VIEW vw_fuel_supply_yoy AS
+WITH supply_with_prior AS (
+  SELECT
+    reporting_year,
+    fuel_category,
+    fuel_type,
+    fuel_units,
+    total_volume,
+    total_energy_content,
+    total_compliance_units,
+    LAG(total_volume) OVER (
+      PARTITION BY fuel_category, fuel_type, fuel_units
+      ORDER BY reporting_year
+    ) AS prior_year_volume,
+    LAG(total_energy_content) OVER (
+      PARTITION BY fuel_category, fuel_type, fuel_units
+      ORDER BY reporting_year
+    ) AS prior_year_energy_content
+  FROM vw_fuel_supply_annual
+)
+SELECT
+  reporting_year,
+  fuel_category,
+  fuel_type,
+  fuel_units,
+  total_volume,
+  prior_year_volume,
+  total_volume - prior_year_volume AS volume_change,
+  ROUND(
+    100.0 * (total_volume - prior_year_volume)::numeric
+      / NULLIF(prior_year_volume, 0)::numeric,
+    2
+  ) AS pct_change_yoy,
+  total_energy_content,
+  prior_year_energy_content,
+  total_energy_content - prior_year_energy_content AS energy_content_change,
+  total_compliance_units
+FROM supply_with_prior;
+
+GRANT SELECT ON vw_fuel_supply_yoy TO basic_lcfs_reporting_role;
+
+-- ==========================================
+-- Fuel Category YoY View
+-- ==========================================
+DROP VIEW IF EXISTS vw_fuel_category_yoy;
+CREATE OR REPLACE VIEW vw_fuel_category_yoy AS
+WITH category_supply AS (
+  SELECT
+    reporting_year,
+    fuel_category,
+    fuel_units,
+    SUM(total_volume) AS total_volume,
+    SUM(total_energy_content) AS total_energy_content,
+    SUM(total_compliance_units) AS total_compliance_units
+  FROM vw_fuel_supply_annual
+  GROUP BY
+    reporting_year,
+    fuel_category,
+    fuel_units
+),
+category_supply_with_prior AS (
+  SELECT
+    reporting_year,
+    fuel_category,
+    fuel_units,
+    total_volume,
+    total_energy_content,
+    total_compliance_units,
+    LAG(total_volume) OVER (
+      PARTITION BY fuel_category, fuel_units
+      ORDER BY reporting_year
+    ) AS prior_year_volume
+  FROM category_supply
+)
+SELECT
+  reporting_year,
+  fuel_category,
+  fuel_units,
+  total_volume,
+  prior_year_volume,
+  total_volume - prior_year_volume AS volume_change,
+  ROUND(
+    100.0 * (total_volume - prior_year_volume)::numeric
+      / NULLIF(prior_year_volume, 0)::numeric,
+    2
+  ) AS pct_change_yoy,
+  ROUND(
+    100.0 * total_volume::numeric
+      / NULLIF(SUM(total_volume) OVER (PARTITION BY reporting_year, fuel_units), 0)::numeric,
+    2
+  ) AS pct_of_total_supply,
+  total_energy_content,
+  total_compliance_units
+FROM category_supply_with_prior;
+
+GRANT SELECT ON vw_fuel_category_yoy TO basic_lcfs_reporting_role;
+
+-- ==========================================
+-- Fuel Type Composition View
+-- ==========================================
+DROP VIEW IF EXISTS vw_fuel_type_composition;
+CREATE OR REPLACE VIEW vw_fuel_type_composition AS
+SELECT
+  reporting_year,
+  fuel_category,
+  fuel_type,
+  fuel_units,
+  total_volume,
+  ROUND(
+    100.0 * total_volume::numeric
+      / NULLIF(SUM(total_volume) OVER (PARTITION BY reporting_year, fuel_category, fuel_units), 0)::numeric,
+    2
+  ) AS pct_of_category,
+  total_energy_content,
+  total_compliance_units
+FROM vw_fuel_supply_annual;
+
+GRANT SELECT ON vw_fuel_type_composition TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Fuel Export Analytics Base View
 -- ==========================================
