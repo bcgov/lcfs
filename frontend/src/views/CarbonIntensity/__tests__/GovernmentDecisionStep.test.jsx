@@ -480,7 +480,7 @@ describe('GovernmentDecisionStep', () => {
     ).not.toBeDisabled()
   })
 
-  it('disables only the clicked request button and records supplier wait start', async () => {
+  it('opens the documentation modal and records supplier wait start without disabling the button', async () => {
     mockUserRoles = [{ name: roles.analyst }]
     const onDocumentUploadClick = vi.fn()
     const onSupplierRequest = vi.fn()
@@ -496,7 +496,9 @@ describe('GovernmentDecisionStep', () => {
 
     fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
 
-    expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
+    // Opening the modal is not a completed action, so the button stays enabled
+    // and remains clickable after the modal is cancelled (#4651).
+    expect(screen.getByTestId('ci-request-documentation-btn')).not.toBeDisabled()
     expect(
       screen.getByTestId('ci-request-pathway-changes-btn')
     ).not.toBeDisabled()
