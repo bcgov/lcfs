@@ -8,11 +8,12 @@ Government decision) plug into the same data-access surface.
 """
 
 import math
+import re
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import Integer, and_, asc, case, cast, desc, func, select
+from sqlalchemy import Integer, String, and_, asc, case, cast, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -80,6 +81,19 @@ def _resolve_value(f):
     if f.filter_type == "set":
         return f.values or []
     return f.filter
+
+
+def _build_ci_application_id_condition(f):
+    """Filter ci_application_id while ignoring non-digit input characters."""
+    raw = _resolve_value(f)
+    if raw is None:
+        return None
+    digits_only = re.sub(r"\D", "", str(raw))
+    if not digits_only:
+        return None
+
+    raw_id = cast(CIApplication.ci_application_id, String)
+    return apply_filter_conditions(raw_id, digits_only, f.type, "text")
 
 
 def _build_status_condition(f):
@@ -416,6 +430,12 @@ class CIApplicationRepository:
     def _apply_filters(self, pagination: PaginationRequestSchema) -> list:
         conditions = []
         for f in pagination.filters:
+            if f.field == "ci_application_id":
+                cond = _build_ci_application_id_condition(f)
+                if cond is not None:
+                    conditions.append(cond)
+                continue
+            
             nested_builder = _NESTED_FILTER_BUILDERS.get(f.field)
             if nested_builder is not None:
                 cond = nested_builder(f)

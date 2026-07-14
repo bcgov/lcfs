@@ -139,11 +139,12 @@ const idCol = (t) => ({
   field: 'ciApplicationId',
   headerName: t('carbonIntensity:columns.ciApplicationId'),
   valueFormatter: (params) => `CI${params.value}`,
-  minWidth: 90,
-  maxWidth: 110,
+  filterValueGetter: (params) => `CI${params.data?.ciApplicationId ?? ''}`,
+  minWidth: 150,
+  maxWidth: 220,
   sortable: true,
-  filter: 'agNumberColumnFilter',
-  filterParams: NUMBER_FILTER_PARAMS,
+  filter: 'agTextColumnFilter',
+  filterParams: TEXT_FILTER_PARAMS,
   suppressFloatingFilterButton: true
 })
 
