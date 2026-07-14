@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import Integer, and_, asc, case, cast, desc, func, select
+from sqlalchemy import Integer, String, and_, asc, case, cast, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -122,7 +122,6 @@ def _build_production_facility_location_condition(f):
 
 
 _NESTED_FILTER_BUILDERS = {
-    "ci_application_id": _build_ci_application_id_condition,
     "status.status": _build_status_condition,
     "organization.name": _build_organization_condition,
     "production_facility_location": _build_production_facility_location_condition,
@@ -431,6 +430,12 @@ class CIApplicationRepository:
     def _apply_filters(self, pagination: PaginationRequestSchema) -> list:
         conditions = []
         for f in pagination.filters:
+            if f.field == "ci_application_id":
+                cond = _build_ci_application_id_condition(f)
+                if cond is not None:
+                    conditions.append(cond)
+                continue
+            
             nested_builder = _NESTED_FILTER_BUILDERS.get(f.field)
             if nested_builder is not None:
                 cond = nested_builder(f)
