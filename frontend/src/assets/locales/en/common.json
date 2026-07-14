@@ -39,6 +39,97 @@
   },
   "publicDashboard": {
     "cardTitle": "LCFS program information",
+    "hero": {
+      "title": "Cleaner fuels, measured in the open",
+      "subtitle": "British Columbia's Low Carbon Fuel Standard reduces the carbon intensity of transportation fuels supplied in the province, lowering greenhouse gas emissions and supporting cleaner, lower-carbon alternatives."
+    },
+    "impact": {
+      "heading": "tonnes of CO₂e reduced",
+      "equivalent": "About the same as taking {{cars}} cars off the road for a year",
+      "note": "Since the program began"
+    },
+    "stats": {
+      "creditsTraded": "Credits traded",
+      "avgPrice": "Average price (VWAP)",
+      "outstandingCredits": "Outstanding credits",
+      "participatingOrgs": "Participating organizations"
+    },
+    "market": {
+      "title": "Credit market snapshot",
+      "subtitle": "Volume-weighted average price per credit, with high/low range",
+      "aggregatedNote": "Aggregated · anonymized",
+      "noData": "Market data is not available right now.",
+      "priceSeries": "Average price",
+      "rangeSeries": "Price range",
+      "volumeSeries": "Volume",
+      "avgPriceCaption": "avg price (VWAP), {{period}}",
+      "explore": "Explore the full market data"
+    },
+    "intro": {
+      "programTitle": "About the Low Carbon Fuel Standard",
+      "programBody": "The Low Carbon Fuels Act and its two regulations form British Columbia's Low Carbon Fuel Standard, which sets requirements that encourage the use of renewable and low carbon fuels and offers incentives to organizations that supply them, based on how much these fuels reduce greenhouse gas emissions compared to conventional fuels.",
+      "siteTitle": "Using this site",
+      "siteBody": "This site provides public access to program tools and data — including the compliance unit calculator, approved carbon intensities, and credit market information. Registered fuel suppliers and government staff can log in to file and review compliance reports."
+    },
+    "toolsTitle": "Public tools",
+    "toolsSubtitle": "Open data and calculators — available to everyone.",
+    "legislation": {
+      "title": "Legislation and requirements",
+      "renewable": "Renewable and low carbon fuels program",
+      "requirements": "Program requirements"
+    },
+    "marketData": {
+      "title": "Credit market data",
+      "subtitle": "Credit transfer activity under the Low Carbon Fuel Standard. Prices are volume-weighted averages across all reported transfers; individual transactions are never shown.",
+      "aggregatedNote": "Aggregated · anonymized",
+      "downloadCsv": "Download CSV",
+      "vsYearAgo": "vs {{period}}",
+      "kpi": {
+        "transfers": "Transfers",
+        "totalVolume": "Total volume (credits)",
+        "avgPrice": "Weighted average price"
+      },
+      "allTimeTitle": "All time",
+      "allTime": {
+        "volume": "Volume (credits)",
+        "transfers": "Transfers",
+        "avgPrice": "Weighted average price",
+        "transferValue": "Total transfer value"
+      },
+      "chartTitle": "Price and volume over time",
+      "chartSubtitle": "Volume-weighted average price per credit and credits traded",
+      "granularity": {
+        "month": "Monthly",
+        "quarter": "Quarterly",
+        "year": "Annual"
+      },
+      "tables": {
+        "monthly": "Monthly market report",
+        "quarterly": "Quarterly market report",
+        "annual": "Annual market report",
+        "period": "Period",
+        "transfers": "Transfers (#)",
+        "volume": "Volume (credits)",
+        "avgPrice": "Weighted average price",
+        "transferValue": "Transfer value",
+        "noData": "No published periods for this granularity yet."
+      },
+      "about": {
+        "title": "About this data",
+        "body": "Figures are aggregated from credit transfers recorded under the Low Carbon Fuels Act. Periods with fewer than five transfers or three participating organizations are withheld to protect confidentiality, and no individual transaction prices are shown. Data may be restated as late reports are received."
+      }
+    },
+    "tools": {
+      "calculatorDesc": "Estimate credits for a fuel and quantity.",
+      "calculationDataDesc": "Carbon intensities and energy density factors.",
+      "approvedCarbonIntensitiesDesc": "Published fuel code bulletins.",
+      "releaseNotesDesc": "Recent updates and change history."
+    },
+    "login": {
+      "prompt": "Are you a fuel supplier or government analyst? Log in to file and review compliance reports.",
+      "bceid": "Log in with BCeID",
+      "idir": "Log in with IDIR"
+    },
     "links": {
       "calculator": "Compliance unit calculator",
       "calculationData": "Calculation data",

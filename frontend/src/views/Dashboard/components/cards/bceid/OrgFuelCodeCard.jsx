@@ -6,17 +6,24 @@ import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import withRole from '@/utils/withRole'
+import { withFeatureFlag } from '@/utils/withFeatureFlag'
 import { roles } from '@/constants/roles'
+import { FEATURE_FLAGS } from '@/constants/config'
 import { ROUTES } from '@/routes/routes'
 import { useOrgFuelCodeCounts } from '@/hooks/useDashboard'
 
-const CountDisplay = ({ count }) => (
+// When `hidden`, the number is rendered invisibly but still occupies layout,
+// so plain links (with no count) share the same indent and row height as the
+// counted links above them.
+const CountDisplay = ({ count, hidden = false }) => (
   <BCTypography
     component="span"
     variant="h3"
+    aria-hidden={hidden || undefined}
     sx={{
       color: 'success.main',
-      marginX: 3
+      marginX: 3,
+      ...(hidden && { visibility: 'hidden' })
     }}
   >
     {count}
@@ -44,7 +51,12 @@ const OrgFuelCodeCard = () => {
     return count > 0 ? (
       <ListItemButton component="a" onClick={onClick}>
         <CountDisplay count={count} />
-        <BCTypography variant="body2" color="link" sx={linkSx} onClick={onClick}>
+        <BCTypography
+          variant="body2"
+          color="link"
+          sx={linkSx}
+          onClick={onClick}
+        >
           {text}
         </BCTypography>
       </ListItemButton>
@@ -52,7 +64,8 @@ const OrgFuelCodeCard = () => {
   }
 
   const renderPlainLink = (text, onClick) => (
-    <ListItemButton component="a" sx={{ pl: '4.2rem' }} onClick={onClick}>
+    <ListItemButton component="a" onClick={onClick}>
+      <CountDisplay count={0} hidden />
       <BCTypography variant="body2" color="link" sx={linkSx} onClick={onClick}>
         {text}
       </BCTypography>
@@ -114,4 +127,13 @@ const OrgFuelCodeCard = () => {
 const AllowedRoles = [roles.ci_applicant]
 const OrgFuelCodeCardWithRole = withRole(OrgFuelCodeCard, AllowedRoles)
 
-export default OrgFuelCodeCardWithRole
+// Gate the card behind the CI applications feature flag (off in prod) so it
+// only appears where the feature is enabled — mirroring the flag gating on the
+// CI application routes. No redirect: this is a dashboard card, not a route, so
+// it simply renders nothing when the flag is off.
+const OrgFuelCodeCardGated = withFeatureFlag(
+  OrgFuelCodeCardWithRole,
+  FEATURE_FLAGS.CI_APPLICATIONS
+)
+
+export default OrgFuelCodeCardGated
