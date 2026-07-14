@@ -5,6 +5,8 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import HTTPException
+from pydantic import ValidationError
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.ci_application import CIApplication, CIApplicationStatus
@@ -20,6 +22,9 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationStatusEnum,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
+    CIApplicationVerification1Schema,
+    CIApplicationVerification2Schema,
+    CIRiskAssessmentEnum,
     CITableOptionsSchema,
     PathwayInputSchema,
 )
@@ -33,6 +38,90 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+)
+def test_verification_priority_score_requires_whole_number_1_to_999(schema):
+    payload = {"priorityScore": 120}
+    if schema is CIApplicationVerification1Schema:
+        payload["preliminaryRiskAssessment"] = "Low"
+
+    result = schema.model_validate(payload)
+
+    assert result.priority_score == 120
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+)
+@pytest.mark.parametrize("payload", [{}, {"priorityScore": None}])
+def test_verification_priority_score_schema_allows_null_when_not_completing_status(
+    schema, payload
+):
+    data = dict(payload)
+    if schema is CIApplicationVerification1Schema:
+        data["preliminaryRiskAssessment"] = "Low"
+
+    result = schema.model_validate(data)
+
+    assert result.priority_score is None
+
+
+@pytest.mark.parametrize(
+    "priority_score",
+    [0, 1000, 10.5, "10"],
+)
+@pytest.mark.parametrize(
+    "schema",
+    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+)
+def test_verification_priority_score_rejects_decimal_and_out_of_range(
+    schema, priority_score
+):
+    payload = {"priorityScore": priority_score}
+    if schema is CIApplicationVerification1Schema:
+        payload["preliminaryRiskAssessment"] = "Low"
+
+    with pytest.raises(ValidationError):
+        schema.model_validate(payload)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("priority_score", [None, 0, 1000, 10.5])
+async def test_complete_verification_1_requires_valid_priority_score(
+    service, mock_user, priority_score
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.complete_verification_1(
+            ci, CIRiskAssessmentEnum.Low, priority_score, mock_user
+        )
+
+    assert exc.value.status_code == 400
+    assert "Priority score is required" in exc.value.detail
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("priority_score", [None, 0, 1000, 10.5])
+async def test_complete_verification_2_requires_valid_priority_score(
+    service, mock_user, priority_score
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.Medium.value
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.complete_verification_2(
+            ci, CIRiskAssessmentEnum.Medium, priority_score, mock_user
+        )
+
+    assert exc.value.status_code == 400
+    assert "Priority score is required" in exc.value.detail
 
 
 @pytest.fixture
@@ -370,7 +459,7 @@ def _fuel_type_obj(ident=1, name="Biodiesel"):
     )
 
 
-def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF"):
+def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF", organization_id=1):
     return SimpleNamespace(
         fuel_code_id=ident,
         fuel_suffix=suffix,
@@ -380,6 +469,7 @@ def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF"):
         feedstock="Corn",
         feedstock_location="Ontario, CA",
         fuel_code_prefix=FuelCodePrefix(prefix=prefix),
+        organization_id=organization_id,
     )
 
 
@@ -737,6 +827,30 @@ async def test_update_step2_renewal_with_valid_fuel_code(service, repo, mock_use
 
 
 @pytest.mark.anyio
+async def test_update_step2_renewal_rejects_other_org_fuel_code(
+    service, repo, mock_user
+):
+    """A renewal cannot reference a fuel code owned by another organization."""
+    ci = _ci_application()  # organization_id == 1
+    ci.pathways = []
+    _stub_step2_lookups(repo, with_fuel_code=True)
+    # Fuel code 42 is owned by a different organization.
+    repo.get_fuel_codes_by_ids.return_value = [_fuel_code_obj(organization_id=2)]
+    repo.replace_pathways.return_value = []
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    payload = CIApplicationStep2Schema(
+        pathways=[_new_pathway_input(application_type_id=2, fuel_code_id=42)],
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step2(ci, payload, mock_user)
+    assert exc.value.status_code == 403
+    repo.replace_pathways.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_step2_schema_requires_at_least_one_pathway():
     import pydantic
 
@@ -809,8 +923,6 @@ async def test_update_step3_rejects_when_ghgenius_missing(service, repo, mock_us
 # ---------------------------------------------------------------------------
 # Step 4 — Sign & submit
 # ---------------------------------------------------------------------------
-
-from fastapi import HTTPException
 
 
 @pytest.mark.anyio
@@ -1246,6 +1358,41 @@ async def test_step5_decision_accepts_recommended_status(service, repo, mock_use
 
     assert ci.status_id == completed.ci_application_status_id
     assert ci.approval_date is not None
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step5_completed_approves_generated_fuel_codes(
+    service, repo, mock_user
+):
+    """Approving a CI application moves its generated fuel codes to Approved (#4654)."""
+    # Generate Draft fuel codes through the real generation flow.
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    _stub_generation_dependencies(service, repo, ci)
+    await service.generate_fuel_codes(ci, mock_user)
+
+    generated_fuel_code = ci.generated_fuel_code_associations[0].fuel_code
+    assert generated_fuel_code.fuel_code_status.status == FuelCodeStatusEnum.Draft
+    assert generated_fuel_code.approval_date is None
+
+    # Now approve the application as a Director.
+    mock_user.role_names = {RoleEnum.DIRECTOR}
+    ci.ci_application_status = _status("Recommended", 3)
+    approved_status = FuelCodeStatus(
+        fuel_code_status_id=3, status=FuelCodeStatusEnum.Approved
+    )
+    service.fuel_repo.get_fuel_status_by_status.return_value = approved_status
+    repo.get_status_by_name.return_value = _status("Completed", 4)
+
+    result = await service.record_decision(
+        ci, _decision_payload("Completed"), mock_user, is_government=True
+    )
+
+    assert generated_fuel_code.fuel_code_status == approved_status
+    assert generated_fuel_code.fuel_status_id == 3
+    assert generated_fuel_code.approval_date is not None
+    assert generated_fuel_code.action_type == ActionTypeEnum.UPDATE
     assert isinstance(result, CIApplicationSchema)
 
 
