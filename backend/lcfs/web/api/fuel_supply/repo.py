@@ -1208,6 +1208,9 @@ class FuelSupplyRepository:
                         "fuelType": fuel_type_name,
                         "fuelCategory": fuel_type_data.get("fuel_category"),
                         "totalVolume": fuel_type_data.get("total_volume", 0),
+                        "fossilDerived": fuel_type_data.get(
+                            "fossil_derived", False
+                        ),
                     }
                 )
 

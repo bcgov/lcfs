@@ -458,6 +458,41 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     }
   }, [analytics.fuelTypeVolumeTrend])
 
+  const renewableSupplyVolumeChangeData = useMemo(() => {
+    const rows = analytics.fuelTypeVolumeTrend || []
+    const years = Array.from(
+      new Set(rows.map((row) => row.reportingYear))
+    ).sort()
+    const groups = [
+      t('org:supplyHistory.analytics.renewable'),
+      t('org:supplyHistory.analytics.nonRenewable')
+    ]
+    const totalsByYearAndGroup = rows.reduce((acc, row) => {
+      const year = row.reportingYear
+      const group = row.fossilDerived
+        ? t('org:supplyHistory.analytics.nonRenewable')
+        : t('org:supplyHistory.analytics.renewable')
+      acc[year] ||= {}
+      acc[year][group] = (acc[year][group] || 0) + (row.totalVolume || 0)
+      return acc
+    }, {})
+
+    return {
+      labels: years,
+      series: groups.map((group) => ({
+        name: group,
+        type: 'bar',
+        data: years.map((year, index) => {
+          const current = totalsByYearAndGroup[year]?.[group] || 0
+          if (index === 0) return null
+          const previousYear = years[index - 1]
+          const previous = totalsByYearAndGroup[previousYear]?.[group] || 0
+          return current - previous
+        })
+      }))
+    }
+  }, [analytics.fuelTypeVolumeTrend, t])
+
   const topFuelCodesChartData = useMemo(() => {
     const rows = analytics.topFuelCodes || []
     return {
@@ -469,12 +504,15 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   const showComplianceUnitCreditDebitChart =
     complianceUnitCreditDebitTrendData.labels.length > 1
   const showFuelTypeVolumeTrendChart = fuelTypeVolumeTrendData.labels.length > 1
+  const showRenewableSupplyVolumeChangeChart =
+    renewableSupplyVolumeChangeData.labels.length > 1
   const showTopFuelCodesChart = topFuelCodesChartData.labels.length > 1
 
   const hasDashboardContent =
     dashboardMetricCards.length > 0 ||
     showComplianceUnitCreditDebitChart ||
     showFuelTypeVolumeTrendChart ||
+    showRenewableSupplyVolumeChangeChart ||
     showTopFuelCodesChart
 
   const complianceUnitCreditDebitTrendOption = useMemo(
@@ -580,6 +618,53 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
       series: fuelTypeVolumeTrendData.series
     }),
     [fuelTypeVolumeTrendData, t]
+  )
+
+  const renewableSupplyVolumeChangeOption = useMemo(
+    () => ({
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        valueFormatter: (value) => formatCompactAxisNumber(value)
+      },
+      legend: {
+        bottom: 0,
+        left: 8,
+        right: 8
+      },
+      grid: {
+        left: 8,
+        right: 12,
+        top: 20,
+        bottom: 70,
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        name: t('org:supplyHistory.analytics.complianceYear'),
+        data: renewableSupplyVolumeChangeData.labels,
+        axisLabel: {
+          hideOverlap: true
+        }
+      },
+      yAxis: {
+        type: 'value',
+        name: t('org:supplyHistory.analytics.volumeChange'),
+        axisLabel: {
+          formatter: (value) => formatCompactAxisNumber(value)
+        }
+      },
+      series: renewableSupplyVolumeChangeData.series.map((series) => ({
+        ...series,
+        itemStyle: {
+          color:
+            series.name === t('org:supplyHistory.analytics.renewable')
+              ? CHART_COLORS.green
+              : CHART_COLORS.orange
+        }
+      }))
+    }),
+    [renewableSupplyVolumeChangeData, t]
   )
 
   const topFuelCodesChartOption = useMemo(
@@ -721,6 +806,18 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                     title={t('org:supplyHistory.analytics.fuelTypeVolumeTrend')}
                     option={fuelTypeVolumeTrendOption}
                     height={380}
+                  />
+                </Grid>
+              )}
+
+              {showRenewableSupplyVolumeChangeChart && (
+                <Grid item xs={12} sx={{ minWidth: 0 }}>
+                  <ChartPanel
+                    title={t(
+                      'org:supplyHistory.analytics.renewableSupplyVolumeChange'
+                    )}
+                    option={renewableSupplyVolumeChangeOption}
+                    height={360}
                   />
                 </Grid>
               )}

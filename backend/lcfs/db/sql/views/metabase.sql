@@ -3563,7 +3563,12 @@ SELECT
     END
   ) AS total_volume,
   SUM(COALESCE(energy_content, 0)) AS total_energy_content,
-  SUM(COALESCE(compliance_units, 0)) AS total_compliance_units
+  SUM(COALESCE(compliance_units, 0)) AS total_compliance_units,
+  fossil_derived,
+  CASE
+      WHEN fossil_derived = TRUE THEN 'Non-renewable'
+      ELSE 'Renewable'
+  END AS renewable_group
 FROM vw_fuel_supply_analytics_base
 WHERE compliance_year ~ '^[0-9]{4}$'
 GROUP BY

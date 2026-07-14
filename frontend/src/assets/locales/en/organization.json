@@ -237,6 +237,9 @@
       "vsPreviousYear": "vs. previous year",
       "volumeChange": "volume change",
       "fuelTypeVolumeTrend": "Volume by fuel type over each compliance period",
+      "renewableSupplyVolumeChange": "Fuel supply volume change: renewable vs non-renewable",
+      "renewable": "Renewable",
+      "nonRenewable": "Non-renewable",
       "fuelTypeYoyMovers": "Fuel type YoY movers",
       "yoyChange": "YoY change"
     }
