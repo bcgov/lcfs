@@ -56,30 +56,33 @@ The `backend/migrate.sh` script is a utility to simplify common Alembic operatio
 
 The database schema is defined programmatically using SQLAlchemy ORM models.
 
-*   **Model Location**: `backend/lcfs/db/models/` (e.g., `user_model.py`, `report_model.py`, etc.).
+*   **Model Location**: `backend/lcfs/db/models/` (organized by domain, such as `organization/`, `compliance/`, `fuel/`, `transaction/`, and `transfer/`).
 *   These Python classes define the tables, columns, relationships, and constraints of the database.
 *   Alembic uses these model definitions (often by comparing them to the current database state) to auto-generate migration scripts.
 
 ## 3. Entity Relationship Diagram (ERD)
 
-*   An existing Entity Relationship Diagram is available: `LCFS_ERD_v0.2.0.drawio` (located in the project root).
-*   This diagram provides a visual representation of the database schema, including tables, columns, primary keys, foreign keys, and relationships.
+*   The current Entity Relationship Diagram is available: `LCFS_ERD_v0.3.0.drawio` (located in the project root).
+*   This diagram was regenerated from the current SQLAlchemy metadata and covers 112 database tables and 178 foreign key relationships.
+*   The v0.3.0 diagram is organized into 12 domain pages: Organization, User & Access, Compliance Reports, Final Supply Equipment, Charging Assets, Fuel, Transactions, Transfers, CI Applications, Documents & Comments, Notifications, and Administration & Audit.
+*   This diagram provides a visual representation of the database schema, including tables, columns, primary keys, foreign keys, and relationships. Gray tables are external one-hop references included to show cross-domain relationships.
 *   It is recommended to keep this diagram updated as the schema evolves. You can use [draw.io](https://app.diagrams.net/) (or a compatible desktop version) to view and edit this file.
 
 ## 4. Key Tables and Relationships (High-Level - To Be Expanded)
 
-*(This section should be populated based on the `LCFS_ERD_v0.2.0.drawio` file and a review of the SQLAlchemy models. It should list major entities and how they relate to each other.)*
+This section summarizes the major domains represented in `LCFS_ERD_v0.3.0.drawio`. The ERD should be used with the SQLAlchemy models for the full column-level view.
 
 Examples of potential key entities (based on typical LCFS requirements):
 
 *   **Users & Organizations**: User accounts, roles, permissions, and their association with organizations/companies.
 *   **Fuel Suppliers/Producers**: Information about entities involved in fuel production and supply.
-*   **Fuel Types**: Different types of low carbon fuels.
-*   **Compliance Reports**: Reports submitted for compliance periods, detailing fuel transactions, carbon intensities, credits/deficits.
-*   **Transactions**: Records of fuel transfers, sales, or consumption.
+*   **Fuel Types and Fuel Codes**: Fuel categories, fuel instances, fuel codes, carbon intensity values, energy densities, energy effectiveness ratios, and transport modes.
+*   **Compliance Reports**: Reports submitted for compliance periods, including fuel supplies, fuel exports, allocation agreements, notional transfers, other uses, summaries, report history, and organization snapshots.
+*   **Charging and Final Supply Equipment**: Charging sites, charging equipment, charging statuses, charging power outputs, final supply equipment, and registration numbers.
+*   **Transactions and Transfers**: Credit transactions, transfer records, transfer categories, transfer statuses, transfer comments, and transfer history.
 *   **Credit/Deficit Tracking**: Ledger for LCFS credits and deficits.
-*   **Notifications**: System notifications to users.
-*   **Audit Logs**: Tracking significant actions within the system.
+*   **Notifications**: Government notifications, notification messages, types, channels, and channel subscriptions.
+*   **Administration and Audit**: Administrative adjustments, initiative agreements, aggregator issuance, scheduled tasks, task executions, penalty logs, and audit logs.
 
 ## 5. Data Integrity
 

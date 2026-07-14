@@ -31,29 +31,34 @@ export const PublicPageLayout = () => {
       <Container
         maxWidth="lg"
         sx={{
-          marginTop: '1px',
+          marginTop: hideBreadcrumb ? 0 : '1px',
           paddingX: '40px',
           flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
           '@media (max-width: 920px)': {
-            marginTop: '2rem'
+            marginTop: hideBreadcrumb ? 0 : '2rem'
           }
         }}
         disableGutters
       >
-        <Stack spacing={2}>
+        <Stack spacing={2} sx={{ flexGrow: 1 }}>
           {!hideBreadcrumb && (
             <BCBox size={12}>
               <PublicBreadcrumb
-                rootLabel="Login"
-                rootPath={ROUTES.AUTH.LOGIN}
+                rootLabel="Home"
+                rootPath={ROUTES.PUBLIC_DASHBOARD}
               />
             </BCBox>
           )}
           <BCBox
             elevation={5}
             sx={{
-              padding: '.75rem 0rem',
-              minHeight: 'auto'
+              padding: hideBreadcrumb ? 0 : '.75rem 0 0',
+              minHeight: 'auto',
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column'
             }}
           >
             <Outlet />
