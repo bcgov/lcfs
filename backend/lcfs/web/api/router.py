@@ -34,6 +34,7 @@ from lcfs.web.api import (
     email,
     organization_snapshot,
     credit_ledger,
+    credit_market,
     forms,
     geocoder,
     charging_site,
@@ -56,6 +57,9 @@ api_router.include_router(echo.router, prefix="/echo", tags=["echo"])
 api_router.include_router(user.router, prefix="/users", tags=["users"])
 api_router.include_router(role.router, prefix="/roles", tags=["roles"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(
+    credit_market.router, prefix="/credit-market", tags=["credit-market"]
+)
 api_router.include_router(
     notification.router, prefix="/notifications", tags=["notifications"]
 )

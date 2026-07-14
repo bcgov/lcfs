@@ -38,7 +38,7 @@ function a11yProps(index) {
 export function CalculatorMenu({ tabIndex }) {
   const { t } = useTranslation(['common'])
   const navigate = useNavigate()
-  
+
   const paths = useMemo(
     () => [ROUTES.CREDIT_CALCULATOR, ROUTES.CALCULATION_DATA],
     []
@@ -65,7 +65,14 @@ export function CalculatorMenu({ tabIndex }) {
   return (
     <BCBox>
       <BCBox sx={{ mt: 2, bgcolor: 'background.paper' }}>
-        <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
+        <AppBar
+          position="static"
+          sx={{
+            boxShadow: 'none',
+            border: 'none',
+            backgroundColor: 'transparent'
+          }}
+        >
           <Tabs
             value={tabIndex}
             onChange={handleSetTabValue}
@@ -73,14 +80,22 @@ export function CalculatorMenu({ tabIndex }) {
             variant="scrollable"
             scrollButtons="auto"
             sx={{
-              backgroundColor: 'rgba(0, 0, 0, 0.08)',
+              borderBottom: '1px solid #D8D8D8',
               width: 'fit-content',
               maxWidth: { xs: '100%', md: '50%', lg: '40%' },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#003366',
+                height: '3px'
+              },
               '& .MuiTab-root': {
                 minWidth: 'auto',
                 paddingX: 3,
-                marginX: 1,
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                textTransform: 'none',
+                fontSize: '15px',
+                fontWeight: 600,
+                color: '#565656',
+                '&.Mui-selected': { color: '#003366', fontWeight: 700 }
               },
               '& .MuiTabs-flexContainer': {
                 flexWrap: 'nowrap'
