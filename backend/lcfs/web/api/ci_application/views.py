@@ -23,17 +23,17 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
     CIApplicationAnalystAssignmentSchema,
     CIApplicationDecisionSchema,
-    CIGeneratedFuelCodeSchema,
-    CIGeneratedFuelCodeUpdateSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
-    CIApplicationUserSchema,
-    CIApplicationVerification1Schema,
-    CIApplicationVerification2Schema,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
     CIApplicationStep4Schema,
+    CIApplicationUserSchema,
+    CIApplicationVerification1Schema,
+    CIApplicationVerification2Schema,
+    CIGeneratedFuelCodeSchema,
+    CIGeneratedFuelCodeUpdateSchema,
     CITableOptionsSchema,
 )
 from lcfs.web.api.ci_application.services import CIApplicationServices
@@ -60,8 +60,19 @@ async def get_table_options(
     request: Request,
     service: CIApplicationServices = Depends(),
 ) -> CITableOptionsSchema:
-    """Lookup data needed to render the CI application form (Step 1)."""
-    return await service.get_table_options()
+    """Lookup data needed to render the CI application form (Step 1).
+
+    Renewal fuel code iterations are scoped to the caller's organization:
+    government users see every approved iteration, while a supplier/CI
+    applicant only sees iterations owned by their own organization. A
+    supplier without an organization is fail-closed to no iterations.
+    """
+    organization_id: Optional[int] = None
+    if not user_has_roles(request.user, [RoleEnum.GOVERNMENT]):
+        org = request.user.organization
+        # -1 matches no fuel code, so a supplier with no org sees none.
+        organization_id = org.organization_id if org else -1
+    return await service.get_table_options(organization_id)
 
 
 @router.get(

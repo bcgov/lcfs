@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   apiToRow,
+  buildPathwayColDefs,
   isRenewalRow,
   rowToApiPayload,
   validatePathwayRow
@@ -33,14 +34,12 @@ const validRow = {
 
 describe('isRenewalRow', () => {
   it('returns true when application type matches Renewal', () => {
-    expect(
-      isRenewalRow({ applicationTypeId: 2 }, APPLICATION_TYPES)
-    ).toBe(true)
+    expect(isRenewalRow({ applicationTypeId: 2 }, APPLICATION_TYPES)).toBe(true)
   })
   it('returns false for New rows', () => {
-    expect(
-      isRenewalRow({ applicationTypeId: 1 }, APPLICATION_TYPES)
-    ).toBe(false)
+    expect(isRenewalRow({ applicationTypeId: 1 }, APPLICATION_TYPES)).toBe(
+      false
+    )
   })
   it('returns false for unset rows', () => {
     expect(isRenewalRow({}, APPLICATION_TYPES)).toBe(false)
@@ -70,7 +69,9 @@ describe('validatePathwayRow', () => {
 
   it('requires fuelCodeId on Renewal rows', () => {
     const renewal = { ...validRow, applicationTypeId: 2, fuelCodeId: null }
-    expect(validatePathwayRow(renewal, APPLICATION_TYPES)).toContain('fuelCodeId')
+    expect(validatePathwayRow(renewal, APPLICATION_TYPES)).toContain(
+      'fuelCodeId'
+    )
   })
 
   it('does not require fuelCodeId on New rows', () => {
@@ -134,5 +135,31 @@ describe('apiToRow', () => {
     expect(row.pathwayId).toBe(7)
     expect(row.proposedCi).toBe(23.23)
     expect(row.id).toBe('pathway-7')
+  })
+})
+
+describe('buildPathwayColDefs — fuel code iteration empty state', () => {
+  const fuelCodeCol = (fuelCodes) =>
+    buildPathwayColDefs({
+      optionsData: { pathwayApplicationTypes: APPLICATION_TYPES, fuelCodes },
+      canEdit: true
+    }).find((c) => c.field === 'fuelCodeId')
+
+  const renewalRow = { data: { applicationTypeId: 2 } }
+  const newRow = { data: { applicationTypeId: 1 } }
+
+  it('gives renewal rows an explanatory tooltip when no iterations are available', () => {
+    const tip = fuelCodeCol([]).tooltipValueGetter(renewalRow)
+    expect(typeof tip).toBe('string')
+    expect(tip.length).toBeGreaterThan(0)
+  })
+
+  it('shows no tooltip when the org owns renewable iterations', () => {
+    const col = fuelCodeCol([{ fuelCodeId: 1, fuelCode: 'BCLCF101.4' }])
+    expect(col.tooltipValueGetter(renewalRow)).toBeNull()
+  })
+
+  it('shows no tooltip on New rows even with an empty iteration list', () => {
+    expect(fuelCodeCol([]).tooltipValueGetter(newRow)).toBeNull()
   })
 })
