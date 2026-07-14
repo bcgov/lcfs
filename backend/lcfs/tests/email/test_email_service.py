@@ -52,7 +52,9 @@ async def test_send_notification_email_success(mock_email_repo, mock_environment
     # Assert
     assert result is True
     mock_email_repo.get_subscribed_user_emails.assert_called_once_with(
-        notification_type.value, organization_id, AudienceType.SAME_ORGANIZATION  # Ensure value is passed with audience type
+        notification_type.value,
+        organization_id,
+        AudienceType.SAME_ORGANIZATION,  # Ensure value is passed with audience type
     )
     service._render_email_template.assert_called_once_with(
         notification_type.value, notification_context
@@ -85,7 +87,9 @@ async def test_send_notification_email_no_recipients(
     # Assert
     assert result is False
     mock_email_repo.get_subscribed_user_emails.assert_called_once_with(
-        notification_type.value, organization_id, AudienceType.SAME_ORGANIZATION  # Ensure value is passed with audience type
+        notification_type.value,
+        organization_id,
+        AudienceType.SAME_ORGANIZATION,  # Ensure value is passed with audience type
     )
 
 
@@ -112,9 +116,13 @@ async def test_get_ches_token_success(mock_environment_vars):
 
 
 @pytest.mark.anyio
-async def test_send_fuel_code_expiry_notifications_success(mock_email_repo, mock_environment_vars):
+async def test_send_fuel_code_expiry_notifications_success(
+    mock_email_repo, mock_environment_vars
+):
     # Arrange
-    notification_type = NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION
+    notification_type = (
+        NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION
+    )
     email = "user@example.com"
     notification_context = {
         "subject": "Fuel Code Expiry Notification",
@@ -164,3 +172,25 @@ async def test_get_ches_token_cached(mock_environment_vars):
         # Assert
         assert first_token == second_token
         mock_post.assert_not_called()
+
+
+def test_build_email_payload_includes_attachments(
+    mock_email_repo, mock_environment_vars
+):
+    service = CHESEmailService(repo=mock_email_repo)
+    attachment = {
+        "filename": "credit-market-report.xlsx",
+        "contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "encoding": "base64",
+        "content": "ZmFrZQ==",
+    }
+
+    payload = service._build_email_payload(
+        recipients=["user@example.com"],
+        context={"subject": "Credit Market Report"},
+        body="<p>Report</p>",
+        attachments=[attachment],
+    )
+
+    assert payload["attachments"] == [attachment]
+    assert payload["bcc"] == ["user@example.com"]

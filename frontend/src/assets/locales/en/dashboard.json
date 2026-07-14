@@ -32,6 +32,16 @@
     "fcInProgress": "Fuel Code(s) in progress",
     "loadingMessage": "Loading fuel codes card..."
   },
+  "orgFuelCodes": {
+    "title": "Fuel codes",
+    "loadingMessage": "Loading fuel codes card...",
+    "thereAre": "There are:",
+    "inDraft": "Carbon intensity application(s) in draft",
+    "submittedForReview": "Carbon intensity application(s) submitted for government review",
+    "viewAll": "View all carbon intensity applications",
+    "startNew": "Start a new application",
+    "noApplications": "There are no carbon intensity applications in progress."
+  },
   "complianceReports": {
     "title": "Compliance reports",
     "thereAre": "There are:",
