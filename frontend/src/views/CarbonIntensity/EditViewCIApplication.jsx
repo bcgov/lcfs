@@ -288,7 +288,7 @@ const EditViewCIApplicationBase = () => {
       await deleteDraft(ciApplicationId)
       navigate(ROUTES.CI_APPLICATIONS.LIST, {
         state: {
-          message: t('carbonIntensity:step1.deleteConfirmTitle'),
+          message: t('carbonIntensity:step1.deleteSuccess'),
           severity: 'success'
         }
       })
