@@ -43,6 +43,7 @@ from .schema import (
     OrganizationLinkKeysListSchema,
     LinkKeyOperationResponseSchema,
     LinkKeyValidationSchema,
+    AllocationAgreementAnalyticsResponseSchema,
     AvailableFormsSchema,
     PenaltyAnalyticsResponseSchema,
     PenaltyLogListResponseSchema,
@@ -205,6 +206,23 @@ async def get_penalty_analytics(
             detail="You do not have permission to view this organization's penalty data.",
         )
     return await service.get_penalty_analytics(organization_id)
+
+
+@router.get(
+    "/{organization_id}/allocation-agreements/analytics",
+    response_model=AllocationAgreementAnalyticsResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_allocation_agreement_analytics(
+    request: Request,
+    organization_id: int,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Retrieve allocator-level allocation agreement analytics for the specified organization.
+    """
+    return await service.get_allocation_agreement_analytics(organization_id)
 
 
 @router.post(

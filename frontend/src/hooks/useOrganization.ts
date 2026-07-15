@@ -3,7 +3,11 @@ import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
 import { roles } from '@/constants/roles'
-import type { QueryOptions, PaginationParams, ExtMutationOptions} from './types'
+import type {
+  QueryOptions,
+  PaginationParams,
+  ExtMutationOptions
+} from './types'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
@@ -11,7 +15,10 @@ const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const BALANCE_STALE_TIME = 2 * 60 * 1000 // 2 minutes (more frequent updates for financial data)
 const USER_DATA_STALE_TIME = 10 * 60 * 1000 // 10 minutes (user data changes less frequently)
 
-export const useOrganization = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useOrganization = (
+  orgID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
   const id = orgID ?? currentUser?.organization?.organizationId
@@ -41,7 +48,10 @@ export const useOrganization = (orgID: number | string | undefined | null, optio
   })
 }
 
-export const useOrganizationPenaltyAnalytics = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useOrganizationPenaltyAnalytics = (
+  orgID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
   const id = orgID ?? currentUser?.organization?.organizationId
@@ -73,7 +83,48 @@ export const useOrganizationPenaltyAnalytics = (orgID: number | string | undefin
   })
 }
 
-export const useOrganizationPenaltyLogs = (orgID: number | string | undefined | null, paginationOptions: PaginationParams, options: QueryOptions<unknown> = {}) => {
+export const useOrganizationAllocationAgreementAnalytics = (
+  orgID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  const { data: currentUser } = useCurrentUser()
+  const id = orgID ?? currentUser?.organization?.organizationId
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization-allocation-agreement-analytics', id],
+    queryFn: async () => {
+      if (!id) {
+        throw new Error('Organization ID is required')
+      }
+      const path = apiRoutes.organizationAllocationAgreementAnalytics.replace(
+        ':orgID',
+        String(id)
+      )
+      const response = await client.get(path)
+      return response.data
+    },
+    enabled: enabled && !!id,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useOrganizationPenaltyLogs = (
+  orgID: number | string | undefined | null,
+  paginationOptions: PaginationParams,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
   const id = orgID ?? currentUser?.organization?.organizationId
@@ -86,10 +137,7 @@ export const useOrganizationPenaltyLogs = (orgID: number | string | undefined | 
       if (!id) {
         throw new Error('Organization ID is required')
       }
-      const path = apiRoutes.organizationPenaltyLogsList.replace(
-        ':orgID',
-        id
-      )
+      const path = apiRoutes.organizationPenaltyLogsList.replace(':orgID', id)
       const response = await client.post(path, paginationOptions)
       return response.data
     },
@@ -102,7 +150,10 @@ export const useOrganizationPenaltyLogs = (orgID: number | string | undefined | 
   })
 }
 
-export const useSaveOrganizationPenaltyLog = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useSaveOrganizationPenaltyLog = (
+  orgID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   const { onSuccess, onError, ...restOptions } = options
@@ -113,7 +164,10 @@ export const useSaveOrganizationPenaltyLog = (orgID: number | string | undefined
         throw new Error('Organization ID is required')
       }
 
-      const basePath = apiRoutes.organizationPenaltyLogs.replace(':orgID', String(orgID ?? ''))
+      const basePath = apiRoutes.organizationPenaltyLogs.replace(
+        ':orgID',
+        String(orgID ?? '')
+      )
 
       if (data.deleted) {
         if (!data.penaltyLogId) {
@@ -136,7 +190,9 @@ export const useSaveOrganizationPenaltyLog = (orgID: number | string | undefined
     },
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: ['organization-penalty-logs'] })
-      queryClient.invalidateQueries({ queryKey: ['organization-penalty-analytics'] })
+      queryClient.invalidateQueries({
+        queryKey: ['organization-penalty-analytics']
+      })
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
@@ -172,7 +228,11 @@ export const useOrganizationTypes = (options: QueryOptions<unknown> = {}) => {
   })
 }
 
-export const useOrganizationUser = (orgID: number | string | undefined | null, userID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useOrganizationUser = (
+  orgID: number | string | undefined | null,
+  userID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -202,7 +262,10 @@ export const useOrganizationUser = (orgID: number | string | undefined | null, u
   })
 }
 
-export const useOrganizationBalance = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useOrganizationBalance = (
+  orgID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const { hasRoles } = useCurrentUser()
   const hasAccess = hasRoles(roles.government)
@@ -260,7 +323,10 @@ export const useCurrentOrgBalance = (options: QueryOptions<unknown> = {}) => {
   })
 }
 
-export const useGetOrgComplianceReportReportedYears = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useGetOrgComplianceReportReportedYears = (
+  orgID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
   const id = orgID ?? currentUser?.organization?.organizationId
@@ -303,7 +369,10 @@ export const useGetOrgComplianceReportReportedYears = (orgID: number | string | 
  * A more robust long-term solution should be implemented to support future years
  * dynamically (e.g., backend-driven configuration per compliance period).
  */
-export const useOrgEarlyIssuance = (complianceYear: string | number | undefined, options: QueryOptions<unknown> = {}) => {
+export const useOrgEarlyIssuance = (
+  complianceYear: string | number | undefined,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -334,7 +403,10 @@ export const useOrgEarlyIssuance = (complianceYear: string | number | undefined,
 }
 
 // Mutation hooks for updating organization data
-export const useUpdateOrganization = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateOrganization = (
+  orgID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -378,7 +450,11 @@ export const useUpdateOrganization = (orgID: number | string | undefined | null,
   })
 }
 
-export const useUpdateOrganizationUser = (orgID: number | string | undefined | null, userID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateOrganizationUser = (
+  orgID: number | string | undefined | null,
+  userID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -399,7 +475,9 @@ export const useUpdateOrganizationUser = (orgID: number | string | undefined | n
     },
     onSuccess: (data, variables, context) => {
       if (clearCache) {
-        queryClient.removeQueries({ queryKey: ['organization-user', orgID, userID] })
+        queryClient.removeQueries({
+          queryKey: ['organization-user', orgID, userID]
+        })
       } else {
         queryClient.setQueryData(
           ['organization-user', orgID, userID],
@@ -415,7 +493,9 @@ export const useUpdateOrganizationUser = (orgID: number | string | undefined | n
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
-      queryClient.invalidateQueries({ queryKey: ['organization-user', orgID, userID] })
+      queryClient.invalidateQueries({
+        queryKey: ['organization-user', orgID, userID]
+      })
       onError?.(error, variables, context)
     },
     ...restOptions
@@ -423,7 +503,9 @@ export const useUpdateOrganizationUser = (orgID: number | string | undefined | n
 }
 
 // Mutation hook for updating current organization's credit market details
-export const useUpdateCurrentOrgCreditMarket = (options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateCurrentOrgCreditMarket = (
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   const { data: currentUser } = useCurrentUser()
@@ -471,7 +553,10 @@ export const useUpdateCurrentOrgCreditMarket = (options: ExtMutationOptions<unkn
 }
 
 // Mutation hook for updating any organization's credit market details (IDIR users)
-export const useUpdateOrganizationCreditMarket = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateOrganizationCreditMarket = (
+  orgID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -519,7 +604,10 @@ export const useUpdateOrganizationCreditMarket = (orgID: number | string | undef
 }
 
 // Mutation hook for updating company overview details
-export const useUpdateCompanyOverview = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateCompanyOverview = (
+  orgID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -559,7 +647,9 @@ export const useUpdateCompanyOverview = (orgID: number | string | undefined | nu
   })
 }
 
-export const useCreditMarketListings = (options: QueryOptions<unknown> = {}) => {
+export const useCreditMarketListings = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -584,7 +674,10 @@ export const useCreditMarketListings = (options: QueryOptions<unknown> = {}) => 
   })
 }
 
-export const useCreditMarketAuditLogs = ({ page = 1, size = 10, sortOrders = [], filters = [] }: any = {}, options: QueryOptions<unknown> = {}) => {
+export const useCreditMarketAuditLogs = (
+  { page = 1, size = 10, sortOrders = [], filters = [] }: any = {},
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   return useQuery({
@@ -603,7 +696,10 @@ export const useCreditMarketAuditLogs = ({ page = 1, size = 10, sortOrders = [],
 }
 
 // Link Key Management Hooks
-export const useAvailableFormTypes = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useAvailableFormTypes = (
+  orgID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -629,7 +725,10 @@ export const useAvailableFormTypes = (orgID: number | string | undefined | null,
   })
 }
 
-export const useOrganizationLinkKeys = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useOrganizationLinkKeys = (
+  orgID: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -655,7 +754,10 @@ export const useOrganizationLinkKeys = (orgID: number | string | undefined | nul
   })
 }
 
-export const useGenerateLinkKey = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useGenerateLinkKey = (
+  orgID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -677,7 +779,9 @@ export const useGenerateLinkKey = (orgID: number | string | undefined | null, op
     },
     onSuccess: (data, variables, context) => {
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: ['organization-link-keys', orgID] })
+        queryClient.invalidateQueries({
+          queryKey: ['organization-link-keys', orgID]
+        })
       }
       onSuccess?.(data, variables, context)
     },
@@ -688,7 +792,10 @@ export const useGenerateLinkKey = (orgID: number | string | undefined | null, op
   })
 }
 
-export const useRegenerateLinkKey = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useRegenerateLinkKey = (
+  orgID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -711,7 +818,9 @@ export const useRegenerateLinkKey = (orgID: number | string | undefined | null, 
     },
     onSuccess: (data, variables, context) => {
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: ['organization-link-keys', orgID] })
+        queryClient.invalidateQueries({
+          queryKey: ['organization-link-keys', orgID]
+        })
       }
       onSuccess?.(data, variables, context)
     },
@@ -722,7 +831,10 @@ export const useRegenerateLinkKey = (orgID: number | string | undefined | null, 
   })
 }
 
-export const useValidateLinkKey = (linkKey: string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useValidateLinkKey = (
+  linkKey: string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {

@@ -421,6 +421,24 @@ class PenaltyAnalyticsResponseSchema(BaseSchema):
     penalty_logs: List[PenaltyLogEntrySchema]
 
 
+class AllocationAgreementYearMetricsSchema(BaseSchema):
+    compliance_year: Optional[Union[int, str]] = None
+    allocated_organization_count: int
+    allocated_organizations: List[str]
+    added_organizations: List[str]
+    removed_organizations: List[str]
+    total_fse: float
+    prior_year_fse: Optional[float] = None
+    fse_change: Optional[float] = None
+    fse_pct_change: Optional[float] = None
+
+
+class AllocationAgreementAnalyticsResponseSchema(BaseSchema):
+    allocator_organization_id: int
+    allocator_organization_name: str
+    years: List[AllocationAgreementYearMetricsSchema]
+
+
 class PenaltyLogListResponseSchema(BaseSchema):
     pagination: PaginationResponseSchema
     penalty_logs: List[PenaltyLogEntrySchema]

@@ -142,6 +142,11 @@ vi.mock('@/hooks/useOrganization', () => ({
       reservedBalance: 500
     },
     isLoading: false
+  })),
+  useOrganizationAllocationAgreementAnalytics: vi.fn(() => ({
+    data: { years: [] },
+    isLoading: false,
+    isError: false
   }))
 }))
 
@@ -214,25 +219,20 @@ describe('OrganizationView', () => {
   })
 
   describe('TabPanel Component', () => {
-    it('renders correctly with tabs displayed', () => {
+    it('renders correctly with section selector displayed', () => {
       renderComponent()
 
-      // Test basic tab rendering which exercises TabPanel internally
-      expect(screen.getByRole('tablist')).toBeInTheDocument()
+      expect(screen.getByText('Organization menu')).toBeInTheDocument()
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
     })
 
-    it('switches tab content when different tabs are clicked', () => {
+    it('renders dashboard content until route changes', () => {
       renderComponent()
 
-      // Initially shows dashboard content
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
       expect(screen.queryByText('Organization Users')).not.toBeInTheDocument()
-
-      // Clicking tabs should call navigate (routing-based approach)
-      fireEvent.click(screen.getByText('Users'))
-      expect(mockNavigate).toHaveBeenCalled()
     })
   })
 
@@ -241,12 +241,8 @@ describe('OrganizationView', () => {
       renderComponent()
 
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
-      expect(screen.getByText('Users')).toBeInTheDocument()
-      expect(screen.getByText('Credit ledger')).toBeInTheDocument()
-      expect(screen.getByText('Company overview')).toBeInTheDocument()
-      expect(screen.getByText('Penalty log')).toBeInTheDocument()
-      expect(screen.getByText('Supply history')).toBeInTheDocument()
-      expect(screen.getByText('Compliance tracking')).toBeInTheDocument()
+      expect(screen.getByText('Organization menu')).toBeInTheDocument()
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
 
     it('displays organization title for government users', () => {
@@ -369,60 +365,32 @@ describe('OrganizationView', () => {
     })
   })
 
-  describe('Window Resize Handling', () => {
-    it('adds resize event listener on mount', () => {
+  describe('Section Navigation', () => {
+    it('uses a section selector for government navigation', () => {
       renderComponent()
 
-      expect(global.addEventListener).toHaveBeenCalledWith(
+      expect(screen.getByText('Organization menu')).toBeInTheDocument()
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    })
+
+    it('does not attach a resize listener for section navigation', () => {
+      renderComponent()
+
+      expect(global.addEventListener).not.toHaveBeenCalledWith(
         'resize',
         expect.any(Function)
       )
-    })
-
-    it('removes resize event listener on unmount', () => {
-      const { unmount } = renderComponent()
-
-      unmount()
-
-      expect(global.removeEventListener).toHaveBeenCalledWith(
-        'resize',
-        expect.any(Function)
-      )
-    })
-
-    it('handles window resize events', () => {
-      Object.defineProperty(window, 'innerWidth', {
-        value: 400,
-        configurable: true
-      })
-
-      let resizeHandler
-      global.addEventListener = vi.fn((event, handler) => {
-        if (event === 'resize') resizeHandler = handler
-      })
-
-      renderComponent()
-
-      // Just verify the handler exists, don't trigger it
-      expect(resizeHandler).toBeDefined()
-      expect(typeof resizeHandler).toBe('function')
     })
   })
 
   describe('Tab Navigation', () => {
-    it('changes tab when handleChangeTab is called', () => {
+    it('renders government section selector instead of expanded tabs', () => {
       renderComponent()
 
-      // Initially on first tab (Dashboard)
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
-
-      // Click on Users tab should call navigate
-      fireEvent.click(screen.getByText('Users'))
-      expect(mockNavigate).toHaveBeenCalled()
-
-      // Click on Credit Ledger tab should call navigate
-      fireEvent.click(screen.getByText('Credit ledger'))
-      expect(mockNavigate).toHaveBeenCalled()
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     })
 
     it('shows correct tab content based on active tab', () => {
@@ -462,16 +430,11 @@ describe('OrganizationView', () => {
       expect(creditLedger).toHaveAttribute('data-organization-id', '789')
     })
 
-    it('renders all tabs with correct labels', () => {
+    it('renders the current section selector label', () => {
       renderComponent()
 
-      const tabs = screen.getAllByRole('tab')
-      expect(tabs).toHaveLength(8)
-
+      expect(screen.getByText('Organization menu')).toBeInTheDocument()
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
-      expect(screen.getByText('Users')).toBeInTheDocument()
-      expect(screen.getByText('Credit ledger')).toBeInTheDocument()
-      expect(screen.getByText('Comment log')).toBeInTheDocument()
     })
   })
 
@@ -482,17 +445,11 @@ describe('OrganizationView', () => {
       expect(mockCurrentUser).toHaveBeenCalled()
     })
 
-    it('renders all tab labels correctly', () => {
+    it('renders the selected section label correctly', () => {
       renderComponent()
 
+      expect(screen.getByText('Organization menu')).toBeInTheDocument()
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
-      expect(screen.getByText('Users')).toBeInTheDocument()
-      expect(screen.getByText('Credit ledger')).toBeInTheDocument()
-      expect(screen.getByText('Company overview')).toBeInTheDocument()
-      expect(screen.getByText('Penalty log')).toBeInTheDocument()
-      expect(screen.getByText('Supply history')).toBeInTheDocument()
-      expect(screen.getByText('Compliance tracking')).toBeInTheDocument()
-      expect(screen.getByText('Comment log')).toBeInTheDocument()
     })
   })
 
@@ -503,9 +460,7 @@ describe('OrganizationView', () => {
       // Should have Organization Details by default (dashboard tab)
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
 
-      // Click Users tab should call navigate
-      fireEvent.click(screen.getByText('Users'))
-      expect(mockNavigate).toHaveBeenCalled()
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
 
     it('renders correct tab content based on pathname', () => {
