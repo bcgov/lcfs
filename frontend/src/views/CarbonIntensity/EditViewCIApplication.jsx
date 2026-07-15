@@ -585,25 +585,6 @@ const EditViewCIApplicationBase = () => {
         ))
       )}
 
-      <BCBox
-        sx={{
-          mt: 4,
-          p: 2,
-          bgcolor: 'grey.50',
-          border: 1,
-          borderColor: 'divider'
-        }}
-      >
-        <BCTypography
-          variant="caption"
-          color="text.secondary"
-          component="pre"
-          sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', m: 0 }}
-        >
-          {t('carbonIntensity:footer')}
-        </BCTypography>
-      </BCBox>
-
       {modalData && (
         <BCModal
           open={!!modalData}
