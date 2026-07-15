@@ -47,7 +47,7 @@ describe('AnalystReviewSummary', () => {
     mockUseGetComplianceReportReviewSummary.mockReset()
   })
 
-  it('shows Methy drafting state while loading', () => {
+  it('shows assistant drafting state while loading', () => {
     mockUseGetComplianceReportReviewSummary.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -69,7 +69,7 @@ describe('AnalystReviewSummary', () => {
     render(<AnalystReviewSummary complianceReportId={101} />)
 
     expect(
-      screen.getByText('Methy pre-screen is unavailable.')
+      screen.getByText('Fuelbert pre-screen is unavailable.')
     ).toBeInTheDocument()
   })
 
@@ -87,7 +87,9 @@ describe('AnalystReviewSummary', () => {
       screen.getAllByText('Which FSE rows are not validated?')
     ).toHaveLength(1)
 
-    await user.click(screen.getByRole('button', { name: /Methy pre-screen/i }))
+    await user.click(
+      screen.getByRole('button', { name: /Fuelbert pre-screen/i })
+    )
     await user.click(screen.getByRole('button', { name: /Electricity\/FSE/i }))
     await user.click(screen.getByRole('checkbox', { name: /addressed/i }))
 

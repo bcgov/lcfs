@@ -862,6 +862,9 @@ class FuelSupplyRepository:
                 joinedload(FuelSupply.fuel_type),
                 joinedload(FuelSupply.fuel_category),
                 joinedload(FuelSupply.provision_of_the_act),
+                joinedload(FuelSupply.fuel_code).joinedload(
+                    FuelCode.fuel_code_prefix
+                ),
                 joinedload(FuelSupply.compliance_report).joinedload(
                     ComplianceReport.compliance_period
                 ),
@@ -874,7 +877,10 @@ class FuelSupplyRepository:
             )
         )
 
-        # Apply filters if provided
+        selected_year_filter = None
+
+        # Apply filters if provided. Keep compliance_period as a selected year for
+        # YoY calculations instead of limiting the analytics query to one year.
         if filters:
             for filter_item in filters:
                 field = camel_to_snake(getattr(filter_item, "field", "") or "")
@@ -890,9 +896,7 @@ class FuelSupplyRepository:
                 # (fuel_code) — which Postgres rejects with
                 # "table name ... specified more than once" (issue #4601).
                 if field == "compliance_period":
-                    query = query.where(
-                        CompliancePeriod.description.ilike(f"%{filter_value}%")
-                    )
+                    selected_year_filter = str(filter_value)
                 elif field == "fuel_type":
                     query = query.where(
                         FuelType.fuel_type.ilike(f"%{filter_value}%")
@@ -926,6 +930,33 @@ class FuelSupplyRepository:
         result = await self.db.execute(query)
         all_fuel_supplies = result.scalars().all()
 
+        def _quantity(fuel_supply):
+            return (
+                fuel_supply.quantity
+                if fuel_supply.quantity is not None
+                else (
+                    (fuel_supply.q1_quantity or 0)
+                    + (fuel_supply.q2_quantity or 0)
+                    + (fuel_supply.q3_quantity or 0)
+                    + (fuel_supply.q4_quantity or 0)
+                )
+            )
+
+        def _pct_change(current, previous):
+            if previous in (None, 0):
+                return None
+            return round(((current - previous) / previous) * 100, 2)
+
+        def _share(part, total):
+            if not total:
+                return None
+            return round((part / total) * 100, 2)
+
+        def _round(value, digits=2):
+            if value is None:
+                return None
+            return round(float(value), digits)
+
         # Calculate analytics from FuelSupply objects
         total_volume = 0
         fuel_types_set = set()
@@ -934,41 +965,254 @@ class FuelSupplyRepository:
         total_by_year = {}
         total_by_fuel_category = {}
         total_by_provision = {}
+        total_by_fuel_code = {}
+        yearly = {}
+        yearly_fuel_type = {}
 
         for fs in all_fuel_supplies:
-            # Calculate quantity for this fuel supply
-            quantity = fs.quantity if fs.quantity is not None else (
-                (fs.q1_quantity or 0) + (fs.q2_quantity or 0) +
-                (fs.q3_quantity or 0) + (fs.q4_quantity or 0)
+            quantity = _quantity(fs)
+            compliance_units = float(fs.compliance_units or 0)
+            year = fs.compliance_report.compliance_period.description
+            include_in_filtered_totals = (
+                selected_year_filter is None or year == selected_year_filter
             )
 
-            total_volume += quantity
+            if include_in_filtered_totals:
+                total_volume += quantity
 
-            # Track unique fuel types
-            fuel_types_set.add(fs.fuel_type.fuel_type)
+                # Track unique fuel types
+                fuel_types_set.add(fs.fuel_type.fuel_type)
 
-            # Track submission dates
-            if fs.compliance_report.update_date:
-                submission_dates_set.add(fs.compliance_report.update_date)
+                # Track submission dates
+                if fs.compliance_report.update_date:
+                    submission_dates_set.add(fs.compliance_report.update_date)
 
-            # Aggregate by fuel type
-            fuel_type_name = fs.fuel_type.fuel_type
-            total_by_fuel_type[fuel_type_name] = total_by_fuel_type.get(fuel_type_name, 0) + quantity
+                # Aggregate by fuel type
+                fuel_type_name = fs.fuel_type.fuel_type
+                total_by_fuel_type[fuel_type_name] = (
+                    total_by_fuel_type.get(fuel_type_name, 0) + quantity
+                )
 
-            # Aggregate by year
-            year = fs.compliance_report.compliance_period.description
-            total_by_year[year] = total_by_year.get(year, 0) + quantity
+                # Aggregate by year
+                total_by_year[year] = total_by_year.get(year, 0) + quantity
 
-            # Aggregate by category
+                # Aggregate by category
+                category = fs.fuel_category.category
+                total_by_fuel_category[category] = (
+                    total_by_fuel_category.get(category, 0) + quantity
+                )
+
+                # Aggregate by provision
+                provision = fs.provision_of_the_act.name
+                total_by_provision[provision] = (
+                    total_by_provision.get(provision, 0) + quantity
+                )
+
+                if fs.fuel_code:
+                    fuel_code = fs.fuel_code.fuel_code
+                    total_by_fuel_code[fuel_code] = (
+                        total_by_fuel_code.get(fuel_code, 0) + quantity
+                    )
+
             category = fs.fuel_category.category
-            total_by_fuel_category[category] = total_by_fuel_category.get(category, 0) + quantity
+            yearly.setdefault(
+                year,
+                {
+                    "total_volume": 0,
+                    "total_compliance_units": 0,
+                    "positive_compliance_units": 0,
+                    "zero_or_negative_compliance_units": 0,
+                    "positive_cu_volume": 0,
+                    "non_positive_cu_volume": 0,
+                },
+            )
+            yearly[year]["total_volume"] += quantity
+            yearly[year]["total_compliance_units"] += compliance_units
+            if compliance_units > 0:
+                yearly[year]["positive_compliance_units"] += compliance_units
+                yearly[year]["positive_cu_volume"] += quantity
+            else:
+                yearly[year][
+                    "zero_or_negative_compliance_units"
+                ] += compliance_units
+                yearly[year]["non_positive_cu_volume"] += quantity
 
-            # Aggregate by provision
-            provision = fs.provision_of_the_act.name
-            total_by_provision[provision] = total_by_provision.get(provision, 0) + quantity
+            fuel_type_name = fs.fuel_type.fuel_type
+            yearly_fuel_type.setdefault(year, {})
+            yearly_fuel_type[year].setdefault(
+                fuel_type_name,
+                {
+                    "fuel_type": fuel_type_name,
+                    "fuel_category": category,
+                    "total_volume": 0,
+                    "total_compliance_units": 0,
+                    "positive_compliance_units": False,
+                    "renewable": bool(getattr(fs.fuel_type, "renewable", False)),
+                    "fossil_derived": bool(
+                        getattr(fs.fuel_type, "fossil_derived", False)
+                    ),
+                },
+            )
+            yearly_fuel_type[year][fuel_type_name]["total_volume"] += quantity
+            yearly_fuel_type[year][fuel_type_name][
+                "total_compliance_units"
+            ] += compliance_units
+            if compliance_units > 0:
+                yearly_fuel_type[year][fuel_type_name][
+                    "positive_compliance_units"
+                ] = True
 
         # Calculate most recent submission
         most_recent_submission = max(submission_dates_set).isoformat() if submission_dates_set else None
+
+        sorted_years = sorted(
+            [year for year in yearly.keys() if str(year).isdigit()],
+            key=lambda value: int(value),
+        )
+        selected_year = (
+            selected_year_filter
+            if selected_year_filter in yearly
+            else (sorted_years[-1] if sorted_years else None)
+        )
+        selected_year_index = (
+            sorted_years.index(selected_year)
+            if selected_year is not None and selected_year in sorted_years
+            else -1
+        )
+        prior_year = (
+            sorted_years[selected_year_index - 1] if selected_year_index > 0 else None
+        )
+
+        current_year_data = yearly.get(selected_year, {})
+        prior_year_data = yearly.get(prior_year, {})
+        current_volume = current_year_data.get("total_volume", 0)
+        prior_volume = prior_year_data.get("total_volume", 0)
+        current_compliance_units = current_year_data.get("total_compliance_units", 0)
+        prior_compliance_units = prior_year_data.get("total_compliance_units", 0)
+        current_compliance_units_per_unit = (
+            _round(current_compliance_units / current_volume, 6)
+            if current_volume
+            else None
+        )
+        prior_compliance_units_per_unit = (
+            _round(prior_compliance_units / prior_volume, 6)
+            if prior_volume
+            else None
+        )
+
+        fuel_type_yoy = []
+        current_fuel_types = yearly_fuel_type.get(selected_year, {})
+        prior_fuel_types = yearly_fuel_type.get(prior_year, {})
+        all_fuel_type_names = sorted(
+            set(current_fuel_types.keys()) | set(prior_fuel_types.keys())
+        )
+        for fuel_type_name in all_fuel_type_names:
+            current_type = current_fuel_types.get(fuel_type_name, {})
+            prior_type = prior_fuel_types.get(fuel_type_name, {})
+            current_type_volume = current_type.get("total_volume", 0)
+            prior_type_volume = prior_type.get("total_volume", 0)
+            if current_type_volume == 0 and prior_type_volume == 0:
+                continue
+            fuel_type_yoy.append(
+                {
+                    "fuelType": fuel_type_name,
+                    "fuelCategory": current_type.get(
+                        "fuel_category", prior_type.get("fuel_category")
+                    ),
+                    "totalVolume": current_type_volume,
+                    "priorYearVolume": prior_type_volume or None,
+                    "volumeChange": current_type_volume - prior_type_volume,
+                    "pctChangeYoy": _pct_change(
+                        current_type_volume, prior_type_volume
+                    ),
+                    "totalComplianceUnits": _round(
+                        current_type.get("total_compliance_units", 0)
+                    ),
+                    "positiveComplianceUnits": current_type.get(
+                        "positive_compliance_units", False
+                    ),
+                    "isNew": current_type_volume > 0 and prior_type_volume == 0,
+                    "isDiscontinued": current_type_volume == 0
+                    and prior_type_volume > 0,
+                    "renewable": current_type.get(
+                        "renewable", prior_type.get("renewable", False)
+                    ),
+                    "fossilDerived": current_type.get(
+                        "fossil_derived", prior_type.get("fossil_derived", False)
+                    ),
+                }
+            )
+
+        fuel_type_yoy.sort(
+            key=lambda row: abs(row["pctChangeYoy"] or 0), reverse=True
+        )
+        negative_yoy_count = len(
+            [
+                row
+                for row in fuel_type_yoy
+                if row["priorYearVolume"] not in (None, 0)
+                and row["totalVolume"] < row["priorYearVolume"]
+            ]
+        )
+        new_fuel_types = [row for row in fuel_type_yoy if row["isNew"]]
+        biggest_single_mover = next(
+            (row for row in fuel_type_yoy if row["pctChangeYoy"] is not None), None
+        )
+
+        compliance_unit_credit_debit_trend = []
+        compliance_units_per_unit_trend = []
+        fuel_type_volume_trend = []
+        top_fuel_codes = [
+            {"fuelCode": fuel_code, "totalVolume": volume}
+            for fuel_code, volume in sorted(
+                total_by_fuel_code.items(), key=lambda item: item[1], reverse=True
+            )[:10]
+        ]
+        for year in sorted_years:
+            year_data = yearly[year]
+            year_volume = year_data["total_volume"]
+            compliance_unit_credit_debit_trend.extend(
+                [
+                    {
+                        "reportingYear": year,
+                        "complianceUnitGroup": "Positive compliance units",
+                        "complianceUnits": _round(
+                            year_data["positive_compliance_units"]
+                        ),
+                    },
+                    {
+                        "reportingYear": year,
+                        "complianceUnitGroup": "Zero or negative compliance units",
+                        "complianceUnits": _round(
+                            year_data["zero_or_negative_compliance_units"]
+                        ),
+                    },
+                ]
+            )
+            compliance_units_per_unit_trend.append(
+                {
+                    "reportingYear": year,
+                    "complianceUnitsPerUnitSupply": _round(
+                        year_data["total_compliance_units"] / year_volume, 6
+                    )
+                    if year_volume
+                    else None,
+                }
+            )
+            for fuel_type_name, fuel_type_data in yearly_fuel_type.get(
+                year, {}
+            ).items():
+                fuel_type_volume_trend.append(
+                    {
+                        "reportingYear": year,
+                        "fuelType": fuel_type_name,
+                        "fuelCategory": fuel_type_data.get("fuel_category"),
+                        "totalVolume": fuel_type_data.get("total_volume", 0),
+                        "fossilDerived": fuel_type_data.get(
+                            "fossil_derived", False
+                        ),
+                    }
+                )
 
         return {
             "total_volume": total_volume,
@@ -979,4 +1223,43 @@ class FuelSupplyRepository:
             "total_by_year": total_by_year,
             "total_by_fuel_category": total_by_fuel_category,
             "total_by_provision": total_by_provision,
+            "selected_year_summary": {
+                "reportingYear": selected_year,
+                "priorYear": prior_year,
+                "totalVolume": current_volume,
+                "priorYearVolume": prior_volume or None,
+                "volumeChange": current_volume - prior_volume,
+                "volumePctChangeYoy": _pct_change(current_volume, prior_volume),
+                "totalComplianceUnits": _round(current_compliance_units),
+                "priorYearComplianceUnits": _round(prior_compliance_units)
+                if prior_year
+                else None,
+                "complianceUnitsChange": _round(
+                    current_compliance_units - prior_compliance_units
+                )
+                if prior_year
+                else None,
+                "complianceUnitsPctChangeYoy": _pct_change(
+                    current_compliance_units, prior_compliance_units
+                ),
+                "complianceUnitsPerUnitSupply": current_compliance_units_per_unit,
+                "priorYearComplianceUnitsPerUnitSupply": prior_compliance_units_per_unit,
+                "complianceUnitsPerUnitSupplyChange": _round(
+                    current_compliance_units_per_unit
+                    - prior_compliance_units_per_unit,
+                    6,
+                )
+                if current_compliance_units_per_unit is not None
+                and prior_compliance_units_per_unit is not None
+                else None,
+                "negativeYoyFuelTypeCount": negative_yoy_count,
+                "newFuelTypeCount": len(new_fuel_types),
+                "newFuelTypes": [row["fuelType"] for row in new_fuel_types],
+                "biggestSingleMover": biggest_single_mover,
+            },
+            "fuel_type_yoy": fuel_type_yoy,
+            "compliance_unit_credit_debit_trend": compliance_unit_credit_debit_trend,
+            "compliance_units_per_unit_trend": compliance_units_per_unit_trend,
+            "fuel_type_volume_trend": fuel_type_volume_trend,
+            "top_fuel_codes": top_fuel_codes,
         }

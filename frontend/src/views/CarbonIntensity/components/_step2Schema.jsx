@@ -195,6 +195,13 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         openOnFocus: true
       },
       suppressKeyboardEvent,
+      // When the applicant's organization owns no renewable iterations the
+      // editor dropdown is empty; a browser tooltip on the cell explains why
+      // (BCGridEditor sets enableBrowserTooltips).
+      tooltipValueGetter: (params) =>
+        isRenewal(params) && fuelCodes.length === 0
+          ? i18n.t('carbonIntensity:step2.noEligibleFuelCodes')
+          : null,
       cellRenderer: (params) => {
         if (!isRenewal(params)) {
           return <BCTypography variant="body4">—</BCTypography>
@@ -202,10 +209,13 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         const match = fuelCodes.find(
           (fc) => fc.fuelCodeId === params.data?.fuelCodeId
         )
-        return match ? (
-          match.fuelCode
-        ) : (
-          <BCTypography variant="body4">Select</BCTypography>
+        if (match) {
+          return match.fuelCode
+        }
+        return (
+          <BCTypography variant="body4">
+            {fuelCodes.length === 0 ? 'No eligible iterations' : 'Select'}
+          </BCTypography>
         )
       },
       cellStyle: (params) => {

@@ -36,9 +36,11 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
 )
+from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.ComplianceReportListView import (
     ComplianceReportListView,
 )
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.organization.PenaltyLog import PenaltyLog
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -1213,6 +1215,209 @@ class OrganizationsRepository:
         )
         deleted_id = result.scalar()
         return deleted_id is not None
+
+    def _allocation_quantity(self, agreement: AllocationAgreement) -> float:
+        if agreement.quantity is not None:
+            return float(agreement.quantity)
+        return float(
+            (agreement.q1_quantity or 0)
+            + (agreement.q2_quantity or 0)
+            + (agreement.q3_quantity or 0)
+            + (agreement.q4_quantity or 0)
+        )
+
+    async def _get_effective_allocation_agreements_for_report(
+        self, compliance_report: ComplianceReport
+    ) -> List[AllocationAgreement]:
+        compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
+            and_(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report.compliance_report_group_uuid,
+                ComplianceReport.compliance_report_id
+                <= compliance_report.compliance_report_id,
+            )
+        )
+
+        latest_version_per_group = (
+            select(
+                AllocationAgreement.group_uuid,
+                func.max(AllocationAgreement.version).label("max_version"),
+            )
+            .where(
+                AllocationAgreement.compliance_report_id.in_(
+                    compliance_reports_select
+                )
+            )
+            .group_by(AllocationAgreement.group_uuid)
+        ).subquery()
+
+        deleted_groups = (
+            select(AllocationAgreement.group_uuid)
+            .join(
+                latest_version_per_group,
+                and_(
+                    AllocationAgreement.group_uuid
+                    == latest_version_per_group.c.group_uuid,
+                    AllocationAgreement.version
+                    == latest_version_per_group.c.max_version,
+                ),
+            )
+            .where(AllocationAgreement.action_type == ActionTypeEnum.DELETE)
+            .distinct()
+        )
+
+        valid_agreements_subq = (
+            select(
+                AllocationAgreement.group_uuid,
+                func.max(AllocationAgreement.version).label("max_version"),
+            )
+            .where(
+                AllocationAgreement.compliance_report_id.in_(
+                    compliance_reports_select
+                ),
+                ~AllocationAgreement.group_uuid.in_(deleted_groups),
+            )
+            .group_by(AllocationAgreement.group_uuid)
+        ).subquery()
+
+        query = (
+            select(AllocationAgreement)
+            .options(
+                joinedload(AllocationAgreement.allocation_transaction_type),
+                joinedload(AllocationAgreement.compliance_report).joinedload(
+                    ComplianceReport.compliance_period
+                ),
+            )
+            .join(
+                valid_agreements_subq,
+                and_(
+                    AllocationAgreement.group_uuid
+                    == valid_agreements_subq.c.group_uuid,
+                    AllocationAgreement.version
+                    == valid_agreements_subq.c.max_version,
+                ),
+            )
+            .order_by(AllocationAgreement.transaction_partner)
+        )
+        result = await self.db.execute(query)
+        return result.unique().scalars().all()
+
+    @repo_handler
+    async def get_allocation_agreement_analytics(
+        self, organization_id: int
+    ) -> Dict[str, object]:
+        organization = await self.get_organization_lite(organization_id)
+        if not organization:
+            raise HTTPException(status_code=404, detail="Organization not found")
+
+        latest_reports_subq = (
+            select(
+                ComplianceReport.compliance_period_id,
+                func.max(ComplianceReport.compliance_report_id).label(
+                    "compliance_report_id"
+                ),
+            )
+            .join(ComplianceReport.current_status)
+            .where(
+                ComplianceReport.organization_id == organization_id,
+                ComplianceReportStatus.status != ComplianceReportStatusEnum.Draft,
+            )
+            .group_by(ComplianceReport.compliance_period_id)
+        ).subquery()
+
+        reports_result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+            )
+            .join(
+                latest_reports_subq,
+                ComplianceReport.compliance_report_id
+                == latest_reports_subq.c.compliance_report_id,
+            )
+        )
+        reports = sorted(
+            reports_result.unique().scalars().all(),
+            key=lambda report: (
+                0,
+                int(report.compliance_period.description),
+            )
+            if str(report.compliance_period.description).isdigit()
+            else (1, report.compliance_period.description),
+        )
+
+        yearly = {}
+        for report in reports:
+            year = report.compliance_period.description
+            agreements = await self._get_effective_allocation_agreements_for_report(
+                report
+            )
+
+            allocatees = set()
+            total_fse = 0.0
+            for agreement in agreements:
+                transaction_type = (
+                    agreement.allocation_transaction_type.type
+                    if agreement.allocation_transaction_type
+                    else ""
+                )
+                if "to" not in transaction_type.lower():
+                    continue
+                partner = (agreement.transaction_partner or "").strip()
+                if not partner:
+                    continue
+                allocatees.add(partner)
+                total_fse += self._allocation_quantity(agreement)
+
+            if allocatees or total_fse:
+                yearly[year] = {
+                    "allocated_organizations": sorted(allocatees),
+                    "total_fse": round(total_fse, 2),
+                }
+
+        years = []
+        prior_allocatees = set()
+        prior_fse = None
+        for year in sorted(
+            yearly.keys(),
+            key=lambda value: (0, int(value)) if str(value).isdigit() else (1, value),
+        ):
+            allocatees = set(yearly[year]["allocated_organizations"])
+            total_fse = yearly[year]["total_fse"]
+            fse_change = (
+                round(total_fse - prior_fse, 2) if prior_fse is not None else None
+            )
+            fse_pct_change = (
+                round(((total_fse - prior_fse) / prior_fse) * 100, 2)
+                if prior_fse not in (None, 0)
+                else None
+            )
+            years.append(
+                {
+                    "compliance_year": year,
+                    "allocated_organization_count": len(allocatees),
+                    "allocated_organizations": sorted(allocatees),
+                    "added_organizations": sorted(allocatees - prior_allocatees)
+                    if prior_allocatees
+                    else [],
+                    "removed_organizations": sorted(prior_allocatees - allocatees)
+                    if prior_allocatees
+                    else [],
+                    "total_fse": total_fse,
+                    "prior_year_fse": prior_fse,
+                    "fse_change": fse_change,
+                    "fse_pct_change": fse_pct_change,
+                }
+            )
+            prior_allocatees = allocatees
+            prior_fse = total_fse
+
+        return {
+            "allocator_organization_id": organization.organization_id,
+            "allocator_organization_name": organization.name,
+            "years": years,
+        }
 
     @repo_handler
     async def get_link_key_by_key(self, link_key: str) -> OrganizationLinkKey:
