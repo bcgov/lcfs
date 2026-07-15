@@ -1,4 +1,5 @@
 import type { ChipProps } from '@mui/material'
+import { CONFIG } from '@/constants/config'
 import type { ReviewSectionStatus, ReviewSeverity, RobotVariant } from './types'
 
 export const severityColor: Record<ReviewSeverity, ChipProps['color']> = {
@@ -13,8 +14,22 @@ export const sectionColor: Record<ReviewSectionStatus, ChipProps['color']> = {
   clear: 'success'
 }
 
+export const analystReviewAssistantName = CONFIG.ANALYST_REVIEW_ASSISTANT_NAME
+
 export const robotVariants: RobotVariant[] = [
-  { name: 'Methy review', color: '#0f766e', background: '#ccfbf1' },
-  { name: 'Methy summary', color: '#1d4ed8', background: '#dbeafe' },
-  { name: 'Methy triage', color: '#7c3aed', background: '#ede9fe' }
+  {
+    name: `${analystReviewAssistantName} review`,
+    color: '#0f766e',
+    background: '#ccfbf1'
+  },
+  {
+    name: `${analystReviewAssistantName} summary`,
+    color: '#1d4ed8',
+    background: '#dbeafe'
+  },
+  {
+    name: `${analystReviewAssistantName} triage`,
+    color: '#7c3aed',
+    background: '#ede9fe'
+  }
 ]
