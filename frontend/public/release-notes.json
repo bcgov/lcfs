@@ -1,5 +1,147 @@
 [
   {
+    "version": "1.3.6",
+    "tag": "v1.3.6",
+    "date": "2026-07-14",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.6",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.5...v1.3.6",
+    "summary": "Adds the BCeID Fuel Codes dashboard card for CI applicants, fuel code compliance units chart, admin comment editing, credit market report email attachments consolidation, LNG End-use new UCI values effective May 6 2026, CI application resume-draft navigation, and a deterministic compliance report summary algorithm. Fixes FSE export record completeness and gates the Fuel Codes card behind the ciApplications feature flag.",
+    "sections": {
+      "features": [
+        "Add Fuel Codes card to BCeID dashboard for CI applicants",
+        "Add fuel code compliance units chart",
+        "Allow admin comment editing",
+        "Consolidate Credit Market Report email attachments",
+        "Add LNG End-use new UCI values effective May 6, 2026",
+        "Resume draft CI application on first incomplete step",
+        "Add deterministic compliance report summary algorithm"
+      ],
+      "fixes": [
+        "Include all FSE records in compliance report export",
+        "Gate Fuel codes dashboard card behind ciApplications feature flag",
+        "Rename Methy to Fuelbert"
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [],
+      "other": []
+    },
+    "contributors": [
+      "@hamed-valiollahi",
+      "@AlexZorkin",
+      "@prv-proton"
+    ]
+  },
+  {
+    "version": "1.3.5",
+    "tag": "v1.3.5",
+    "date": "2026-07-02",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.5",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.4...v1.3.5",
+    "summary": "Adds the Comment Log with audit trail, FSE Year-over-Year Metabase model, Set as Withdrawn/Reactivate for fuel pathways, Fuel Pathway Change Log, fuel code details page, fuel code generate button, document attachments on internal comments, Credit Trader and Aggregator Issuance organisation types, and the Release Notes page. Fixes submission race conditions, allocation agreement editing, FSE kWh reconciliation, credit ledger timezone handling, and several CI application refinements.",
+    "sections": {
+      "features": [
+        "Add Comment Log with full audit trail",
+        "Add FSE Year-over-Year Metabase model",
+        "Set as Withdrawn/Reactivate and pathway changes for fuel pathways",
+        "Add Fuel Pathway change log",
+        "Add fuel code details page",
+        "Add fuel code generate button with priority score",
+        "Add document attachments to internal comments",
+        "Add Aggregator Issuance transaction type",
+        "Add Credit Trader organization type",
+        "Add Release Notes page"
+      ],
+      "fixes": [
+        "Submission race condition causing duplicate Reserved transactions",
+        "Disable BCModal primary button while action is in flight",
+        "Allocation agreement line edit and delete in supplemental reports",
+        "Decommissioned FSE reporting",
+        "Missing FSE records",
+        "CI application verification and analyst column display",
+        "Postal code validation and address field inconsistencies",
+        "Restrict CI application page to CI Applicant role",
+        "CI application wizard refinements",
+        "Reset comment type after submit",
+        "Expand CNG unit widths",
+        "Reconcile FSE kWh total and supplier export with reporting table",
+        "Allow editing empty rows in FSE export",
+        "Sum Line 14 issued units over the transaction window",
+        "Stop double timezone conversion on credit ledger timestamps",
+        "Paginate organization comments by comment, not conversation",
+        "Stop organization fuel supply filters returning 500",
+        "Refine Metabase Credit Market Report — add A1 transfer category"
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "bump idna from 3.10 to 3.15 in /backend",
+        "bump tmp from 0.2.5 to 0.2.7 in /frontend",
+        "bump qs from 6.14.2 to 6.15.2 in /mcp-server",
+        "bump hono from 4.12.23 to 4.12.25 in /mcp-server",
+        "bump @grpc/grpc-js from 1.13.4 to 1.14.4 in /mcp-server",
+        "bump pyjwt from 2.12.0 to 2.13.0 in /backend",
+        "bump protobufjs from 7.5.8 to 7.6.4 in /mcp-server",
+        "bump dompurify from 3.4.0 to 3.4.11 in /frontend",
+        "bump vite from 6.4.2 to 6.4.3 in /frontend",
+        "bump form-data from 4.0.5 to 4.0.6 in /frontend",
+        "bump undici from 6.24.1 to 6.27.0 in /frontend",
+        "bump esbuild from 0.25.11 to 0.28.1 in /frontend",
+        "bump markdown-it from 14.1.1 to 14.2.0 in /frontend"
+      ],
+      "other": [
+        "Pagination performance optimization with window functions on top 5 endpoints"
+      ]
+    },
+    "contributors": [
+      "@hamed-valiollahi",
+      "@AlexZorkin",
+      "@prv-proton",
+      "@kuanfandevops"
+    ]
+  },
+  {
+    "version": "1.3.4",
+    "tag": "v1.3.4",
+    "date": "2026-06-09",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.4",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.3...v1.3.4",
+    "summary": "Introduces the full CI Applications workflow (all steps), My Fuel Codes page, Fuel Code Navigation Tabs, Redis-backed rate limiting, BCeID Supplemental Report Visibility Toggle, director override for credit transfer categories, and the internalCommentSearch feature flag. Includes critical fixes for TFRS historical penalty data, FSE legacy-year and period-aware decommission checks, compliance report submission performance, and fuel code tab visibility.",
+    "sections": {
+      "features": [
+        "Add CI Applications Page with multi-step applicant workflow",
+        "Add CI application internal progress bar",
+        "Add Fuel Code Navigation Tabs",
+        "Add My Fuel Codes Page for BCeID users",
+        "Add Redis-backed rate limiting for public endpoints",
+        "Add BCeID Supplemental Report Visibility Toggle",
+        "Add director override for credit transfer category assignment",
+        "Add internalCommentSearch feature flag"
+      ],
+      "fixes": [
+        "TFRS historical data — penalty inflation and schedule D exporter",
+        "FSE legacy-year guard and period-aware decommission checks",
+        "Speed up compliance report submission",
+        "Resolve Fuel Code Tab visibility and filtering",
+        "Restrict legacy petroleum determining-CI to one provision per fuel category",
+        "Exclude Other fuel types from pre-2024 compliance reports"
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "bump vitest, @vitest/coverage-v8 and @vitest/ui in /frontend",
+        "bump react-router and react-router-dom in /frontend",
+        "bump hono from 4.12.18 to 4.12.23 in /mcp-server"
+      ],
+      "other": []
+    },
+    "contributors": [
+      "@hamed-valiollahi",
+      "@AlexZorkin",
+      "@prv-proton"
+    ]
+  },
+  {
     "version": "1.3.3",
     "tag": "v1.3.3",
     "date": "2026-05-26",
@@ -33,7 +175,11 @@
       ],
       "other": []
     },
-    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton"
+    ]
   },
   {
     "version": "1.3.2",
@@ -64,7 +210,11 @@
         "Removed TFRS sync code and infrastructure — issues #4297, #4298, #4299, #4300 (#4329)."
       ]
     },
-    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton"
+    ]
   },
   {
     "version": "1.3.1",
@@ -109,7 +259,11 @@
       ],
       "other": []
     },
-    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton"
+    ]
   },
   {
     "version": "1.3.0",
@@ -221,7 +375,11 @@
       ],
       "other": []
     },
-    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton"
+    ]
   },
   {
     "version": "1.2.4",
