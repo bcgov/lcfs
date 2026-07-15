@@ -1,8 +1,8 @@
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-import structlog
+import re
 from datetime import date, datetime, time
 from typing import List, Optional, Tuple
 
+import structlog
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 import sqlalchemy as sa
@@ -31,6 +31,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
 from lcfs.db.models.ci_application.CIApplication import CIApplication
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
 from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
     InitiativeAgreementInternalComment,
@@ -46,6 +47,8 @@ from lcfs.db.models.comment.CIApplicationInternalComment import (
 )
 
 logger = structlog.get_logger(__name__)
+
+_SEARCH_NORMALIZE_RE = re.compile(r"[^0-9A-Za-z]+")
 
 
 class InternalCommentRepository:
@@ -699,10 +702,13 @@ class InternalCommentRepository:
         """
         Paginated organization comments with live-derived org/year, server-side
         filters (category, compliance_year, date range, visibility, search) and
-        sorting. Search uses ``websearch_to_tsquery('english', ...)`` against
-        ``comment_search_vector``; with ``category='Organization details'`` it
-        also matches ``organization.name``/``operating_name``, and with
-        ``category='Person'`` it also matches the author's name / email.
+        sorting. Search matches the comment body: a full-text
+        ``websearch_to_tsquery('english', ...)`` predicate plus case-insensitive
+        substring / punctuation-insensitive matching against the HTML-stripped
+        ``comment`` column (the source of truth). With
+        ``category='Organization details'`` it also matches
+        ``organization.name``/``operating_name``, and with ``category='Person'``
+        it also matches the author's name / email.
         """
         entity_meta = self._entity_meta_subquery(organization_id)
 
@@ -737,7 +743,28 @@ class InternalCommentRepository:
             fts_predicate = InternalComment.comment_search_vector.op("@@")(tsquery)
 
             ilike_term = f"%{search_term}%"
-            search_predicates = [fts_predicate]
+            normalized_search = _SEARCH_NORMALIZE_RE.sub("", search_term).lower()
+            
+            stripped_comment = func.regexp_replace(
+                func.coalesce(InternalComment.comment, ""),
+                r"<[^>]*>",
+                " ",
+                "g",
+            )
+            normalized_comment_text = func.regexp_replace(
+                func.lower(stripped_comment),
+                r"[^[:alnum:]]+",
+                "",
+                "g",
+            )
+            search_predicates = [
+                fts_predicate,
+                stripped_comment.ilike(ilike_term),
+            ]
+            if normalized_search:
+                search_predicates.append(
+                    normalized_comment_text.like(f"%{normalized_search}%")
+                )
 
             if category == "Organization details":
                 search_predicates.append(Organization.name.ilike(ilike_term))
@@ -756,39 +783,9 @@ class InternalCommentRepository:
 
             where_clauses.append(or_(*search_predicates))
 
-        needs_org_join_for_count = bool(
-            search_term and category == "Organization details"
-        )
-        needs_user_join_for_count = bool(search_term and category == "Person")
-
         full_name_col = (UserProfile.first_name + " " + UserProfile.last_name).label(
             "full_name"
         )
-
-        base_select_from = (
-            select(InternalComment.internal_comment_id)
-            .select_from(InternalComment)
-            .join(
-                entity_meta,
-                entity_meta.c.ic_id == InternalComment.internal_comment_id,
-            )
-            .outerjoin(
-                CommentCategory,
-                CommentCategory.comment_category_id
-                == InternalComment.comment_category_id,
-            )
-        )
-        if needs_org_join_for_count:
-            base_select_from = base_select_from.outerjoin(
-                Organization,
-                Organization.organization_id == entity_meta.c.live_org_id,
-            )
-        if needs_user_join_for_count:
-            base_select_from = base_select_from.outerjoin(
-                UserProfile,
-                UserProfile.keycloak_username == InternalComment.create_user,
-            )
-        base_select_from = base_select_from.where(*where_clauses)
 
         sort_col = (
             InternalComment.update_date

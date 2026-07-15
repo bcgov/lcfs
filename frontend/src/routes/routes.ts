@@ -10,6 +10,8 @@ export const ROUTES = {
   CALCULATION_DATA: '/calculation-data',
   APPROVED_CARBON_INTENSITIES: '/approved-carbon-intensities',
   FILE_SUBMISSION: '/file-submissions',
+  CREDIT_MARKET: '/credit-market',
+  PUBLIC_MARKET_DATA: '/market-data',
 
   AUTH: {
     LOGIN: '/login',
@@ -69,6 +71,7 @@ export const ROUTES = {
     PENALTY_LOG: '/organizations/:orgID/penalty-log',
     PENALTY_LOG_MANAGE: '/organizations/:orgID/penalty-log/manage',
     SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
+    ALLOCATION_AGREEMENTS: '/organizations/:orgID/allocation-agreements',
     COMPLIANCE_TRACKING: '/organizations/:orgID/compliance-tracking',
     COMMENT_LOG: '/organizations/:orgID/comment-log'
   },

@@ -1,11 +1,12 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterAll } from 'vitest'
 import OrgFuelCodeCard from '../OrgFuelCodeCard'
 import { useOrgFuelCodeCounts } from '@/hooks/useDashboard'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
+import { CONFIG } from '@/constants/config'
 
 // Mock dependencies
 vi.mock('@/hooks/useDashboard')
@@ -63,10 +64,33 @@ vi.mock('@mui/material', () => ({
 
 describe('OrgFuelCodeCard Component', () => {
   const mockNavigate = vi.fn()
+  const originalCiApplicationsFlag = CONFIG.feature_flags.ciApplications
 
   beforeEach(() => {
     vi.resetAllMocks()
     useNavigate.mockReturnValue(mockNavigate)
+    // The card is gated behind the CI applications feature flag; enable it so
+    // the content tests below exercise the rendered card. The gating itself is
+    // covered by the "Feature flag gating" block.
+    CONFIG.feature_flags.ciApplications = true
+  })
+
+  afterAll(() => {
+    CONFIG.feature_flags.ciApplications = originalCiApplicationsFlag
+  })
+
+  describe('Feature flag gating', () => {
+    it('renders nothing when the CI applications feature flag is off', () => {
+      CONFIG.feature_flags.ciApplications = false
+      useOrgFuelCodeCounts.mockReturnValue({
+        data: { draft: 1, submitted: 0 },
+        isLoading: false
+      })
+
+      render(<OrgFuelCodeCard />, { wrapper })
+
+      expect(screen.queryByText('Fuel codes')).not.toBeInTheDocument()
+    })
   })
 
   describe('Loading state', () => {
@@ -137,23 +161,21 @@ describe('OrgFuelCodeCard Component', () => {
   })
 
   describe('Empty state', () => {
-    it.each([
-      { draft: 0, submitted: 0 },
-      undefined,
-      null,
-      {}
-    ])('shows the no-applications message when there is nothing in progress (%o)', (data) => {
-      useOrgFuelCodeCounts.mockReturnValue({ data, isLoading: false })
+    it.each([{ draft: 0, submitted: 0 }, undefined, null, {}])(
+      'shows the no-applications message when there is nothing in progress (%o)',
+      (data) => {
+        useOrgFuelCodeCounts.mockReturnValue({ data, isLoading: false })
 
-      render(<OrgFuelCodeCard />, { wrapper })
+        render(<OrgFuelCodeCard />, { wrapper })
 
-      expect(
-        screen.getByText(
-          /There are no carbon intensity applications in progress./
-        )
-      ).toBeInTheDocument()
-      expect(screen.queryByText(/There are:/)).not.toBeInTheDocument()
-    })
+        expect(
+          screen.getByText(
+            /There are no carbon intensity applications in progress./
+          )
+        ).toBeInTheDocument()
+        expect(screen.queryByText(/There are:/)).not.toBeInTheDocument()
+      }
+    )
   })
 
   describe('Action links (always present)', () => {
@@ -166,7 +188,9 @@ describe('OrgFuelCodeCard Component', () => {
 
     it('navigates to the CI applications list via "View all"', () => {
       render(<OrgFuelCodeCard />, { wrapper })
-      fireEvent.click(screen.getByText(/View all carbon intensity applications/))
+      fireEvent.click(
+        screen.getByText(/View all carbon intensity applications/)
+      )
       expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.LIST)
     })
 

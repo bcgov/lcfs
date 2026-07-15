@@ -52,6 +52,7 @@
     "operatingDataFrom": "Operating data collection from",
     "operatingDataTo": "Operating data collection to",
     "fuelCodeIteration": "Fuel code iteration",
+    "noEligibleFuelCodes": "No fuel code iterations are available to renew. Only approved fuel codes owned by your organization can be renewed — the latest iteration of each is shown here.",
     "proposedCi": "Proposed CI (gCO2e/MJ)",
     "fuelType": "Fuel type",
     "feedstock": "Feedstock",
@@ -144,6 +145,7 @@
     "workflowHeader": "Workflow",
     "riskAssessment": "Risk assessment",
     "priorityScore": "Priority score",
+    "priorityScoreInvalid": "Priority score is required and must be a whole number from 1 to 999.",
     "numberOfFuelPathways": "Number of fuel pathways",
     "verification1Complete": "Verification 1 complete",
     "verification2Complete": "Verification 2 complete",
@@ -221,6 +223,5 @@
     "noPathwayChanges": "No pathway changes found.",
     "effectiveDateShort": "Proposed effective date",
     "iteration": "Iteration"
-  },
-  "footer": "For security and privacy, please don't share personal information on this website.\nThis information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations."
+  }
 }

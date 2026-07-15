@@ -50,6 +50,7 @@ vi.mock('../routes', () => ({
       PENALTY_LOG: '/organizations/:orgID/penalty-log',
       PENALTY_LOG_MANAGE: '/organizations/:orgID/penalty-log/manage',
       SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
+      ALLOCATION_AGREEMENTS: '/organizations/:orgID/allocation-agreements',
       COMPLIANCE_TRACKING: '/organizations/:orgID/compliance-tracking',
       ADD_USER: '/organizations/:orgID/add-user',
       VIEW_USER: '/organizations/:orgID/users/:userID'
@@ -67,7 +68,7 @@ vi.mock('../routes', () => ({
 describe('organizationRoutes', () => {
   it('should export an array of route configurations', () => {
     expect(Array.isArray(organizationRoutes)).toBe(true)
-    expect(organizationRoutes.length).toBe(18)
+    expect(organizationRoutes.length).toBe(19)
   })
 
   it('should have all expected route paths', () => {
@@ -81,6 +82,7 @@ describe('organizationRoutes', () => {
       '/organizations/:orgID/penalty-log',
       '/organizations/:orgID/penalty-log/manage',
       '/organizations/:orgID/supply-history',
+      '/organizations/:orgID/allocation-agreements',
       '/organizations/:orgID/compliance-tracking',
       '/organizations/:orgID/comment-log',
       '/organizations/:orgID/add-user',
@@ -104,7 +106,7 @@ describe('organizationRoutes', () => {
       const idirRoutes = organizationRoutes.filter((route) =>
         route.path.startsWith('/organizations')
       )
-      expect(idirRoutes.length).toBe(13)
+      expect(idirRoutes.length).toBe(14)
 
       const expectedIdirPaths = [
         '/organizations',
@@ -116,6 +118,7 @@ describe('organizationRoutes', () => {
         '/organizations/:orgID/penalty-log',
         '/organizations/:orgID/penalty-log/manage',
         '/organizations/:orgID/supply-history',
+        '/organizations/:orgID/allocation-agreements',
         '/organizations/:orgID/compliance-tracking',
         '/organizations/:orgID/comment-log',
         '/organizations/:orgID/add-user',

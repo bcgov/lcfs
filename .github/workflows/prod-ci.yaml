@@ -847,26 +847,3 @@ jobs:
               make_latest: 'true'
             })
             core.info(`✅ GitHub Release created: ${tag}`)
-
-      - name: Update release-notes.json
-        # Only run for named semantic version releases (e.g. v1.3.4), not for every CI push
-        if: steps.tags.outputs.is_semantic == 'true'
-        run: |
-          node scripts/build-release-notes.mjs \
-            --tag             "${{ steps.tags.outputs.latest }}" \
-            --display-version "${{ steps.tags.outputs.display }}" \
-            --native-notes    /tmp/native-notes.md \
-            --enhanced-notes  /tmp/enhanced-notes.md
-
-      - name: Commit and push release-notes.json
-        if: steps.tags.outputs.is_semantic == 'true'
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/public/release-notes.json
-          if git diff --staged --quiet; then
-            echo "release-notes.json unchanged — nothing to commit"
-          else
-            git commit -m "chore(release): update release notes for ${{ steps.tags.outputs.latest }} [skip ci]"
-            git push origin main
-          fi

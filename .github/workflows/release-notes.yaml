@@ -1,0 +1,193 @@
+name: Update Release Notes JSON
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Semantic release tag to (re)generate notes for (e.g. v1.3.5)"
+        required: true
+
+permissions:
+  contents: write # Required to commit the updated release-notes.json to main
+  pull-requests: read # Required by generateReleaseNotes to read PR data
+
+concurrency:
+  group: release-notes-json
+  cancel-in-progress: false
+
+jobs:
+  update-release-notes-json:
+    name: Update release-notes.json
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
+    steps:
+      - name: Resolve release tag
+        id: tag
+        env:
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          TAG="${EVENT_TAG:-$INPUT_TAG}"
+          if [ -z "$TAG" ]; then
+            echo "No tag resolved from event or input — nothing to do."
+            echo "is_semantic=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          # Only named semantic version tags (vX.Y.Z or X.Y.Z) drive the page.
+          if echo "$TAG" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "is_semantic=true" >> "$GITHUB_OUTPUT"
+            echo "display=${TAG#v}" >> "$GITHUB_OUTPUT"
+            echo "✅ ${TAG} is a semantic release — will update release-notes.json"
+          else
+            echo "is_semantic=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ ${TAG} is not a semantic version tag — skipping."
+          fi
+
+      - name: Check out repository
+        if: steps.tag.outputs.is_semantic == 'true'
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0 # Full history + all tags required
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        if: steps.tag.outputs.is_semantic == 'true'
+        uses: actions/setup-node@v6.3.0
+        with:
+          node-version: "20"
+
+      - name: Resolve previous semantic tag
+        id: prev
+        if: steps.tag.outputs.is_semantic == 'true'
+        env:
+          LATEST_TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          git fetch --tags --quiet
+          PREVIOUS_TAG=$(git tag --sort=-version:refname \
+            | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
+            | grep -v "^${LATEST_TAG}$" \
+            | head -1 || true)
+          echo "previous=${PREVIOUS_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Previous semantic tag: ${PREVIOUS_TAG:-<none>}"
+
+      - name: Generate native release notes
+        id: native
+        if: steps.tag.outputs.is_semantic == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            const latestTag   = '${{ steps.tag.outputs.tag }}'
+            const previousTag = '${{ steps.prev.outputs.previous }}'
+
+            const params = {
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              tag_name: latestTag
+            }
+            if (previousTag) params.previous_tag_name = previousTag
+
+            const { data } = await github.rest.repos.generateReleaseNotes(params)
+            fs.writeFileSync('/tmp/native-notes.md', data.body)
+            core.info('✅ Native release notes generated')
+
+      - name: Enhance with GitHub Copilot (Models API)
+        id: enhanced
+        if: steps.tag.outputs.is_semantic == 'true'
+        uses: actions/github-script@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          script: |
+            const fs = require('fs')
+            const nativeNotes = fs.readFileSync('/tmp/native-notes.md', 'utf8')
+
+            const SYSTEM_PROMPT = [
+              'You are a technical writer for the BC Government Low Carbon Fuel Standard (LCFS) web application.',
+              'Rewrite the provided GitHub-generated release notes into clear, professional language for a BC Government website.',
+              'The audience is fuel suppliers, compliance officers, and ministry staff — not developers.',
+              'Preserve the original ## category headings (🚀 New Features, 🐛 Bug Fixes, etc.).',
+              'Rewrite each bullet point in plain English. Remove GitHub-specific syntax such as "by @user in #PR".',
+              'Keep each item concise (one sentence). Return only the formatted markdown — no preamble or explanation.'
+            ].join(' ')
+
+            try {
+              const response = await fetch(
+                'https://models.inference.ai.azure.com/chat/completions',
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${process.env.GITHUB_TOKEN}`
+                  },
+                  body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: [
+                      { role: 'system', content: SYSTEM_PROMPT },
+                      { role: 'user',   content: nativeNotes }
+                    ],
+                    max_tokens: 2000,
+                    temperature: 0.3
+                  })
+                }
+              )
+
+              if (!response.ok) {
+                const body = await response.text()
+                core.warning(`GitHub Models API ${response.status}: ${body.slice(0, 200)} — falling back to native notes`)
+                fs.writeFileSync('/tmp/enhanced-notes.md', nativeNotes)
+                return
+              }
+
+              const json     = await response.json()
+              const enhanced = json.choices?.[0]?.message?.content
+              if (!enhanced) {
+                core.warning('Empty response from GitHub Models — falling back to native notes')
+                fs.writeFileSync('/tmp/enhanced-notes.md', nativeNotes)
+                return
+              }
+
+              core.info('✅ GitHub Copilot enhancement applied')
+              fs.writeFileSync('/tmp/enhanced-notes.md', enhanced)
+            } catch (err) {
+              core.warning(`GitHub Models API unavailable: ${err.message} — falling back to native notes`)
+              fs.writeFileSync('/tmp/enhanced-notes.md', nativeNotes)
+            }
+
+      - name: Update release-notes.json
+        if: steps.tag.outputs.is_semantic == 'true'
+        run: |
+          node scripts/build-release-notes.mjs \
+            --tag             "${{ steps.tag.outputs.tag }}" \
+            --display-version "${{ steps.tag.outputs.display }}" \
+            --native-notes    /tmp/native-notes.md \
+            --enhanced-notes  /tmp/enhanced-notes.md
+
+      - name: Commit and push release-notes.json
+        if: steps.tag.outputs.is_semantic == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/public/release-notes.json
+          if git diff --staged --quiet; then
+            echo "release-notes.json unchanged — nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore(release): update release notes for ${{ steps.tag.outputs.tag }} [skip ci]"
+          # Rebase-and-retry to avoid non-fast-forward failures if main advanced
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "✅ release-notes.json pushed to main"
+              exit 0
+            fi
+            echo "Push rejected (attempt ${attempt}) — rebasing on latest main and retrying"
+            git fetch origin main
+            git rebase origin/main || { git rebase --abort; exit 1; }
+          done
+          echo "::error::Failed to push release-notes.json after 3 attempts"
+          exit 1

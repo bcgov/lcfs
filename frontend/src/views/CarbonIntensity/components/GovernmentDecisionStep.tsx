@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Box,
   FormControlLabel,
+  FormHelperText,
   OutlinedInput,
   Radio,
   RadioGroup,
@@ -87,6 +88,24 @@ export const GovernmentDecisionStep = ({
     ciApplication?.priorityScore || ''
   )
   const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
+  const [priorityScoreTouched, setPriorityScoreTouched] = useState(false)
+  const [
+    priorityScoreVerificationAttempted,
+    setPriorityScoreVerificationAttempted
+  ] = useState(false)
+
+  const priorityScoreNumber = Number(priorityScore)
+  const isPriorityScoreValid =
+    priorityScore !== '' &&
+    Number.isInteger(priorityScoreNumber) &&
+    priorityScoreNumber >= 1 &&
+    priorityScoreNumber <= 999
+  const priorityScoreError =
+    ((priorityScoreTouched && priorityScore !== '') ||
+      priorityScoreVerificationAttempted) &&
+    !isPriorityScoreValid
+      ? t('carbonIntensity:step5.priorityScoreInvalid')
+      : null
 
   const normalizeRisk = (risk?: string | null) =>
     risk === 'Moderate' ? 'Medium' : risk
@@ -222,6 +241,43 @@ export const GovernmentDecisionStep = ({
     )
   }
 
+  const requireValidPriorityScore = () => {
+    setPriorityScoreTouched(true)
+    setPriorityScoreVerificationAttempted(true)
+    if (isPriorityScoreValid) return priorityScoreNumber
+    setError(t('carbonIntensity:step5.priorityScoreInvalid'))
+    setSuccess(null)
+    return null
+  }
+
+  const handleCompleteVerification1 = () => {
+    const validPriorityScore = requireValidPriorityScore()
+    if (validPriorityScore === null) return
+
+    recordWorkflowAction(
+      () =>
+        completeVerification1({
+          preliminaryRiskAssessment: riskAssessment,
+          priorityScore: validPriorityScore
+        } as any),
+      t('carbonIntensity:step5.workflowSuccess')
+    )
+  }
+
+  const handleCompleteVerification2 = () => {
+    const validPriorityScore = requireValidPriorityScore()
+    if (validPriorityScore === null) return
+
+    recordWorkflowAction(
+      () =>
+        completeVerification2({
+          preliminaryRiskAssessment: riskAssessment,
+          priorityScore: validPriorityScore
+        } as any),
+      t('carbonIntensity:step5.workflowSuccess')
+    )
+  }
+
   return (
     <Box>
       {showTitle && (
@@ -310,37 +366,58 @@ export const GovernmentDecisionStep = ({
                       />
                     </RadioGroup>
                   </Stack>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
-                      {t('carbonIntensity:step5.priorityScore')}:
-                    </BCTypography>
-                    <OutlinedInput
-                      type="number"
-                      inputProps={{ min: 0, max: 1000 }}
-                      value={priorityScore}
-                      onChange={(event) => {
-                        let value = Number(event.target.value)
-                        if (value < 0) value = 0
-                        if (value > 1000) value = 1000
-                        setPriorityScore(value.toString())
-                      }}
-                      disabled={readOnly}
-                      sx={{
-                        width: 106,
-                        height: 42,
-                        border: 1,
-                        borderColor: 'grey.400',
-                        bgcolor: 'common.white',
-                        color: 'primary.main',
-                        fontWeight: 700,
-                        fontSize: '1rem',
-                        textAlign: 'center',
-                        '& input': {
-                          p: 0,
-                          textAlign: 'center'
-                        }
-                      }}
-                    />
+                  <Stack spacing={0.5}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
+                        {t('carbonIntensity:step5.priorityScore')}:
+                      </BCTypography>
+                      <OutlinedInput
+                        type="text"
+                        inputProps={{
+                          'data-test': 'ci-priority-score-input',
+                          inputMode: 'numeric',
+                          pattern: '[0-9]*',
+                          min: 1,
+                          max: 999
+                        }}
+                        value={priorityScore}
+                        error={!!priorityScoreError}
+                        onBlur={() => setPriorityScoreTouched(true)}
+                        onChange={(event) => {
+                          const nextValue = event.target.value
+                          if (!/^\d*$/.test(nextValue)) return
+                          if (nextValue === '') {
+                            setPriorityScore('')
+                            return
+                          }
+                          const numericValue = Number(nextValue)
+                          setPriorityScore(
+                            Math.min(numericValue, 999).toString()
+                          )
+                        }}
+                        disabled={readOnly}
+                        sx={{
+                          width: 106,
+                          height: 42,
+                          border: 1,
+                          borderColor: 'grey.400',
+                          bgcolor: 'common.white',
+                          color: 'primary.main',
+                          fontWeight: 700,
+                          fontSize: '1rem',
+                          textAlign: 'center',
+                          '& input': {
+                            p: 0,
+                            textAlign: 'center'
+                          }
+                        }}
+                      />
+                    </Stack>
+                    {priorityScoreError && (
+                      <FormHelperText error sx={{ m: 0 }}>
+                        {priorityScoreError}
+                      </FormHelperText>
+                    )}
                   </Stack>
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
@@ -362,18 +439,7 @@ export const GovernmentDecisionStep = ({
                   color="primary"
                   sx={workflowButtonSx}
                   disabled={readOnly || isVerifying1}
-                  onClick={() =>
-                    recordWorkflowAction(
-                      () =>
-                        completeVerification1({
-                          preliminaryRiskAssessment: riskAssessment,
-                          priorityScore: priorityScore
-                            ? Number(priorityScore)
-                            : undefined
-                        } as any),
-                      t('carbonIntensity:step5.workflowSuccess')
-                    )
-                  }
+                  onClick={handleCompleteVerification1}
                   data-test="ci-verification-1-complete-btn"
                 >
                   {t('carbonIntensity:step5.verification1Complete')}
@@ -386,18 +452,7 @@ export const GovernmentDecisionStep = ({
                   color="primary"
                   sx={workflowButtonSx}
                   disabled={readOnly || isVerifying2}
-                  onClick={() =>
-                    recordWorkflowAction(
-                      () =>
-                        completeVerification2({
-                          preliminaryRiskAssessment: riskAssessment,
-                          priorityScore: priorityScore
-                            ? Number(priorityScore)
-                            : undefined
-                        } as any),
-                      t('carbonIntensity:step5.workflowSuccess')
-                    )
-                  }
+                  onClick={handleCompleteVerification2}
                   data-test="ci-verification-2-complete-btn"
                 >
                   {t('carbonIntensity:step5.verification2Complete')}

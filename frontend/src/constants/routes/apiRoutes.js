@@ -44,6 +44,8 @@ export const apiRoutes = {
   organizationPenaltyLogsList: '/organizations/:orgID/penalties/logs/list',
   organizationPenaltyLogs: '/organizations/:orgID/penalties/logs',
   organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
+  organizationAllocationAgreementAnalytics:
+    '/organizations/:orgID/allocation-agreements/analytics',
   organizationComments: '/organizations/:orgID/comments',
   commentCategories: '/internal_comments/categories',
   internalComment: '/internal_comments/:commentId',
@@ -247,6 +249,11 @@ export const apiRoutes = {
   complianceReportCounts: '/dashboard/compliance-report-counts',
   fuelCodeCounts: '/dashboard/fuel-code-counts',
   orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
+
+  // credit market
+  creditMarketOverview: '/credit-market/overview',
+  creditMarketPublicOverview: '/credit-market/public-overview',
+  creditMarketPublicReport: '/credit-market/public-report',
 
   // audit-logs
   getAuditLogs: '/audit-log/list',

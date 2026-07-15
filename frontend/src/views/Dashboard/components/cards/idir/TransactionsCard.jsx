@@ -188,6 +188,17 @@ const TransactionsCard = () => {
               </ListItemButton>
             ))}
           </List>
+          <BCTypography
+            variant="body2"
+            color="link"
+            sx={styles.link}
+            onClick={() => navigate(ROUTES.CREDIT_MARKET)}
+            data-test="credit-market-link"
+          >
+            {t('dashboard:transactions.creditMarketDashboard', {
+              defaultValue: 'Credit market dashboard'
+            })}
+          </BCTypography>
         </Stack>
       }
     />

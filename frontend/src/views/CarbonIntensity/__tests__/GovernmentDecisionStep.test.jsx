@@ -121,13 +121,60 @@ describe('GovernmentDecisionStep', () => {
       { wrapper }
     )
     expect(screen.getByTestId('ci-step5-decision-panel')).toBeInTheDocument()
+    fireEvent.change(screen.getByTestId('ci-priority-score-input'), {
+      target: { value: '120' }
+    })
     fireEvent.click(screen.getByTestId('ci-verification-1-complete-btn'))
     await waitFor(() =>
       expect(mockCompleteVerification1).toHaveBeenCalledWith({
         preliminaryRiskAssessment: 'Low',
-        priorityScore: undefined
+        priorityScore: 120
       })
     )
+  })
+
+  it('requires a valid priority score before completing verification 1', async () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-verification-1-complete-btn'))
+
+    expect(mockCompleteVerification1).not.toHaveBeenCalled()
+    expect(
+      screen.getAllByText('carbonIntensity:step5.priorityScoreInvalid').length
+    ).toBeGreaterThan(0)
+  })
+
+  it('allows a blank priority score before a verification action is submitted', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      { wrapper }
+    )
+
+    fireEvent.blur(screen.getByTestId('ci-priority-score-input'))
+
+    expect(
+      screen.queryByText('carbonIntensity:step5.priorityScoreInvalid')
+    ).not.toBeInTheDocument()
+  })
+
+  it('caps priority score at 999 and ignores decimal input', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      { wrapper }
+    )
+    const input = screen.getByTestId('ci-priority-score-input')
+
+    fireEvent.change(input, { target: { value: '1000' } })
+    expect(input).toHaveValue('999')
+
+    fireEvent.change(input, { target: { value: '12.5' } })
+    expect(input).toHaveValue('999')
   })
 
   it.each([
