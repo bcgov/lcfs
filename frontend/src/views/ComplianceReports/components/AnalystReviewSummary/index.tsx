@@ -13,7 +13,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import { useEffect, useMemo, useState } from 'react'
-import { robotVariants } from './constants'
+import { analystReviewAssistantName, robotVariants } from './constants'
 import { ReviewCharts } from './ReviewCharts'
 import { ReviewSections } from './ReviewSections'
 import { RobotAvatar } from './RobotAvatar'
@@ -129,7 +129,7 @@ export const AnalystReviewSummary = ({
   if (isError || !data) {
     return (
       <BCAlert severity="warning" noFade sx={{ mb: 2 }}>
-        Methy pre-screen is unavailable.
+        {analystReviewAssistantName} pre-screen is unavailable.
       </BCAlert>
     )
   }
@@ -180,7 +180,7 @@ export const AnalystReviewSummary = ({
               <BCBox>
                 <Stack direction="row" spacing={0.75} alignItems="center">
                   <BCTypography variant="h6" color="primary">
-                    Methy pre-screen
+                    {analystReviewAssistantName} pre-screen
                   </BCTypography>
                   <Chip
                     size="small"
