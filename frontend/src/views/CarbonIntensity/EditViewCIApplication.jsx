@@ -288,7 +288,7 @@ const EditViewCIApplicationBase = () => {
       await deleteDraft(ciApplicationId)
       navigate(ROUTES.CI_APPLICATIONS.LIST, {
         state: {
-          message: t('carbonIntensity:step1.deleteConfirmTitle'),
+          message: t('carbonIntensity:step1.deleteSuccess'),
           severity: 'success'
         }
       })
@@ -584,25 +584,6 @@ const EditViewCIApplicationBase = () => {
           </Accordion>
         ))
       )}
-
-      <BCBox
-        sx={{
-          mt: 4,
-          p: 2,
-          bgcolor: 'grey.50',
-          border: 1,
-          borderColor: 'divider'
-        }}
-      >
-        <BCTypography
-          variant="caption"
-          color="text.secondary"
-          component="pre"
-          sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', m: 0 }}
-        >
-          {t('carbonIntensity:footer')}
-        </BCTypography>
-      </BCBox>
 
       {modalData && (
         <BCModal
