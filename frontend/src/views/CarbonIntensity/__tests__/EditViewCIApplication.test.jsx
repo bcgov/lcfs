@@ -357,6 +357,8 @@ describe('EditViewCIApplication', () => {
         status: { status: 'Draft' },
         // Step 1 required fields saved
         facilityCountry: 'Canada',
+        facilityCity: 'Vancouver',
+        facilityProvinceState: 'BC',
         facilityNameplateCapacity: 1000,
         facilityNameplateCapacityUnit: 'L',
         // Step 2 saved
