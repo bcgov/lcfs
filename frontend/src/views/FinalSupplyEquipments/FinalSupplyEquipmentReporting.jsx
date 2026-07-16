@@ -1,13 +1,7 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditorPaginated } from '@/components/BCDataGrid/BCGridEditorPaginated'
 import BCTypography from '@/components/BCTypography'
-import {
-  Stack,
-  TextField,
-  Autocomplete,
-  Alert,
-  CircularProgress
-} from '@mui/material'
+import { Stack, TextField, Autocomplete, Alert, CircularProgress } from '@mui/material'
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Controller, useForm } from 'react-hook-form'
@@ -76,8 +70,9 @@ export const FinalSupplyEquipmentReporting = () => {
   const { data: reportData, isLoading: isReportLoading } =
     useComplianceReportWithCache(complianceReportId)
   const organizationId = reportData?.report?.organizationId
-  const { data: siteNames = [], isLoading: siteLoading } =
-    useSiteNames(organizationId)
+  const { data: siteNames = [], isLoading: siteLoading } = useSiteNames(
+    organizationId
+  )
 
   const { control, watch } = useForm({
     defaultValues: {
@@ -114,10 +109,8 @@ export const FinalSupplyEquipmentReporting = () => {
     complianceReportId
   )
 
-  const { mutateAsync: updateActiveStatus } = useUpdateFSEReportingActiveStatus(
-    complianceReportId,
-    organizationId
-  )
+  const { mutateAsync: updateActiveStatus } =
+    useUpdateFSEReportingActiveStatus(complianceReportId, organizationId)
 
   // Mutation hook for set defaults
   const { mutateAsync: setDefaults } =
@@ -234,212 +227,220 @@ export const FinalSupplyEquipmentReporting = () => {
   }, [])
 
   // Handle row selection changes
-  const handleSelectionChanged = useCallback(async () => {
-    if (isSyncingSelectionRef.current) return
+  const handleSelectionChanged = useCallback(
+    async () => {
+      if (isSyncingSelectionRef.current) return
 
-    const gridApi = fseGridRef.current?.api
-    const selectedNodes = gridApi?.getSelectedNodes() ?? []
-    const currentSelection = new Set(
-      selectedNodes.map((node) => node.data.chargingEquipmentId).filter(Boolean)
-    )
+      const gridApi = fseGridRef.current?.api
+      const selectedNodes = gridApi?.getSelectedNodes() ?? []
+      const currentSelection = new Set(
+        selectedNodes
+          .map((node) => node.data.chargingEquipmentId)
+          .filter(Boolean)
+      )
 
-    const nodesToCreate = []
-    const nodesToReactivate = []
-    selectedNodes.forEach((node) => {
-      const equipmentId = node.data?.chargingEquipmentId
-      if (equipmentId && !previousSelectionRef.current.has(equipmentId)) {
+      const nodesToCreate = []
+      const nodesToReactivate = []
+      selectedNodes.forEach((node) => {
+        const equipmentId = node.data?.chargingEquipmentId
         if (
-          node.data?.chargingEquipmentComplianceId &&
-          node.data?.isActive === false
+          equipmentId &&
+          !previousSelectionRef.current.has(equipmentId)
         ) {
-          nodesToReactivate.push(node)
-        } else if (!node.data?.chargingEquipmentComplianceId) {
-          nodesToCreate.push(node)
+          if (
+            node.data?.chargingEquipmentComplianceId &&
+            node.data?.isActive === false
+          ) {
+            nodesToReactivate.push(node)
+          } else if (!node.data?.chargingEquipmentComplianceId) {
+            nodesToCreate.push(node)
+          }
+        }
+      })
+
+      const newlyUnselectedIds = []
+      const newlyUnselectedEquipmentIds = []
+      const newlyUnselectedNodes = []
+      gridApi?.forEachNode((node) => {
+        const equipmentId = node.data?.chargingEquipmentId
+        if (
+          equipmentId &&
+          previousSelectionRef.current.has(equipmentId) &&
+          !currentSelection.has(equipmentId) &&
+          node.data.chargingEquipmentComplianceId &&
+          node.data.isActive !== false
+        ) {
+          newlyUnselectedIds.push(
+            parseInt(node.data.chargingEquipmentComplianceId)
+          )
+          newlyUnselectedEquipmentIds.push(equipmentId)
+          newlyUnselectedNodes.push(node)
+        }
+      })
+
+      if (
+        nodesToCreate.length === 0 &&
+        nodesToReactivate.length === 0 &&
+        newlyUnselectedIds.length === 0
+      ) {
+        return
+      }
+
+      const selectionResult = new Set(previousSelectionRef.current)
+
+      const revertSelection = () => {
+        syncGridSelection(selectionResult)
+        globalSelectionRef.current = new Set(selectionResult)
+        previousSelectionRef.current = new Set(selectionResult)
+        setHasSelectedRows(selectionResult.size > 0)
+      }
+
+      let created = false
+      let reactivated = false
+      let deactivated = false
+
+      if (nodesToReactivate.length > 0) {
+        try {
+          await updateActiveStatus({
+            reportingIds: nodesToReactivate.map((node) =>
+              parseInt(node.data.chargingEquipmentComplianceId)
+            ),
+            isActive: true
+          })
+
+          nodesToReactivate.forEach((node) => {
+            const equipmentId = node.data?.chargingEquipmentId
+            selectionResult.add(equipmentId)
+            node.updateData({
+              ...node.data,
+              isActive: true
+            })
+          })
+          reactivated = true
+        } catch (error) {
+          console.error('Error reactivating FSE reporting records:', error)
+          fseGridAlertRef.current?.triggerAlert({
+            message: t('finalSupplyEquipment:errorAddDeleteRows'),
+            severity: 'error'
+          })
+          revertSelection()
+          return
         }
       }
-    })
 
-    const newlyUnselectedIds = []
-    const newlyUnselectedEquipmentIds = []
-    const newlyUnselectedNodes = []
-    gridApi?.forEachNode((node) => {
-      const equipmentId = node.data?.chargingEquipmentId
-      if (
-        equipmentId &&
-        previousSelectionRef.current.has(equipmentId) &&
-        !currentSelection.has(equipmentId) &&
-        node.data.chargingEquipmentComplianceId &&
-        node.data.isActive !== false
-      ) {
-        newlyUnselectedIds.push(
-          parseInt(node.data.chargingEquipmentComplianceId)
-        )
-        newlyUnselectedEquipmentIds.push(equipmentId)
-        newlyUnselectedNodes.push(node)
+      if (nodesToCreate.length > 0) {
+        try {
+          const newRows = nodesToCreate.map((node) => ({
+            supplyFromDate: defaultFromDate,
+            supplyToDate: defaultToDate,
+            kwhUsage: node.data.kwhUsage,
+            complianceNotes: node.data.complianceNotes || null,
+            chargingEquipmentId: node.data.chargingEquipmentId,
+            chargingEquipmentVersion: node.data.chargingEquipmentVersion,
+            organizationId,
+            complianceReportId,
+            complianceReportGroupUuid:
+              reportData?.report?.complianceReportGroupUuid
+          }))
+
+          const response = await saveRow(newRows)
+
+          const createdRecords = response?.data?.data || []
+          nodesToCreate.forEach((node, index) => {
+            const equipmentId = node.data?.chargingEquipmentId
+            const createdData = Array.isArray(createdRecords)
+              ? createdRecords[index]
+              : createdRecords
+            node.updateData({
+              ...node.data,
+              chargingEquipmentComplianceId:
+                createdData?.chargingEquipmentComplianceId || createdData?.id,
+              supplyFromDate: defaultFromDate,
+              supplyToDate: defaultToDate,
+              complianceReportId: parseInt(complianceReportId),
+              complianceReportGroupUuid:
+                reportData?.report?.complianceReportGroupUuid,
+              complianceNotes: node.data.complianceNotes || null,
+              isActive: true
+            })
+            if (equipmentId) {
+              selectionResult.add(equipmentId)
+            }
+          })
+          created = true
+        } catch (error) {
+          console.error('Error creating FSE reporting records:', error)
+          fseGridAlertRef.current?.triggerAlert({
+            message: t('finalSupplyEquipment:errorAddDeleteRows'),
+            severity: 'error'
+          })
+          revertSelection()
+          return
+        }
       }
-    })
 
-    if (
-      nodesToCreate.length === 0 &&
-      nodesToReactivate.length === 0 &&
-      newlyUnselectedIds.length === 0
-    ) {
-      return
-    }
+      if (newlyUnselectedIds.length > 0) {
+        try {
+          await updateActiveStatus({
+            reportingIds: newlyUnselectedIds,
+            isActive: false
+          })
 
-    const selectionResult = new Set(previousSelectionRef.current)
+          newlyUnselectedNodes.forEach((node) => {
+            node.updateData({
+              ...node.data,
+              isActive: false
+            })
+          })
+          newlyUnselectedEquipmentIds.forEach((id) => {
+            validationStatusCacheRef.current.delete(id)
+            selectionResult.delete(id)
+          })
+          deactivated = true
+        } catch (error) {
+          console.error('Error deactivating FSE reporting records:', error)
+          fseGridAlertRef.current?.triggerAlert({
+            message: t('finalSupplyEquipment:errorAddDeleteRows'),
+            severity: 'error'
+          })
+          revertSelection()
+          return
+        }
+      }
 
-    const revertSelection = () => {
-      syncGridSelection(selectionResult)
       globalSelectionRef.current = new Set(selectionResult)
       previousSelectionRef.current = new Set(selectionResult)
       setHasSelectedRows(selectionResult.size > 0)
-    }
 
-    let created = false
-    let reactivated = false
-    let deactivated = false
-
-    if (nodesToReactivate.length > 0) {
-      try {
-        await updateActiveStatus({
-          reportingIds: nodesToReactivate.map((node) =>
-            parseInt(node.data.chargingEquipmentComplianceId)
-          ),
-          isActive: true
-        })
-
-        nodesToReactivate.forEach((node) => {
-          const equipmentId = node.data?.chargingEquipmentId
-          selectionResult.add(equipmentId)
-          node.updateData({
-            ...node.data,
-            isActive: true
-          })
-        })
-        reactivated = true
-      } catch (error) {
-        console.error('Error reactivating FSE reporting records:', error)
+      if (created) {
         fseGridAlertRef.current?.triggerAlert({
-          message: t('finalSupplyEquipment:errorAddDeleteRows'),
-          severity: 'error'
+          message: t('finalSupplyEquipment:rowsCreatedSuccessfully'),
+          severity: 'success'
         })
-        revertSelection()
-        return
-      }
-    }
-
-    if (nodesToCreate.length > 0) {
-      try {
-        const newRows = nodesToCreate.map((node) => ({
-          supplyFromDate: defaultFromDate,
-          supplyToDate: defaultToDate,
-          kwhUsage: node.data.kwhUsage,
-          complianceNotes: node.data.complianceNotes || null,
-          chargingEquipmentId: node.data.chargingEquipmentId,
-          chargingEquipmentVersion: node.data.chargingEquipmentVersion,
-          organizationId,
-          complianceReportId,
-          complianceReportGroupUuid:
-            reportData?.report?.complianceReportGroupUuid
-        }))
-
-        const response = await saveRow(newRows)
-
-        const createdRecords = response?.data?.data || []
-        nodesToCreate.forEach((node, index) => {
-          const equipmentId = node.data?.chargingEquipmentId
-          const createdData = Array.isArray(createdRecords)
-            ? createdRecords[index]
-            : createdRecords
-          node.updateData({
-            ...node.data,
-            chargingEquipmentComplianceId:
-              createdData?.chargingEquipmentComplianceId || createdData?.id,
-            supplyFromDate: defaultFromDate,
-            supplyToDate: defaultToDate,
-            complianceReportId: parseInt(complianceReportId),
-            complianceReportGroupUuid:
-              reportData?.report?.complianceReportGroupUuid,
-            complianceNotes: node.data.complianceNotes || null,
-            isActive: true
-          })
-          if (equipmentId) {
-            selectionResult.add(equipmentId)
-          }
-        })
-        created = true
-      } catch (error) {
-        console.error('Error creating FSE reporting records:', error)
+      } else if (reactivated) {
         fseGridAlertRef.current?.triggerAlert({
-          message: t('finalSupplyEquipment:errorAddDeleteRows'),
-          severity: 'error'
+          message: t('finalSupplyEquipment:rowsReactivatedSuccessfully'),
+          severity: 'success'
         })
-        revertSelection()
-        return
-      }
-    }
-
-    if (newlyUnselectedIds.length > 0) {
-      try {
-        await updateActiveStatus({
-          reportingIds: newlyUnselectedIds,
-          isActive: false
-        })
-
-        newlyUnselectedNodes.forEach((node) => {
-          node.updateData({
-            ...node.data,
-            isActive: false
-          })
-        })
-        newlyUnselectedEquipmentIds.forEach((id) => {
-          validationStatusCacheRef.current.delete(id)
-          selectionResult.delete(id)
-        })
-        deactivated = true
-      } catch (error) {
-        console.error('Error deactivating FSE reporting records:', error)
+      } else if (deactivated) {
         fseGridAlertRef.current?.triggerAlert({
-          message: t('finalSupplyEquipment:errorAddDeleteRows'),
-          severity: 'error'
+          message: t('finalSupplyEquipment:rowsExcludedSuccessfully'),
+          severity: 'success'
         })
-        revertSelection()
-        return
       }
-    }
-
-    globalSelectionRef.current = new Set(selectionResult)
-    previousSelectionRef.current = new Set(selectionResult)
-    setHasSelectedRows(selectionResult.size > 0)
-
-    if (created) {
-      fseGridAlertRef.current?.triggerAlert({
-        message: t('finalSupplyEquipment:rowsCreatedSuccessfully'),
-        severity: 'success'
-      })
-    } else if (reactivated) {
-      fseGridAlertRef.current?.triggerAlert({
-        message: t('finalSupplyEquipment:rowsReactivatedSuccessfully'),
-        severity: 'success'
-      })
-    } else if (deactivated) {
-      fseGridAlertRef.current?.triggerAlert({
-        message: t('finalSupplyEquipment:rowsExcludedSuccessfully'),
-        severity: 'success'
-      })
-    }
-  }, [
-    saveRow,
-    updateActiveStatus,
-    complianceReportId,
-    reportData,
-    defaultFromDate,
-    defaultToDate,
-    t,
-    syncGridSelection,
-    organizationId
-  ])
+    },
+    [
+      saveRow,
+      updateActiveStatus,
+      complianceReportId,
+      reportData,
+      defaultFromDate,
+      defaultToDate,
+      t,
+      syncGridSelection,
+      organizationId
+    ]
+  )
 
   const gridOptions = useMemo(
     () => ({
@@ -564,30 +565,27 @@ export const FinalSupplyEquipmentReporting = () => {
     }
   }, [complianceReportId, apiService, t])
 
-  const handleSiteChange = useCallback(
-    (event, newValue) => {
-      setSelectedSiteOption(newValue)
-      // Update filters in pagination options
-      setPaginationOptions((prev) => ({
-        ...prev,
-        page: 1,
-        filters: [
-          ...(newValue
-            ? [
-                {
-                  field: 'chargingSiteId',
-                  type: 'equals',
-                  filterType: 'number',
-                  filter: newValue.chargingSiteId
-                }
-              ]
-            : []),
-          ...(showingOnlyUnselected ? [inactiveRowsFilter] : [])
-        ]
-      }))
-    },
-    [showingOnlyUnselected]
-  )
+  const handleSiteChange = useCallback((event, newValue) => {
+    setSelectedSiteOption(newValue)
+    // Update filters in pagination options
+    setPaginationOptions((prev) => ({
+      ...prev,
+      page: 1,
+      filters: [
+        ...(newValue
+          ? [
+              {
+                field: 'chargingSiteId',
+                type: 'equals',
+                filterType: 'number',
+                filter: newValue.chargingSiteId
+              }
+            ]
+          : []),
+        ...(showingOnlyUnselected ? [inactiveRowsFilter] : [])
+      ]
+    }))
+  }, [showingOnlyUnselected])
 
   const handleToggleUnselectedRows = useCallback(() => {
     setPaginationOptions((prev) => {
@@ -726,182 +724,180 @@ export const FinalSupplyEquipmentReporting = () => {
             flexWrap: { xs: 'wrap', lg: 'nowrap' }
           }}
         >
-          {/* Left side: Date fields and buttons */}
-          <BCBox
-            sx={{
-              display: 'flex',
-              gap: 2,
-              alignItems: 'flex-start',
-              flexWrap: 'wrap'
-            }}
-          >
-            <Controller
-              name="defaultFromDate"
-              control={control}
-              rules={{
-                validate: (value) => {
-                  if (
-                    value &&
-                    defaultToDate &&
-                    new Date(value) > new Date(defaultToDate)
-                  ) {
-                    return t('finalSupplyEquipment:fromDateMustBeBeforeToDate')
-                  }
-                  return true
+        {/* Left side: Date fields and buttons */}
+        <BCBox
+          sx={{
+            display: 'flex',
+            gap: 2,
+            alignItems: 'flex-start',
+            flexWrap: 'wrap'
+          }}
+        >
+          <Controller
+            name="defaultFromDate"
+            control={control}
+            rules={{
+              validate: (value) => {
+                if (
+                  value &&
+                  defaultToDate &&
+                  new Date(value) > new Date(defaultToDate)
+                ) {
+                  return t('finalSupplyEquipment:fromDateMustBeBeforeToDate')
                 }
-              }}
-              render={({ field, fieldState: { error } }) => (
-                <TextField
-                  {...field}
-                  label={t('finalSupplyEquipment:defaultFromDate')}
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: minDate, max: maxDate }}
-                  size="small"
-                  sx={{ minWidth: 180 }}
-                  error={!!error || !isDateRangeValid}
-                  helperText={error?.message}
-                />
-              )}
-            />
-
-            <Controller
-              name="defaultToDate"
-              control={control}
-              rules={{
-                validate: (value) => {
-                  if (
-                    value &&
-                    defaultFromDate &&
-                    new Date(value) < new Date(defaultFromDate)
-                  ) {
-                    return t('finalSupplyEquipment:toDateMustBeAfterFromDate')
-                  }
-                  return true
-                }
-              }}
-              render={({ field, fieldState: { error } }) => (
-                <TextField
-                  {...field}
-                  label={t('finalSupplyEquipment:defaultToDate')}
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: minDate, max: maxDate }}
-                  size="small"
-                  sx={{ minWidth: 180 }}
-                  error={!!error || !isDateRangeValid}
-                  helperText={error?.message}
-                />
-              )}
-            />
-
-            <BCButton
-              variant="outlined"
-              size="medium"
-              color="primary"
-              onClick={handleSetDefaultValues}
-              disabled={!isDateRangeValid || !hasSelectedRows}
-              sx={{ minWidth: 160, height: 40 }}
-            >
-              <BCTypography variant="body2">
-                {t('finalSupplyEquipment:setDefaultValues')}
-              </BCTypography>
-            </BCButton>
-
-            <BCButton
-              variant="outlined"
-              size="medium"
-              color="primary"
-              startIcon={
-                isDownloadingTemplate ? null : (
-                  <FontAwesomeIcon icon={faDownload} />
-                )
+                return true
               }
-              onClick={handleDownloadTemplate}
-              isLoading={isDownloadingTemplate}
-              disabled={isDownloadingTemplate}
-              sx={{ height: 40 }}
-            >
-              {t('finalSupplyEquipment:bulkUpdate.downloadTemplate')}
-            </BCButton>
-
-            <BCButton
-              variant="outlined"
-              size="medium"
-              color="primary"
-              startIcon={<FontAwesomeIcon icon={faUpload} />}
-              onClick={() => setIsBulkUpdateDialogOpen(true)}
-              sx={{ height: 40 }}
-            >
-              {t('finalSupplyEquipment:bulkUpdate.uploadTemplate')}
-            </BCButton>
-            <BCButton
-              variant="outlined"
-              size="medium"
-              color={showingOnlyUnselected ? 'secondary' : 'primary'}
-              startIcon={
-                <FontAwesomeIcon
-                  icon={
-                    showingOnlyUnselected ? faFilterCircleXmark : faEyeSlash
-                  }
-                />
-              }
-              onClick={handleToggleUnselectedRows}
-              sx={{ height: 40, whiteSpace: 'nowrap' }}
-            >
-              {showingOnlyUnselected
-                ? t('common:showAll', 'Show all')
-                : t(
-                    'finalSupplyEquipment:showUnselectedRows',
-                    'Show unselected rows only'
-                  )}
-            </BCButton>
-          </BCBox>
-
-          {/* Right side: Filter dropdown */}
-          <BCBox
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              marginLeft: 'auto'
             }}
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                label={t('finalSupplyEquipment:defaultFromDate')}
+                type="date"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: minDate, max: maxDate }}
+                size="small"
+                sx={{ minWidth: 180 }}
+                error={!!error || !isDateRangeValid}
+                helperText={error?.message}
+              />
+            )}
+          />
+
+          <Controller
+            name="defaultToDate"
+            control={control}
+            rules={{
+              validate: (value) => {
+                if (
+                  value &&
+                  defaultFromDate &&
+                  new Date(value) < new Date(defaultFromDate)
+                ) {
+                  return t('finalSupplyEquipment:toDateMustBeAfterFromDate')
+                }
+                return true
+              }
+            }}
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                label={t('finalSupplyEquipment:defaultToDate')}
+                type="date"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: minDate, max: maxDate }}
+                size="small"
+                sx={{ minWidth: 180 }}
+                error={!!error || !isDateRangeValid}
+                helperText={error?.message}
+              />
+            )}
+          />
+
+          <BCButton
+            variant="outlined"
+            size="medium"
+            color="primary"
+            onClick={handleSetDefaultValues}
+            disabled={!isDateRangeValid || !hasSelectedRows}
+            sx={{ minWidth: 160, height: 40 }}
           >
-            <BCTypography
-              variant="body2"
-              color="text.primary"
-              sx={{ whiteSpace: 'nowrap' }}
-            >
-              {t('finalSupplyEquipment:showFSEFor')}
+            <BCTypography variant="body2">
+              {t('finalSupplyEquipment:setDefaultValues')}
             </BCTypography>
-            <Autocomplete
-              disablePortal
-              id="site-selector"
-              loading={siteLoading}
-              options={siteNames}
-              value={selectedSiteOption}
-              getOptionLabel={(option) => option.siteName}
-              isOptionEqualToValue={(option, value) =>
-                option.chargingSiteId === value.chargingSiteId
-              }
-              onChange={handleSiteChange}
-              fullWidth
-              sx={{
-                minWidth: 250,
-                '& .MuiOutlinedInput-root': {
-                  fontSize: '0.875rem'
+          </BCButton>
+
+          <BCButton
+            variant="outlined"
+            size="medium"
+            color="primary"
+            startIcon={
+              isDownloadingTemplate ? null : (
+                <FontAwesomeIcon icon={faDownload} />
+              )
+            }
+            onClick={handleDownloadTemplate}
+            isLoading={isDownloadingTemplate}
+            disabled={isDownloadingTemplate}
+            sx={{ height: 40 }}
+          >
+            {t('finalSupplyEquipment:bulkUpdate.downloadTemplate')}
+          </BCButton>
+
+          <BCButton
+            variant="outlined"
+            size="medium"
+            color="primary"
+            startIcon={<FontAwesomeIcon icon={faUpload} />}
+            onClick={() => setIsBulkUpdateDialogOpen(true)}
+            sx={{ height: 40 }}
+          >
+            {t('finalSupplyEquipment:bulkUpdate.uploadTemplate')}
+          </BCButton>
+          <BCButton
+            variant="outlined"
+            size="medium"
+            color={showingOnlyUnselected ? 'secondary' : 'primary'}
+            startIcon={
+              <FontAwesomeIcon
+                icon={
+                  showingOnlyUnselected ? faFilterCircleXmark : faEyeSlash
                 }
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder={t('finalSupplyEquipment:selectSiteName')}
-                  size="small"
-                />
-              )}
-            />
-          </BCBox>
+              />
+            }
+            onClick={handleToggleUnselectedRows}
+            sx={{ height: 40, whiteSpace: 'nowrap' }}
+          >
+            {showingOnlyUnselected
+              ? t('common:showAll', 'Show all')
+              : t('finalSupplyEquipment:showUnselectedRows', 'Show unselected rows only')}
+          </BCButton>
+
         </BCBox>
+
+        {/* Right side: Filter dropdown */}
+        <BCBox
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            marginLeft: 'auto'
+          }}
+        >
+          <BCTypography
+            variant="body2"
+            color="text.primary"
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            {t('finalSupplyEquipment:showFSEFor')}
+          </BCTypography>
+          <Autocomplete
+            disablePortal
+            id="site-selector"
+            loading={siteLoading}
+            options={siteNames}
+            value={selectedSiteOption}
+            getOptionLabel={(option) => option.siteName}
+            isOptionEqualToValue={(option, value) =>
+              option.chargingSiteId === value.chargingSiteId
+            }
+            onChange={handleSiteChange}
+            fullWidth
+            sx={{
+              minWidth: 250,
+              '& .MuiOutlinedInput-root': {
+                fontSize: '0.875rem'
+              }
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder={t('finalSupplyEquipment:selectSiteName')}
+                size="small"
+              />
+            )}
+          />
+        </BCBox>
+      </BCBox>
       )}
 
       {downloadError && (
@@ -912,48 +908,42 @@ export const FinalSupplyEquipmentReporting = () => {
 
       {!shouldShowInstructionalMessage && (
         <BCGridEditorPaginated
-          gridRef={fseGridRef}
-          alertRef={fseGridAlertRef}
-          gridKey="fse-reporting-grid"
-          columnDefs={columnDefs}
-          defaultColDef={{
-            resizable: false,
-            editable: true,
-            singleClickEdit: true
-          }}
-          gridOptions={gridOptions}
-          queryData={queryData}
-          dataKey="finalSupplyEquipments"
-          getRowId={(params) =>
-            String(
-              params.data.chargingEquipmentId +
-                '-' +
-                params.data.chargingEquipmentVersion
+        gridRef={fseGridRef}
+        alertRef={fseGridAlertRef}
+        gridKey="fse-reporting-grid"
+        columnDefs={columnDefs}
+        defaultColDef={{
+          resizable: false,
+          editable: true,
+          singleClickEdit: true
+        }}
+        gridOptions={gridOptions}
+        queryData={queryData}
+        dataKey="finalSupplyEquipments"
+        getRowId={(params) => String(params.data.chargingEquipmentId + '-' + params.data.chargingEquipmentVersion)}
+        onGridReady={handleGridReady}
+        onCellValueChanged={handleCellValueChanged}
+        paginationOptions={paginationOptions}
+        onPaginationChange={setPaginationOptions}
+        enablePageCaching={true}
+        showAddRowsButton={false}
+        saveButtonProps={{
+          enabled: true,
+          text: t('finalSupplyEquipment:saveChanges'),
+          confirmText: t('finalSupplyEquipment:saveConfirmation'),
+          confirmLabel: t('finalSupplyEquipment:saveAnyway'),
+          onSave: (e) => {
+            navigate(
+              `/compliance-reporting/${compliancePeriod}/${complianceReportId}`
             )
           }
-          onGridReady={handleGridReady}
-          onCellValueChanged={handleCellValueChanged}
-          paginationOptions={paginationOptions}
-          onPaginationChange={setPaginationOptions}
-          enablePageCaching={true}
-          showAddRowsButton={false}
-          saveButtonProps={{
-            enabled: true,
-            text: t('finalSupplyEquipment:saveChanges'),
-            confirmText: t('finalSupplyEquipment:saveConfirmation'),
-            confirmLabel: t('finalSupplyEquipment:saveAnyway'),
-            onSave: (e) => {
-              navigate(
-                `/compliance-reporting/${compliancePeriod}/${complianceReportId}`
-              )
-            }
-          }}
-          autoSizeStrategy={{
-            type: 'fitCellContents',
-            defaultMinWidth: 100,
-            defaultMaxWidth: 600
-          }}
-        />
+        }}
+        autoSizeStrategy={{
+          type: 'fitCellContents',
+          defaultMinWidth: 100,
+          defaultMaxWidth: 600
+        }}
+      />
       )}
 
       <ImportDialog
@@ -966,7 +956,6 @@ export const FinalSupplyEquipmentReporting = () => {
         skippedLabel={t('finalSupplyEquipment:bulkUpdate.skippedCount')}
         importHook={useImportFSEReportingUpdate}
         getJobStatusHook={useGetFSEReportingUpdateJobStatus}
-        invalidateComplianceReportOnComplete
         onComplete={() => {
           refetch()
         }}

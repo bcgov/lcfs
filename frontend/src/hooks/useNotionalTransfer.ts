@@ -1,22 +1,14 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
-import type {
-  QueryOptions,
-  PaginationParams,
-  ExtMutationOptions
-} from './types'
+import type { QueryOptions, PaginationParams, ExtMutationOptions} from './types'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
 const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less frequently)
 
-export const useNotionalTransferOptions = (
-  _params: Record<string, any>,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useNotionalTransferOptions = (_params: Record<string, any>, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -41,11 +33,7 @@ export const useNotionalTransferOptions = (
   })
 }
 
-export const useGetAllNotionalTransfers = (
-  complianceReportId: number | string | undefined | null,
-  pagination: PaginationParams,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useGetAllNotionalTransfers = (complianceReportId: number | string | undefined | null, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -82,10 +70,7 @@ export const useGetAllNotionalTransfers = (
   })
 }
 
-export const useGetAllNotionalTransfersList = (
-  { complianceReportId, changelog = false }: any,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useGetAllNotionalTransfersList = ({ complianceReportId, changelog = false }: any, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -117,16 +102,13 @@ export const useGetAllNotionalTransfersList = (
   })
 }
 
-export const useGetNotionalTransfers = (
-  {
+export const useGetNotionalTransfers = ({
     page = 1,
     size = 10,
     sortOrders = [],
     filters = [],
     complianceReportId
-  }: any = {},
-  options: QueryOptions<unknown> = {}
-) => {
+  }: any = {}, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -161,10 +143,7 @@ export const useGetNotionalTransfers = (
   })
 }
 
-export const useSaveNotionalTransfer = (
-  complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useSaveNotionalTransfer = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -225,10 +204,8 @@ export const useSaveNotionalTransfer = (
       }
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
       }
 
       onSuccess?.(data, variables, context)
@@ -256,10 +233,7 @@ export const useSaveNotionalTransfer = (
   })
 }
 
-export const useUpdateNotionalTransfer = (
-  complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useUpdateNotionalTransfer = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -324,10 +298,8 @@ export const useUpdateNotionalTransfer = (
       }
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
       }
 
       onSuccess?.(data, variables, context)
@@ -354,10 +326,7 @@ export const useUpdateNotionalTransfer = (
   })
 }
 
-export const useDeleteNotionalTransfer = (
-  complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useDeleteNotionalTransfer = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -399,10 +368,8 @@ export const useDeleteNotionalTransfer = (
       })
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
       }
 
       onSuccess?.(data, variables, context)
@@ -429,10 +396,7 @@ export const useDeleteNotionalTransfer = (
   })
 }
 
-export const useImportNotionalTransfers = (
-  complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useImportNotionalTransfers = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -483,10 +447,8 @@ export const useImportNotionalTransfers = (
       })
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
       }
 
       onSuccess?.(data, variables, context)

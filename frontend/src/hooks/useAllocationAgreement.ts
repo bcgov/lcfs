@@ -1,12 +1,7 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
-import type {
-  QueryOptions,
-  PaginationParams,
-  ExtMutationOptions
-} from './types'
+import type { QueryOptions, PaginationParams, ExtMutationOptions} from './types'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
@@ -14,10 +9,7 @@ const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less frequently)
 const JOB_STATUS_STALE_TIME = 0 // Real-time for job status
 
-export const useAllocationAgreementOptions = (
-  params: Record<string, any>,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useAllocationAgreementOptions = (params: Record<string, any>, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -47,11 +39,7 @@ export const useAllocationAgreementOptions = (
   })
 }
 
-export const useGetAllocationAgreements = (
-  complianceReportId: number | string | undefined | null,
-  pagination: PaginationParams,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useGetAllocationAgreements = (complianceReportId: number | string | undefined | null, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -88,11 +76,7 @@ export const useGetAllocationAgreements = (
   })
 }
 
-export const useGetAllAllocationAgreements = (
-  complianceReportId: number | string | undefined | null,
-  pagination: PaginationParams,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useGetAllAllocationAgreements = (complianceReportId: number | string | undefined | null, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -124,11 +108,7 @@ export const useGetAllAllocationAgreements = (
   })
 }
 
-export const useGetAllocationAgreementsList = (
-  { complianceReportId, changelog = false }: any,
-  pagination: PaginationParams,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useGetAllocationAgreementsList = ({ complianceReportId, changelog = false }: any, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -167,10 +147,7 @@ export const useGetAllocationAgreementsList = (
   })
 }
 
-export const useSaveAllocationAgreement = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useSaveAllocationAgreement = (params: Record<string, any>, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -222,10 +199,8 @@ export const useSaveAllocationAgreement = (
       }
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          params.complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', params.complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report', params.complianceReportId ] })
         // Invalidate allocation organizations cache so charging site field updates
         queryClient.invalidateQueries({ queryKey: ['allocationOrganizations'] })
       }
@@ -249,10 +224,7 @@ export const useSaveAllocationAgreement = (
   })
 }
 
-export const useUpdateAllocationAgreement = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useUpdateAllocationAgreement = (params: Record<string, any>, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -305,10 +277,8 @@ export const useUpdateAllocationAgreement = (
       }
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          params.complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', params.complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report', params.complianceReportId ] })
         // Invalidate allocation organizations cache so charging site field updates
         queryClient.invalidateQueries({ queryKey: ['allocationOrganizations'] })
       }
@@ -331,10 +301,7 @@ export const useUpdateAllocationAgreement = (
   })
 }
 
-export const useDeleteAllocationAgreement = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useDeleteAllocationAgreement = (params: Record<string, any>, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -370,10 +337,8 @@ export const useDeleteAllocationAgreement = (
       })
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          params.complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', params.complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report', params.complianceReportId ] })
         // Invalidate allocation organizations cache so charging site field updates
         queryClient.invalidateQueries({ queryKey: ['allocationOrganizations'] })
       }
@@ -396,10 +361,7 @@ export const useDeleteAllocationAgreement = (
   })
 }
 
-export const useImportAllocationAgreement = (
-  complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useImportAllocationAgreement = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -448,10 +410,8 @@ export const useImportAllocationAgreement = (
       })
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
         // Invalidate allocation organizations cache so charging site field updates
         queryClient.invalidateQueries({ queryKey: ['allocationOrganizations'] })
       }
@@ -465,10 +425,7 @@ export const useImportAllocationAgreement = (
   })
 }
 
-export const useGetAllocationAgreementImportJobStatus = (
-  jobID: string | undefined | null,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useGetAllocationAgreementImportJobStatus = (jobID: string | undefined | null, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {

@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { testQueryClient, wrapper } from '@/tests/utils/wrapper'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { wrapper } from '@/tests/utils/wrapper'
 import {
   useFuelSupplyOptions,
   useGetFuelSupplies,
@@ -42,11 +42,6 @@ vi.mock('@/constants/statuses', () => ({
 describe('useFuelSupply', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    testQueryClient.clear()
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
   })
 
   describe('useFuelSupplyOptions', () => {
@@ -270,32 +265,6 @@ describe('useFuelSupply', () => {
 
       expect(result.current.error).toEqual(mockError)
     })
-
-    it('should invalidate main report queries after saving fuel supply', async () => {
-      mockApiService.post.mockResolvedValue({ data: { id: 1 } })
-      const invalidateSpy = vi.spyOn(testQueryClient, 'invalidateQueries')
-
-      const { result } = renderHook(
-        () => useSaveFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
-      )
-
-      result.current.mutate({ fuelType: 'Gasoline', quantity: 1000 })
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true)
-      })
-
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['compliance-report-summary', 123]
-      })
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['compliance-report', 123]
-      })
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['compliance-report-schedule-overview', 123]
-      })
-    })
   })
 
   describe('useUpdateFuelSupply', () => {
@@ -343,32 +312,6 @@ describe('useFuelSupply', () => {
 
       expect(result.current.error).toEqual(mockError)
     })
-
-    it('should invalidate main report queries after updating fuel supply', async () => {
-      mockApiService.put.mockResolvedValue({ data: { id: 1 } })
-      const invalidateSpy = vi.spyOn(testQueryClient, 'invalidateQueries')
-
-      const { result } = renderHook(
-        () => useUpdateFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
-      )
-
-      result.current.mutate({ id: 1, fuelType: 'Diesel', quantity: 1500 })
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true)
-      })
-
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['compliance-report-summary', 123]
-      })
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['compliance-report', 123]
-      })
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['compliance-report-schedule-overview', 123]
-      })
-    })
   })
 
   describe('useDeleteFuelSupply', () => {
@@ -405,32 +348,6 @@ describe('useFuelSupply', () => {
       })
 
       expect(result.current.error).toEqual(mockError)
-    })
-
-    it('should invalidate main report queries after deleting fuel supply', async () => {
-      mockApiService.delete.mockResolvedValue({ data: {} })
-      const invalidateSpy = vi.spyOn(testQueryClient, 'invalidateQueries')
-
-      const { result } = renderHook(
-        () => useDeleteFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
-      )
-
-      result.current.mutate(1)
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true)
-      })
-
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['compliance-report-summary', 123]
-      })
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['compliance-report', 123]
-      })
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ['compliance-report-schedule-overview', 123]
-      })
     })
   })
 })

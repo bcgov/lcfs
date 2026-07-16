@@ -1,18 +1,13 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
-import type { QueryOptions, ExtMutationOptions } from './types'
+import type { QueryOptions, ExtMutationOptions} from './types'
 
 // Default cache configuration
 const DEFAULT_CACHE_TIME = 15 * 60 * 1000 // 15 minutes
 const DOCUMENT_STALE_TIME = 10 * 60 * 1000 // 10 minutes (documents don't change frequently)
 
-export const useDocuments = (
-  parentType: string,
-  parentID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useDocuments = (parentType: string, parentID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -45,11 +40,7 @@ export const useDocuments = (
   })
 }
 
-export const useUploadDocument = (
-  parentType: string,
-  parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useUploadDocument = (parentType: string, parentID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -100,19 +91,16 @@ export const useUploadDocument = (
     },
     onSuccess: (data, variables, context) => {
       if (clearCache) {
-        queryClient.removeQueries({
-          queryKey: ['documents', parentType, parentID]
-        })
+        queryClient.removeQueries({ queryKey: ['documents', parentType, parentID] })
       } else {
-        queryClient.invalidateQueries({
-          queryKey: ['documents', parentType, parentID]
-        })
+        queryClient.invalidateQueries({ queryKey: ['documents', parentType, parentID] })
       }
 
       if (invalidateRelatedQueries) {
         // Invalidate any parent entity that might display document counts or status
         if (parentType === 'compliance_report') {
-          invalidateComplianceReportRelatedQueries(queryClient, parentID)
+          queryClient.invalidateQueries({ queryKey: ['compliance-report', parentID] })
+          queryClient.invalidateQueries({ queryKey: ['compliance-report-summary', parentID] })
         }
       }
 
@@ -125,11 +113,7 @@ export const useUploadDocument = (
   })
 }
 
-export const useDeleteDocument = (
-  parentType: string,
-  parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useDeleteDocument = (parentType: string, parentID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -158,13 +142,12 @@ export const useDeleteDocument = (
     },
     onSuccess: (data, variables, context) => {
       // Always invalidate after deletion to ensure removed document is gone from cache
-      queryClient.invalidateQueries({
-        queryKey: ['documents', parentType, parentID]
-      })
+      queryClient.invalidateQueries({ queryKey: ['documents', parentType, parentID] })
 
       if (invalidateRelatedQueries) {
         if (parentType === 'compliance_report') {
-          invalidateComplianceReportRelatedQueries(queryClient, parentID)
+          queryClient.invalidateQueries({ queryKey: ['compliance-report', parentID] })
+          queryClient.invalidateQueries({ queryKey: ['compliance-report-summary', parentID] })
         }
       }
 
@@ -177,11 +160,7 @@ export const useDeleteDocument = (
   })
 }
 
-export const useDownloadDocument = (
-  parentType: string,
-  parentID: number | string | undefined | null,
-  options: Record<string, any> = {}
-) => {
+export const useDownloadDocument = (parentType: string, parentID: number | string | undefined | null, options: Record<string, any> = {}) => {
   const client = useApiService()
 
   const { onSuccess, onError, ...requestOptions } = options
@@ -244,12 +223,7 @@ export const useDownloadDocument = (
   }
 }
 
-export const useGetDocumentInfo = (
-  parentType: string,
-  parentID: number | string | undefined | null,
-  documentID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useGetDocumentInfo = (parentType: string, parentID: number | string | undefined | null, documentID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -283,11 +257,7 @@ export const useGetDocumentInfo = (
   })
 }
 
-export const useUpdateDocument = (
-  parentType: string,
-  parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useUpdateDocument = (parentType: string, parentID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -319,24 +289,17 @@ export const useUpdateDocument = (
       const { documentID } = variables
 
       if (clearCache) {
-        queryClient.removeQueries({
-          queryKey: ['documents', parentType, parentID]
-        })
-        queryClient.removeQueries({
-          queryKey: ['document-info', parentType, parentID, documentID]
-        })
+        queryClient.removeQueries({ queryKey: ['documents', parentType, parentID] })
+        queryClient.removeQueries({ queryKey: [ 'document-info', parentType, parentID, documentID ] })
       } else {
-        queryClient.invalidateQueries({
-          queryKey: ['documents', parentType, parentID]
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['document-info', parentType, parentID, documentID]
-        })
+        queryClient.invalidateQueries({ queryKey: ['documents', parentType, parentID] })
+        queryClient.invalidateQueries({ queryKey: [ 'document-info', parentType, parentID, documentID ] })
       }
 
       if (invalidateRelatedQueries) {
         if (parentType === 'compliance_report') {
-          invalidateComplianceReportRelatedQueries(queryClient, parentID)
+          queryClient.invalidateQueries({ queryKey: ['compliance-report', parentID] })
+          queryClient.invalidateQueries({ queryKey: ['compliance-report-summary', parentID] })
         }
       }
 

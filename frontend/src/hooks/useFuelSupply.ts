@@ -2,22 +2,14 @@ import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
-import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
-import type {
-  QueryOptions,
-  PaginationParams,
-  ExtMutationOptions
-} from './types'
+import type { QueryOptions, PaginationParams, ExtMutationOptions} from './types'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
 const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less frequently)
 
-export const useFuelSupplyOptions = (
-  params: Record<string, any>,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useFuelSupplyOptions = (params: Record<string, any>, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -47,11 +39,7 @@ export const useFuelSupplyOptions = (
   })
 }
 
-export const useGetFuelSupplies = (
-  complianceReportId: number | string | undefined | null,
-  pagination: PaginationParams,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useGetFuelSupplies = (complianceReportId: number | string | undefined | null, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -83,11 +71,7 @@ export const useGetFuelSupplies = (
   })
 }
 
-export const useGetFuelSuppliesList = (
-  { complianceReportId, mode = REPORT_SCHEDULES_VIEW.VIEW }: any,
-  pagination: PaginationParams,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useGetFuelSuppliesList = ({ complianceReportId, mode = REPORT_SCHEDULES_VIEW.VIEW }: any, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -120,10 +104,7 @@ export const useGetFuelSuppliesList = (
   })
 }
 
-export const useSaveFuelSupply = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useSaveFuelSupply = (params: Record<string, any>, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -174,22 +155,16 @@ export const useSaveFuelSupply = (
       }
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          params.complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', params.complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report', params.complianceReportId ] })
       }
 
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
       // Invalidate on error to ensure fresh data on retry
-      queryClient.invalidateQueries({
-        queryKey: ['fuel-supplies', params.complianceReportId]
-      })
-      queryClient.invalidateQueries({
-        queryKey: ['fuel-supplies-list', params.complianceReportId]
-      })
+      queryClient.invalidateQueries({ queryKey: [ 'fuel-supplies', params.complianceReportId ] })
+      queryClient.invalidateQueries({ queryKey: [ 'fuel-supplies-list', params.complianceReportId ] })
 
       onError?.(error, variables, context)
     },
@@ -197,10 +172,7 @@ export const useSaveFuelSupply = (
   })
 }
 
-export const useUpdateFuelSupply = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useUpdateFuelSupply = (params: Record<string, any>, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -233,12 +205,8 @@ export const useUpdateFuelSupply = (
     },
     onSuccess: (data, variables, context) => {
       if (clearCache) {
-        queryClient.removeQueries({
-          queryKey: ['fuel-supplies', params.complianceReportId]
-        })
-        queryClient.removeQueries({
-          queryKey: ['fuel-supplies-list', params.complianceReportId]
-        })
+        queryClient.removeQueries({ queryKey: ['fuel-supplies', params.complianceReportId] })
+        queryClient.removeQueries({ queryKey: [ 'fuel-supplies-list', params.complianceReportId ] })
       } else {
         // Invalidate all fuel supply queries for this report (same method as FuelExports)
         queryClient.invalidateQueries({
@@ -247,30 +215,22 @@ export const useUpdateFuelSupply = (
               (query.queryKey[0] === 'fuel-supplies' ||
                 query.queryKey[0] === 'fuel-supplies-list') &&
               (query.queryKey.includes(params.complianceReportId) ||
-                query.queryKey.some(
-                  (key: any) => key === params.complianceReportId
-                ))
+                query.queryKey.some((key: any) => key === params.complianceReportId))
             )
           }
         })
       }
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          params.complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', params.complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report', params.complianceReportId ] })
       }
 
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
-      queryClient.invalidateQueries({
-        queryKey: ['fuel-supplies', params.complianceReportId]
-      })
-      queryClient.invalidateQueries({
-        queryKey: ['fuel-supplies-list', params.complianceReportId]
-      })
+      queryClient.invalidateQueries({ queryKey: [ 'fuel-supplies', params.complianceReportId ] })
+      queryClient.invalidateQueries({ queryKey: [ 'fuel-supplies-list', params.complianceReportId ] })
 
       onError?.(error, variables, context)
     },
@@ -278,10 +238,7 @@ export const useUpdateFuelSupply = (
   })
 }
 
-export const useDeleteFuelSupply = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
-) => {
+export const useDeleteFuelSupply = (params: Record<string, any>, options: ExtMutationOptions<unknown, any> = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -307,29 +264,19 @@ export const useDeleteFuelSupply = (
     },
     onSuccess: (data, variables, context) => {
       // Always invalidate after deletion to ensure removed item is gone from cache
-      queryClient.invalidateQueries({
-        queryKey: ['fuel-supplies', params.complianceReportId]
-      })
-      queryClient.invalidateQueries({
-        queryKey: ['fuel-supplies-list', params.complianceReportId]
-      })
+      queryClient.invalidateQueries({ queryKey: [ 'fuel-supplies', params.complianceReportId ] })
+      queryClient.invalidateQueries({ queryKey: [ 'fuel-supplies-list', params.complianceReportId ] })
 
       if (invalidateRelatedQueries) {
-        invalidateComplianceReportRelatedQueries(
-          queryClient,
-          params.complianceReportId
-        )
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', params.complianceReportId ] })
+        queryClient.invalidateQueries({ queryKey: [ 'compliance-report', params.complianceReportId ] })
       }
 
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
-      queryClient.invalidateQueries({
-        queryKey: ['fuel-supplies', params.complianceReportId]
-      })
-      queryClient.invalidateQueries({
-        queryKey: ['fuel-supplies-list', params.complianceReportId]
-      })
+      queryClient.invalidateQueries({ queryKey: [ 'fuel-supplies', params.complianceReportId ] })
+      queryClient.invalidateQueries({ queryKey: [ 'fuel-supplies-list', params.complianceReportId ] })
 
       onError?.(error, variables, context)
     },
@@ -337,11 +284,7 @@ export const useDeleteFuelSupply = (
   })
 }
 
-export const useOrganizationFuelSupply = (
-  organizationId: number | string | undefined | null,
-  pagination: PaginationParams,
-  options: QueryOptions<unknown> = {}
-) => {
+export const useOrganizationFuelSupply = (organizationId: number | string | undefined | null, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
 
   const {
@@ -358,10 +301,7 @@ export const useOrganizationFuelSupply = (
         throw new Error('Organization ID is required')
       }
 
-      const path = apiRoutes.getOrganizationFuelSupply.replace(
-        ':orgID',
-        String(organizationId ?? '')
-      )
+      const path = apiRoutes.getOrganizationFuelSupply.replace(':orgID', String(organizationId ?? ''))
       const response = await client.post(path, pagination)
       return response.data
     },

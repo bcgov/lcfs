@@ -13,8 +13,6 @@ import {
 import { validateFile } from '@/utils/fileValidation'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import { useQueryClient } from '@tanstack/react-query'
-import { invalidateComplianceReportRelatedQueries } from '@/hooks/reportQueryInvalidation'
 
 function LinearProgressWithLabel(props) {
   return (
@@ -65,7 +63,6 @@ const DIALOG_STATES = {
  * - importHook: A hook that returns the import mutation (e.g. useImportAllocationAgreement or useImportFinalSupplyEquipment).
  * - getJobStatusHook: A hook to check the import job status.
  * - onComplete: Callback invoked when the background import job finishes successfully.
- * - invalidateComplianceReportOnComplete: Boolean, whether to refresh compliance report caches on successful completion.
  * - title: Optional string to override the default dialog title.
  */
 function ImportDialog({
@@ -76,13 +73,11 @@ function ImportDialog({
   importHook,
   getJobStatusHook,
   onComplete,
-  invalidateComplianceReportOnComplete = false,
   title: titleProp,
   importedLabel: importedLabelProp,
   skippedLabel: skippedLabelProp
 }) {
   const { t } = useTranslation(['common'])
-  const queryClient = useQueryClient()
   const fileInputRef = useRef(null)
   const [uploadedFile, setUploadedFile] = useState(null)
   const [dialogState, setDialogState] = useState(DIALOG_STATES.SELECT_FILE)
@@ -153,19 +148,13 @@ function ImportDialog({
             setCreatedCount(data.created)
             setSkippedCount(data.skipped ?? 0)
             setRejectedCount(data.rejected)
-            if (data.progress >= 100) {
-              if (data.status === 'Import process completed.') {
-                if (invalidateComplianceReportOnComplete) {
-                  invalidateComplianceReportRelatedQueries(
-                    queryClient,
-                    complianceReportId
-                  )
-                }
-                onComplete?.({
-                  ...data,
-                  jobId: jobID
-                })
-              }
+          if (data.progress >= 100) {
+            if (data.status === 'Import process completed.') {
+              onComplete?.({
+                ...data,
+                jobId: jobID
+              })
+            }
               setDialogState(DIALOG_STATES.COMPLETED)
               setErrorMsgs(data.errors)
               clearInterval(intervalId)
@@ -188,16 +177,7 @@ function ImportDialog({
         setIntervalID(null)
       }
     }
-  }, [
-    jobID,
-    data,
-    refetch,
-    open,
-    onComplete,
-    queryClient,
-    complianceReportId,
-    invalidateComplianceReportOnComplete
-  ])
+  }, [jobID, data, refetch, open, onComplete])
 
   const preventBrowserDefaults = (e) => {
     e.preventDefault()
@@ -313,20 +293,14 @@ function ImportDialog({
               <LinearProgressWithLabel value={uploadProgress} />
               <Box>
                 <BCTypography variant="body2">
-                  {importedLabelProp ??
-                    t(
-                      `common:importExport.import.dialog.uploadStatus.imported`
-                    )}{' '}
+                  {importedLabelProp ?? t(`common:importExport.import.dialog.uploadStatus.imported`)}{' '}
                   <BCTypography color="success" component="span">
                     {createdCount}
                   </BCTypography>
                 </BCTypography>
                 {(skippedLabelProp || skippedCount > 0) && (
                   <BCTypography variant="body2">
-                    {skippedLabelProp ??
-                      t(
-                        `common:importExport.import.dialog.uploadStatus.skipped`
-                      )}{' '}
+                    {skippedLabelProp ?? t(`common:importExport.import.dialog.uploadStatus.skipped`)}{' '}
                     <BCTypography color="warning" component="span">
                       {skippedCount}
                     </BCTypography>
@@ -355,20 +329,12 @@ function ImportDialog({
                       fileName: uploadedFile.fileName
                     })}
                   </BCTypography>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      flexWrap: 'wrap',
-                      gap: 2
-                    }}
-                  >
+                  <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 2 }}>
                     <Box sx={{ display: 'flex' }}>
                       <BCTypography variant="body2">
-                        {importedLabelProp ??
-                          t(
-                            `common:importExport.import.dialog.uploadStatus.imported`
-                          )}
+                        {importedLabelProp ?? t(
+                          `common:importExport.import.dialog.uploadStatus.imported`
+                        )}
                         &nbsp;
                       </BCTypography>
                       <BCTypography variant="body2" color="success">
@@ -378,10 +344,9 @@ function ImportDialog({
                     {(skippedLabelProp || skippedCount > 0) && (
                       <Box sx={{ display: 'flex' }}>
                         <BCTypography variant="body2">
-                          {skippedLabelProp ??
-                            t(
-                              `common:importExport.import.dialog.uploadStatus.skipped`
-                            )}
+                          {skippedLabelProp ?? t(
+                            `common:importExport.import.dialog.uploadStatus.skipped`
+                          )}
                           &nbsp;
                         </BCTypography>
                         <BCTypography variant="body2" color="warning">
@@ -418,13 +383,11 @@ function ImportDialog({
       onClose={handleClose}
       open={open}
       data={{
-        title:
-          titleProp ??
-          t(`common:importExport.import.dialog.title`, {
-            mode: isOverwrite
-              ? t(`common:importExport.import.dialog.uploadMode.overwrite`)
-              : t(`common:importExport.import.dialog.uploadMode.append`)
-          }),
+      title: titleProp ?? t(`common:importExport.import.dialog.title`, {
+        mode: isOverwrite
+          ? t(`common:importExport.import.dialog.uploadMode.overwrite`)
+          : t(`common:importExport.import.dialog.uploadMode.append`)
+      }),
         secondaryButtonAction: handleClose,
         secondaryButtonText:
           dialogState === DIALOG_STATES.COMPLETED
