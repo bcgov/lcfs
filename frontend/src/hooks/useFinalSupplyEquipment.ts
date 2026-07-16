@@ -1,7 +1,12 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { QueryOptions, PaginationParams, ExtMutationOptions} from './types'
+import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
+import type {
+  QueryOptions,
+  PaginationParams,
+  ExtMutationOptions
+} from './types'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
@@ -9,7 +14,9 @@ const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less frequently)
 const JOB_STATUS_STALE_TIME = 0 // Real-time for job status
 
-export const useFinalSupplyEquipmentOptions = (options: QueryOptions<unknown> = {}) => {
+export const useFinalSupplyEquipmentOptions = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -34,7 +41,11 @@ export const useFinalSupplyEquipmentOptions = (options: QueryOptions<unknown> = 
   })
 }
 
-export const useGetFinalSupplyEquipments = (complianceReportId: number | string | undefined | null, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
+export const useGetFinalSupplyEquipments = (
+  complianceReportId: number | string | undefined | null,
+  pagination: PaginationParams,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -66,7 +77,10 @@ export const useGetFinalSupplyEquipments = (complianceReportId: number | string 
   })
 }
 
-export const useSaveFinalSupplyEquipment = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useSaveFinalSupplyEquipment = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -97,7 +111,9 @@ export const useSaveFinalSupplyEquipment = (complianceReportId: number | string 
     },
     onSuccess: (data, variables, context) => {
       if (clearCache) {
-        queryClient.removeQueries({ queryKey: [ 'final-supply-equipments', complianceReportId ] })
+        queryClient.removeQueries({
+          queryKey: ['final-supply-equipments', complianceReportId]
+        })
       } else {
         // Invalidate all variations of final supply equipment queries for this report
         queryClient.invalidateQueries({
@@ -111,8 +127,10 @@ export const useSaveFinalSupplyEquipment = (complianceReportId: number | string 
       }
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -134,7 +152,10 @@ export const useSaveFinalSupplyEquipment = (complianceReportId: number | string 
   })
 }
 
-export const useUpdateFinalSupplyEquipment = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateFinalSupplyEquipment = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -168,7 +189,9 @@ export const useUpdateFinalSupplyEquipment = (complianceReportId: number | strin
     },
     onSuccess: (data, variables, context) => {
       if (clearCache) {
-        queryClient.removeQueries({ queryKey: [ 'final-supply-equipments', complianceReportId ] })
+        queryClient.removeQueries({
+          queryKey: ['final-supply-equipments', complianceReportId]
+        })
       } else {
         queryClient.invalidateQueries({
           predicate: (query) => {
@@ -181,8 +204,10 @@ export const useUpdateFinalSupplyEquipment = (complianceReportId: number | strin
       }
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -203,7 +228,10 @@ export const useUpdateFinalSupplyEquipment = (complianceReportId: number | strin
   })
 }
 
-export const useDeleteFinalSupplyEquipment = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useDeleteFinalSupplyEquipment = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -239,8 +267,10 @@ export const useDeleteFinalSupplyEquipment = (complianceReportId: number | strin
       })
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -261,7 +291,10 @@ export const useDeleteFinalSupplyEquipment = (complianceReportId: number | strin
   })
 }
 
-export const useImportFinalSupplyEquipment = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useImportFinalSupplyEquipment = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -281,7 +314,10 @@ export const useImportFinalSupplyEquipment = (complianceReportId: number | strin
         throw new Error('File is required for import')
       }
 
-      const path = apiRoutes.importFinalSupplyEquipments.replace(':reportID', String(complianceReportId ?? ''))
+      const path = apiRoutes.importFinalSupplyEquipments.replace(
+        ':reportID',
+        String(complianceReportId ?? '')
+      )
 
       const formData = new FormData()
       formData.append('file', file)
@@ -307,8 +343,10 @@ export const useImportFinalSupplyEquipment = (complianceReportId: number | strin
       })
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -320,7 +358,10 @@ export const useImportFinalSupplyEquipment = (complianceReportId: number | strin
   })
 }
 
-export const useGetFinalSupplyEquipmentImportJobStatus = (jobID: string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useGetFinalSupplyEquipmentImportJobStatus = (
+  jobID: string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -351,7 +392,10 @@ export const useGetFinalSupplyEquipmentImportJobStatus = (jobID: string | undefi
     gcTime,
     refetchInterval: (data) => {
       // Stop polling when job is complete or failed
-      if ((data?.state?.data as any)?.status === 'completed' || (data?.state?.data as any)?.status === 'failed') {
+      if (
+        (data?.state?.data as any)?.status === 'completed' ||
+        (data?.state?.data as any)?.status === 'failed'
+      ) {
         return false
       }
       return refetchInterval as number | false
@@ -362,7 +406,13 @@ export const useGetFinalSupplyEquipmentImportJobStatus = (jobID: string | undefi
   })
 }
 
-export const useGetFSEReportingList = (complianceReportId: number | string | undefined | null, pagination = { page: 1, size: 10, filters: [], sort_orders: [] }, options: QueryOptions<unknown> = {}, organizationId: number | string | undefined | null = null, mode = undefined) => {
+export const useGetFSEReportingList = (
+  complianceReportId: number | string | undefined | null,
+  pagination = { page: 1, size: 10, filters: [], sort_orders: [] },
+  options: QueryOptions<unknown> = {},
+  organizationId: number | string | undefined | null = null,
+  mode = undefined
+) => {
   const client = useApiService()
 
   const {
@@ -393,7 +443,10 @@ export const useGetFSEReportingList = (complianceReportId: number | string | und
       }
 
       if (complianceReportId) {
-        queryParams.append('complianceReportId', String(complianceReportId ?? ''))
+        queryParams.append(
+          'complianceReportId',
+          String(complianceReportId ?? '')
+        )
       }
       if (mode) {
         queryParams.append('mode', mode)
@@ -414,7 +467,11 @@ export const useGetFSEReportingList = (complianceReportId: number | string | und
   })
 }
 
-export const useSaveFSEReporting = (organizationId: number | string | undefined | null, complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useSaveFSEReporting = (
+  organizationId: number | string | undefined | null,
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -482,12 +539,10 @@ export const useSaveFSEReporting = (organizationId: number | string | undefined 
 
       if (invalidateRelatedQueries) {
         // Invalidate compliance report related queries
-        queryClient.invalidateQueries({
-          queryKey: ['compliance-report-summary', complianceReportId]
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['compliance-report', complianceReportId]
-        })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
         queryClient.invalidateQueries({
           queryKey: ['final-supply-equipments', complianceReportId]
         })
@@ -513,7 +568,11 @@ export const useSaveFSEReporting = (organizationId: number | string | undefined 
   })
 }
 
-export const useDeleteFSEReportingBatch = (complianceReportId: number | string | undefined | null, organizationId: number | string | undefined | null = null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useDeleteFSEReportingBatch = (
+  complianceReportId: number | string | undefined | null,
+  organizationId: number | string | undefined | null = null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -547,12 +606,10 @@ export const useDeleteFSEReportingBatch = (complianceReportId: number | string |
 
       if (invalidateRelatedQueries) {
         // Invalidate compliance report related queries
-        queryClient.invalidateQueries({
-          queryKey: ['compliance-report-summary', complianceReportId]
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['compliance-report', complianceReportId]
-        })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
         queryClient.invalidateQueries({
           queryKey: ['final-supply-equipments', complianceReportId]
         })
@@ -577,7 +634,11 @@ export const useDeleteFSEReportingBatch = (complianceReportId: number | string |
   })
 }
 
-export const useUpdateFSEReportingActiveStatus = (complianceReportId: number | string | undefined | null, organizationId: number | string | undefined | null = null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateFSEReportingActiveStatus = (
+  complianceReportId: number | string | undefined | null,
+  organizationId: number | string | undefined | null = null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -597,15 +658,12 @@ export const useUpdateFSEReportingActiveStatus = (complianceReportId: number | s
         throw new Error('isActive flag is required')
       }
 
-      return await client.patch(
-        apiRoutes.updateFSEReportingActiveStatus,
-        {
-          reportingIds,
-          isActive,
-          complianceReportId,
-          organizationId
-        }
-      )
+      return await client.patch(apiRoutes.updateFSEReportingActiveStatus, {
+        reportingIds,
+        isActive,
+        complianceReportId,
+        organizationId
+      })
     },
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({
@@ -618,12 +676,10 @@ export const useUpdateFSEReportingActiveStatus = (complianceReportId: number | s
       })
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({
-          queryKey: ['compliance-report-summary', complianceReportId]
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['compliance-report', complianceReportId]
-        })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -643,7 +699,10 @@ export const useUpdateFSEReportingActiveStatus = (complianceReportId: number | s
   })
 }
 
-export const useSetFSEReportingDefaultDates = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useSetFSEReportingDefaultDates = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -673,12 +732,10 @@ export const useSetFSEReportingDefaultDates = (complianceReportId: number | stri
       })
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({
-          queryKey: ['compliance-report-summary', complianceReportId]
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['compliance-report', complianceReportId]
-        })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -693,7 +750,10 @@ export const useSetFSEReportingDefaultDates = (complianceReportId: number | stri
 /**
  * Hook to fetch all charging sites for the map view
  */
-export const useGetAllChargingSitesForMap = (organizationId: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useGetAllChargingSitesForMap = (
+  organizationId: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -738,7 +798,11 @@ export const useGetAllChargingSitesForMap = (organizationId: number | string | u
 /**
  * Hook to fetch ALL FSE/Charging Equipment data for the map view.
  */
-export const useGetAllFSEForMap = (complianceReportId: number | string | undefined | null, organizationId: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useGetAllFSEForMap = (
+  complianceReportId: number | string | undefined | null,
+  organizationId: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -810,7 +874,7 @@ export const useGetAllFSEForMap = (complianceReportId: number | string | undefin
       }
 
       if (organizationId) {
-        (requestBody as any).organization_id = organizationId
+        ;(requestBody as any).organization_id = organizationId
       }
 
       const response = await client.post(
@@ -872,7 +936,10 @@ export const useGetAllFSEForMap = (complianceReportId: number | string | undefin
  *   importHook(complianceReportId, { onSuccess, onError })
  *   importFile({ file, isOverwrite })
  */
-export const useImportFSEReportingUpdate = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useImportFSEReportingUpdate = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const { onSuccess, onError, ...restOptions } = options
 
@@ -884,7 +951,10 @@ export const useImportFSEReportingUpdate = (complianceReportId: number | string 
       const formData = new FormData()
       formData.append('file', file)
 
-      const url = apiRoutes.fseReportingBulkUpdate.replace(':reportID', String(complianceReportId ?? ''))
+      const url = apiRoutes.fseReportingBulkUpdate.replace(
+        ':reportID',
+        String(complianceReportId ?? '')
+      )
       const response = await client.post(url, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
@@ -901,14 +971,20 @@ export const useImportFSEReportingUpdate = (complianceReportId: number | string 
  * Query hook to poll the progress of an FSE bulk-update import job.
  * Automatically stops polling when progress reaches 100.
  */
-export const useGetFSEReportingUpdateJobStatus = (jobId: string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useGetFSEReportingUpdateJobStatus = (
+  jobId: string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const { enabled = true, ...restOptions } = options
 
   return useQuery({
     queryKey: ['fse-reporting-bulk-update-status', jobId],
     queryFn: async () => {
-      const url = apiRoutes.fseReportingBulkUpdateStatus.replace(':jobID', String(jobId ?? ''))
+      const url = apiRoutes.fseReportingBulkUpdateStatus.replace(
+        ':jobID',
+        String(jobId ?? '')
+      )
       const response = await client.get(url)
       return response.data
     },

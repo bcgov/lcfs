@@ -528,6 +528,7 @@ export const AddEditFinalSupplyEquipments = () => {
           isOverwrite={isOverwrite}
           importHook={useImportFinalSupplyEquipment}
           getJobStatusHook={useGetFinalSupplyEquipmentImportJobStatus}
+          invalidateComplianceReportOnComplete
         />
       </Grid2>
     )
