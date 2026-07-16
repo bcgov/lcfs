@@ -346,7 +346,12 @@ describe('EditViewCIApplication', () => {
     await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('10'))
     expect(mockNavigate).toHaveBeenCalledWith(
       ROUTES.CI_APPLICATIONS.LIST,
-      expect.any(Object)
+      {
+        state: {
+          message: 'carbonIntensity:step1.deleteSuccess',
+          severity: 'success'
+        }
+      }
     )
   })
 
