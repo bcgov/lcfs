@@ -51,6 +51,15 @@ describe('validatePathwayRow', () => {
     expect(validatePathwayRow(validRow, APPLICATION_TYPES)).toEqual([])
   })
 
+  it('allows negative proposed CI values', () => {
+    expect(
+      validatePathwayRow(
+        { ...validRow, proposedCi: -5.61 },
+        APPLICATION_TYPES
+      )
+    ).toEqual([])
+  })
+
   it('flags every required field on an empty row', () => {
     const errs = validatePathwayRow(
       { id: 'x', applicationTypeId: 1 },
@@ -105,6 +114,11 @@ describe('rowToApiPayload', () => {
     expect(payload.feedstockTransportDistance).toBe(100)
     expect(payload.finishedFuelTransportDistance).toBe(200)
     expect(payload.coproducts).toBeNull()
+  })
+
+  it('preserves negative proposed CI values', () => {
+    const payload = rowToApiPayload({ ...validRow, proposedCi: '-5.61' })
+    expect(payload.proposedCi).toBe(-5.61)
   })
 
   it('passes through fuelCodeId for renewals', () => {
