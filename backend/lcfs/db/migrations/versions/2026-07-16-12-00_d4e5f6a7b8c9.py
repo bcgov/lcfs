@@ -837,9 +837,22 @@ CREATE UNIQUE INDEX mv_credit_ledger_tx_org_idx ON mv_credit_ledger (transaction
 """
 
 
+def _exec_script(ddl: str) -> None:
+    """Execute a multi-statement DDL script one statement at a time.
+
+    The migrations run over asyncpg, which rejects multiple commands in a
+    single prepared statement, so each statement is sent on its own (matching
+    the helper in 2026-06-04-12-00_d2e4f6a8b0c1.py).
+    """
+    for statement in ddl.split(";"):
+        statement = statement.strip()
+        if statement:
+            op.execute(statement + ";")
+
+
 def upgrade() -> None:
-    op.execute(UPGRADE_SQL)
+    _exec_script(UPGRADE_SQL)
 
 
 def downgrade() -> None:
-    op.execute(DOWNGRADE_SQL)
+    _exec_script(DOWNGRADE_SQL)
