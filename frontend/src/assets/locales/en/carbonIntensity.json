@@ -32,9 +32,12 @@
     "saveAndProceed": "Save & proceed",
     "deleteDraft": "Delete draft application",
     "saveSuccess": "Application information saved.",
+    "deleteSuccess": "Draft application deleted.",
     "deleteConfirmTitle": "Delete draft application?",
     "deleteConfirmText": "This will permanently remove the draft. This action cannot be undone.",
     "validation": {
+      "cityRequired": "City is required.",
+      "provinceStateRequired": "Province/State is required.",
       "countryRequired": "Country is required.",
       "capacityRequired": "Facility nameplate capacity is required.",
       "capacityPositive": "Facility nameplate capacity must be greater than zero.",

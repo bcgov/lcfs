@@ -35,8 +35,12 @@ const dateToString = (value) => {
 
 const buildValidationSchema = (t) =>
   Yup.object({
-    facilityCity: Yup.string().nullable(),
-    facilityProvinceState: Yup.string().nullable(),
+    facilityCity: Yup.string()
+      .trim()
+      .required(t('carbonIntensity:step1.validation.cityRequired')),
+    facilityProvinceState: Yup.string()
+      .trim()
+      .required(t('carbonIntensity:step1.validation.provinceStateRequired')),
     facilityCountry: Yup.string()
       .trim()
       .required(t('carbonIntensity:step1.validation.countryRequired')),
@@ -61,8 +65,8 @@ const toFormValues = (data) => ({
 })
 
 const toApiPayload = (values) => ({
-  facilityCity: values.facilityCity || null,
-  facilityProvinceState: values.facilityProvinceState || null,
+  facilityCity: values.facilityCity?.trim(),
+  facilityProvinceState: values.facilityProvinceState?.trim(),
   facilityCountry: values.facilityCountry?.trim(),
   facilityNameplateCapacity: Number(values.facilityNameplateCapacity),
   facilityNameplateCapacityUnit: values.facilityNameplateCapacityUnit || null,
@@ -110,7 +114,6 @@ export const ApplicationInformationStep = forwardRef(
 
     const onSubmit = (values) => onSave?.(toApiPayload(values))
 
-    const optionalSuffix = ` ${t('carbonIntensity:labels.optional')}`
     const requiredSuffix = ` ${t('carbonIntensity:labels.required')}`
 
     return (
@@ -150,12 +153,13 @@ export const ApplicationInformationStep = forwardRef(
                 <Box mb={2}>
                   <InputLabel htmlFor="facilityCity" sx={{ pb: 1 }}>
                     {t('carbonIntensity:step1.city')}
-                    {optionalSuffix}:
+                    {requiredSuffix}:
                   </InputLabel>
                   <TextField
                     {...field}
                     id="facilityCity"
                     data-test="facilityCity"
+                    required
                     variant="outlined"
                     fullWidth
                     error={!!fieldState.error}
@@ -175,12 +179,13 @@ export const ApplicationInformationStep = forwardRef(
                 <Box mb={2}>
                   <InputLabel htmlFor="facilityProvinceState" sx={{ pb: 1 }}>
                     {t('carbonIntensity:step1.provinceState')}
-                    {optionalSuffix}:
+                    {requiredSuffix}:
                   </InputLabel>
                   <TextField
                     {...field}
                     id="facilityProvinceState"
                     data-test="facilityProvinceState"
+                    required
                     variant="outlined"
                     fullWidth
                     error={!!fieldState.error}

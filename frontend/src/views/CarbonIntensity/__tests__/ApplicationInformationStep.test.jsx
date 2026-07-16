@@ -53,6 +53,9 @@ describe('ApplicationInformationStep', () => {
     expect(
       document.getElementById('proposedFuelCodeEffectiveDate')
     ).toBeInTheDocument()
+    expect(document.getElementById('facilityCity')).toBeRequired()
+    expect(document.getElementById('facilityProvinceState')).toBeRequired()
+    expect(document.getElementById('facilityCountry')).toBeRequired()
   })
 
   it('renders the Save & proceed button and no Delete button on add', () => {
@@ -85,6 +88,35 @@ describe('ApplicationInformationStep', () => {
     await waitFor(() => {
       expect(
         screen.getByText('carbonIntensity:step1.validation.countryRequired')
+      ).toBeInTheDocument()
+    })
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('blocks submission when city or province/state are missing', async () => {
+    const onSave = vi.fn()
+    const user = userEvent.setup()
+    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, {
+      wrapper
+    })
+
+    await user.type(document.getElementById('facilityCountry'), 'Canada')
+    await user.type(document.getElementById('facilityNameplateCapacity'), '2500')
+
+    const combobox = screen.getByRole('combobox')
+    await user.click(combobox)
+    await user.click(await screen.findByRole('option', { name: 'kg' }))
+
+    fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('carbonIntensity:step1.validation.cityRequired')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'carbonIntensity:step1.validation.provinceStateRequired'
+        )
       ).toBeInTheDocument()
     })
     expect(onSave).not.toHaveBeenCalled()
