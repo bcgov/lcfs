@@ -172,6 +172,8 @@ vi.mock(
           data-test="step1-save-trigger"
           onClick={() =>
             onSave({
+              facilityCity: 'San Martin',
+              facilityProvinceState: 'Santa Fe',
               facilityCountry: 'Argentina',
               facilityNameplateCapacity: 1000,
               facilityNameplateCapacityUnit: 'L'
@@ -356,6 +358,8 @@ describe('EditViewCIApplication', () => {
         organization: { name: 'Acme Corp' },
         status: { status: 'Draft' },
         // Step 1 required fields saved
+        facilityCity: 'Vancouver',
+        facilityProvinceState: 'BC',
         facilityCountry: 'Canada',
         facilityNameplateCapacity: 1000,
         facilityNameplateCapacityUnit: 'L',
