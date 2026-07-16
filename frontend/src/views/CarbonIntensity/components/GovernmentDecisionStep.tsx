@@ -178,8 +178,7 @@ export const GovernmentDecisionStep = ({
   const verification2Risk = normalizeRisk(
     ciApplication?.verification2RiskAssessment
   )
-  const requiresVerification2 =
-    preliminaryRisk === 'Medium' || preliminaryRisk === 'High'
+  const requiresVerification2 = preliminaryRisk === 'High'
   const fuelPathwayCount = ciApplication?.pathways?.length || 0
   const generatedFuelCodesCount = ciApplication?.generatedFuelCodes?.length || 0
   const generatedFuelCodesReady =

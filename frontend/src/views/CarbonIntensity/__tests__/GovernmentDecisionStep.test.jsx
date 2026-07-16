@@ -299,13 +299,51 @@ describe('GovernmentDecisionStep', () => {
     ).toBeInTheDocument()
   })
 
-  it('waits for Verification 2 before showing Generate fuel codes for moderate risk', () => {
+  it('shows Generate fuel codes after Verification 1 for moderate risk', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Medium',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('ci-generate-fuel-codes-btn')).toBeInTheDocument()
+    expect(
+      screen.getByText('carbonIntensity:step5.generateFuelCodes')
+    ).toBeInTheDocument()
+  })
+
+  it('does not show Generate fuel codes before Verification 1 is complete', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Medium'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.queryByTestId('ci-generate-fuel-codes-btn')
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows Generate fuel codes when switched from high to moderate risk on Verification 2', () => {
     mockUserRoles = [{ name: roles.analyst }]
     const { rerender } = render(
       <GovernmentDecisionStep
         ciApplication={{
           ...baseCi,
-          preliminaryRiskAssessment: 'Medium',
+          preliminaryRiskAssessment: 'High',
           verification1Date: '2026-05-19T12:00:00Z'
         }}
         isGovernment={true}
@@ -321,7 +359,7 @@ describe('GovernmentDecisionStep', () => {
       <GovernmentDecisionStep
         ciApplication={{
           ...baseCi,
-          preliminaryRiskAssessment: 'Medium',
+          preliminaryRiskAssessment: 'High',
           verification1Date: '2026-05-19T12:00:00Z',
           verification2Date: '2026-05-20T12:00:00Z',
           verification2RiskAssessment: 'Medium'

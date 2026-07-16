@@ -926,17 +926,18 @@ async def test_update_step3_rejects_when_ghgenius_missing(service, repo, mock_us
 
 
 @pytest.mark.anyio
-async def test_generate_fuel_codes_requires_verification_2_for_moderate_risk(
+async def test_generate_fuel_codes_allows_moderate_after_verification_1(
     service, repo, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _submitted_ci_for_generation("Medium")
+    _stub_generation_dependencies(service, repo, ci)
 
-    with pytest.raises(HTTPException) as exc:
-        await service.generate_fuel_codes(ci, mock_user)
+    result = await service.generate_fuel_codes(ci, mock_user)
 
-    assert exc.value.status_code == 400
-    assert "Required verification" in exc.value.detail
+    assert isinstance(result, CIApplicationSchema)
+    assert len(ci.generated_fuel_code_associations) == 1
+    repo.update.assert_awaited_once()
 
 
 @pytest.mark.anyio

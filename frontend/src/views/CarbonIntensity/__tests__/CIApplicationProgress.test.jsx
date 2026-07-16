@@ -69,6 +69,22 @@ describe('CIApplicationProgress', () => {
     ])
   })
 
+  it('builds moderate risk workflow without verification 2', () => {
+    const steps = buildCIWorkflowSteps({
+      status: { status: 'Submitted' },
+      signatureUser: 'Jane Submitter',
+      signatureDateTime: '2026-05-01T12:00:00Z',
+      preliminaryRiskAssessment: 'Medium',
+      verification1Date: '2026-05-02T12:00:00Z',
+      proposedFuelCodeEffectiveDate: '2026-06-01'
+    })
+    expect(steps.map((step) => step.key)).toEqual([
+      'submitted',
+      'verification1',
+      'target'
+    ])
+  })
+
   it('renders submitted workflow details and target countdown', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-19T12:00:00Z'))
@@ -78,7 +94,7 @@ describe('CIApplicationProgress', () => {
           status: { status: 'Submitted' },
           signatureUserDisplayName: 'Jane Submitter',
           signatureDateTime: '2026-05-01T12:00:00Z',
-          preliminaryRiskAssessment: 'Medium',
+          preliminaryRiskAssessment: 'High',
           assignedAnalyst: {
             initials: 'AA',
             fullName: 'Alex Analyst'
@@ -243,7 +259,7 @@ describe('CIApplicationProgress', () => {
       status: { status: 'Submitted' },
       signatureUserDisplayName: 'Jane Submitter',
       signatureDateTime: '2026-05-01T12:00:00Z',
-      preliminaryRiskAssessment: 'Medium',
+      preliminaryRiskAssessment: 'High',
       verification1Date: '2026-05-02T12:00:00Z',
       verification1User: {
         initials: 'GW',
