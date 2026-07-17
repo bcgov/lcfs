@@ -12,6 +12,8 @@ import {
 } from '@/views/CarbonIntensity/ciResumeStep'
 
 const step1Fields = {
+  facilityCity: 'Vancouver',
+  facilityProvinceState: 'BC',
   facilityCountry: 'Canada',
   facilityNameplateCapacity: 1000,
   facilityNameplateCapacityUnit: 'L'
@@ -28,6 +30,10 @@ describe('isCIStep1Complete', () => {
   it('is false when required facility fields are missing', () => {
     expect(isCIStep1Complete(null)).toBe(false)
     expect(isCIStep1Complete({})).toBe(false)
+    expect(isCIStep1Complete({ ...step1Fields, facilityCity: '' })).toBe(false)
+    expect(
+      isCIStep1Complete({ ...step1Fields, facilityProvinceState: '' })
+    ).toBe(false)
     expect(
       isCIStep1Complete({ ...step1Fields, facilityCountry: '' })
     ).toBe(false)
@@ -39,7 +45,7 @@ describe('isCIStep1Complete', () => {
     ).toBe(false)
   })
 
-  it('is true when country, positive capacity and unit are saved', () => {
+  it('is true when location, positive capacity and unit are saved', () => {
     expect(isCIStep1Complete(step1Fields)).toBe(true)
   })
 })

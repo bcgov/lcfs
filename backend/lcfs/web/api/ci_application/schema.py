@@ -14,7 +14,14 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import EmailStr, Field, StrictInt, field_validator, model_validator
+from pydantic import (
+    ConfigDict,
+    EmailStr,
+    Field,
+    StrictInt,
+    field_validator,
+    model_validator,
+)
 
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
@@ -165,14 +172,15 @@ class CIApplicationStep1Schema(BaseSchema):
     """
     Persisted fields for Step 1 of the CI application workflow.
 
-    Country and nameplate capacity (with its unit) are the only required
-    fields per the wireframe; the other facility location fields and the
-    proposed fuel code effective date are optional.
+    Facility location and nameplate capacity (with its unit) are required.
+    The proposed fuel code effective date is optional.
     """
 
-    facility_city: Optional[str] = Field(default=None, max_length=500)
-    facility_province_state: Optional[str] = Field(default=None, max_length=500)
-    facility_country: str = Field(..., max_length=500)
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    facility_city: str = Field(..., min_length=1, max_length=500)
+    facility_province_state: str = Field(..., min_length=1, max_length=500)
+    facility_country: str = Field(..., min_length=1, max_length=500)
     facility_iso: Optional[str] = Field(default=None, max_length=10)
     facility_nameplate_capacity: int = Field(..., gt=0)
     facility_nameplate_capacity_unit: FuelTypeQuantityUnitsEnumSchema
@@ -200,7 +208,7 @@ class PathwayInputSchema(BaseSchema):
     operating_data_from: date
     operating_data_to: date
     fuel_code_id: Optional[int] = None
-    proposed_ci: Decimal = Field(..., ge=0)
+    proposed_ci: Decimal
     fuel_type_id: int
     feedstock: str = Field(..., max_length=500)
     feedstock_region: str = Field(..., max_length=500)
