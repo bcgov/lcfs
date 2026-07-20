@@ -139,25 +139,39 @@ export const AssessmentCard = ({
     return parseInt(derivedCompliancePeriod, 10)
   }, [derivedCompliancePeriod])
 
+  // Per-year IDIR configuration (Report openings) for this report's year, if the
+  // year is one the administrator can configure at all.
+  const yearConfig = useMemo(() => {
+    if (
+      !Array.isArray(reportOpenings) ||
+      Number.isNaN(compliancePeriodNumber)
+    ) {
+      return null
+    }
+    return (
+      reportOpenings.find(
+        (opening) => opening.complianceYear === compliancePeriodNumber
+      ) ?? null
+    )
+  }, [reportOpenings, compliancePeriodNumber])
+
+  // The per-year IDIR configuration is authoritative wherever it exists, so an
+  // administrator enabling "Create supplemental" for 2023 or earlier makes the
+  // button available for that year (#4691). The legacy lock flag predates that
+  // toggle and would otherwise override it; it now only guards years with no
+  // configuration row (compliance periods outside the configurable range), which
+  // an administrator has no way to open up.
   const isLegacySupplementalRestricted =
     !isGovernmentUser &&
     isFeatureEnabled(FEATURE_FLAGS.LEGACY_SUPPLEMENTAL_LOCK) &&
     !Number.isNaN(compliancePeriodNumber) &&
-    compliancePeriodNumber <= 2023
+    compliancePeriodNumber <= 2023 &&
+    !yearConfig
 
   // Show/hide Create Supplemental button for BCeID by IDIR config per year.
-  const isCreateSupplementalAllowedForYear = useMemo(() => {
-    if (!Array.isArray(reportOpenings)) {
-      return true
-    }
-    const yearConfig = reportOpenings.find(
-      (opening) => opening.complianceYear === compliancePeriodNumber
-    )
-    if (!yearConfig) {
-      return true
-    }
-    return yearConfig.createSupplementalEnabled !== false
-  }, [reportOpenings, compliancePeriodNumber])
+  const isCreateSupplementalAllowedForYear = yearConfig
+    ? yearConfig.createSupplementalEnabled !== false
+    : true
 
   return (
     <BCWidgetCard

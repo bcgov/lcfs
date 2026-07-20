@@ -776,6 +776,93 @@ describe('AssessmentCard', () => {
         expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
       })
 
+      // #4691 — the legacy lock feature flag is enabled in these tests
+      // (isFeatureEnabled is mocked to true), mirroring the deployed
+      // environment where the bug was reported.
+      it('shows supplemental button for a 2023 report when an admin enabled the year', () => {
+        mockShowRoleContent = true
+        vi.mocked(useReportOpenings).mockReturnValue({
+          data: [{ complianceYear: 2023, createSupplementalEnabled: true }]
+        })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+            compliancePeriodYear="2023"
+          />,
+          { wrapper }
+        )
+        expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
+      })
+
+      it('hides supplemental button for a 2023 report when an admin disabled the year', () => {
+        mockShowRoleContent = true
+        vi.mocked(useReportOpenings).mockReturnValue({
+          data: [{ complianceYear: 2023, createSupplementalEnabled: false }]
+        })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+            compliancePeriodYear="2023"
+          />,
+          { wrapper }
+        )
+        expect(
+          screen.queryByTestId('create-supplemental')
+        ).not.toBeInTheDocument()
+      })
+
+      it('keeps the legacy lock for a pre-2019 year that has no configurable row', () => {
+        // Report openings are only configurable for 2019-2030, so an older year
+        // can never be enabled by an admin and stays locked.
+        mockShowRoleContent = true
+        vi.mocked(useReportOpenings).mockReturnValue({
+          data: [{ complianceYear: 2023, createSupplementalEnabled: true }]
+        })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+            compliancePeriodYear="2017"
+          />,
+          { wrapper }
+        )
+        expect(
+          screen.queryByTestId('create-supplemental')
+        ).not.toBeInTheDocument()
+      })
+
+      it('keeps the legacy lock for a 2023 report while the config is still loading', () => {
+        mockShowRoleContent = true
+        vi.mocked(useReportOpenings).mockReturnValue({ data: undefined })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+            compliancePeriodYear="2023"
+          />,
+          { wrapper }
+        )
+        expect(
+          screen.queryByTestId('create-supplemental')
+        ).not.toBeInTheDocument()
+      })
+
+      it('still shows supplemental button for 2025 while the config is loading', () => {
+        mockShowRoleContent = true
+        vi.mocked(useReportOpenings).mockReturnValue({ data: undefined })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+            compliancePeriodYear="2025"
+          />,
+          { wrapper }
+        )
+        expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
+      })
+
       it('shows download button for non-draft status', () => {
         render(<AssessmentCard {...defaultProps} />, { wrapper })
         expect(screen.getByTestId('download-report')).toBeInTheDocument()
