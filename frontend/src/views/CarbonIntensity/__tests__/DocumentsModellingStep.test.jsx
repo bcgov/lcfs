@@ -1,12 +1,5 @@
 import React from 'react'
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi
-} from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   cleanup,
   fireEvent,
@@ -25,6 +18,7 @@ vi.mock('react-i18next', () => ({
 let mockDocs = []
 const mockUpload = vi.fn().mockResolvedValue({})
 const mockDelete = vi.fn().mockResolvedValue({})
+const mockDownloadDoc = vi.fn().mockResolvedValue({})
 
 vi.mock('@/hooks/useDocuments', () => ({
   useDocuments: vi.fn(() => ({ data: mockDocs, isLoading: false })),
@@ -35,7 +29,8 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDeleteDocument: vi.fn(() => ({
     mutateAsync: mockDelete,
     isPending: false
-  }))
+  })),
+  useDownloadDocument: vi.fn(() => mockDownloadDoc)
 }))
 
 const mockDownload = vi.fn().mockResolvedValue({})
@@ -61,37 +56,63 @@ describe('DocumentsModellingStep', () => {
       />,
       { wrapper }
     )
-    expect(
-      screen.getByTestId('ci-step3-upload-supporting')
-    ).toBeInTheDocument()
+    expect(screen.getByTestId('ci-step3-upload-supporting')).toBeInTheDocument()
     expect(screen.getByTestId('ci-step3-upload-ghgenius')).toBeInTheDocument()
     // The download-template button was removed (ticket #4534) — the template
     // is now provided earlier in the process.
     expect(
       screen.queryByTestId('ci-step3-download-template')
     ).not.toBeInTheDocument()
-    expect(
-      screen.getByTestId('ci-step3-other-description')
-    ).toBeInTheDocument()
+    expect(screen.getByTestId('ci-step3-other-description')).toBeInTheDocument()
     expect(screen.getByTestId('ci-step3-save-btn')).toBeInTheDocument()
     expect(screen.getByTestId('ci-step3-delete-btn')).toBeInTheDocument()
   })
 
+  it('downloads the document when its file name is clicked (#4645)', () => {
+    mockDocs = [
+      {
+        documentId: 7,
+        fileName: 'tech.pdf',
+        fileSize: 100,
+        documentCategory: 'technical_report'
+      }
+    ]
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
+      wrapper
+    })
+    fireEvent.click(screen.getByTestId('ci-step3-download-doc'))
+    expect(mockDownloadDoc).toHaveBeenCalledWith(7, 'tech.pdf')
+  })
+
   it('disables Save & proceed until both required uploads are present', () => {
     mockDocs = [
-      { documentId: 1, fileName: 'x.pdf', fileSize: 100, documentCategory: 'technical_report' }
+      {
+        documentId: 1,
+        fileName: 'x.pdf',
+        fileSize: 100,
+        documentCategory: 'technical_report'
+      }
     ]
-    render(
-      <DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />,
-      { wrapper }
-    )
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
+      wrapper
+    })
     expect(screen.getByTestId('ci-step3-save-btn')).toBeDisabled()
   })
 
   it('enables Save & proceed and submits when both required uploads exist', async () => {
     mockDocs = [
-      { documentId: 1, fileName: 'tech.pdf', fileSize: 100, documentCategory: 'technical_report' },
-      { documentId: 2, fileName: 'model.xlsx', fileSize: 200, documentCategory: 'ghgenius_model' }
+      {
+        documentId: 1,
+        fileName: 'tech.pdf',
+        fileSize: 100,
+        documentCategory: 'technical_report'
+      },
+      {
+        documentId: 2,
+        fileName: 'model.xlsx',
+        fileSize: 200,
+        documentCategory: 'ghgenius_model'
+      }
     ]
     const onSave = vi.fn().mockResolvedValue(undefined)
     render(
@@ -109,10 +130,9 @@ describe('DocumentsModellingStep', () => {
   })
 
   it('uploads a chosen file with the selected supporting category', async () => {
-    render(
-      <DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />,
-      { wrapper }
-    )
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
+      wrapper
+    })
     const file = new File(['hi'], 'tech.pdf', { type: 'application/pdf' })
     const input = screen.getByTestId('ci-step3-supporting-input')
     fireEvent.change(input, { target: { files: [file] } })
@@ -123,10 +143,9 @@ describe('DocumentsModellingStep', () => {
   })
 
   it('uploads a GHGenius file with category ghgenius_model', async () => {
-    render(
-      <DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />,
-      { wrapper }
-    )
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
+      wrapper
+    })
     const file = new File(['hi'], 'model.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     })
@@ -134,16 +153,13 @@ describe('DocumentsModellingStep', () => {
       target: { files: [file] }
     })
     await waitFor(() => expect(mockUpload).toHaveBeenCalledTimes(1))
-    expect(mockUpload.mock.calls[0][0].documentCategory).toBe(
-      'ghgenius_model'
-    )
+    expect(mockUpload.mock.calls[0][0].documentCategory).toBe('ghgenius_model')
   })
 
   it('rejects an unsupported file type without calling upload', async () => {
-    render(
-      <DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />,
-      { wrapper }
-    )
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
+      wrapper
+    })
     const file = new File(['hi'], 'bad.exe', {
       type: 'application/x-msdownload'
     })
