@@ -13,13 +13,12 @@ from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.ci_application import CIApplication, CIApplicationStatus
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
-from lcfs.db.models.fuel.FuelType import FuelType
-from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
+from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
-    CIApplicationsListSchema,
     CIApplicationSchema,
+    CIApplicationsListSchema,
     CIApplicationStatusEnum,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
@@ -34,7 +33,6 @@ from lcfs.web.api.ci_application.services import (
     _pathway_change_logs_from_versions,
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -943,29 +941,23 @@ async def test_update_step3_succeeds_when_required_present(service, repo, mock_u
 
 
 @pytest.mark.anyio
-async def test_update_step3_rejects_when_technical_report_missing(
-    service, repo, mock_user
-):
+async def test_update_step3_succeeds_when_documents_missing(service, repo, mock_user):
+    # The mandatory Technical report / GHGenius upload validation is disabled
+    # for the simplified Step 3 flow (#4669), so saving proceeds even with no
+    # documents uploaded. The check is retained behind CI_STEP3_REQUIRE_DOCUMENTS.
     ci = _ci_application()
-    repo.get_document_categories.return_value = ["ghgenius_model"]
+    repo.get_document_categories.return_value = []
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
     from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
 
-    with pytest.raises(Exception) as exc:
-        await service.update_step3(ci, CIApplicationStep3Schema(), mock_user)
-    assert "Technical report" in str(exc.value)
-    repo.update.assert_not_called()
+    payload = CIApplicationStep3Schema(supporting_document_other="Extra notes")
+    result = await service.update_step3(ci, payload, mock_user)
 
-
-@pytest.mark.anyio
-async def test_update_step3_rejects_when_ghgenius_missing(service, repo, mock_user):
-    ci = _ci_application()
-    repo.get_document_categories.return_value = ["technical_report"]
-    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
-
-    with pytest.raises(Exception) as exc:
-        await service.update_step3(ci, CIApplicationStep3Schema(), mock_user)
-    assert "GHGenius" in str(exc.value)
-    repo.update.assert_not_called()
+    assert ci.supporting_document_other == "Extra notes"
+    assert ci.action_type == ActionTypeEnum.UPDATE
+    assert isinstance(result, CIApplicationSchema)
 
 
 # ---------------------------------------------------------------------------
@@ -1176,14 +1168,22 @@ async def test_step4_submit_requires_at_least_one_pathway(service, repo, mock_us
 
 
 @pytest.mark.anyio
-async def test_step4_submit_requires_required_documents(service, repo, mock_user):
+async def test_step4_submit_succeeds_when_documents_missing(service, repo, mock_user):
+    # Step 3 upload validation is disabled for the simplified flow (#4669), so
+    # submission no longer requires the Technical report / GHGenius uploads.
     ci = _draft_ci_with_pathways()
     repo.get_document_categories.return_value = []  # nothing uploaded
-    with pytest.raises(HTTPException) as exc:
-        await service.submit_application(ci, _step4_payload(), mock_user)
-    assert exc.value.status_code == 400
-    assert "Technical report" in exc.value.detail
-    assert "GHGenius" in exc.value.detail
+    submitted = _status("Submitted", 2)
+    repo.get_status_by_name.return_value = submitted
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    result = await service.submit_application(ci, _step4_payload(), mock_user)
+
+    assert ci.status_id == submitted.ci_application_status_id
+    assert ci.action_type == ActionTypeEnum.UPDATE
+    assert isinstance(result, CIApplicationSchema)
 
 
 @pytest.mark.anyio
@@ -1265,6 +1265,7 @@ async def test_step4_submit_clears_consultant_when_not_consented(
 @pytest.mark.anyio
 async def test_step4_schema_requires_all_three_declarations():
     import pydantic
+
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
 
     with pytest.raises(pydantic.ValidationError):
@@ -1278,6 +1279,7 @@ async def test_step4_schema_requires_all_three_declarations():
 @pytest.mark.anyio
 async def test_step4_schema_requires_consultant_fields_when_consented():
     import pydantic
+
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
 
     with pytest.raises(pydantic.ValidationError):
@@ -1298,9 +1300,7 @@ async def test_step4_schema_requires_consultant_fields_when_consented():
 
 
 def _decision_payload(status_value="Completed", comment=None):
-    from lcfs.web.api.ci_application.schema import (
-        CIApplicationDecisionSchema,
-    )
+    from lcfs.web.api.ci_application.schema import CIApplicationDecisionSchema
 
     return CIApplicationDecisionSchema(status=status_value, comment=comment)
 
@@ -1410,9 +1410,7 @@ async def test_step5_decision_accepts_recommended_status(service, repo, mock_use
 
 
 @pytest.mark.anyio
-async def test_step5_completed_approves_generated_fuel_codes(
-    service, repo, mock_user
-):
+async def test_step5_completed_approves_generated_fuel_codes(service, repo, mock_user):
     """Approving a CI application moves its generated fuel codes to Approved (#4654)."""
     # Generate Draft fuel codes through the real generation flow.
     mock_user.role_names = {RoleEnum.ANALYST}
@@ -1665,9 +1663,8 @@ async def test_step5_decision_ignores_inline_comment_field(service, repo, mock_u
 @pytest.mark.anyio
 async def test_step5_decision_schema_rejects_non_terminal_status():
     import pydantic
-    from lcfs.web.api.ci_application.schema import (
-        CIApplicationDecisionSchema,
-    )
+
+    from lcfs.web.api.ci_application.schema import CIApplicationDecisionSchema
 
     with pytest.raises(pydantic.ValidationError):
         CIApplicationDecisionSchema(status="Recommended")

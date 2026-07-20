@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 from fastapi import Depends, HTTPException, status
+from pydantic.alias_generators import to_camel
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models import UserProfile
@@ -69,11 +70,16 @@ from lcfs.web.exception.exceptions import (
     DataNotFoundException,
     ValidationErrorException,
 )
-from pydantic.alias_generators import to_camel
 
 # pathway_application_type.type values seeded by the migration
 PATHWAY_APPLICATION_TYPE_NEW = "New"
 PATHWAY_APPLICATION_TYPE_RENEWAL = "Renewal"
+
+# Step 3 mandatory-upload validation (Technical report + GHGenius model) is
+# disabled for the simplified single-upload flow (#4669). The validation logic
+# below is retained, not removed — set this to True to re-enable the required
+# Technical report / GHGenius upload checks on Step 3 save and on submission.
+CI_STEP3_REQUIRE_DOCUMENTS = False
 
 PATHWAY_LOG_FIELDS = [
     "application_type_id",
@@ -876,9 +882,7 @@ class CIApplicationServices:
         # field-level validation error the grid renders inline; genuinely
         # nullable fields fall through and are flagged by the row validator.
         non_nullable_columns = {
-            column.name
-            for column in FuelCode.__table__.columns
-            if not column.nullable
+            column.name for column in FuelCode.__table__.columns if not column.nullable
         }
         cleared_required = [
             field
@@ -1703,24 +1707,31 @@ class CIApplicationServices:
         user: UserProfile,
     ) -> CIApplicationSchema:
         """
-        Persists the optional "other supporting" description and verifies
-        the mandatory uploads (Technical report + GHGenius model) are
-        present. Files are uploaded out-of-band via the generic document
+        Persists the optional "other supporting" description.
+
+        Historically this also enforced the mandatory Technical report +
+        GHGenius uploads. That validation is disabled for the simplified
+        single-upload flow (#4669) and retained behind
+        ``CI_STEP3_REQUIRE_DOCUMENTS`` so it can be re-enabled without
+        redevelopment. Files are uploaded out-of-band via the generic document
         endpoint with a category query param.
         """
-        present_categories = set(
-            await self.repo.get_document_categories(ci_application.ci_application_id)
-        )
-        missing = []
-        if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
-            missing.append("Technical report")
-        if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
-            missing.append("GHGenius model")
-        if missing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=("Missing required upload(s): " + ", ".join(missing) + "."),
+        if CI_STEP3_REQUIRE_DOCUMENTS:
+            present_categories = set(
+                await self.repo.get_document_categories(
+                    ci_application.ci_application_id
+                )
             )
+            missing = []
+            if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
+                missing.append("Technical report")
+            if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
+                missing.append("GHGenius model")
+            if missing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=("Missing required upload(s): " + ", ".join(missing) + "."),
+                )
 
         ci_application.supporting_document_other = data.supporting_document_other
         ci_application.update_user = user.keycloak_username
@@ -1757,32 +1768,32 @@ class CIApplicationServices:
 
         # Sanity-check the prior steps. Step 1 is enforced by NOT NULL
         # columns at the DB layer; we re-check Step 2 (at least one
-        # pathway) and Step 3 (technical report + GHGenius model) so
-        # signing authorities cannot bypass the wizard via the API.
+        # pathway) so signing authorities cannot bypass the wizard via the API.
         if not (ci_application.pathways or []):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="At least one fuel pathway is required before submission.",
             )
 
-        from lcfs.db.models.ci_application.CIApplication import (
-            CI_DOC_CATEGORY_GHGENIUS_MODEL,
-            CI_DOC_CATEGORY_TECHNICAL_REPORT,
-        )
-
-        present_categories = set(
-            await self.repo.get_document_categories(ci_application.ci_application_id)
-        )
-        missing = []
-        if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
-            missing.append("Technical report")
-        if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
-            missing.append("GHGenius model")
-        if missing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing required upload(s): " + ", ".join(missing) + ".",
+        # Step 3 mandatory-upload validation (technical report + GHGenius) is
+        # disabled for the simplified flow (#4669) and retained behind
+        # CI_STEP3_REQUIRE_DOCUMENTS so it can be re-enabled without redevelopment.
+        if CI_STEP3_REQUIRE_DOCUMENTS:
+            present_categories = set(
+                await self.repo.get_document_categories(
+                    ci_application.ci_application_id
+                )
             )
+            missing = []
+            if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
+                missing.append("Technical report")
+            if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
+                missing.append("GHGenius model")
+            if missing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Missing required upload(s): " + ", ".join(missing) + ".",
+                )
 
         submitted_status = await self.repo.get_status_by_name(
             CIApplicationStatusEnum.Submitted.value
