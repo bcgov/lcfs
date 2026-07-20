@@ -17,6 +17,7 @@ import {
 import {
   useDeleteDocument,
   useDocuments,
+  useDownloadDocument,
   useUploadDocument
 } from '@/hooks/useDocuments'
 import colors from '@/themes/base/colors'
@@ -70,6 +71,7 @@ export const DocumentsModellingStep = ({
   )
   const { mutateAsync: deleteDoc, isPending: isDeletingDoc } =
     useDeleteDocument(PARENT_TYPE, ciApplicationId)
+  const downloadDocument = useDownloadDocument(PARENT_TYPE, ciApplicationId)
 
   const hasDocuments = documents.length > 0
 
@@ -165,7 +167,22 @@ export const DocumentsModellingStep = ({
                 }}
                 data-test="ci-step3-uploaded-row"
               >
-                <Link href="#" underline="hover" sx={{ minWidth: 0 }} noWrap>
+                <Link
+                  component="button"
+                  type="button"
+                  underline="hover"
+                  onClick={() => downloadDocument(doc.documentId, doc.fileName)}
+                  sx={{
+                    minWidth: 0,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title={doc.fileName}
+                  data-test="ci-step3-download-doc"
+                >
                   {doc.fileName}
                 </Link>
                 <BCTypography variant="body2">

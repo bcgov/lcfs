@@ -18,6 +18,7 @@ vi.mock('react-i18next', () => ({
 let mockDocs = []
 const mockUpload = vi.fn().mockResolvedValue({})
 const mockDelete = vi.fn().mockResolvedValue({})
+const mockDownloadDoc = vi.fn().mockResolvedValue({})
 
 vi.mock('@/hooks/useDocuments', () => ({
   useDocuments: vi.fn(() => ({ data: mockDocs, isLoading: false })),
@@ -28,7 +29,8 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDeleteDocument: vi.fn(() => ({
     mutateAsync: mockDelete,
     isPending: false
-  }))
+  })),
+  useDownloadDocument: vi.fn(() => mockDownloadDoc)
 }))
 
 const mockDownload = vi.fn().mockResolvedValue({})
@@ -88,6 +90,22 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     })
     expect(screen.getByTestId('ci-step3-uploaded-list')).toBeInTheDocument()
     expect(screen.getByTestId('ci-step3-uploaded-row')).toBeInTheDocument()
+  })
+
+  it('downloads the document when its file name is clicked (#4645)', () => {
+    mockDocs = [
+      {
+        documentId: 7,
+        fileName: 'tech.pdf',
+        fileSize: 100,
+        documentCategory: 'supporting'
+      }
+    ]
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
+      wrapper
+    })
+    fireEvent.click(screen.getByTestId('ci-step3-download-doc'))
+    expect(mockDownloadDoc).toHaveBeenCalledWith(7, 'tech.pdf')
   })
 
   it('allows Save & proceed with no uploads (required-doc validation disabled)', async () => {
