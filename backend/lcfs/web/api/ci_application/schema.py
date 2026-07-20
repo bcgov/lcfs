@@ -25,12 +25,11 @@ from pydantic import (
 
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
-from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.api.fuel_code.schema import (
     CoProcessedEnumSchema,
     FuelTypeQuantityUnitsEnumSchema,
 )
-
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 
 # ---------------------------------------------------------------------------
 # Enums (mirror the seeded lookup values in the migration)
@@ -370,6 +369,7 @@ class CIApplicationBaseSchema(BaseSchema):
     facility_nameplate_capacity_unit: Optional[str] = None
     proposed_fuel_code_effective_date: Optional[date] = None
     pathway_supplemental_edit_enabled: bool = False
+    document_upload_enabled: bool = False
     preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
     priority_score: Optional[int] = None
     assigned_analyst: Optional[CIApplicationUserSchema] = None
@@ -404,6 +404,9 @@ class CIApplicationSchema(BaseSchema):
     pathway_supplemental_edit_enabled: bool = False
     pathway_changes_requested_at: Optional[datetime] = None
     pathway_changes_requested_by: Optional[str] = None
+    document_upload_enabled: bool = False
+    document_changes_requested_at: Optional[datetime] = None
+    document_changes_requested_by: Optional[str] = None
     pathway_changelog: List[Dict[str, Any]] = Field(default_factory=list)
     pathway_change_logs: List[PathwayChangeLogSchema] = Field(default_factory=list)
     generated_fuel_codes: List[CIGeneratedFuelCodeSchema] = Field(default_factory=list)

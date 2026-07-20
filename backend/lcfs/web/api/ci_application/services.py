@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 from fastapi import Depends, HTTPException, status
+from pydantic.alias_generators import to_camel
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models import UserProfile
@@ -69,7 +70,6 @@ from lcfs.web.exception.exceptions import (
     DataNotFoundException,
     ValidationErrorException,
 )
-from pydantic.alias_generators import to_camel
 
 # pathway_application_type.type values seeded by the migration
 PATHWAY_APPLICATION_TYPE_NEW = "New"
@@ -526,6 +526,13 @@ def _to_full_schema(
         ),
         pathway_changes_requested_at=getattr(ci, "pathway_changes_requested_at", None),
         pathway_changes_requested_by=getattr(ci, "pathway_changes_requested_by", None),
+        document_upload_enabled=bool(getattr(ci, "document_upload_enabled", False)),
+        document_changes_requested_at=getattr(
+            ci, "document_changes_requested_at", None
+        ),
+        document_changes_requested_by=getattr(
+            ci, "document_changes_requested_by", None
+        ),
         pathway_changelog=[
             history.ci_application_snapshot
             for history in (getattr(ci, "history_records", None) or [])
@@ -653,6 +660,7 @@ def _to_list_item(
         pathway_supplemental_edit_enabled=bool(
             getattr(ci, "pathway_supplemental_edit_enabled", False)
         ),
+        document_upload_enabled=bool(getattr(ci, "document_upload_enabled", False)),
         preliminary_risk_assessment=getattr(ci, "preliminary_risk_assessment", None),
         update_date=ci.update_date.isoformat() if ci.update_date else None,
         create_date=ci.create_date.isoformat() if ci.create_date else None,
@@ -876,9 +884,7 @@ class CIApplicationServices:
         # field-level validation error the grid renders inline; genuinely
         # nullable fields fall through and are flagged by the row validator.
         non_nullable_columns = {
-            column.name
-            for column in FuelCode.__table__.columns
-            if not column.nullable
+            column.name for column in FuelCode.__table__.columns if not column.nullable
         }
         cleared_required = [
             field
@@ -1683,6 +1689,44 @@ class CIApplicationServices:
             ci_application,
             snapshot={
                 "event": "pathway_changes_requested",
+                "changed_at": requested_at.isoformat(),
+                "changed_by": user.keycloak_username,
+            },
+        )
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
+
+    @service_handler
+    async def request_documentation(
+        self,
+        ci_application: CIApplication,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        """Open additional-document uploads on a submitted application so the
+        supplier can attach files the analyst requested (#4644). Mirrors
+        ``request_pathway_changes``."""
+        if not _user_has_any_role(
+            user,
+            [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only internal users can request additional documentation.",
+            )
+        self._require_submitted_workflow(ci_application)
+
+        requested_at = datetime.now(timezone.utc)
+        ci_application.document_upload_enabled = True
+        ci_application.document_changes_requested_at = requested_at
+        ci_application.document_changes_requested_by = user.keycloak_username
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+        await self.repo.add_history(
+            ci_application,
+            snapshot={
+                "event": "documentation_requested",
                 "changed_at": requested_at.isoformat(),
                 "changed_by": user.keycloak_username,
             },

@@ -20,6 +20,7 @@ const mockCompleteVerification1 = vi.fn().mockResolvedValue(null)
 const mockCompleteVerification2 = vi.fn().mockResolvedValue(null)
 const mockRecommendToDirector = vi.fn().mockResolvedValue(null)
 const mockRequestPathwayChanges = vi.fn().mockResolvedValue(null)
+const mockRequestDocumentation = vi.fn().mockResolvedValue(null)
 const mockGenerateFuelCodes = vi.fn().mockResolvedValue(null)
 
 vi.mock('@/hooks/useCIApplication', () => ({
@@ -37,6 +38,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
   })),
   useRequestCIApplicationPathwayChanges: vi.fn(() => ({
     mutateAsync: mockRequestPathwayChanges,
+    isPending: false
+  })),
+  useRequestCIApplicationDocumentation: vi.fn(() => ({
+    mutateAsync: mockRequestDocumentation,
     isPending: false
   })),
   useGenerateCIApplicationFuelCodes: vi.fn(() => ({
@@ -527,15 +532,13 @@ describe('GovernmentDecisionStep', () => {
     ).not.toBeDisabled()
   })
 
-  it('opens the documentation modal and records supplier wait start without disabling the button', async () => {
+  it('requests additional documentation, enabling supplier uploads (#4644)', async () => {
     mockUserRoles = [{ name: roles.analyst }]
-    const onDocumentUploadClick = vi.fn()
     const onSupplierRequest = vi.fn()
     render(
       <GovernmentDecisionStep
         ciApplication={baseCi}
         isGovernment={true}
-        onDocumentUploadClick={onDocumentUploadClick}
         onSupplierRequest={onSupplierRequest}
       />,
       { wrapper }
@@ -543,14 +546,13 @@ describe('GovernmentDecisionStep', () => {
 
     fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
 
-    // Opening the modal is not a completed action, so the button stays enabled
-    // and remains clickable after the modal is cancelled (#4651).
-    expect(screen.getByTestId('ci-request-documentation-btn')).not.toBeDisabled()
-    expect(
-      screen.getByTestId('ci-request-pathway-changes-btn')
-    ).not.toBeDisabled()
-    expect(onDocumentUploadClick).toHaveBeenCalled()
+    await waitFor(() =>
+      expect(mockRequestDocumentation).toHaveBeenCalledTimes(1)
+    )
     expect(onSupplierRequest).toHaveBeenCalledWith('documentation')
+    // Like the pathway request, the button disables once documentation is
+    // requested so it cannot be re-triggered.
+    expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
   })
 
   it('can render only the decision panel for the submitted application page layout', () => {
