@@ -1,6 +1,7 @@
 """Tests for the CI application service layer."""
 
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -228,6 +229,27 @@ def _step1_payload(**overrides):
     )
     base.update(overrides)
     return CIApplicationStep1Schema(**base)
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    ["facility_city", "facility_province_state", "facility_country"],
+)
+@pytest.mark.parametrize("value", [None, "", "   "])
+def test_step1_schema_requires_non_empty_location_fields(field_name, value):
+    base = dict(
+        facility_city="San Martin",
+        facility_province_state="Santa Fe",
+        facility_country="Argentina",
+        facility_iso="AR",
+        facility_nameplate_capacity=1000,
+        facility_nameplate_capacity_unit="L",
+        proposed_fuel_code_effective_date=date(2026, 6, 1),
+    )
+    base[field_name] = value
+
+    with pytest.raises(ValidationError):
+        CIApplicationStep1Schema(**base)
 
 
 # ---------------------------------------------------------------------------
@@ -494,6 +516,12 @@ def _new_pathway_input(**overrides):
     return PathwayInputSchema(**base)
 
 
+def test_pathway_input_allows_negative_proposed_ci():
+    payload = _new_pathway_input(proposed_ci=-5.61)
+
+    assert payload.proposed_ci == Decimal("-5.61")
+
+
 def _existing_pathway(**overrides):
     base = dict(
         pathway_id=1,
@@ -643,6 +671,26 @@ async def test_update_step2_replaces_pathways_and_description(service, repo, moc
     assert ci.pathway_description == "Uses CCS"
     assert ci.action_type == ActionTypeEnum.UPDATE
     assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_update_step2_allows_negative_proposed_ci(service, repo, mock_user):
+    ci = _ci_application()
+    ci.pathways = []
+    _stub_step2_lookups(repo)
+    repo.replace_pathways.return_value = []
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    payload = CIApplicationStep2Schema(
+        pathways=[_new_pathway_input(proposed_ci=-5.61)],
+    )
+
+    await service.update_step2(ci, payload, mock_user)
+
+    repo.replace_pathways.assert_awaited_once()
+    args, _ = repo.replace_pathways.await_args
+    assert args[1][0].proposed_ci == Decimal("-5.61")
 
 
 @pytest.mark.anyio

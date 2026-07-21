@@ -282,6 +282,7 @@ export const ApplicationSummary = ({
 
   const documents = ciApplication.documents || []
   const pathways = ciApplication.pathways || []
+  const pathwayDescription = ciApplication.pathwayDescription?.trim()
   const pathwayChangeLogs = [
     ...(ciApplication.pathwayChangeLogs ||
       ciApplication.pathway_change_logs ||
@@ -709,6 +710,26 @@ export const ApplicationSummary = ({
       </BCBox>
 
       <Divider sx={{ mb: 2 }} />
+
+      {!isEditingPathways && pathwayDescription && (
+        <>
+          <BCBox
+            data-test="ci-summary-pathway-description"
+            sx={{ width: '100%', mb: 2 }}
+          >
+            <BCTypography
+              variant="subtitle1"
+              sx={{ fontWeight: 700, color: colors.primary.main, mb: 1 }}
+            >
+              {t('carbonIntensity:step2.descriptionLabel')}
+            </BCTypography>
+            <BCTypography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {pathwayDescription}
+            </BCTypography>
+          </BCBox>
+          <Divider sx={{ mb: 2 }} />
+        </>
+      )}
 
       {/* Pathways */}
       <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
