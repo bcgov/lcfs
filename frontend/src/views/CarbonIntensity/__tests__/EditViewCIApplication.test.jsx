@@ -366,8 +366,6 @@ describe('EditViewCIApplication', () => {
         facilityCity: 'Vancouver',
         facilityProvinceState: 'BC',
         facilityCountry: 'Canada',
-        facilityCity: 'Vancouver',
-        facilityProvinceState: 'BC',
         facilityNameplateCapacity: 1000,
         facilityNameplateCapacityUnit: 'L',
         // Step 2 saved

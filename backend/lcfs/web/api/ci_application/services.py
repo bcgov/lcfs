@@ -233,6 +233,22 @@ def _action_type_value(action_type: Any) -> str:
     return action_type.value if hasattr(action_type, "value") else str(action_type)
 
 
+def _pathway_changed_at(pathway: Pathway) -> Optional[datetime]:
+    action_type = _action_type_value(getattr(pathway, "action_type", "CREATE"))
+    if action_type == ActionTypeEnum.CREATE.value:
+        return getattr(pathway, "create_date", None)
+    return getattr(pathway, "update_date", None) or getattr(
+        pathway, "create_date", None
+    )
+
+
+def _pathway_changed_by(pathway: Pathway) -> Optional[str]:
+    action_type = _action_type_value(getattr(pathway, "action_type", "CREATE"))
+    if action_type == ActionTypeEnum.CREATE.value:
+        return getattr(pathway, "create_user", None)
+    return getattr(pathway, "update_user", None) or getattr(pathway, "create_user", None)
+
+
 def _sorted_pathways(pathways: List[Pathway]) -> List[Pathway]:
     return sorted(
         pathways,
@@ -311,8 +327,8 @@ def _pathway_change_logs_from_versions(
                         pathway_id=pathway.pathway_id,
                         pathway_group_uuid=group_uuid,
                         action_type=action_type,
-                        changed_at=getattr(pathway, "create_date", None),
-                        changed_by=getattr(pathway, "create_user", None),
+                        changed_at=_pathway_changed_at(pathway),
+                        changed_by=_pathway_changed_by(pathway),
                         changed_fields=changed_fields,
                         before_snapshot=previous_snapshot,
                         after_snapshot=current_snapshot,
@@ -1534,6 +1550,9 @@ class CIApplicationServices:
             if is_supplemental_edit
             else []
         )
+        supplemental_changed_at = (
+            datetime.now(timezone.utc) if is_supplemental_edit else None
+        )
 
         new_rows: List[Pathway] = []
         for row in data.pathways:
@@ -1567,6 +1586,8 @@ class CIApplicationServices:
                 ),
                 update_user=user.keycloak_username,
             )
+            if supplemental_changed_at:
+                pathway.update_date = supplemental_changed_at
             if previous and getattr(previous, "create_date", None):
                 pathway.create_date = previous.create_date
             new_rows.append(pathway)
@@ -1604,6 +1625,8 @@ class CIApplicationServices:
                     ),
                     update_user=user.keycloak_username,
                 )
+                if supplemental_changed_at:
+                    pathway.update_date = supplemental_changed_at
                 if getattr(previous, "create_date", None):
                     pathway.create_date = previous.create_date
                 delete_rows.append(pathway)
@@ -1634,7 +1657,7 @@ class CIApplicationServices:
                 ci_application,
                 snapshot={
                     "event": "supplemental_pathways_updated",
-                    "changed_at": datetime.now(timezone.utc).isoformat(),
+                    "changed_at": supplemental_changed_at.isoformat(),
                     "changed_by": user.keycloak_username,
                     "before": previous_pathways,
                     "after": [
