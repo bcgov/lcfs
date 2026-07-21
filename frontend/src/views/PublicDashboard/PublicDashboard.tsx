@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Box, Button } from '@mui/material'
 import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined'
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined'
@@ -7,7 +7,7 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import ReactECharts from 'echarts-for-react'
 import { useKeycloak } from '@react-keycloak/web'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
@@ -18,6 +18,10 @@ import { apiRoutes } from '@/constants/routes'
 import { useCreditMarketPublicOverview } from '@/hooks/useCreditMarket'
 import { useActiveLoginBgImage } from '@/hooks/useLoginBgImage'
 import bgFallbackImage from '@/assets/images/backgrounds/summer.webp'
+
+// One-shot flag (cleared on logout, which wipes storage) that lets us forward
+// a just-authenticated visitor into the app exactly once without looping.
+const POST_LOGIN_FORWARDED_KEY = 'lcfs.postLoginForwarded'
 
 // BC Government brand palette
 const NAVY = '#003366'
@@ -64,9 +68,24 @@ const innerContainer = { maxWidth: 1320, mx: 'auto', px: { xs: 3, md: 6 } }
 
 export const PublicDashboard = () => {
   const { t } = useTranslation()
-  const { keycloak } = useKeycloak()
+  const { keycloak, initialized } = useKeycloak()
+  const navigate = useNavigate()
   const { data } = useCreditMarketPublicOverview('quarter')
   const { data: activeBg } = useActiveLoginBgImage()
+
+  // After login the OIDC callback returns to the app root, which can briefly
+  // bounce an authenticated user here (the public landing) before the session
+  // settles — leaving them stranded until they click login a second time.
+  // Forward authenticated visitors into the app. The one-shot flag stops this
+  // from looping with RequireAuth for an authenticated user who has no LCFS
+  // account (RequireAuth sends such a user back here), while still recovering
+  // the ordinary post-login bounce.
+  useEffect(() => {
+    if (!initialized || !keycloak.authenticated) return
+    if (sessionStorage.getItem(POST_LOGIN_FORWARDED_KEY)) return
+    sessionStorage.setItem(POST_LOGIN_FORWARDED_KEY, '1')
+    navigate(ROUTES.DASHBOARD, { replace: true })
+  }, [initialized, keycloak.authenticated, navigate])
 
   const priceIndex = data?.priceIndex ?? []
   const periods = priceIndex.map((p) => p.period)
