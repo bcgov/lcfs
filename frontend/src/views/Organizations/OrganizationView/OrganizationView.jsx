@@ -173,10 +173,13 @@ export const OrganizationView = ({ addMode = false }) => {
             flexWrap: 'wrap',
             gap: '4px',
             p: '4px',
-            width: '100%',
+            // Shrink to the tabs' width (compact pill, matching the original
+            // look) but wrap onto more rows once they exceed the available
+            // width instead of clipping.
+            width: 'fit-content',
             maxWidth: '100%',
             boxSizing: 'border-box',
-            backgroundColor: colors.grey[100],
+            background: 'rgba(0, 0, 0, 0.08)',
             borderRadius: borders.borderRadius.xl
           }}
         >
@@ -216,7 +219,7 @@ export const OrganizationView = ({ addMode = false }) => {
                   },
                   '&:focus-visible': {
                     outline: `2px solid ${colors.primary.main}`,
-                    outlineOffset: '-2px'
+                    outlineOffset: '2px'
                   }
                 }}
               >
