@@ -23,17 +23,17 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
     CIApplicationAnalystAssignmentSchema,
     CIApplicationDecisionSchema,
-    CIGeneratedFuelCodeSchema,
-    CIGeneratedFuelCodeUpdateSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
-    CIApplicationUserSchema,
-    CIApplicationVerification1Schema,
-    CIApplicationVerification2Schema,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
     CIApplicationStep4Schema,
+    CIApplicationUserSchema,
+    CIApplicationVerification1Schema,
+    CIApplicationVerification2Schema,
+    CIGeneratedFuelCodeSchema,
+    CIGeneratedFuelCodeUpdateSchema,
     CITableOptionsSchema,
 )
 from lcfs.web.api.ci_application.services import CIApplicationServices
@@ -60,8 +60,19 @@ async def get_table_options(
     request: Request,
     service: CIApplicationServices = Depends(),
 ) -> CITableOptionsSchema:
-    """Lookup data needed to render the CI application form (Step 1)."""
-    return await service.get_table_options()
+    """Lookup data needed to render the CI application form (Step 1).
+
+    Renewal fuel code iterations are scoped to the caller's organization:
+    government users see every approved iteration, while a supplier/CI
+    applicant only sees iterations owned by their own organization. A
+    supplier without an organization is fail-closed to no iterations.
+    """
+    organization_id: Optional[int] = None
+    if not user_has_roles(request.user, [RoleEnum.GOVERNMENT]):
+        org = request.user.organization
+        # -1 matches no fuel code, so a supplier with no org sees none.
+        organization_id = org.organization_id if org else -1
+    return await service.get_table_options(organization_id)
 
 
 @router.get(
@@ -286,7 +297,12 @@ async def update_ci_application_step3(
     service: CIApplicationServices = Depends(),
     validate: CIApplicationValidation = Depends(),
 ) -> CIApplicationSchema:
-    """Step 3 — Documents & GHGenius modelling. Validates required uploads."""
+    """Step 3 — Documents & GHGenius template.
+
+    Persists the optional supporting-document description. The mandatory
+    Technical report / GHGenius upload validation is disabled for the simplified
+    flow (#4669) and retained behind ``CI_STEP3_REQUIRE_DOCUMENTS``.
+    """
     ci = await validate.validate_access(ci_application_id)
     return await service.update_step3(ci, data, request.user)
 
@@ -416,9 +432,7 @@ async def complete_ci_application_verification_1(
 async def complete_ci_application_verification_2(
     request: Request,
     ci_application_id: int,
-    data: CIApplicationVerification2Schema = Body(
-        default=CIApplicationVerification2Schema()
-    ),
+    data: CIApplicationVerification2Schema = Body(...),
     service: CIApplicationServices = Depends(),
     validate: CIApplicationValidation = Depends(),
 ) -> CIApplicationSchema:
@@ -472,6 +486,29 @@ async def request_ci_application_pathway_changes(
 ) -> CIApplicationSchema:
     ci = await validate.validate_access(ci_application_id)
     return await service.request_pathway_changes(ci, request.user)
+
+
+@router.post(
+    "/{ci_application_id}/request-documentation",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def request_ci_application_documentation(
+    request: Request,
+    ci_application_id: int,
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    ci = await validate.validate_access(ci_application_id)
+    return await service.request_documentation(ci, request.user)
 
 
 @router.post(

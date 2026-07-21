@@ -236,6 +236,12 @@ class FuelSupplyAnalyticsSchema(BaseSchema):
     total_by_year: dict = {}
     total_by_fuel_category: dict = {}
     total_by_provision: dict = {}
+    selected_year_summary: dict = {}
+    fuel_type_yoy: List[dict] = []
+    compliance_unit_credit_debit_trend: List[dict] = []
+    compliance_units_per_unit_trend: List[dict] = []
+    fuel_type_volume_trend: List[dict] = []
+    top_fuel_codes: List[dict] = []
 
 
 class OrganizationFuelSuppliesSchema(BaseSchema):

@@ -54,11 +54,7 @@ const applyFuelCodeAutofill = (rowData, fuelCode) => {
     fuelCodeId: fuelCode.fuelCodeId,
     fuelTypeId: fuelCode.fuelTypeId ?? rowData.fuelTypeId,
     feedstock: fuelCode.feedstock ?? rowData.feedstock,
-    feedstockRegion: fuelCode.feedstockLocation ?? rowData.feedstockRegion,
-    proposedCi:
-      fuelCode.carbonIntensity != null
-        ? Number(fuelCode.carbonIntensity)
-        : rowData.proposedCi
+    feedstockRegion: fuelCode.feedstockLocation ?? rowData.feedstockRegion
   }
 }
 
@@ -115,9 +111,9 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         const match = applicationTypes.find((t) => t.type === params.newValue)
         if (!match) return false
         params.data.applicationTypeId = match.pathwayApplicationTypeId
-        // Switching back to "New" must clear any renewal-specific fuel code
-        // reference; otherwise validation will reject the row server-side.
-        if (match.type !== APPLICATION_TYPE_RENEWAL) {
+        if (match.type === APPLICATION_TYPE_RENEWAL) {
+          params.data.proposedCi = null
+        } else {
           params.data.fuelCodeId = null
         }
         return true
@@ -195,6 +191,13 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         openOnFocus: true
       },
       suppressKeyboardEvent,
+      // When the applicant's organization owns no renewable iterations the
+      // editor dropdown is empty; a browser tooltip on the cell explains why
+      // (BCGridEditor sets enableBrowserTooltips).
+      tooltipValueGetter: (params) =>
+        isRenewal(params) && fuelCodes.length === 0
+          ? i18n.t('carbonIntensity:step2.noEligibleFuelCodes')
+          : null,
       cellRenderer: (params) => {
         if (!isRenewal(params)) {
           return <BCTypography variant="body4">—</BCTypography>
@@ -202,10 +205,13 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         const match = fuelCodes.find(
           (fc) => fc.fuelCodeId === params.data?.fuelCodeId
         )
-        return match ? (
-          match.fuelCode
-        ) : (
-          <BCTypography variant="body4">Select</BCTypography>
+        if (match) {
+          return match.fuelCode
+        }
+        return (
+          <BCTypography variant="body4">
+            {fuelCodes.length === 0 ? 'No eligible iterations' : 'Select'}
+          </BCTypography>
         )
       },
       cellStyle: (params) => {

@@ -1,14 +1,22 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { QueryOptions, PaginationParams, ExtMutationOptions} from './types'
+import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
+import type {
+  QueryOptions,
+  PaginationParams,
+  ExtMutationOptions
+} from './types'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
 const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less frequently)
 
-export const useOtherUsesOptions = (params: Record<string, any>, options: QueryOptions<unknown> = {}) => {
+export const useOtherUsesOptions = (
+  params: Record<string, any>,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -38,7 +46,11 @@ export const useOtherUsesOptions = (params: Record<string, any>, options: QueryO
   })
 }
 
-export const useGetAllOtherUses = (complianceReportId: number | string | undefined | null, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
+export const useGetAllOtherUses = (
+  complianceReportId: number | string | undefined | null,
+  pagination: PaginationParams,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -70,7 +82,10 @@ export const useGetAllOtherUses = (complianceReportId: number | string | undefin
   })
 }
 
-export const useGetAllOtherUsesList = ({ complianceReportId, changelog = false }: any, options: QueryOptions<unknown> = {}) => {
+export const useGetAllOtherUsesList = (
+  { complianceReportId, changelog = false }: any,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -102,13 +117,16 @@ export const useGetAllOtherUsesList = ({ complianceReportId, changelog = false }
   })
 }
 
-export const useGetOtherUses = ({
+export const useGetOtherUses = (
+  {
     page = 1,
     size = 10,
     sortOrders = [],
     filters = [],
     complianceReportId
-  }: any = {}, options: QueryOptions<unknown> = {}) => {
+  }: any = {},
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -143,7 +161,10 @@ export const useGetOtherUses = ({
   })
 }
 
-export const useSaveOtherUses = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useSaveOtherUses = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -206,8 +227,10 @@ export const useSaveOtherUses = (complianceReportId: number | string | undefined
       }
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -236,7 +259,10 @@ export const useSaveOtherUses = (complianceReportId: number | string | undefined
   })
 }
 
-export const useUpdateOtherUses = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateOtherUses = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -303,8 +329,10 @@ export const useUpdateOtherUses = (complianceReportId: number | string | undefin
       }
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -332,7 +360,10 @@ export const useUpdateOtherUses = (complianceReportId: number | string | undefin
   })
 }
 
-export const useDeleteOtherUses = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useDeleteOtherUses = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -373,8 +404,10 @@ export const useDeleteOtherUses = (complianceReportId: number | string | undefin
       })
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -402,7 +435,10 @@ export const useDeleteOtherUses = (complianceReportId: number | string | undefin
   })
 }
 
-export const useImportOtherUses = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useImportOtherUses = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -457,8 +493,10 @@ export const useImportOtherUses = (complianceReportId: number | string | undefin
       })
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
