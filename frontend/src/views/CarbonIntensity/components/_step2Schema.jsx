@@ -54,11 +54,7 @@ const applyFuelCodeAutofill = (rowData, fuelCode) => {
     fuelCodeId: fuelCode.fuelCodeId,
     fuelTypeId: fuelCode.fuelTypeId ?? rowData.fuelTypeId,
     feedstock: fuelCode.feedstock ?? rowData.feedstock,
-    feedstockRegion: fuelCode.feedstockLocation ?? rowData.feedstockRegion,
-    proposedCi:
-      fuelCode.carbonIntensity != null
-        ? Number(fuelCode.carbonIntensity)
-        : rowData.proposedCi
+    feedstockRegion: fuelCode.feedstockLocation ?? rowData.feedstockRegion
   }
 }
 
@@ -115,9 +111,9 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         const match = applicationTypes.find((t) => t.type === params.newValue)
         if (!match) return false
         params.data.applicationTypeId = match.pathwayApplicationTypeId
-        // Switching back to "New" must clear any renewal-specific fuel code
-        // reference; otherwise validation will reject the row server-side.
-        if (match.type !== APPLICATION_TYPE_RENEWAL) {
+        if (match.type === APPLICATION_TYPE_RENEWAL) {
+          params.data.proposedCi = null
+        } else {
           params.data.fuelCodeId = null
         }
         return true
