@@ -1,14 +1,22 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { QueryOptions, PaginationParams, ExtMutationOptions} from './types'
+import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
+import type {
+  QueryOptions,
+  PaginationParams,
+  ExtMutationOptions
+} from './types'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
 const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less frequently)
 
-export const useFuelExportOptions = (params: Record<string, any>, options: QueryOptions<unknown> = {}) => {
+export const useFuelExportOptions = (
+  params: Record<string, any>,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -38,7 +46,11 @@ export const useFuelExportOptions = (params: Record<string, any>, options: Query
   })
 }
 
-export const useGetFuelExports = (params: Record<string, any>, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
+export const useGetFuelExports = (
+  params: Record<string, any>,
+  pagination: PaginationParams,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -76,7 +88,11 @@ export const useGetFuelExports = (params: Record<string, any>, pagination: Pagin
   })
 }
 
-export const useGetFuelExportsList = ({ complianceReportId, changelog = false }: any, pagination: PaginationParams, options: QueryOptions<unknown> = {}) => {
+export const useGetFuelExportsList = (
+  { complianceReportId, changelog = false }: any,
+  pagination: PaginationParams,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -109,7 +125,10 @@ export const useGetFuelExportsList = ({ complianceReportId, changelog = false }:
   })
 }
 
-export const useSaveFuelExport = (params: Record<string, any>, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useSaveFuelExport = (
+  params: Record<string, any>,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -143,7 +162,9 @@ export const useSaveFuelExport = (params: Record<string, any>, options: ExtMutat
               (query.queryKey[0] === 'fuel-exports' ||
                 query.queryKey[0] === 'fuel-exports-list') &&
               (query.queryKey.includes(params.complianceReportId) ||
-                query.queryKey.some((key: any) => key === params.complianceReportId))
+                query.queryKey.some(
+                  (key: any) => key === params.complianceReportId
+                ))
             )
           }
         })
@@ -155,15 +176,19 @@ export const useSaveFuelExport = (params: Record<string, any>, options: ExtMutat
               (query.queryKey[0] === 'fuel-exports' ||
                 query.queryKey[0] === 'fuel-exports-list') &&
               (query.queryKey.includes(params.complianceReportId) ||
-                query.queryKey.some((key: any) => key === params.complianceReportId))
+                query.queryKey.some(
+                  (key: any) => key === params.complianceReportId
+                ))
             )
           }
         })
       }
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', params.complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report', params.complianceReportId ] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          params.complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -176,7 +201,9 @@ export const useSaveFuelExport = (params: Record<string, any>, options: ExtMutat
             (query.queryKey[0] === 'fuel-exports' ||
               query.queryKey[0] === 'fuel-exports-list') &&
             (query.queryKey.includes(params.complianceReportId) ||
-              query.queryKey.some((key: any) => key === params.complianceReportId))
+              query.queryKey.some(
+                (key: any) => key === params.complianceReportId
+              ))
           )
         }
       })
@@ -187,7 +214,10 @@ export const useSaveFuelExport = (params: Record<string, any>, options: ExtMutat
   })
 }
 
-export const useUpdateFuelExport = (params: Record<string, any>, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateFuelExport = (
+  params: Record<string, any>,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -226,7 +256,9 @@ export const useUpdateFuelExport = (params: Record<string, any>, options: ExtMut
               (query.queryKey[0] === 'fuel-exports' ||
                 query.queryKey[0] === 'fuel-exports-list') &&
               (query.queryKey.includes(params.complianceReportId) ||
-                query.queryKey.some((key: any) => key === params.complianceReportId))
+                query.queryKey.some(
+                  (key: any) => key === params.complianceReportId
+                ))
             )
           }
         })
@@ -237,15 +269,19 @@ export const useUpdateFuelExport = (params: Record<string, any>, options: ExtMut
               (query.queryKey[0] === 'fuel-exports' ||
                 query.queryKey[0] === 'fuel-exports-list') &&
               (query.queryKey.includes(params.complianceReportId) ||
-                query.queryKey.some((key: any) => key === params.complianceReportId))
+                query.queryKey.some(
+                  (key: any) => key === params.complianceReportId
+                ))
             )
           }
         })
       }
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', params.complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report', params.complianceReportId ] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          params.complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -257,7 +293,9 @@ export const useUpdateFuelExport = (params: Record<string, any>, options: ExtMut
             (query.queryKey[0] === 'fuel-exports' ||
               query.queryKey[0] === 'fuel-exports-list') &&
             (query.queryKey.includes(params.complianceReportId) ||
-              query.queryKey.some((key: any) => key === params.complianceReportId))
+              query.queryKey.some(
+                (key: any) => key === params.complianceReportId
+              ))
           )
         }
       })
@@ -268,7 +306,10 @@ export const useUpdateFuelExport = (params: Record<string, any>, options: ExtMut
   })
 }
 
-export const useDeleteFuelExport = (params: Record<string, any>, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useDeleteFuelExport = (
+  params: Record<string, any>,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -298,14 +339,18 @@ export const useDeleteFuelExport = (params: Record<string, any>, options: ExtMut
             (query.queryKey[0] === 'fuel-exports' ||
               query.queryKey[0] === 'fuel-exports-list') &&
             (query.queryKey.includes(params.complianceReportId) ||
-              query.queryKey.some((key: any) => key === params.complianceReportId))
+              query.queryKey.some(
+                (key: any) => key === params.complianceReportId
+              ))
           )
         }
       })
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', params.complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report', params.complianceReportId ] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          params.complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
@@ -317,7 +362,9 @@ export const useDeleteFuelExport = (params: Record<string, any>, options: ExtMut
             (query.queryKey[0] === 'fuel-exports' ||
               query.queryKey[0] === 'fuel-exports-list') &&
             (query.queryKey.includes(params.complianceReportId) ||
-              query.queryKey.some((key: any) => key === params.complianceReportId))
+              query.queryKey.some(
+                (key: any) => key === params.complianceReportId
+              ))
           )
         }
       })
@@ -328,7 +375,10 @@ export const useDeleteFuelExport = (params: Record<string, any>, options: ExtMut
   })
 }
 
-export const useImportFuelExports = (complianceReportId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useImportFuelExports = (
+  complianceReportId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -378,8 +428,10 @@ export const useImportFuelExports = (complianceReportId: number | string | undef
       })
 
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries({ queryKey: [ 'compliance-report-summary', complianceReportId ] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', complianceReportId] })
+        invalidateComplianceReportRelatedQueries(
+          queryClient,
+          complianceReportId
+        )
       }
 
       onSuccess?.(data, variables, context)
