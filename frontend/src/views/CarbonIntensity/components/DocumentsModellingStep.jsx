@@ -1,16 +1,6 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Box,
-  IconButton,
-  InputLabel,
-  Link,
-  MenuItem,
-  Select,
-  Stack,
-  TextField,
-  Tooltip
-} from '@mui/material'
+import { Box, IconButton, Link, Stack, TextField, Tooltip } from '@mui/material'
 import {
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon
@@ -33,6 +23,11 @@ import {
 import colors from '@/themes/base/colors'
 import { validateFile } from '@/utils/fileValidation'
 
+// Document category constants. The Technical report / GHGenius categories are
+// retained for when the mandatory-upload validation is re-enabled (the previous
+// categorized multi-upload layout lives in DocumentsModellingStep.legacy.jsx —
+// see #4669). The simplified single-upload flow stores every Step 3 file under
+// the generic supporting category.
 export const DOC_CATEGORY_TECHNICAL_REPORT = 'technical_report'
 export const DOC_CATEGORY_GHGENIUS_MODEL = 'ghgenius_model'
 export const DOC_CATEGORY_SUPPORTING = 'supporting'
@@ -61,11 +56,6 @@ export const DocumentsModellingStep = ({
   const ciApplicationId = ciApplication?.ciApplicationId
 
   const supportingFileRef = useRef(null)
-  const ghgeniusFileRef = useRef(null)
-
-  const [supportingCategory, setSupportingCategory] = useState(
-    DOC_CATEGORY_TECHNICAL_REPORT
-  )
   const [otherDescription, setOtherDescription] = useState(
     ciApplication?.supportingDocumentOther || ''
   )
@@ -83,14 +73,9 @@ export const DocumentsModellingStep = ({
     useDeleteDocument(PARENT_TYPE, ciApplicationId)
   const downloadDocument = useDownloadDocument(PARENT_TYPE, ciApplicationId)
 
-  const hasTechnicalReport = documents.some(
-    (d) => d.documentCategory === DOC_CATEGORY_TECHNICAL_REPORT
-  )
-  const hasGHGeniusModel = documents.some(
-    (d) => d.documentCategory === DOC_CATEGORY_GHGENIUS_MODEL
-  )
+  const hasDocuments = documents.length > 0
 
-  const handleFileChosen = async (event, category) => {
+  const handleFileChosen = async (event) => {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
@@ -106,7 +91,8 @@ export const DocumentsModellingStep = ({
     }
     setUploadError(null)
     try {
-      await uploadDoc({ file, documentCategory: category })
+      // Simplified flow: every Step 3 file is stored as a supporting document.
+      await uploadDoc({ file, documentCategory: DOC_CATEGORY_SUPPORTING })
     } catch (err) {
       setUploadError(
         err?.response?.data?.detail ||
@@ -128,14 +114,14 @@ export const DocumentsModellingStep = ({
     }
   }
 
-  const canProceed = hasTechnicalReport && hasGHGeniusModel && !readOnly
+  // Required-upload validation is intentionally disabled for the simplified
+  // flow (#4669). The previous mandatory Technical report / GHGenius checks are
+  // retained in DocumentsModellingStep.legacy.jsx (frontend) and behind the
+  // backend CI_STEP3_REQUIRE_DOCUMENTS flag. Proceeding is always allowed here.
+  const canProceed = !readOnly
 
   const handleSaveAndProceed = async () => {
     setUploadError(null)
-    if (!hasTechnicalReport || !hasGHGeniusModel) {
-      setUploadError(t('carbonIntensity:step3.errors.missingRequired'))
-      return
-    }
     await onSave?.({ supportingDocumentOther: otherDescription || null })
   }
 
@@ -147,89 +133,87 @@ export const DocumentsModellingStep = ({
         </BCTypography>
       )}
 
-      {/* Uploaded documents list */}
-      <BCBox
-        sx={{
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 1,
-          p: 2,
-          mb: 3,
-          maxHeight: 240,
-          overflowY: 'auto'
-        }}
-        data-test="ci-step3-uploaded-list"
-      >
-        <BCTypography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          {t('carbonIntensity:step3.uploadedHeader')}
-        </BCTypography>
-        {isLoadingDocs ? (
-          <BCTypography variant="body2" color="text.secondary">
-            {t('common:loading')}
+      {/* Uploaded documents — hidden until at least one document exists (#4669) */}
+      {hasDocuments && (
+        <BCBox
+          sx={{
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            p: 2,
+            mb: 3,
+            maxHeight: 240,
+            overflowY: 'auto'
+          }}
+          data-test="ci-step3-uploaded-list"
+        >
+          <BCTypography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+            {t('carbonIntensity:step3.uploadedHeader')}
           </BCTypography>
-        ) : documents.length === 0 ? (
-          <BCTypography variant="body2" color="text.secondary">
-            {t('carbonIntensity:step3.noDocuments')}
-          </BCTypography>
-        ) : (
-          documents.map((doc) => (
-            <Box
-              key={doc.documentId}
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1fr 1fr 1fr auto',
-                alignItems: 'center',
-                py: 0.5,
-                gap: 2
-              }}
-              data-test="ci-step3-uploaded-row"
-            >
-              <Link
-                component="button"
-                type="button"
-                underline="hover"
-                onClick={() => downloadDocument(doc.documentId, doc.fileName)}
+          {isLoadingDocs ? (
+            <BCTypography variant="body2" color="text.secondary">
+              {t('common:loading')}
+            </BCTypography>
+          ) : (
+            documents.map((doc) => (
+              <Box
+                key={doc.documentId}
                 sx={{
-                  minWidth: 0,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 1fr 1fr 1fr auto',
+                  alignItems: 'center',
+                  py: 0.5,
+                  gap: 2
                 }}
-                title={doc.fileName}
-                data-test="ci-step3-download-doc"
+                data-test="ci-step3-uploaded-row"
               >
-                {doc.fileName}
-              </Link>
-              <BCTypography variant="body2">
-                {formatBytes(doc.fileSize)}
-              </BCTypography>
-              <BCTypography variant="body2">
-                {doc.createUser || ''}
-              </BCTypography>
-              <BCTypography variant="body2">
-                {formatDate(doc.createDate)}
-              </BCTypography>
-              {!readOnly && (
-                <Tooltip title={t('common:deleteBtn')}>
-                  <span>
-                    <IconButton
-                      aria-label="delete document"
-                      size="small"
-                      onClick={() => handleDelete(doc.documentId)}
-                      disabled={isDeletingDoc}
-                      data-test="ci-step3-delete-doc"
-                    >
-                      <DeleteIcon fontSize="small" color="error" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              )}
-            </Box>
-          ))
-        )}
-      </BCBox>
+                <Link
+                  component="button"
+                  type="button"
+                  underline="hover"
+                  onClick={() => downloadDocument(doc.documentId, doc.fileName)}
+                  sx={{
+                    minWidth: 0,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title={doc.fileName}
+                  data-test="ci-step3-download-doc"
+                >
+                  {doc.fileName}
+                </Link>
+                <BCTypography variant="body2">
+                  {formatBytes(doc.fileSize)}
+                </BCTypography>
+                <BCTypography variant="body2">
+                  {doc.createUser || ''}
+                </BCTypography>
+                <BCTypography variant="body2">
+                  {formatDate(doc.createDate)}
+                </BCTypography>
+                {!readOnly && (
+                  <Tooltip title={t('common:deleteBtn')}>
+                    <span>
+                      <IconButton
+                        aria-label="delete document"
+                        size="small"
+                        onClick={() => handleDelete(doc.documentId)}
+                        disabled={isDeletingDoc}
+                        data-test="ci-step3-delete-doc"
+                      >
+                        <DeleteIcon fontSize="small" color="error" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                )}
+              </Box>
+            ))
+          )}
+        </BCBox>
+      )}
 
       {uploadError && (
         <Box mb={2}>
@@ -239,38 +223,8 @@ export const DocumentsModellingStep = ({
         </Box>
       )}
 
-      {/* Supporting documentation */}
-      <BCTypography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-        {t('carbonIntensity:step3.supportingHeader')}
-      </BCTypography>
-
-      <Stack direction="row" spacing={2} alignItems="flex-end" sx={{ mb: 1 }}>
-        <Box sx={{ minWidth: 340 }}>
-          <InputLabel
-            htmlFor="ci-step3-supporting-category"
-            shrink={false}
-            sx={{ pb: 1, color: 'text.primary', position: 'static' }}
-          >
-            {t('carbonIntensity:step3.documentCategoryLabel')}
-          </InputLabel>
-          <Select
-            id="ci-step3-supporting-category"
-            value={supportingCategory}
-            onChange={(e) => setSupportingCategory(e.target.value)}
-            disabled={readOnly}
-            displayEmpty
-            fullWidth
-            inputProps={{ 'data-test': 'ci-step3-supporting-category' }}
-            sx={{ height: 40 }}
-          >
-            <MenuItem value={DOC_CATEGORY_TECHNICAL_REPORT}>
-              {t('carbonIntensity:step3.categoryTechnicalReport')}
-            </MenuItem>
-            <MenuItem value={DOC_CATEGORY_SUPPORTING}>
-              {t('carbonIntensity:step3.categorySupporting')}
-            </MenuItem>
-          </Select>
-        </Box>
+      {/* Single upload control (#4669) */}
+      <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
         <BCButton
           type="button"
           variant="outlined"
@@ -280,7 +234,6 @@ export const DocumentsModellingStep = ({
           onClick={() => supportingFileRef.current?.click()}
           disabled={readOnly || isUploading}
           data-test="ci-step3-upload-supporting"
-          sx={{ height: 40 }}
         >
           {t('carbonIntensity:step3.uploadSupporting')}
         </BCButton>
@@ -289,25 +242,21 @@ export const DocumentsModellingStep = ({
           type="file"
           accept={COMPLIANCE_REPORT_FILE_TYPES.ACCEPT_STRING}
           hidden
-          onChange={(e) => handleFileChosen(e, supportingCategory)}
+          onChange={handleFileChosen}
           data-test="ci-step3-supporting-input"
         />
       </Stack>
 
-      <Box component="ul" sx={{ pl: 3, mb: 2 }}>
+      {/* Guidance on what to include — informational only, not enforced (#4669) */}
+      <Box component="ul" sx={{ pl: 3, mb: 2 }} data-test="ci-step3-guidance">
         <li>
           <BCTypography variant="body2">
             {t('carbonIntensity:step3.bullets.technicalReport')}
-            {!hasTechnicalReport && (
-              <BCTypography
-                component="span"
-                variant="body2"
-                color="error"
-                sx={{ ml: 1 }}
-              >
-                {t('carbonIntensity:step3.notUploaded')}
-              </BCTypography>
-            )}
+          </BCTypography>
+        </li>
+        <li>
+          <BCTypography variant="body2">
+            {t('carbonIntensity:step3.bullets.ghgeniusTemplate')}
           </BCTypography>
         </li>
         <li>
@@ -334,43 +283,6 @@ export const DocumentsModellingStep = ({
         }}
         sx={{ mb: 4 }}
       />
-
-      {/* GHGenius modelling */}
-      <BCTypography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-        {t('carbonIntensity:step3.ghgeniusHeader')}
-      </BCTypography>
-      <BCTypography variant="body2" sx={{ mb: 2 }}>
-        {t('carbonIntensity:step3.ghgeniusIntro')}
-      </BCTypography>
-
-      <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-        <BCButton
-          type="button"
-          variant="outlined"
-          color="primary"
-          size="medium"
-          startIcon={<CloudUploadIcon sx={{ fontSize: '1.5rem !important' }} />}
-          onClick={() => ghgeniusFileRef.current?.click()}
-          disabled={readOnly || isUploading}
-          data-test="ci-step3-upload-ghgenius"
-        >
-          {t('carbonIntensity:step3.uploadGHGenius')}
-        </BCButton>
-        <input
-          ref={ghgeniusFileRef}
-          type="file"
-          accept={COMPLIANCE_REPORT_FILE_TYPES.ACCEPT_STRING}
-          hidden
-          onChange={(e) => handleFileChosen(e, DOC_CATEGORY_GHGENIUS_MODEL)}
-          data-test="ci-step3-ghgenius-input"
-        />
-      </Stack>
-
-      {!hasGHGeniusModel && (
-        <BCTypography variant="body2" color="error" sx={{ mb: 2 }}>
-          {t('carbonIntensity:step3.ghgeniusRequired')}
-        </BCTypography>
-      )}
 
       {showSaveControls && (
         <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
