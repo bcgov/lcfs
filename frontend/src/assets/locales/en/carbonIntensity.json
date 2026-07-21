@@ -70,6 +70,8 @@
     "validation": {
       "atLeastOneRow": "At least one pathway is required.",
       "fixSpecificFields": "{{count}} pathway row(s) have missing or invalid values. Please complete: {{fields}}.",
+      "missingSpecificFields": "Required field(s) missing: {{fields}}. Complete the highlighted cell(s) before saving.",
+      "incompleteRows": "{{count}} pathway row(s) have missing required fields — complete all cells highlighted in red before saving.",
       "dateOrder": "Operating data collection end date must be on or after the start date. Please fix the dates and try again."
     }
   },
@@ -128,6 +130,9 @@
     "validation": {
       "allDeclarationsRequired": "All three declarations must be acknowledged before submitting.",
       "consultantFieldsRequired": "Consultant name, company, and email are required when consenting to consultant communication.",
+      "consultantNameRequired": "Consultant name is required.",
+      "consultantCompanyRequired": "Consultant company is required.",
+      "consultantEmailRequired": "Consultant email address is required.",
       "consultantEmailInvalid": "Enter a valid consultant email address."
     },
     "submitConfirmTitle": "Submit application?",
