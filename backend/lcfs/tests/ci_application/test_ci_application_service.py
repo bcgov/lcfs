@@ -584,8 +584,10 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
             action_type=ActionTypeEnum.UPDATE,
             feedstock="Camelina",
             proposed_ci=6.25,
-            create_date=update_date,
-            create_user="editor",
+            create_date=create_date,
+            create_user="creator",
+            update_date=update_date,
+            update_user="editor",
         ),
         _existing_pathway(
             pathway_id=103,
@@ -595,8 +597,10 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
             action_type=ActionTypeEnum.DELETE,
             feedstock="Camelina",
             proposed_ci=6.25,
-            create_date=delete_date,
-            create_user="deleter",
+            create_date=create_date,
+            create_user="creator",
+            update_date=delete_date,
+            update_user="deleter",
         ),
     ]
 
@@ -733,6 +737,7 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
 async def test_update_step2_records_pathway_versions_for_change_log(
     service, repo, mock_user
 ):
+    before_update = datetime.now(timezone.utc)
     ci = _ci_application(status=_status("Submitted", 2))
     ci.pathway_supplemental_edit_enabled = True
     ci.pathway_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
@@ -788,6 +793,7 @@ async def test_update_step2_records_pathway_versions_for_change_log(
     assert update_row.action_type == ActionTypeEnum.UPDATE
     assert update_row.create_date == first_pathway_create_date
     assert update_row.create_user == "original_user"
+    assert update_row.update_date >= before_update
     assert update_row.update_user == mock_user.keycloak_username
     assert update_row.feedstock == "Camelina"
     assert update_row.feedstock_transport_distance == 125
@@ -803,6 +809,7 @@ async def test_update_step2_records_pathway_versions_for_change_log(
     assert delete_row.action_type == ActionTypeEnum.DELETE
     assert delete_row.create_date == second_pathway_create_date
     assert delete_row.create_user == "original_user"
+    assert delete_row.update_date == update_row.update_date
     assert delete_row.update_user == mock_user.keycloak_username
     assert delete_row.feedstock == "Soy"
 
