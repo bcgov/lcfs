@@ -5,7 +5,8 @@ import {
   fireEvent,
   render,
   screen,
-  waitFor
+  waitFor,
+  within
 } from '@testing-library/react'
 
 import { roles } from '@/constants/roles'
@@ -532,7 +533,48 @@ describe('GovernmentDecisionStep', () => {
     ).not.toBeDisabled()
   })
 
-  it('requests additional documentation, enabling supplier uploads (#4644)', async () => {
+  it('opens a confirmation on click without firing the request or disabling the button (#4651)', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        onSupplierRequest={vi.fn()}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
+
+    expect(screen.getByTestId('modal')).toBeInTheDocument()
+    expect(mockRequestDocumentation).not.toHaveBeenCalled()
+    expect(
+      screen.getByTestId('ci-request-documentation-btn')
+    ).not.toBeDisabled()
+  })
+
+  it('leaves the button enabled after cancelling the confirmation (#4651)', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        onSupplierRequest={vi.fn()}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
+    const modal = screen.getByTestId('modal')
+    fireEvent.click(within(modal).getByText('common:cancelBtn'))
+
+    expect(mockRequestDocumentation).not.toHaveBeenCalled()
+    expect(
+      screen.getByTestId('ci-request-documentation-btn')
+    ).not.toBeDisabled()
+  })
+
+  it('requests documentation and disables the button after confirming (#4644)', async () => {
     mockUserRoles = [{ name: roles.analyst }]
     const onSupplierRequest = vi.fn()
     render(
@@ -545,13 +587,15 @@ describe('GovernmentDecisionStep', () => {
     )
 
     fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
+    const modal = screen.getByTestId('modal')
+    fireEvent.click(
+      within(modal).getByText('carbonIntensity:step5.requestDocumentation')
+    )
 
     await waitFor(() =>
       expect(mockRequestDocumentation).toHaveBeenCalledTimes(1)
     )
     expect(onSupplierRequest).toHaveBeenCalledWith('documentation')
-    // Like the pathway request, the button disables once documentation is
-    // requested so it cannot be re-triggered.
     expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
   })
 

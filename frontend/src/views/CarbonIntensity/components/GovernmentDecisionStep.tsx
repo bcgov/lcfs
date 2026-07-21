@@ -12,6 +12,7 @@ import {
 
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import Comments from '@/components/Comments'
 import { Role } from '@/components/Role'
@@ -92,6 +93,10 @@ export const GovernmentDecisionStep = ({
   )
   const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
   const [requestedDocumentation, setRequestedDocumentation] = useState(false)
+  const [
+    isRequestDocumentationConfirmOpen,
+    setIsRequestDocumentationConfirmOpen
+  ] = useState(false)
   const [priorityScoreTouched, setPriorityScoreTouched] = useState(false)
   const [
     priorityScoreVerificationAttempted,
@@ -229,9 +234,17 @@ export const GovernmentDecisionStep = ({
   }
 
   const handleRequestDocumentation = () => {
+    // Ask the analyst to confirm the request rather than opening the upload
+    // utility or firing silently (#4651). Cancelling leaves the button enabled;
+    // only confirming performs the action and disables it.
+    setIsRequestDocumentationConfirmOpen(true)
+  }
+
+  const confirmRequestDocumentation = () => {
     // Enable additional-document uploads for the supplier on the submitted
     // application (#4644), mirroring the pathway-changes request. Persists
     // document_upload_enabled so the BCeID user gets an upload path.
+    setIsRequestDocumentationConfirmOpen(false)
     setRequestedDocumentation(true)
     onSupplierRequest?.('documentation')
     recordWorkflowAction(
@@ -618,6 +631,21 @@ export const GovernmentDecisionStep = ({
           )}
         </Box>
       )}
+      <BCModal
+        open={isRequestDocumentationConfirmOpen}
+        onClose={() => setIsRequestDocumentationConfirmOpen(false)}
+        data={{
+          title: t('carbonIntensity:step5.requestDocumentationConfirmTitle'),
+          primaryButtonText: t('carbonIntensity:step5.requestDocumentation'),
+          primaryButtonAction: confirmRequestDocumentation,
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <BCTypography variant="body1">
+              {t('carbonIntensity:step5.requestDocumentationConfirmText')}
+            </BCTypography>
+          )
+        }}
+      />
     </Box>
   )
 }

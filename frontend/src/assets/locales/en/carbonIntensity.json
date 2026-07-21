@@ -154,6 +154,8 @@
     "verification2Complete": "Verification 2 complete",
     "generateFuelCodes": "Generate fuel codes",
     "requestDocumentation": "Request further documentation",
+    "requestDocumentationConfirmTitle": "Request further documentation?",
+    "requestDocumentationConfirmText": "This lets the applicant upload additional documents for this application. Do you want to continue?",
     "requestPathwayChanges": "Request pathway changes",
     "recommendToDirector": "Recommend to director",
     "approveBtn": "Approve",
