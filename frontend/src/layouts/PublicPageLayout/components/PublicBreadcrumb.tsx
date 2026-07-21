@@ -79,6 +79,10 @@ export const PublicBreadcrumb = ({
       label: 'Release notes',
       route: '/release-notes'
     },
+    'market-data': {
+      label: 'Credit market data',
+      route: '/market-data'
+    },
     ...customBreadcrumbs
   }
 

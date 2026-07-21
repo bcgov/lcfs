@@ -1,11 +1,7 @@
 import { useEffect } from 'react'
-import {
-  Outlet,
-  useLocation,
-  useMatches,
-  useNavigate
-} from 'react-router-dom'
+import { Outlet, useLocation, useMatches, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { Container, Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import Footer from '@/components/Footer'
@@ -70,8 +66,17 @@ export const MainLayout = () => {
     refreshToken(true)
   }, [location.pathname])
 
+  // Route root visitors to the public dashboard when enabled, else to login.
+  const showCreditMarketLoginPage = isFeatureEnabled(
+    FEATURE_FLAGS.CREDIT_MARKET_LOGIN_PAGE
+  )
+  const unauthRedirect =
+    location.pathname === ROUTES.DASHBOARD && showCreditMarketLoginPage
+      ? ROUTES.PUBLIC_DASHBOARD
+      : ROUTES.AUTH.LOGIN
+
   return (
-    <RequireAuth redirectTo={ROUTES.AUTH.LOGIN}>
+    <RequireAuth redirectTo={unauthRedirect}>
       <BCBox display="flex" flexDirection="column" minHeight="100vh">
         <BCTypography variant="h1" className="visually-hidden">
           {pageTitle}

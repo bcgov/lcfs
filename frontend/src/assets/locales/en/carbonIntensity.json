@@ -15,7 +15,7 @@
   "steps": {
     "step1": "Application information",
     "step2": "Proposed fuel pathways",
-    "step3": "Documents & GHGenius modelling",
+    "step3": "Documents & GHGenius template",
     "step4": "Sign & submit",
     "step5": "Government decision"
   },
@@ -32,9 +32,12 @@
     "saveAndProceed": "Save & proceed",
     "deleteDraft": "Delete draft application",
     "saveSuccess": "Application information saved.",
+    "deleteSuccess": "Draft application deleted.",
     "deleteConfirmTitle": "Delete draft application?",
     "deleteConfirmText": "This will permanently remove the draft. This action cannot be undone.",
     "validation": {
+      "cityRequired": "City is required.",
+      "provinceStateRequired": "Province/State is required.",
       "countryRequired": "Country is required.",
       "capacityRequired": "Facility nameplate capacity is required.",
       "capacityPositive": "Facility nameplate capacity must be greater than zero.",
@@ -52,6 +55,7 @@
     "operatingDataFrom": "Operating data collection from",
     "operatingDataTo": "Operating data collection to",
     "fuelCodeIteration": "Fuel code iteration",
+    "noEligibleFuelCodes": "No fuel code iterations are available to renew. Only approved fuel codes owned by your organization can be renewed — the latest iteration of each is shown here.",
     "proposedCi": "Proposed CI (gCO2e/MJ)",
     "fuelType": "Fuel type",
     "feedstock": "Feedstock",
@@ -70,7 +74,7 @@
     }
   },
   "step3": {
-    "title": "Documents & GHGenius modelling",
+    "title": "Documents & GHGenius template",
     "uploadedHeader": "Uploaded documents for application",
     "noDocuments": "No documents uploaded yet.",
     "supportingHeader": "Supporting documentation",
@@ -81,11 +85,12 @@
     "notUploaded": "(not uploaded)",
     "bullets": {
       "technicalReport": "Technical report (required)",
+      "ghgeniusTemplate": "GHGenius template (required)",
       "notification": "Notification of representation agreement form (optional, required if applicable)",
-      "other": "Other supporting documents — describe below (optional)"
+      "other": "Other supporting documentation, enter brief description (optional)"
     },
     "otherPlaceholder": "Brief description of other supporting documentation included",
-    "ghgeniusHeader": "GHGenius Modelling — Input & output tables",
+    "ghgeniusHeader": "GHGenius template — Input & output tables",
     "ghgeniusIntro": "Complete the required modelling input and output tables in the GHGenius Excel template, then upload the completed spreadsheet.",
     "uploadGHGenius": "Upload GHGenius model",
     "ghgeniusRequired": "GHGenius model upload is required.",
@@ -102,7 +107,7 @@
   "step4": {
     "title": "Sign & submit",
     "summaryHeader": "Application information",
-    "documentsHeader": "Documents & GHGenius modelling",
+    "documentsHeader": "Documents & GHGenius template",
     "pathwaysHeader": "Proposed fuel pathways",
     "signingAuthorityHeader": "Signing authority declaration",
     "signingAuthorityLabel": "Signing authority:",
@@ -144,11 +149,14 @@
     "workflowHeader": "Workflow",
     "riskAssessment": "Risk assessment",
     "priorityScore": "Priority score",
+    "priorityScoreInvalid": "Priority score is required and must be a whole number from 1 to 999.",
     "numberOfFuelPathways": "Number of fuel pathways",
     "verification1Complete": "Verification 1 complete",
     "verification2Complete": "Verification 2 complete",
     "generateFuelCodes": "Generate fuel codes",
     "requestDocumentation": "Request further documentation",
+    "requestDocumentationConfirmTitle": "Request further documentation?",
+    "requestDocumentationConfirmText": "This lets the applicant upload additional documents for this application. Do you want to continue?",
     "requestPathwayChanges": "Request pathway changes",
     "recommendToDirector": "Recommend to director",
     "approveBtn": "Approve",
@@ -202,7 +210,7 @@
     "titleLabel": "Title:",
     "emailLabel": "Email:",
     "consultantContactLabel": "Third party consultant contact:",
-    "documentsHeader": "Documents & GHGenius modelling",
+    "documentsHeader": "Documents & GHGenius template",
     "pathwaysHeader": "Proposed fuel pathways",
     "editPathways": "Edit supplemental pathway changes",
     "pathwayChangelog": "Pathway changelog",
@@ -221,6 +229,5 @@
     "noPathwayChanges": "No pathway changes found.",
     "effectiveDateShort": "Proposed effective date",
     "iteration": "Iteration"
-  },
-  "footer": "For security and privacy, please don't share personal information on this website.\nThis information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations."
+  }
 }

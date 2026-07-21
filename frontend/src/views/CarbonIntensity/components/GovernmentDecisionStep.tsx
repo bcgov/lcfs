@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Box,
   FormControlLabel,
+  FormHelperText,
   OutlinedInput,
   Radio,
   RadioGroup,
@@ -11,6 +12,7 @@ import {
 
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import Comments from '@/components/Comments'
 import { Role } from '@/components/Role'
@@ -22,6 +24,7 @@ import {
   useGenerateCIApplicationFuelCodes,
   useRecommendCIApplication,
   useRequestCIApplicationPathwayChanges,
+  useRequestCIApplicationDocumentation,
   useRecordCIDecision
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
@@ -30,7 +33,6 @@ type GovernmentDecisionStepProps = {
   ciApplication: any
   isGovernment?: boolean
   readOnly?: boolean
-  onDocumentUploadClick?: (() => void) | null
   onSupplierRequest?:
     | ((requestType: 'documentation' | 'pathwayChanges') => void)
     | null
@@ -44,7 +46,6 @@ export const GovernmentDecisionStep = ({
   ciApplication,
   isGovernment = false,
   readOnly = false,
-  onDocumentUploadClick = null,
   onSupplierRequest = null,
   showDecisionPanel = true,
   showComments = true,
@@ -67,6 +68,10 @@ export const GovernmentDecisionStep = ({
     mutateAsync: requestPathwayChanges,
     isPending: isRequestingPathwayChanges
   } = useRequestCIApplicationPathwayChanges(ciApplicationId)
+  const {
+    mutateAsync: requestDocumentation,
+    isPending: isRequestingDocumentation
+  } = useRequestCIApplicationDocumentation(ciApplicationId)
   const { mutateAsync: generateFuelCodes, isPending: isGeneratingFuelCodes } =
     useGenerateCIApplicationFuelCodes(ciApplicationId)
 
@@ -86,8 +91,30 @@ export const GovernmentDecisionStep = ({
   const [priorityScore, setPriorityScore] = useState(
     ciApplication?.priorityScore || ''
   )
-  const [requestedDocumentation, setRequestedDocumentation] = useState(false)
   const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
+  const [requestedDocumentation, setRequestedDocumentation] = useState(false)
+  const [
+    isRequestDocumentationConfirmOpen,
+    setIsRequestDocumentationConfirmOpen
+  ] = useState(false)
+  const [priorityScoreTouched, setPriorityScoreTouched] = useState(false)
+  const [
+    priorityScoreVerificationAttempted,
+    setPriorityScoreVerificationAttempted
+  ] = useState(false)
+
+  const priorityScoreNumber = Number(priorityScore)
+  const isPriorityScoreValid =
+    priorityScore !== '' &&
+    Number.isInteger(priorityScoreNumber) &&
+    priorityScoreNumber >= 1 &&
+    priorityScoreNumber <= 999
+  const priorityScoreError =
+    ((priorityScoreTouched && priorityScore !== '') ||
+      priorityScoreVerificationAttempted) &&
+    !isPriorityScoreValid
+      ? t('carbonIntensity:step5.priorityScoreInvalid')
+      : null
 
   const normalizeRisk = (risk?: string | null) =>
     risk === 'Moderate' ? 'Medium' : risk
@@ -159,8 +186,7 @@ export const GovernmentDecisionStep = ({
   const verification2Risk = normalizeRisk(
     ciApplication?.verification2RiskAssessment
   )
-  const requiresVerification2 =
-    preliminaryRisk === 'Medium' || preliminaryRisk === 'High'
+  const requiresVerification2 = preliminaryRisk === 'High'
   const fuelPathwayCount = ciApplication?.pathways?.length || 0
   const generatedFuelCodesCount = ciApplication?.generatedFuelCodes?.length || 0
   const generatedFuelCodesReady =
@@ -207,9 +233,23 @@ export const GovernmentDecisionStep = ({
   }
 
   const handleRequestDocumentation = () => {
+    // Ask the analyst to confirm the request rather than opening the upload
+    // utility or firing silently (#4651). Cancelling leaves the button enabled;
+    // only confirming performs the action and disables it.
+    setIsRequestDocumentationConfirmOpen(true)
+  }
+
+  const confirmRequestDocumentation = () => {
+    // Enable additional-document uploads for the supplier on the submitted
+    // application (#4644), mirroring the pathway-changes request. Persists
+    // document_upload_enabled so the BCeID user gets an upload path.
+    setIsRequestDocumentationConfirmOpen(false)
     setRequestedDocumentation(true)
     onSupplierRequest?.('documentation')
-    onDocumentUploadClick?.()
+    recordWorkflowAction(
+      () => requestDocumentation(),
+      t('carbonIntensity:step5.workflowSuccess')
+    )
   }
 
   const handleRequestPathwayChanges = () => {
@@ -217,6 +257,43 @@ export const GovernmentDecisionStep = ({
     onSupplierRequest?.('pathwayChanges')
     recordWorkflowAction(
       () => requestPathwayChanges(),
+      t('carbonIntensity:step5.workflowSuccess')
+    )
+  }
+
+  const requireValidPriorityScore = () => {
+    setPriorityScoreTouched(true)
+    setPriorityScoreVerificationAttempted(true)
+    if (isPriorityScoreValid) return priorityScoreNumber
+    setError(t('carbonIntensity:step5.priorityScoreInvalid'))
+    setSuccess(null)
+    return null
+  }
+
+  const handleCompleteVerification1 = () => {
+    const validPriorityScore = requireValidPriorityScore()
+    if (validPriorityScore === null) return
+
+    recordWorkflowAction(
+      () =>
+        completeVerification1({
+          preliminaryRiskAssessment: riskAssessment,
+          priorityScore: validPriorityScore
+        } as any),
+      t('carbonIntensity:step5.workflowSuccess')
+    )
+  }
+
+  const handleCompleteVerification2 = () => {
+    const validPriorityScore = requireValidPriorityScore()
+    if (validPriorityScore === null) return
+
+    recordWorkflowAction(
+      () =>
+        completeVerification2({
+          preliminaryRiskAssessment: riskAssessment,
+          priorityScore: validPriorityScore
+        } as any),
       t('carbonIntensity:step5.workflowSuccess')
     )
   }
@@ -309,37 +386,58 @@ export const GovernmentDecisionStep = ({
                       />
                     </RadioGroup>
                   </Stack>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
-                      {t('carbonIntensity:step5.priorityScore')}:
-                    </BCTypography>
-                    <OutlinedInput
-                      type="number"
-                      inputProps={{ min: 0, max: 1000 }}
-                      value={priorityScore}
-                      onChange={(event) => {
-                        let value = Number(event.target.value)
-                        if (value < 0) value = 0
-                        if (value > 1000) value = 1000
-                        setPriorityScore(value.toString())
-                      }}
-                      disabled={readOnly}
-                      sx={{
-                        width: 106,
-                        height: 42,
-                        border: 1,
-                        borderColor: 'grey.400',
-                        bgcolor: 'common.white',
-                        color: 'primary.main',
-                        fontWeight: 700,
-                        fontSize: '1rem',
-                        textAlign: 'center',
-                        '& input': {
-                          p: 0,
-                          textAlign: 'center'
-                        }
-                      }}
-                    />
+                  <Stack spacing={0.5}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
+                        {t('carbonIntensity:step5.priorityScore')}:
+                      </BCTypography>
+                      <OutlinedInput
+                        type="text"
+                        inputProps={{
+                          'data-test': 'ci-priority-score-input',
+                          inputMode: 'numeric',
+                          pattern: '[0-9]*',
+                          min: 1,
+                          max: 999
+                        }}
+                        value={priorityScore}
+                        error={!!priorityScoreError}
+                        onBlur={() => setPriorityScoreTouched(true)}
+                        onChange={(event) => {
+                          const nextValue = event.target.value
+                          if (!/^\d*$/.test(nextValue)) return
+                          if (nextValue === '') {
+                            setPriorityScore('')
+                            return
+                          }
+                          const numericValue = Number(nextValue)
+                          setPriorityScore(
+                            Math.min(numericValue, 999).toString()
+                          )
+                        }}
+                        disabled={readOnly}
+                        sx={{
+                          width: 106,
+                          height: 42,
+                          border: 1,
+                          borderColor: 'grey.400',
+                          bgcolor: 'common.white',
+                          color: 'primary.main',
+                          fontWeight: 700,
+                          fontSize: '1rem',
+                          textAlign: 'center',
+                          '& input': {
+                            p: 0,
+                            textAlign: 'center'
+                          }
+                        }}
+                      />
+                    </Stack>
+                    {priorityScoreError && (
+                      <FormHelperText error sx={{ m: 0 }}>
+                        {priorityScoreError}
+                      </FormHelperText>
+                    )}
                   </Stack>
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
@@ -361,18 +459,7 @@ export const GovernmentDecisionStep = ({
                   color="primary"
                   sx={workflowButtonSx}
                   disabled={readOnly || isVerifying1}
-                  onClick={() =>
-                    recordWorkflowAction(
-                      () =>
-                        completeVerification1({
-                          preliminaryRiskAssessment: riskAssessment,
-                          priorityScore: priorityScore
-                            ? Number(priorityScore)
-                            : undefined
-                        } as any),
-                      t('carbonIntensity:step5.workflowSuccess')
-                    )
-                  }
+                  onClick={handleCompleteVerification1}
                   data-test="ci-verification-1-complete-btn"
                 >
                   {t('carbonIntensity:step5.verification1Complete')}
@@ -385,18 +472,7 @@ export const GovernmentDecisionStep = ({
                   color="primary"
                   sx={workflowButtonSx}
                   disabled={readOnly || isVerifying2}
-                  onClick={() =>
-                    recordWorkflowAction(
-                      () =>
-                        completeVerification2({
-                          preliminaryRiskAssessment: riskAssessment,
-                          priorityScore: priorityScore
-                            ? Number(priorityScore)
-                            : undefined
-                        } as any),
-                      t('carbonIntensity:step5.workflowSuccess')
-                    )
-                  }
+                  onClick={handleCompleteVerification2}
                   data-test="ci-verification-2-complete-btn"
                 >
                   {t('carbonIntensity:step5.verification2Complete')}
@@ -445,7 +521,12 @@ export const GovernmentDecisionStep = ({
                     variant="outlined"
                     color="primary"
                     sx={workflowButtonSx}
-                    disabled={readOnly || requestedDocumentation}
+                    disabled={
+                      readOnly ||
+                      requestedDocumentation ||
+                      !!ciApplication?.documentUploadEnabled ||
+                      isRequestingDocumentation
+                    }
                     onClick={handleRequestDocumentation}
                     data-test="ci-request-documentation-btn"
                   >
@@ -549,6 +630,21 @@ export const GovernmentDecisionStep = ({
           )}
         </Box>
       )}
+      <BCModal
+        open={isRequestDocumentationConfirmOpen}
+        onClose={() => setIsRequestDocumentationConfirmOpen(false)}
+        data={{
+          title: t('carbonIntensity:step5.requestDocumentationConfirmTitle'),
+          primaryButtonText: t('carbonIntensity:step5.requestDocumentation'),
+          primaryButtonAction: confirmRequestDocumentation,
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <BCTypography variant="body1">
+              {t('carbonIntensity:step5.requestDocumentationConfirmText')}
+            </BCTypography>
+          )
+        }}
+      />
     </Box>
   )
 }

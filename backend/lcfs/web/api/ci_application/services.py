@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 from fastapi import Depends, HTTPException, status
+from pydantic.alias_generators import to_camel
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models import UserProfile
@@ -21,40 +22,35 @@ from lcfs.db.models.ci_application import (
     CIApplicationFuelCodeAssociation,
     Pathway,
 )
-from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.ci_application.CIApplication import (
     CI_DOC_CATEGORY_GHGENIUS_MODEL,
     CI_DOC_CATEGORY_TECHNICAL_REPORT,
 )
-from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
+from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.schema import FileResponseSchema
-from lcfs.web.api.base import (
-    PaginationRequestSchema,
-    PaginationResponseSchema,
-)
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
-from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.api.ci_application.schema import (
     AssignedAnalystSchema,
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
-    CIGeneratedFuelCodeSchema,
-    CIGeneratedFuelCodeUpdateSchema,
     CIApplicationSchema,
-    CIApplicationUserSchema,
-    CIRiskAssessmentEnum,
+    CIApplicationsListSchema,
     CIApplicationStatusEnum,
     CIApplicationStatusSchema,
-    CIApplicationsListSchema,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
     CIApplicationStep4Schema,
+    CIApplicationUserSchema,
+    CIGeneratedFuelCodeSchema,
+    CIGeneratedFuelCodeUpdateSchema,
+    CIRiskAssessmentEnum,
     CITableOptionsSchema,
     FuelCodeOptionSchema,
     FuelTypeOptionSchema,
@@ -66,13 +62,24 @@ from lcfs.web.api.ci_application.schema import (
     PathwayInputSchema,
     PathwaySchema,
 )
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.exception.exceptions import (
+    DataNotFoundException,
+    ValidationErrorException,
+)
 
 # pathway_application_type.type values seeded by the migration
 PATHWAY_APPLICATION_TYPE_NEW = "New"
 PATHWAY_APPLICATION_TYPE_RENEWAL = "Renewal"
+
+# Step 3 mandatory-upload validation (Technical report + GHGenius model) is
+# disabled for the simplified single-upload flow (#4669). The validation logic
+# below is retained, not removed — set this to True to re-enable the required
+# Technical report / GHGenius upload checks on Step 3 save and on submission.
+CI_STEP3_REQUIRE_DOCUMENTS = False
 
 PATHWAY_LOG_FIELDS = [
     "application_type_id",
@@ -232,6 +239,22 @@ def _action_type_value(action_type: Any) -> str:
     return action_type.value if hasattr(action_type, "value") else str(action_type)
 
 
+def _pathway_changed_at(pathway: Pathway) -> Optional[datetime]:
+    action_type = _action_type_value(getattr(pathway, "action_type", "CREATE"))
+    if action_type == ActionTypeEnum.CREATE.value:
+        return getattr(pathway, "create_date", None)
+    return getattr(pathway, "update_date", None) or getattr(
+        pathway, "create_date", None
+    )
+
+
+def _pathway_changed_by(pathway: Pathway) -> Optional[str]:
+    action_type = _action_type_value(getattr(pathway, "action_type", "CREATE"))
+    if action_type == ActionTypeEnum.CREATE.value:
+        return getattr(pathway, "create_user", None)
+    return getattr(pathway, "update_user", None) or getattr(pathway, "create_user", None)
+
+
 def _sorted_pathways(pathways: List[Pathway]) -> List[Pathway]:
     return sorted(
         pathways,
@@ -310,8 +333,8 @@ def _pathway_change_logs_from_versions(
                         pathway_id=pathway.pathway_id,
                         pathway_group_uuid=group_uuid,
                         action_type=action_type,
-                        changed_at=getattr(pathway, "create_date", None),
-                        changed_by=getattr(pathway, "create_user", None),
+                        changed_at=_pathway_changed_at(pathway),
+                        changed_by=_pathway_changed_by(pathway),
                         changed_fields=changed_fields,
                         before_snapshot=previous_snapshot,
                         after_snapshot=current_snapshot,
@@ -525,6 +548,13 @@ def _to_full_schema(
         ),
         pathway_changes_requested_at=getattr(ci, "pathway_changes_requested_at", None),
         pathway_changes_requested_by=getattr(ci, "pathway_changes_requested_by", None),
+        document_upload_enabled=bool(getattr(ci, "document_upload_enabled", False)),
+        document_changes_requested_at=getattr(
+            ci, "document_changes_requested_at", None
+        ),
+        document_changes_requested_by=getattr(
+            ci, "document_changes_requested_by", None
+        ),
         pathway_changelog=[
             history.ci_application_snapshot
             for history in (getattr(ci, "history_records", None) or [])
@@ -652,6 +682,7 @@ def _to_list_item(
         pathway_supplemental_edit_enabled=bool(
             getattr(ci, "pathway_supplemental_edit_enabled", False)
         ),
+        document_upload_enabled=bool(getattr(ci, "document_upload_enabled", False)),
         preliminary_risk_assessment=getattr(ci, "preliminary_risk_assessment", None),
         update_date=ci.update_date.isoformat() if ci.update_date else None,
         create_date=ci.create_date.isoformat() if ci.create_date else None,
@@ -701,10 +732,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
         verification_2_risk = ci_application.verification_2_risk_assessment or risk
-        requires_verification_2 = risk in {
-            CIRiskAssessmentEnum.Medium.value,
-            CIRiskAssessmentEnum.High.value,
-        }
+        requires_verification_2 = risk == CIRiskAssessmentEnum.High.value
         can_generate_after_verification_1 = (
             ci_application.verification_1_date and not requires_verification_2
         )
@@ -867,6 +895,31 @@ class CIApplicationServices:
             unit = updates["facility_nameplate_capacity_unit"]
             updates["facility_nameplate_capacity_unit"] = (
                 QuantityUnitsEnum(unit) if unit else None
+            )
+
+        # Clearing a required field sends null (the grid's DateEditor emits null
+        # on clear). Writing null to a NOT NULL column raises an IntegrityError
+        # on flush and surfaces as a 500 (#4653). Reject the clear with a
+        # field-level validation error the grid renders inline; genuinely
+        # nullable fields fall through and are flagged by the row validator.
+        non_nullable_columns = {
+            column.name for column in FuelCode.__table__.columns if not column.nullable
+        }
+        cleared_required = [
+            field
+            for field, value in updates.items()
+            if field in non_nullable_columns and value in (None, "", [])
+        ]
+        if cleared_required:
+            raise ValidationErrorException(
+                {
+                    "errors": [
+                        {
+                            "fields": [to_camel(field) for field in cleared_required],
+                            "message": "This field is required and cannot be cleared.",
+                        }
+                    ]
+                }
             )
 
         for field, value in updates.items():
@@ -1037,13 +1090,17 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
 
     @service_handler
-    async def get_table_options(self) -> CITableOptionsSchema:
+    async def get_table_options(
+        self, organization_id: Optional[int] = None
+    ) -> CITableOptionsSchema:
         statuses = await self.repo.get_statuses()
         application_types = await self.repo.get_pathway_application_types()
         fuel_code_types = await self.repo.get_pathway_fuel_code_types()
         fuel_types = await self.repo.get_fuel_types()
         transport_modes = await self.repo.get_transport_modes()
-        fuel_codes = await self.repo.get_approved_fuel_codes()
+        # Renewal iterations are scoped to the caller's organization for
+        # supplier/CI-applicant users; government callers pass None (all).
+        fuel_codes = await self.repo.get_approved_fuel_codes(organization_id)
         return CITableOptionsSchema(
             statuses=[CIApplicationStatusSchema.model_validate(s) for s in statuses],
             # Facility nameplate capacity is a physical quantity — use the same
@@ -1168,6 +1225,7 @@ class CIApplicationServices:
         user: UserProfile,
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
+        self._validate_priority_score(priority_score)
         ci_application.preliminary_risk_assessment = risk_assessment.value
         ci_application.priority_score = priority_score
         ci_application.verification_1_user_id = user.user_profile_id
@@ -1190,13 +1248,11 @@ class CIApplicationServices:
         user: UserProfile,
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
-        if ci_application.preliminary_risk_assessment not in {
-            CIRiskAssessmentEnum.Medium.value,
-            CIRiskAssessmentEnum.High.value,
-        }:
+        self._validate_priority_score(priority_score)
+        if ci_application.preliminary_risk_assessment != CIRiskAssessmentEnum.High.value:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Verification 2 is only required for Medium or High risk applications.",
+                detail="Verification 2 is only required for High risk applications.",
             )
         if not ci_application.verification_1_date:
             raise HTTPException(
@@ -1244,10 +1300,7 @@ class CIApplicationServices:
             )
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
-        requires_verification_2 = risk in {
-            CIRiskAssessmentEnum.Medium.value,
-            CIRiskAssessmentEnum.High.value,
-        }
+        requires_verification_2 = risk == CIRiskAssessmentEnum.High.value
         if not ci_application.verification_1_date or (
             requires_verification_2 and not ci_application.verification_2_date
         ):
@@ -1274,6 +1327,18 @@ class CIApplicationServices:
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
         return await self._to_full_schema_with_user(ci)
+
+    def _validate_priority_score(self, priority_score: Optional[int]) -> None:
+        if (
+            not isinstance(priority_score, int)
+            or isinstance(priority_score, bool)
+            or priority_score < 1
+            or priority_score > 999
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Priority score is required and must be a whole number from 1 to 999.",
+            )
 
     def _require_submitted_workflow(self, ci_application: CIApplication) -> None:
         if (
@@ -1362,6 +1427,7 @@ class CIApplicationServices:
     async def _validate_step2_payload(
         self,
         data: CIApplicationStep2Schema,
+        organization_id: Optional[int] = None,
     ) -> dict:
         """
         Cross-row validation of Step 2:
@@ -1424,6 +1490,19 @@ class CIApplicationServices:
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Row {index}: invalid fuel code iteration.",
                     )
+                # Renewals must reference a fuel code owned by the
+                # application's organization.
+                if (
+                    organization_id is not None
+                    and fuel_codes[row.fuel_code_id].organization_id != organization_id
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=(
+                            f"Row {index}: the selected fuel code iteration "
+                            "belongs to another organization."
+                        ),
+                    )
             else:
                 # New (or any other non-Renewal) row must not reference a fuel code.
                 if row.fuel_code_id is not None:
@@ -1467,7 +1546,7 @@ class CIApplicationServices:
                 ),
             )
 
-        await self._validate_step2_payload(data)
+        await self._validate_step2_payload(data, ci_application.organization_id)
         previous_pathway_entities = (
             _latest_active_pathways(list(ci_application.pathways or []))
             if is_supplemental_edit
@@ -1482,6 +1561,9 @@ class CIApplicationServices:
             [_pathway_snapshot(pathway) for pathway in previous_pathway_entities]
             if is_supplemental_edit
             else []
+        )
+        supplemental_changed_at = (
+            datetime.now(timezone.utc) if is_supplemental_edit else None
         )
 
         new_rows: List[Pathway] = []
@@ -1516,6 +1598,8 @@ class CIApplicationServices:
                 ),
                 update_user=user.keycloak_username,
             )
+            if supplemental_changed_at:
+                pathway.update_date = supplemental_changed_at
             if previous and getattr(previous, "create_date", None):
                 pathway.create_date = previous.create_date
             new_rows.append(pathway)
@@ -1553,6 +1637,8 @@ class CIApplicationServices:
                     ),
                     update_user=user.keycloak_username,
                 )
+                if supplemental_changed_at:
+                    pathway.update_date = supplemental_changed_at
                 if getattr(previous, "create_date", None):
                     pathway.create_date = previous.create_date
                 delete_rows.append(pathway)
@@ -1583,7 +1669,7 @@ class CIApplicationServices:
                 ci_application,
                 snapshot={
                     "event": "supplemental_pathways_updated",
-                    "changed_at": datetime.now(timezone.utc).isoformat(),
+                    "changed_at": supplemental_changed_at.isoformat(),
                     "changed_by": user.keycloak_username,
                     "before": previous_pathways,
                     "after": [
@@ -1631,6 +1717,44 @@ class CIApplicationServices:
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
         return await self._to_full_schema_with_user(ci)
 
+    @service_handler
+    async def request_documentation(
+        self,
+        ci_application: CIApplication,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        """Open additional-document uploads on a submitted application so the
+        supplier can attach files the analyst requested (#4644). Mirrors
+        ``request_pathway_changes``."""
+        if not _user_has_any_role(
+            user,
+            [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only internal users can request additional documentation.",
+            )
+        self._require_submitted_workflow(ci_application)
+
+        requested_at = datetime.now(timezone.utc)
+        ci_application.document_upload_enabled = True
+        ci_application.document_changes_requested_at = requested_at
+        ci_application.document_changes_requested_by = user.keycloak_username
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+        await self.repo.add_history(
+            ci_application,
+            snapshot={
+                "event": "documentation_requested",
+                "changed_at": requested_at.isoformat(),
+                "changed_by": user.keycloak_username,
+            },
+        )
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
+
     # ------------------------------------------------------------------
     # Step 3 — Documents & GHGenius modelling
     # ------------------------------------------------------------------
@@ -1643,24 +1767,31 @@ class CIApplicationServices:
         user: UserProfile,
     ) -> CIApplicationSchema:
         """
-        Persists the optional "other supporting" description and verifies
-        the mandatory uploads (Technical report + GHGenius model) are
-        present. Files are uploaded out-of-band via the generic document
+        Persists the optional "other supporting" description.
+
+        Historically this also enforced the mandatory Technical report +
+        GHGenius uploads. That validation is disabled for the simplified
+        single-upload flow (#4669) and retained behind
+        ``CI_STEP3_REQUIRE_DOCUMENTS`` so it can be re-enabled without
+        redevelopment. Files are uploaded out-of-band via the generic document
         endpoint with a category query param.
         """
-        present_categories = set(
-            await self.repo.get_document_categories(ci_application.ci_application_id)
-        )
-        missing = []
-        if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
-            missing.append("Technical report")
-        if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
-            missing.append("GHGenius model")
-        if missing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=("Missing required upload(s): " + ", ".join(missing) + "."),
+        if CI_STEP3_REQUIRE_DOCUMENTS:
+            present_categories = set(
+                await self.repo.get_document_categories(
+                    ci_application.ci_application_id
+                )
             )
+            missing = []
+            if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
+                missing.append("Technical report")
+            if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
+                missing.append("GHGenius model")
+            if missing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=("Missing required upload(s): " + ", ".join(missing) + "."),
+                )
 
         ci_application.supporting_document_other = data.supporting_document_other
         ci_application.update_user = user.keycloak_username
@@ -1697,32 +1828,32 @@ class CIApplicationServices:
 
         # Sanity-check the prior steps. Step 1 is enforced by NOT NULL
         # columns at the DB layer; we re-check Step 2 (at least one
-        # pathway) and Step 3 (technical report + GHGenius model) so
-        # signing authorities cannot bypass the wizard via the API.
+        # pathway) so signing authorities cannot bypass the wizard via the API.
         if not (ci_application.pathways or []):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="At least one fuel pathway is required before submission.",
             )
 
-        from lcfs.db.models.ci_application.CIApplication import (
-            CI_DOC_CATEGORY_GHGENIUS_MODEL,
-            CI_DOC_CATEGORY_TECHNICAL_REPORT,
-        )
-
-        present_categories = set(
-            await self.repo.get_document_categories(ci_application.ci_application_id)
-        )
-        missing = []
-        if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
-            missing.append("Technical report")
-        if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
-            missing.append("GHGenius model")
-        if missing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing required upload(s): " + ", ".join(missing) + ".",
+        # Step 3 mandatory-upload validation (technical report + GHGenius) is
+        # disabled for the simplified flow (#4669) and retained behind
+        # CI_STEP3_REQUIRE_DOCUMENTS so it can be re-enabled without redevelopment.
+        if CI_STEP3_REQUIRE_DOCUMENTS:
+            present_categories = set(
+                await self.repo.get_document_categories(
+                    ci_application.ci_application_id
+                )
             )
+            missing = []
+            if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
+                missing.append("Technical report")
+            if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
+                missing.append("GHGenius model")
+            if missing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Missing required upload(s): " + ", ".join(missing) + ".",
+                )
 
         submitted_status = await self.repo.get_status_by_name(
             CIApplicationStatusEnum.Submitted.value
@@ -1759,6 +1890,40 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
     # Step 5 — Government decision & comments
     # ------------------------------------------------------------------
+
+    async def _approve_generated_fuel_codes(
+        self, ci_application: CIApplication
+    ) -> None:
+        """
+        Advance the fuel codes generated for a CI application from Draft to
+        Approved when the application is approved (Completed), so their status
+        reflects the application decision instead of remaining stuck in Draft
+        (see #4654). Codes that are already Approved are left untouched, and the
+        ``approval_date`` mirrors the application's approval date.
+        """
+        associations = (
+            getattr(ci_application, "generated_fuel_code_associations", None) or []
+        )
+        if not associations:
+            return
+
+        approved_status = await self.fuel_repo.get_fuel_status_by_status(
+            FuelCodeStatusEnum.Approved
+        )
+        approval_date = (
+            ci_application.approval_date or datetime.now(timezone.utc)
+        ).date()
+
+        for association in associations:
+            fuel_code = association.fuel_code
+            if fuel_code is None:
+                continue
+            if fuel_code.fuel_status_id == approved_status.fuel_code_status_id:
+                continue
+            fuel_code.fuel_code_status = approved_status
+            fuel_code.fuel_status_id = approved_status.fuel_code_status_id
+            fuel_code.approval_date = approval_date
+            fuel_code.action_type = ActionTypeEnum.UPDATE
 
     @service_handler
     async def record_decision(
@@ -1836,6 +2001,7 @@ class CIApplicationServices:
         if data.status == CIApplicationStatusEnum.Completed:
             ci_application.approval_user_id = user.user_profile_id
             ci_application.approval_date = datetime.now(timezone.utc)
+            await self._approve_generated_fuel_codes(ci_application)
         elif (
             data.status == CIApplicationStatusEnum.Submitted
             and current_status == CIApplicationStatusEnum.Recommended.value

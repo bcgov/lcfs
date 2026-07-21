@@ -175,6 +175,24 @@ class CIApplication(BaseModel, Auditable, Versioning):
         nullable=True,
         comment="Username of the IDIR user who requested pathway changes.",
     )
+    document_upload_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="True when the supplier may upload additional documents after a "
+        "request for further documentation on a submitted application.",
+    )
+    document_changes_requested_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="UTC date and time additional documentation was requested.",
+    )
+    document_changes_requested_by = Column(
+        String(500),
+        nullable=True,
+        comment="Username of the IDIR user who requested additional documentation.",
+    )
     generated_fuel_codes = Column(
         JSONB,
         nullable=True,

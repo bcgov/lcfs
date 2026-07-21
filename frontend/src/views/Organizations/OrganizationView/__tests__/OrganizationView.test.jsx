@@ -142,6 +142,11 @@ vi.mock('@/hooks/useOrganization', () => ({
       reservedBalance: 500
     },
     isLoading: false
+  })),
+  useOrganizationAllocationAgreementAnalytics: vi.fn(() => ({
+    data: { years: [] },
+    isLoading: false,
+    isError: false
   }))
 }))
 
@@ -246,6 +251,7 @@ describe('OrganizationView', () => {
       expect(screen.getByText('Company overview')).toBeInTheDocument()
       expect(screen.getByText('Penalty log')).toBeInTheDocument()
       expect(screen.getByText('Supply history')).toBeInTheDocument()
+      expect(screen.getByText('Allocation agreements')).toBeInTheDocument()
       expect(screen.getByText('Compliance tracking')).toBeInTheDocument()
     })
 
@@ -369,47 +375,17 @@ describe('OrganizationView', () => {
     })
   })
 
-  describe('Window Resize Handling', () => {
-    it('adds resize event listener on mount', () => {
-      renderComponent()
-
-      expect(global.addEventListener).toHaveBeenCalledWith(
-        'resize',
-        expect.any(Function)
-      )
-    })
-
-    it('removes resize event listener on unmount', () => {
-      const { unmount } = renderComponent()
-
-      unmount()
-
-      expect(global.removeEventListener).toHaveBeenCalledWith(
-        'resize',
-        expect.any(Function)
-      )
-    })
-
-    it('handles window resize events', () => {
-      Object.defineProperty(window, 'innerWidth', {
-        value: 400,
-        configurable: true
-      })
-
-      let resizeHandler
-      global.addEventListener = vi.fn((event, handler) => {
-        if (event === 'resize') resizeHandler = handler
-      })
-
-      renderComponent()
-
-      // Just verify the handler exists, don't trigger it
-      expect(resizeHandler).toBeDefined()
-      expect(typeof resizeHandler).toBe('function')
-    })
-  })
-
   describe('Tab Navigation', () => {
+    it('renders every section as a tab so none are clipped/hidden', () => {
+      renderComponent()
+
+      const tabs = screen.getAllByRole('tab')
+      expect(tabs.length).toBeGreaterThan(1)
+      ;['Dashboard', 'Users', 'Credit ledger'].forEach((label) => {
+        expect(screen.getByRole('tab', { name: label })).toBeInTheDocument()
+      })
+    })
+
     it('changes tab when handleChangeTab is called', () => {
       renderComponent()
 
@@ -466,7 +442,7 @@ describe('OrganizationView', () => {
       renderComponent()
 
       const tabs = screen.getAllByRole('tab')
-      expect(tabs).toHaveLength(8)
+      expect(tabs).toHaveLength(9)
 
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('Users')).toBeInTheDocument()
@@ -491,6 +467,7 @@ describe('OrganizationView', () => {
       expect(screen.getByText('Company overview')).toBeInTheDocument()
       expect(screen.getByText('Penalty log')).toBeInTheDocument()
       expect(screen.getByText('Supply history')).toBeInTheDocument()
+      expect(screen.getByText('Allocation agreements')).toBeInTheDocument()
       expect(screen.getByText('Compliance tracking')).toBeInTheDocument()
       expect(screen.getByText('Comment log')).toBeInTheDocument()
     })
