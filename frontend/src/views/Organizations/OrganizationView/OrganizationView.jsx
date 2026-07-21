@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { AppBar, FormControl, MenuItem, Select, Tab, Tabs } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
@@ -14,6 +13,10 @@ import SupplyHistory from './components/SupplyHistory'
 import ComplianceTracking from './components/ComplianceTracking'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
+import { ROUTES } from '@/routes/routes'
+import colors from '@/themes/base/colors'
+import borders from '@/themes/base/borders'
+import boxShadows from '@/themes/base/boxShadows'
 import {
   orgDashboardRenderers,
   orgDashboardRoutes
@@ -101,12 +104,6 @@ export const OrganizationView = ({ addMode = false }) => {
     }
   }
 
-  const handleSectionChange = (event) => {
-    if (event.target.value) {
-      navigate(event.target.value)
-    }
-  }
-
   // Render content based on current route
   const renderContent = useCallback(() => {
     const currentPath = location.pathname || ''
@@ -165,131 +162,72 @@ export const OrganizationView = ({ addMode = false }) => {
       )}
 
       <BCBox sx={{ mt: 0, bgcolor: 'background.paper' }}>
-        {isGovernment ? (
-          <FormControl
-            fullWidth
-            size="small"
-            sx={{
-              maxWidth: { xs: '100%', sm: 360 },
-              mb: 1
-            }}
-          >
-            <BCTypography
-              id="organization-section-selector-label"
-              variant="body2"
-              color="text"
-              sx={{ mb: 0.75 }}
-            >
-              Organization menu
-            </BCTypography>
-            <Select
-              value={currentTab?.path || ''}
-              onChange={handleSectionChange}
-              aria-labelledby="organization-section-selector-label"
-              displayEmpty
-              renderValue={() => currentTabLabel || ''}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    mt: 0.5,
-                    maxHeight: 420,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    boxShadow: 3
-                  }
-                },
-                MenuListProps: {
-                  dense: false,
-                  sx: { py: 0.5 }
-                }
-              }}
-              sx={{
-                bgcolor: 'background.paper',
-                '& .MuiSelect-select': {
-                  py: 1.2,
-                  fontWeight: 500
-                }
-              }}
-            >
-              {tabConfig.map((config) => (
-                <MenuItem
-                  key={config.path}
-                  value={config.path}
-                  sx={{
-                    minHeight: 42,
-                    whiteSpace: 'normal',
-                    '&.Mui-selected': {
-                      fontWeight: 700
-                    }
-                  }}
-                >
-                  {config.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        ) : (
-          <AppBar
-            position="static"
-            sx={{
-              boxShadow: 'none',
-              border: 'none',
-              width: '100%',
-              maxWidth: '100%',
-              overflow: 'hidden',
-              bgcolor: 'transparent'
-            }}
-          >
-            <Tabs
-              orientation="horizontal"
-              value={tabIndex}
-              onChange={handleTabChange}
-              aria-label="Organization dashboard sections"
-              sx={{
-                background: 'rgba(0, 0, 0, 0.05)',
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1,
-                maxWidth: '100%',
-                width: '100%',
-                minHeight: 44,
-                '& .MuiTabs-scroller': {
-                  maxWidth: '100%'
-                },
-                '& .MuiTabs-indicator': {
-                  height: 3
-                },
-                '& .MuiTab-root': {
-                  minWidth: 'auto',
-                  maxWidth: 220,
-                  minHeight: 44,
-                  paddingX: 1.75,
-                  marginX: 0.25,
+        {/* Section navigation. A wrapping flex row (not MUI <Tabs>, which is a
+            single scrollable row) so every section stays visible at any width —
+            tabs fold onto additional rows instead of being clipped. */}
+        <BCBox
+          role="tablist"
+          aria-label="Organization tabs"
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '4px',
+            p: '4px',
+            // Shrink to the tabs' width (compact pill, matching the original
+            // look) but wrap onto more rows once they exceed the available
+            // width instead of clipping.
+            width: 'fit-content',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
+            background: 'rgba(0, 0, 0, 0.08)',
+            borderRadius: borders.borderRadius.xl
+          }}
+        >
+          {tabConfig.map((config, idx) => {
+            const selected = idx === tabIndex
+            return (
+              <BCBox
+                key={config.path}
+                component="button"
+                type="button"
+                role="tab"
+                id={`organization-tab-${idx}`}
+                aria-selected={selected}
+                aria-controls={`organization-tabpanel-${idx}`}
+                onClick={() => handleTabChange(null, idx)}
+                sx={{
+                  border: 'none',
+                  cursor: 'pointer',
+                  font: 'inherit',
+                  fontSize: '0.875rem',
+                  fontWeight: selected ? 700 : 500,
                   whiteSpace: 'nowrap',
-                  textTransform: 'none',
-                  fontSize: '0.875rem'
-                },
-                '& .MuiTabs-flexContainer': {
-                  flexWrap: 'nowrap'
-                },
-                '& .MuiTabs-scrollButtons': {
-                  color: 'primary.main',
-                  width: 36
-                },
-                '& .MuiTabs-scrollButtons.Mui-disabled': {
-                  opacity: 0.2
-                }
-              }}
-              variant="scrollable"
-              scrollButtons="auto"
-              allowScrollButtonsMobile
-            >
-              {tabConfig.map((config) => (
-                <Tab key={config.path} label={config.label} />
-              ))}
-            </Tabs>
-          </AppBar>
-        )}
+                  px: 2,
+                  py: 1,
+                  borderRadius: borders.borderRadius.lg,
+                  color: colors.text.primary,
+                  backgroundColor: selected ? colors.white.main : 'transparent',
+                  boxShadow: selected
+                    ? boxShadows.tabsBoxShadow.indicator
+                    : 'none',
+                  transition:
+                    'background-color 200ms ease, box-shadow 200ms ease',
+                  '&:hover': {
+                    backgroundColor: selected
+                      ? colors.white.main
+                      : 'rgba(0, 0, 0, 0.06)'
+                  },
+                  '&:focus-visible': {
+                    outline: `2px solid ${colors.primary.main}`,
+                    outlineOffset: '2px'
+                  }
+                }}
+              >
+                {config.label}
+              </BCBox>
+            )
+          })}
+        </BCBox>
         {organizationTitle && (
           <BCTypography variant="h5" color="primary" mt={3}>
             {organizationTitle}

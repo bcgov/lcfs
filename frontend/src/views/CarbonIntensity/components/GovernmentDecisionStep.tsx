@@ -87,7 +87,6 @@ export const GovernmentDecisionStep = ({
   const [priorityScore, setPriorityScore] = useState(
     ciApplication?.priorityScore || ''
   )
-  const [requestedDocumentation, setRequestedDocumentation] = useState(false)
   const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
   const [priorityScoreTouched, setPriorityScoreTouched] = useState(false)
   const [
@@ -178,8 +177,7 @@ export const GovernmentDecisionStep = ({
   const verification2Risk = normalizeRisk(
     ciApplication?.verification2RiskAssessment
   )
-  const requiresVerification2 =
-    preliminaryRisk === 'Medium' || preliminaryRisk === 'High'
+  const requiresVerification2 = preliminaryRisk === 'High'
   const fuelPathwayCount = ciApplication?.pathways?.length || 0
   const generatedFuelCodesCount = ciApplication?.generatedFuelCodes?.length || 0
   const generatedFuelCodesReady =
@@ -226,7 +224,9 @@ export const GovernmentDecisionStep = ({
   }
 
   const handleRequestDocumentation = () => {
-    setRequestedDocumentation(true)
+    // Opening the document request modal is not a completed action, so the
+    // button must stay enabled — cancelling the modal should leave it clickable
+    // (#4651). The modal overlay already prevents re-triggering while open.
     onSupplierRequest?.('documentation')
     onDocumentUploadClick?.()
   }
@@ -500,7 +500,7 @@ export const GovernmentDecisionStep = ({
                     variant="outlined"
                     color="primary"
                     sx={workflowButtonSx}
-                    disabled={readOnly || requestedDocumentation}
+                    disabled={readOnly}
                     onClick={handleRequestDocumentation}
                     data-test="ci-request-documentation-btn"
                   >

@@ -230,6 +230,7 @@ class ComplianceReportViewSchema(BaseSchema):
     latest_report_supplemental_initiator: Optional[SupplementalInitiatorType] = None
     latest_supplemental_create_date: Optional[datetime] = None
     latest_status: Optional[str] = None
+    latest_supplemental_has_been_submitted: bool = False
     assigned_analyst: Optional[AssignedAnalystSchema] = None
 
     @classmethod

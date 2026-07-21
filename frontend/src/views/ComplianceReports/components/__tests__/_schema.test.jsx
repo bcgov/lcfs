@@ -359,6 +359,30 @@ describe('ComplianceReports Schema', () => {
       expect(warningIcon).not.toBeInTheDocument()
     })
 
+    // #4630: once a supplemental has been submitted, the flag is permanently
+    // retired even after the analyst returns it to Draft (over 30 days old).
+    it('should NOT show flag when a returned Draft supplemental has been submitted before', () => {
+      const fortyDaysAgo = new Date()
+      fortyDaysAgo.setDate(fortyDaysAgo.getDate() - 40)
+
+      const data = {
+        reportType: 'Original Report',
+        compliancePeriod: '2024',
+        complianceReportId: 2,
+        latestSupplementalCreateDate: fortyDaysAgo.toISOString(),
+        latestStatus: 'Draft',
+        isLatest: false,
+        latestSupplementalHasBeenSubmitted: true
+      }
+
+      const { container } = renderTypeCell(data, false)
+
+      const warningIcon = container.querySelector(
+        '[data-testid="warning-icon"]'
+      )
+      expect(warningIcon).not.toBeInTheDocument()
+    })
+
     // Matches screenshot: LCFS Org 2 (2024) - no flag when no hidden draft
     it('should NOT show flag when there is no hidden draft (isLatest=true)', () => {
       const fortyDaysAgo = new Date()
