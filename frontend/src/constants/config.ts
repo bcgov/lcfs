@@ -12,6 +12,7 @@ export interface FeatureFlagsConfig {
   ciApplications?: boolean
   internalCommentSearch?: boolean
   deterministicReportSummary?: boolean
+  creditMarketLoginPage?: boolean
 }
 
 export interface KeycloakConfig {
@@ -81,7 +82,8 @@ export const FEATURE_FLAGS = {
   LEGACY_SUPPLEMENTAL_LOCK: 'legacySupplementalLock',
   CI_APPLICATIONS: 'ciApplications',
   INTERNAL_COMMENT_SEARCH: 'internalCommentSearch',
-  DETERMINISTIC_REPORT_SUMMARY: 'deterministicReportSummary'
+  DETERMINISTIC_REPORT_SUMMARY: 'deterministicReportSummary',
+  CREDIT_MARKET_LOGIN_PAGE: 'creditMarketLoginPage'
 } as const
 
 export type FeatureFlagValue =
@@ -160,6 +162,8 @@ export const CONFIG: AppConfig = {
       window.lcfs_config.feature_flags.internalCommentSearch ?? false,
     deterministicReportSummary:
       window.lcfs_config.feature_flags.deterministicReportSummary ??
-      !isProductionEnvironment
+      !isProductionEnvironment,
+    creditMarketLoginPage:
+      window.lcfs_config.feature_flags.creditMarketLoginPage ?? false
   }
 }

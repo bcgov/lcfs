@@ -43,6 +43,14 @@ const TypeCellRenderer = (isSupplier) => (props) => {
       return false
     }
 
+    // The flag only nudges toward the *initial* submission of a supplemental.
+    // Once it has been submitted for the first time the flag is permanently
+    // retired, even after the report is returned to Draft for analyst-requested
+    // revisions (#4630 — matches the report-page 30-day banner suppression).
+    if (data.latestSupplementalHasBeenSubmitted) {
+      return false
+    }
+
     // Calculate how long the draft supplemental has been sitting
     const createDate = new Date(data.latestSupplementalCreateDate)
     const now = new Date()
