@@ -483,6 +483,54 @@ class ComplianceReportRepository:
             self.db, query, offset, limit
         )
 
+        # Determine which groups' *latest* version has ever been Submitted. The
+        # IDIR "supplemental draft over 30 days old" flag only nudges the
+        # organization toward the *initial* submission of a supplemental; once
+        # it has been submitted the flag is permanently retired, even if the
+        # report is later returned to Draft for analyst-requested revisions
+        # (#4630 — matches the report-page banner suppression). A prior
+        # Submitted history entry on the latest version is the signal.
+        group_uuids = [report.compliance_report_group_uuid for report in query_result]
+        submitted_group_uuids: set = set()
+        if group_uuids:
+            latest_versions = (
+                select(
+                    ComplianceReport.compliance_report_group_uuid.label("group_uuid"),
+                    func.max(ComplianceReport.version).label("max_version"),
+                )
+                .where(ComplianceReport.compliance_report_group_uuid.in_(group_uuids))
+                .group_by(ComplianceReport.compliance_report_group_uuid)
+                .subquery()
+            )
+            submitted_query = (
+                select(ComplianceReport.compliance_report_group_uuid)
+                .join(
+                    latest_versions,
+                    and_(
+                        ComplianceReport.compliance_report_group_uuid
+                        == latest_versions.c.group_uuid,
+                        ComplianceReport.version == latest_versions.c.max_version,
+                    ),
+                )
+                .join(
+                    ComplianceReportHistory,
+                    ComplianceReportHistory.compliance_report_id
+                    == ComplianceReport.compliance_report_id,
+                )
+                .join(
+                    ComplianceReportStatus,
+                    ComplianceReportHistory.status_id
+                    == ComplianceReportStatus.compliance_report_status_id,
+                )
+                .where(
+                    ComplianceReportStatus.status
+                    == ComplianceReportStatusEnum.Submitted
+                )
+                .distinct()
+            )
+            submitted_result = await self.db.execute(submitted_query)
+            submitted_group_uuids = {row[0] for row in submitted_result.all()}
+
         # Transform results into Pydantic schemas and fetch latest comments
         reports = []
         for report in query_result:
@@ -501,6 +549,9 @@ class ComplianceReportRepository:
                 "is_latest": report.is_latest,
                 "latest_supplemental_create_date": report.latest_supplemental_create_date,
                 "latest_status": report.latest_status,
+                "latest_supplemental_has_been_submitted": (
+                    report.compliance_report_group_uuid in submitted_group_uuids
+                ),
                 "assigned_analyst_id": report.assigned_analyst_id,
                 "assigned_analyst_first_name": report.assigned_analyst_first_name,
                 "assigned_analyst_last_name": report.assigned_analyst_last_name,
