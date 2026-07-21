@@ -65,7 +65,7 @@ export const buildCIWorkflowSteps = (
   const isApproved = status === 'Completed'
   const isWithdrawn = status === 'Withdrawn'
   const risk = ciApplication.preliminaryRiskAssessment
-  const showVerification2 = risk === 'Medium' || risk === 'High'
+  const showVerification2 = risk === 'High'
   const recommendationComplete = Boolean(ciApplication.recommendationDate)
   const targetDate = ciApplication.proposedFuelCodeEffectiveDate
   const supplierRequestDate = getSupplierRequestDate(ciApplication)

@@ -1,18 +1,24 @@
 import ROUTES from '../routes'
 import { CalculatorMenu } from '@/views/ComplianceReports/CalculatorMenu'
 import FormView from '@/views/Forms/FormView'
-import PublicDashboard from '@/views/PublicDashboard/PublicDashboard'
+import PublicDashboardRoute from '@/views/PublicDashboard/PublicDashboardRoute'
 import { PublicMarketData } from '@/views/PublicMarketData'
 import { FuelCodeBulletinsBase } from '@/views/FuelCodeBulletins/FuelCodeBulletins'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { AppRouteObject } from '../types'
+
+const creditMarketPageEnabled = isFeatureEnabled(FEATURE_FLAGS.CREDIT_MARKET_LOGIN_PAGE)
 
 export const publicPageRoutes: AppRouteObject[] = [
   {
     name: 'Public dashboard',
     key: 'public-dashboard',
     path: ROUTES.PUBLIC_DASHBOARD,
-    element: <PublicDashboard />,
-    handle: { title: 'LCFS program information', hideBreadcrumb: true }
+    element: <PublicDashboardRoute />,
+    handle: {
+      title: 'LCFS program information',
+      hideBreadcrumb: creditMarketPageEnabled
+    }
   },
   {
     name: 'Credit market data',
