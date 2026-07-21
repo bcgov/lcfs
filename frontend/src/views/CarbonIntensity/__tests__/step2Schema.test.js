@@ -51,6 +51,15 @@ describe('validatePathwayRow', () => {
     expect(validatePathwayRow(validRow, APPLICATION_TYPES)).toEqual([])
   })
 
+  it('allows negative proposed CI values', () => {
+    expect(
+      validatePathwayRow(
+        { ...validRow, proposedCi: -5.61 },
+        APPLICATION_TYPES
+      )
+    ).toEqual([])
+  })
+
   it('flags every required field on an empty row', () => {
     const errs = validatePathwayRow(
       { id: 'x', applicationTypeId: 1 },
@@ -107,6 +116,11 @@ describe('rowToApiPayload', () => {
     expect(payload.coproducts).toBeNull()
   })
 
+  it('preserves negative proposed CI values', () => {
+    const payload = rowToApiPayload({ ...validRow, proposedCi: '-5.61' })
+    expect(payload.proposedCi).toBe(-5.61)
+  })
+
   it('passes through fuelCodeId for renewals', () => {
     const payload = rowToApiPayload({ ...validRow, fuelCodeId: 99 })
     expect(payload.fuelCodeId).toBe(99)
@@ -161,5 +175,44 @@ describe('buildPathwayColDefs — fuel code iteration empty state', () => {
 
   it('shows no tooltip on New rows even with an empty iteration list', () => {
     expect(fuelCodeCol([]).tooltipValueGetter(newRow)).toBeNull()
+  })
+})
+
+describe('buildPathwayColDefs — Renewal CI carry-over prevention', () => {
+  const fuelCodes = [
+    {
+      fuelCodeId: 42,
+      fuelCode: 'C-BCLCF100.4',
+      carbonIntensity: 23.23,
+      fuelTypeId: 1,
+      feedstock: 'Corn',
+      feedstockLocation: 'Ontario'
+    }
+  ]
+
+  const colDefs = buildPathwayColDefs({
+    optionsData: { pathwayApplicationTypes: APPLICATION_TYPES, fuelCodes },
+    canEdit: true
+  })
+  const applicationTypeCol = colDefs.find((c) => c.field === 'applicationTypeId')
+  const fuelCodeCol = colDefs.find((c) => c.field === 'fuelCodeId')
+
+  it('blanks proposedCi when the applicant selects Renewal', () => {
+    const data = { applicationTypeId: 1, proposedCi: 5.61 }
+    applicationTypeCol.valueSetter({ data, newValue: 'Renewal' })
+    expect(data.proposedCi).toBeNull()
+  })
+
+  it('leaves proposedCi untouched when switching between non-Renewal types', () => {
+    const data = { applicationTypeId: 1, proposedCi: 5.61 }
+    applicationTypeCol.valueSetter({ data, newValue: 'New' })
+    expect(data.proposedCi).toBe(5.61)
+  })
+
+  it('does not populate proposedCi from the selected fuel code iteration', () => {
+    const data = { applicationTypeId: 2, proposedCi: null }
+    fuelCodeCol.valueSetter({ data, newValue: 'C-BCLCF100.4' })
+    expect(data.fuelCodeId).toBe(42)
+    expect(data.proposedCi).toBeNull()
   })
 })

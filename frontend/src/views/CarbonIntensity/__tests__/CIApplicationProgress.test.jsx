@@ -139,6 +139,28 @@ describe('CIApplicationProgress', () => {
     expect(screen.queryByText('5')).not.toBeInTheDocument()
   })
 
+  it('marks the final step complete for BCeID users once the application is Completed (ticket #4652)', () => {
+    mockHasAnyRole = vi.fn(() => false)
+    render(
+      <CIApplicationProgress
+        activeStep={0}
+        ciApplication={{
+          status: { status: 'Completed' },
+          signatureUserDisplayName: 'Jane Submitter',
+          signatureDateTime: '2026-05-01T12:00:00Z',
+          proposedFuelCodeEffectiveDate: '2026-06-01'
+        }}
+      />,
+      { wrapper }
+    )
+
+    // All five steps, including Government decision, are complete so the BCeID
+    // pipeline matches the grid's "Completed" status.
+    expect(screen.getByText('carbonIntensity:steps.step5')).toBeInTheDocument()
+    expect(screen.getByText('4')).toBeInTheDocument()
+    expect(screen.getByText('5')).toBeInTheDocument()
+  })
+
   it('adds an hourglass supplier-wait step with days counted from request date', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-19T12:00:00Z'))

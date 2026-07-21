@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { RobotAvatar } from '../RobotAvatar'
 
 describe('RobotAvatar', () => {
-  it('renders the Methy robot gif in a square avatar frame', () => {
+  it('renders the assistant robot gif in a square avatar frame', () => {
     const { container } = render(
       <RobotAvatar
         robot={{
-          name: 'Methy',
+          name: 'Fuelbert',
           color: '#003366',
           background: '#fff'
         }}

@@ -54,7 +54,7 @@ describe('pathwayExport', () => {
           ['New', 'Canola'],
           ['Renewal', 'Soy']
         ],
-        '!cols': [{ wch: 18 }, { wch: 14 }]
+        '!cols': [{ wch: 20 }, { wch: 14 }]
       }),
       'Pathways'
     )
@@ -62,6 +62,25 @@ describe('pathwayExport', () => {
       { sheets: [] },
       'ci_application_pathways_10.xlsx',
       { bookType: 'xlsx' }
+    )
+  })
+
+  it('uses the grid minimum width when it is wider than the content', () => {
+    exportRowsToXlsx({
+      rows: [{ feedstock: 'Soy' }],
+      columnDefs: [
+        { field: 'feedstock', headerName: 'Feedstock', minWidth: 220 }
+      ],
+      fileName: 'pathways.xlsx',
+      sheetName: 'Pathways'
+    })
+
+    expect(XLSX.utils.book_append_sheet).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        '!cols': [{ wch: 31 }]
+      }),
+      'Pathways'
     )
   })
 

@@ -109,6 +109,21 @@ const formatPlainNumber = (value, decimals = 0) => {
   return formatNumberWithCommas({ value: Number(value).toFixed(decimals) })
 }
 
+const formatDisplayDate = (value) => {
+  if (!value) {
+    return '—'
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  }).format(date)
+}
+
 const formatCompactAxisNumber = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return ''
@@ -392,9 +407,35 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
             color: 'text'
           }
         ]
+      },
+      {
+        key: 'submission-activity',
+        hasData: Number(analytics.totalReports || 0) > 0,
+        title: t('org:supplyHistory.analytics.totalReports'),
+        value: formatPlainNumber(analytics.totalReports),
+        period:
+          selectedYear === 'all'
+            ? t('org:supplyHistory.allYears')
+            : selectedYearSummary.reportingYear,
+        comparisons: analytics.mostRecentSubmission
+          ? [
+              {
+                label: `${t(
+                  'org:supplyHistory.analytics.mostRecentSubmission'
+                )}: ${formatDisplayDate(analytics.mostRecentSubmission)}`,
+                color: 'text'
+              }
+            ]
+          : []
       }
     ].filter((card) => card.hasData)
-  }, [selectedYearSummary, t])
+  }, [
+    analytics.mostRecentSubmission,
+    analytics.totalReports,
+    selectedYear,
+    selectedYearSummary,
+    t
+  ])
 
   const complianceUnitCreditDebitTrendData = useMemo(() => {
     const rows = analytics.complianceUnitCreditDebitTrend || []

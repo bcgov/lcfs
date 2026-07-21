@@ -24,6 +24,7 @@ export interface KeycloakConfig {
 
 export interface LcfsWindowConfig {
   api_base?: string
+  analyst_review_assistant_name?: string
   tfrs_base: string
   environment: string
   keycloak: KeycloakConfig
@@ -92,10 +93,24 @@ export const isFeatureEnabled = (featureFlag: FeatureFlagValue): boolean => {
 
 export interface AppConfig {
   API_BASE: string
+  ANALYST_REVIEW_ASSISTANT_NAME: string
   TFRS_BASE: string
   ENVIRONMENT: string
   KEYCLOAK: Required<KeycloakConfig>
   feature_flags: Record<FeatureFlagValue, boolean>
+}
+
+const getAnalystReviewAssistantName = (): string => {
+  const viteEnv = (
+    import.meta as ImportMeta & {
+      env?: Record<string, string | undefined>
+    }
+  ).env
+  const assistantName =
+    window.lcfs_config.analyst_review_assistant_name ??
+    viteEnv?.VITE_ANALYST_REVIEW_ASSISTANT_NAME
+
+  return assistantName?.trim() || 'Fuelbert'
 }
 
 const getKeycloakConfig = (
@@ -112,6 +127,7 @@ const getKeycloakConfig = (
 
 export const CONFIG: AppConfig = {
   API_BASE: getApiBaseUrl(),
+  ANALYST_REVIEW_ASSISTANT_NAME: getAnalystReviewAssistantName(),
   TFRS_BASE: window.lcfs_config.tfrs_base,
   ENVIRONMENT: window.lcfs_config.environment,
   KEYCLOAK: getKeycloakConfig(window.lcfs_config.keycloak),

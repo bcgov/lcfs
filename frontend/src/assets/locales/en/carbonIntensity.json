@@ -32,9 +32,12 @@
     "saveAndProceed": "Save & proceed",
     "deleteDraft": "Delete draft application",
     "saveSuccess": "Application information saved.",
+    "deleteSuccess": "Draft application deleted.",
     "deleteConfirmTitle": "Delete draft application?",
     "deleteConfirmText": "This will permanently remove the draft. This action cannot be undone.",
     "validation": {
+      "cityRequired": "City is required.",
+      "provinceStateRequired": "Province/State is required.",
       "countryRequired": "Country is required.",
       "capacityRequired": "Facility nameplate capacity is required.",
       "capacityPositive": "Facility nameplate capacity must be greater than zero.",
@@ -223,6 +226,5 @@
     "noPathwayChanges": "No pathway changes found.",
     "effectiveDateShort": "Proposed effective date",
     "iteration": "Iteration"
-  },
-  "footer": "For security and privacy, please don't share personal information on this website.\nThis information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations."
+  }
 }

@@ -389,13 +389,17 @@ export const CIApplicationProgress = ({ activeStep = 0, ciApplication }) => {
     // Once submitted, the supplier steps (1-4) are complete, so mark them done
     // and leave Government decision pending. While drafting, follow the
     // URL-driven active step.
-    const isSubmitted = Boolean(
-      ciApplication?.status?.status &&
-        ciApplication.status.status !== 'Draft'
-    )
-    const wizardActiveStep = isSubmitted
-      ? CI_APPLICATION_STEPS.length - 1
-      : activeStep
+    const currentStatus = ciApplication?.status?.status
+    const isSubmitted = Boolean(currentStatus && currentStatus !== 'Draft')
+    // Once the application reaches its terminal approved state, the final
+    // "Government decision" step is complete too, so the BCeID pipeline stays in
+    // sync with the grid's "Completed" status (#4652).
+    const isCompleted = currentStatus === 'Completed'
+    const wizardActiveStep = isCompleted
+      ? CI_APPLICATION_STEPS.length
+      : isSubmitted
+        ? CI_APPLICATION_STEPS.length - 1
+        : activeStep
 
     return (
       <Stack direction="row" sx={{ mb: 3, mt: 2 }}>

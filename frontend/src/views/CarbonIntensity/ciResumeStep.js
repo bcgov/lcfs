@@ -11,12 +11,15 @@ export const CI_STEP_SIGN_SUBMIT = 3
 
 // A step counts as "complete" only when the required fields it persists are
 // present on the saved draft. These mirror the per-step validation in
-// ApplicationInformationStep (country + positive capacity + unit),
+// ApplicationInformationStep (city + province/state + country + positive
+// capacity + unit),
 // ProposedFuelPathwaysStep (at least one pathway) and DocumentsModellingStep
 // (technical report + GHGenius model uploaded).
 export const isCIStep1Complete = (ciApplication) =>
   Boolean(
     ciApplication?.facilityCountry &&
+      ciApplication?.facilityCity &&
+      ciApplication?.facilityProvinceState &&
       Number(ciApplication?.facilityNameplateCapacity) > 0 &&
       ciApplication?.facilityNameplateCapacityUnit
   )
