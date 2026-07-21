@@ -239,6 +239,22 @@ def _action_type_value(action_type: Any) -> str:
     return action_type.value if hasattr(action_type, "value") else str(action_type)
 
 
+def _pathway_changed_at(pathway: Pathway) -> Optional[datetime]:
+    action_type = _action_type_value(getattr(pathway, "action_type", "CREATE"))
+    if action_type == ActionTypeEnum.CREATE.value:
+        return getattr(pathway, "create_date", None)
+    return getattr(pathway, "update_date", None) or getattr(
+        pathway, "create_date", None
+    )
+
+
+def _pathway_changed_by(pathway: Pathway) -> Optional[str]:
+    action_type = _action_type_value(getattr(pathway, "action_type", "CREATE"))
+    if action_type == ActionTypeEnum.CREATE.value:
+        return getattr(pathway, "create_user", None)
+    return getattr(pathway, "update_user", None) or getattr(pathway, "create_user", None)
+
+
 def _sorted_pathways(pathways: List[Pathway]) -> List[Pathway]:
     return sorted(
         pathways,
@@ -317,8 +333,8 @@ def _pathway_change_logs_from_versions(
                         pathway_id=pathway.pathway_id,
                         pathway_group_uuid=group_uuid,
                         action_type=action_type,
-                        changed_at=getattr(pathway, "create_date", None),
-                        changed_by=getattr(pathway, "create_user", None),
+                        changed_at=_pathway_changed_at(pathway),
+                        changed_by=_pathway_changed_by(pathway),
                         changed_fields=changed_fields,
                         before_snapshot=previous_snapshot,
                         after_snapshot=current_snapshot,
@@ -532,6 +548,13 @@ def _to_full_schema(
         ),
         pathway_changes_requested_at=getattr(ci, "pathway_changes_requested_at", None),
         pathway_changes_requested_by=getattr(ci, "pathway_changes_requested_by", None),
+        document_upload_enabled=bool(getattr(ci, "document_upload_enabled", False)),
+        document_changes_requested_at=getattr(
+            ci, "document_changes_requested_at", None
+        ),
+        document_changes_requested_by=getattr(
+            ci, "document_changes_requested_by", None
+        ),
         pathway_changelog=[
             history.ci_application_snapshot
             for history in (getattr(ci, "history_records", None) or [])
@@ -659,6 +682,7 @@ def _to_list_item(
         pathway_supplemental_edit_enabled=bool(
             getattr(ci, "pathway_supplemental_edit_enabled", False)
         ),
+        document_upload_enabled=bool(getattr(ci, "document_upload_enabled", False)),
         preliminary_risk_assessment=getattr(ci, "preliminary_risk_assessment", None),
         update_date=ci.update_date.isoformat() if ci.update_date else None,
         create_date=ci.create_date.isoformat() if ci.create_date else None,
@@ -708,10 +732,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
         verification_2_risk = ci_application.verification_2_risk_assessment or risk
-        requires_verification_2 = risk in {
-            CIRiskAssessmentEnum.Medium.value,
-            CIRiskAssessmentEnum.High.value,
-        }
+        requires_verification_2 = risk == CIRiskAssessmentEnum.High.value
         can_generate_after_verification_1 = (
             ci_application.verification_1_date and not requires_verification_2
         )
@@ -1228,13 +1249,10 @@ class CIApplicationServices:
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
         self._validate_priority_score(priority_score)
-        if ci_application.preliminary_risk_assessment not in {
-            CIRiskAssessmentEnum.Medium.value,
-            CIRiskAssessmentEnum.High.value,
-        }:
+        if ci_application.preliminary_risk_assessment != CIRiskAssessmentEnum.High.value:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Verification 2 is only required for Medium or High risk applications.",
+                detail="Verification 2 is only required for High risk applications.",
             )
         if not ci_application.verification_1_date:
             raise HTTPException(
@@ -1282,10 +1300,7 @@ class CIApplicationServices:
             )
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
-        requires_verification_2 = risk in {
-            CIRiskAssessmentEnum.Medium.value,
-            CIRiskAssessmentEnum.High.value,
-        }
+        requires_verification_2 = risk == CIRiskAssessmentEnum.High.value
         if not ci_application.verification_1_date or (
             requires_verification_2 and not ci_application.verification_2_date
         ):
@@ -1547,6 +1562,9 @@ class CIApplicationServices:
             if is_supplemental_edit
             else []
         )
+        supplemental_changed_at = (
+            datetime.now(timezone.utc) if is_supplemental_edit else None
+        )
 
         new_rows: List[Pathway] = []
         for row in data.pathways:
@@ -1580,6 +1598,8 @@ class CIApplicationServices:
                 ),
                 update_user=user.keycloak_username,
             )
+            if supplemental_changed_at:
+                pathway.update_date = supplemental_changed_at
             if previous and getattr(previous, "create_date", None):
                 pathway.create_date = previous.create_date
             new_rows.append(pathway)
@@ -1617,6 +1637,8 @@ class CIApplicationServices:
                     ),
                     update_user=user.keycloak_username,
                 )
+                if supplemental_changed_at:
+                    pathway.update_date = supplemental_changed_at
                 if getattr(previous, "create_date", None):
                     pathway.create_date = previous.create_date
                 delete_rows.append(pathway)
@@ -1647,7 +1669,7 @@ class CIApplicationServices:
                 ci_application,
                 snapshot={
                     "event": "supplemental_pathways_updated",
-                    "changed_at": datetime.now(timezone.utc).isoformat(),
+                    "changed_at": supplemental_changed_at.isoformat(),
                     "changed_by": user.keycloak_username,
                     "before": previous_pathways,
                     "after": [
@@ -1687,6 +1709,44 @@ class CIApplicationServices:
             ci_application,
             snapshot={
                 "event": "pathway_changes_requested",
+                "changed_at": requested_at.isoformat(),
+                "changed_by": user.keycloak_username,
+            },
+        )
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
+
+    @service_handler
+    async def request_documentation(
+        self,
+        ci_application: CIApplication,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        """Open additional-document uploads on a submitted application so the
+        supplier can attach files the analyst requested (#4644). Mirrors
+        ``request_pathway_changes``."""
+        if not _user_has_any_role(
+            user,
+            [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only internal users can request additional documentation.",
+            )
+        self._require_submitted_workflow(ci_application)
+
+        requested_at = datetime.now(timezone.utc)
+        ci_application.document_upload_enabled = True
+        ci_application.document_changes_requested_at = requested_at
+        ci_application.document_changes_requested_by = user.keycloak_username
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+        await self.repo.add_history(
+            ci_application,
+            snapshot={
+                "event": "documentation_requested",
                 "changed_at": requested_at.isoformat(),
                 "changed_by": user.keycloak_username,
             },

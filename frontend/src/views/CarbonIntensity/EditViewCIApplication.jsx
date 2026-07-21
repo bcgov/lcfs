@@ -338,6 +338,12 @@ const EditViewCIApplicationBase = () => {
     !isGovernment &&
     ciApplication?.status?.status === 'Submitted' &&
     !!ciApplication?.pathwaySupplementalEditEnabled
+  // After an analyst requests further documentation, the BCeID supplier may
+  // upload additional documents to their submitted application (#4644).
+  const canSupplementallyEditDocuments =
+    !isGovernment &&
+    ciApplication?.status?.status === 'Submitted' &&
+    !!ciApplication?.documentUploadEnabled
 
   // Hooks must run on every render — keep this above the loading-state
   // early return so hook order stays stable across renders.
@@ -408,7 +414,6 @@ const EditViewCIApplicationBase = () => {
         ciApplication={ciApplicationWithSupplierRequest}
         isGovernment={isGovernment}
         readOnly={isDecisionReadOnly}
-        onDocumentUploadClick={() => setIsDocumentEditorOpen(true)}
         onSupplierRequest={() =>
           setSupplierRequestDate(new Date().toISOString())
         }
@@ -547,7 +552,9 @@ const EditViewCIApplicationBase = () => {
                 <ApplicationSummary
                   ciApplication={ciApplication}
                   currentUser={currentUser}
-                  canEditDocuments={canManageSummaryDocuments}
+                  canEditDocuments={
+                    canManageSummaryDocuments || canSupplementallyEditDocuments
+                  }
                   onEditDocuments={() => setIsDocumentEditorOpen(true)}
                   canEditPathways={canSupplementallyEditPathways}
                   pathwayEditorOptionsData={tableOptions}

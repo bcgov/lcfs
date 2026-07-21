@@ -504,7 +504,9 @@ export const AddEditAllocationAgreements = () => {
       const transactions = gridApi.applyTransaction({ add: newData })
 
       const firstEditableCol = editableColumns[0]
-      const colDef = firstEditableCol?.colDef || { field: 'allocationTransactionType' }
+      const colDef = firstEditableCol?.colDef || {
+        field: 'allocationTransactionType'
+      }
 
       alertRef.current?.triggerAlert({
         message: `Saving ${transactions.add.length} rows...`,
@@ -789,6 +791,7 @@ export const AddEditAllocationAgreements = () => {
           isOverwrite={isOverwrite}
           importHook={useImportAllocationAgreement}
           getJobStatusHook={useGetAllocationAgreementImportJobStatus}
+          invalidateComplianceReportOnComplete
         />
       </Grid2>
     )

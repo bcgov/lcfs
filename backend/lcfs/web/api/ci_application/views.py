@@ -489,6 +489,29 @@ async def request_ci_application_pathway_changes(
 
 
 @router.post(
+    "/{ci_application_id}/request-documentation",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def request_ci_application_documentation(
+    request: Request,
+    ci_application_id: int,
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    ci = await validate.validate_access(ci_application_id)
+    return await service.request_documentation(ci, request.user)
+
+
+@router.post(
     "/{ci_application_id}/fuel-codes/generate",
     response_model=CIApplicationSchema,
     status_code=status.HTTP_200_OK,
