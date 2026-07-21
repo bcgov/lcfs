@@ -375,47 +375,17 @@ describe('OrganizationView', () => {
     })
   })
 
-  describe('Window Resize Handling', () => {
-    it('adds resize event listener on mount', () => {
-      renderComponent()
-
-      expect(global.addEventListener).toHaveBeenCalledWith(
-        'resize',
-        expect.any(Function)
-      )
-    })
-
-    it('removes resize event listener on unmount', () => {
-      const { unmount } = renderComponent()
-
-      unmount()
-
-      expect(global.removeEventListener).toHaveBeenCalledWith(
-        'resize',
-        expect.any(Function)
-      )
-    })
-
-    it('handles window resize events', () => {
-      Object.defineProperty(window, 'innerWidth', {
-        value: 400,
-        configurable: true
-      })
-
-      let resizeHandler
-      global.addEventListener = vi.fn((event, handler) => {
-        if (event === 'resize') resizeHandler = handler
-      })
-
-      renderComponent()
-
-      // Just verify the handler exists, don't trigger it
-      expect(resizeHandler).toBeDefined()
-      expect(typeof resizeHandler).toBe('function')
-    })
-  })
-
   describe('Tab Navigation', () => {
+    it('renders every section as a tab so none are clipped/hidden', () => {
+      renderComponent()
+
+      const tabs = screen.getAllByRole('tab')
+      expect(tabs.length).toBeGreaterThan(1)
+      ;['Dashboard', 'Users', 'Credit ledger'].forEach((label) => {
+        expect(screen.getByRole('tab', { name: label })).toBeInTheDocument()
+      })
+    })
+
     it('changes tab when handleChangeTab is called', () => {
       renderComponent()
 
