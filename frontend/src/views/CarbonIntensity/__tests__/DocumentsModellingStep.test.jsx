@@ -17,6 +17,7 @@ import {
 
 import { DocumentsModellingStep } from '@/views/CarbonIntensity/components/DocumentsModellingStep'
 import { wrapper } from '@/tests/utils/wrapper'
+import * as useDocumentsModule from '@/hooks/useDocuments'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -25,6 +26,7 @@ vi.mock('react-i18next', () => ({
 let mockDocs = []
 const mockUpload = vi.fn().mockResolvedValue({})
 const mockDelete = vi.fn().mockResolvedValue({})
+const mockDownload = vi.fn()
 
 vi.mock('@/hooks/useDocuments', () => ({
   useDocuments: vi.fn(() => ({ data: mockDocs, isLoading: false })),
@@ -35,12 +37,8 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDeleteDocument: vi.fn(() => ({
     mutateAsync: mockDelete,
     isPending: false
-  }))
-}))
-
-const mockDownload = vi.fn().mockResolvedValue({})
-vi.mock('@/services/useApiService', () => ({
-  useApiService: () => ({ download: mockDownload, get: vi.fn(), post: vi.fn() })
+  })),
+  useDownloadDocument: vi.fn(() => mockDownload)
 }))
 
 const baseCi = { ciApplicationId: 99, supportingDocumentOther: '' }
@@ -155,5 +153,62 @@ describe('DocumentsModellingStep', () => {
       expect(screen.getByText(/is not allowed/i)).toBeInTheDocument()
     )
     expect(mockUpload).not.toHaveBeenCalled()
+  })
+
+  it('downloads a document when its file name link is clicked', async () => {
+    mockDocs = [
+      {
+        documentId: 42,
+        fileName: 'report.png',
+        fileSize: 5000,
+        documentCategory: 'technical_report',
+        createUser: 'analyst',
+        createDate: '2026-07-20'
+      }
+    ]
+    render(
+      <DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />,
+      { wrapper }
+    )
+
+    const link = screen.getByText('report.png')
+    fireEvent.click(link)
+
+    await waitFor(() => expect(mockDownload).toHaveBeenCalledTimes(1))
+    expect(mockDownload).toHaveBeenCalledWith(42, 'report.png')
+  })
+
+  it('calls delete handler when the delete icon is clicked', async () => {
+    mockDocs = [
+      {
+        documentId: 7,
+        fileName: 'model.xlsx',
+        fileSize: 2000,
+        documentCategory: 'ghgenius_model',
+        createUser: 'analyst',
+        createDate: '2026-07-20'
+      }
+    ]
+    render(
+      <DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-step3-delete-doc'))
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith(7))
+  })
+
+  it('shows a loading state while documents are being fetched', () => {
+    vi.mocked(useDocumentsModule.useDocuments).mockReturnValueOnce({
+      data: [],
+      isLoading: true
+    })
+
+    render(
+      <DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />,
+      { wrapper }
+    )
+
+    expect(screen.getByText('common:loading')).toBeInTheDocument()
   })
 })
