@@ -24,7 +24,8 @@ export const config = {
     manageFse: true,
     legacySupplementalLock: false,
     deterministicReportSummary: true,
-    internalCommentSearch: true
+    internalCommentSearch: true,
+    creditMarketLoginPage: false
   }
 }
 
