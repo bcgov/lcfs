@@ -1,15 +1,32 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper'
+import { ROUTES } from '@/routes/routes'
 import { PublicDashboard } from '../PublicDashboard'
 
 const loginMock = vi.fn()
+const navigateMock = vi.fn()
 
 vi.mock('echarts-for-react', () => ({ default: () => null }))
 
+const keycloakState: {
+  initialized: boolean
+  authenticated: boolean
+} = { initialized: false, authenticated: false }
+
 vi.mock('@react-keycloak/web', () => ({
-  useKeycloak: () => ({ keycloak: { login: loginMock } })
+  useKeycloak: () => ({
+    keycloak: { login: loginMock, authenticated: keycloakState.authenticated },
+    initialized: keycloakState.initialized
+  })
 }))
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>(
+    'react-router-dom'
+  )
+  return { ...actual, useNavigate: () => navigateMock }
+})
 
 const mockData = {
   interval: 'quarter',
@@ -37,6 +54,49 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('PublicDashboard', () => {
+  beforeEach(() => {
+    keycloakState.initialized = false
+    keycloakState.authenticated = false
+    navigateMock.mockReset()
+    sessionStorage.clear()
+  })
+
+  it('forwards a just-authenticated visitor into the app dashboard', () => {
+    keycloakState.initialized = true
+    keycloakState.authenticated = true
+    render(<PublicDashboard />, { wrapper })
+    expect(navigateMock).toHaveBeenCalledWith(ROUTES.DASHBOARD, {
+      replace: true
+    })
+  })
+
+  it('forwards only once so it cannot loop with the auth guard', () => {
+    keycloakState.initialized = true
+    keycloakState.authenticated = true
+    // First mount forwards; a re-render (e.g. RequireAuth bounced the visitor
+    // straight back, as happens for an authenticated user with no LCFS
+    // account) must not forward again.
+    const { unmount } = render(<PublicDashboard />, { wrapper })
+    expect(navigateMock).toHaveBeenCalledTimes(1)
+    unmount()
+    render(<PublicDashboard />, { wrapper })
+    expect(navigateMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not forward an unauthenticated visitor', () => {
+    keycloakState.initialized = true
+    keycloakState.authenticated = false
+    render(<PublicDashboard />, { wrapper })
+    expect(navigateMock).not.toHaveBeenCalled()
+  })
+
+  it('does not forward before keycloak has initialized', () => {
+    keycloakState.initialized = false
+    keycloakState.authenticated = true
+    render(<PublicDashboard />, { wrapper })
+    expect(navigateMock).not.toHaveBeenCalled()
+  })
+
   it('renders the hero and program title', () => {
     render(<PublicDashboard />, { wrapper })
     expect(screen.getByText('publicDashboard.hero.title')).toBeInTheDocument()

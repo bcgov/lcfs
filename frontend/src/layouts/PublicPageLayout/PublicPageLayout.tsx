@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import { PublicHeader } from './components/PublicHeader'
 import { PublicBreadcrumb } from './components/PublicBreadcrumb'
 import ROUTES from '@/routes/routes'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 
 type RouteHandle = {
   title?: string
@@ -45,10 +46,17 @@ export const PublicPageLayout = () => {
         <Stack spacing={2} sx={{ flexGrow: 1 }}>
           {!hideBreadcrumb && (
             <BCBox size={12}>
-              <PublicBreadcrumb
-                rootLabel="Home"
-                rootPath={ROUTES.PUBLIC_DASHBOARD}
-              />
+              {isFeatureEnabled(FEATURE_FLAGS.CREDIT_MARKET_LOGIN_PAGE) ? (
+                <PublicBreadcrumb
+                  rootLabel="Home"
+                  rootPath={ROUTES.PUBLIC_DASHBOARD}
+                />
+              ) : (
+                <PublicBreadcrumb
+                  rootLabel="Login"
+                  rootPath={ROUTES.AUTH.LOGIN}
+                />
+              )}
             </BCBox>
           )}
           <BCBox

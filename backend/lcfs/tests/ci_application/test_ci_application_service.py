@@ -584,8 +584,10 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
             action_type=ActionTypeEnum.UPDATE,
             feedstock="Camelina",
             proposed_ci=6.25,
-            create_date=update_date,
-            create_user="editor",
+            create_date=create_date,
+            create_user="creator",
+            update_date=update_date,
+            update_user="editor",
         ),
         _existing_pathway(
             pathway_id=103,
@@ -595,8 +597,10 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
             action_type=ActionTypeEnum.DELETE,
             feedstock="Camelina",
             proposed_ci=6.25,
-            create_date=delete_date,
-            create_user="deleter",
+            create_date=create_date,
+            create_user="creator",
+            update_date=delete_date,
+            update_user="deleter",
         ),
     ]
 
@@ -733,6 +737,7 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
 async def test_update_step2_records_pathway_versions_for_change_log(
     service, repo, mock_user
 ):
+    before_update = datetime.now(timezone.utc)
     ci = _ci_application(status=_status("Submitted", 2))
     ci.pathway_supplemental_edit_enabled = True
     ci.pathway_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
@@ -788,6 +793,7 @@ async def test_update_step2_records_pathway_versions_for_change_log(
     assert update_row.action_type == ActionTypeEnum.UPDATE
     assert update_row.create_date == first_pathway_create_date
     assert update_row.create_user == "original_user"
+    assert update_row.update_date >= before_update
     assert update_row.update_user == mock_user.keycloak_username
     assert update_row.feedstock == "Camelina"
     assert update_row.feedstock_transport_distance == 125
@@ -803,6 +809,7 @@ async def test_update_step2_records_pathway_versions_for_change_log(
     assert delete_row.action_type == ActionTypeEnum.DELETE
     assert delete_row.create_date == second_pathway_create_date
     assert delete_row.create_user == "original_user"
+    assert delete_row.update_date == update_row.update_date
     assert delete_row.update_user == mock_user.keycloak_username
     assert delete_row.feedstock == "Soy"
 
@@ -974,17 +981,18 @@ async def test_update_step3_rejects_when_ghgenius_missing(service, repo, mock_us
 
 
 @pytest.mark.anyio
-async def test_generate_fuel_codes_requires_verification_2_for_moderate_risk(
+async def test_generate_fuel_codes_allows_moderate_after_verification_1(
     service, repo, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _submitted_ci_for_generation("Medium")
+    _stub_generation_dependencies(service, repo, ci)
 
-    with pytest.raises(HTTPException) as exc:
-        await service.generate_fuel_codes(ci, mock_user)
+    result = await service.generate_fuel_codes(ci, mock_user)
 
-    assert exc.value.status_code == 400
-    assert "Required verification" in exc.value.detail
+    assert isinstance(result, CIApplicationSchema)
+    assert len(ci.generated_fuel_code_associations) == 1
+    repo.update.assert_awaited_once()
 
 
 @pytest.mark.anyio

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet, useLocation, useMatches, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { Container, Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import Footer from '@/components/Footer'
@@ -65,10 +66,12 @@ export const MainLayout = () => {
     refreshToken(true)
   }, [location.pathname])
 
-  // Logged-out visitors to the app root land on the public dashboard;
-  // deep links to other protected routes still go to the login screen.
+  // Route root visitors to the public dashboard when enabled, else to login.
+  const showCreditMarketLoginPage = isFeatureEnabled(
+    FEATURE_FLAGS.CREDIT_MARKET_LOGIN_PAGE
+  )
   const unauthRedirect =
-    location.pathname === ROUTES.DASHBOARD
+    location.pathname === ROUTES.DASHBOARD && showCreditMarketLoginPage
       ? ROUTES.PUBLIC_DASHBOARD
       : ROUTES.AUTH.LOGIN
 
