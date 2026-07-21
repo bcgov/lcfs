@@ -5,7 +5,7 @@ document uploads on a submitted CI application so the supplier can attach the
 requested files. Mirrors the supplemental pathway-edit request fields (#4644).
 
 Revision ID: e7f8a9b0c1d2
-Revises: b7c8d9e0f1a2
+Revises: d4e5f6a7b8c9
 Create Date: 2026-07-20 10:00:00.000000
 """
 
@@ -14,7 +14,7 @@ from alembic import op
 
 
 revision = "e7f8a9b0c1d2"
-down_revision = "b7c8d9e0f1a2"
+down_revision = "d4e5f6a7b8c9"
 branch_labels = None
 depends_on = None
 
