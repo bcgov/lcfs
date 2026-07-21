@@ -103,6 +103,8 @@ export const apiRoutes = {
   recommendCIApplication: '/ci-applications/:ciApplicationId/recommend',
   requestCIApplicationPathwayChanges:
     '/ci-applications/:ciApplicationId/request-pathway-changes',
+  requestCIApplicationDocumentation:
+    '/ci-applications/:ciApplicationId/request-documentation',
   generateCIApplicationFuelCodes:
     '/ci-applications/:ciApplicationId/fuel-codes/generate',
   updateCIApplicationGeneratedFuelCode:

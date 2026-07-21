@@ -1399,6 +1399,54 @@ async def test_recommend_to_director_requires_workflow_role(service, repo, mock_
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "role",
+    [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
+)
+async def test_request_documentation_enables_upload_for_workflow_roles(
+    service, repo, mock_user, role
+):
+    mock_user.role_names = {role}
+    ci = _ci_application(status=_status("Submitted", 2))
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.request_documentation(ci, mock_user)
+
+    assert ci.document_upload_enabled is True
+    assert ci.document_changes_requested_at is not None
+    assert ci.document_changes_requested_by == mock_user.keycloak_username
+    repo.add_history.assert_awaited_once()
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_request_documentation_requires_workflow_role(service, repo, mock_user):
+    ci = _ci_application(status=_status("Submitted", 2))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.request_documentation(ci, mock_user)
+
+    assert exc.value.status_code == 403
+    repo.update.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_request_documentation_requires_submitted_status(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Draft", 1))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.request_documentation(ci, mock_user)
+
+    assert exc.value.status_code == 400
+    repo.update.assert_not_called()
+
+
+@pytest.mark.anyio
 async def test_step5_decision_accepts_recommended_status(service, repo, mock_user):
     mock_user.role_names = {RoleEnum.DIRECTOR}
     ci = _ci_application(status=_status("Recommended", 3))
@@ -1418,9 +1466,7 @@ async def test_step5_decision_accepts_recommended_status(service, repo, mock_use
 
 
 @pytest.mark.anyio
-async def test_step5_completed_approves_generated_fuel_codes(
-    service, repo, mock_user
-):
+async def test_step5_completed_approves_generated_fuel_codes(service, repo, mock_user):
     """Approving a CI application moves its generated fuel codes to Approved (#4654)."""
     # Generate Draft fuel codes through the real generation flow.
     mock_user.role_names = {RoleEnum.ANALYST}

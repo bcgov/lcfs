@@ -12,6 +12,7 @@ import {
 
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import Comments from '@/components/Comments'
 import { Role } from '@/components/Role'
@@ -23,6 +24,7 @@ import {
   useGenerateCIApplicationFuelCodes,
   useRecommendCIApplication,
   useRequestCIApplicationPathwayChanges,
+  useRequestCIApplicationDocumentation,
   useRecordCIDecision
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
@@ -31,7 +33,6 @@ type GovernmentDecisionStepProps = {
   ciApplication: any
   isGovernment?: boolean
   readOnly?: boolean
-  onDocumentUploadClick?: (() => void) | null
   onSupplierRequest?:
     | ((requestType: 'documentation' | 'pathwayChanges') => void)
     | null
@@ -45,7 +46,6 @@ export const GovernmentDecisionStep = ({
   ciApplication,
   isGovernment = false,
   readOnly = false,
-  onDocumentUploadClick = null,
   onSupplierRequest = null,
   showDecisionPanel = true,
   showComments = true,
@@ -68,6 +68,10 @@ export const GovernmentDecisionStep = ({
     mutateAsync: requestPathwayChanges,
     isPending: isRequestingPathwayChanges
   } = useRequestCIApplicationPathwayChanges(ciApplicationId)
+  const {
+    mutateAsync: requestDocumentation,
+    isPending: isRequestingDocumentation
+  } = useRequestCIApplicationDocumentation(ciApplicationId)
   const { mutateAsync: generateFuelCodes, isPending: isGeneratingFuelCodes } =
     useGenerateCIApplicationFuelCodes(ciApplicationId)
 
@@ -88,6 +92,11 @@ export const GovernmentDecisionStep = ({
     ciApplication?.priorityScore || ''
   )
   const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
+  const [requestedDocumentation, setRequestedDocumentation] = useState(false)
+  const [
+    isRequestDocumentationConfirmOpen,
+    setIsRequestDocumentationConfirmOpen
+  ] = useState(false)
   const [priorityScoreTouched, setPriorityScoreTouched] = useState(false)
   const [
     priorityScoreVerificationAttempted,
@@ -224,11 +233,23 @@ export const GovernmentDecisionStep = ({
   }
 
   const handleRequestDocumentation = () => {
-    // Opening the document request modal is not a completed action, so the
-    // button must stay enabled — cancelling the modal should leave it clickable
-    // (#4651). The modal overlay already prevents re-triggering while open.
+    // Ask the analyst to confirm the request rather than opening the upload
+    // utility or firing silently (#4651). Cancelling leaves the button enabled;
+    // only confirming performs the action and disables it.
+    setIsRequestDocumentationConfirmOpen(true)
+  }
+
+  const confirmRequestDocumentation = () => {
+    // Enable additional-document uploads for the supplier on the submitted
+    // application (#4644), mirroring the pathway-changes request. Persists
+    // document_upload_enabled so the BCeID user gets an upload path.
+    setIsRequestDocumentationConfirmOpen(false)
+    setRequestedDocumentation(true)
     onSupplierRequest?.('documentation')
-    onDocumentUploadClick?.()
+    recordWorkflowAction(
+      () => requestDocumentation(),
+      t('carbonIntensity:step5.workflowSuccess')
+    )
   }
 
   const handleRequestPathwayChanges = () => {
@@ -500,7 +521,12 @@ export const GovernmentDecisionStep = ({
                     variant="outlined"
                     color="primary"
                     sx={workflowButtonSx}
-                    disabled={readOnly}
+                    disabled={
+                      readOnly ||
+                      requestedDocumentation ||
+                      !!ciApplication?.documentUploadEnabled ||
+                      isRequestingDocumentation
+                    }
                     onClick={handleRequestDocumentation}
                     data-test="ci-request-documentation-btn"
                   >
@@ -604,6 +630,21 @@ export const GovernmentDecisionStep = ({
           )}
         </Box>
       )}
+      <BCModal
+        open={isRequestDocumentationConfirmOpen}
+        onClose={() => setIsRequestDocumentationConfirmOpen(false)}
+        data={{
+          title: t('carbonIntensity:step5.requestDocumentationConfirmTitle'),
+          primaryButtonText: t('carbonIntensity:step5.requestDocumentation'),
+          primaryButtonAction: confirmRequestDocumentation,
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <BCTypography variant="body1">
+              {t('carbonIntensity:step5.requestDocumentationConfirmText')}
+            </BCTypography>
+          )
+        }}
+      />
     </Box>
   )
 }
