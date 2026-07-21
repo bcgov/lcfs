@@ -1,20 +1,27 @@
 from enum import Enum
-from typing import Optional, List
+from typing import List, Optional
 
 from pydantic import Field, field_validator, model_validator
 
 from lcfs.web.api.base import (
     BaseSchema,
-    FilterModel,
-    SortOrder,
-    PaginationResponseSchema,
     ComplianceReportRequestSchema,
+    FilterModel,
+    PaginationResponseSchema,
+    SortOrder,
 )
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.utils.schema_validators import (
     fuel_code_required_label,
     other_expected_use_required,
 )
+
+
+def _is_delete(values) -> bool:
+    """True when the payload is removing a row rather than saving one."""
+    if hasattr(values, "get"):
+        return bool(values.get("deleted"))
+    return bool(getattr(values, "deleted", False))
 
 
 class FuelCodeStatusEnumSchema(str, Enum):
@@ -119,6 +126,15 @@ class OtherUsesCreateSchema(BaseSchema):
     @model_validator(mode="before")
     @classmethod
     def check_fuel_code_required(cls, values):
+        # Deleting a row re-submits the stored values with `deleted: true`, but
+        # delete_other_use only reads group_uuid, other_uses_id and
+        # compliance_report_id and copies every other field from the record it
+        # already has. These rules therefore only apply to data being saved:
+        # enforcing them on a delete blocks removing rows whose rationale is
+        # empty, which is possible for rows saved before the rule existed
+        # (#4689).
+        if _is_delete(values):
+            return values
         values = fuel_code_required_label(values)
         return other_expected_use_required(values)
 

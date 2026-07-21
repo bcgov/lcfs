@@ -3575,6 +3575,7 @@ GROUP BY
   compliance_year::int,
   fuel_category::text,
   fuel_type::text,
+  fossil_derived,
   fuel_units::text;
 
 GRANT SELECT ON vw_fuel_supply_annual TO basic_lcfs_reporting_role;

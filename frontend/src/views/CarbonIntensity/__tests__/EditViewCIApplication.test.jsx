@@ -172,6 +172,8 @@ vi.mock(
           data-test="step1-save-trigger"
           onClick={() =>
             onSave({
+              facilityCity: 'San Martin',
+              facilityProvinceState: 'Santa Fe',
               facilityCountry: 'Argentina',
               facilityNameplateCapacity: 1000,
               facilityNameplateCapacityUnit: 'L'
@@ -344,7 +346,12 @@ describe('EditViewCIApplication', () => {
     await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('10'))
     expect(mockNavigate).toHaveBeenCalledWith(
       ROUTES.CI_APPLICATIONS.LIST,
-      expect.any(Object)
+      {
+        state: {
+          message: 'carbonIntensity:step1.deleteSuccess',
+          severity: 'success'
+        }
+      }
     )
   })
 
@@ -356,7 +363,11 @@ describe('EditViewCIApplication', () => {
         organization: { name: 'Acme Corp' },
         status: { status: 'Draft' },
         // Step 1 required fields saved
+        facilityCity: 'Vancouver',
+        facilityProvinceState: 'BC',
         facilityCountry: 'Canada',
+        facilityCity: 'Vancouver',
+        facilityProvinceState: 'BC',
         facilityNameplateCapacity: 1000,
         facilityNameplateCapacityUnit: 'L',
         // Step 2 saved
