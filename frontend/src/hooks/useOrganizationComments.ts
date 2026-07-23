@@ -295,6 +295,91 @@ export const useEditOrganizationComment = (
   })
 }
 
+// The dedicated org-dashboard Company Overview thread is an ORGANIZATION-entity
+// internal-comment thread filed under this seeded category (#4608). It flows
+// into the org Comment Log filterable by the same category.
+export const COMPANY_OVERVIEW_CATEGORY = 'Company Overview'
+export const COMPANY_OVERVIEW_ENTITY_TYPE = 'Organization'
+
+/**
+ * List the Company Overview comment thread for an organization. Independent of
+ * the Comment Log's URL-driven filters — this is a self-contained thread shown
+ * on the dashboard. Comments are returned oldest-first like a conversation.
+ */
+export const useOrganizationCommentThread = (
+  orgID: number | string | undefined | null,
+  category: string = COMPANY_OVERVIEW_CATEGORY,
+  options: QueryOptions<OrganizationCommentsResponse> = {}
+) => {
+  const client = useApiService()
+  const { enabled = true, ...restOptions } = options
+  return useQuery<OrganizationCommentsResponse>({
+    queryKey: ['organization-comments', orgID, 'thread', category],
+    queryFn: async () => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      const url = apiRoutes.organizationComments.replace(
+        ':orgID',
+        String(orgID)
+      )
+      const response = await client.get(url, {
+        params: {
+          category,
+          size: MAX_SIZE,
+          sort_by: 'create_date',
+          sort_order: 'asc'
+        }
+      })
+      return response.data
+    },
+    enabled: enabled && !!orgID,
+    staleTime: DEFAULT_STALE_TIME,
+    gcTime: DEFAULT_CACHE_TIME,
+    ...restOptions
+  })
+}
+
+/**
+ * Create a Company Overview comment (an ORGANIZATION-entity internal comment
+ * filed under the Company Overview category) for an organization.
+ */
+export const useCreateOrganizationComment = (
+  orgID: number | string | undefined | null,
+  category: string = COMPANY_OVERVIEW_CATEGORY
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      comment,
+      visibility = 'Internal'
+    }: {
+      comment: string
+      visibility?: CommentLogVisibility
+    }) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      const payload = {
+        entityType: COMPANY_OVERVIEW_ENTITY_TYPE,
+        entityId: Number(orgID),
+        comment,
+        commentCategory: category,
+        visibility
+      }
+      const response = await client.post('/internal_comments/', payload)
+      return response.data
+    },
+    onSuccess: () => {
+      // Prefix-invalidates both the dashboard thread and the Comment Log feed.
+      queryClient.invalidateQueries({
+        queryKey: ['organization-comments', orgID]
+      })
+    }
+  })
+}
+
 export const useCommentCategories = () => {
   const client = useApiService()
   return useQuery<string[]>({

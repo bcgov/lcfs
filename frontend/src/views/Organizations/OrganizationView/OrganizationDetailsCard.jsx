@@ -17,13 +17,16 @@ import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 import { Role } from '@/components/Role'
 import { AddEditOrgForm } from '../AddEditOrg/AddEditOrgForm'
 import { OrganizationProfile } from './OrganizationProfile'
+import { CompanyOverviewComments } from './components/CompanyOverviewComments'
 import BCAlert, { FloatingAlert } from '@/components/BCAlert'
 
 export const OrganizationDetailsCard = ({ addMode = false }) => {
   const alertRef = useRef(null)
   const { t } = useTranslation(['common', 'org'])
   const location = useLocation()
-  const [isEditMode, setIsEditMode] = useState(addMode || location?.state?.reportID)
+  const [isEditMode, setIsEditMode] = useState(
+    addMode || location?.state?.reportID
+  )
   const navigate = useNavigate()
   const { orgID } = useParams()
 
@@ -46,6 +49,8 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
   )
 
   const canEdit = hasRoles(roles.administrator)
+  const isGovernment = hasRoles(roles.government)
+  const resolvedOrgId = orgID ?? currentUser?.organization?.organizationId
   const editButtonRoute = canEdit
     ? buildPath(ROUTES.ORGANIZATIONS.EDIT, {
         orgID: orgID || currentUser?.organization?.organizationId
@@ -143,6 +148,12 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
           }
         />
       </BCBox>
+      {isGovernment && !isEditMode && resolvedOrgId && (
+        <CompanyOverviewComments
+          organizationId={resolvedOrgId}
+          isGovernmentUser={isGovernment}
+        />
+      )}
     </>
   )
 }
