@@ -102,7 +102,19 @@ describe('SignAndSubmitStep', () => {
     fireEvent.click(screen.getByTestId('ci-step4-submit-btn'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('ci-step4-consultant-error')).toBeInTheDocument()
+      expect(
+        screen.getByText('carbonIntensity:step4.validation.consultantNameRequired')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'carbonIntensity:step4.validation.consultantCompanyRequired'
+        )
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'carbonIntensity:step4.validation.consultantEmailRequired'
+        )
+      ).toBeInTheDocument()
     })
     expect(onSave).not.toHaveBeenCalled()
   })
@@ -127,7 +139,11 @@ describe('SignAndSubmitStep', () => {
 
     fireEvent.click(screen.getByTestId('ci-step4-submit-btn'))
     await waitFor(() => {
-      expect(screen.getByTestId('ci-step4-consultant-error')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'carbonIntensity:step4.validation.consultantEmailInvalid'
+        )
+      ).toBeInTheDocument()
     })
     expect(onSave).not.toHaveBeenCalled()
   })
