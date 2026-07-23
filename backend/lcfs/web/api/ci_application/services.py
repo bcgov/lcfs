@@ -1090,6 +1090,16 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
 
     @service_handler
+    async def search_facility_location(
+        self,
+        city: Optional[str] = None,
+        province: Optional[str] = None,
+        country: Optional[str] = None,
+    ) -> List[str]:
+        """Facility location typeahead."""
+        return await self.repo.get_facility_location_by_name(city, province, country)
+
+    @service_handler
     async def get_table_options(
         self, organization_id: Optional[int] = None
     ) -> CITableOptionsSchema:

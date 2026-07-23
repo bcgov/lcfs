@@ -264,6 +264,11 @@ async def test_get_table_options_returns_lookup_data(service, repo):
         _status("Completed", 4),
         _status("Withdrawn", 5),
     ]
+    repo.get_pathway_application_types.return_value = []
+    repo.get_pathway_fuel_code_types.return_value = []
+    repo.get_fuel_types.return_value = []
+    repo.get_transport_modes.return_value = []
+    repo.get_approved_fuel_codes.return_value = []
     result = await service.get_table_options()
 
     assert isinstance(result, CITableOptionsSchema)
@@ -275,6 +280,16 @@ async def test_get_table_options_returns_lookup_data(service, repo):
         CIApplicationStatusEnum.Withdrawn,
     ]
     assert set(result.units_of_measure) == {u.value for u in QuantityUnitsEnum}
+
+
+@pytest.mark.anyio
+async def test_search_facility_location_delegates_to_repo(service, repo):
+    repo.get_facility_location_by_name.return_value = ["Vancouver, BC, Canada"]
+    result = await service.search_facility_location(
+        city="Van", province=None, country=None
+    )
+    assert result == ["Vancouver, BC, Canada"]
+    repo.get_facility_location_by_name.assert_awaited_once_with("Van", None, None)
 
 
 # ---------------------------------------------------------------------------

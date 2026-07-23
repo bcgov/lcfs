@@ -1,7 +1,16 @@
-import { forwardRef, useEffect, useImperativeHandle } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import {
+  Autocomplete,
   Box,
   InputLabel,
   MenuItem,
@@ -10,15 +19,146 @@ import {
 } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers'
 import { format as formatDate, isValid as isValidDate, parseISO } from 'date-fns'
+import { debounce } from 'lodash'
 import * as Yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import Grid2 from '@mui/material/Grid2'
 
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
+import { useCIFacilityLocationSearch } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
 
 const DATE_FORMAT = 'yyyy-MM-dd'
+
+// Match plain TextField padding
+const LOCATION_AUTOCOMPLETE_SX = {
+  '& .MuiOutlinedInput-root': {
+    padding: '0 !important'
+  },
+  '& .MuiAutocomplete-input': {
+    padding: '12px !important'
+  }
+}
+
+// Fetches suggestions from the backend as user types; cascade-fills on select.
+const FacilityLocationAutocomplete = ({
+  id,
+  value,
+  onChange,
+  onSelectSuggestion,
+  onBlur,
+  error,
+  helperText,
+  disabled,
+  searchType, // 'city' | 'province' | 'country'
+  inputRef
+}) => {
+  const [open, setOpen] = useState(false)
+  // Block Chrome address autofill until focus
+  const [autofillLocked, setAutofillLocked] = useState(true)
+  const [debouncedSearch, setDebouncedSearch] = useState(value || '')
+  const autofillToken = `lcfs-no-autofill-${id}`
+
+  const debouncedSetSearch = useCallback(
+    debounce((v) => setDebouncedSearch(v), 500),
+    []
+  )
+
+  const searchParams = useMemo(
+    () => ({
+      city: searchType === 'city' ? debouncedSearch : undefined,
+      province: searchType === 'province' ? debouncedSearch : undefined,
+      country: searchType === 'country' ? debouncedSearch : undefined
+    }),
+    [searchType, debouncedSearch]
+  )
+
+  const { data: options = [] } = useCIFacilityLocationSearch(searchParams)
+  const hasMatches = options.length > 0
+
+  return (
+    <Autocomplete
+      freeSolo
+      options={options}
+      filterOptions={(x) => x}
+      open={open && hasMatches}
+      onOpen={() => {
+        if (hasMatches) setOpen(true)
+      }}
+      onClose={() => setOpen(false)}
+      openOnFocus
+      forcePopupIcon={false}
+      disableClearable
+      disabled={disabled}
+      inputValue={value ?? ''}
+      value={null}
+      sx={LOCATION_AUTOCOMPLETE_SX}
+      ListboxProps={{ style: { maxHeight: 320 } }}
+      noOptionsText={null}
+      onInputChange={(_event, newInputValue, reason) => {
+        if (reason === 'input' || reason === 'clear') {
+          onChange(newInputValue)
+          debouncedSetSearch(newInputValue)
+          if (reason === 'clear') setOpen(false)
+        }
+      }}
+      onChange={(_event, newValue, reason) => {
+        if (reason === 'selectOption' && typeof newValue === 'string') {
+          onSelectSuggestion?.(newValue)
+          setOpen(false)
+          return
+        }
+        if (reason === 'clear') {
+          onChange('')
+          return
+        }
+        if (typeof newValue === 'string') {
+          onChange(newValue)
+        }
+      }}
+      onBlur={(event) => {
+        setOpen(false)
+        onBlur?.(event)
+      }}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          id={id}
+          name={autofillToken}
+          inputRef={inputRef}
+          required
+          variant="outlined"
+          fullWidth
+          error={error}
+          helperText={helperText}
+          autoComplete={autofillToken}
+          onFocus={(event) => {
+            setAutofillLocked(false)
+            // Defeat Chrome autofill on focus
+            event.target.setAttribute('autocomplete', autofillToken)
+            if (hasMatches) setOpen(true)
+            params.inputProps?.onFocus?.(event)
+          }}
+          inputProps={{
+            ...params.inputProps,
+            id,
+            name: autofillToken,
+            'data-test': id,
+            autoComplete: autofillToken,
+            autoCorrect: 'off',
+            autoCapitalize: 'off',
+            spellCheck: false,
+            'data-lpignore': 'true',
+            'data-1p-ignore': 'true',
+            'data-form-type': 'other',
+            readOnly: autofillLocked && !disabled
+          }}
+        />
+      )}
+    />
+  )
+}
 
 const stringToDate = (value) => {
   if (!value) return null
@@ -32,6 +172,11 @@ const dateToString = (value) => {
   if (typeof value === 'string') return value
   return isValidDate(value) ? formatDate(value, DATE_FORMAT) : ''
 }
+
+const splitLocationParts = (value) =>
+  String(value ?? '')
+    .split(',')
+    .map((part) => part.trim())
 
 const buildValidationSchema = (t) =>
   Yup.object({
@@ -87,6 +232,7 @@ export const ApplicationInformationStep = forwardRef(
     ref
   ) => {
     const { t } = useTranslation(['common', 'carbonIntensity'])
+    const autofillTrapRef = useRef(null)
 
     const validationSchema = buildValidationSchema(t)
     const form = useForm({
@@ -95,7 +241,7 @@ export const ApplicationInformationStep = forwardRef(
       defaultValues: toFormValues(ciApplication)
     })
 
-    const { control, handleSubmit, reset, formState } = form
+    const { control, handleSubmit, reset, setValue, formState } = form
 
     useEffect(() => {
       reset(toFormValues(ciApplication))
@@ -114,10 +260,68 @@ export const ApplicationInformationStep = forwardRef(
 
     const onSubmit = (values) => onSave?.(toApiPayload(values))
 
+    const applyCitySuggestion = (suggestion) => {
+      const [city = '', province = '', country = ''] =
+        splitLocationParts(suggestion)
+      setValue('facilityCity', city, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true
+      })
+      setValue('facilityProvinceState', province, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true
+      })
+      setValue('facilityCountry', country, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true
+      })
+    }
+
+    const applyProvinceSuggestion = (suggestion) => {
+      const [province = '', country = ''] = splitLocationParts(suggestion)
+      setValue('facilityProvinceState', province, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true
+      })
+      setValue('facilityCountry', country, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true
+      })
+    }
+
     const requiredSuffix = ` ${t('carbonIntensity:labels.required')}`
 
     return (
-      <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)}>
+      <Box
+        component="form"
+        noValidate
+        autoComplete="off"
+        onSubmit={handleSubmit(onSubmit)}
+      >
+        {/* Autofill honeypots */}
+        <Box
+          ref={autofillTrapRef}
+          aria-hidden="true"
+          sx={{
+            position: 'absolute',
+            left: '-10000px',
+            top: 'auto',
+            width: 1,
+            height: 1,
+            overflow: 'hidden'
+          }}
+        >
+          <input tabIndex={-1} name="address-line1" autoComplete="address-line1" />
+          <input tabIndex={-1} name="city" autoComplete="address-level2" />
+          <input tabIndex={-1} name="state" autoComplete="address-level1" />
+          <input tabIndex={-1} name="country" autoComplete="country-name" />
+        </Box>
+
         {organization && (
           <Box mb={3}>
             <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
@@ -155,13 +359,14 @@ export const ApplicationInformationStep = forwardRef(
                     {t('carbonIntensity:step1.city')}
                     {requiredSuffix}:
                   </InputLabel>
-                  <TextField
-                    {...field}
+                  <FacilityLocationAutocomplete
                     id="facilityCity"
-                    data-test="facilityCity"
-                    required
-                    variant="outlined"
-                    fullWidth
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    inputRef={field.ref}
+                    onSelectSuggestion={applyCitySuggestion}
+                    searchType="city"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     disabled={readOnly}
@@ -181,13 +386,14 @@ export const ApplicationInformationStep = forwardRef(
                     {t('carbonIntensity:step1.provinceState')}
                     {requiredSuffix}:
                   </InputLabel>
-                  <TextField
-                    {...field}
+                  <FacilityLocationAutocomplete
                     id="facilityProvinceState"
-                    data-test="facilityProvinceState"
-                    required
-                    variant="outlined"
-                    fullWidth
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    inputRef={field.ref}
+                    onSelectSuggestion={applyProvinceSuggestion}
+                    searchType="province"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     disabled={readOnly}
@@ -207,13 +413,16 @@ export const ApplicationInformationStep = forwardRef(
                     {t('carbonIntensity:step1.country')}
                     {requiredSuffix}:
                   </InputLabel>
-                  <TextField
-                    {...field}
+                  <FacilityLocationAutocomplete
                     id="facilityCountry"
-                    data-test="facilityCountry"
-                    required
-                    variant="outlined"
-                    fullWidth
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    inputRef={field.ref}
+                    onSelectSuggestion={(suggestion) =>
+                      field.onChange(splitLocationParts(suggestion)[0] ?? '')
+                    }
+                    searchType="country"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     disabled={readOnly}
@@ -231,7 +440,9 @@ export const ApplicationInformationStep = forwardRef(
               control={control}
               render={({ field, fieldState }) => {
                 const displayValue =
-                  field.value === '' || field.value === null || field.value === undefined
+                  field.value === '' ||
+                  field.value === null ||
+                  field.value === undefined
                     ? ''
                     : Number(field.value).toLocaleString('en-CA')
                 return (
@@ -246,8 +457,6 @@ export const ApplicationInformationStep = forwardRef(
                     <TextField
                       id="facilityNameplateCapacity"
                       data-test="facilityNameplateCapacity"
-                      // Free-form text so we can render thousands separators while
-                      // still capturing only digits on input.
                       type="text"
                       inputMode="numeric"
                       name={field.name}
@@ -331,8 +540,7 @@ export const ApplicationInformationStep = forwardRef(
                     htmlFor="proposedFuelCodeEffectiveDate"
                     sx={{ pb: 1 }}
                   >
-                    {t('carbonIntensity:step1.proposedFuelCodeEffective')}
-                    {' '}
+                    {t('carbonIntensity:step1.proposedFuelCodeEffective')}{' '}
                     <BCTypography
                       variant="caption"
                       component="span"
