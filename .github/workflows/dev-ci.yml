@@ -15,7 +15,6 @@ env:
   GIT_URL: https://github.com/bcgov/lcfs.git
   TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
   DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -73,10 +72,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6.0.2
 
-      - name: Install oc
-        uses: redhat-actions/openshift-tools-installer@v1
+      - name: Restore oc command from cache
+        uses: actions/cache@v5.0.4
         with:
-          oc: "4"
+          path: /usr/local/bin/oc # Path where the `oc` binary was installed by the install-oc job
+          key: oc-cli-${{ runner.os }}
 
       - name: Log in to Openshift
         run: |
