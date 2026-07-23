@@ -45,7 +45,11 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: install oc
-        uses: ./.github/workflows/install-oc-template.yaml
+        run: |
+          curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz
+          tar -xvf openshift-client-linux.tar.gz
+          sudo mv oc /usr/local/bin/
+          oc version --client
 
       - name: Log in to Openshift
         run: |
