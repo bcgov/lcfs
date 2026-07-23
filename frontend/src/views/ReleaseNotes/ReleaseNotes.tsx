@@ -934,6 +934,7 @@ export const ReleaseNotes = () => {
                               color="error"
                               onClick={() => setResetModalOpen(true)}
                               disabled={updateReleaseNote.isPending || resetReleaseNote.isPending}
+                              data-test={`reset-release-${release.tag}`}
                             >
                               {t('releaseNotes:resetToDefault')}
                             </BCButton>

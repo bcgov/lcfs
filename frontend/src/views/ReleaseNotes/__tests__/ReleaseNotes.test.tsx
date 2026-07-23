@@ -25,10 +25,11 @@ vi.mock('react-i18next', () => ({
         'releaseNotes:addItem': 'Add line',
         'releaseNotes:removeItem': 'Remove line',
         'releaseNotes:resetToDefault': 'Reset to default',
-        'releaseNotes:confirmResetTitle': 'Reset to default?',
-        'releaseNotes:confirmReset':
+        'releaseNotes:resetModalTitle': 'Reset to default?',
+        'releaseNotes:resetModalContent':
           'This release note will revert to its original auto-generated content.',
-        'common:cancelBtn': 'Cancel',
+        'releaseNotes:resetConfirm': 'Reset',
+        'common:cancel': 'Cancel',
         'releaseNotes:categories.features': 'Features',
         'releaseNotes:categories.fixes': 'Bug Fixes',
         'releaseNotes:categories.security': 'Security',
@@ -60,10 +61,9 @@ vi.mock('@/hooks/useReleaseNotes', () => ({
     isPending: false
   }),
   useResetReleaseNote: (options: any) => ({
-    mutateAsync: async (variables: unknown) => {
+    mutate: (variables: unknown) => {
       mockResetMutate(variables)
       options?.onSuccess?.({}, variables, undefined)
-      return {}
     },
     isPending: false
   })
@@ -458,9 +458,7 @@ describe('ReleaseNotes', () => {
       )
       fireEvent.click(screen.getByTestId(`reset-release-${mockRelease.tag}`))
       const modal = screen.getByTestId('modal')
-      fireEvent.click(
-        within(modal).getByRole('button', { name: 'Reset to default' })
-      )
+      fireEvent.click(within(modal).getByRole('button', { name: 'Reset' }))
 
       await waitFor(() =>
         expect(mockResetMutate).toHaveBeenCalledWith({
