@@ -100,7 +100,9 @@ const FacilityLocationAutocomplete = ({
         if (reason === 'input' || reason === 'clear') {
           onChange(newInputValue)
           debouncedSetSearch(newInputValue)
+          // Keep open armed while typing so the list appears when matches arrive
           if (reason === 'clear') setOpen(false)
+          else setOpen(true)
         }
       }}
       onChange={(_event, newValue, reason) => {

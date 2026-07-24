@@ -16,6 +16,18 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
 
+vi.mock('lodash', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    debounce: (fn) => {
+      const wrapped = (...args) => fn(...args)
+      wrapped.cancel = vi.fn()
+      return wrapped
+    }
+  }
+})
+
 vi.mock('@/hooks/useCIApplication', () => ({
   useCIFacilityLocationSearch: vi.fn(({ city } = {}) => ({
     data: city?.toLowerCase().includes('coquit')
@@ -195,13 +207,11 @@ describe('ApplicationInformationStep', () => {
   })
 
   it('shows API suggestions and auto-populates on select', async () => {
-    vi.useFakeTimers()
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) })
+    const user = userEvent.setup()
     render(<ApplicationInformationStep {...baseProps} />, { wrapper })
 
     await user.click(document.getElementById('facilityCity'))
     await user.type(document.getElementById('facilityCity'), 'coquit')
-    vi.runAllTimers() // fire the 500ms debounce
 
     const option = await screen.findByRole('option', {
       name: 'Coquitlam, British Columbia, Canada'
@@ -215,8 +225,6 @@ describe('ApplicationInformationStep', () => {
       )
       expect(document.getElementById('facilityCountry').value).toBe('Canada')
     })
-
-    vi.useRealTimers()
   })
 
   it('disables browser autofill attributes on location fields', () => {
