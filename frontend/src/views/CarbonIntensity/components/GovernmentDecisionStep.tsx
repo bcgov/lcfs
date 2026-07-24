@@ -186,7 +186,13 @@ export const GovernmentDecisionStep = ({
   const verification2Risk = normalizeRisk(
     ciApplication?.verification2RiskAssessment
   )
-  const requiresVerification2 = preliminaryRisk === 'High'
+  // Medium and High risk applications both go through Verification 2; only Low
+  // risk completes after Verification 1. Keeping Medium here also keeps the
+  // Risk Assessment / Priority Score fields visible, since they render inside
+  // the active verification panel (#4741).
+  const requiresVerification2 = ['Medium', 'High'].includes(
+    preliminaryRisk || ''
+  )
   const fuelPathwayCount = ciApplication?.pathways?.length || 0
   const generatedFuelCodesCount = ciApplication?.generatedFuelCodes?.length || 0
   const generatedFuelCodesReady =
