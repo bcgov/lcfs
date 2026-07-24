@@ -180,6 +180,11 @@
     "comingSoon": "This step is not yet available.",
     "description": "This part of the workflow will be implemented in a future task. The accordion above keeps your place in the wizard."
   },
+  "documents": {
+    "uploadTitle": "Upload supporting documents for application",
+    "documentLabel": "Supporting documents help provide additional context and evidence for this application.",
+    "returnButton": "Return to application"
+  },
   "columns": {
     "ciApplicationId": "ID",
     "status": "Status",
