@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
+from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 
 from lcfs.db.base import ActionTypeEnum
@@ -246,7 +247,7 @@ def test_step1_schema_requires_non_empty_location_fields(field_name, value):
     )
     base[field_name] = value
 
-    with pytest.raises(ValidationError):
+    with pytest.raises((ValidationError, RequestValidationError)):
         CIApplicationStep1Schema(**base)
 
 
@@ -949,9 +950,7 @@ async def test_step2_schema_requires_at_least_one_pathway():
 
 @pytest.mark.anyio
 async def test_pathway_input_rejects_inverted_dates():
-    import pydantic
-
-    with pytest.raises(pydantic.ValidationError):
+    with pytest.raises((ValidationError, RequestValidationError)):
         _new_pathway_input(
             operating_data_from=date(2025, 12, 31),
             operating_data_to=date(2025, 1, 1),
@@ -1323,10 +1322,9 @@ async def test_step4_schema_requires_all_three_declarations():
 @pytest.mark.anyio
 async def test_step4_schema_requires_consultant_fields_when_consented():
     import pydantic
-
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
 
-    with pytest.raises(pydantic.ValidationError):
+    with pytest.raises((ValidationError, RequestValidationError)):
         CIApplicationStep4Schema(
             declaration_information_true=True,
             declaration_response_8_weeks=True,

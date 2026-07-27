@@ -36,9 +36,19 @@ def _make_json_serializable(errors: list) -> list:
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     errors = exc.errors()
-    standard_errors = [
-        {"fields": [error["loc"][-1]], "message": error["msg"]} for error in errors
-    ]
+    standard_errors = []
+    for error in errors:
+        loc = error.get("loc", ())
+        # Use the last path segment as the field name; "body" is the request
+        # body wrapper — treat that as a form-level (root) error.
+        field = loc[-1] if loc else "__root__"
+        if field == "body":
+            field = "__root__"
+        msg = error.get("msg", "")
+        # Pydantic v2 prefixes ValueError messages with "Value error, " — strip it.
+        if msg.startswith("Value error, "):
+            msg = msg[len("Value error, "):]
+        standard_errors.append({"fields": [field], "message": msg})
     content = {
         "message": "Validation failed",
         "details": _make_json_serializable(errors),

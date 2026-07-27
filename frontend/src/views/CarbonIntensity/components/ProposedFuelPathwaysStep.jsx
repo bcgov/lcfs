@@ -173,13 +173,21 @@ export const ProposedFuelPathwaysStep = ({
           }
         })
       })
-      const labels = fieldLabels([...missingFields], t)
-      const message = hasDateOrderIssue
-        ? t('carbonIntensity:step2.validation.dateOrder')
-        : t('carbonIntensity:step2.validation.fixSpecificFields', {
-            count: Object.keys(newErrors).length,
-            fields: labels.join(', ')
-          })
+
+      const errorRowCount = Object.keys(newErrors).length
+      let message
+      if (hasDateOrderIssue) {
+        message = t('carbonIntensity:step2.validation.dateOrder')
+      } else if (missingFields.size <= 3 && errorRowCount === 1) {
+        const labels = fieldLabels([...missingFields], t)
+        message = t('carbonIntensity:step2.validation.missingSpecificFields', {
+          fields: labels.join(', ')
+        })
+      } else {
+        message = t('carbonIntensity:step2.validation.incompleteRows', {
+          count: errorRowCount
+        })
+      }
       onValidationError?.(message)
       return
     }
