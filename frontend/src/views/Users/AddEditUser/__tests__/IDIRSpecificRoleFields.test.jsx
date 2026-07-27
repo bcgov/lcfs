@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 // Local override for @/components/BCForm so that BCFormRadio propagates `disabled`
@@ -65,6 +65,12 @@ vi.mock('react-hook-form', () => ({
 
 vi.mock('@mui/material', () => ({
   Box: ({ children }) => <div data-test="box">{children}</div>,
+  Stack: ({ children }) => <div data-test="stack">{children}</div>,
+  Button: ({ children, onClick, disabled, ...props }) => (
+    <button onClick={onClick} disabled={disabled} {...props}>
+      {children}
+    </button>
+  ),
   FormControl: ({ children }) => <div data-test="form-control">{children}</div>,
   FormControlLabel: ({ control: ctrl, label, value }) => (
     <div data-test="form-control-label" data-value={value}>
@@ -108,14 +114,16 @@ import { adminRoleOptions, iaRoleOptions } from '../_schema'
 
 const t = vi.fn((key) => key)
 
-function makeForm(idirRoleValue = '', iaRoleValue = '') {
+function makeForm(idirRoleValue = '', iaRoleValue = '', adminRoleValue = []) {
   return {
     control: { __mockIdirRole: idirRoleValue },
     watch: vi.fn((field) => {
       if (field === 'idirRole') return idirRoleValue
       if (field === 'iaRole') return iaRoleValue
+      if (field === 'adminRole') return adminRoleValue
       return ''
-    })
+    }),
+    setValue: vi.fn()
   }
 }
 
@@ -224,5 +232,98 @@ describe('IDIRSpecificRoleFields', () => {
     const iaGroup = screen.getByTestId('iaRole-radio-group')
     const iaInputs = iaGroup.querySelectorAll('input[type="radio"]')
     iaInputs.forEach((input) => expect(input).not.toBeDisabled())
+  })
+
+  describe('Reset roles buttons', () => {
+    describe('Compliance roles reset button', () => {
+      it('renders the compliance reset roles button', () => {
+        render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+        const resetButton = screen.getByTestId('reset-compliance-roles-btn')
+        expect(resetButton).toBeInTheDocument()
+        expect(t).toHaveBeenCalledWith('admin:userForm.resetRoles')
+      })
+
+      it('disables the compliance reset button when no compliance role is selected', () => {
+        render(<IDIRSpecificRoleFields form={makeForm('', '', [])} disabled={false} t={t} />)
+        const resetButton = screen.getByTestId('reset-compliance-roles-btn')
+        expect(resetButton).toBeDisabled()
+      })
+
+      it('enables the compliance reset button when idir role is selected', () => {
+        const form = makeForm('analyst', '', [])
+        render(<IDIRSpecificRoleFields form={form} disabled={false} t={t} />)
+        const resetButton = screen.getByTestId('reset-compliance-roles-btn')
+        expect(resetButton).not.toBeDisabled()
+      })
+
+      it('calls setValue to clear compliance role when clicked', () => {
+        const form = makeForm('analyst', '', [])
+        render(<IDIRSpecificRoleFields form={form} disabled={false} t={t} />)
+        const resetButton = screen.getByTestId('reset-compliance-roles-btn')
+        
+        fireEvent.click(resetButton)
+        
+        expect(form.setValue).toHaveBeenCalledWith('idirRole', '')
+      })
+
+      it('disables the compliance reset button when form is disabled', () => {
+        const form = makeForm('analyst', '', [])
+        render(<IDIRSpecificRoleFields form={form} disabled={true} t={t} />)
+        const resetButton = screen.getByTestId('reset-compliance-roles-btn')
+        expect(resetButton).toBeDisabled()
+      })
+    })
+
+    describe('IA roles reset button', () => {
+      it('renders the IA reset roles button', () => {
+        render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+        const resetButton = screen.getByTestId('reset-ia-roles-btn')
+        expect(resetButton).toBeInTheDocument()
+      })
+
+      it('disables the IA reset button when no IA role is selected', () => {
+        render(<IDIRSpecificRoleFields form={makeForm('', '', [])} disabled={false} t={t} />)
+        const resetButton = screen.getByTestId('reset-ia-roles-btn')
+        expect(resetButton).toBeDisabled()
+      })
+
+      it('enables the IA reset button when ia role is selected', () => {
+        const form = makeForm('', 'ia analyst', [])
+        render(<IDIRSpecificRoleFields form={form} disabled={false} t={t} />)
+        const resetButton = screen.getByTestId('reset-ia-roles-btn')
+        expect(resetButton).not.toBeDisabled()
+      })
+
+      it('calls setValue to clear IA role when clicked', () => {
+        const form = makeForm('', 'ia analyst', [])
+        render(<IDIRSpecificRoleFields form={form} disabled={false} t={t} />)
+        const resetButton = screen.getByTestId('reset-ia-roles-btn')
+        
+        fireEvent.click(resetButton)
+        
+        expect(form.setValue).toHaveBeenCalledWith('iaRole', '')
+      })
+
+      it('disables the IA reset button when form is disabled', () => {
+        const form = makeForm('', 'ia analyst', [])
+        render(<IDIRSpecificRoleFields form={form} disabled={true} t={t} />)
+        const resetButton = screen.getByTestId('reset-ia-roles-btn')
+        expect(resetButton).toBeDisabled()
+      })
+    })
+
+    it('both reset buttons work independently', () => {
+      const form = makeForm('analyst', 'ia analyst', [])
+      render(<IDIRSpecificRoleFields form={form} disabled={false} t={t} />)
+      
+      const complianceResetButton = screen.getByTestId('reset-compliance-roles-btn')
+      const iaResetButton = screen.getByTestId('reset-ia-roles-btn')
+      
+      fireEvent.click(complianceResetButton)
+      expect(form.setValue).toHaveBeenCalledWith('idirRole', '')
+      
+      fireEvent.click(iaResetButton)
+      expect(form.setValue).toHaveBeenCalledWith('iaRole', '')
+    })
   })
 })
