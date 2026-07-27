@@ -297,7 +297,12 @@ async def update_ci_application_step3(
     service: CIApplicationServices = Depends(),
     validate: CIApplicationValidation = Depends(),
 ) -> CIApplicationSchema:
-    """Step 3 — Documents & GHGenius modelling. Validates required uploads."""
+    """Step 3 — Documents & GHGenius template.
+
+    Persists the optional supporting-document description. The mandatory
+    Technical report / GHGenius upload validation is disabled for the simplified
+    flow (#4669) and retained behind ``CI_STEP3_REQUIRE_DOCUMENTS``.
+    """
     ci = await validate.validate_access(ci_application_id)
     return await service.update_step3(ci, data, request.user)
 

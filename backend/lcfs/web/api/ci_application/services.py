@@ -9,7 +9,7 @@ decision (with the comments thread).
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import structlog
 from fastapi import Depends, HTTPException, status
@@ -74,6 +74,12 @@ from lcfs.web.exception.exceptions import (
 # pathway_application_type.type values seeded by the migration
 PATHWAY_APPLICATION_TYPE_NEW = "New"
 PATHWAY_APPLICATION_TYPE_RENEWAL = "Renewal"
+
+# Step 3 mandatory-upload validation (Technical report + GHGenius model) is
+# disabled for the simplified single-upload flow (#4669). The validation logic
+# below is retained, not removed — set this to True to re-enable the required
+# Technical report / GHGenius upload checks on Step 3 save and on submission.
+CI_STEP3_REQUIRE_DOCUMENTS = False
 
 PATHWAY_LOG_FIELDS = [
     "application_type_id",
@@ -298,7 +304,13 @@ def _latest_active_pathways(pathways: List[Pathway]) -> List[Pathway]:
 
 def _pathway_change_logs_from_versions(
     pathways: List[Pathway],
+    original_group_uuids: Optional[Set[str]] = None,
 ) -> List[PathwayChangeLogSchema]:
+    # None = no supplemental edit yet → empty log (hides the toggle).
+    # Skip initial CREATE for original-submission pathways so they aren't "Added".
+    if original_group_uuids is None:
+        return []
+
     by_group: Dict[str, List[Pathway]] = {}
     for pathway in _sorted_pathways(pathways):
         group_uuid = getattr(pathway, "group_uuid", None)
@@ -320,7 +332,10 @@ def _pathway_change_logs_from_versions(
                 None if action_type == ActionTypeEnum.DELETE.value else current_snapshot
             )
             changed_fields = _changed_fields(previous_snapshot, comparison_snapshot)
-            if changed_fields:
+            is_original_initial_create = (
+                previous_snapshot is None and group_uuid in original_group_uuids
+            )
+            if changed_fields and not is_original_initial_create:
                 logs.append(
                     PathwayChangeLogSchema(
                         ci_application_id=pathway.ci_application_id,
@@ -518,6 +533,27 @@ def _to_full_schema(
     signature_user_display_name: Optional[str] = None,
 ) -> CIApplicationSchema:
     all_pathways = list(getattr(ci, "pathways", None) or [])
+
+    # Group UUIDs present before the first supplemental edit (None if none yet).
+    original_group_uuids: Optional[Set[str]] = None
+    history_records = getattr(ci, "history_records", None) or []
+    supplemental_events = sorted(
+        (
+            h.ci_application_snapshot
+            for h in history_records
+            if isinstance(getattr(h, "ci_application_snapshot", None), dict)
+            and h.ci_application_snapshot.get("event") == "supplemental_pathways_updated"
+        ),
+        key=lambda e: e.get("changed_at") or "",
+    )
+    if supplemental_events:
+        before_snapshots = supplemental_events[0].get("before") or []
+        original_group_uuids = {
+            entry.get("pathway_group_uuid")
+            for entry in before_snapshots
+            if entry.get("pathway_group_uuid")
+        }
+
     return CIApplicationSchema(
         signature_user_display_name=signature_user_display_name,
         ci_application_id=ci.ci_application_id,
@@ -556,7 +592,7 @@ def _to_full_schema(
             and history.ci_application_snapshot.get("event")
             in {"pathway_changes_requested", "supplemental_pathways_updated"}
         ],
-        pathway_change_logs=_pathway_change_logs_from_versions(all_pathways),
+        pathway_change_logs=_pathway_change_logs_from_versions(all_pathways, original_group_uuids),
         generated_fuel_codes=[
             _to_generated_fuel_code_schema(row)
             for row in (
@@ -1761,24 +1797,31 @@ class CIApplicationServices:
         user: UserProfile,
     ) -> CIApplicationSchema:
         """
-        Persists the optional "other supporting" description and verifies
-        the mandatory uploads (Technical report + GHGenius model) are
-        present. Files are uploaded out-of-band via the generic document
+        Persists the optional "other supporting" description.
+
+        Historically this also enforced the mandatory Technical report +
+        GHGenius uploads. That validation is disabled for the simplified
+        single-upload flow (#4669) and retained behind
+        ``CI_STEP3_REQUIRE_DOCUMENTS`` so it can be re-enabled without
+        redevelopment. Files are uploaded out-of-band via the generic document
         endpoint with a category query param.
         """
-        present_categories = set(
-            await self.repo.get_document_categories(ci_application.ci_application_id)
-        )
-        missing = []
-        if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
-            missing.append("Technical report")
-        if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
-            missing.append("GHGenius model")
-        if missing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=("Missing required upload(s): " + ", ".join(missing) + "."),
+        if CI_STEP3_REQUIRE_DOCUMENTS:
+            present_categories = set(
+                await self.repo.get_document_categories(
+                    ci_application.ci_application_id
+                )
             )
+            missing = []
+            if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
+                missing.append("Technical report")
+            if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
+                missing.append("GHGenius model")
+            if missing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=("Missing required upload(s): " + ", ".join(missing) + "."),
+                )
 
         ci_application.supporting_document_other = data.supporting_document_other
         ci_application.update_user = user.keycloak_username
@@ -1815,32 +1858,32 @@ class CIApplicationServices:
 
         # Sanity-check the prior steps. Step 1 is enforced by NOT NULL
         # columns at the DB layer; we re-check Step 2 (at least one
-        # pathway) and Step 3 (technical report + GHGenius model) so
-        # signing authorities cannot bypass the wizard via the API.
+        # pathway) so signing authorities cannot bypass the wizard via the API.
         if not (ci_application.pathways or []):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="At least one fuel pathway is required before submission.",
             )
 
-        from lcfs.db.models.ci_application.CIApplication import (
-            CI_DOC_CATEGORY_GHGENIUS_MODEL,
-            CI_DOC_CATEGORY_TECHNICAL_REPORT,
-        )
-
-        present_categories = set(
-            await self.repo.get_document_categories(ci_application.ci_application_id)
-        )
-        missing = []
-        if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
-            missing.append("Technical report")
-        if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
-            missing.append("GHGenius model")
-        if missing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing required upload(s): " + ", ".join(missing) + ".",
+        # Step 3 mandatory-upload validation (technical report + GHGenius) is
+        # disabled for the simplified flow (#4669) and retained behind
+        # CI_STEP3_REQUIRE_DOCUMENTS so it can be re-enabled without redevelopment.
+        if CI_STEP3_REQUIRE_DOCUMENTS:
+            present_categories = set(
+                await self.repo.get_document_categories(
+                    ci_application.ci_application_id
+                )
             )
+            missing = []
+            if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
+                missing.append("Technical report")
+            if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
+                missing.append("GHGenius model")
+            if missing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Missing required upload(s): " + ", ".join(missing) + ".",
+                )
 
         submitted_status = await self.repo.get_status_by_name(
             CIApplicationStatusEnum.Submitted.value

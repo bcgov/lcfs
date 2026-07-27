@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   FormControl,
   FormControlLabel,
   Radio,
@@ -12,14 +13,42 @@ import { CustomLabel } from '@/components/BCForm/CustomLabel'
 import { roles } from '@/constants/roles'
 import { adminRoleOptions, iaRoleOptions } from '../_schema'
 
+const resetButtonSx = {
+  display: 'block',
+  textTransform: 'none',
+  mt: 1,
+  px: 1.25,
+  py: 0.25,
+  height: 28,
+  minHeight: 28,
+  minWidth: 0,
+  fontSize: '0.8125rem',
+  fontWeight: 400,
+  lineHeight: 1.2,
+  borderColor: 'primary.main',
+  color: 'primary.main',
+  backgroundColor: 'white.main'
+}
+
 export const IDIRSpecificRoleFields = ({ form, disabled, t }) => {
-  const { control, watch } = form
+  const { control, watch, setValue } = form
   const idirRole = watch('idirRole')
-  const isDirector = idirRole === roles.director.toLowerCase()
+  const iaRole = watch('iaRole')
+
+  const handleResetComplianceRoles = () => {
+    setValue('idirRole', '')
+  }
+
+  const handleResetIARoles = () => {
+    setValue('iaRole', '')
+  }
+
+  const hasComplianceRole = idirRole !== ''
+  const hasIARole = iaRole !== ''
 
   return (
     <Box>
-      <BCTypography variant="label" component="div">
+      <BCTypography variant="label" component="div" mb={1}>
         {t('admin:Roles')}
       </BCTypography>
 
@@ -85,6 +114,18 @@ export const IDIRSpecificRoleFields = ({ form, disabled, t }) => {
         />
       </FormControl>
 
+      <Button
+        variant="outlined"
+        size="small"
+        color="primary"
+        onClick={handleResetComplianceRoles}
+        disabled={disabled || !hasComplianceRole}
+        data-test="reset-compliance-roles-btn"
+        sx={resetButtonSx}
+      >
+        {t('admin:userForm.resetRoles')}
+      </Button>
+
       <BCTypography variant="label" component="div" sx={{ mt: 2, mb: 0 }}>
         {t('admin:userForm.initiativeAgreementsSection')}
       </BCTypography>
@@ -93,7 +134,20 @@ export const IDIRSpecificRoleFields = ({ form, disabled, t }) => {
         name="iaRole"
         options={iaRoleOptions(t)}
         disabled={disabled}
+        sx={{ width: '100%', display: 'block' }}
       />
+
+      <Button
+        variant="outlined"
+        size="small"
+        color="primary"
+        onClick={handleResetIARoles}
+        disabled={disabled || !hasIARole}
+        data-test="reset-ia-roles-btn"
+        sx={resetButtonSx}
+      >
+        {t('admin:userForm.resetRoles')}
+      </Button>
     </Box>
   )
 }

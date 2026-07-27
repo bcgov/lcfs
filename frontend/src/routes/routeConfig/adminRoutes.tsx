@@ -65,5 +65,10 @@ export const adminRoutes: AppRouteObject[] = [
     path: ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND,
     element: <AdminMenu />,
     handle: { title: 'Login screen background' }
+  },
+  {
+    path: ROUTES.ADMIN.RELEASE_NOTES,
+    element: <AdminMenu />,
+    handle: { title: 'Release notes' }
   }
 ]

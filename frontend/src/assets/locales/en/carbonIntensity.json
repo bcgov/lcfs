@@ -15,7 +15,7 @@
   "steps": {
     "step1": "Application information",
     "step2": "Proposed fuel pathways",
-    "step3": "Documents & GHGenius modelling",
+    "step3": "Documents & GHGenius template",
     "step4": "Sign & submit",
     "step5": "Government decision"
   },
@@ -76,7 +76,7 @@
     }
   },
   "step3": {
-    "title": "Documents & GHGenius modelling",
+    "title": "Documents & GHGenius template",
     "uploadedHeader": "Uploaded documents for application",
     "noDocuments": "No documents uploaded yet.",
     "supportingHeader": "Supporting documentation",
@@ -87,11 +87,12 @@
     "notUploaded": "(not uploaded)",
     "bullets": {
       "technicalReport": "Technical report (required)",
+      "ghgeniusTemplate": "GHGenius template (required)",
       "notification": "Notification of representation agreement form (optional, required if applicable)",
-      "other": "Other supporting documents — describe below (optional)"
+      "other": "Other supporting documentation, enter brief description (optional)"
     },
     "otherPlaceholder": "Brief description of other supporting documentation included",
-    "ghgeniusHeader": "GHGenius Modelling — Input & output tables",
+    "ghgeniusHeader": "GHGenius template — Input & output tables",
     "ghgeniusIntro": "Complete the required modelling input and output tables in the GHGenius Excel template, then upload the completed spreadsheet.",
     "uploadGHGenius": "Upload GHGenius model",
     "ghgeniusRequired": "GHGenius model upload is required.",
@@ -108,7 +109,7 @@
   "step4": {
     "title": "Sign & submit",
     "summaryHeader": "Application information",
-    "documentsHeader": "Documents & GHGenius modelling",
+    "documentsHeader": "Documents & GHGenius template",
     "pathwaysHeader": "Proposed fuel pathways",
     "signingAuthorityHeader": "Signing authority declaration",
     "signingAuthorityLabel": "Signing authority:",
@@ -181,8 +182,7 @@
     "commentRequired": "Comment cannot be empty."
   },
   "stepStub": {
-    "comingSoon": "This step is not yet available.",
-    "description": "This part of the workflow will be implemented in a future task. The accordion above keeps your place in the wizard."
+    "comingSoon": "This step is not yet available."
   },
   "columns": {
     "ciApplicationId": "ID",
@@ -214,7 +214,7 @@
     "titleLabel": "Title:",
     "emailLabel": "Email:",
     "consultantContactLabel": "Third party consultant contact:",
-    "documentsHeader": "Documents & GHGenius modelling",
+    "documentsHeader": "Documents & GHGenius template",
     "pathwaysHeader": "Proposed fuel pathways",
     "editPathways": "Edit supplemental pathway changes",
     "pathwayChangelog": "Pathway changelog",

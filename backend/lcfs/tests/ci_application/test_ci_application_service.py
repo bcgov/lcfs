@@ -14,13 +14,12 @@ from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.ci_application import CIApplication, CIApplicationStatus
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
-from lcfs.db.models.fuel.FuelType import FuelType
-from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
+from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
-    CIApplicationsListSchema,
     CIApplicationSchema,
+    CIApplicationsListSchema,
     CIApplicationStatusEnum,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
@@ -35,7 +34,6 @@ from lcfs.web.api.ci_application.services import (
     _pathway_change_logs_from_versions,
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -563,7 +561,24 @@ def _stub_step2_lookups(repo, *, with_fuel_code=False):
     )
 
 
-def test_pathway_change_logs_from_versions_builds_field_diffs():
+def test_pathway_change_logs_from_versions_returns_empty_when_no_supplemental_edit():
+    create_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    versions = [
+        _existing_pathway(
+            pathway_id=101,
+            ci_application_id=10,
+            group_uuid="pathway-group-1",
+            version=0,
+            action_type=ActionTypeEnum.CREATE,
+            create_date=create_date,
+            create_user="creator",
+        ),
+    ]
+
+    assert _pathway_change_logs_from_versions(versions, original_group_uuids=None) == []
+
+
+def test_pathway_change_logs_from_versions_skips_original_create_logs_update_delete():
     create_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
     update_date = datetime(2026, 2, 1, tzinfo=timezone.utc)
     delete_date = datetime(2026, 3, 1, tzinfo=timezone.utc)
@@ -605,25 +620,16 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
         ),
     ]
 
-    logs = _pathway_change_logs_from_versions(versions)
+    logs = _pathway_change_logs_from_versions(
+        versions, original_group_uuids={"pathway-group-1"}
+    )
 
     assert [log.action_type for log in logs] == [
-        ActionTypeEnum.CREATE.value,
         ActionTypeEnum.UPDATE.value,
         ActionTypeEnum.DELETE.value,
     ]
 
-    create_log = logs[0]
-    assert create_log.changed_at == create_date
-    assert create_log.changed_by == "creator"
-    assert create_log.before_snapshot is None
-    assert create_log.after_snapshot["feedstock"] == "Canola"
-    assert create_log.changed_fields["feedstock"] == {
-        "old": None,
-        "new": "Canola",
-    }
-
-    update_log = logs[1]
+    update_log = logs[0]
     assert update_log.changed_at == update_date
     assert update_log.changed_by == "editor"
     assert update_log.before_snapshot["feedstock"] == "Canola"
@@ -633,7 +639,7 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
         "feedstock": {"old": "Canola", "new": "Camelina"},
     }
 
-    delete_log = logs[2]
+    delete_log = logs[1]
     assert delete_log.changed_at == delete_date
     assert delete_log.changed_by == "deleter"
     assert delete_log.before_snapshot["feedstock"] == "Camelina"
@@ -646,6 +652,34 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
         "old": 6.25,
         "new": None,
     }
+
+
+def test_pathway_change_logs_from_versions_shows_supplemental_additions_as_added():
+    add_date = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    versions = [
+        _existing_pathway(
+            pathway_id=201,
+            ci_application_id=10,
+            group_uuid="pathway-group-new",
+            version=0,
+            action_type=ActionTypeEnum.CREATE,
+            create_date=add_date,
+            create_user="supplier",
+        ),
+    ]
+
+    logs = _pathway_change_logs_from_versions(
+        versions, original_group_uuids={"pathway-group-original"}
+    )
+
+    assert [log.action_type for log in logs] == [ActionTypeEnum.CREATE.value]
+
+    create_log = logs[0]
+    assert create_log.changed_at == add_date
+    assert create_log.changed_by == "supplier"
+    assert create_log.before_snapshot is None
+    assert create_log.after_snapshot["feedstock"] == "Canola"
+    assert create_log.changed_fields["feedstock"] == {"old": None, "new": "Canola"}
 
 
 @pytest.mark.anyio
@@ -949,29 +983,23 @@ async def test_update_step3_succeeds_when_required_present(service, repo, mock_u
 
 
 @pytest.mark.anyio
-async def test_update_step3_rejects_when_technical_report_missing(
-    service, repo, mock_user
-):
+async def test_update_step3_succeeds_when_documents_missing(service, repo, mock_user):
+    # The mandatory Technical report / GHGenius upload validation is disabled
+    # for the simplified Step 3 flow (#4669), so saving proceeds even with no
+    # documents uploaded. The check is retained behind CI_STEP3_REQUIRE_DOCUMENTS.
     ci = _ci_application()
-    repo.get_document_categories.return_value = ["ghgenius_model"]
+    repo.get_document_categories.return_value = []
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
     from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
 
-    with pytest.raises(Exception) as exc:
-        await service.update_step3(ci, CIApplicationStep3Schema(), mock_user)
-    assert "Technical report" in str(exc.value)
-    repo.update.assert_not_called()
+    payload = CIApplicationStep3Schema(supporting_document_other="Extra notes")
+    result = await service.update_step3(ci, payload, mock_user)
 
-
-@pytest.mark.anyio
-async def test_update_step3_rejects_when_ghgenius_missing(service, repo, mock_user):
-    ci = _ci_application()
-    repo.get_document_categories.return_value = ["technical_report"]
-    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
-
-    with pytest.raises(Exception) as exc:
-        await service.update_step3(ci, CIApplicationStep3Schema(), mock_user)
-    assert "GHGenius" in str(exc.value)
-    repo.update.assert_not_called()
+    assert ci.supporting_document_other == "Extra notes"
+    assert ci.action_type == ActionTypeEnum.UPDATE
+    assert isinstance(result, CIApplicationSchema)
 
 
 # ---------------------------------------------------------------------------
@@ -1183,14 +1211,22 @@ async def test_step4_submit_requires_at_least_one_pathway(service, repo, mock_us
 
 
 @pytest.mark.anyio
-async def test_step4_submit_requires_required_documents(service, repo, mock_user):
+async def test_step4_submit_succeeds_when_documents_missing(service, repo, mock_user):
+    # Step 3 upload validation is disabled for the simplified flow (#4669), so
+    # submission no longer requires the Technical report / GHGenius uploads.
     ci = _draft_ci_with_pathways()
     repo.get_document_categories.return_value = []  # nothing uploaded
-    with pytest.raises(HTTPException) as exc:
-        await service.submit_application(ci, _step4_payload(), mock_user)
-    assert exc.value.status_code == 400
-    assert "Technical report" in exc.value.detail
-    assert "GHGenius" in exc.value.detail
+    submitted = _status("Submitted", 2)
+    repo.get_status_by_name.return_value = submitted
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    result = await service.submit_application(ci, _step4_payload(), mock_user)
+
+    assert ci.status_id == submitted.ci_application_status_id
+    assert ci.action_type == ActionTypeEnum.UPDATE
+    assert isinstance(result, CIApplicationSchema)
 
 
 @pytest.mark.anyio
@@ -1272,6 +1308,7 @@ async def test_step4_submit_clears_consultant_when_not_consented(
 @pytest.mark.anyio
 async def test_step4_schema_requires_all_three_declarations():
     import pydantic
+
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
 
     with pytest.raises(pydantic.ValidationError):
@@ -1284,6 +1321,7 @@ async def test_step4_schema_requires_all_three_declarations():
 
 @pytest.mark.anyio
 async def test_step4_schema_requires_consultant_fields_when_consented():
+    import pydantic
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
 
     with pytest.raises((ValidationError, RequestValidationError)):
@@ -1304,9 +1342,7 @@ async def test_step4_schema_requires_consultant_fields_when_consented():
 
 
 def _decision_payload(status_value="Completed", comment=None):
-    from lcfs.web.api.ci_application.schema import (
-        CIApplicationDecisionSchema,
-    )
+    from lcfs.web.api.ci_application.schema import CIApplicationDecisionSchema
 
     return CIApplicationDecisionSchema(status=status_value, comment=comment)
 
@@ -1717,9 +1753,8 @@ async def test_step5_decision_ignores_inline_comment_field(service, repo, mock_u
 @pytest.mark.anyio
 async def test_step5_decision_schema_rejects_non_terminal_status():
     import pydantic
-    from lcfs.web.api.ci_application.schema import (
-        CIApplicationDecisionSchema,
-    )
+
+    from lcfs.web.api.ci_application.schema import CIApplicationDecisionSchema
 
     with pytest.raises(pydantic.ValidationError):
         CIApplicationDecisionSchema(status="Recommended")
