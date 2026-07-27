@@ -177,8 +177,7 @@
     "commentRequired": "Comment cannot be empty."
   },
   "stepStub": {
-    "comingSoon": "This step is not yet available.",
-    "description": "This part of the workflow will be implemented in a future task. The accordion above keeps your place in the wizard."
+    "comingSoon": "This step is not yet available."
   },
   "columns": {
     "ciApplicationId": "ID",
