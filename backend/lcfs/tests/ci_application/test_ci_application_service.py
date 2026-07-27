@@ -575,7 +575,24 @@ def _stub_step2_lookups(repo, *, with_fuel_code=False):
     )
 
 
-def test_pathway_change_logs_from_versions_builds_field_diffs():
+def test_pathway_change_logs_from_versions_returns_empty_when_no_supplemental_edit():
+    create_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    versions = [
+        _existing_pathway(
+            pathway_id=101,
+            ci_application_id=10,
+            group_uuid="pathway-group-1",
+            version=0,
+            action_type=ActionTypeEnum.CREATE,
+            create_date=create_date,
+            create_user="creator",
+        ),
+    ]
+
+    assert _pathway_change_logs_from_versions(versions, original_group_uuids=None) == []
+
+
+def test_pathway_change_logs_from_versions_skips_original_create_logs_update_delete():
     create_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
     update_date = datetime(2026, 2, 1, tzinfo=timezone.utc)
     delete_date = datetime(2026, 3, 1, tzinfo=timezone.utc)
@@ -617,25 +634,16 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
         ),
     ]
 
-    logs = _pathway_change_logs_from_versions(versions)
+    logs = _pathway_change_logs_from_versions(
+        versions, original_group_uuids={"pathway-group-1"}
+    )
 
     assert [log.action_type for log in logs] == [
-        ActionTypeEnum.CREATE.value,
         ActionTypeEnum.UPDATE.value,
         ActionTypeEnum.DELETE.value,
     ]
 
-    create_log = logs[0]
-    assert create_log.changed_at == create_date
-    assert create_log.changed_by == "creator"
-    assert create_log.before_snapshot is None
-    assert create_log.after_snapshot["feedstock"] == "Canola"
-    assert create_log.changed_fields["feedstock"] == {
-        "old": None,
-        "new": "Canola",
-    }
-
-    update_log = logs[1]
+    update_log = logs[0]
     assert update_log.changed_at == update_date
     assert update_log.changed_by == "editor"
     assert update_log.before_snapshot["feedstock"] == "Canola"
@@ -645,7 +653,7 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
         "feedstock": {"old": "Canola", "new": "Camelina"},
     }
 
-    delete_log = logs[2]
+    delete_log = logs[1]
     assert delete_log.changed_at == delete_date
     assert delete_log.changed_by == "deleter"
     assert delete_log.before_snapshot["feedstock"] == "Camelina"
@@ -658,6 +666,34 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
         "old": 6.25,
         "new": None,
     }
+
+
+def test_pathway_change_logs_from_versions_shows_supplemental_additions_as_added():
+    add_date = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    versions = [
+        _existing_pathway(
+            pathway_id=201,
+            ci_application_id=10,
+            group_uuid="pathway-group-new",
+            version=0,
+            action_type=ActionTypeEnum.CREATE,
+            create_date=add_date,
+            create_user="supplier",
+        ),
+    ]
+
+    logs = _pathway_change_logs_from_versions(
+        versions, original_group_uuids={"pathway-group-original"}
+    )
+
+    assert [log.action_type for log in logs] == [ActionTypeEnum.CREATE.value]
+
+    create_log = logs[0]
+    assert create_log.changed_at == add_date
+    assert create_log.changed_by == "supplier"
+    assert create_log.before_snapshot is None
+    assert create_log.after_snapshot["feedstock"] == "Canola"
+    assert create_log.changed_fields["feedstock"] == {"old": None, "new": "Canola"}
 
 
 @pytest.mark.anyio
