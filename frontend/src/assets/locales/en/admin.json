@@ -91,6 +91,7 @@
     "system_admin": "control report opening and login screen background.",
     "optional": "optional",
     "selectRolePrompt": "Select a role before saving.",
+    "resetRoles": "Reset roles",
     "initiativeAgreementsSection": "Initiative agreements",
     "complianceSection": "Compliance reporting, transfers, CI applications & fuel codes"
   },
