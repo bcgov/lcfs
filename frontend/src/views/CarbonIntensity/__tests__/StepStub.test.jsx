@@ -12,14 +12,11 @@ vi.mock('react-i18next', () => ({
 describe('StepStub', () => {
   afterEach(cleanup)
 
-  it('renders the title key, the coming-soon alert, and the description', () => {
+  it('renders the title key and the coming-soon alert', () => {
     render(<StepStub titleKey="carbonIntensity:steps.step2" />, { wrapper })
     expect(screen.getByText('carbonIntensity:steps.step2')).toBeInTheDocument()
     expect(
       screen.getByText('carbonIntensity:stepStub.comingSoon')
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('carbonIntensity:stepStub.description')
     ).toBeInTheDocument()
   })
 })

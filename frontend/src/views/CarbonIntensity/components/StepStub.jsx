@@ -18,9 +18,6 @@ export const StepStub = ({ titleKey }) => {
       <Alert severity="info" sx={{ mb: 2 }}>
         {t('carbonIntensity:stepStub.comingSoon')}
       </Alert>
-      <BCTypography variant="body2" color="text.secondary">
-        {t('carbonIntensity:stepStub.description')}
-      </BCTypography>
     </Box>
   )
 }
