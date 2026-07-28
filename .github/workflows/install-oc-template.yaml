@@ -1,0 +1,36 @@
+# Installs and caches the OpenShift CLI (`oc`) for caller workflows.
+
+name: Install OpenShift CLI Template
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  install-oc:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up cache for OpenShift CLI
+        id: cache
+        uses: actions/cache@v5.0.4
+        with:
+          path: /usr/local/bin/oc # Path where the `oc` binary will be installed
+          key: oc-cli-${{ runner.os }}
+
+      - name: Install OpenShift CLI (if not cached)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz
+          tar -xvf openshift-client-linux.tar.gz
+          sudo mv oc /usr/local/bin/
+          oc version --client
+
+      - name: Confirm OpenShift CLI is Available
+        run: oc version --client
