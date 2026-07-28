@@ -12,7 +12,8 @@ import {
   UserActivity,
   UserLoginHistory,
   AuditLog,
-  LoginScreenBackground
+  LoginScreenBackground,
+  ReleaseNotesAdmin
 } from '.'
 import { roles } from '@/constants/roles'
 import { CONFIG } from '@/constants/config'
@@ -76,12 +77,20 @@ export function AdminMenu() {
       )
     }
     if (isSystemAdmin) {
-      list.push({
-        key: 'loginScreenBackground',
-        label: t('LoginScreenBackground'),
-        path: ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND,
-        component: <LoginScreenBackground />
-      })
+      list.push(
+        {
+          key: 'loginScreenBackground',
+          label: t('LoginScreenBackground'),
+          path: ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND,
+          component: <LoginScreenBackground />
+        },
+        {
+          key: 'releaseNotesAdmin',
+          label: t('ReleaseNotesAdmin'),
+          path: ROUTES.ADMIN.RELEASE_NOTES,
+          component: <ReleaseNotesAdmin />
+        }
+      )
     }
     if (showSeededAssociationAdminOnly) {
       list.push({

@@ -25,6 +25,7 @@ vi.mock('@/routes/routes', () => ({
       USER_LOGIN_HISTORY: '/admin/user-login-history',
       AUDIT_LOG: { LIST: '/admin/audit-log' },
       LOGIN_SCREEN_BACKGROUND: '/admin/login-screen-background',
+      RELEASE_NOTES: '/admin/release-notes',
       SEEDED_USER_ASSOCIATION: '/admin/seeded-user-association'
     }
   }
@@ -96,6 +97,9 @@ vi.mock('@/views/Admin/AdminMenu', () => ({
   LoginScreenBackground: vi.fn(() => (
     <div data-test="login-screen-background">LoginScreenBackground Component</div>
   )),
+  ReleaseNotesAdmin: vi.fn(() => (
+    <div data-test="release-notes-admin">ReleaseNotesAdmin Component</div>
+  )),
   SeededUserAssociation: vi.fn(() => (
     <div data-test="seeded-user-association">SeededUserAssociation Component</div>
   ))
@@ -160,14 +164,14 @@ describe('AdminMenu Component', () => {
       const { container } = render(<AdminMenu />)
 
       const tabs = container.querySelectorAll('[data-test="tab"]')
-      expect(tabs).toHaveLength(5)
+      expect(tabs).toHaveLength(6)
     })
 
     it('renders a tab panel for each visible tab', () => {
       const { container } = render(<AdminMenu />)
 
       const panels = container.querySelectorAll('[data-test="admin-tab-panel"]')
-      expect(panels).toHaveLength(5)
+      expect(panels).toHaveLength(6)
     })
 
     it('returns nothing when the user has no admin-related roles', () => {
@@ -203,16 +207,19 @@ describe('AdminMenu Component', () => {
       ).toBeNull()
     })
 
-    it('shows only the login screen background tab for system admins', () => {
+    it('shows only the system admin tabs for system admins', () => {
       mockLocation.pathname = '/admin/login-screen-background'
       mockHasRoles.mockImplementation((role) => role === 'System Admin')
       const { container } = render(<AdminMenu />)
 
       const tabs = container.querySelectorAll('[data-test="tab"]')
-      expect(tabs).toHaveLength(1)
+      expect(tabs).toHaveLength(2)
 
       expect(
         container.querySelector('[data-test="login-screen-background"]')
+      ).toBeTruthy()
+      expect(
+        container.querySelector('[data-test="release-notes-admin"]')
       ).toBeTruthy()
       expect(container.querySelector('[data-test="users"]')).toBeNull()
     })
@@ -293,6 +300,7 @@ describe('AdminMenu Component', () => {
       expect(mockT).toHaveBeenCalledWith('UserLoginHistory')
       expect(mockT).toHaveBeenCalledWith('AuditLog')
       expect(mockT).toHaveBeenCalledWith('LoginScreenBackground')
+      expect(mockT).toHaveBeenCalledWith('ReleaseNotesAdmin')
     })
   })
 })

@@ -9,7 +9,7 @@ decision (with the comments thread).
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import structlog
 from fastapi import Depends, HTTPException, status
@@ -304,7 +304,13 @@ def _latest_active_pathways(pathways: List[Pathway]) -> List[Pathway]:
 
 def _pathway_change_logs_from_versions(
     pathways: List[Pathway],
+    original_group_uuids: Optional[Set[str]] = None,
 ) -> List[PathwayChangeLogSchema]:
+    # None = no supplemental edit yet → empty log (hides the toggle).
+    # Skip initial CREATE for original-submission pathways so they aren't "Added".
+    if original_group_uuids is None:
+        return []
+
     by_group: Dict[str, List[Pathway]] = {}
     for pathway in _sorted_pathways(pathways):
         group_uuid = getattr(pathway, "group_uuid", None)
@@ -326,7 +332,10 @@ def _pathway_change_logs_from_versions(
                 None if action_type == ActionTypeEnum.DELETE.value else current_snapshot
             )
             changed_fields = _changed_fields(previous_snapshot, comparison_snapshot)
-            if changed_fields:
+            is_original_initial_create = (
+                previous_snapshot is None and group_uuid in original_group_uuids
+            )
+            if changed_fields and not is_original_initial_create:
                 logs.append(
                     PathwayChangeLogSchema(
                         ci_application_id=pathway.ci_application_id,
@@ -524,6 +533,27 @@ def _to_full_schema(
     signature_user_display_name: Optional[str] = None,
 ) -> CIApplicationSchema:
     all_pathways = list(getattr(ci, "pathways", None) or [])
+
+    # Group UUIDs present before the first supplemental edit (None if none yet).
+    original_group_uuids: Optional[Set[str]] = None
+    history_records = getattr(ci, "history_records", None) or []
+    supplemental_events = sorted(
+        (
+            h.ci_application_snapshot
+            for h in history_records
+            if isinstance(getattr(h, "ci_application_snapshot", None), dict)
+            and h.ci_application_snapshot.get("event") == "supplemental_pathways_updated"
+        ),
+        key=lambda e: e.get("changed_at") or "",
+    )
+    if supplemental_events:
+        before_snapshots = supplemental_events[0].get("before") or []
+        original_group_uuids = {
+            entry.get("pathway_group_uuid")
+            for entry in before_snapshots
+            if entry.get("pathway_group_uuid")
+        }
+
     return CIApplicationSchema(
         signature_user_display_name=signature_user_display_name,
         ci_application_id=ci.ci_application_id,
@@ -562,7 +592,7 @@ def _to_full_schema(
             and history.ci_application_snapshot.get("event")
             in {"pathway_changes_requested", "supplemental_pathways_updated"}
         ],
-        pathway_change_logs=_pathway_change_logs_from_versions(all_pathways),
+        pathway_change_logs=_pathway_change_logs_from_versions(all_pathways, original_group_uuids),
         generated_fuel_codes=[
             _to_generated_fuel_code_schema(row)
             for row in (

@@ -6,6 +6,7 @@
   "UserLoginHistory": "User login history",
   "AuditLog": "Audit log",
   "LoginScreenBackground": "Login screen background",
+  "ReleaseNotesAdmin": "Release notes",
   "AuditLogDetails": "Audit log details — ID: {{id}}",
   "Field": "Field",
   "OldValue": "Old value",
@@ -91,6 +92,7 @@
     "system_admin": "control report opening and login screen background.",
     "optional": "optional",
     "selectRolePrompt": "Select a role before saving.",
+    "resetRoles": "Reset roles",
     "initiativeAgreementsSection": "Initiative agreements",
     "complianceSection": "Compliance reporting, transfers, CI applications & fuel codes"
   },
@@ -109,6 +111,12 @@
   },
   "editSuccessMessage": "User has been updated successfully.",
   "createSuccessMessage": "User has been created successfully.",
+  "releaseNotesAdmin": {
+    "title": "Release notes",
+    "description": "Release notes are generated automatically whenever a new version is deployed. As a System Admin, you can correct, clarify, or enhance the generated text.",
+    "howTo": "Open the release notes page below, then use the pencil icon on any release to edit its summary or change list. Edits are saved immediately and shown to everyone.",
+    "viewButton": "Open release notes"
+  },
   "loginBg": {
     "title": "Login screen background",
     "description": "Manage the background image displayed on the LCFS login page. Upload landscape photos and select one as the active background. Only one image can be active at a time.",
