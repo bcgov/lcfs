@@ -39,6 +39,7 @@ from lcfs.web.api import (
     geocoder,
     charging_site,
     login_bg_image,
+    release_notes,
 )
 
 api_router = APIRouter()
@@ -141,4 +142,7 @@ api_router.include_router(
 )
 api_router.include_router(
     login_bg_image.router, prefix="/login-bg-images", tags=["login_bg_image"]
+)
+api_router.include_router(
+    release_notes.router, prefix="/release-notes", tags=["release_notes"]
 )
