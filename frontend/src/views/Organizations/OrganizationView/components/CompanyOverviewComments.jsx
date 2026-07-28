@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
+import { Alert, Box } from '@mui/material'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
@@ -75,26 +76,41 @@ export const CompanyOverviewComments = ({
             {isLoading ? (
               <Loading />
             ) : comments.length === 0 ? (
-              <BCTypography
-                variant="body2"
-                sx={{ mb: 2 }}
+              <Alert
+                severity="info"
+                icon={false}
                 data-test="company-overview-empty"
               >
                 {t('org:sections.companyOverview.empty')}
-              </BCTypography>
+              </Alert>
             ) : (
-              <BCBox data-test="company-overview-list">
-                {comments.map((comment, index) => (
-                  <CommentRow
-                    key={comment.internalCommentId}
-                    comment={comment}
-                    index={index}
-                    showInternalBadge={isGovernmentUser}
-                    isGovernmentUser={isGovernmentUser}
-                    onEdit={handleEdit}
-                    isEditPending={editMutation.isPending}
-                  />
-                ))}
+              // Same container structure as the org Comment Log so the shared
+              // CommentRow renders identically in both places (bordered white
+              // panel + semantic list).
+              <BCBox
+                variant="bordered"
+                borderRadius="sm"
+                data-test="company-overview-list"
+                sx={{ p: 2, backgroundColor: '#ffffff' }}
+              >
+                <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
+                  {comments.map((comment, index) => (
+                    <Box
+                      key={comment.internalCommentId}
+                      component="li"
+                      sx={{ listStyle: 'none' }}
+                    >
+                      <CommentRow
+                        comment={comment}
+                        index={index}
+                        showInternalBadge={isGovernmentUser}
+                        isGovernmentUser={isGovernmentUser}
+                        onEdit={handleEdit}
+                        isEditPending={editMutation.isPending}
+                      />
+                    </Box>
+                  ))}
+                </Box>
               </BCBox>
             )}
 
