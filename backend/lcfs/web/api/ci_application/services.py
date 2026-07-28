@@ -181,10 +181,18 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
         ),
         feedstock=pathway.feedstock,
         feedstock_region=pathway.feedstock_region,
-        feedstock_transport_mode=pathway.feedstock_transport_mode,
+        feedstock_transport_mode=(
+            pathway.feedstock_transport_mode.split(",")
+            if pathway.feedstock_transport_mode
+            else []
+        ),
         feedstock_transport_distance=pathway.feedstock_transport_distance,
         coproducts=pathway.coproducts,
-        finished_fuel_transport_mode=pathway.finished_fuel_transport_mode,
+        finished_fuel_transport_mode=(
+            pathway.finished_fuel_transport_mode.split(",")
+            if pathway.finished_fuel_transport_mode
+            else []
+        ),
         finished_fuel_transport_distance=pathway.finished_fuel_transport_distance,
     )
 
@@ -217,8 +225,12 @@ def _pathway_input_snapshot(
         "pathway_group_uuid": pathway_group_uuid
         or getattr(pathway, "group_uuid", None),
     }
+    _transport_fields = {"feedstock_transport_mode", "finished_fuel_transport_mode"}
     for field in PATHWAY_LOG_FIELDS:
-        snapshot[field] = _json_value(getattr(row, field, None))
+        value = getattr(row, field, None)
+        if field in _transport_fields and isinstance(value, list):
+            value = ",".join(value)
+        snapshot[field] = _json_value(value)
     return snapshot
 
 
@@ -1055,9 +1067,12 @@ class CIApplicationServices:
     def _unique_transport_mode_names(self, selected_modes: Optional[Any]) -> List[str]:
         if selected_modes in (None, "", []):
             return []
-        mode_names = (
-            selected_modes if isinstance(selected_modes, list) else [selected_modes]
-        )
+        if isinstance(selected_modes, list):
+            mode_names = selected_modes
+        elif isinstance(selected_modes, str):
+            mode_names = [m.strip() for m in selected_modes.split(",") if m.strip()]
+        else:
+            mode_names = [selected_modes]
         return list(dict.fromkeys(mode_name for mode_name in mode_names if mode_name))
 
     async def _get_fuel_code_prefix_map(self) -> Dict[str, Any]:
@@ -1611,10 +1626,10 @@ class CIApplicationServices:
                 fuel_type_id=row.fuel_type_id,
                 feedstock=row.feedstock,
                 feedstock_region=row.feedstock_region,
-                feedstock_transport_mode=row.feedstock_transport_mode,
+                feedstock_transport_mode=",".join(row.feedstock_transport_mode),
                 feedstock_transport_distance=row.feedstock_transport_distance,
                 coproducts=row.coproducts,
-                finished_fuel_transport_mode=row.finished_fuel_transport_mode,
+                finished_fuel_transport_mode=",".join(row.finished_fuel_transport_mode),
                 finished_fuel_transport_distance=row.finished_fuel_transport_distance,
                 group_uuid=previous.group_uuid if previous else str(uuid.uuid4()),
                 version=((previous.version or 0) + 1) if previous else 0,
