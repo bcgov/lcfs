@@ -58,7 +58,6 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
 const ORG_TAB_SEGMENTS = new Set([
   'users',
   'credit-ledger',
-  'company-overview',
   'penalty-log',
   'supply-history',
   'compliance-tracking'

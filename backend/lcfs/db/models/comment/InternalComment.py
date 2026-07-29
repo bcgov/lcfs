@@ -139,6 +139,9 @@ class InternalComment(BaseModel, Auditable):
     ci_application_internal_comments = relationship(
         "CIApplicationInternalComment", back_populates="internal_comment"
     )
+    organization_internal_comments = relationship(
+        "OrganizationInternalComment", back_populates="internal_comment"
+    )
     documents = relationship(
         "Document",
         secondary=internal_comment_document_association,

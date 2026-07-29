@@ -61,7 +61,6 @@
     "dashboard": "Dashboard",
     "users": "Users",
     "creditLedger": "Credit ledger",
-    "companyOverview": "Company overview",
     "penaltyLog": "Penalty log",
     "supplyHistory": "Supply history",
     "allocationAgreements": "Allocation agreements",
@@ -70,8 +69,10 @@
   },
   "sections": {
     "companyOverview": {
-      "title": "Company Overview",
-      "description": "This section will contain company overview information. Implementation pending."
+      "title": "Company overview",
+      "description": "Internal notes about this organization. Comments are searchable in the Comment log.",
+      "empty": "No company overview comments yet.",
+      "addTitle": "Add a company overview comment"
     },
     "penaltyLog": {
       "title": "Penalty log",
@@ -98,17 +99,6 @@
       "description": "This section will contain compliance tracking information. Implementation pending."
     }
   },
-  "companyOverviewTitle": "Company overview",
-  "companyDetailsLabel": "Company details",
-  "companyDetailsPlaceholder": "Enter company details here...",
-  "companyRepresentationAgreementsLabel": "Company representation agreements or affiliated organizations",
-  "companyRepresentationAgreementsPlaceholder": "Note the applicable year and enter company representation agreements or affiliated organizations here...",
-  "companyActingAsAggregatorLabel": "Acting as an aggregator",
-  "companyActingAsAggregatorPlaceholder": "Note the start year and end year, if applicable, and enter aggregator information here...",
-  "companyAdditionalNotesLabel": "Additional notes",
-  "companyAdditionalNotesPlaceholder": "Enter any additional notes here...",
-  "companyOverviewUpdateSuccess": "Company overview updated successfully",
-  "companyOverviewUpdateError": "Failed to update company overview",
   "noInformationProvided": "No information provided",
   "errorLoadingOrganization": "Error loading organization details",
   "creditLedgerTab": "Credit ledger",
