@@ -505,10 +505,10 @@ def _new_pathway_input(**overrides):
         fuel_type_id=1,
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode="Truck",
+        feedstock_transport_mode=["Truck"],
         feedstock_transport_distance=100,
         coproducts=None,
-        finished_fuel_transport_mode="Rail",
+        finished_fuel_transport_mode=["Rail"],
         finished_fuel_transport_distance=200,
     )
     base.update(overrides)
