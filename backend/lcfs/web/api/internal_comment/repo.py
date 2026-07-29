@@ -45,6 +45,9 @@ from lcfs.db.models.comment.ComplianceReportInternalComment import (
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
+from lcfs.db.models.comment.OrganizationInternalComment import (
+    OrganizationInternalComment,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -120,6 +123,11 @@ class InternalCommentRepository:
                 ci_application_id=entity_id,
                 internal_comment_id=internal_comment.internal_comment_id,
             )
+        elif entity_type == EntityTypeEnum.ORGANIZATION:
+            association = OrganizationInternalComment(
+                organization_id=entity_id,
+                internal_comment_id=internal_comment.internal_comment_id,
+            )
 
         # Add the association to the session and commit
         self.db.add(association)
@@ -182,6 +190,10 @@ class InternalCommentRepository:
             EntityTypeEnum.CI_APPLICATION: (
                 CIApplicationInternalComment,
                 CIApplicationInternalComment.ci_application_id,
+            ),
+            EntityTypeEnum.ORGANIZATION: (
+                OrganizationInternalComment,
+                OrganizationInternalComment.organization_id,
             ),
         }
 
@@ -443,6 +455,10 @@ class InternalCommentRepository:
                 CIApplicationInternalComment,
                 CIApplicationInternalComment.ci_application_id,
             ),
+            EntityTypeEnum.ORGANIZATION: (
+                OrganizationInternalComment,
+                OrganizationInternalComment.organization_id,
+            ),
         }
 
         entity_model, where_condition = entity_mapping[entity_type]
@@ -498,6 +514,11 @@ class InternalCommentRepository:
             except (TypeError, ValueError):
                 year = None
             return (org_id, year)
+
+        # Organization-scoped comments carry the organization id directly as the
+        # entity id (e.g. Company Overview notes).
+        if entity_type == EntityTypeEnum.ORGANIZATION:
+            return (entity_id, None)
 
         if entity_type == EntityTypeEnum.TRANSFER:
             stmt = select(Transfer.to_organization_id).where(
@@ -563,6 +584,10 @@ class InternalCommentRepository:
                         CIApplicationInternalComment.ci_application_id.isnot(None),
                         EntityTypeEnum.CI_APPLICATION.value,
                     ),
+                    (
+                        OrganizationInternalComment.organization_id.isnot(None),
+                        EntityTypeEnum.ORGANIZATION.value,
+                    ),
                     else_=None,
                 ).label("entity_type"),
                 func.coalesce(
@@ -571,6 +596,7 @@ class InternalCommentRepository:
                     AdminAdjustmentInternalComment.admin_adjustment_id,
                     ComplianceReportInternalComment.compliance_report_id,
                     CIApplicationInternalComment.ci_application_id,
+                    OrganizationInternalComment.organization_id,
                 ).label("entity_id"),
                 func.coalesce(
                     Transfer.to_organization_id,
@@ -578,6 +604,7 @@ class InternalCommentRepository:
                     AdminAdjustment.to_organization_id,
                     ComplianceReport.organization_id,
                     CIApplication.organization_id,
+                    OrganizationInternalComment.organization_id,
                 ).label("live_org_id"),
                 cp_year.label("live_year"),
             )
@@ -635,6 +662,11 @@ class InternalCommentRepository:
                 CIApplication.ci_application_id
                 == CIApplicationInternalComment.ci_application_id,
             )
+            .outerjoin(
+                OrganizationInternalComment,
+                OrganizationInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
             .where(
                 *(
                     [
@@ -644,6 +676,8 @@ class InternalCommentRepository:
                             AdminAdjustment.to_organization_id == organization_id,
                             ComplianceReport.organization_id == organization_id,
                             CIApplication.organization_id == organization_id,
+                            OrganizationInternalComment.organization_id
+                            == organization_id,
                         )
                     ]
                     if organization_id is not None
@@ -671,7 +705,8 @@ class InternalCommentRepository:
                         4,
                     ),
                     (CIApplicationInternalComment.ci_application_id.isnot(None), 5),
-                    else_=6,
+                    (OrganizationInternalComment.organization_id.isnot(None), 6),
+                    else_=7,
                 ),
                 func.coalesce(
                     TransferInternalComment.transfer_id,
@@ -679,6 +714,7 @@ class InternalCommentRepository:
                     AdminAdjustmentInternalComment.admin_adjustment_id,
                     ComplianceReportInternalComment.compliance_report_id,
                     CIApplicationInternalComment.ci_application_id,
+                    OrganizationInternalComment.organization_id,
                 ),
             )
             .subquery()

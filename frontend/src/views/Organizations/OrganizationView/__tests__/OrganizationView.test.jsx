@@ -248,7 +248,6 @@ describe('OrganizationView', () => {
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('Users')).toBeInTheDocument()
       expect(screen.getByText('Credit ledger')).toBeInTheDocument()
-      expect(screen.getByText('Company overview')).toBeInTheDocument()
       expect(screen.getByText('Penalty log')).toBeInTheDocument()
       expect(screen.getByText('Supply history')).toBeInTheDocument()
       expect(screen.getByText('Allocation agreements')).toBeInTheDocument()
@@ -442,7 +441,7 @@ describe('OrganizationView', () => {
       renderComponent()
 
       const tabs = screen.getAllByRole('tab')
-      expect(tabs).toHaveLength(9)
+      expect(tabs).toHaveLength(8)
 
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('Users')).toBeInTheDocument()
@@ -464,7 +463,6 @@ describe('OrganizationView', () => {
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('Users')).toBeInTheDocument()
       expect(screen.getByText('Credit ledger')).toBeInTheDocument()
-      expect(screen.getByText('Company overview')).toBeInTheDocument()
       expect(screen.getByText('Penalty log')).toBeInTheDocument()
       expect(screen.getByText('Supply history')).toBeInTheDocument()
       expect(screen.getByText('Allocation agreements')).toBeInTheDocument()
