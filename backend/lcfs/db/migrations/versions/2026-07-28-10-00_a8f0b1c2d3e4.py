@@ -1,7 +1,7 @@
 """Add FK indexes on high-traffic tables.
 
 Revision ID: a8f0b1c2d3e4
-Revises: b3c4d5e6f7a8
+Revises: c9d1e2f3a4b5
 Create Date: 2026-07-28 10:00:00.000000
 """
 
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "a8f0b1c2d3e4"
-down_revision = "b3c4d5e6f7a8"
+down_revision = "c9d1e2f3a4b5"
 branch_labels = None
 depends_on = None
 
