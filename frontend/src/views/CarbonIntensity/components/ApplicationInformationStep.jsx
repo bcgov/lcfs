@@ -340,13 +340,23 @@ export const ApplicationInformationStep = forwardRef(
             {organization.email && (
               <BCTypography variant="body2">{organization.email}</BCTypography>
             )}
+            <BCTypography
+              variant="body2"
+              sx={{ mt: 1, fontStyle: 'italic' }}
+              data-test="ci-step1-org-info-confirmation"
+            >
+              "{t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
+              <a
+                href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+              >
+                {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
+              </a>
+              "
+            </BCTypography>
           </Box>
         )}
 
-        <BCTypography
-          variant="h6"
-          sx={{ pb: 2, color: colors.primary.main }}
-        >
+        <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
           {t('carbonIntensity:step1.facilityLocationLabel')}
         </BCTypography>
 
@@ -548,9 +558,7 @@ export const ApplicationInformationStep = forwardRef(
                       component="span"
                       color="text.secondary"
                     >
-                      {t(
-                        'carbonIntensity:step1.proposedFuelCodeEffectiveHelp'
-                      )}
+                      {t('carbonIntensity:step1.proposedFuelCodeEffectiveHelp')}
                     </BCTypography>
                   </InputLabel>
                   <DatePicker
@@ -584,12 +592,7 @@ export const ApplicationInformationStep = forwardRef(
           </Grid2>
         </Grid2>
 
-        <Stack
-          direction="row"
-          spacing={2}
-          sx={{ mt: 2 }}
-          alignItems="center"
-        >
+        <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
           <BCButton
             type="submit"
             variant="contained"
