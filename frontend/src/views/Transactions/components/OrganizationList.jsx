@@ -9,7 +9,11 @@ import { numberFormatter } from '@/utils/formatters'
 const OrganizationList = ({
   selectedOrg,
   onOrgChange,
-  onlyRegistered = true
+  onlyRegistered = true,
+  includeAllOption = true,
+  label,
+  placeholder,
+  showSelectedLabel = true
 }) => {
   const { t } = useTranslation(['transaction'])
   const statuses = onlyRegistered ? ['Registered'] : null
@@ -27,18 +31,21 @@ const OrganizationList = ({
         })} ${t('txn:inReserve')})`
       }))
 
-      setOptionsList([
-        {
-          organizationId: null,
-          name: t('txn:allOrganizations'),
-          totalBalance: 0,
-          reservedBalance: 0,
-          label: t('txn:allOrganizations')
-        },
-        ...formattedData
-      ])
+      const allOrganizationsOption = {
+        organizationId: null,
+        name: t('txn:allOrganizations'),
+        totalBalance: 0,
+        reservedBalance: 0,
+        label: t('txn:allOrganizations')
+      }
+
+      setOptionsList(
+        includeAllOption
+          ? [allOrganizationsOption, ...formattedData]
+          : formattedData
+      )
     }
-  }, [data, isLoading, t])
+  }, [data, includeAllOption, isLoading, t])
 
   const onInputBoxChanged = (event, input) => {
     if (!input || input.name === t('txn:allOrganizations')) {
@@ -50,9 +57,11 @@ const OrganizationList = ({
 
   return (
     <Box component="div" mb={2}>
-      <BCTypography variant="body2" color="primary">
-        {selectedOrg?.label}
-      </BCTypography>
+      {showSelectedLabel && (
+        <BCTypography variant="body2" color="primary">
+          {selectedOrg?.label}
+        </BCTypography>
+      )}
       <Stack
         component="div"
         direction={{ md: 'coloumn', lg: 'row' }}
@@ -62,7 +71,7 @@ const OrganizationList = ({
         flexWrap="wrap"
       >
         <BCTypography variant="body2" color="primary" mt={1}>
-          {t('txn:showTransactionsInvolve')}:&nbsp;
+          {label ?? `${t('txn:showTransactionsInvolve')}:`}&nbsp;
         </BCTypography>
         <Autocomplete
           disablePortal
@@ -74,7 +83,8 @@ const OrganizationList = ({
           onChange={onInputBoxChanged}
           value={
             optionsList.find(
-              (option) => option.organizationId === selectedOrg?.id
+              (option) =>
+                String(option.organizationId) === String(selectedOrg?.id)
             ) || null
           }
           sx={({ functions: { pxToRem }, palette: { primary, light } }) => ({
@@ -84,8 +94,8 @@ const OrganizationList = ({
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder={t('txn:selectOrganizationName')}
-              aria-label={t('txn:selectOrganizationName')}
+              placeholder={placeholder ?? t('txn:selectOrganizationName')}
+              aria-label={placeholder ?? t('txn:selectOrganizationName')}
               slotProps={{
                 htmlInput: {
                   ...params.inputProps,
@@ -101,7 +111,17 @@ const OrganizationList = ({
 }
 
 OrganizationList.propTypes = {
-  onOrgChange: PropTypes.func.isRequired
+  selectedOrg: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    label: PropTypes.string,
+    name: PropTypes.string
+  }),
+  onOrgChange: PropTypes.func.isRequired,
+  onlyRegistered: PropTypes.bool,
+  includeAllOption: PropTypes.bool,
+  label: PropTypes.string,
+  placeholder: PropTypes.string,
+  showSelectedLabel: PropTypes.bool
 }
 
 export default OrganizationList
