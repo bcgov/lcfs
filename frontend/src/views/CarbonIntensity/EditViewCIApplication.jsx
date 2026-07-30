@@ -47,6 +47,19 @@ import { FuelCodesTabs } from './components/FuelCodesTabs'
 import colors from '@/themes/base/colors'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 
+const getApiError = (err, fallback) => {
+  const data = err?.response?.data
+  if (!data) return err?.message || fallback
+  if (Array.isArray(data.errors) && data.errors[0]?.message) {
+    return data.errors[0].message
+  }
+  if (typeof data.detail === 'string' && data.detail) return data.detail
+  if (typeof data.message === 'string' && data.message !== 'Validation failed') {
+    return data.message
+  }
+  return err?.message || fallback
+}
+
 const STEP_KEYS = CI_APPLICATION_STEPS.map((s) => s.key)
 
 const EditViewCIApplicationBase = () => {
@@ -177,10 +190,7 @@ const EditViewCIApplicationBase = () => {
         goToStep(4)
       } catch (err) {
         alertRef.current?.triggerAlert?.({
-          message:
-            err?.response?.data?.detail ||
-            err?.message ||
-            'Failed to submit application.',
+          message: getApiError(err, 'Failed to submit application.'),
           severity: 'error'
         })
       }
@@ -199,10 +209,7 @@ const EditViewCIApplicationBase = () => {
         goToStep(3)
       } catch (err) {
         alertRef.current?.triggerAlert?.({
-          message:
-            err?.response?.data?.detail ||
-            err?.message ||
-            'Failed to save Step 3.',
+          message: getApiError(err, 'Failed to save Step 3.'),
           severity: 'error'
         })
       }
@@ -221,10 +228,7 @@ const EditViewCIApplicationBase = () => {
         goToStep(2)
       } catch (err) {
         alertRef.current?.triggerAlert?.({
-          message:
-            err?.response?.data?.detail ||
-            err?.message ||
-            'Failed to save proposed fuel pathways.',
+          message: getApiError(err, 'Failed to save proposed fuel pathways.'),
           severity: 'error'
         })
       }
@@ -258,10 +262,7 @@ const EditViewCIApplicationBase = () => {
         goToStep(1)
       } catch (err) {
         alertRef.current?.triggerAlert?.({
-          message:
-            err?.response?.data?.detail ||
-            err?.message ||
-            'Failed to save application information.',
+          message: getApiError(err, 'Failed to save application information.'),
           severity: 'error'
         })
       }
@@ -294,10 +295,7 @@ const EditViewCIApplicationBase = () => {
       })
     } catch (err) {
       alertRef.current?.triggerAlert?.({
-        message:
-          err?.response?.data?.detail ||
-          err?.message ||
-          'Failed to delete CI application.',
+        message: getApiError(err, 'Failed to delete CI application.'),
         severity: 'error'
       })
     } finally {

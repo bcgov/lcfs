@@ -20,7 +20,8 @@ import { useDownloadDocument } from '@/hooks/useDocuments'
 import colors from '@/themes/base/colors'
 import {
   ciApplicationPathwayChangelogColDefs,
-  ciApplicationPathwaySummaryColDefs
+  ciApplicationPathwaySummaryColDefs,
+  normalizeTransportModes
 } from '@/views/CarbonIntensity/components/_step2Schema'
 import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
 import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
@@ -88,10 +89,10 @@ const toPathwayChangelogRow = (snapshot = {}) => ({
   fuelTypeId: snapshot.fuel_type_id,
   feedstock: snapshot.feedstock,
   feedstockRegion: snapshot.feedstock_region,
-  feedstockTransportMode: snapshot.feedstock_transport_mode,
+  feedstockTransportMode: normalizeTransportModes(snapshot.feedstock_transport_mode),
   feedstockTransportDistance: snapshot.feedstock_transport_distance,
   coproducts: snapshot.coproducts,
-  finishedFuelTransportMode: snapshot.finished_fuel_transport_mode,
+  finishedFuelTransportMode: normalizeTransportModes(snapshot.finished_fuel_transport_mode),
   finishedFuelTransportDistance: snapshot.finished_fuel_transport_distance
 })
 
@@ -119,13 +120,15 @@ const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
   fuelTypeId: pathway.fuelTypeId || pathway.fuel_type_id,
   feedstock: pathway.feedstock,
   feedstockRegion: pathway.feedstockRegion || pathway.feedstock_region,
-  feedstockTransportMode:
-    pathway.feedstockTransportMode || pathway.feedstock_transport_mode,
+  feedstockTransportMode: normalizeTransportModes(
+    pathway.feedstockTransportMode ?? pathway.feedstock_transport_mode
+  ),
   feedstockTransportDistance:
     pathway.feedstockTransportDistance || pathway.feedstock_transport_distance,
   coproducts: pathway.coproducts,
-  finishedFuelTransportMode:
-    pathway.finishedFuelTransportMode || pathway.finished_fuel_transport_mode,
+  finishedFuelTransportMode: normalizeTransportModes(
+    pathway.finishedFuelTransportMode ?? pathway.finished_fuel_transport_mode
+  ),
   finishedFuelTransportDistance:
     pathway.finishedFuelTransportDistance ||
     pathway.finished_fuel_transport_distance,
@@ -502,6 +505,19 @@ export const ApplicationSummary = ({
           {org.email && (
             <BCTypography variant="body2">{org.email}</BCTypography>
           )}
+          <BCTypography
+            variant="body2"
+            sx={{ mt: 1, fontStyle: 'italic' }}
+            data-test="ci-summary-org-info-confirmation"
+          >
+            "{t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
+            <a
+              href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+            >
+              {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
+            </a>
+            "
+          </BCTypography>
         </Grid>
         <Grid item xs={12} md={6}>
           <Stack spacing={0.5}>

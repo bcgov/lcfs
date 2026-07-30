@@ -44,6 +44,7 @@ from .initiative_agreement import *
 from .login_bg_image import *
 from .notification import *
 from .organization import *
+from .release_note import *
 from .transaction import *
 from .transfer import *
 from .user import *

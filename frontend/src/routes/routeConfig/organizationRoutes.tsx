@@ -10,7 +10,6 @@ import ComplianceTracking from '@/views/Organizations/OrganizationView/component
 import SupplyHistory from '@/views/Organizations/OrganizationView/components/SupplyHistory'
 import AllocationAgreementHistory from '@/views/Organizations/OrganizationView/components/AllocationAgreementHistory'
 import { PenaltyLog } from '@/views/Organizations/OrganizationView/components/PenaltyLog/PenaltyLog'
-import CompanyOverview from '@/views/Organizations/OrganizationView/components/CompanyOverview'
 import { CreditLedger } from '@/views/Organizations/OrganizationView/CreditLedger'
 import { OrganizationUsers } from '@/views/Organizations/OrganizationView/OrganizationUsers'
 import { CommentLog } from '@/views/Organizations/OrganizationView/components/CommentLog'
@@ -48,11 +47,6 @@ export const organizationRoutes: AppRouteObject[] = [
     path: ROUTES.ORGANIZATIONS.CREDIT_LEDGER,
     element: <OrganizationView />,
     handle: { title: 'Credit ledger' }
-  },
-  {
-    path: ROUTES.ORGANIZATIONS.COMPANY_OVERVIEW,
-    element: <OrganizationView />,
-    handle: { title: 'Company overview' }
   },
   {
     path: ROUTES.ORGANIZATIONS.PENALTY_LOG,
@@ -171,14 +165,6 @@ export const orgDashboardRoutes = (
       label: i18n.t('org:tabs.creditLedger')
     },
     {
-      path: ROUTES.ORGANIZATIONS.COMPANY_OVERVIEW.replace(
-        ':orgID',
-        orgID || ''
-      ),
-      match: (pathname: string) => pathname.includes('/company-overview'),
-      label: i18n.t('org:tabs.companyOverview')
-    },
-    {
       path: ROUTES.ORGANIZATIONS.PENALTY_LOG.replace(':orgID', orgID || ''),
       match: (pathname: string) =>
         pathname.includes('/penalty-log') && !pathname.includes('/manage'),
@@ -249,9 +235,6 @@ export const orgDashboardRenderers = (
   }
   if (currentPath.includes('/credit-ledger')) {
     return <CreditLedger organizationId={orgID} />
-  }
-  if (currentPath.includes('/company-overview')) {
-    return <CompanyOverview />
   }
   if (currentPath.includes('/penalty-log')) {
     return <PenaltyLog />

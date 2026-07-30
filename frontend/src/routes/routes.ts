@@ -67,7 +67,6 @@ export const ROUTES = {
     EDIT_USER: '/organizations/:orgID/users/:userID/edit',
     USERS: '/organizations/:orgID/users',
     CREDIT_LEDGER: '/organizations/:orgID/credit-ledger',
-    COMPANY_OVERVIEW: '/organizations/:orgID/company-overview',
     PENALTY_LOG: '/organizations/:orgID/penalty-log',
     PENALTY_LOG_MANAGE: '/organizations/:orgID/penalty-log/manage',
     SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
@@ -129,7 +128,8 @@ export const ROUTES = {
       LIST: '/admin/audit-log',
       VIEW: '/admin/audit-log/:auditLogId'
     },
-    LOGIN_SCREEN_BACKGROUND: '/admin/login-screen-background'
+    LOGIN_SCREEN_BACKGROUND: '/admin/login-screen-background',
+    RELEASE_NOTES: '/admin/release-notes'
   },
 
   FUEL_CODES: {

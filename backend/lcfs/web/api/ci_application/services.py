@@ -9,7 +9,7 @@ decision (with the comments thread).
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import structlog
 from fastapi import Depends, HTTPException, status
@@ -181,10 +181,18 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
         ),
         feedstock=pathway.feedstock,
         feedstock_region=pathway.feedstock_region,
-        feedstock_transport_mode=pathway.feedstock_transport_mode,
+        feedstock_transport_mode=(
+            pathway.feedstock_transport_mode.split(",")
+            if pathway.feedstock_transport_mode
+            else []
+        ),
         feedstock_transport_distance=pathway.feedstock_transport_distance,
         coproducts=pathway.coproducts,
-        finished_fuel_transport_mode=pathway.finished_fuel_transport_mode,
+        finished_fuel_transport_mode=(
+            pathway.finished_fuel_transport_mode.split(",")
+            if pathway.finished_fuel_transport_mode
+            else []
+        ),
         finished_fuel_transport_distance=pathway.finished_fuel_transport_distance,
     )
 
@@ -217,8 +225,12 @@ def _pathway_input_snapshot(
         "pathway_group_uuid": pathway_group_uuid
         or getattr(pathway, "group_uuid", None),
     }
+    _transport_fields = {"feedstock_transport_mode", "finished_fuel_transport_mode"}
     for field in PATHWAY_LOG_FIELDS:
-        snapshot[field] = _json_value(getattr(row, field, None))
+        value = getattr(row, field, None)
+        if field in _transport_fields and isinstance(value, list):
+            value = ",".join(value)
+        snapshot[field] = _json_value(value)
     return snapshot
 
 
@@ -304,7 +316,13 @@ def _latest_active_pathways(pathways: List[Pathway]) -> List[Pathway]:
 
 def _pathway_change_logs_from_versions(
     pathways: List[Pathway],
+    original_group_uuids: Optional[Set[str]] = None,
 ) -> List[PathwayChangeLogSchema]:
+    # None = no supplemental edit yet → empty log (hides the toggle).
+    # Skip initial CREATE for original-submission pathways so they aren't "Added".
+    if original_group_uuids is None:
+        return []
+
     by_group: Dict[str, List[Pathway]] = {}
     for pathway in _sorted_pathways(pathways):
         group_uuid = getattr(pathway, "group_uuid", None)
@@ -326,7 +344,10 @@ def _pathway_change_logs_from_versions(
                 None if action_type == ActionTypeEnum.DELETE.value else current_snapshot
             )
             changed_fields = _changed_fields(previous_snapshot, comparison_snapshot)
-            if changed_fields:
+            is_original_initial_create = (
+                previous_snapshot is None and group_uuid in original_group_uuids
+            )
+            if changed_fields and not is_original_initial_create:
                 logs.append(
                     PathwayChangeLogSchema(
                         ci_application_id=pathway.ci_application_id,
@@ -524,6 +545,27 @@ def _to_full_schema(
     signature_user_display_name: Optional[str] = None,
 ) -> CIApplicationSchema:
     all_pathways = list(getattr(ci, "pathways", None) or [])
+
+    # Group UUIDs present before the first supplemental edit (None if none yet).
+    original_group_uuids: Optional[Set[str]] = None
+    history_records = getattr(ci, "history_records", None) or []
+    supplemental_events = sorted(
+        (
+            h.ci_application_snapshot
+            for h in history_records
+            if isinstance(getattr(h, "ci_application_snapshot", None), dict)
+            and h.ci_application_snapshot.get("event") == "supplemental_pathways_updated"
+        ),
+        key=lambda e: e.get("changed_at") or "",
+    )
+    if supplemental_events:
+        before_snapshots = supplemental_events[0].get("before") or []
+        original_group_uuids = {
+            entry.get("pathway_group_uuid")
+            for entry in before_snapshots
+            if entry.get("pathway_group_uuid")
+        }
+
     return CIApplicationSchema(
         signature_user_display_name=signature_user_display_name,
         ci_application_id=ci.ci_application_id,
@@ -562,7 +604,7 @@ def _to_full_schema(
             and history.ci_application_snapshot.get("event")
             in {"pathway_changes_requested", "supplemental_pathways_updated"}
         ],
-        pathway_change_logs=_pathway_change_logs_from_versions(all_pathways),
+        pathway_change_logs=_pathway_change_logs_from_versions(all_pathways, original_group_uuids),
         generated_fuel_codes=[
             _to_generated_fuel_code_schema(row)
             for row in (
@@ -1025,9 +1067,12 @@ class CIApplicationServices:
     def _unique_transport_mode_names(self, selected_modes: Optional[Any]) -> List[str]:
         if selected_modes in (None, "", []):
             return []
-        mode_names = (
-            selected_modes if isinstance(selected_modes, list) else [selected_modes]
-        )
+        if isinstance(selected_modes, list):
+            mode_names = selected_modes
+        elif isinstance(selected_modes, str):
+            mode_names = [m.strip() for m in selected_modes.split(",") if m.strip()]
+        else:
+            mode_names = [selected_modes]
         return list(dict.fromkeys(mode_name for mode_name in mode_names if mode_name))
 
     async def _get_fuel_code_prefix_map(self) -> Dict[str, Any]:
@@ -1581,10 +1626,10 @@ class CIApplicationServices:
                 fuel_type_id=row.fuel_type_id,
                 feedstock=row.feedstock,
                 feedstock_region=row.feedstock_region,
-                feedstock_transport_mode=row.feedstock_transport_mode,
+                feedstock_transport_mode=",".join(row.feedstock_transport_mode),
                 feedstock_transport_distance=row.feedstock_transport_distance,
                 coproducts=row.coproducts,
-                finished_fuel_transport_mode=row.finished_fuel_transport_mode,
+                finished_fuel_transport_mode=",".join(row.finished_fuel_transport_mode),
                 finished_fuel_transport_distance=row.finished_fuel_transport_distance,
                 group_uuid=previous.group_uuid if previous else str(uuid.uuid4()),
                 version=((previous.version or 0) + 1) if previous else 0,
