@@ -54,9 +54,6 @@ const FacilityLocationAutocomplete = ({
   searchType, // 'city' | 'province' | 'country'
   inputRef
 }) => {
-  const [open, setOpen] = useState(false)
-  // Block Chrome address autofill until focus
-  const [autofillLocked, setAutofillLocked] = useState(true)
   const [debouncedSearch, setDebouncedSearch] = useState(value || '')
   const autofillToken = `lcfs-no-autofill-${id}`
 
@@ -75,18 +72,13 @@ const FacilityLocationAutocomplete = ({
   )
 
   const { data: options = [] } = useCIFacilityLocationSearch(searchParams)
-  const hasMatches = options.length > 0
 
   return (
     <Autocomplete
+      id={id}
       freeSolo
       options={options}
       filterOptions={(x) => x}
-      open={open && hasMatches}
-      onOpen={() => {
-        if (hasMatches) setOpen(true)
-      }}
-      onClose={() => setOpen(false)}
       openOnFocus
       forcePopupIcon={false}
       disableClearable
@@ -96,33 +88,26 @@ const FacilityLocationAutocomplete = ({
       sx={LOCATION_AUTOCOMPLETE_SX}
       ListboxProps={{ style: { maxHeight: 320 } }}
       noOptionsText={null}
+      componentsProps={{ paper: { sx: { display: options.length === 0 ? 'none' : 'block' } } }}
       onInputChange={(_event, newInputValue, reason) => {
-        if (reason === 'input' || reason === 'clear') {
+        if (reason === 'input') {
           onChange(newInputValue)
           debouncedSetSearch(newInputValue)
-          // Keep open armed while typing so the list appears when matches arrive
-          if (reason === 'clear') setOpen(false)
-          else setOpen(true)
+        } else if (reason === 'clear') {
+          onChange('')
+          setDebouncedSearch('')
         }
       }}
       onChange={(_event, newValue, reason) => {
         if (reason === 'selectOption' && typeof newValue === 'string') {
           onSelectSuggestion?.(newValue)
-          setOpen(false)
-          return
-        }
-        if (reason === 'clear') {
+        } else if (reason === 'clear') {
           onChange('')
-          return
-        }
-        if (typeof newValue === 'string') {
+        } else if (typeof newValue === 'string') {
           onChange(newValue)
         }
       }}
-      onBlur={(event) => {
-        setOpen(false)
-        onBlur?.(event)
-      }}
+      onBlur={onBlur}
       renderInput={(params) => (
         <TextField
           {...params}
@@ -136,10 +121,9 @@ const FacilityLocationAutocomplete = ({
           helperText={helperText}
           autoComplete={autofillToken}
           onFocus={(event) => {
-            setAutofillLocked(false)
-            // Defeat Chrome autofill on focus
             event.target.setAttribute('autocomplete', autofillToken)
-            if (hasMatches) setOpen(true)
+            const term = (value || '').trim()
+            if (term && term !== debouncedSearch) setDebouncedSearch(term)
             params.inputProps?.onFocus?.(event)
           }}
           inputProps={{
@@ -153,8 +137,7 @@ const FacilityLocationAutocomplete = ({
             spellCheck: false,
             'data-lpignore': 'true',
             'data-1p-ignore': 'true',
-            'data-form-type': 'other',
-            readOnly: autofillLocked && !disabled
+            'data-form-type': 'other'
           }}
         />
       )}

@@ -29,11 +29,18 @@ vi.mock('lodash', async (importOriginal) => {
 })
 
 vi.mock('@/hooks/useCIApplication', () => ({
-  useCIFacilityLocationSearch: vi.fn(({ city } = {}) => ({
-    data: city?.toLowerCase().includes('coquit')
-      ? ['Coquitlam, British Columbia, Canada']
-      : []
-  }))
+  useCIFacilityLocationSearch: vi.fn(({ city, province, country } = {}) => {
+    if (city?.toLowerCase().includes('coquit')) {
+      return { data: ['Coquitlam, British Columbia, Canada'] }
+    }
+    if (province?.toLowerCase().includes('alb')) {
+      return { data: ['Alberta, Canada'] }
+    }
+    if (country?.toLowerCase().includes('can')) {
+      return { data: ['Canada'] }
+    }
+    return { data: [] }
+  })
 }))
 
 const baseProps = {
@@ -223,6 +230,44 @@ describe('ApplicationInformationStep', () => {
       expect(document.getElementById('facilityProvinceState').value).toBe(
         'British Columbia'
       )
+      expect(document.getElementById('facilityCountry').value).toBe('Canada')
+    })
+  })
+
+  it('province autocomplete works without entering city first', async () => {
+    const user = userEvent.setup()
+    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+
+    await user.click(document.getElementById('facilityProvinceState'))
+    await user.type(document.getElementById('facilityProvinceState'), 'alb')
+
+    const option = await screen.findByRole('option', {
+      name: 'Alberta, Canada'
+    })
+    await user.click(option)
+
+    await waitFor(() => {
+      expect(document.getElementById('facilityCity').value).toBe('')
+      expect(document.getElementById('facilityProvinceState').value).toBe(
+        'Alberta'
+      )
+      expect(document.getElementById('facilityCountry').value).toBe('Canada')
+    })
+  })
+
+  it('country autocomplete works without entering city first', async () => {
+    const user = userEvent.setup()
+    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+
+    await user.click(document.getElementById('facilityCountry'))
+    await user.type(document.getElementById('facilityCountry'), 'can')
+
+    const option = await screen.findByRole('option', { name: 'Canada' })
+    await user.click(option)
+
+    await waitFor(() => {
+      expect(document.getElementById('facilityCity').value).toBe('')
+      expect(document.getElementById('facilityProvinceState').value).toBe('')
       expect(document.getElementById('facilityCountry').value).toBe('Canada')
     })
   })

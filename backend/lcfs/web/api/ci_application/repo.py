@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import Integer, String, and_, asc, case, cast, desc, func, select, union
+from sqlalchemy import Integer, String, and_, asc, case, cast, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -183,102 +183,6 @@ class CIApplicationRepository:
             select(TransportMode).order_by(TransportMode.transport_mode)
         )
         return result.scalars().all()
-
-    @repo_handler
-    async def get_all_facility_locations(self) -> List[Dict[str, str]]:
-        """Distinct facility locations from CI apps + fuel codes."""
-        ci_stmt = select(
-            CIApplication.facility_city.label("city"),
-            CIApplication.facility_province_state.label("province_state"),
-            CIApplication.facility_country.label("country"),
-        ).where(
-            and_(
-                CIApplication.facility_city.isnot(None),
-                CIApplication.facility_city != "",
-            )
-        )
-        fc_stmt = select(
-            FuelCode.fuel_production_facility_city.label("city"),
-            FuelCode.fuel_production_facility_province_state.label(
-                "province_state"
-            ),
-            FuelCode.fuel_production_facility_country.label("country"),
-        ).where(
-            and_(
-                FuelCode.fuel_production_facility_city.isnot(None),
-                FuelCode.fuel_production_facility_city != "",
-            )
-        )
-        combined = union(ci_stmt, fc_stmt).subquery("facility_locations")
-        stmt = (
-            select(
-                combined.c.city,
-                combined.c.province_state,
-                combined.c.country,
-            )
-            .where(
-                and_(
-                    combined.c.city.isnot(None),
-                    combined.c.city != "",
-                )
-            )
-            .order_by(
-                combined.c.city,
-                combined.c.province_state,
-                combined.c.country,
-            )
-        )
-        result = await self.db.execute(stmt)
-        return [
-            {
-                "city": (row.city or "").strip(),
-                "province_state": (row.province_state or "").strip(),
-                "country": (row.country or "").strip(),
-            }
-            for row in result.all()
-            if (row.city or "").strip()
-        ]
-
-    @repo_handler
-    async def get_facility_location_by_name(
-        self,
-        city: Optional[str] = None,
-        province: Optional[str] = None,
-        country: Optional[str] = None,
-    ) -> List[str]:
-        """Filter locations for city / province / country typeahead."""
-        if not (city or province or country):
-            return []
-
-        locations = await self.get_all_facility_locations()
-        if city:
-            needle = city.casefold()
-            return [
-                f"{loc['city']}, {loc['province_state']}, {loc['country']}"
-                for loc in locations
-                if needle in loc["city"].casefold()
-            ]
-        if province:
-            needle = province.casefold()
-            seen = []
-            for loc in locations:
-                if needle not in loc["province_state"].casefold():
-                    continue
-                label = f"{loc['province_state']}, {loc['country']}"
-                if label not in seen:
-                    seen.append(label)
-            return seen
-        if country:
-            needle = country.casefold()
-            seen = []
-            for loc in locations:
-                if needle not in loc["country"].casefold():
-                    continue
-                label = loc["country"]
-                if label not in seen:
-                    seen.append(label)
-            return seen
-        return []
 
     @repo_handler
     async def get_approved_fuel_codes(
