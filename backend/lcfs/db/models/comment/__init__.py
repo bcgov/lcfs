@@ -4,6 +4,7 @@ from .CommentCategory import CommentCategory
 from .InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
 from .InternalComment import InternalComment
 from .ComplianceReportInternalComment import ComplianceReportInternalComment
+from .OrganizationInternalComment import OrganizationInternalComment
 
 __all__ = [
     "AdminAdjustmentInternalComment",
@@ -12,4 +13,5 @@ __all__ = [
     "InitiativeAgreementInternalComment",
     "InternalComment",
     "ComplianceReportInternalComment",
+    "OrganizationInternalComment",
 ]

@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import view_handler
-from .schema import CreditLedgerListSchema
+from .schema import CreditLedgerListSchema, PeriodLedgerSchema
 from .services import CreditLedgerService
 from .validation import CreditLedgerValidation
 
@@ -37,6 +37,37 @@ async def get_credit_ledger(
     return await service.get_ledger_paginated(
         organization_id=organization_id,
         pagination=pagination,
+    )
+
+
+@router.get(
+    "/organization/{organization_id}/period/{compliance_year}",
+    response_model=PeriodLedgerSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_period_credit_ledger(
+    request: Request,
+    organization_id: int = Path(..., ge=1),
+    compliance_year: int = Path(..., ge=2000, le=2100),
+    include_pending: bool = Query(
+        default=False,
+        description="Include in-flight pending transactions in the ledger.",
+    ),
+    service: CreditLedgerService = Depends(),
+    validate: CreditLedgerValidation = Depends(),
+):
+    """
+    Compliance-period credit ledger for one organization (#4714): completed
+    (and optionally pending) transactions with a per-period running balance,
+    totals grouped by transaction type, and previous/current assessed balances.
+    """
+    await validate.validate_organization_access(organization_id)
+
+    return await service.get_period_ledger(
+        organization_id=organization_id,
+        compliance_period=compliance_year,
+        include_pending=include_pending,
     )
 
 

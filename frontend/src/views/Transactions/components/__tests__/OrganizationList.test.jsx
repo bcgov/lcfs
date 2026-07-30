@@ -122,6 +122,14 @@ describe('OrganizationList Component', () => {
       })
     })
 
+    it('selects the current organization when selectedOrg id is a string', async () => {
+      renderComponent({ selectedOrg: { id: '1' } })
+
+      await waitFor(() => {
+        expect(screen.getByRole('combobox')).toHaveValue('Organization One')
+      })
+    })
+
     it('formats organization labels with balance information', async () => {
       renderComponent()
       

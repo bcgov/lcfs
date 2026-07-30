@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Box, IconButton, Link, Stack, TextField, Tooltip } from '@mui/material'
 import {
@@ -10,24 +10,18 @@ import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import {
-  COMPLIANCE_REPORT_FILE_TYPES,
-  MAX_FILE_SIZE_BYTES
-} from '@/constants/common'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import {
   useDeleteDocument,
   useDocuments,
-  useDownloadDocument,
-  useUploadDocument
+  useDownloadDocument
 } from '@/hooks/useDocuments'
 import colors from '@/themes/base/colors'
-import { validateFile } from '@/utils/fileValidation'
 
-// Document category constants. The Technical report / GHGenius categories are
-// retained for when the mandatory-upload validation is re-enabled (the previous
-// categorized multi-upload layout lives in DocumentsModellingStep.legacy.jsx —
-// see #4669). The simplified single-upload flow stores every Step 3 file under
-// the generic supporting category.
+// CI document-category constants. Uploading no longer tags a category (Step 3
+// now uses the shared upload modal — #4740), but these remain the canonical
+// category values consumed by the resume-step logic (ciResumeStep) and the
+// legacy categorized layout (DocumentsModellingStep.legacy.jsx — see #4669).
 export const DOC_CATEGORY_TECHNICAL_REPORT = 'technical_report'
 export const DOC_CATEGORY_GHGENIUS_MODEL = 'ghgenius_model'
 export const DOC_CATEGORY_SUPPORTING = 'supporting'
@@ -55,17 +49,13 @@ export const DocumentsModellingStep = ({
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const ciApplicationId = ciApplication?.ciApplicationId
 
-  const supportingFileRef = useRef(null)
   const [otherDescription, setOtherDescription] = useState(
     ciApplication?.supportingDocumentOther || ''
   )
   const [uploadError, setUploadError] = useState(null)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
 
   const { data: documents = [], isLoading: isLoadingDocs } = useDocuments(
-    PARENT_TYPE,
-    ciApplicationId
-  )
-  const { mutateAsync: uploadDoc, isPending: isUploading } = useUploadDocument(
     PARENT_TYPE,
     ciApplicationId
   )
@@ -74,33 +64,6 @@ export const DocumentsModellingStep = ({
   const downloadDocument = useDownloadDocument(PARENT_TYPE, ciApplicationId)
 
   const hasDocuments = documents.length > 0
-
-  const handleFileChosen = async (event) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-
-    const result = validateFile(
-      file,
-      MAX_FILE_SIZE_BYTES,
-      COMPLIANCE_REPORT_FILE_TYPES
-    )
-    if (!result.isValid) {
-      setUploadError(result.errorMessage)
-      return
-    }
-    setUploadError(null)
-    try {
-      // Simplified flow: every Step 3 file is stored as a supporting document.
-      await uploadDoc({ file, documentCategory: DOC_CATEGORY_SUPPORTING })
-    } catch (err) {
-      setUploadError(
-        err?.response?.data?.detail ||
-          err?.message ||
-          t('carbonIntensity:step3.errors.uploadFailed')
-      )
-    }
-  }
 
   const handleDelete = async (documentId) => {
     try {
@@ -223,7 +186,10 @@ export const DocumentsModellingStep = ({
         </Box>
       )}
 
-      {/* Single upload control (#4669) */}
+      {/* Upload via the shared document upload modal (#4740). Opening the
+          modal shows the common drag-and-drop component (with the allowed file
+          types and multi-file selection) rather than immediately opening the
+          OS file browser. */}
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
         <BCButton
           type="button"
@@ -231,20 +197,12 @@ export const DocumentsModellingStep = ({
           color="primary"
           size="medium"
           startIcon={<CloudUploadIcon sx={{ fontSize: '1.5rem !important' }} />}
-          onClick={() => supportingFileRef.current?.click()}
-          disabled={readOnly || isUploading}
+          onClick={() => setUploadDialogOpen(true)}
+          disabled={readOnly}
           data-test="ci-step3-upload-supporting"
         >
           {t('carbonIntensity:step3.uploadSupporting')}
         </BCButton>
-        <input
-          ref={supportingFileRef}
-          type="file"
-          accept={COMPLIANCE_REPORT_FILE_TYPES.ACCEPT_STRING}
-          hidden
-          onChange={handleFileChosen}
-          data-test="ci-step3-supporting-input"
-        />
       </Stack>
 
       {/* Guidance on what to include — informational only, not enforced (#4669) */}
@@ -291,7 +249,7 @@ export const DocumentsModellingStep = ({
             variant="contained"
             color="primary"
             onClick={handleSaveAndProceed}
-            disabled={!canProceed || isSaving || isUploading}
+            disabled={!canProceed || isSaving}
             data-test="ci-step3-save-btn"
           >
             {t('carbonIntensity:step3.saveAndProceed')}
@@ -309,6 +267,15 @@ export const DocumentsModellingStep = ({
             </BCButton>
           )}
         </Stack>
+      )}
+
+      {ciApplicationId && (
+        <DocumentUploadDialog
+          open={uploadDialogOpen}
+          close={() => setUploadDialogOpen(false)}
+          parentType={PARENT_TYPE}
+          parentID={ciApplicationId}
+        />
       )}
     </Box>
   )

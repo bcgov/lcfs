@@ -1,218 +1,190 @@
-import React, { useState, useRef, useCallback } from 'react'
-import { Grid, FormControl, Select, MenuItem } from '@mui/material'
+import React, { useState, useCallback } from 'react'
+import {
+  Box,
+  IconButton,
+  FormControlLabel,
+  Switch,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow
+} from '@mui/material'
+import {
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
+} from '@mui/icons-material'
+import { useTranslation } from 'react-i18next'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import Loading from '@/components/Loading'
+import BCAlert from '@/components/BCAlert'
 import { DownloadButton } from '@/components/DownloadButton'
-
 import {
-  useCreditLedger,
+  usePeriodCreditLedger,
   useDownloadCreditLedger,
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
-import {
-  useOrganizationBalance,
-  useCurrentOrgBalance
-} from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useTranslation } from 'react-i18next'
-import {
-  timezoneFormatter,
-  numberFormatter,
-  spacesFormatter
-} from '@/utils/formatters'
+import { dateFormatter } from '@/utils/formatters'
+
+const TYPE_LABELS = {
+  Transfer: 'Transfer',
+  InitiativeAgreement: 'Initiative Agreement',
+  AdminAdjustment: 'Administrative Adjustment',
+  ComplianceReport: 'Compliance Report',
+  AggregatorIssuance: 'Aggregator Issuance',
+  StandaloneTransaction: 'Legacy Transaction'
+}
+
+const formatType = (txn) => {
+  const base = TYPE_LABELS[txn.transactionType] || txn.transactionType
+  if (txn.transactionType === 'ComplianceReport' && txn.description) {
+    return `${base} - ${txn.description}`
+  }
+  return base
+}
+
+const formatUnits = (n) => (n ? Number(n).toLocaleString() : '-')
+const formatDate = (iso) => (iso ? dateFormatter({ value: iso }) : '-')
+
+const cellSx = {
+  py: 1.25,
+  borderBottom: '1px solid',
+  borderColor: 'divider',
+  whiteSpace: 'nowrap'
+}
+
+// A number cell that turns red when negative (deficits / negative balances).
+const NumberCell = ({ value, bold = false, dataTest, align = 'right', sx }) => {
+  const negative = Number(value) < 0
+  return (
+    <TableCell
+      align={align}
+      data-test={dataTest}
+      sx={{
+        ...cellSx,
+        color: negative ? 'error.main' : 'inherit',
+        fontWeight: bold ? 700 : 400,
+        ...sx
+      }}
+    >
+      {Number(value ?? 0).toLocaleString()}
+    </TableCell>
+  )
+}
+
+const headerSx = {
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+  backgroundColor: 'grey.100',
+  borderBottom: '2px solid',
+  borderColor: 'grey.400',
+  py: 1.25
+}
+// Zebra striping + hover for readability on long ledgers.
+const bodyRowSx = {
+  '&:nth-of-type(even)': { backgroundColor: 'grey.50' },
+  '&:hover': { backgroundColor: 'action.hover' }
+}
+const groupRowSx = { backgroundColor: 'grey.100' }
+// Assessed-balance rows sit in a small summary table with rule lines.
+const assessedCellSx = {
+  py: 1.5,
+  borderTop: '1px solid',
+  borderColor: 'grey.400'
+}
 
 export const CreditLedger = ({ organizationId }) => {
   const { t } = useTranslation(['org', 'common'])
-  const gridRef = useRef(null)
 
   const { data: currentUser } = useCurrentUser()
-  // Use passed organizationId prop, fallback to current user's org for backward compatibility
   const orgID = organizationId ?? currentUser?.organization?.organizationId
 
-  const [pagination, setPagination] = useState({ page: 1, size: 10 })
-  const [selectedPeriod, setSelectedPeriod] = useState('')
+  const [selectedYear, setSelectedYear] = useState(null)
+  const [showTotals, setShowTotals] = useState(false)
+  const [showPending, setShowPending] = useState(false)
 
-  // Get years with actual ledger data for this organization
-  const { data: availableYears = [], isLoading: yearsLoading } =
-    useCreditLedgerYears(orgID)
+  const { data: availableYears = [] } = useCreditLedgerYears(orgID)
+  const numericYears = availableYears
+    .map(Number)
+    .filter((n) => Number.isFinite(n))
 
-  // Sort years in descending order
-  const sortedYears = availableYears.sort((a, b) => Number(b) - Number(a))
+  const currentCalendarYear = new Date().getFullYear()
+  const defaultYear = numericYears.length
+    ? Math.max(...numericYears)
+    : currentCalendarYear
+  const year = selectedYear ?? defaultYear
 
-  const { data: ledgerRes, isLoading: ledgerLoading } = useCreditLedger({
+  const minYear = numericYears.length
+    ? Math.min(...numericYears)
+    : currentCalendarYear
+  const maxYear = Math.max(currentCalendarYear, ...numericYears, defaultYear)
+
+  const {
+    data: ledger,
+    isLoading,
+    isError
+  } = usePeriodCreditLedger({
     orgId: orgID,
-    page: pagination.page,
-    size: pagination.size,
-    period: selectedPeriod
+    complianceYear: year,
+    includePending: showPending
   })
 
-  // Get full ledger data (without period filter) to calculate year-specific balances
-  const { data: fullLedgerRes } = useCreditLedger({
-    orgId: orgID,
-    page: 1,
-    size: 1000, // Large size to get all transactions
-    period: '' // No period filter
-  })
+  const transactions = ledger?.transactions ?? []
+  const totalsByType = ledger?.totalsByType ?? []
+  const assessed = ledger?.assessedBalance
 
-  // Determine if user is viewing their own organization
-  const isViewingOwnOrg =
-    !organizationId ||
-    organizationId === currentUser?.organization?.organizationId
+  const goPrev = () => setSelectedYear(year - 1)
+  const goNext = () => setSelectedYear(year + 1)
 
-  // Use appropriate balance hook based on context
-  const { data: currentOrgBalance } = useCurrentOrgBalance({
-    enabled: isViewingOwnOrg
-  })
-  const { data: specificOrgBalance } = useOrganizationBalance(orgID)
-
-  // Use current org balance if viewing own org, otherwise use specific org balance
-  const orgBalance = isViewingOwnOrg ? currentOrgBalance : specificOrgBalance
-
-  // Function to get available balance for a specific year or current balance for "All years"
-  const getAvailableBalanceForPeriod = () => {
-    if (!selectedPeriod) {
-      // "All years" - show current total balance, but never negative
-      return Math.max(orgBalance?.totalBalance ?? 0, 0)
-    }
-
-    if (!fullLedgerRes?.ledger) {
-      return 0
-    }
-
-    const selectedYear = Number(selectedPeriod)
-
-    // Get all transactions up to and including the selected year
-    const transactionsUpToYear = fullLedgerRes.ledger.filter(
-      (tx) => Number(tx.compliancePeriod) <= selectedYear
-    )
-
-    // Get all negative transactions after the selected year
-    const futureNegativeTransactions = fullLedgerRes.ledger.filter(
-      (tx) =>
-        Number(tx.compliancePeriod) > selectedYear &&
-        Number(tx.complianceUnits) < 0
-    )
-
-    // Sum all compliance units up to the selected year
-    const unitsUpToYear = transactionsUpToYear.reduce(
-      (sum, tx) => sum + (Number(tx.complianceUnits) || 0),
-      0
-    )
-
-    // Sum all future negative units (these are already negative values)
-    const futureNegativeUnits = futureNegativeTransactions.reduce(
-      (sum, tx) => sum + (Number(tx.complianceUnits) || 0),
-      0
-    )
-
-    // Available balance = units up to year + future negative units
-    // (futureNegativeUnits is already negative, so this subtracts them)
-    const balance = unitsUpToYear + futureNegativeUnits
-
-    // Ensure balance is never negative - display 0 instead
-    return Math.max(balance, 0)
-  }
-
-  const availableBalance = getAvailableBalanceForPeriod()
-
-  const rowData = (ledgerRes?.ledger ?? []).map((r) => ({
-    compliancePeriod: r.compliancePeriod,
-    availableBalance: r.availableBalance,
-    complianceUnits: r.complianceUnits,
-    transactionType: r.transactionType,
-    description: r.description,
-    updateDate: r.updateDate
-  }))
-
-  const pg = ledgerRes?.pagination ?? {
-    page: pagination.page,
-    size: pagination.size,
-    total: 0,
-    totalPages: 0
-  }
-
-  const onPaginationChange = (newPg) =>
-    setPagination((prev) => ({ ...prev, ...newPg }))
-
-  const onPeriodChange = (e) => {
-    setSelectedPeriod(e.target.value)
-    setPagination({ page: 1, size: pagination.size })
-  }
-
-  // excel / csv download
   const downloadLedger = useDownloadCreditLedger()
   const handleDownload = useCallback(
-    () =>
-      downloadLedger({
-        orgId: orgID,
-        complianceYear: selectedPeriod || undefined
-      }),
-    [downloadLedger, orgID, selectedPeriod]
+    () => downloadLedger({ orgId: orgID, complianceYear: year }),
+    [downloadLedger, orgID, year]
   )
 
-  // Column defs
-  const columnDefs = [
-    {
-      field: 'compliancePeriod',
-      headerName: t('org:ledger.complianceYear'),
-      minWidth: 130,
-      sortable: false
-    },
-    {
-      field: 'availableBalance',
-      headerName: t('org:ledger.availableBalance'),
-      valueFormatter: numberFormatter,
-      minWidth: 170,
-      sortable: false
-    },
-    {
-      field: 'complianceUnits',
-      headerName: t('org:ledger.complianceUnits'),
-      valueFormatter: numberFormatter,
-      minWidth: 150,
-      sortable: false
-    },
-    {
-      field: 'transactionType',
-      headerName: t('org:ledger.transactionType'),
-      valueFormatter: (params) => {
-        const transactionType = params.data.transactionType
-        const description = params.data.description
-
-        // Map StandaloneTransaction to Legacy Transaction for display
-        const displayType =
-          transactionType === 'StandaloneTransaction'
-            ? 'Legacy Transaction'
-            : spacesFormatter({ value: transactionType })
-
-        // Append description for Compliance Reports (e.g., "Compliance Report - Original")
-        if (transactionType === 'ComplianceReport' && description) {
-          return `${displayType} – ${description}`
-        }
-
-        return displayType
-      },
-      minWidth: 300,
-      sortable: false
-    },
-    {
-      field: 'updateDate',
-      headerName: t('org:ledger.transactionDate'),
-      valueFormatter: timezoneFormatter,
-      minWidth: 180,
-      sortable: false,
-      sort: 'desc'
-    }
-  ]
-  const getRowId = (p) =>
-    `${p.data.updateDate}-${p.data.transactionType}-${p.data.complianceUnits}-${p.data.description || ''}`
+  const runningBalanceHeader = t('org:ledger.runningBalance', { year })
 
   return (
-    <BCBox mt={1}>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6} alignContent={'end'}>
+    <BCBox mt={1} data-test="credit-ledger">
+      {/* Controls: toggles (left) + period navigation (right) */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          mb: 2
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showTotals}
+                onChange={(e) => setShowTotals(e.target.checked)}
+                data-test="toggle-show-totals"
+              />
+            }
+            label={t('org:ledger.showTotals')}
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showPending}
+                onChange={(e) => setShowPending(e.target.checked)}
+                data-test="toggle-show-pending"
+              />
+            }
+            label={t('org:ledger.showPending')}
+          />
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <DownloadButton
             onDownload={handleDownload}
             label={t('org:downloadExcel')}
@@ -220,86 +192,210 @@ export const CreditLedger = ({ organizationId }) => {
             isDownloading={false}
             dataTest="download-credit-ledger"
           />
-        </Grid>
-        <Grid
-          item
-          xs={12}
-          md={6}
-          display="flex"
-          flexDirection="column"
-          alignItems={{ xs: 'flex-start', md: 'flex-end' }}
-          justifyContent="center"
-        >
-          <BCTypography variant="body2" mb={1}>
-            {selectedPeriod
-              ? t('org:availableCreditBalanceForPeriod', {
-                  year: selectedPeriod
-                })
-              : `Available credit balance: `}{' '}
-            <strong>{availableBalance.toLocaleString()}</strong>
+          <IconButton
+            onClick={goPrev}
+            disabled={year <= minYear}
+            aria-label={t('org:ledger.previousPeriod')}
+            data-test="ledger-prev-period"
+          >
+            <ChevronLeftIcon />
+          </IconButton>
+          <BCTypography
+            variant="h5"
+            component="span"
+            data-test="ledger-current-period"
+            sx={{ minWidth: 64, textAlign: 'center', fontWeight: 700 }}
+          >
+            {year}
           </BCTypography>
+          <IconButton
+            onClick={goNext}
+            disabled={year >= maxYear}
+            aria-label={t('org:ledger.nextPeriod')}
+            data-test="ledger-next-period"
+          >
+            <ChevronRightIcon />
+          </IconButton>
+        </Box>
+      </Box>
 
-          <BCBox display="flex" alignItems="center" gap={1}>
-            <BCTypography variant="body2">
-              {t('org:showTransactionsIn')}
-            </BCTypography>
+      {isError && (
+        <BCAlert severity="error" data-test="ledger-error">
+          {t('org:ledger.errorLoading')}
+        </BCAlert>
+      )}
 
-            <FormControl sx={{ width: 200 }}>
-              <Select
-                displayEmpty
-                value={selectedPeriod}
-                onChange={onPeriodChange}
-                renderValue={(v) => (v === '' ? 'All years' : v)}
-                sx={{
-                  height: '46px',
-                  '& .MuiSelect-select': {
-                    height: '46px',
-                    paddingTop: '0px',
-                    paddingBottom: '0px'
-                  }
-                }}
-              >
-                <MenuItem value="">All years</MenuItem>
-                {!yearsLoading &&
-                  sortedYears.map((year) => (
-                    <MenuItem key={year} value={year}>
-                      {year}
-                    </MenuItem>
-                  ))}
-              </Select>
-            </FormControl>
-          </BCBox>
-        </Grid>
-      </Grid>
+      {isLoading ? (
+        <Loading />
+      ) : (
+        <>
+          <Table size="small" data-test="ledger-table">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={headerSx}>{t('org:ledger.id')}</TableCell>
+                <TableCell sx={headerSx}>
+                  {t('org:ledger.effectiveDate')}
+                </TableCell>
+                <TableCell sx={headerSx}>
+                  {t('org:ledger.transactionType')}
+                </TableCell>
+                <TableCell align="right" sx={headerSx}>
+                  {t('org:ledger.unitsIn')}
+                </TableCell>
+                <TableCell align="right" sx={headerSx}>
+                  {t('org:ledger.unitsOut')}
+                </TableCell>
+                <TableCell align="right" sx={headerSx}>
+                  {showTotals ? t('org:ledger.total') : runningBalanceHeader}
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {transactions.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} sx={cellSx} data-test="ledger-empty">
+                    {t('org:ledger.noTransactions')}
+                  </TableCell>
+                </TableRow>
+              )}
 
-      <BCBox mt={2} sx={{ width: '100%' }}>
-        <BCGridViewer
-          ref={gridRef}
-          gridKey="credit-ledger-grid"
-          queryData={{
-            data: { ledger: rowData, pagination: pg },
-            isLoading: ledgerLoading,
-            isError: false,
-            error: null
-          }}
-          dataKey="ledger"
-          columnDefs={columnDefs}
-          getRowId={getRowId}
-          suppressPagination={false}
-          paginationOptions={pg}
-          onPaginationChange={onPaginationChange}
-          defaultColDef={{
-            filter: false,
-            sortable: false,
-            floatingFilter: false
-          }}
-        />
-      </BCBox>
-      <BCBox mt={4}>
-        <BCTypography variant="body2">
-          {t('org:availableCreditBalanceFootnote')}
-        </BCTypography>
-      </BCBox>
+              {!showTotals &&
+                transactions.map((txn) => (
+                  <TableRow
+                    key={`${txn.transactionType}-${txn.transactionId}`}
+                    sx={bodyRowSx}
+                  >
+                    <TableCell sx={cellSx}>
+                      {txn.transactionType === 'ComplianceReport'
+                        ? `CR${txn.transactionId}`
+                        : `CT${txn.transactionId}`}
+                    </TableCell>
+                    <TableCell sx={cellSx}>
+                      {formatDate(txn.effectiveDate)}
+                    </TableCell>
+                    <TableCell sx={cellSx}>
+                      {formatType(txn)}
+                      {txn.isPending && (
+                        <Chip
+                          size="small"
+                          label={t('org:ledger.pending')}
+                          data-test="ledger-pending-chip"
+                          sx={{ ml: 1, height: 20 }}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell align="right" sx={cellSx}>
+                      {formatUnits(txn.unitsIn)}
+                    </TableCell>
+                    <TableCell align="right" sx={cellSx}>
+                      {formatUnits(txn.unitsOut)}
+                    </TableCell>
+                    <NumberCell
+                      value={txn.runningBalance}
+                      dataTest="ledger-running-balance"
+                    />
+                  </TableRow>
+                ))}
+
+              {showTotals &&
+                totalsByType.map((group) => (
+                  <React.Fragment key={group.transactionType}>
+                    {transactions
+                      .filter(
+                        (txn) => txn.transactionType === group.transactionType
+                      )
+                      .map((txn) => (
+                        <TableRow
+                          key={`${txn.transactionType}-${txn.transactionId}`}
+                          sx={bodyRowSx}
+                        >
+                          <TableCell sx={cellSx}>
+                            {txn.transactionType === 'ComplianceReport'
+                              ? `CR${txn.transactionId}`
+                              : `CT${txn.transactionId}`}
+                          </TableCell>
+                          <TableCell sx={cellSx}>
+                            {formatDate(txn.effectiveDate)}
+                          </TableCell>
+                          <TableCell sx={cellSx}>{formatType(txn)}</TableCell>
+                          <TableCell align="right" sx={cellSx}>
+                            {formatUnits(txn.unitsIn)}
+                          </TableCell>
+                          <TableCell align="right" sx={cellSx}>
+                            {formatUnits(txn.unitsOut)}
+                          </TableCell>
+                          <TableCell align="right" sx={cellSx}>
+                            -
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    <TableRow sx={groupRowSx} data-test="ledger-type-total">
+                      <TableCell sx={{ ...cellSx, fontWeight: 700 }} colSpan={3}>
+                        {t('org:ledger.typeTotal', {
+                          type:
+                            TYPE_LABELS[group.transactionType] ||
+                            group.transactionType
+                        })}
+                      </TableCell>
+                      <NumberCell value={group.unitsIn} bold />
+                      <NumberCell value={group.unitsOut} bold />
+                      <NumberCell value={group.net} bold />
+                    </TableRow>
+                  </React.Fragment>
+                ))}
+
+              {showTotals && transactions.length > 0 && (
+                <TableRow sx={groupRowSx} data-test="ledger-grand-total">
+                  <TableCell sx={{ ...cellSx, fontWeight: 700 }} colSpan={3}>
+                    {t('org:ledger.totalInOut')}
+                  </TableCell>
+                  <NumberCell value={ledger?.totalUnitsIn} bold />
+                  <NumberCell value={ledger?.totalUnitsOut} bold />
+                  <NumberCell value={ledger?.totalNet} bold />
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Assessed balance section */}
+          {assessed && (
+            <Table
+              size="small"
+              sx={{ mt: 4, maxWidth: 640 }}
+              data-test="ledger-assessed-balance"
+            >
+              <TableBody>
+                <TableRow>
+                  <TableCell sx={{ ...assessedCellSx, fontWeight: 700 }}>
+                    {t('org:ledger.assessedBalance', {
+                      year: assessed.previousYear
+                    })}
+                  </TableCell>
+                  <NumberCell
+                    value={assessed.previousBalance}
+                    bold
+                    sx={assessedCellSx}
+                    dataTest="assessed-previous"
+                  />
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ ...assessedCellSx, fontWeight: 700 }}>
+                    {t('org:ledger.assessedBalance', {
+                      year: assessed.currentYear
+                    })}
+                  </TableCell>
+                  <NumberCell
+                    value={assessed.currentBalance}
+                    bold
+                    sx={assessedCellSx}
+                    dataTest="assessed-current"
+                  />
+                </TableRow>
+              </TableBody>
+            </Table>
+          )}
+        </>
+      )}
     </BCBox>
   )
 }

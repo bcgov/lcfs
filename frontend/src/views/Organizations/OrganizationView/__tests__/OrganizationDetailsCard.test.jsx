@@ -40,6 +40,12 @@ const baseOrg = {
   hasEarlyIssuance: false
 }
 
+// The dashboard Company Overview thread (#4608) is exercised by its own test;
+// stub it here so these card tests need no AuthorizationContext/ApiService.
+vi.mock('../components/CompanyOverviewComments', () => ({
+  CompanyOverviewComments: () => <div data-test="company-overview-section" />
+}))
+
 vi.mock('@/hooks/useOrganization', () => ({
   useOrganization: vi.fn(() => ({ data: baseOrg, isLoading: false })),
   useOrganizationBalance: () => ({
