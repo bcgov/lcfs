@@ -175,7 +175,7 @@ describe('CIApplicationProgress', () => {
     expect(screen.getByText('5')).toBeInTheDocument()
   })
 
-  it('adds an hourglass supplier-wait step with days counted from request date', () => {
+  it('adds an hourglass applicant-wait step with days counted from request date', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-19T12:00:00Z'))
     render(
@@ -193,8 +193,10 @@ describe('CIApplicationProgress', () => {
       { wrapper }
     )
 
-    expect(screen.getByText('With supplier')).toBeInTheDocument()
-    expect(screen.getByText('2 days with supplier')).toBeInTheDocument()
+    expect(screen.getByText('With applicant')).toBeInTheDocument()
+    expect(screen.getByText('2 days with applicant')).toBeInTheDocument()
+    // Terminology is applicant-only within the CI process (#4743).
+    expect(screen.queryByText('With supplier')).not.toBeInTheDocument()
     vi.useRealTimers()
   })
 
