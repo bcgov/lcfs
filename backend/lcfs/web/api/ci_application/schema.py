@@ -271,10 +271,10 @@ class PathwayInputSchema(BaseSchema):
     fuel_type_id: int
     feedstock: str = Field(..., max_length=500)
     feedstock_region: str = Field(..., max_length=500)
-    feedstock_transport_mode: str = Field(..., max_length=500)
+    feedstock_transport_mode: List[str] = Field(..., min_length=1)
     feedstock_transport_distance: int = Field(..., ge=0)
     coproducts: Optional[str] = Field(default=None, max_length=1000)
-    finished_fuel_transport_mode: str = Field(..., max_length=500)
+    finished_fuel_transport_mode: List[str] = Field(..., min_length=1)
     finished_fuel_transport_distance: int = Field(..., ge=0)
 
     @model_validator(mode="after")
@@ -323,10 +323,10 @@ class PathwaySchema(BaseSchema):
     fuel_type: Optional[FuelTypeOptionSchema] = None
     feedstock: str
     feedstock_region: str
-    feedstock_transport_mode: str
+    feedstock_transport_mode: List[str]
     feedstock_transport_distance: int
     coproducts: Optional[str] = None
-    finished_fuel_transport_mode: str
+    finished_fuel_transport_mode: List[str]
     finished_fuel_transport_distance: int
 
 

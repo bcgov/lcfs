@@ -35,6 +35,7 @@ DEFAULT_CATEGORY_BY_ENTITY: dict[EntityTypeEnum, str] = {
     EntityTypeEnum.INITIATIVE_AGREEMENT: "IA notes",
     EntityTypeEnum.ADMIN_ADJUSTMENT: "Penalty notes",
     EntityTypeEnum.CI_APPLICATION: "CI application notes",
+    EntityTypeEnum.ORGANIZATION: "Company Overview",
 }
 
 
