@@ -137,8 +137,13 @@ def user_repo():
 
 
 @pytest.fixture
-def service(repo, user_repo):
-    return CIApplicationServices(repo=repo, user_repo=user_repo)
+def fuel_repo():
+    return AsyncMock()
+
+
+@pytest.fixture
+def service(repo, user_repo, fuel_repo):
+    return CIApplicationServices(repo=repo, user_repo=user_repo, fuel_repo=fuel_repo)
 
 
 @pytest.fixture
@@ -257,7 +262,7 @@ def test_step1_schema_requires_non_empty_location_fields(field_name, value):
 
 
 @pytest.mark.anyio
-async def test_get_table_options_returns_lookup_data(service, repo):
+async def test_get_table_options_returns_lookup_data(service, repo, fuel_repo):
     repo.get_statuses.return_value = [
         _status("Draft", 1),
         _status("Submitted", 2),
@@ -265,6 +270,30 @@ async def test_get_table_options_returns_lookup_data(service, repo):
         _status("Completed", 4),
         _status("Withdrawn", 5),
     ]
+    repo.get_fuel_types.side_effect = AssertionError(
+        "CI table options should reuse FuelCode fuel type options"
+    )
+    fuel_repo.get_fuel_types.return_value = [
+        FuelType(
+            fuel_type_id=1,
+            fuel_type="Biodiesel",
+            fossil_derived=False,
+            is_legacy=False,
+        ),
+        FuelType(
+            fuel_type_id=2,
+            fuel_type="Fossil-derived diesel",
+            fossil_derived=True,
+            is_legacy=False,
+        ),
+        FuelType(
+            fuel_type_id=3,
+            fuel_type="Electricity",
+            fossil_derived=False,
+            is_legacy=False,
+        ),
+    ]
+
     result = await service.get_table_options()
 
     assert isinstance(result, CITableOptionsSchema)
@@ -276,6 +305,9 @@ async def test_get_table_options_returns_lookup_data(service, repo):
         CIApplicationStatusEnum.Withdrawn,
     ]
     assert set(result.units_of_measure) == {u.value for u in QuantityUnitsEnum}
+    assert [ft.fuel_type for ft in result.fuel_types] == ["Biodiesel", "Electricity"]
+    fuel_repo.get_fuel_types.assert_awaited_once()
+    repo.get_fuel_types.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

@@ -1126,7 +1126,11 @@ class CIApplicationServices:
         statuses = await self.repo.get_statuses()
         application_types = await self.repo.get_pathway_application_types()
         fuel_code_types = await self.repo.get_pathway_fuel_code_types()
-        fuel_types = await self.repo.get_fuel_types()
+        fuel_types = [
+            ft
+            for ft in await self.fuel_repo.get_fuel_types()
+            if not getattr(ft, "fossil_derived", False)
+        ]
         transport_modes = await self.repo.get_transport_modes()
         # Renewal iterations are scoped to the caller's organization for
         # supplier/CI-applicant users; government callers pass None (all).
