@@ -33,6 +33,31 @@ const formatNumber = (value, decimals = 0) => {
   return formatNumberWithCommas({ value: Number(value).toFixed(decimals) })
 }
 
+const formatCompactNumber = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return '-'
+  }
+  const numericValue = Number(value)
+  const absValue = Math.abs(numericValue)
+  const thresholds = [
+    { limit: 1e12, suffix: 'T' },
+    { limit: 1e9, suffix: 'B' },
+    { limit: 1e6, suffix: 'M' },
+    { limit: 1e3, suffix: 'k' }
+  ]
+
+  const threshold = thresholds.find((item) => absValue >= item.limit)
+  if (!threshold) {
+    return formatNumber(numericValue, absValue < 10 ? 2 : 0)
+  }
+
+  const scaledValue = numericValue / threshold.limit
+  const precision =
+    Math.abs(scaledValue) >= 100 ? 0 : Math.abs(scaledValue) >= 10 ? 1 : 2
+
+  return `${Number(scaledValue.toFixed(precision))}${threshold.suffix}`
+}
+
 const formatSignedNumber = (value, decimals = 0) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '-'
@@ -66,6 +91,23 @@ const CHART_COLORS = {
   orange: '#D55E00',
   purple: '#CC79A7',
   neutralText: '#405074'
+}
+const CHART_GRID = {
+  left: 64,
+  right: 24,
+  top: 56,
+  bottom: 56,
+  containLabel: true
+}
+const CHART_AXIS_LABEL = {
+  color: '#5f6675',
+  hideOverlap: true
+}
+const CHART_CATEGORY_AXIS_LABEL = {
+  ...CHART_AXIS_LABEL,
+  show: true,
+  interval: 0,
+  margin: 10
 }
 
 const MetricCard = ({ title, value, period, comparison, comparisonColor }) => (
@@ -137,7 +179,7 @@ const LabelWithTooltip = ({ label, tooltip }) => {
 
 const ChartPanel = ({ title, option, height = 320 }) => (
   <Card elevation={1} sx={{ height: '100%', overflow: 'hidden', minWidth: 0 }}>
-    <CardContent sx={{ minWidth: 0 }}>
+    <CardContent sx={{ minWidth: 0, overflow: 'hidden' }}>
       <BCTypography variant="h6" color="primary" sx={{ mb: 2 }}>
         {title}
       </BCTypography>
@@ -296,17 +338,31 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
     () => ({
       tooltip: {
         trigger: 'axis',
-        valueFormatter: (value) => formatNumber(value, 2)
+        valueFormatter: (value) => formatCompactNumber(value)
       },
-      grid: { left: 8, right: 12, top: 18, bottom: 42, containLabel: true },
+      grid: {
+        ...CHART_GRID,
+        top: 24
+      },
       xAxis: {
         type: 'category',
         data: filteredYears.map((year) => year.complianceYear),
-        axisLabel: { hideOverlap: true }
+        axisLabel: CHART_CATEGORY_AXIS_LABEL
       },
       yAxis: {
         type: 'value',
-        name: t('org:allocationAgreementHistory.fseReported')
+        name: t('org:allocationAgreementHistory.fseReported'),
+        nameLocation: 'middle',
+        nameGap: 52,
+        nameRotate: 90,
+        nameTextStyle: {
+          color: CHART_COLORS.neutralText,
+          align: 'center'
+        },
+        axisLabel: {
+          ...CHART_AXIS_LABEL,
+          formatter: (value) => formatCompactNumber(value)
+        }
       },
       series: [
         {
@@ -328,15 +384,27 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
     () => ({
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
       legend: { bottom: 0, left: 8, right: 8 },
-      grid: { left: 8, right: 12, top: 18, bottom: 70, containLabel: true },
+      grid: {
+        ...CHART_GRID,
+        top: 24,
+        bottom: 96
+      },
       xAxis: {
         type: 'category',
         data: filteredYears.map((year) => year.complianceYear),
-        axisLabel: { hideOverlap: true }
+        axisLabel: CHART_CATEGORY_AXIS_LABEL
       },
       yAxis: {
         type: 'value',
-        name: t('org:allocationAgreementHistory.organizationsShort')
+        name: t('org:allocationAgreementHistory.organizationsShort'),
+        nameLocation: 'middle',
+        nameGap: 52,
+        nameRotate: 90,
+        nameTextStyle: {
+          color: CHART_COLORS.neutralText,
+          align: 'center'
+        },
+        axisLabel: CHART_AXIS_LABEL
       },
       series: [
         {

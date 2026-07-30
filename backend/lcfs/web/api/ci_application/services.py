@@ -680,6 +680,18 @@ def _to_assigned_analyst(user) -> Optional[AssignedAnalystSchema]:
     )
 
 
+# Medium and High risk applications both go through a second verification;
+# only Low risk applications complete after Verification 1 (#4741).
+VERIFICATION_2_RISK_LEVELS = frozenset(
+    {CIRiskAssessmentEnum.Medium.value, CIRiskAssessmentEnum.High.value}
+)
+
+
+def _requires_verification_2(risk: Optional[str]) -> bool:
+    """Whether a preliminary risk assessment requires Verification 2."""
+    return risk in VERIFICATION_2_RISK_LEVELS
+
+
 def _verification_level_from_progress(ci: CIApplication) -> Optional[str]:
     if getattr(ci, "verification_2_date", None):
         return "VX2"
@@ -791,7 +803,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
         verification_2_risk = ci_application.verification_2_risk_assessment or risk
-        requires_verification_2 = risk == CIRiskAssessmentEnum.High.value
+        requires_verification_2 = _requires_verification_2(risk)
         can_generate_after_verification_1 = (
             ci_application.verification_1_date and not requires_verification_2
         )
@@ -1338,10 +1350,13 @@ class CIApplicationServices:
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
         self._validate_priority_score(priority_score)
-        if ci_application.preliminary_risk_assessment != CIRiskAssessmentEnum.High.value:
+        if not _requires_verification_2(ci_application.preliminary_risk_assessment):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Verification 2 is only required for High risk applications.",
+                detail=(
+                    "Verification 2 is only required for Medium and High risk "
+                    "applications."
+                ),
             )
         if not ci_application.verification_1_date:
             raise HTTPException(
@@ -1389,7 +1404,7 @@ class CIApplicationServices:
             )
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
-        requires_verification_2 = risk == CIRiskAssessmentEnum.High.value
+        requires_verification_2 = _requires_verification_2(risk)
         if not ci_application.verification_1_date or (
             requires_verification_2 and not ci_application.verification_2_date
         ):

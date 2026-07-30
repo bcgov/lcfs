@@ -12,16 +12,13 @@ import SupplyHistory from './components/SupplyHistory'
 import ComplianceTracking from './components/ComplianceTracking'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/routes/routes'
-import colors from '@/themes/base/colors'
-import borders from '@/themes/base/borders'
-import boxShadows from '@/themes/base/boxShadows'
 import {
   orgDashboardRenderers,
   orgDashboardRoutes
 } from '@/routes/routeConfig/organizationRoutes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
+import { AppBar, Tab, Tabs } from '@mui/material'
 
 function TabPanel({ children, value, index }) {
   return (
@@ -34,6 +31,13 @@ function TabPanel({ children, value, index }) {
       {value === index && children}
     </BCBox>
   )
+}
+
+function a11yProps(index) {
+  return {
+    id: `organization-tab-${index}`,
+    'aria-controls': `organization-tabpanel-${index}`
+  }
 }
 
 export const OrganizationView = ({ addMode = false }) => {
@@ -161,72 +165,35 @@ export const OrganizationView = ({ addMode = false }) => {
       )}
 
       <BCBox sx={{ mt: 0, bgcolor: 'background.paper' }}>
-        {/* Section navigation. A wrapping flex row (not MUI <Tabs>, which is a
-            single scrollable row) so every section stays visible at any width —
-            tabs fold onto additional rows instead of being clipped. */}
-        <BCBox
-          role="tablist"
-          aria-label="Organization tabs"
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '4px',
-            p: '4px',
-            // Shrink to the tabs' width (compact pill, matching the original
-            // look) but wrap onto more rows once they exceed the available
-            // width instead of clipping.
-            width: 'fit-content',
-            maxWidth: '100%',
-            boxSizing: 'border-box',
-            background: 'rgba(0, 0, 0, 0.08)',
-            borderRadius: borders.borderRadius.xl
-          }}
-        >
-          {tabConfig.map((config, idx) => {
-            const selected = idx === tabIndex
-            return (
-              <BCBox
-                key={config.path}
-                component="button"
-                type="button"
-                role="tab"
-                id={`organization-tab-${idx}`}
-                aria-selected={selected}
-                aria-controls={`organization-tabpanel-${idx}`}
-                onClick={() => handleTabChange(null, idx)}
-                sx={{
-                  border: 'none',
-                  cursor: 'pointer',
-                  font: 'inherit',
-                  fontSize: '0.875rem',
-                  fontWeight: selected ? 700 : 500,
-                  whiteSpace: 'nowrap',
-                  px: 2,
-                  py: 1,
-                  borderRadius: borders.borderRadius.lg,
-                  color: colors.text.primary,
-                  backgroundColor: selected ? colors.white.main : 'transparent',
-                  boxShadow: selected
-                    ? boxShadows.tabsBoxShadow.indicator
-                    : 'none',
-                  transition:
-                    'background-color 200ms ease, box-shadow 200ms ease',
-                  '&:hover': {
-                    backgroundColor: selected
-                      ? colors.white.main
-                      : 'rgba(0, 0, 0, 0.06)'
-                  },
-                  '&:focus-visible': {
-                    outline: `2px solid ${colors.primary.main}`,
-                    outlineOffset: '2px'
-                  }
-                }}
-              >
-                {config.label}
-              </BCBox>
-            )
-          })}
-        </BCBox>
+        <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
+          <Tabs
+            value={tabIndex}
+            onChange={handleTabChange}
+            aria-label="Organization tabs"
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              backgroundColor: 'rgba(0, 0, 0, 0.08)',
+              width: 'fit-content',
+              maxWidth: '100%',
+              '& .MuiTab-root': {
+                minWidth: 'auto',
+                minHeight: 36,
+                paddingX: 2,
+                paddingY: 0.75,
+                marginX: 0.25,
+                whiteSpace: 'nowrap'
+              },
+              '& .MuiTabs-flexContainer': {
+                flexWrap: 'nowrap'
+              }
+            }}
+          >
+            {tabConfig.map((config, idx) => (
+              <Tab key={config.path} label={config.label} {...a11yProps(idx)} />
+            ))}
+          </Tabs>
+        </AppBar>
         {organizationTitle && (
           <BCTypography variant="h5" color="primary" mt={3}>
             {organizationTitle}

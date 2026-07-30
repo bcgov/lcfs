@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   useCreditLedger,
+  usePeriodCreditLedger,
   useDownloadCreditLedger,
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
@@ -247,6 +248,59 @@ describe('useCreditLedger', () => {
   })
 })
 
+describe('usePeriodCreditLedger', () => {
+  const mockGet = vi.fn()
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+  })
+
+  it('fetches the period ledger with the include_pending param', async () => {
+    const mockData = { compliancePeriod: 2024, transactions: [] }
+    mockGet.mockResolvedValueOnce({ data: mockData })
+
+    const { result } = renderHook(
+      () =>
+        usePeriodCreditLedger({
+          orgId: 123,
+          complianceYear: 2024,
+          includePending: true
+        }),
+      { wrapper }
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toEqual(mockData)
+    expect(mockGet).toHaveBeenCalledWith(
+      '/credit-ledger/organization/123/period/2024',
+      { params: { include_pending: true } }
+    )
+  })
+
+  it('defaults include_pending to false', async () => {
+    mockGet.mockResolvedValueOnce({ data: {} })
+    const { result } = renderHook(
+      () => usePeriodCreditLedger({ orgId: 5, complianceYear: 2023 }),
+      { wrapper }
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(mockGet).toHaveBeenCalledWith(
+      '/credit-ledger/organization/5/period/2023',
+      { params: { include_pending: false } }
+    )
+  })
+
+  it('does not fetch until org and year are present', () => {
+    const { result } = renderHook(
+      () => usePeriodCreditLedger({ orgId: null, complianceYear: 2024 }),
+      { wrapper }
+    )
+    expect(result.current.isLoading).toBe(false)
+    expect(mockGet).not.toHaveBeenCalled()
+  })
+})
+
 describe('useDownloadCreditLedger', () => {
   const mockDownload = vi.fn()
 
@@ -380,7 +434,9 @@ describe('useCreditLedgerYears', () => {
       expect(result.current.data).toEqual(mockYears)
     })
 
-    expect(mockGet).toHaveBeenCalledWith('/credit-ledger/organization/123/years')
+    expect(mockGet).toHaveBeenCalledWith(
+      '/credit-ledger/organization/123/years'
+    )
   })
 
   it('should not fetch when orgId is not provided', () => {
@@ -403,7 +459,9 @@ describe('useCreditLedgerYears', () => {
       expect(result.current.data).toEqual([])
     })
 
-    expect(mockGet).toHaveBeenCalledWith('/credit-ledger/organization/456/years')
+    expect(mockGet).toHaveBeenCalledWith(
+      '/credit-ledger/organization/456/years'
+    )
   })
 
   it('should handle API errors gracefully', async () => {
@@ -430,9 +488,12 @@ describe('useCreditLedgerYears', () => {
       staleTime: 60000
     }
 
-    const { result } = renderHook(() => useCreditLedgerYears(123, customOptions), {
-      wrapper: wrapper
-    })
+    const { result } = renderHook(
+      () => useCreditLedgerYears(123, customOptions),
+      {
+        wrapper: wrapper
+      }
+    )
 
     await waitFor(() => {
       expect(result.current.data).toEqual(mockYears)

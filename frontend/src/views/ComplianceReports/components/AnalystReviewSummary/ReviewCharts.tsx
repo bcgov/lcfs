@@ -38,11 +38,16 @@ type HistoricalChartMode = 'trend' | 'horizontal-bars' | 'grouped-bars'
 const ALL_FILTER_VALUE = 'all'
 
 const chartGrid = {
-  left: 8,
-  right: 16,
-  bottom: 8,
-  top: 48,
+  left: 64,
+  right: 24,
+  bottom: 44,
+  top: 56,
   containLabel: true
+}
+
+const chartAxisLabel = {
+  color: '#5f6675',
+  hideOverlap: true
 }
 
 const getHistoricalChartMode = (
@@ -84,6 +89,7 @@ const buildSupplementalImpactChartOptions = (series: ComparisonSeries) => ({
     type: 'category',
     data: series.points.map((point) => point.label),
     axisLabel: {
+      ...chartAxisLabel,
       rotate: series.points.length > 4 ? 30 : 0,
       overflow: 'truncate',
       width: 100
@@ -183,10 +189,12 @@ const buildHistoricalChartOptions = (group: HistoricalChartGroup) => {
       grid: chartGrid,
       xAxis: {
         type: 'category',
-        data: group.periodLabels
+        data: group.periodLabels,
+        axisLabel: chartAxisLabel
       },
       yAxis: {
-        type: 'value'
+        type: 'value',
+        axisLabel: chartAxisLabel
       },
       series: group.labels.map((label) => ({
         name: label,
@@ -209,12 +217,14 @@ const buildHistoricalChartOptions = (group: HistoricalChartGroup) => {
       legend: { top: 0, type: 'scroll' },
       grid: chartGrid,
       xAxis: {
-        type: 'value'
+        type: 'value',
+        axisLabel: chartAxisLabel
       },
       yAxis: {
         type: 'category',
         data: group.labels,
         axisLabel: {
+          ...chartAxisLabel,
           overflow: 'truncate',
           width: 120
         }
@@ -243,13 +253,15 @@ const buildHistoricalChartOptions = (group: HistoricalChartGroup) => {
       type: 'category',
       data: group.labels,
       axisLabel: {
+        ...chartAxisLabel,
         rotate: group.labels.length > 4 ? 30 : 0,
         overflow: 'truncate',
         width: 100
       }
     },
     yAxis: {
-      type: 'value'
+      type: 'value',
+      axisLabel: chartAxisLabel
     },
     series: group.periodLabels.map((period) => ({
       name: period,
@@ -270,17 +282,34 @@ const buildFseUsageUtilizationChartOptions = (group: HistoricalChartGroup) => ({
   },
   xAxis: {
     type: 'category',
-    data: group.periodLabels
+    data: group.periodLabels,
+    axisLabel: chartAxisLabel
   },
   yAxis: [
     {
       type: 'value',
-      name: 'kWh usage'
+      name: 'kWh usage',
+      nameLocation: 'middle',
+      nameGap: 48,
+      nameRotate: 90,
+      nameTextStyle: {
+        color: '#405074',
+        align: 'center'
+      },
+      axisLabel: chartAxisLabel
     },
     {
       type: 'value',
       name: 'Utilization %',
+      nameLocation: 'middle',
+      nameGap: 48,
+      nameRotate: 90,
+      nameTextStyle: {
+        color: '#405074',
+        align: 'center'
+      },
       axisLabel: {
+        ...chartAxisLabel,
         formatter: '{value}%'
       }
     }
@@ -468,6 +497,8 @@ const FuelCodeSunburstChartCard = ({
         border: '1px solid rgba(0, 0, 0, 0.12)',
         borderRadius: '4px',
         p: 1,
+        minWidth: 0,
+        overflow: 'hidden',
         gridColumn: { xl: '1 / -1' }
       }}
     >
@@ -482,7 +513,7 @@ const FuelCodeSunburstChartCard = ({
       >
         <ReactECharts
           option={chartOptions}
-          style={{ height: 520, width: '100%' }}
+          style={{ height: 520, width: '100%', minWidth: 0 }}
           notMerge
           lazyUpdate
         />
@@ -567,6 +598,7 @@ const buildComplianceUnitChartOptions = (group: ComplianceUnitChartGroup) => ({
     type: 'category',
     data: group.fuelLabels,
     axisLabel: {
+      ...chartAxisLabel,
       rotate: group.fuelLabels.length > 4 ? 30 : 0,
       overflow: 'truncate',
       width: 100
@@ -574,7 +606,15 @@ const buildComplianceUnitChartOptions = (group: ComplianceUnitChartGroup) => ({
   },
   yAxis: {
     type: 'value',
-    name: 'Compliance units'
+    name: 'Compliance units',
+    nameLocation: 'middle',
+    nameGap: 52,
+    nameRotate: 90,
+    nameTextStyle: {
+      color: '#405074',
+      align: 'center'
+    },
+    axisLabel: chartAxisLabel
   },
   series: group.schedules.map((schedule) => ({
     name: schedule,
@@ -630,7 +670,9 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
             sx={{
               border: '1px solid rgba(0, 0, 0, 0.12)',
               borderRadius: '4px',
-              p: 1
+              p: 1,
+              minWidth: 0,
+              overflow: 'hidden'
             }}
           >
             <BCTypography variant="body2" sx={{ mb: 1 }}>
@@ -638,7 +680,7 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
             </BCTypography>
             <ReactECharts
               option={buildComplianceUnitChartOptions(complianceUnitGroup)}
-              style={{ height: 280, width: '100%' }}
+              style={{ height: 280, width: '100%', minWidth: 0 }}
               notMerge
               lazyUpdate
             />
@@ -653,7 +695,9 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
               sx={{
                 border: '1px solid rgba(0, 0, 0, 0.12)',
                 borderRadius: '4px',
-                p: 1
+                p: 1,
+                minWidth: 0,
+                overflow: 'hidden'
               }}
             >
               <BCTypography variant="body2" sx={{ mb: 1 }}>
@@ -663,7 +707,8 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
                 option={buildHistoricalChartOptions(item)}
                 style={{
                   height: 280,
-                  width: '100%'
+                  width: '100%',
+                  minWidth: 0
                 }}
                 notMerge
                 lazyUpdate
@@ -677,7 +722,9 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
             sx={{
               border: '1px solid rgba(0, 0, 0, 0.12)',
               borderRadius: '4px',
-              p: 1
+              p: 1,
+              minWidth: 0,
+              overflow: 'hidden'
             }}
           >
             <BCTypography variant="body2" sx={{ mb: 1 }}>
@@ -685,7 +732,7 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
             </BCTypography>
             <ReactECharts
               option={buildSupplementalImpactChartOptions(item)}
-              style={{ height: 280, width: '100%' }}
+              style={{ height: 280, width: '100%', minWidth: 0 }}
               notMerge
               lazyUpdate
             />
