@@ -56,7 +56,7 @@ describe('Admin Component', () => {
       
       const typography = container.querySelector('[data-test="bc-typography"]')
       expect(typography).toBeTruthy()
-      expect(typography.textContent).toBe('Admin Settings')
+      expect(typography.textContent).toBe('Admin settings')
     })
 
     it('renders icon within button', () => {

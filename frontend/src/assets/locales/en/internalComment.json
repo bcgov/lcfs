@@ -1,8 +1,8 @@
 {
   "loadingComments": "Loading comments...",
   "errorLoadingComments": "Error loading comments:",
-  "addComment": "Add Comment",
-  "saveChanges": "Save Changes",
+  "addComment": "Add comment",
+  "saveChanges": "Save changes",
   "cancel": "Cancel",
   "editComment": "Edit comment:",
   "editingOthersComment": "You are editing {{name}}'s comment as administrator:",

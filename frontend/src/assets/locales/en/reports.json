@@ -17,7 +17,7 @@
     "type": "Type",
     "status": "Current status",
     "lastUpdated": "Last status update",
-    "assignedAnalyst": "Assigned Analyst",
+    "assignedAnalyst": "Assigned analyst",
     "lastComment": "Last comment"
   },
   "noReportsFound": "No compliance reports found",
@@ -44,7 +44,7 @@
   "assessmentPenaltyLn1": "As per section 37(1) of the Low Carbon Fuels Act, an administrative penalty of {{penaltyAmount}} must be paid for failure to meet the renewable fuel target.",
   "assessmentPenaltyLn2": "As per section 37(2) of the Low Carbon Fuels Act, an administrative penalty of {{penaltyAmount}} must be paid for failure to meet the low carbon fuel target.",
   "supplementalWarning": "If you become aware that this report is incomplete or inaccurate, you must submit a supplemental report within 30 days.",
-  "supplementalReport": "Supplemental Report",
+  "supplementalReport": "Supplemental report",
   "createSupplementalRptBtn": "Create supplemental report",
   "createReassessmentBtn": "Create reassessment",
   "downloadExcel": "Download Excel",
@@ -86,7 +86,7 @@
     "reAssessReportBtn": "Re-assess report",
     "deleteSupplementalReportBtn": "Delete supplemental report",
     "deleteAnalystAdjustmentBtn": "Delete analyst adjustment",
-    "createSupplementalReportBtn": "Create Supplemental Report",
+    "createSupplementalReportBtn": "Create supplemental report",
     "nonAssessment": "Non-assessment",
     "issueExemptionBtn": "Issue exemption"
   },
@@ -167,7 +167,7 @@
   ],
   "earlyIssuanceIntroSections": [
     {
-      "header": "Early Issuance Reporting",
+      "header": "Early issuance reporting",
       "content": [
         "<p>Under the Low Carbon Fuels Act, early issuance reporting is an opportunity for organizations to receive compliance units for eligible low carbon fuel supplied before the annual compliance report is due. This reporting is optional and must follow specific requirements set out by the director and described in the Low Carbon Fuels (Technical) Regulation.</p>"
       ]
@@ -210,7 +210,7 @@
   "reportDetails": "Report details",
   "summaryAndDeclaration": "Summary & declaration",
   "summary": "Summary",
-  "compareMode": "Compare Mode",
+  "compareMode": "Compare mode",
   "addRenewableFuelRetention": "Add a renewable fuel retention or obligation deferral",
   "errorRetrieving": "Error retrieving the record",
   "renewableFuelTarget": "Renewable fuel target",
@@ -229,7 +229,7 @@
   "signingAuthorityDeclaration": "Signing authority declaration",
   "declarationText": "I certify that the information in this report is true and complete to the best of my knowledge and I understand that I may be required to provide to the Director records evidencing the truth of that information.",
   "claimDeclarationText": "<p>I certify that the reported fuel(s) were produced in Canada or were supplied in the first quarter of 2025 (by March 31 for non-Canadian fuel).</p><i>Note: Evidence for fuel supply date would be a required attachment.</i>",
-  "submitReport": "Submit Report",
+  "submitReport": "Submit report",
   "pleaseCheckDeclaration": "Please certify the information before submitting",
   "expandAll": "expand all",
   "collapseAll": "collapse all",
@@ -267,16 +267,16 @@
   "summaryLabels": {
     "line": "Line",
     "value": "Value",
-    "totalValue": "Total Value",
+    "totalValue": "Total value",
     "units": "Units",
-    "earlyIssuanceSummary": "Early Issuance Summary"
+    "earlyIssuanceSummary": "Early issuance summary"
   },
   "summaryLoadingMsg": "Loading compliance report summary...",
   "noSigningAuthorityTooltip": "Cannot submit: Signing authority role required.",
   "noRecords": "Cannot submit: You must report fuel activity information (FSE data alone is not sufficient)",
   "invalidAddress": "Cannot submit: Organization details are incomplete. Please fill out all required fields in the Organization details section before submitting.",
   "addressEdited": " - edited",
-  "viewLegacyBtn": "View Full Historical Report in TFRS",
+  "viewLegacyBtn": "View full historical report in TFRS",
   "reportAssessed": "Compliance report, Assessed",
   "reportExempted": "Compliance report, Exempted",
   "changelog": "Change log",
@@ -321,13 +321,13 @@
   "selectedFuelType": "Selected fuel type",
   "quantitySupplied": "Quantity supplied",
   "allRecordsDeleted": "All previous records deleted.",
-  "notSubjectToAssessment": "Not Subject to Assessment",
+  "notSubjectToAssessment": "Not subject to assessment",
   "notSubjectToAssessmentDescription": "This report is not subject to assessment under the Low Carbon Fuels Act. No action will be taken on the contents of this report, and the summary result will not impact the organization's compliance unit balance. Please add any specific information to the supplier in the director statement above.",
   "notSubjectToAssessmentHistoryMessage": "This report is not subject to assessment under the Low Carbon Fuels Act. No action will be taken on the contents of this report, and the summary result will not impact the organization's compliance unit balance.",
   "exempted": "Exempted",
   "renewableFuelExemptionDescription": "Recommend assessment with exemption from the renewable fuel requirement.",
   "lowCarbonFuelExemptionDescription": "Recommend assessment with exemption from the low carbon fuel requirement.",
-  "assignAnalyst": "Assign Analyst",
+  "assignAnalyst": "Assign analyst",
   "unassign": "Unassign",
   "reportOpenings": {
     "title": "Report openings",

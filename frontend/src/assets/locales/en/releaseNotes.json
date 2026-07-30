@@ -1,5 +1,5 @@
 {
-  "pageTitle": "Release Notes",
+  "pageTitle": "Release notes",
   "pageSubtitle": "Track new features, improvements, and fixes to the Low Carbon Fuel Standard portal.",
   "loadError": "Unable to load release notes. Please try refreshing the page.",
   "noReleases": "No release notes are available yet.",
@@ -32,9 +32,9 @@
   "resetError": "Unable to reset this release note. Please try again.",
   "categories": {
     "features": "Features",
-    "fixes": "Bug Fixes",
+    "fixes": "Bug fixes",
     "security": "Security",
-    "breaking": "Breaking Changes",
+    "breaking": "Breaking changes",
     "dependencies": "Dependencies",
     "other": "Other"
   }
