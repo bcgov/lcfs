@@ -65,7 +65,10 @@ export const buildCIWorkflowSteps = (
   const isApproved = status === 'Completed'
   const isWithdrawn = status === 'Withdrawn'
   const risk = ciApplication.preliminaryRiskAssessment
-  const showVerification2 = risk === 'High'
+  // Medium and High risk applications both go through Verification 2; only Low
+  // risk completes after Verification 1. Legacy rows may store 'Moderate'
+  // instead of 'Medium' (#4741).
+  const showVerification2 = ['Medium', 'Moderate', 'High'].includes(risk)
   const recommendationComplete = Boolean(ciApplication.recommendationDate)
   const targetDate = ciApplication.proposedFuelCodeEffectiveDate
   const supplierRequestDate = getSupplierRequestDate(ciApplication)
