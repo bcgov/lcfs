@@ -184,6 +184,10 @@
     "title": "Supply History",
     "filterByYear": "Filter by year",
     "allYears": "All years",
+    "fromYear": "From year",
+    "toYear": "to",
+    "showOrganization": "Show organization:",
+    "selectOrganization": "Select organization",
     "noDataFound": "No fuel supply data found",
     "columns": {
       "year": "Year",
