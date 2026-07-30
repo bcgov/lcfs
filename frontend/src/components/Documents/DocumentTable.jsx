@@ -104,7 +104,7 @@ function DocumentTable({ parentType, parentID }) {
     e.stopPropagation()
     setIsDragActive(false)
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileUpload(e.dataTransfer.files[0])
+      handleFiles(e.dataTransfer.files)
       e.dataTransfer.clearData()
     }
   }
@@ -114,22 +114,32 @@ function DocumentTable({ parentType, parentID }) {
   }
 
   const handleFileChange = (e) => {
-    const files = e.target.files
-    if (!files || files.length === 0) {
-      return
-    }
-    handleFileUpload(files[0])
+    handleFiles(e.target.files)
+    // Reset the input so selecting the same file(s) again still fires onChange.
+    e.target.value = ''
   }
 
-  const handleFileUpload = async (file) => {
+  // Upload every selected/dropped file. Validation and upload progress are
+  // applied to each file independently so a range/multi-select uploads them
+  // all in a single action (#4739). Single-file selection is the N=1 case.
+  const handleFiles = (fileList) => {
+    const selected = Array.from(fileList || [])
+    if (selected.length === 0) {
+      return
+    }
+    // Clear any existing error message before processing a new batch.
+    setErrorMessage(null)
+    selected.forEach((file, index) => handleFileUpload(file, index))
+  }
+
+  const handleFileUpload = async (file, index = 0) => {
     if (!file) {
       return
     }
 
-    // Clear any existing error message
-    setErrorMessage(null)
-
-    const fileId = Date.now()
+    // Unique placeholder id so multiple files selected in the same tick do not
+    // collide on their React key or optimistic row.
+    const fileId = `${Date.now()}-${index}-${file.name}`
 
     const baseDocument = {
       documentId: fileId,
@@ -146,12 +156,13 @@ function DocumentTable({ parentType, parentID }) {
       COMPLIANCE_REPORT_FILE_TYPES
     )
     if (!validation.isValid) {
-      // Show error alert with file name and allowed formats
+      // Show error alert with file name and allowed formats. Functional updates
+      // keep every file's row when several are processed in the same batch.
       setErrorMessage(
         `Upload failed for "${file.name}": ${validation.errorMessage}`
       )
-      setFiles([
-        ...files,
+      setFiles((prev) => [
+        ...prev,
         {
           ...baseDocument,
           error: true,
@@ -162,8 +173,8 @@ function DocumentTable({ parentType, parentID }) {
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      setFiles([
-        ...files,
+      setFiles((prev) => [
+        ...prev,
         {
           ...baseDocument,
           oversize: true
@@ -172,8 +183,8 @@ function DocumentTable({ parentType, parentID }) {
       return
     }
 
-    setFiles([
-      ...files,
+    setFiles((prev) => [
+      ...prev,
       {
         ...baseDocument,
         scanning: true
@@ -183,13 +194,15 @@ function DocumentTable({ parentType, parentID }) {
     uploadFile(file, {
       onError: (error) => {
         if (error.response?.status === 422) {
-          setFiles([
-            ...files,
-            {
-              ...baseDocument,
-              virus: true
-            }
-          ])
+          // Transition this file's own row from scanning to virus-detected,
+          // matched by its placeholder id so sibling uploads are untouched.
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.documentId === fileId
+                ? { ...f, scanning: false, virus: true }
+                : f
+            )
+          )
         } else {
           console.error('Error uploading file:', error)
         }
@@ -236,6 +249,7 @@ function DocumentTable({ parentType, parentID }) {
       <input
         id="file"
         type="file"
+        multiple
         data-test="file-input"
         ref={fileInputRef}
         style={{ display: 'none' }}

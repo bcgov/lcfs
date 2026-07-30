@@ -46,7 +46,6 @@ vi.mock('../routes', () => ({
       VIEW: '/organizations/:orgID',
       USERS: '/organizations/:orgID/users',
       CREDIT_LEDGER: '/organizations/:orgID/credit-ledger',
-      COMPANY_OVERVIEW: '/organizations/:orgID/company-overview',
       PENALTY_LOG: '/organizations/:orgID/penalty-log',
       PENALTY_LOG_MANAGE: '/organizations/:orgID/penalty-log/manage',
       SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
@@ -68,7 +67,7 @@ vi.mock('../routes', () => ({
 describe('organizationRoutes', () => {
   it('should export an array of route configurations', () => {
     expect(Array.isArray(organizationRoutes)).toBe(true)
-    expect(organizationRoutes.length).toBe(19)
+    expect(organizationRoutes.length).toBe(18)
   })
 
   it('should have all expected route paths', () => {
@@ -78,7 +77,6 @@ describe('organizationRoutes', () => {
       '/organizations/:orgID',
       '/organizations/:orgID/users',
       '/organizations/:orgID/credit-ledger',
-      '/organizations/:orgID/company-overview',
       '/organizations/:orgID/penalty-log',
       '/organizations/:orgID/penalty-log/manage',
       '/organizations/:orgID/supply-history',
@@ -106,7 +104,7 @@ describe('organizationRoutes', () => {
       const idirRoutes = organizationRoutes.filter((route) =>
         route.path.startsWith('/organizations')
       )
-      expect(idirRoutes.length).toBe(14)
+      expect(idirRoutes.length).toBe(13)
 
       const expectedIdirPaths = [
         '/organizations',
@@ -114,7 +112,6 @@ describe('organizationRoutes', () => {
         '/organizations/:orgID',
         '/organizations/:orgID/users',
         '/organizations/:orgID/credit-ledger',
-        '/organizations/:orgID/company-overview',
         '/organizations/:orgID/penalty-log',
         '/organizations/:orgID/penalty-log/manage',
         '/organizations/:orgID/supply-history',
@@ -425,18 +422,6 @@ describe('Route Handle Properties', () => {
       )
 
       expect(result.type.name).toBe('OrganizationUsers')
-    })
-
-    it('should render CompanyOverview for company-overview path', () => {
-      const result = orgDashboardRenderers(
-        true, // isGovernment
-        '/organizations/123/company-overview',
-        mockOrgID,
-        false,
-        mockNavigate
-      )
-
-      expect(result.type.name).toBe('CompanyOverview')
     })
 
     it('should render PenaltyLog for penalty-log path', () => {

@@ -299,5 +299,10 @@ export const apiRoutes = {
   loginBgImageActive: '/login-bg-images/active',
   loginBgImage: '/login-bg-images/:imageId',
   loginBgImageActivate: '/login-bg-images/:imageId/activate',
-  loginBgImageStream: '/login-bg-images/:imageId/stream'
+  loginBgImageStream: '/login-bg-images/:imageId/stream',
+
+  // release notes (System Admin overrides on top of auto-generated content)
+  releaseNoteOverrides: '/release-notes/overrides',
+  updateReleaseNote: '/release-notes/:version',
+  resetReleaseNote: '/release-notes/:version'
 }
