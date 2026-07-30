@@ -38,6 +38,20 @@ vi.mock('@/services/useApiService', () => ({
   useApiService: () => ({ download: mockDownload, get: vi.fn(), post: vi.fn() })
 }))
 
+// The shared upload modal is exercised by its own DocumentTable tests; stub it
+// here so we can assert Step 3 opens it (rather than the OS file browser).
+vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
+  __esModule: true,
+  default: ({ open, parentType, parentID }) =>
+    open ? (
+      <div
+        data-test="ci-step3-upload-dialog"
+        data-parent-type={parentType}
+        data-parent-id={String(parentID)}
+      />
+    ) : null
+}))
+
 const baseCi = { ciApplicationId: 99, supportingDocumentOther: '' }
 
 describe('DocumentsModellingStep (simplified upload — #4669)', () => {
@@ -124,32 +138,37 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     expect(onSave.mock.calls[0][0].supportingDocumentOther).toBe('CCS notes')
   })
 
-  it('uploads a chosen file under the generic supporting category', async () => {
+  it('opens the shared upload modal instead of the OS file browser (#4740)', () => {
     render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
       wrapper
     })
-    const file = new File(['hi'], 'tech.pdf', { type: 'application/pdf' })
-    fireEvent.change(screen.getByTestId('ci-step3-supporting-input'), {
-      target: { files: [file] }
-    })
-    await waitFor(() => expect(mockUpload).toHaveBeenCalledTimes(1))
-    expect(mockUpload.mock.calls[0][0].documentCategory).toBe('supporting')
+    // The modal is not open (and the browser is not triggered) until the user
+    // clicks the upload control.
+    expect(
+      screen.queryByTestId('ci-step3-upload-dialog')
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('ci-step3-upload-supporting'))
+
+    const dialog = screen.getByTestId('ci-step3-upload-dialog')
+    expect(dialog).toBeInTheDocument()
+    // Wired to the common component for this CI application.
+    expect(dialog).toHaveAttribute('data-parent-type', 'ci_application')
+    expect(dialog).toHaveAttribute('data-parent-id', '99')
   })
 
-  it('rejects an unsupported file type without calling upload', async () => {
-    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
-      wrapper
-    })
-    const file = new File(['hi'], 'bad.exe', {
-      type: 'application/x-msdownload'
-    })
-    fireEvent.change(screen.getByTestId('ci-step3-supporting-input'), {
-      target: { files: [file] }
-    })
-    // Shared validateFile utility surfaces "File type ... is not allowed".
-    await waitFor(() =>
-      expect(screen.getByText(/is not allowed/i)).toBeInTheDocument()
+  it('does not open the upload modal while the upload control is disabled (readOnly)', () => {
+    render(
+      <DocumentsModellingStep
+        ciApplication={baseCi}
+        onSave={vi.fn()}
+        readOnly
+      />,
+      { wrapper }
     )
-    expect(mockUpload).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByTestId('ci-step3-upload-supporting'))
+    expect(
+      screen.queryByTestId('ci-step3-upload-dialog')
+    ).not.toBeInTheDocument()
   })
 })

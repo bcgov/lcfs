@@ -3,209 +3,105 @@ import {
   render,
   screen,
   fireEvent,
-  waitFor
+  within
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CreditLedger } from '../CreditLedger'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 
-// Mock translation
+import { CreditLedger } from '../CreditLedger'
+
+// t returns the key, interpolating year/type so period + assessed labels are
+// assertable.
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: vi.fn((key) => key) })
+  useTranslation: () => ({
+    t: (key, opts) => {
+      if (opts && opts.year != null) return `${key}|${opts.year}`
+      if (opts && opts.type != null) return `${key}|${opts.type}`
+      return key
+    }
+  })
 }))
 
-// Mock formatters
 vi.mock('@/utils/formatters', () => ({
-  timezoneFormatter: vi.fn((value) => value),
-  numberFormatter: vi.fn((value) => value),
-  spacesFormatter: vi.fn(({ value }) =>
-    value ? value.replace(/([a-z])([A-Z])/g, '$1 $2') : value
-  )
+  dateFormatter: ({ value }) => value
 }))
 
-// Mock components
-vi.mock('@/components/BCBox', () => ({
-  default: ({ children, alignItems, ...props }) => {
-    const domProps = {}
-    // Only pass through standard DOM attributes
-    Object.keys(props).forEach((key) => {
-      if (
-        key.startsWith('data-') ||
-        key.startsWith('aria-') ||
-        ['id', 'className', 'style'].includes(key)
-      ) {
-        domProps[key] = props[key]
-      }
-    })
-    return <div {...domProps}>{children}</div>
-  }
-}))
-
-vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => {
-    const domProps = {}
-    // Only pass through standard DOM attributes
-    Object.keys(props).forEach((key) => {
-      if (
-        key.startsWith('data-') ||
-        key.startsWith('aria-') ||
-        ['id', 'className', 'style'].includes(key)
-      ) {
-        domProps[key] = props[key]
-      }
-    })
-    return <div {...domProps}>{children}</div>
-  }
-}))
-
-vi.mock('@/components/DownloadButton', () => ({
-  DownloadButton: ({
-    onDownload,
-    label,
-    downloadLabel,
-    isDownloading,
-    dataTest,
-    ...props
-  }) => {
-    const domProps = {}
-    // Only pass through standard DOM attributes
-    Object.keys(props).forEach((key) => {
-      if (
-        key.startsWith('data-') ||
-        key.startsWith('aria-') ||
-        ['id', 'className', 'style'].includes(key)
-      ) {
-        domProps[key] = props[key]
-      }
-    })
-    if (dataTest) domProps['data-test'] = dataTest
-    return (
-      <button onClick={onDownload} disabled={isDownloading} {...domProps}>
-        {downloadLabel || label}
-      </button>
-    )
-  }
-}))
-
-let lastGridProps = null
-
-vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
-  const React = require('react')
-  return {
-    BCGridViewer: React.forwardRef(
-      (
-        {
-          queryData,
-          onPaginationChange,
-          getRowId,
-          gridKey,
-          dataKey,
-          columnDefs,
-          suppressPagination,
-          paginationOptions,
-          defaultColDef,
-          autoSizeStrategy,
-          ...props
-        },
-        ref
-      ) => {
-        lastGridProps = {
-          queryData,
-          onPaginationChange,
-          getRowId,
-          gridKey,
-          dataKey,
-          columnDefs,
-          suppressPagination,
-          paginationOptions,
-          defaultColDef,
-          autoSizeStrategy
-        }
-        const domProps = {}
-        // Only pass through standard DOM attributes
-        Object.keys(props).forEach((key) => {
-          if (
-            key.startsWith('data-') ||
-            key.startsWith('aria-') ||
-            ['id', 'className', 'style'].includes(key)
-          ) {
-            domProps[key] = props[key]
-          }
-        })
-        return (
-          <div ref={ref} data-test="credit-ledger-grid" {...domProps}>
-            Mock Grid with {queryData?.data?.ledger?.length || 0} items
-            {queryData?.data?.ledger?.map((item, index) => (
-              <div
-                key={getRowId ? getRowId({ data: item }) : index}
-                data-test={`grid-row-${index}`}
-              >
-                {item.compliancePeriod}-{item.complianceUnits}-
-                {item.transactionType}
-              </div>
-            ))}
-            <button
-              data-test="pagination-change"
-              onClick={() =>
-                onPaginationChange && onPaginationChange({ page: 2, size: 20 })
-              }
-            >
-              Change Page
-            </button>
-          </div>
-        )
-      }
-    )
-  }
-})
-
-// Mock hooks
 vi.mock('@/hooks/useCreditLedger', () => ({
-  useCreditLedger: vi.fn(),
+  usePeriodCreditLedger: vi.fn(),
   useDownloadCreditLedger: vi.fn(),
   useCreditLedgerYears: vi.fn()
-}))
-
-vi.mock('@/hooks/useOrganization', () => ({
-  useOrganizationBalance: vi.fn(),
-  useCurrentOrgBalance: vi.fn()
 }))
 
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn()
 }))
 
-// Import mocked functions after mocking
 import {
-  useCreditLedger,
+  usePeriodCreditLedger,
   useDownloadCreditLedger,
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
-import {
-  useOrganizationBalance,
-  useCurrentOrgBalance
-} from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useTranslation } from 'react-i18next'
 
-const mockUseCreditLedger = vi.mocked(useCreditLedger)
-const mockUseDownloadCreditLedger = vi.mocked(useDownloadCreditLedger)
-const mockUseCreditLedgerYears = vi.mocked(useCreditLedgerYears)
-const mockUseOrganizationBalance = vi.mocked(useOrganizationBalance)
-const mockUseCurrentOrgBalance = vi.mocked(useCurrentOrgBalance)
-const mockUseCurrentUser = vi.mocked(useCurrentUser)
-const mockUseTranslation = vi.mocked(useTranslation)
+const mockPeriod = vi.mocked(usePeriodCreditLedger)
+const mockYears = vi.mocked(useCreditLedgerYears)
+const mockDownload = vi.mocked(useDownloadCreditLedger)
+const mockCurrentUser = vi.mocked(useCurrentUser)
+
+const PERIOD_PAYLOAD = {
+  organizationId: 999,
+  compliancePeriod: 2024,
+  includePending: false,
+  transactions: [
+    {
+      transactionId: 43,
+      transactionType: 'InitiativeAgreement',
+      description: null,
+      effectiveDate: '2024-04-03',
+      unitsIn: 10000,
+      unitsOut: 0,
+      runningBalance: 10000,
+      status: 'Approved',
+      isPending: false
+    },
+    {
+      transactionId: 444,
+      transactionType: 'Transfer',
+      description: null,
+      effectiveDate: '2025-07-08',
+      unitsIn: 0,
+      unitsOut: 1500,
+      runningBalance: -1500,
+      status: 'Recorded',
+      isPending: false
+    }
+  ],
+  totalsByType: [
+    { transactionType: 'Transfer', unitsIn: 0, unitsOut: 1500, net: -1500 },
+    {
+      transactionType: 'InitiativeAgreement',
+      unitsIn: 10000,
+      unitsOut: 0,
+      net: 10000
+    }
+  ],
+  totalUnitsIn: 10000,
+  totalUnitsOut: 1500,
+  totalNet: 8500,
+  assessedBalance: {
+    previousYear: 2023,
+    previousBalance: 1000,
+    currentYear: 2024,
+    currentBalance: 1850
+  }
+}
 
 const renderComponent = (props = {}) => {
   const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false }
-    }
+    defaultOptions: { queries: { retry: false } }
   })
-
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
@@ -215,321 +111,112 @@ const renderComponent = (props = {}) => {
   )
 }
 
-describe('CreditLedger Component Tests', () => {
+describe('CreditLedger (compliance-period ledger #4714)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    lastGridProps = null
-
-    // Default mock implementations
-    mockUseCurrentUser.mockReturnValue({
+    mockCurrentUser.mockReturnValue({
       data: { organization: { organizationId: 999 } }
     })
-
-    mockUseCreditLedgerYears.mockReturnValue({
-      data: ['2024', '2023', '2022'],
-      isLoading: false
+    mockYears.mockReturnValue({ data: ['2024', '2023', '2022'] })
+    mockPeriod.mockReturnValue({
+      data: PERIOD_PAYLOAD,
+      isLoading: false,
+      isError: false
     })
+    mockDownload.mockReturnValue(vi.fn())
+  })
+  afterEach(cleanup)
 
-    mockUseCreditLedger.mockReturnValue({
+  it('defaults to the most recent available compliance period', () => {
+    renderComponent({ organizationId: 999 })
+    expect(screen.getByTestId('ledger-current-period')).toHaveTextContent(
+      '2024'
+    )
+    expect(mockPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({ complianceYear: 2024, includePending: false })
+    )
+  })
+
+  it('navigates to the previous and next compliance period', () => {
+    renderComponent({ organizationId: 999 })
+
+    fireEvent.click(screen.getByTestId('ledger-prev-period'))
+    expect(screen.getByTestId('ledger-current-period')).toHaveTextContent(
+      '2023'
+    )
+    expect(mockPeriod).toHaveBeenLastCalledWith(
+      expect.objectContaining({ complianceYear: 2023 })
+    )
+
+    fireEvent.click(screen.getByTestId('ledger-next-period'))
+    expect(screen.getByTestId('ledger-current-period')).toHaveTextContent(
+      '2024'
+    )
+  })
+
+  it('renders transaction rows with units and a running balance', () => {
+    renderComponent({ organizationId: 999 })
+    const balances = screen.getAllByTestId('ledger-running-balance')
+    expect(balances).toHaveLength(2)
+    expect(balances[0]).toHaveTextContent('10,000')
+    // Negative running balance rendered (styling handled by NumberCell)
+    expect(balances[1]).toHaveTextContent('-1,500')
+  })
+
+  it('switches to grouped totals view with per-type and grand totals', () => {
+    renderComponent({ organizationId: 999 })
+    expect(screen.queryByTestId('ledger-grand-total')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('toggle-show-totals'))
+
+    const typeTotals = screen.getAllByTestId('ledger-type-total')
+    expect(typeTotals).toHaveLength(2)
+    const grand = screen.getByTestId('ledger-grand-total')
+    expect(within(grand).getByText('10,000')).toBeInTheDocument() // total in
+    expect(within(grand).getByText('1,500')).toBeInTheDocument() // total out
+    expect(within(grand).getByText('8,500')).toBeInTheDocument() // net
+  })
+
+  it('requests pending transactions when the toggle is on', () => {
+    renderComponent({ organizationId: 999 })
+    fireEvent.click(screen.getByTestId('toggle-show-pending'))
+    expect(mockPeriod).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includePending: true })
+    )
+  })
+
+  it('renders the assessed-balance section for previous and current year', () => {
+    renderComponent({ organizationId: 999 })
+    const section = screen.getByTestId('ledger-assessed-balance')
+    expect(within(section).getByTestId('assessed-previous')).toHaveTextContent(
+      '1,000'
+    )
+    expect(within(section).getByTestId('assessed-current')).toHaveTextContent(
+      '1,850'
+    )
+  })
+
+  it('shows an empty state when the period has no transactions', () => {
+    mockPeriod.mockReturnValue({
       data: {
-        ledger: [],
-        pagination: { page: 1, size: 10, total: 0, totalPages: 0 }
+        ...PERIOD_PAYLOAD,
+        transactions: [],
+        totalsByType: [],
+        totalUnitsIn: 0,
+        totalUnitsOut: 0,
+        totalNet: 0
       },
-      isLoading: false
+      isLoading: false,
+      isError: false
     })
-
-    mockUseOrganizationBalance.mockReturnValue({
-      data: { totalBalance: 5000 }
-    })
-
-    mockUseCurrentOrgBalance.mockReturnValue({
-      data: { totalBalance: 5000 }
-    })
-
-    mockUseDownloadCreditLedger.mockReturnValue(vi.fn())
+    renderComponent({ organizationId: 999 })
+    expect(screen.getByTestId('ledger-empty')).toBeInTheDocument()
   })
 
-  afterEach(() => {
-    cleanup()
-  })
-
-  describe('Basic Rendering', () => {
-    it('renders with organizationId prop', () => {
-      renderComponent({ organizationId: 123 })
-
-      expect(screen.getByText('org:downloading')).toBeInTheDocument()
-      expect(screen.getByText('5,000')).toBeInTheDocument()
-    })
-
-    it('uses currentUser organization when no organizationId prop', () => {
-      renderComponent()
-
-      expect(mockUseCreditLedger).toHaveBeenCalledWith(
-        expect.objectContaining({ orgId: 999 })
-      )
-    })
-
-    it('handles missing currentUser gracefully', () => {
-      mockUseCurrentUser.mockReturnValue({ data: null })
-
-      renderComponent()
-
-      expect(mockUseCreditLedger).toHaveBeenCalledWith(
-        expect.objectContaining({ orgId: undefined })
-      )
-    })
-
-    it('renders years dropdown with sorted years', () => {
-      renderComponent()
-
-      const select = screen.getByRole('combobox')
-      expect(select).toBeInTheDocument()
-    })
-
-    it('shows loading state correctly', () => {
-      mockUseCreditLedger.mockReturnValue({
-        data: { ledger: [], pagination: {} },
-        isLoading: true
-      })
-
-      renderComponent()
-
-      expect(screen.getByText('Mock Grid with 0 items')).toBeInTheDocument()
-    })
-  })
-
-  describe('getAvailableBalanceForPeriod Function', () => {
-    it('returns organization balance when no period selected', () => {
-      renderComponent()
-
-      expect(screen.getByText('5,000')).toBeInTheDocument()
-    })
-
-    it('returns 0 when no period selected and balance is negative', () => {
-      mockUseOrganizationBalance.mockReturnValue({
-        data: { totalBalance: -1000 }
-      })
-      mockUseCurrentOrgBalance.mockReturnValue({
-        data: { totalBalance: -1000 }
-      })
-
-      renderComponent()
-
-      expect(screen.getByText('0')).toBeInTheDocument()
-    })
-
-    it('returns 0 when no period selected and balance is undefined', () => {
-      mockUseOrganizationBalance.mockReturnValue({
-        data: null
-      })
-      mockUseCurrentOrgBalance.mockReturnValue({
-        data: null
-      })
-
-      renderComponent()
-
-      expect(screen.getByText('0')).toBeInTheDocument()
-    })
-  })
-
-  describe('Event Handlers', () => {
-    it('handles pagination change correctly', () => {
-      renderComponent()
-
-      const paginationButton = screen.getByTestId('pagination-change')
-      fireEvent.click(paginationButton)
-
-      // Verify button interaction works
-      expect(paginationButton).toBeInTheDocument()
-    })
-
-    it('handles download button click', () => {
-      const mockDownload = vi.fn()
-      mockUseDownloadCreditLedger.mockReturnValue(mockDownload)
-
-      renderComponent({ organizationId: 123 })
-
-      const downloadButton = screen.getByText('org:downloading')
-      fireEvent.click(downloadButton)
-
-      expect(mockDownload).toHaveBeenCalledWith({
-        orgId: 123,
-        complianceYear: undefined
-      })
-    })
-  })
-
-  describe('Data Processing', () => {
-    it('formats compliance report transaction type with description', () => {
-      const ledgerData = [
-        {
-          compliancePeriod: '2023',
-          availableBalance: '1000',
-          complianceUnits: '500',
-          transactionType: 'ComplianceReport',
-          description: 'Supplemental 2',
-          updateDate: '2023-01-01'
-        }
-      ]
-
-      mockUseCreditLedger.mockReturnValue({
-        data: {
-          ledger: ledgerData,
-          pagination: { page: 1, size: 10, total: 1, totalPages: 1 }
-        },
-        isLoading: false
-      })
-
-      renderComponent()
-
-      const transactionTypeCol = lastGridProps.columnDefs.find(
-        (col) => col.field === 'transactionType'
-      )
-
-      const formatted = transactionTypeCol.valueFormatter({
-        data: ledgerData[0]
-      })
-
-      expect(formatted).toBe('Compliance Report – Supplemental 2')
-    })
-
-    it('transforms ledger data correctly', () => {
-      const ledgerData = [
-        {
-          compliancePeriod: '2023',
-          availableBalance: '1000',
-          complianceUnits: '500',
-          transactionType: 'Credit',
-          updateDate: '2023-01-01'
-        }
-      ]
-
-      mockUseCreditLedger.mockReturnValue({
-        data: {
-          ledger: ledgerData,
-          pagination: { page: 1, size: 10, total: 1, totalPages: 1 }
-        },
-        isLoading: false
-      })
-
-      renderComponent()
-
-      expect(screen.getByText('Mock Grid with 1 items')).toBeInTheDocument()
-      expect(screen.getByTestId('grid-row-0')).toHaveTextContent(
-        '2023-500-Credit'
-      )
-    })
-
-    it('handles empty ledger data', () => {
-      mockUseCreditLedger.mockReturnValue({
-        data: {
-          ledger: [],
-          pagination: { page: 1, size: 10, total: 0, totalPages: 0 }
-        },
-        isLoading: false
-      })
-
-      renderComponent()
-
-      expect(screen.getByText('Mock Grid with 0 items')).toBeInTheDocument()
-    })
-
-    it('generates row IDs correctly', () => {
-      const ledgerData = [
-        {
-          compliancePeriod: '2023',
-          availableBalance: '1000',
-          complianceUnits: '500',
-          transactionType: 'Credit',
-          updateDate: '2023-01-01T00:00:00'
-        },
-        {
-          compliancePeriod: '2023',
-          availableBalance: '800',
-          complianceUnits: '200',
-          transactionType: 'Transfer',
-          updateDate: '2023-01-02T00:00:00'
-        }
-      ]
-
-      mockUseCreditLedger.mockReturnValue({
-        data: {
-          ledger: ledgerData,
-          pagination: { page: 1, size: 10, total: 2, totalPages: 1 }
-        },
-        isLoading: false
-      })
-
-      renderComponent()
-
-      // Verify both rows are rendered with unique keys
-      expect(screen.getByTestId('grid-row-0')).toBeInTheDocument()
-      expect(screen.getByTestId('grid-row-1')).toBeInTheDocument()
-    })
-
-    it('sorts available years in descending order', () => {
-      mockUseCreditLedgerYears.mockReturnValue({
-        data: ['2022', '2024', '2023'],
-        isLoading: false
-      })
-
-      renderComponent()
-
-      // The component should internally sort these, but we can't easily test the dropdown order
-      // So we verify the component renders without errors
-      expect(screen.getByRole('combobox')).toBeInTheDocument()
-    })
-
-    it('handles missing pagination data', () => {
-      mockUseCreditLedger.mockReturnValue({
-        data: {
-          ledger: [],
-          pagination: null
-        },
-        isLoading: false
-      })
-
-      renderComponent()
-
-      expect(screen.getByText('Mock Grid with 0 items')).toBeInTheDocument()
-    })
-  })
-
-  describe('Conditional Rendering', () => {
-    it('shows different balance text based on selected period', () => {
-      renderComponent()
-
-      // Initially shows "Available credit balance" - check for partial text match
-      expect(screen.getByText(/Available credit balance/)).toBeInTheDocument()
-
-      // Component renders without error
-      expect(screen.getByRole('combobox')).toBeInTheDocument()
-    })
-
-    it('does not render years when loading', () => {
-      mockUseCreditLedgerYears.mockReturnValue({
-        data: [],
-        isLoading: true
-      })
-
-      renderComponent()
-
-      // Should still have the dropdown but without year options
-      expect(screen.getByRole('combobox')).toBeInTheDocument()
-    })
-
-    it('renders footnote text', () => {
-      renderComponent()
-
-      // Component renders footnote without error
-      expect(screen.getByRole('combobox')).toBeInTheDocument()
-    })
-
-    it('renders column headers with translations', () => {
-      renderComponent()
-
-      // Component renders grid with column headers without error
-      expect(screen.getByTestId('credit-ledger-grid')).toBeInTheDocument()
-    })
+  it('falls back to the current user org when no organizationId prop is given', () => {
+    renderComponent()
+    expect(mockPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({ orgId: 999 })
+    )
   })
 })

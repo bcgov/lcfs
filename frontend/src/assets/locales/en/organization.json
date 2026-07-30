@@ -61,7 +61,6 @@
     "dashboard": "Dashboard",
     "users": "Users",
     "creditLedger": "Credit ledger",
-    "companyOverview": "Company overview",
     "penaltyLog": "Penalty log",
     "supplyHistory": "Supply history",
     "allocationAgreements": "Allocation agreements",
@@ -70,8 +69,10 @@
   },
   "sections": {
     "companyOverview": {
-      "title": "Company Overview",
-      "description": "This section will contain company overview information. Implementation pending."
+      "title": "Company overview",
+      "description": "Internal notes about this organization. Comments are searchable in the Comment log.",
+      "empty": "No company overview comments yet.",
+      "addTitle": "Add a company overview comment"
     },
     "penaltyLog": {
       "title": "Penalty log",
@@ -98,17 +99,6 @@
       "description": "This section will contain compliance tracking information. Implementation pending."
     }
   },
-  "companyOverviewTitle": "Company overview",
-  "companyDetailsLabel": "Company details",
-  "companyDetailsPlaceholder": "Enter company details here...",
-  "companyRepresentationAgreementsLabel": "Company representation agreements or affiliated organizations",
-  "companyRepresentationAgreementsPlaceholder": "Note the applicable year and enter company representation agreements or affiliated organizations here...",
-  "companyActingAsAggregatorLabel": "Acting as an aggregator",
-  "companyActingAsAggregatorPlaceholder": "Note the start year and end year, if applicable, and enter aggregator information here...",
-  "companyAdditionalNotesLabel": "Additional notes",
-  "companyAdditionalNotesPlaceholder": "Enter any additional notes here...",
-  "companyOverviewUpdateSuccess": "Company overview updated successfully",
-  "companyOverviewUpdateError": "Failed to update company overview",
   "noInformationProvided": "No information provided",
   "errorLoadingOrganization": "Error loading organization details",
   "creditLedgerTab": "Credit ledger",
@@ -123,7 +113,23 @@
     "availableBalance": "Available balance",
     "complianceUnits": "Compliance units",
     "transactionType": "Transaction type",
-    "transactionDate": "Transaction date"
+    "transactionDate": "Transaction date",
+    "id": "ID",
+    "effectiveDate": "Effective date",
+    "unitsIn": "Units in",
+    "unitsOut": "Units out",
+    "runningBalance": "{{year}} Running balance",
+    "total": "Total",
+    "showTotals": "Show totals",
+    "showPending": "Show pending transactions",
+    "pending": "Pending",
+    "previousPeriod": "Previous compliance period",
+    "nextPeriod": "Next compliance period",
+    "noTransactions": "No transactions for this compliance period.",
+    "typeTotal": "{{type}} total",
+    "totalInOut": "Total in/out",
+    "assessedBalance": "{{year}} Assessed balance",
+    "errorLoading": "Unable to load the credit ledger for this period."
   },
   "availableCreditBalanceFootnote": "* The Available Compliance Unit Balance is the number of compliance units in an organization's balance that are available for use in achieving compliance within a specific period. It reflects the compliance units the organization had in their balance as of the March 31st reporting deadline. Compliance units generated in future periods cannot be used for prior years, and future debit obligations (such as transfers out or debit obligations from future compliance reports) will be subtracted from available balances in prior years.",
   "toUpdateMsgPrefix": "To update address information, email",
@@ -194,6 +200,10 @@
     "title": "Supply History",
     "filterByYear": "Filter by year",
     "allYears": "All years",
+    "fromYear": "From year",
+    "toYear": "to",
+    "showOrganization": "Show organization:",
+    "selectOrganization": "Select organization",
     "noDataFound": "No fuel supply data found",
     "columns": {
       "year": "Year",

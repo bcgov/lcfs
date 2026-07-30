@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
+from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 
 from lcfs.db.base import ActionTypeEnum
@@ -121,6 +122,62 @@ async def test_complete_verification_2_requires_valid_priority_score(
 
     assert exc.value.status_code == 400
     assert "Priority score is required" in exc.value.detail
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("risk", ["Medium", "High"])
+async def test_complete_verification_2_allowed_for_medium_and_high(
+    service, repo, mock_user, risk
+):
+    # Verification 2 is available to Medium as well as High risk (#4741).
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = risk
+    ci.priority_score = 10
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    result = await service.complete_verification_2(
+        ci, CIRiskAssessmentEnum(risk), 25, mock_user
+    )
+
+    assert isinstance(result, CIApplicationSchema)
+    assert ci.verification_2_date is not None
+    assert ci.verification_2_risk_assessment == risk
+    assert ci.verification_2_priority_score == 25
+
+
+@pytest.mark.anyio
+async def test_complete_verification_2_rejected_for_low_risk(service, mock_user):
+    # Low risk still has no Verification 2 step (#4741).
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.Low.value
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.complete_verification_2(
+            ci, CIRiskAssessmentEnum.Low, 25, mock_user
+        )
+
+    assert exc.value.status_code == 400
+    assert "Medium and High" in exc.value.detail
+
+
+@pytest.mark.anyio
+async def test_complete_verification_2_requires_verification_1_for_medium(
+    service, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.Medium.value
+    ci.verification_1_date = None
+
+    with pytest.raises(HTTPException) as exc:
+        await service.complete_verification_2(
+            ci, CIRiskAssessmentEnum.Medium, 25, mock_user
+        )
+
+    assert exc.value.status_code == 400
+    assert "Verification 1 must be completed first" in exc.value.detail
 
 
 @pytest.fixture
@@ -246,7 +303,7 @@ def test_step1_schema_requires_non_empty_location_fields(field_name, value):
     )
     base[field_name] = value
 
-    with pytest.raises(ValidationError):
+    with pytest.raises((ValidationError, RequestValidationError)):
         CIApplicationStep1Schema(**base)
 
 
@@ -504,10 +561,10 @@ def _new_pathway_input(**overrides):
         fuel_type_id=1,
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode="Truck",
+        feedstock_transport_mode=["Truck"],
         feedstock_transport_distance=100,
         coproducts=None,
-        finished_fuel_transport_mode="Rail",
+        finished_fuel_transport_mode=["Rail"],
         finished_fuel_transport_distance=200,
     )
     base.update(overrides)
@@ -560,7 +617,24 @@ def _stub_step2_lookups(repo, *, with_fuel_code=False):
     )
 
 
-def test_pathway_change_logs_from_versions_builds_field_diffs():
+def test_pathway_change_logs_from_versions_returns_empty_when_no_supplemental_edit():
+    create_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    versions = [
+        _existing_pathway(
+            pathway_id=101,
+            ci_application_id=10,
+            group_uuid="pathway-group-1",
+            version=0,
+            action_type=ActionTypeEnum.CREATE,
+            create_date=create_date,
+            create_user="creator",
+        ),
+    ]
+
+    assert _pathway_change_logs_from_versions(versions, original_group_uuids=None) == []
+
+
+def test_pathway_change_logs_from_versions_skips_original_create_logs_update_delete():
     create_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
     update_date = datetime(2026, 2, 1, tzinfo=timezone.utc)
     delete_date = datetime(2026, 3, 1, tzinfo=timezone.utc)
@@ -602,25 +676,16 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
         ),
     ]
 
-    logs = _pathway_change_logs_from_versions(versions)
+    logs = _pathway_change_logs_from_versions(
+        versions, original_group_uuids={"pathway-group-1"}
+    )
 
     assert [log.action_type for log in logs] == [
-        ActionTypeEnum.CREATE.value,
         ActionTypeEnum.UPDATE.value,
         ActionTypeEnum.DELETE.value,
     ]
 
-    create_log = logs[0]
-    assert create_log.changed_at == create_date
-    assert create_log.changed_by == "creator"
-    assert create_log.before_snapshot is None
-    assert create_log.after_snapshot["feedstock"] == "Canola"
-    assert create_log.changed_fields["feedstock"] == {
-        "old": None,
-        "new": "Canola",
-    }
-
-    update_log = logs[1]
+    update_log = logs[0]
     assert update_log.changed_at == update_date
     assert update_log.changed_by == "editor"
     assert update_log.before_snapshot["feedstock"] == "Canola"
@@ -630,7 +695,7 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
         "feedstock": {"old": "Canola", "new": "Camelina"},
     }
 
-    delete_log = logs[2]
+    delete_log = logs[1]
     assert delete_log.changed_at == delete_date
     assert delete_log.changed_by == "deleter"
     assert delete_log.before_snapshot["feedstock"] == "Camelina"
@@ -643,6 +708,34 @@ def test_pathway_change_logs_from_versions_builds_field_diffs():
         "old": 6.25,
         "new": None,
     }
+
+
+def test_pathway_change_logs_from_versions_shows_supplemental_additions_as_added():
+    add_date = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    versions = [
+        _existing_pathway(
+            pathway_id=201,
+            ci_application_id=10,
+            group_uuid="pathway-group-new",
+            version=0,
+            action_type=ActionTypeEnum.CREATE,
+            create_date=add_date,
+            create_user="supplier",
+        ),
+    ]
+
+    logs = _pathway_change_logs_from_versions(
+        versions, original_group_uuids={"pathway-group-original"}
+    )
+
+    assert [log.action_type for log in logs] == [ActionTypeEnum.CREATE.value]
+
+    create_log = logs[0]
+    assert create_log.changed_at == add_date
+    assert create_log.changed_by == "supplier"
+    assert create_log.before_snapshot is None
+    assert create_log.after_snapshot["feedstock"] == "Canola"
+    assert create_log.changed_fields["feedstock"] == {"old": None, "new": "Canola"}
 
 
 @pytest.mark.anyio
@@ -913,9 +1006,7 @@ async def test_step2_schema_requires_at_least_one_pathway():
 
 @pytest.mark.anyio
 async def test_pathway_input_rejects_inverted_dates():
-    import pydantic
-
-    with pytest.raises(pydantic.ValidationError):
+    with pytest.raises((ValidationError, RequestValidationError)):
         _new_pathway_input(
             operating_data_from=date(2025, 12, 31),
             operating_data_to=date(2025, 1, 1),
@@ -973,11 +1064,46 @@ async def test_update_step3_succeeds_when_documents_missing(service, repo, mock_
 
 
 @pytest.mark.anyio
-async def test_generate_fuel_codes_allows_moderate_after_verification_1(
+async def test_generate_fuel_codes_requires_verification_2_for_medium_risk(
+    service, repo, mock_user
+):
+    # Medium risk now joins High in requiring Verification 2 before fuel codes
+    # can be generated (#4741). Previously Medium completed after Verification 1.
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Medium")
+
+    with pytest.raises(HTTPException) as exc:
+        await service.generate_fuel_codes(ci, mock_user)
+
+    assert exc.value.status_code == 400
+    assert "Required verification" in exc.value.detail
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_allows_medium_after_verification_2(
     service, repo, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _submitted_ci_for_generation("Medium")
+    ci.verification_2_date = datetime(2026, 5, 3, tzinfo=timezone.utc)
+    ci.verification_2_risk_assessment = "Medium"
+    _stub_generation_dependencies(service, repo, ci)
+
+    result = await service.generate_fuel_codes(ci, mock_user)
+
+    assert isinstance(result, CIApplicationSchema)
+    assert len(ci.generated_fuel_code_associations) == 1
+    repo.update.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_allows_low_after_verification_1(
+    service, repo, mock_user
+):
+    # Low risk is explicitly unchanged by #4741: still completes after
+    # Verification 1 with no Verification 2 required.
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
     _stub_generation_dependencies(service, repo, ci)
 
     result = await service.generate_fuel_codes(ci, mock_user)
@@ -1287,10 +1413,9 @@ async def test_step4_schema_requires_all_three_declarations():
 @pytest.mark.anyio
 async def test_step4_schema_requires_consultant_fields_when_consented():
     import pydantic
-
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
 
-    with pytest.raises(pydantic.ValidationError):
+    with pytest.raises((ValidationError, RequestValidationError)):
         CIApplicationStep4Schema(
             declaration_information_true=True,
             declaration_response_8_weeks=True,

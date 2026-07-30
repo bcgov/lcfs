@@ -1,5 +1,5 @@
 import io
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, time
 from math import ceil
 from typing import Optional, List
 
@@ -20,9 +20,81 @@ from lcfs.web.api.base import (
 from .schema import (
     CreditLedgerTxnSchema,
     CreditLedgerListSchema,
+    PeriodLedgerTxnSchema,
+    PeriodLedgerTypeTotalSchema,
+    PeriodLedgerSchema,
+    AssessedBalanceSchema,
 )
 from .repo import CreditLedgerRepository
 from lcfs.db.models.transaction.CreditLedgerView import CreditLedgerView
+
+
+# Statuses that represent a completed (finalized) transaction per type — these
+# are always shown. Mirrors the mv_credit_ledger status gating.
+_COMPLETED_STATUSES = {
+    "Transfer": {"Recorded"},
+    "InitiativeAgreement": {"Approved"},
+    "AdminAdjustment": {"Approved"},
+    "ComplianceReport": {"Assessed", "Reassessed"},
+    "AggregatorIssuance": {"Recorded"},
+    "StandaloneTransaction": {"Recorded"},
+}
+
+# In-flight statuses that reserve units and only appear when "show pending" is
+# on (#4714). Pending compliance reports are not in mv_transaction_aggregate,
+# so they surface only once assessed — consistent with the rest of the system.
+_PENDING_STATUSES = {
+    "Transfer": {"Submitted", "Recommended"},
+    "InitiativeAgreement": {"Recommended"},
+    "AdminAdjustment": {"Recommended"},
+}
+
+# Display order for the Show-totals type groupings (wireframe order); unknown
+# types fall to the end alphabetically.
+_TYPE_DISPLAY_ORDER = {
+    "Transfer": 0,
+    "InitiativeAgreement": 1,
+    "AdminAdjustment": 2,
+    "AggregatorIssuance": 3,
+    "ComplianceReport": 4,
+    "StandaloneTransaction": 5,
+}
+
+
+def _signed_units_for_org(row, organization_id: int) -> int:
+    """Signed compliance units from the organization's perspective: positive =
+    units in, negative = units out."""
+    if row.transaction_type == "Transfer":
+        if row.to_organization_id == organization_id:
+            return int(row.quantity or 0)
+        if row.from_organization_id == organization_id:
+            return -int(row.quantity or 0)
+        return 0
+    # Non-transfer types are issued toward to_organization_id; quantity is
+    # already signed (a compliance report can be negative for a deficit).
+    return int(row.quantity or 0)
+
+
+def _effective_date(row):
+    return (
+        row.transaction_effective_date
+        or row.recorded_date
+        or row.approved_date
+        or row.create_date
+    )
+
+
+def _sort_key_datetime(value) -> datetime:
+    """Normalize a date/datetime (tz-aware or naive) to a naive datetime so the
+    aggregate's mixed effective-date types can be ordered together (real data
+    mixes ``date`` and tz-aware/naive ``datetime``)."""
+    if value is None:
+        return datetime.min
+    if isinstance(value, datetime):
+        return value.replace(tzinfo=None)
+    if isinstance(value, date):
+        return datetime.combine(value, time.min)
+    return datetime.min
 
 
 class CreditLedgerService:
@@ -89,6 +161,123 @@ class CreditLedgerService:
                 page=pagination.page,
                 size=pagination.size,
                 total_pages=ceil(total / pagination.size) or 1,
+            ),
+        )
+
+    @service_handler
+    async def get_period_ledger(
+        self,
+        *,
+        organization_id: int,
+        compliance_period: int,
+        include_pending: bool = False,
+    ) -> PeriodLedgerSchema:
+        """
+        Build the compliance-period credit ledger for one organization (#4714):
+        completed transactions (optionally plus in-flight pending ones), a
+        per-period running balance, totals grouped by transaction type, and the
+        previous/current compliance-year assessed balances.
+        """
+        rows = await self.repo.get_period_rows(
+            organization_id=organization_id,
+            compliance_period=compliance_period,
+        )
+
+        # 1. Keep only rows whose status is completed (always) or, when
+        #    requested, pending for their type.
+        selected = []
+        for ledger_view, version in rows:
+            ttype = ledger_view.transaction_type
+            status = ledger_view.status
+            completed = status in _COMPLETED_STATUSES.get(ttype, set())
+            pending = status in _PENDING_STATUSES.get(ttype, set())
+            if completed or (include_pending and pending):
+                selected.append((ledger_view, version, not completed and pending))
+
+        # 2. Sort chronologically (ascending effective date) so the running
+        #    balance accumulates from the start of the period. A stable
+        #    transaction_id tiebreaker keeps same-day rows deterministic.
+        selected.sort(
+            key=lambda t: (
+                _sort_key_datetime(_effective_date(t[0])),
+                t[0].transaction_id,
+            )
+        )
+
+        # 3. Build transaction rows with signed units + running balance.
+        transactions: List[PeriodLedgerTxnSchema] = []
+        running = 0
+        for ledger_view, version, is_pending in selected:
+            signed = _signed_units_for_org(ledger_view, organization_id)
+            running += signed
+
+            description = None
+            if (
+                ledger_view.transaction_type == "ComplianceReport"
+                and version is not None
+            ):
+                description = "Original" if version == 0 else f"Supplemental {version}"
+
+            transactions.append(
+                PeriodLedgerTxnSchema(
+                    transaction_id=ledger_view.transaction_id,
+                    transaction_type=ledger_view.transaction_type,
+                    description=description,
+                    effective_date=_effective_date(ledger_view),
+                    units_in=signed if signed > 0 else 0,
+                    units_out=-signed if signed < 0 else 0,
+                    running_balance=running,
+                    status=ledger_view.status,
+                    is_pending=is_pending,
+                )
+            )
+
+        # 4. Totals grouped by transaction type.
+        totals_map: dict[str, list[int]] = {}
+        for txn in transactions:
+            entry = totals_map.setdefault(txn.transaction_type, [0, 0])
+            entry[0] += txn.units_in
+            entry[1] += txn.units_out
+        totals_by_type = [
+            PeriodLedgerTypeTotalSchema(
+                transaction_type=ttype,
+                units_in=units_in,
+                units_out=units_out,
+                net=units_in - units_out,
+            )
+            for ttype, (units_in, units_out) in sorted(
+                totals_map.items(),
+                key=lambda kv: (_TYPE_DISPLAY_ORDER.get(kv[0], 99), kv[0]),
+            )
+        ]
+        total_units_in = sum(t.units_in for t in totals_by_type)
+        total_units_out = sum(t.units_out for t in totals_by_type)
+
+        # 5. Assessed balances carried between compliance years (raw, so a
+        #    deficit surfaces as a negative value).
+        current_balance = await self.repo.get_period_assessed_balance(
+            organization_id=organization_id,
+            compliance_period=compliance_period,
+        )
+        previous_balance = await self.repo.get_period_assessed_balance(
+            organization_id=organization_id,
+            compliance_period=compliance_period - 1,
+        )
+
+        return PeriodLedgerSchema(
+            organization_id=organization_id,
+            compliance_period=compliance_period,
+            include_pending=include_pending,
+            transactions=transactions,
+            totals_by_type=totals_by_type,
+            total_units_in=total_units_in,
+            total_units_out=total_units_out,
+            total_net=total_units_in - total_units_out,
+            assessed_balance=AssessedBalanceSchema(
+                previous_year=compliance_period - 1,
+                previous_balance=previous_balance,
+                current_year=compliance_period,
+                current_balance=current_balance,
             ),
         )
 

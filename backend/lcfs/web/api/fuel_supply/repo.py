@@ -37,6 +37,19 @@ from lcfs.web.core.decorators import repo_handler
 logger = structlog.get_logger(__name__)
 
 
+def _get_filter_values(filter_item):
+    values = getattr(filter_item, "values", None)
+    if values:
+        return [str(value) for value in values if value not in (None, "")]
+
+    filter_value = getattr(filter_item, "filter", None)
+    if isinstance(filter_value, list):
+        return [str(value) for value in filter_value if value not in (None, "")]
+    if filter_value not in (None, ""):
+        return [str(filter_value)]
+    return []
+
+
 class FuelSupplyRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
@@ -745,14 +758,20 @@ class FuelSupplyRepository:
             for filter_item in pagination.filters:
                 field = camel_to_snake(getattr(filter_item, "field", "") or "")
                 filter_value = getattr(filter_item, "filter", None)
+                filter_values = _get_filter_values(filter_item)
 
-                if not filter_value:
+                if not filter_value and not filter_values:
                     continue
 
                 if field == "compliance_period":
-                    query = query.where(
-                        CompliancePeriod.description.ilike(f"%{filter_value}%")
-                    )
+                    if getattr(filter_item, "filter_type", None) == "set":
+                        query = query.where(
+                            CompliancePeriod.description.in_(filter_values)
+                        )
+                    else:
+                        query = query.where(
+                            CompliancePeriod.description.ilike(f"%{filter_value}%")
+                        )
                 elif field == "fuel_type":
                     query = query.where(
                         FuelType.fuel_type.ilike(f"%{filter_value}%")
@@ -885,8 +904,9 @@ class FuelSupplyRepository:
             for filter_item in filters:
                 field = camel_to_snake(getattr(filter_item, "field", "") or "")
                 filter_value = getattr(filter_item, "filter", None)
+                filter_values = _get_filter_values(filter_item)
 
-                if not filter_value:
+                if not filter_value and not filter_values:
                     continue
 
                 # The base query already outerjoins each of these tables, so the
@@ -896,7 +916,7 @@ class FuelSupplyRepository:
                 # (fuel_code) — which Postgres rejects with
                 # "table name ... specified more than once" (issue #4601).
                 if field == "compliance_period":
-                    selected_year_filter = str(filter_value)
+                    selected_year_filter = set(filter_values)
                 elif field == "fuel_type":
                     query = query.where(
                         FuelType.fuel_type.ilike(f"%{filter_value}%")
@@ -974,7 +994,7 @@ class FuelSupplyRepository:
             compliance_units = float(fs.compliance_units or 0)
             year = fs.compliance_report.compliance_period.description
             include_in_filtered_totals = (
-                selected_year_filter is None or year == selected_year_filter
+                selected_year_filter is None or year in selected_year_filter
             )
 
             if include_in_filtered_totals:
@@ -1069,9 +1089,14 @@ class FuelSupplyRepository:
             [year for year in yearly.keys() if str(year).isdigit()],
             key=lambda value: int(value),
         )
+        filtered_sorted_years = (
+            [year for year in sorted_years if year in selected_year_filter]
+            if selected_year_filter is not None
+            else sorted_years
+        )
         selected_year = (
-            selected_year_filter
-            if selected_year_filter in yearly
+            filtered_sorted_years[-1]
+            if filtered_sorted_years
             else (sorted_years[-1] if sorted_years else None)
         )
         selected_year_index = (
@@ -1168,7 +1193,7 @@ class FuelSupplyRepository:
                 total_by_fuel_code.items(), key=lambda item: item[1], reverse=True
             )[:10]
         ]
-        for year in sorted_years:
+        for year in filtered_sorted_years:
             year_data = yearly[year]
             year_volume = year_data["total_volume"]
             compliance_unit_credit_debit_trend.extend(
