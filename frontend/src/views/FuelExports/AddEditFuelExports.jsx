@@ -25,6 +25,7 @@ export const AddEditFuelExports = () => {
   const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
   const [gridReady, setGridReady] = useState(false)
+  const startEditTimeoutRef = useRef(null)
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelExport'])
@@ -96,7 +97,8 @@ export const AddEditFuelExports = () => {
       }
       params.api.sizeColumnsToFit()
 
-      setTimeout(() => {
+      clearTimeout(startEditTimeoutRef.current)
+      startEditTimeoutRef.current = setTimeout(() => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
         params.api.startEditingCell({
           rowIndex: lastRowIndex,
@@ -107,6 +109,9 @@ export const AddEditFuelExports = () => {
     },
     [compliancePeriod, complianceReportId, data, isSupplemental]
   )
+
+  // Cancel the pending start-editing timer so it can't fire after unmount.
+  useEffect(() => () => clearTimeout(startEditTimeoutRef.current), [])
 
   useEffect(() => {
     if (optionsData?.fuelTypes?.length > 0) {
