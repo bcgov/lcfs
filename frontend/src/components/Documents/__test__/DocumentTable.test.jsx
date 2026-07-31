@@ -78,7 +78,7 @@ describe('DocumentTable', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     mockUploadMutate = vi.fn()
     mockDeleteMutate = vi.fn().mockResolvedValue({})
     mockDownloadDocument = vi.fn()
@@ -111,7 +111,9 @@ describe('DocumentTable', () => {
     render(<DocumentTable {...defaultProps} />, { wrapper })
 
     expect(screen.getByTestId('file-input')).toBeInTheDocument()
-    expect(screen.getByText('Click or drag files here to upload')).toBeInTheDocument()
+    expect(
+      screen.getByText('Click or drag files here to upload')
+    ).toBeInTheDocument()
     expect(screen.getByText('File Name')).toBeInTheDocument()
     expect(screen.getByText('Uploaded')).toBeInTheDocument()
     expect(screen.getByText('Size')).toBeInTheDocument()
@@ -120,7 +122,7 @@ describe('DocumentTable', () => {
 
   it('should handle file input change and trigger upload', async () => {
     const validFile = createMockFile('test.pdf', 'application/pdf', 1000)
-    
+
     render(<DocumentTable {...defaultProps} />, { wrapper })
 
     const fileInput = screen.getByTestId('file-input')
@@ -136,32 +138,75 @@ describe('DocumentTable', () => {
     })
   })
 
+  it('allows selecting multiple files at once (#4739)', () => {
+    render(<DocumentTable {...defaultProps} />, { wrapper })
+    expect(screen.getByTestId('file-input')).toHaveAttribute('multiple')
+  })
+
+  it('uploads every file selected in a single action (#4739)', async () => {
+    const fileA = createMockFile('a.pdf', 'application/pdf', 1000)
+    const fileB = createMockFile('b.pdf', 'application/pdf', 1000)
+    const fileC = createMockFile('c.pdf', 'application/pdf', 1000)
+
+    render(<DocumentTable {...defaultProps} />, { wrapper })
+
+    const fileInput = screen.getByTestId('file-input')
+    fireEvent.change(fileInput, { target: { files: [fileA, fileB, fileC] } })
+
+    await waitFor(() => {
+      expect(validateFile).toHaveBeenCalledTimes(3)
+      expect(mockUploadMutate).toHaveBeenCalledTimes(3)
+    })
+  })
+
+  it('uploads every file dropped in a single action (#4739)', async () => {
+    const fileA = createMockFile('a.pdf', 'application/pdf', 1000)
+    const fileB = createMockFile('b.pdf', 'application/pdf', 1000)
+
+    render(<DocumentTable {...defaultProps} />, { wrapper })
+
+    const uploadCard = screen
+      .getByText('Click or drag files here to upload')
+      .closest('div')
+
+    const dropEvent = createDragEvent('drop', [fileA, fileB])
+    fireEvent(uploadCard.parentElement, dropEvent)
+
+    await waitFor(() => {
+      expect(mockUploadMutate).toHaveBeenCalledTimes(2)
+    })
+  })
+
   it('should handle card click to open file dialog', () => {
     render(<DocumentTable {...defaultProps} />, { wrapper })
 
-    const uploadCard = screen.getByText('Click or drag files here to upload').closest('div')
+    const uploadCard = screen
+      .getByText('Click or drag files here to upload')
+      .closest('div')
     const fileInput = screen.getByTestId('file-input')
-    
+
     // Mock the click method
     const clickSpy = vi.spyOn(fileInput, 'click').mockImplementation(() => {})
-    
+
     fireEvent.click(uploadCard.parentElement)
-    
+
     expect(clickSpy).toHaveBeenCalled()
     clickSpy.mockRestore()
   })
 
   it('should handle drag and drop file upload', async () => {
     const validFile = createMockFile('test.pdf', 'application/pdf', 1000)
-    
+
     render(<DocumentTable {...defaultProps} />, { wrapper })
 
-    const uploadCard = screen.getByText('Click or drag files here to upload').closest('div')
-    
+    const uploadCard = screen
+      .getByText('Click or drag files here to upload')
+      .closest('div')
+
     // Simulate drag enter
     const dragEnterEvent = createDragEvent('dragenter', [validFile])
     fireEvent(uploadCard.parentElement, dragEnterEvent)
-    
+
     // Simulate drop
     const dropEvent = createDragEvent('drop', [validFile])
     fireEvent(uploadCard.parentElement, dropEvent)
@@ -178,7 +223,7 @@ describe('DocumentTable', () => {
 
   it('should display error alert for invalid files', async () => {
     const invalidFile = createMockFile('test.txt', 'text/plain', 1000)
-    
+
     validateFile.mockReturnValue({
       isValid: false,
       errorMessage: 'File type "text/plain" is not allowed'
@@ -191,7 +236,11 @@ describe('DocumentTable', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('file-upload-error-alert')).toBeInTheDocument()
-      expect(screen.getByText('Upload failed for "test.txt": File type "text/plain" is not allowed')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'Upload failed for "test.txt": File type "text/plain" is not allowed'
+        )
+      ).toBeInTheDocument()
     })
 
     expect(mockUploadMutate).not.toHaveBeenCalled()
@@ -279,7 +328,7 @@ describe('DocumentTable', () => {
 
   it('should handle upload error responses correctly', async () => {
     const validFile = createMockFile('test.pdf', 'application/pdf', 1000)
-    
+
     // Mock upload to trigger error callback
     mockUploadMutate.mockImplementation((file, { onError }) => {
       onError({ response: { status: 422 } })
@@ -302,12 +351,12 @@ describe('DocumentTable', () => {
 
   it('should show scanning state for uploading files', async () => {
     const file = createMockFile('test.pdf', 'application/pdf', 1000)
-    
+
     render(<DocumentTable {...defaultProps} />, { wrapper })
-    
+
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [file] } })
-    
+
     await waitFor(() => {
       expect(screen.getByText('test.pdf')).toBeInTheDocument()
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
@@ -316,23 +365,25 @@ describe('DocumentTable', () => {
 
   it('should handle drag state changes correctly', () => {
     const file = createMockFile('test.pdf', 'application/pdf', 1000)
-    
+
     render(<DocumentTable {...defaultProps} />, { wrapper })
-    
-    const uploadCard = screen.getByText('Click or drag files here to upload').closest('div')
-    
+
+    const uploadCard = screen
+      .getByText('Click or drag files here to upload')
+      .closest('div')
+
     // Test drag enter
     const dragEnterEvent = createDragEvent('dragenter', [file])
     fireEvent(uploadCard.parentElement, dragEnterEvent)
-    
+
     // Test drag leave
     const dragLeaveEvent = createDragEvent('dragleave')
     fireEvent(uploadCard.parentElement, dragLeaveEvent)
-    
+
     // Test drag over
     const dragOverEvent = createDragEvent('dragover')
     fireEvent(uploadCard.parentElement, dragOverEvent)
-    
+
     // Component should handle all drag events without errors
     expect(uploadCard).toBeInTheDocument()
   })
@@ -361,16 +412,16 @@ describe('DocumentTable', () => {
 
   it('should handle file with virus detection', async () => {
     const file = createMockFile('infected.pdf', 'application/pdf', 1000)
-    
+
     mockUploadMutate.mockImplementation((file, { onError }) => {
       onError({ response: { status: 422 } })
     })
-    
+
     render(<DocumentTable {...defaultProps} />, { wrapper })
-    
+
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [file] } })
-    
+
     await waitFor(() => {
       expect(screen.getByText('infected.pdf')).toBeInTheDocument()
     })
@@ -422,7 +473,7 @@ describe('DocumentTable', () => {
 
   it('should handle error dismissal correctly', async () => {
     const invalidFile = createMockFile('test.bad', 'application/unknown', 1000)
-    
+
     validateFile.mockReturnValue({
       isValid: false,
       errorMessage: 'File type not allowed'
@@ -503,7 +554,10 @@ describe('DocumentTable', () => {
     fireEvent.click(deleteButton)
 
     await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith('Error uploading file:', expect.any(Error))
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error uploading file:',
+        expect.any(Error)
+      )
     })
 
     consoleSpy.mockRestore()
@@ -528,7 +582,9 @@ describe('DocumentTable', () => {
   })
 
   it('should render with different parent types and IDs', () => {
-    render(<DocumentTable parentType="fuel-export" parentID="456" />, { wrapper })
+    render(<DocumentTable parentType="fuel-export" parentID="456" />, {
+      wrapper
+    })
 
     expect(useDocuments).toHaveBeenCalledWith('fuel-export', '456')
     expect(useUploadDocument).toHaveBeenCalledWith('fuel-export', '456')
@@ -549,10 +605,10 @@ describe('DocumentTable', () => {
     render(<DocumentTable {...defaultProps} />, { wrapper })
 
     const fileInput = screen.getByTestId('file-input')
-    
+
     // Upload invalid file first
     fireEvent.change(fileInput, { target: { files: [invalidFile] } })
-    
+
     await waitFor(() => {
       expect(screen.getByTestId('file-upload-error-alert')).toBeInTheDocument()
     })
@@ -561,7 +617,9 @@ describe('DocumentTable', () => {
     fireEvent.change(fileInput, { target: { files: [validFile] } })
 
     await waitFor(() => {
-      expect(screen.queryByTestId('file-upload-error-alert')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('file-upload-error-alert')
+      ).not.toBeInTheDocument()
     })
 
     expect(mockUploadMutate).toHaveBeenCalledTimes(1)
@@ -571,12 +629,14 @@ describe('DocumentTable', () => {
 
   it('should handle drop with no files', () => {
     render(<DocumentTable {...defaultProps} />, { wrapper })
-    
-    const uploadCard = screen.getByText('Click or drag files here to upload').closest('div')
-    
+
+    const uploadCard = screen
+      .getByText('Click or drag files here to upload')
+      .closest('div')
+
     const dropEvent = createDragEvent('drop', [])
     fireEvent(uploadCard.parentElement, dropEvent)
-    
+
     expect(mockUploadMutate).not.toHaveBeenCalled()
   })
 
@@ -643,8 +703,12 @@ describe('DocumentTable', () => {
     render(<DocumentTable {...defaultProps} />, { wrapper })
 
     await waitFor(() => {
-      expect(screen.getByText('error-file.pdf (Unsupported file type)')).toBeInTheDocument()
-      expect(screen.getByText('oversize-file.pdf (File is over 50MB)')).toBeInTheDocument()
+      expect(
+        screen.getByText('error-file.pdf (Unsupported file type)')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('oversize-file.pdf (File is over 50MB)')
+      ).toBeInTheDocument()
     })
 
     expect(screen.queryByTestId('delete-button')).not.toBeInTheDocument()
@@ -652,9 +716,9 @@ describe('DocumentTable', () => {
 
   it('should handle non-422 upload errors correctly', async () => {
     const validFile = createMockFile('test.pdf', 'application/pdf', 1000)
-    
+
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    
+
     // Mock upload to trigger non-422 error
     mockUploadMutate.mockImplementation((file, { onError }) => {
       onError({ response: { status: 500 }, message: 'Server error' })
@@ -669,8 +733,11 @@ describe('DocumentTable', () => {
       expect(mockUploadMutate).toHaveBeenCalled()
     })
 
-    expect(consoleSpy).toHaveBeenCalledWith('Error uploading file:', expect.any(Object))
-    
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error uploading file:',
+      expect.any(Object)
+    )
+
     consoleSpy.mockRestore()
   })
 
@@ -727,7 +794,7 @@ describe('DocumentTable', () => {
     const file2 = createMockFile('test2.pdf', 'application/pdf', 1000)
 
     const fileInput = screen.getByTestId('file-input')
-    
+
     // Upload files in quick succession
     fireEvent.change(fileInput, { target: { files: [file1] } })
     fireEvent.change(fileInput, { target: { files: [file2] } })
