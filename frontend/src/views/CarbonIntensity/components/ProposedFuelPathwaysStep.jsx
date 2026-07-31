@@ -28,10 +28,10 @@ const createEmptyRow = () => ({
   fuelTypeId: null,
   feedstock: '',
   feedstockRegion: '',
-  feedstockTransportMode: '',
+  feedstockTransportMode: [],
   feedstockTransportDistance: null,
   coproducts: '',
-  finishedFuelTransportMode: '',
+  finishedFuelTransportMode: [],
   finishedFuelTransportDistance: null
 })
 

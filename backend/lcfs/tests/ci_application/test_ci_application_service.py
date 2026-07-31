@@ -124,6 +124,62 @@ async def test_complete_verification_2_requires_valid_priority_score(
     assert "Priority score is required" in exc.value.detail
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("risk", ["Medium", "High"])
+async def test_complete_verification_2_allowed_for_medium_and_high(
+    service, repo, mock_user, risk
+):
+    # Verification 2 is available to Medium as well as High risk (#4741).
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = risk
+    ci.priority_score = 10
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    result = await service.complete_verification_2(
+        ci, CIRiskAssessmentEnum(risk), 25, mock_user
+    )
+
+    assert isinstance(result, CIApplicationSchema)
+    assert ci.verification_2_date is not None
+    assert ci.verification_2_risk_assessment == risk
+    assert ci.verification_2_priority_score == 25
+
+
+@pytest.mark.anyio
+async def test_complete_verification_2_rejected_for_low_risk(service, mock_user):
+    # Low risk still has no Verification 2 step (#4741).
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.Low.value
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.complete_verification_2(
+            ci, CIRiskAssessmentEnum.Low, 25, mock_user
+        )
+
+    assert exc.value.status_code == 400
+    assert "Medium and High" in exc.value.detail
+
+
+@pytest.mark.anyio
+async def test_complete_verification_2_requires_verification_1_for_medium(
+    service, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.Medium.value
+    ci.verification_1_date = None
+
+    with pytest.raises(HTTPException) as exc:
+        await service.complete_verification_2(
+            ci, CIRiskAssessmentEnum.Medium, 25, mock_user
+        )
+
+    assert exc.value.status_code == 400
+    assert "Verification 1 must be completed first" in exc.value.detail
+
+
 @pytest.fixture
 def repo():
     return AsyncMock()
@@ -537,10 +593,10 @@ def _new_pathway_input(**overrides):
         fuel_type_id=1,
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode="Truck",
+        feedstock_transport_mode=["Truck"],
         feedstock_transport_distance=100,
         coproducts=None,
-        finished_fuel_transport_mode="Rail",
+        finished_fuel_transport_mode=["Rail"],
         finished_fuel_transport_distance=200,
     )
     base.update(overrides)
@@ -1040,11 +1096,46 @@ async def test_update_step3_succeeds_when_documents_missing(service, repo, mock_
 
 
 @pytest.mark.anyio
-async def test_generate_fuel_codes_allows_moderate_after_verification_1(
+async def test_generate_fuel_codes_requires_verification_2_for_medium_risk(
+    service, repo, mock_user
+):
+    # Medium risk now joins High in requiring Verification 2 before fuel codes
+    # can be generated (#4741). Previously Medium completed after Verification 1.
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Medium")
+
+    with pytest.raises(HTTPException) as exc:
+        await service.generate_fuel_codes(ci, mock_user)
+
+    assert exc.value.status_code == 400
+    assert "Required verification" in exc.value.detail
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_allows_medium_after_verification_2(
     service, repo, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _submitted_ci_for_generation("Medium")
+    ci.verification_2_date = datetime(2026, 5, 3, tzinfo=timezone.utc)
+    ci.verification_2_risk_assessment = "Medium"
+    _stub_generation_dependencies(service, repo, ci)
+
+    result = await service.generate_fuel_codes(ci, mock_user)
+
+    assert isinstance(result, CIApplicationSchema)
+    assert len(ci.generated_fuel_code_associations) == 1
+    repo.update.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_allows_low_after_verification_1(
+    service, repo, mock_user
+):
+    # Low risk is explicitly unchanged by #4741: still completes after
+    # Verification 1 with no Verification 2 required.
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
     _stub_generation_dependencies(service, repo, ci)
 
     result = await service.generate_fuel_codes(ci, mock_user)

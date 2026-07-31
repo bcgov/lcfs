@@ -60,13 +60,65 @@ async def test_export_credit_ledger(
 
 
 @pytest.mark.anyio
+async def test_get_period_credit_ledger(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Supplier can fetch its own compliance-period ledger (#4714)."""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    url = fastapi_app.url_path_for(
+        "get_period_credit_ledger", organization_id=ORG_ID, compliance_year=2024
+    )
+    resp = await client.get(url)
+    assert resp.status_code == status.HTTP_200_OK
+    data = resp.json()
+    assert data["compliancePeriod"] == 2024
+    assert data["includePending"] is False
+    assert isinstance(data["transactions"], list)
+    assert isinstance(data["totalsByType"], list)
+    # Assessed-balance section always present with prev/current years.
+    assert data["assessedBalance"]["currentYear"] == 2024
+    assert data["assessedBalance"]["previousYear"] == 2023
+
+
+@pytest.mark.anyio
+async def test_get_period_credit_ledger_pending_flag(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    url = fastapi_app.url_path_for(
+        "get_period_credit_ledger", organization_id=ORG_ID, compliance_year=2024
+    )
+    resp = await client.get(url, params={"include_pending": "true"})
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()["includePending"] is True
+
+
+@pytest.mark.anyio
+async def test_get_period_credit_ledger_forbidden(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    other_org = ORG_ID + 999
+    url = fastapi_app.url_path_for(
+        "get_period_credit_ledger", organization_id=other_org, compliance_year=2024
+    )
+    resp = await client.get(url)
+    assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
 async def test_get_organization_ledger_years(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     """Supplier can fetch available years for its own organization."""
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = fastapi_app.url_path_for("get_organization_ledger_years", organization_id=ORG_ID)
+    url = fastapi_app.url_path_for(
+        "get_organization_ledger_years", organization_id=ORG_ID
+    )
     resp = await client.get(url)
     assert resp.status_code == status.HTTP_200_OK
     data = resp.json()
@@ -81,6 +133,8 @@ async def test_get_organization_ledger_years_forbidden(
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     other_org = ORG_ID + 999
-    url = fastapi_app.url_path_for("get_organization_ledger_years", organization_id=other_org)
+    url = fastapi_app.url_path_for(
+        "get_organization_ledger_years", organization_id=other_org
+    )
     resp = await client.get(url)
     assert resp.status_code == status.HTTP_403_FORBIDDEN

@@ -305,7 +305,9 @@ describe('GovernmentDecisionStep', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows Generate fuel codes after Verification 1 for moderate risk', () => {
+  // #4741 — Medium risk keeps the Verification 2 workflow (and therefore the
+  // Risk Assessment / Priority Score fields) after Verification 1 completes.
+  it('keeps Verification 2 available after Verification 1 for moderate risk', () => {
     mockUserRoles = [{ name: roles.analyst }]
     render(
       <GovernmentDecisionStep
@@ -319,10 +321,66 @@ describe('GovernmentDecisionStep', () => {
       { wrapper }
     )
 
-    expect(screen.getByTestId('ci-generate-fuel-codes-btn')).toBeInTheDocument()
     expect(
-      screen.getByText('carbonIntensity:step5.generateFuelCodes')
+      screen.getByTestId('ci-verification-2-complete-btn')
     ).toBeInTheDocument()
+    expect(
+      screen.getByText('carbonIntensity:step5.verification2Complete')
+    ).toBeInTheDocument()
+  })
+
+  it('keeps Risk Assessment and Priority Score visible for moderate risk after Verification 1', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Medium',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.getByText('carbonIntensity:step5.riskAssessment:')
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('ci-priority-score-input')).toBeInTheDocument()
+  })
+
+  it('withholds Generate fuel codes for moderate risk until Verification 2 is complete', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    const { rerender } = render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Medium',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.queryByTestId('ci-generate-fuel-codes-btn')
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Medium',
+          verification1Date: '2026-05-19T12:00:00Z',
+          verification2Date: '2026-05-20T12:00:00Z',
+          verification2RiskAssessment: 'Medium'
+        }}
+        isGovernment={true}
+      />
+    )
+
+    expect(screen.getByTestId('ci-generate-fuel-codes-btn')).toBeInTheDocument()
   })
 
   it('does not show Generate fuel codes before Verification 1 is complete', () => {
