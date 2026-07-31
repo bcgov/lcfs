@@ -144,6 +144,12 @@ class InternalCommentService:
         """
         is_government_user = self._is_government_user()
 
+        # Company Overview notes are internal working notes — the thread offers
+        # no public commenting, so pin the visibility here rather than trusting
+        # the client to send it (#4608).
+        if data.entity_type == EntityTypeEnum.ORGANIZATION:
+            data.visibility = CommentVisibilityEnum.INTERNAL
+
         # Keep legacy behavior for existing entities and enforce CI-specific visibility rules.
         if not is_government_user:
             if data.entity_type not in (
@@ -279,6 +285,11 @@ class InternalCommentService:
                 next_audience_scope = AudienceScopeEnum(
                     str(existing_comment.audience_scope)
                 )
+
+        # A Company Overview note can never be flipped to public by an edit,
+        # whatever the payload asks for (#4608).
+        if await self.repo.is_organization_comment(internal_comment_id):
+            next_visibility = CommentVisibilityEnum.INTERNAL
 
         if next_visibility == CommentVisibilityEnum.PUBLIC:
             next_audience_scope = None

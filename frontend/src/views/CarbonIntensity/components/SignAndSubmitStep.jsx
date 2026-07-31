@@ -262,7 +262,10 @@ export const SignAndSubmitStep = ({
                 onChange={(e) => {
                   setConsultantName(e.target.value)
                   if (errors.consultantName) {
-                    setErrors((prev) => ({ ...prev, consultantName: undefined }))
+                    setErrors((prev) => ({
+                      ...prev,
+                      consultantName: undefined
+                    }))
                   }
                 }}
                 disabled={readOnly}
@@ -283,7 +286,10 @@ export const SignAndSubmitStep = ({
                 onChange={(e) => {
                   setConsultantCompany(e.target.value)
                   if (errors.consultantCompany) {
-                    setErrors((prev) => ({ ...prev, consultantCompany: undefined }))
+                    setErrors((prev) => ({
+                      ...prev,
+                      consultantCompany: undefined
+                    }))
                   }
                 }}
                 disabled={readOnly}
@@ -304,7 +310,10 @@ export const SignAndSubmitStep = ({
                 onChange={(e) => {
                   setConsultantEmail(e.target.value)
                   if (errors.consultantEmail) {
-                    setErrors((prev) => ({ ...prev, consultantEmail: undefined }))
+                    setErrors((prev) => ({
+                      ...prev,
+                      consultantEmail: undefined
+                    }))
                   }
                 }}
                 disabled={readOnly}
@@ -319,7 +328,14 @@ export const SignAndSubmitStep = ({
         )}
       </BCBox>
 
-      <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
+      {/* Delete sits far right, away from the primary action (#4770). */}
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{ mt: 2 }}
+        alignItems="center"
+        justifyContent="space-between"
+      >
         <BCButton
           type="button"
           variant="contained"
