@@ -381,7 +381,14 @@ export const ApplicationInformationStep = forwardRef(
           </Grid2>
         </Grid2>
 
-        <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
+        {/* Delete sits far right, away from the primary action (#4770). */}
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ mt: 2 }}
+          alignItems="center"
+          justifyContent="space-between"
+        >
           <BCButton
             type="submit"
             variant="contained"

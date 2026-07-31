@@ -16,6 +16,8 @@ import {
   useEditOrganizationComment
 } from '@/hooks/useOrganizationComments'
 
+const VISIBILITY = 'Internal'
+
 /**
  * Company Overview thread on the Organization dashboard (#4608).
  *
@@ -25,6 +27,10 @@ import {
  * ORGANIZATION-entity internal comments filed under the "Company Overview"
  * category, so they also surface in — and are searchable from — the org
  * Comment Log.
+ *
+ * Company Overview notes are always Internal: there is no public commenting on
+ * this thread, so neither the create box nor the inline editor offers the
+ * visibility choice.
  */
 export const CompanyOverviewComments = ({
   organizationId,
@@ -32,7 +38,6 @@ export const CompanyOverviewComments = ({
 }) => {
   const { t } = useTranslation(['org', 'internalComment'])
   const [commentText, setCommentText] = useState('')
-  const [visibility, setVisibility] = useState('Internal')
 
   const { data, isLoading, isError } =
     useOrganizationCommentThread(organizationId)
@@ -41,16 +46,15 @@ export const CompanyOverviewComments = ({
 
   const comments = data?.comments ?? []
 
-  const handleCreate = async (text, vis) => {
+  const handleCreate = async (text) => {
     const body = (text ?? '').trim()
     if (!body) return
-    await createMutation.mutateAsync({ comment: body, visibility: vis })
+    await createMutation.mutateAsync({ comment: body, visibility: VISIBILITY })
     setCommentText('')
-    setVisibility('Internal')
   }
 
-  const handleEdit = (commentId, comment, vis) => {
-    editMutation.mutate({ commentId, comment, visibility: vis })
+  const handleEdit = (commentId, comment) => {
+    editMutation.mutate({ commentId, comment, visibility: VISIBILITY })
   }
 
   return (
@@ -105,6 +109,7 @@ export const CompanyOverviewComments = ({
                         index={index}
                         showInternalBadge={isGovernmentUser}
                         isGovernmentUser={isGovernmentUser}
+                        allowPublicVisibility={false}
                         onEdit={handleEdit}
                         isEditPending={editMutation.isPending}
                       />
@@ -121,10 +126,8 @@ export const CompanyOverviewComments = ({
                 onCommentChange={setCommentText}
                 onSubmit={handleCreate}
                 isSubmitting={createMutation.isPending}
-                showVisibilityToggle={isGovernmentUser}
-                visibility={visibility}
-                onVisibilityChange={setVisibility}
-                visibilityAlign="left"
+                showVisibilityToggle={false}
+                visibility={VISIBILITY}
               />
             </BCBox>
           </BCBox>
