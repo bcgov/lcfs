@@ -35,6 +35,7 @@ export const apiRoutes = {
 
   // Credit‑ledger
   creditLedger: '/credit-ledger/organization/:orgID',
+  creditLedgerPeriod: '/credit-ledger/organization/:orgID/period/:year',
   creditLedgerYears: '/credit-ledger/organization/:orgID/years',
   exportCreditLedger: '/credit-ledger/organization/:orgID/export',
 
@@ -44,6 +45,8 @@ export const apiRoutes = {
   organizationPenaltyLogsList: '/organizations/:orgID/penalties/logs/list',
   organizationPenaltyLogs: '/organizations/:orgID/penalties/logs',
   organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
+  organizationAllocationAgreementAnalytics:
+    '/organizations/:orgID/allocation-agreements/analytics',
   organizationComments: '/organizations/:orgID/comments',
   commentCategories: '/internal_comments/categories',
   internalComment: '/internal_comments/:commentId',
@@ -101,6 +104,8 @@ export const apiRoutes = {
   recommendCIApplication: '/ci-applications/:ciApplicationId/recommend',
   requestCIApplicationPathwayChanges:
     '/ci-applications/:ciApplicationId/request-pathway-changes',
+  requestCIApplicationDocumentation:
+    '/ci-applications/:ciApplicationId/request-documentation',
   generateCIApplicationFuelCodes:
     '/ci-applications/:ciApplicationId/fuel-codes/generate',
   updateCIApplicationGeneratedFuelCode:
@@ -248,6 +253,11 @@ export const apiRoutes = {
   fuelCodeCounts: '/dashboard/fuel-code-counts',
   orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
 
+  // credit market
+  creditMarketOverview: '/credit-market/overview',
+  creditMarketPublicOverview: '/credit-market/public-overview',
+  creditMarketPublicReport: '/credit-market/public-report',
+
   // audit-logs
   getAuditLogs: '/audit-log/list',
   getAuditLog: '/audit-log/:auditLogId',
@@ -289,5 +299,10 @@ export const apiRoutes = {
   loginBgImageActive: '/login-bg-images/active',
   loginBgImage: '/login-bg-images/:imageId',
   loginBgImageActivate: '/login-bg-images/:imageId/activate',
-  loginBgImageStream: '/login-bg-images/:imageId/stream'
+  loginBgImageStream: '/login-bg-images/:imageId/stream',
+
+  // release notes (System Admin overrides on top of auto-generated content)
+  releaseNoteOverrides: '/release-notes/overrides',
+  updateReleaseNote: '/release-notes/:version',
+  resetReleaseNote: '/release-notes/:version'
 }

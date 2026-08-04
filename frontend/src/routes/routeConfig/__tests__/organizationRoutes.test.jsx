@@ -46,10 +46,10 @@ vi.mock('../routes', () => ({
       VIEW: '/organizations/:orgID',
       USERS: '/organizations/:orgID/users',
       CREDIT_LEDGER: '/organizations/:orgID/credit-ledger',
-      COMPANY_OVERVIEW: '/organizations/:orgID/company-overview',
       PENALTY_LOG: '/organizations/:orgID/penalty-log',
       PENALTY_LOG_MANAGE: '/organizations/:orgID/penalty-log/manage',
       SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
+      ALLOCATION_AGREEMENTS: '/organizations/:orgID/allocation-agreements',
       COMPLIANCE_TRACKING: '/organizations/:orgID/compliance-tracking',
       ADD_USER: '/organizations/:orgID/add-user',
       VIEW_USER: '/organizations/:orgID/users/:userID'
@@ -77,10 +77,10 @@ describe('organizationRoutes', () => {
       '/organizations/:orgID',
       '/organizations/:orgID/users',
       '/organizations/:orgID/credit-ledger',
-      '/organizations/:orgID/company-overview',
       '/organizations/:orgID/penalty-log',
       '/organizations/:orgID/penalty-log/manage',
       '/organizations/:orgID/supply-history',
+      '/organizations/:orgID/allocation-agreements',
       '/organizations/:orgID/compliance-tracking',
       '/organizations/:orgID/comment-log',
       '/organizations/:orgID/add-user',
@@ -112,10 +112,10 @@ describe('organizationRoutes', () => {
         '/organizations/:orgID',
         '/organizations/:orgID/users',
         '/organizations/:orgID/credit-ledger',
-        '/organizations/:orgID/company-overview',
         '/organizations/:orgID/penalty-log',
         '/organizations/:orgID/penalty-log/manage',
         '/organizations/:orgID/supply-history',
+        '/organizations/:orgID/allocation-agreements',
         '/organizations/:orgID/compliance-tracking',
         '/organizations/:orgID/comment-log',
         '/organizations/:orgID/add-user',
@@ -422,18 +422,6 @@ describe('Route Handle Properties', () => {
       )
 
       expect(result.type.name).toBe('OrganizationUsers')
-    })
-
-    it('should render CompanyOverview for company-overview path', () => {
-      const result = orgDashboardRenderers(
-        true, // isGovernment
-        '/organizations/123/company-overview',
-        mockOrgID,
-        false,
-        mockNavigate
-      )
-
-      expect(result.type.name).toBe('CompanyOverview')
     })
 
     it('should render PenaltyLog for penalty-log path', () => {

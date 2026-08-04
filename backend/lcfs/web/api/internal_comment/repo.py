@@ -1,8 +1,8 @@
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-import structlog
+import re
 from datetime import date, datetime, time
 from typing import List, Optional, Tuple
 
+import structlog
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 import sqlalchemy as sa
@@ -31,6 +31,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
 from lcfs.db.models.ci_application.CIApplication import CIApplication
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
 from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
     InitiativeAgreementInternalComment,
@@ -44,8 +45,13 @@ from lcfs.db.models.comment.ComplianceReportInternalComment import (
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
+from lcfs.db.models.comment.OrganizationInternalComment import (
+    OrganizationInternalComment,
+)
 
 logger = structlog.get_logger(__name__)
+
+_SEARCH_NORMALIZE_RE = re.compile(r"[^0-9A-Za-z]+")
 
 
 class InternalCommentRepository:
@@ -117,6 +123,11 @@ class InternalCommentRepository:
                 ci_application_id=entity_id,
                 internal_comment_id=internal_comment.internal_comment_id,
             )
+        elif entity_type == EntityTypeEnum.ORGANIZATION:
+            association = OrganizationInternalComment(
+                organization_id=entity_id,
+                internal_comment_id=internal_comment.internal_comment_id,
+            )
 
         # Add the association to the session and commit
         self.db.add(association)
@@ -179,6 +190,10 @@ class InternalCommentRepository:
             EntityTypeEnum.CI_APPLICATION: (
                 CIApplicationInternalComment,
                 CIApplicationInternalComment.ci_application_id,
+            ),
+            EntityTypeEnum.ORGANIZATION: (
+                OrganizationInternalComment,
+                OrganizationInternalComment.organization_id,
             ),
         }
 
@@ -440,6 +455,10 @@ class InternalCommentRepository:
                 CIApplicationInternalComment,
                 CIApplicationInternalComment.ci_application_id,
             ),
+            EntityTypeEnum.ORGANIZATION: (
+                OrganizationInternalComment,
+                OrganizationInternalComment.organization_id,
+            ),
         }
 
         entity_model, where_condition = entity_mapping[entity_type]
@@ -470,6 +489,19 @@ class InternalCommentRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
+    async def is_organization_comment(self, internal_comment_id: int) -> bool:
+        """
+        True when the comment is an ORGANIZATION-entity comment (a Company
+        Overview note), identified by its association row.
+        """
+        result = await self.db.execute(
+            select(OrganizationInternalComment.internal_comment_id).where(
+                OrganizationInternalComment.internal_comment_id == internal_comment_id
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
+    @repo_handler
     async def get_entity_org_and_year(
         self, entity_type: EntityTypeEnum, entity_id: int
     ) -> Tuple[Optional[int], Optional[int]]:
@@ -495,6 +527,11 @@ class InternalCommentRepository:
             except (TypeError, ValueError):
                 year = None
             return (org_id, year)
+
+        # Organization-scoped comments carry the organization id directly as the
+        # entity id (e.g. Company Overview notes).
+        if entity_type == EntityTypeEnum.ORGANIZATION:
+            return (entity_id, None)
 
         if entity_type == EntityTypeEnum.TRANSFER:
             stmt = select(Transfer.to_organization_id).where(
@@ -560,6 +597,10 @@ class InternalCommentRepository:
                         CIApplicationInternalComment.ci_application_id.isnot(None),
                         EntityTypeEnum.CI_APPLICATION.value,
                     ),
+                    (
+                        OrganizationInternalComment.organization_id.isnot(None),
+                        EntityTypeEnum.ORGANIZATION.value,
+                    ),
                     else_=None,
                 ).label("entity_type"),
                 func.coalesce(
@@ -568,6 +609,7 @@ class InternalCommentRepository:
                     AdminAdjustmentInternalComment.admin_adjustment_id,
                     ComplianceReportInternalComment.compliance_report_id,
                     CIApplicationInternalComment.ci_application_id,
+                    OrganizationInternalComment.organization_id,
                 ).label("entity_id"),
                 func.coalesce(
                     Transfer.to_organization_id,
@@ -575,6 +617,7 @@ class InternalCommentRepository:
                     AdminAdjustment.to_organization_id,
                     ComplianceReport.organization_id,
                     CIApplication.organization_id,
+                    OrganizationInternalComment.organization_id,
                 ).label("live_org_id"),
                 cp_year.label("live_year"),
             )
@@ -632,6 +675,11 @@ class InternalCommentRepository:
                 CIApplication.ci_application_id
                 == CIApplicationInternalComment.ci_application_id,
             )
+            .outerjoin(
+                OrganizationInternalComment,
+                OrganizationInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
             .where(
                 *(
                     [
@@ -641,6 +689,8 @@ class InternalCommentRepository:
                             AdminAdjustment.to_organization_id == organization_id,
                             ComplianceReport.organization_id == organization_id,
                             CIApplication.organization_id == organization_id,
+                            OrganizationInternalComment.organization_id
+                            == organization_id,
                         )
                     ]
                     if organization_id is not None
@@ -668,7 +718,8 @@ class InternalCommentRepository:
                         4,
                     ),
                     (CIApplicationInternalComment.ci_application_id.isnot(None), 5),
-                    else_=6,
+                    (OrganizationInternalComment.organization_id.isnot(None), 6),
+                    else_=7,
                 ),
                 func.coalesce(
                     TransferInternalComment.transfer_id,
@@ -676,6 +727,7 @@ class InternalCommentRepository:
                     AdminAdjustmentInternalComment.admin_adjustment_id,
                     ComplianceReportInternalComment.compliance_report_id,
                     CIApplicationInternalComment.ci_application_id,
+                    OrganizationInternalComment.organization_id,
                 ),
             )
             .subquery()
@@ -699,10 +751,13 @@ class InternalCommentRepository:
         """
         Paginated organization comments with live-derived org/year, server-side
         filters (category, compliance_year, date range, visibility, search) and
-        sorting. Search uses ``websearch_to_tsquery('english', ...)`` against
-        ``comment_search_vector``; with ``category='Organization details'`` it
-        also matches ``organization.name``/``operating_name``, and with
-        ``category='Person'`` it also matches the author's name / email.
+        sorting. Search matches the comment body: a full-text
+        ``websearch_to_tsquery('english', ...)`` predicate plus case-insensitive
+        substring / punctuation-insensitive matching against the HTML-stripped
+        ``comment`` column (the source of truth). With
+        ``category='Organization details'`` it also matches
+        ``organization.name``/``operating_name``, and with ``category='Person'``
+        it also matches the author's name / email.
         """
         entity_meta = self._entity_meta_subquery(organization_id)
 
@@ -737,7 +792,28 @@ class InternalCommentRepository:
             fts_predicate = InternalComment.comment_search_vector.op("@@")(tsquery)
 
             ilike_term = f"%{search_term}%"
-            search_predicates = [fts_predicate]
+            normalized_search = _SEARCH_NORMALIZE_RE.sub("", search_term).lower()
+            
+            stripped_comment = func.regexp_replace(
+                func.coalesce(InternalComment.comment, ""),
+                r"<[^>]*>",
+                " ",
+                "g",
+            )
+            normalized_comment_text = func.regexp_replace(
+                func.lower(stripped_comment),
+                r"[^[:alnum:]]+",
+                "",
+                "g",
+            )
+            search_predicates = [
+                fts_predicate,
+                stripped_comment.ilike(ilike_term),
+            ]
+            if normalized_search:
+                search_predicates.append(
+                    normalized_comment_text.like(f"%{normalized_search}%")
+                )
 
             if category == "Organization details":
                 search_predicates.append(Organization.name.ilike(ilike_term))
@@ -756,39 +832,9 @@ class InternalCommentRepository:
 
             where_clauses.append(or_(*search_predicates))
 
-        needs_org_join_for_count = bool(
-            search_term and category == "Organization details"
-        )
-        needs_user_join_for_count = bool(search_term and category == "Person")
-
         full_name_col = (UserProfile.first_name + " " + UserProfile.last_name).label(
             "full_name"
         )
-
-        base_select_from = (
-            select(InternalComment.internal_comment_id)
-            .select_from(InternalComment)
-            .join(
-                entity_meta,
-                entity_meta.c.ic_id == InternalComment.internal_comment_id,
-            )
-            .outerjoin(
-                CommentCategory,
-                CommentCategory.comment_category_id
-                == InternalComment.comment_category_id,
-            )
-        )
-        if needs_org_join_for_count:
-            base_select_from = base_select_from.outerjoin(
-                Organization,
-                Organization.organization_id == entity_meta.c.live_org_id,
-            )
-        if needs_user_join_for_count:
-            base_select_from = base_select_from.outerjoin(
-                UserProfile,
-                UserProfile.keycloak_username == InternalComment.create_user,
-            )
-        base_select_from = base_select_from.where(*where_clauses)
 
         sort_col = (
             InternalComment.update_date

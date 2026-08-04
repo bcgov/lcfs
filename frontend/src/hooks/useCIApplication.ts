@@ -385,6 +385,30 @@ export const useRequestCIApplicationPathwayChanges = (
   })
 }
 
+export const useRequestCIApplicationDocumentation = (
+  ciApplicationId: number | string | undefined | null
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      return (
+        await client.post(
+          apiRoutes.requestCIApplicationDocumentation.replace(
+            ':ciApplicationId',
+            String(ciApplicationId ?? '')
+          ),
+          {}
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
 export const useGenerateCIApplicationFuelCodes = (
   ciApplicationId: number | string | undefined | null
 ) => {

@@ -1,5 +1,6 @@
 export const config = {
   api_base: 'http://localhost:8000/api',
+  analyst_review_assistant_name: 'Fuelbert',
   tfrs_base: 'http://localhost:3000',
   environment: 'development',
   keycloak: {
@@ -23,7 +24,8 @@ export const config = {
     manageFse: true,
     legacySupplementalLock: false,
     deterministicReportSummary: true,
-    internalCommentSearch: true
+    internalCommentSearch: true,
+    creditMarketLoginPage: false
   }
 }
 

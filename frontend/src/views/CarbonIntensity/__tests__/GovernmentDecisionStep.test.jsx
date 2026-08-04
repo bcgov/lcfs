@@ -5,7 +5,8 @@ import {
   fireEvent,
   render,
   screen,
-  waitFor
+  waitFor,
+  within
 } from '@testing-library/react'
 
 import { roles } from '@/constants/roles'
@@ -20,6 +21,7 @@ const mockCompleteVerification1 = vi.fn().mockResolvedValue(null)
 const mockCompleteVerification2 = vi.fn().mockResolvedValue(null)
 const mockRecommendToDirector = vi.fn().mockResolvedValue(null)
 const mockRequestPathwayChanges = vi.fn().mockResolvedValue(null)
+const mockRequestDocumentation = vi.fn().mockResolvedValue(null)
 const mockGenerateFuelCodes = vi.fn().mockResolvedValue(null)
 
 vi.mock('@/hooks/useCIApplication', () => ({
@@ -37,6 +39,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
   })),
   useRequestCIApplicationPathwayChanges: vi.fn(() => ({
     mutateAsync: mockRequestPathwayChanges,
+    isPending: false
+  })),
+  useRequestCIApplicationDocumentation: vi.fn(() => ({
+    mutateAsync: mockRequestDocumentation,
     isPending: false
   })),
   useGenerateCIApplicationFuelCodes: vi.fn(() => ({
@@ -121,13 +127,60 @@ describe('GovernmentDecisionStep', () => {
       { wrapper }
     )
     expect(screen.getByTestId('ci-step5-decision-panel')).toBeInTheDocument()
+    fireEvent.change(screen.getByTestId('ci-priority-score-input'), {
+      target: { value: '120' }
+    })
     fireEvent.click(screen.getByTestId('ci-verification-1-complete-btn'))
     await waitFor(() =>
       expect(mockCompleteVerification1).toHaveBeenCalledWith({
         preliminaryRiskAssessment: 'Low',
-        priorityScore: undefined
+        priorityScore: 120
       })
     )
+  })
+
+  it('requires a valid priority score before completing verification 1', async () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-verification-1-complete-btn'))
+
+    expect(mockCompleteVerification1).not.toHaveBeenCalled()
+    expect(
+      screen.getAllByText('carbonIntensity:step5.priorityScoreInvalid').length
+    ).toBeGreaterThan(0)
+  })
+
+  it('allows a blank priority score before a verification action is submitted', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      { wrapper }
+    )
+
+    fireEvent.blur(screen.getByTestId('ci-priority-score-input'))
+
+    expect(
+      screen.queryByText('carbonIntensity:step5.priorityScoreInvalid')
+    ).not.toBeInTheDocument()
+  })
+
+  it('caps priority score at 999 and ignores decimal input', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      { wrapper }
+    )
+    const input = screen.getByTestId('ci-priority-score-input')
+
+    fireEvent.change(input, { target: { value: '1000' } })
+    expect(input).toHaveValue('999')
+
+    fireEvent.change(input, { target: { value: '12.5' } })
+    expect(input).toHaveValue('999')
   })
 
   it.each([
@@ -252,7 +305,51 @@ describe('GovernmentDecisionStep', () => {
     ).toBeInTheDocument()
   })
 
-  it('waits for Verification 2 before showing Generate fuel codes for moderate risk', () => {
+  // #4741 — Medium risk keeps the Verification 2 workflow (and therefore the
+  // Risk Assessment / Priority Score fields) after Verification 1 completes.
+  it('keeps Verification 2 available after Verification 1 for moderate risk', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Medium',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.getByTestId('ci-verification-2-complete-btn')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('carbonIntensity:step5.verification2Complete')
+    ).toBeInTheDocument()
+  })
+
+  it('keeps Risk Assessment and Priority Score visible for moderate risk after Verification 1', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Medium',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.getByText('carbonIntensity:step5.riskAssessment:')
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('ci-priority-score-input')).toBeInTheDocument()
+  })
+
+  it('withholds Generate fuel codes for moderate risk until Verification 2 is complete', () => {
     mockUserRoles = [{ name: roles.analyst }]
     const { rerender } = render(
       <GovernmentDecisionStep
@@ -275,6 +372,58 @@ describe('GovernmentDecisionStep', () => {
         ciApplication={{
           ...baseCi,
           preliminaryRiskAssessment: 'Medium',
+          verification1Date: '2026-05-19T12:00:00Z',
+          verification2Date: '2026-05-20T12:00:00Z',
+          verification2RiskAssessment: 'Medium'
+        }}
+        isGovernment={true}
+      />
+    )
+
+    expect(screen.getByTestId('ci-generate-fuel-codes-btn')).toBeInTheDocument()
+  })
+
+  it('does not show Generate fuel codes before Verification 1 is complete', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Medium'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.queryByTestId('ci-generate-fuel-codes-btn')
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows Generate fuel codes when switched from high to moderate risk on Verification 2', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    const { rerender } = render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'High',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.queryByTestId('ci-generate-fuel-codes-btn')
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'High',
           verification1Date: '2026-05-19T12:00:00Z',
           verification2Date: '2026-05-20T12:00:00Z',
           verification2RiskAssessment: 'Medium'
@@ -480,28 +629,70 @@ describe('GovernmentDecisionStep', () => {
     ).not.toBeDisabled()
   })
 
-  it('disables only the clicked request button and records supplier wait start', async () => {
+  it('opens a confirmation on click without firing the request or disabling the button (#4651)', () => {
     mockUserRoles = [{ name: roles.analyst }]
-    const onDocumentUploadClick = vi.fn()
-    const onSupplierRequest = vi.fn()
     render(
       <GovernmentDecisionStep
         ciApplication={baseCi}
         isGovernment={true}
-        onDocumentUploadClick={onDocumentUploadClick}
-        onSupplierRequest={onSupplierRequest}
+        onSupplierRequest={vi.fn()}
       />,
       { wrapper }
     )
 
     fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
 
-    expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
+    expect(screen.getByTestId('modal')).toBeInTheDocument()
+    expect(mockRequestDocumentation).not.toHaveBeenCalled()
     expect(
-      screen.getByTestId('ci-request-pathway-changes-btn')
+      screen.getByTestId('ci-request-documentation-btn')
     ).not.toBeDisabled()
-    expect(onDocumentUploadClick).toHaveBeenCalled()
+  })
+
+  it('leaves the button enabled after cancelling the confirmation (#4651)', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        onSupplierRequest={vi.fn()}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
+    const modal = screen.getByTestId('modal')
+    fireEvent.click(within(modal).getByText('common:cancelBtn'))
+
+    expect(mockRequestDocumentation).not.toHaveBeenCalled()
+    expect(
+      screen.getByTestId('ci-request-documentation-btn')
+    ).not.toBeDisabled()
+  })
+
+  it('requests documentation and disables the button after confirming (#4644)', async () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    const onSupplierRequest = vi.fn()
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        onSupplierRequest={onSupplierRequest}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
+    const modal = screen.getByTestId('modal')
+    fireEvent.click(
+      within(modal).getByText('carbonIntensity:step5.requestDocumentation')
+    )
+
+    await waitFor(() =>
+      expect(mockRequestDocumentation).toHaveBeenCalledTimes(1)
+    )
     expect(onSupplierRequest).toHaveBeenCalledWith('documentation')
+    expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
   })
 
   it('can render only the decision panel for the submitted application page layout', () => {

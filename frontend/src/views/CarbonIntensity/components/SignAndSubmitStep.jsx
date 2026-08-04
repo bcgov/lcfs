@@ -11,7 +11,6 @@ import {
   TextField
 } from '@mui/material'
 
-import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
@@ -80,12 +79,22 @@ export const SignAndSubmitStep = ({
       )
     }
     if (consultantConsent) {
-      if (!consultantName.trim() || !consultantCompany.trim() || !consultantEmail.trim()) {
-        newErrors.consultant = t(
-          'carbonIntensity:step4.validation.consultantFieldsRequired'
+      if (!consultantName.trim()) {
+        newErrors.consultantName = t(
+          'carbonIntensity:step4.validation.consultantNameRequired'
+        )
+      }
+      if (!consultantCompany.trim()) {
+        newErrors.consultantCompany = t(
+          'carbonIntensity:step4.validation.consultantCompanyRequired'
+        )
+      }
+      if (!consultantEmail.trim()) {
+        newErrors.consultantEmail = t(
+          'carbonIntensity:step4.validation.consultantEmailRequired'
         )
       } else if (!EMAIL_REGEX.test(consultantEmail.trim())) {
-        newErrors.consultant = t(
+        newErrors.consultantEmail = t(
           'carbonIntensity:step4.validation.consultantEmailInvalid'
         )
       }
@@ -250,10 +259,20 @@ export const SignAndSubmitStep = ({
               <TextField
                 id="ci-step4-consultant-name"
                 value={consultantName}
-                onChange={(e) => setConsultantName(e.target.value)}
+                onChange={(e) => {
+                  setConsultantName(e.target.value)
+                  if (errors.consultantName) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      consultantName: undefined
+                    }))
+                  }
+                }}
                 disabled={readOnly}
                 fullWidth
                 variant="outlined"
+                error={!!errors.consultantName}
+                helperText={errors.consultantName}
                 inputProps={{ 'data-test': 'ci-step4-consultant-name' }}
               />
             </Box>
@@ -264,10 +283,20 @@ export const SignAndSubmitStep = ({
               <TextField
                 id="ci-step4-consultant-company"
                 value={consultantCompany}
-                onChange={(e) => setConsultantCompany(e.target.value)}
+                onChange={(e) => {
+                  setConsultantCompany(e.target.value)
+                  if (errors.consultantCompany) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      consultantCompany: undefined
+                    }))
+                  }
+                }}
                 disabled={readOnly}
                 fullWidth
                 variant="outlined"
+                error={!!errors.consultantCompany}
+                helperText={errors.consultantCompany}
                 inputProps={{ 'data-test': 'ci-step4-consultant-company' }}
               />
             </Box>
@@ -278,23 +307,35 @@ export const SignAndSubmitStep = ({
               <TextField
                 id="ci-step4-consultant-email"
                 value={consultantEmail}
-                onChange={(e) => setConsultantEmail(e.target.value)}
+                onChange={(e) => {
+                  setConsultantEmail(e.target.value)
+                  if (errors.consultantEmail) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      consultantEmail: undefined
+                    }))
+                  }
+                }}
                 disabled={readOnly}
                 fullWidth
                 variant="outlined"
+                error={!!errors.consultantEmail}
+                helperText={errors.consultantEmail}
                 inputProps={{ 'data-test': 'ci-step4-consultant-email' }}
               />
             </Box>
           </Stack>
         )}
-        {errors.consultant && (
-          <BCAlert severity="error" sx={{ mt: 1 }} data-test="ci-step4-consultant-error">
-            {errors.consultant}
-          </BCAlert>
-        )}
       </BCBox>
 
-      <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
+      {/* Delete sits far right, away from the primary action (#4770). */}
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{ mt: 2 }}
+        alignItems="center"
+        justifyContent="space-between"
+      >
         <BCButton
           type="button"
           variant="contained"

@@ -44,10 +44,8 @@ const daysSince = (date) => {
 
 const getSupplierRequestDate = (ciApplication) =>
   ciApplication?.supplierRequestDate ||
-  ciApplication?.requestFurtherDocumentationDate ||
-  ciApplication?.requestDocumentationDate ||
-  ciApplication?.pathwayChangesRequestedAt ||
-  ciApplication?.pathwayChangesRequestedDate
+  ciApplication?.documentChangesRequestedAt ||
+  ciApplication?.pathwayChangesRequestedAt
 
 const riskLabel = (risk) => (risk === 'Medium' ? 'Moderate' : risk)
 
@@ -67,7 +65,10 @@ export const buildCIWorkflowSteps = (
   const isApproved = status === 'Completed'
   const isWithdrawn = status === 'Withdrawn'
   const risk = ciApplication.preliminaryRiskAssessment
-  const showVerification2 = risk === 'Medium' || risk === 'High'
+  // Medium and High risk applications both go through Verification 2; only Low
+  // risk completes after Verification 1. Legacy rows may store 'Moderate'
+  // instead of 'Medium' (#4741).
+  const showVerification2 = ['Medium', 'Moderate', 'High'].includes(risk)
   const recommendationComplete = Boolean(ciApplication.recommendationDate)
   const targetDate = ciApplication.proposedFuelCodeEffectiveDate
   const supplierRequestDate = getSupplierRequestDate(ciApplication)
@@ -128,8 +129,11 @@ export const buildCIWorkflowSteps = (
 
   if (supplierRequestDate) {
     steps.push({
+      // Within the CI application process the external party is the "applicant"
+      // (the org that submitted the application), not a "supplier" (#4743). The
+      // step key stays 'withSupplier' to avoid touching state/data plumbing.
       key: 'withSupplier',
-      label: 'With supplier',
+      label: 'With applicant',
       date: supplierRequestDate,
       state: 'waiting',
       icon: 'hourglass',
@@ -357,7 +361,7 @@ const WorkflowNode = ({ step, isLast }) => {
             align="center"
             sx={{ fontWeight: 700, lineHeight: 1.15 }}
           >
-            {`${step.countdown} days with supplier`}
+            {`${step.countdown} days with applicant`}
           </Typography>
         )}
       </Stack>
@@ -389,13 +393,17 @@ export const CIApplicationProgress = ({ activeStep = 0, ciApplication }) => {
     // Once submitted, the supplier steps (1-4) are complete, so mark them done
     // and leave Government decision pending. While drafting, follow the
     // URL-driven active step.
-    const isSubmitted = Boolean(
-      ciApplication?.status?.status &&
-        ciApplication.status.status !== 'Draft'
-    )
-    const wizardActiveStep = isSubmitted
-      ? CI_APPLICATION_STEPS.length - 1
-      : activeStep
+    const currentStatus = ciApplication?.status?.status
+    const isSubmitted = Boolean(currentStatus && currentStatus !== 'Draft')
+    // Once the application reaches its terminal approved state, the final
+    // "Government decision" step is complete too, so the BCeID pipeline stays in
+    // sync with the grid's "Completed" status (#4652).
+    const isCompleted = currentStatus === 'Completed'
+    const wizardActiveStep = isCompleted
+      ? CI_APPLICATION_STEPS.length
+      : isSubmitted
+        ? CI_APPLICATION_STEPS.length - 1
+        : activeStep
 
     return (
       <Stack direction="row" sx={{ mb: 3, mt: 2 }}>

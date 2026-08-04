@@ -3,6 +3,7 @@ import { publicRoutes } from './routeConfig/publicRoutes'
 import { adminRoutes } from './routeConfig/adminRoutes'
 import { organizationRoutes } from './routeConfig/organizationRoutes'
 import { transactionRoutes } from './routeConfig/transactionRoutes'
+import { creditMarketRoutes } from './routeConfig/creditMarketRoutes'
 import { reportRoutes } from './routeConfig/reportRoutes'
 import { MainLayout } from '@/layouts/MainLayout'
 import { NotFound } from '@/components/NotFound'
@@ -28,6 +29,7 @@ const allRoutes = [
   ...ciApplicationRoutes,
   ...organizationRoutes,
   ...transactionRoutes,
+  ...creditMarketRoutes,
   ...transferRoutes,
   ...reportRoutes,
   ...notificationRoutes,

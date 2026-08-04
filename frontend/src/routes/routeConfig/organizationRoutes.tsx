@@ -8,8 +8,8 @@ import PenaltyLogManage from '@/views/Organizations/OrganizationView/components/
 import { OrganizationDetailsCard } from '@/views/Organizations/OrganizationView/OrganizationDetailsCard'
 import ComplianceTracking from '@/views/Organizations/OrganizationView/components/ComplianceTracking'
 import SupplyHistory from '@/views/Organizations/OrganizationView/components/SupplyHistory'
+import AllocationAgreementHistory from '@/views/Organizations/OrganizationView/components/AllocationAgreementHistory'
 import { PenaltyLog } from '@/views/Organizations/OrganizationView/components/PenaltyLog/PenaltyLog'
-import CompanyOverview from '@/views/Organizations/OrganizationView/components/CompanyOverview'
 import { CreditLedger } from '@/views/Organizations/OrganizationView/CreditLedger'
 import { OrganizationUsers } from '@/views/Organizations/OrganizationView/OrganizationUsers'
 import { CommentLog } from '@/views/Organizations/OrganizationView/components/CommentLog'
@@ -49,11 +49,6 @@ export const organizationRoutes: AppRouteObject[] = [
     handle: { title: 'Credit ledger' }
   },
   {
-    path: ROUTES.ORGANIZATIONS.COMPANY_OVERVIEW,
-    element: <OrganizationView />,
-    handle: { title: 'Company overview' }
-  },
-  {
     path: ROUTES.ORGANIZATIONS.PENALTY_LOG,
     element: <OrganizationView />,
     handle: { title: 'Penalty log', crumb: () => 'Penalty log' }
@@ -67,6 +62,11 @@ export const organizationRoutes: AppRouteObject[] = [
     path: ROUTES.ORGANIZATIONS.SUPPLY_HISTORY,
     element: <OrganizationView />,
     handle: { title: 'Supply history' }
+  },
+  {
+    path: ROUTES.ORGANIZATIONS.ALLOCATION_AGREEMENTS,
+    element: <OrganizationView />,
+    handle: { title: 'Allocation agreements' }
   },
   {
     path: ROUTES.ORGANIZATIONS.COMPLIANCE_TRACKING,
@@ -165,14 +165,6 @@ export const orgDashboardRoutes = (
       label: i18n.t('org:tabs.creditLedger')
     },
     {
-      path: ROUTES.ORGANIZATIONS.COMPANY_OVERVIEW.replace(
-        ':orgID',
-        orgID || ''
-      ),
-      match: (pathname: string) => pathname.includes('/company-overview'),
-      label: i18n.t('org:tabs.companyOverview')
-    },
-    {
       path: ROUTES.ORGANIZATIONS.PENALTY_LOG.replace(':orgID', orgID || ''),
       match: (pathname: string) =>
         pathname.includes('/penalty-log') && !pathname.includes('/manage'),
@@ -182,6 +174,14 @@ export const orgDashboardRoutes = (
       path: ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(':orgID', orgID || ''),
       match: (pathname: string) => pathname.includes('/supply-history'),
       label: i18n.t('org:tabs.supplyHistory')
+    },
+    {
+      path: ROUTES.ORGANIZATIONS.ALLOCATION_AGREEMENTS.replace(
+        ':orgID',
+        orgID || ''
+      ),
+      match: (pathname: string) => pathname.includes('/allocation-agreements'),
+      label: i18n.t('org:tabs.allocationAgreements')
     },
     {
       path: ROUTES.ORGANIZATIONS.COMPLIANCE_TRACKING.replace(
@@ -236,14 +236,14 @@ export const orgDashboardRenderers = (
   if (currentPath.includes('/credit-ledger')) {
     return <CreditLedger organizationId={orgID} />
   }
-  if (currentPath.includes('/company-overview')) {
-    return <CompanyOverview />
-  }
   if (currentPath.includes('/penalty-log')) {
     return <PenaltyLog />
   }
   if (currentPath.includes('/supply-history')) {
     return <SupplyHistory organizationId={orgID} />
+  }
+  if (currentPath.includes('/allocation-agreements')) {
+    return <AllocationAgreementHistory organizationId={orgID} />
   }
   if (currentPath.includes('/compliance-tracking')) {
     return <ComplianceTracking />

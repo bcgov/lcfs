@@ -34,10 +34,12 @@ from lcfs.web.api import (
     email,
     organization_snapshot,
     credit_ledger,
+    credit_market,
     forms,
     geocoder,
     charging_site,
     login_bg_image,
+    release_notes,
 )
 
 api_router = APIRouter()
@@ -56,6 +58,9 @@ api_router.include_router(echo.router, prefix="/echo", tags=["echo"])
 api_router.include_router(user.router, prefix="/users", tags=["users"])
 api_router.include_router(role.router, prefix="/roles", tags=["roles"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(
+    credit_market.router, prefix="/credit-market", tags=["credit-market"]
+)
 api_router.include_router(
     notification.router, prefix="/notifications", tags=["notifications"]
 )
@@ -137,4 +142,7 @@ api_router.include_router(
 )
 api_router.include_router(
     login_bg_image.router, prefix="/login-bg-images", tags=["login_bg_image"]
+)
+api_router.include_router(
+    release_notes.router, prefix="/release-notes", tags=["release_notes"]
 )

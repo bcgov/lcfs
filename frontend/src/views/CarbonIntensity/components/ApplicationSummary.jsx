@@ -20,11 +20,13 @@ import { useDownloadDocument } from '@/hooks/useDocuments'
 import colors from '@/themes/base/colors'
 import {
   ciApplicationPathwayChangelogColDefs,
-  ciApplicationPathwaySummaryColDefs
+  ciApplicationPathwaySummaryColDefs,
+  normalizeTransportModes
 } from '@/views/CarbonIntensity/components/_step2Schema'
 import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
 import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
 import { constructAddress } from '@/utils/constructAddress'
+import { exportRowsToXlsx } from './pathwayExport'
 
 const formatDate = (value) => {
   if (!value) return ''
@@ -87,10 +89,10 @@ const toPathwayChangelogRow = (snapshot = {}) => ({
   fuelTypeId: snapshot.fuel_type_id,
   feedstock: snapshot.feedstock,
   feedstockRegion: snapshot.feedstock_region,
-  feedstockTransportMode: snapshot.feedstock_transport_mode,
+  feedstockTransportMode: normalizeTransportModes(snapshot.feedstock_transport_mode),
   feedstockTransportDistance: snapshot.feedstock_transport_distance,
   coproducts: snapshot.coproducts,
-  finishedFuelTransportMode: snapshot.finished_fuel_transport_mode,
+  finishedFuelTransportMode: normalizeTransportModes(snapshot.finished_fuel_transport_mode),
   finishedFuelTransportDistance: snapshot.finished_fuel_transport_distance
 })
 
@@ -118,13 +120,15 @@ const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
   fuelTypeId: pathway.fuelTypeId || pathway.fuel_type_id,
   feedstock: pathway.feedstock,
   feedstockRegion: pathway.feedstockRegion || pathway.feedstock_region,
-  feedstockTransportMode:
-    pathway.feedstockTransportMode || pathway.feedstock_transport_mode,
+  feedstockTransportMode: normalizeTransportModes(
+    pathway.feedstockTransportMode ?? pathway.feedstock_transport_mode
+  ),
   feedstockTransportDistance:
     pathway.feedstockTransportDistance || pathway.feedstock_transport_distance,
   coproducts: pathway.coproducts,
-  finishedFuelTransportMode:
-    pathway.finishedFuelTransportMode || pathway.finished_fuel_transport_mode,
+  finishedFuelTransportMode: normalizeTransportModes(
+    pathway.finishedFuelTransportMode ?? pathway.finished_fuel_transport_mode
+  ),
   finishedFuelTransportDistance:
     pathway.finishedFuelTransportDistance ||
     pathway.finished_fuel_transport_distance,
@@ -281,6 +285,7 @@ export const ApplicationSummary = ({
 
   const documents = ciApplication.documents || []
   const pathways = ciApplication.pathways || []
+  const pathwayDescription = ciApplication.pathwayDescription?.trim()
   const pathwayChangeLogs = [
     ...(ciApplication.pathwayChangeLogs ||
       ciApplication.pathway_change_logs ||
@@ -355,9 +360,11 @@ export const ApplicationSummary = ({
   const referencedPathway =
     pathways.find((pathway) => pathway?.fuelCode) || null
   const referencedFuelCode = referencedPathway?.fuelCode || null
-  const referenceNumber =
-    referencedFuelCode?.fuelCode ||
-    (ciApplication.ciApplicationId ? `CI${ciApplication.ciApplicationId}` : '')
+  // Reference number is always the system-generated CI# increment, never a
+  // referenced fuel code number (see #4657).
+  const referenceNumber = ciApplication.ciApplicationId
+    ? `CI${ciApplication.ciApplicationId}`
+    : ''
   const previousFuelCodeExpiryDate = formatDate(
     referencedPathway?.operatingDataTo ||
       referencedPathway?.operating_data_to ||
@@ -445,8 +452,16 @@ export const ApplicationSummary = ({
     [t]
   )
   const handleDownloadPathways = () => {
-    pathwayGridRef.current?.api?.exportDataAsCsv({
-      fileName: `ci_application_pathways_${ciApplication?.ciApplicationId || 'draft'}.csv`
+    const rows = []
+    pathwayGridRef.current?.api?.forEachNodeAfterFilterAndSort((node) => {
+      rows.push(node.data)
+    })
+
+    exportRowsToXlsx({
+      rows: rows.length ? rows : pathways,
+      columnDefs: pathwayColumnDefs,
+      fileName: `ci_application_pathways_${ciApplication?.ciApplicationId || 'draft'}.xlsx`,
+      sheetName: 'Pathways'
     })
   }
   const handleEditPathways = () => {
@@ -490,6 +505,19 @@ export const ApplicationSummary = ({
           {org.email && (
             <BCTypography variant="body2">{org.email}</BCTypography>
           )}
+          <BCTypography
+            variant="body2"
+            sx={{ mt: 1, fontStyle: 'italic' }}
+            data-test="ci-summary-org-info-confirmation"
+          >
+            "{t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
+            <a
+              href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+            >
+              {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
+            </a>
+            "
+          </BCTypography>
         </Grid>
         <Grid item xs={12} md={6}>
           <Stack spacing={0.5}>
@@ -699,6 +727,26 @@ export const ApplicationSummary = ({
 
       <Divider sx={{ mb: 2 }} />
 
+      {!isEditingPathways && pathwayDescription && (
+        <>
+          <BCBox
+            data-test="ci-summary-pathway-description"
+            sx={{ width: '100%', mb: 2 }}
+          >
+            <BCTypography
+              variant="subtitle1"
+              sx={{ fontWeight: 700, color: colors.primary.main, mb: 1 }}
+            >
+              {t('carbonIntensity:step2.descriptionLabel')}
+            </BCTypography>
+            <BCTypography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {pathwayDescription}
+            </BCTypography>
+          </BCBox>
+          <Divider sx={{ mb: 2 }} />
+        </>
+      )}
+
       {/* Pathways */}
       <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
         <BCTypography
@@ -741,7 +789,12 @@ export const ApplicationSummary = ({
       )}
       {!isEditingPathways && hasPathwayChangelogEntries && (
         <FormControlLabel
-          sx={{ display: 'flex', width: 'fit-content', mb: 2, '& .MuiFormControlLabel-label': { mt: 0.8 } }}
+          sx={{
+            display: 'flex',
+            width: 'fit-content',
+            mb: 2,
+            '& .MuiFormControlLabel-label': { mt: 0.8 }
+          }}
           control={
             <Switch
               checked={showPathwayChangelog}

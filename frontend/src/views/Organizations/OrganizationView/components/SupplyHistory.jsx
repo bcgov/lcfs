@@ -6,18 +6,25 @@ import {
   MenuItem,
   Card,
   CardContent,
-  Stack
+  Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material'
+import { ExpandMore } from '@mui/icons-material'
 import ReactECharts from 'echarts-for-react'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import { BCMetricCard } from '@/components/charts/BCMetricCard'
 import { useOrganizationFuelSupply } from '@/hooks/useFuelSupply'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { roles } from '@/constants/roles'
+import { ROUTES } from '@/routes/routes'
+import OrganizationList from '@/views/Transactions/components/OrganizationList'
 import { formatNumberWithCommas } from '@/utils/formatters'
 import { defaultInitialPagination } from '@/constants/schedules'
 
@@ -29,12 +36,93 @@ import {
 
 const GRID_KEY = 'organization-supply-history'
 const YEAR_FILTER_STORAGE_KEY = `${GRID_KEY}-year-filter`
+const CHART_COLORS = {
+  green: '#009E73',
+  orange: '#D55E00',
+  blue: '#0072B2',
+  sky: '#56B4E9',
+  yellow: '#F0E442',
+  purple: '#CC79A7',
+  vermillion: '#E69F00',
+  neutralText: '#405074'
+}
+const CHART_PALETTE = [
+  CHART_COLORS.blue,
+  CHART_COLORS.green,
+  CHART_COLORS.orange,
+  CHART_COLORS.sky,
+  CHART_COLORS.purple,
+  CHART_COLORS.vermillion,
+  '#332288',
+  '#88CCEE'
+]
+const CHART_GRID = {
+  left: 64,
+  right: 24,
+  top: 56,
+  bottom: 56,
+  containLabel: true
+}
+const CHART_AXIS_LABEL = {
+  color: '#5f6675',
+  hideOverlap: true
+}
+const CHART_CATEGORY_AXIS_LABEL = {
+  ...CHART_AXIS_LABEL,
+  show: true,
+  interval: 0,
+  margin: 10
+}
 
-const getStoredYearFilter = () => {
+const getStoredYearRange = () => {
   if (typeof window === 'undefined') {
-    return 'all'
+    return { from: '', to: '' }
   }
-  return sessionStorage.getItem(YEAR_FILTER_STORAGE_KEY) || 'all'
+  const storedValue = sessionStorage.getItem(YEAR_FILTER_STORAGE_KEY)
+  if (!storedValue || storedValue === 'all') {
+    return { from: '', to: '' }
+  }
+  try {
+    const parsedValue = JSON.parse(storedValue)
+    if (parsedValue?.from || parsedValue?.to) {
+      return {
+        from: parsedValue.from ? String(parsedValue.from) : '',
+        to: parsedValue.to ? String(parsedValue.to) : ''
+      }
+    }
+    if (Array.isArray(parsedValue)) {
+      const sortedYears = parsedValue.map(String).sort()
+      return {
+        from: sortedYears[0] || '',
+        to: sortedYears[sortedYears.length - 1] || ''
+      }
+    }
+  } catch {
+    // Legacy stored values were plain strings.
+  }
+  return { from: storedValue, to: '' }
+}
+
+const getYearsInRange = ({ from, to }) => {
+  if (!from && !to) {
+    return []
+  }
+  if (!from) {
+    return [String(to)]
+  }
+  if (!to) {
+    return [String(from)]
+  }
+
+  const start = Number(from)
+  const end = Number(to)
+  if (Number.isNaN(start) || Number.isNaN(end)) {
+    return [String(from), String(to)]
+  }
+
+  return Array.from({ length: end - start + 1 }, (_, index) =>
+    String(start + index)
+  )
 }
 
 const abbreviateNumber = (value, { unitLabel = '', prefix = '' } = {}) => {
@@ -70,33 +158,165 @@ const abbreviateNumber = (value, { unitLabel = '', prefix = '' } = {}) => {
   return `${prefix}${formattedValue}${suffix}${unitText}`.trim()
 }
 
+const formatSignedPercent = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return '—'
+  }
+  const numericValue = Number(value)
+  const sign = numericValue > 0 ? '+' : ''
+  return `${sign}${numericValue.toFixed(2)}%`
+}
+
+const formatPlainNumber = (value, decimals = 0) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return '—'
+  }
+  return formatNumberWithCommas({ value: Number(value).toFixed(decimals) })
+}
+
+const formatDisplayDate = (value) => {
+  if (!value) {
+    return '—'
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  }).format(date)
+}
+
+const formatCompactAxisNumber = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return ''
+  }
+  return abbreviateNumber(value)
+}
+
+const getComparisonColor = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return 'text'
+  }
+  if (Number(value) > 0) return 'success'
+  if (Number(value) < 0) return 'error'
+  return 'text'
+}
+
+const hasNumericValue = (value) =>
+  value !== null && value !== undefined && !Number.isNaN(Number(value))
+
+const SupplyMetricCard = ({ title, value, period, comparisons = [] }) => (
+  <Card
+    elevation={1}
+    sx={{
+      height: '100%',
+      border: '1px solid',
+      borderColor: 'divider',
+      borderRadius: 2
+    }}
+  >
+    <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+      <BCTypography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+        {title}
+      </BCTypography>
+      <BCTypography
+        variant="h4"
+        component="div"
+        fontWeight="bold"
+        color="primary"
+        sx={{ lineHeight: 1.1 }}
+      >
+        {value}
+      </BCTypography>
+      {period && (
+        <BCTypography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          {period}
+        </BCTypography>
+      )}
+      <Stack spacing={0.25} sx={{ mt: 1 }}>
+        {comparisons.map((comparison) => (
+          <BCTypography
+            key={comparison.label}
+            variant="caption"
+            color={comparison.color}
+            fontWeight={comparison.color === 'text' ? 'normal' : 'bold'}
+          >
+            {comparison.label}
+          </BCTypography>
+        ))}
+      </Stack>
+    </CardContent>
+  </Card>
+)
+
+const ChartPanel = ({ title, option, height = 340 }) => (
+  <Card
+    elevation={2}
+    sx={{
+      height: '100%',
+      overflow: 'hidden',
+      minWidth: 0
+    }}
+  >
+    <CardContent sx={{ minWidth: 0, overflow: 'hidden' }}>
+      <BCTypography variant="subtitle1" sx={{ mb: 2 }}>
+        {title}
+      </BCTypography>
+      <BCBox sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
+        <ReactECharts
+          option={option}
+          notMerge
+          lazyUpdate
+          style={{ height, width: '100%', minWidth: 0 }}
+        />
+      </BCBox>
+    </CardContent>
+  </Card>
+)
+
 export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   const { t } = useTranslation(['org'])
+  const navigate = useNavigate()
   const gridRef = useRef(null)
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasRoles } = useCurrentUser()
+  const isGovernment = hasRoles(roles.government)
 
   // Use passed organizationId prop, fallback to current user's org for backward compatibility
-  const organizationId =
+  const defaultOrganizationId =
     propOrganizationId ?? currentUser?.organization?.organizationId
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState(
+    defaultOrganizationId
+  )
 
   const [paginationOptions, setPaginationOptions] = useState(() => ({
     ...defaultInitialPagination
   }))
-  const [selectedYear, setSelectedYear] = useState(getStoredYearFilter)
+  const [selectedYearRange, setSelectedYearRange] = useState(getStoredYearRange)
   const [availableYears, setAvailableYears] = useState([])
+  const selectedYears = useMemo(
+    () => getYearsInRange(selectedYearRange),
+    [selectedYearRange]
+  )
 
-  // Build filters based on selected year
+  useEffect(() => {
+    setSelectedOrganizationId(defaultOrganizationId)
+  }, [defaultOrganizationId])
+
+  // Build filters based on selected years
   const yearFilter = useMemo(() => {
-    if (!selectedYear || selectedYear === 'all') {
+    if (!selectedYears.length) {
       return null
     }
     return {
       field: 'compliancePeriod',
-      filter: selectedYear,
-      type: 'equals',
-      filterType: 'text'
+      values: selectedYears,
+      type: 'set',
+      filterType: 'set'
     }
-  }, [selectedYear])
+  }, [selectedYears])
 
   const combinedFilters = useMemo(() => {
     if (!yearFilter) {
@@ -122,25 +342,24 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     if (typeof window === 'undefined') {
       return
     }
-    if (!value || value === 'all') {
+    if (!value?.from && !value?.to) {
       sessionStorage.removeItem(YEAR_FILTER_STORAGE_KEY)
     } else {
-      sessionStorage.setItem(YEAR_FILTER_STORAGE_KEY, value)
+      sessionStorage.setItem(YEAR_FILTER_STORAGE_KEY, JSON.stringify(value))
     }
   }, [])
 
   // Fetch fuel supply data
   const queryData = useOrganizationFuelSupply(
-    organizationId,
+    selectedOrganizationId,
     paginationPayload,
     {
-      enabled: !!organizationId
+      enabled: !!selectedOrganizationId
     }
   )
 
-  const fuelSupplies = queryData?.data?.fuelSupplies || []
   const analytics = queryData?.data?.analytics || {}
-  const paginationData = queryData?.data?.pagination || {}
+  const selectedYearSummary = analytics.selectedYearSummary || {}
 
   // Maintain a stable list of available years even after filtering
   useEffect(() => {
@@ -154,17 +373,61 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     })
   }, [analytics.totalByYear])
 
-  const handleYearChange = useCallback(
-    (event) => {
-      const nextYear = event.target.value
-      setSelectedYear(nextYear)
-      persistYearFilter(nextYear)
+  const updateYearRange = useCallback(
+    (nextRange) => {
+      setSelectedYearRange(nextRange)
+      persistYearFilter(nextRange)
       setPaginationOptions((prev) => ({
         ...prev,
         page: 1
       }))
     },
     [persistYearFilter]
+  )
+
+  const handleFromYearChange = useCallback(
+    (event) => {
+      const from = event.target.value
+      const to =
+        selectedYearRange.to && Number(selectedYearRange.to) <= Number(from)
+          ? ''
+          : selectedYearRange.to
+      updateYearRange({ from, to })
+    },
+    [selectedYearRange.to, updateYearRange]
+  )
+
+  const handleToYearChange = useCallback(
+    (event) => {
+      const to = event.target.value
+      const from =
+        selectedYearRange.from && Number(selectedYearRange.from) >= Number(to)
+          ? ''
+          : selectedYearRange.from
+      updateYearRange({ from, to })
+    },
+    [selectedYearRange.from, updateYearRange]
+  )
+
+  const handleOrganizationChange = useCallback(
+    ({ id }) => {
+      if (!id) {
+        return
+      }
+      setSelectedOrganizationId(id)
+      setAvailableYears([])
+      setPaginationOptions((prev) => ({
+        ...prev,
+        page: 1
+      }))
+      navigate(
+        ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(
+          ':orgID',
+          String(id)
+        )
+      )
+    },
+    [navigate]
   )
 
   const handleGridPaginationChange = useCallback((newPagination) => {
@@ -176,281 +439,468 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
 
   const handleClearFilters = useCallback(() => {
     gridRef.current?.clearFilters?.()
-    setSelectedYear('all')
-    persistYearFilter('all')
+    const emptyRange = { from: '', to: '' }
+    setSelectedYearRange(emptyRange)
+    persistYearFilter(emptyRange)
     setPaginationOptions({ ...defaultInitialPagination })
   }, [persistYearFilter])
 
   const hasGridFilters = (paginationOptions.filters || []).length > 0
-  const hasActiveFilters = hasGridFilters || selectedYear !== 'all'
+  const hasActiveFilters = hasGridFilters || selectedYears.length > 0
+  const yearOptionsAscending = useMemo(
+    () => [...availableYears].sort((a, b) => Number(a) - Number(b)),
+    [availableYears]
+  )
+  const fromYearOptions = useMemo(
+    () =>
+      selectedYearRange.to
+        ? yearOptionsAscending.filter(
+            (year) => Number(year) < Number(selectedYearRange.to)
+          )
+        : yearOptionsAscending,
+    [selectedYearRange.to, yearOptionsAscending]
+  )
+  const toYearOptions = useMemo(
+    () =>
+      selectedYearRange.from
+        ? yearOptionsAscending.filter(
+            (year) => Number(year) > Number(selectedYearRange.from)
+          )
+        : yearOptionsAscending,
+    [selectedYearRange.from, yearOptionsAscending]
+  )
 
-  const metricCards = useMemo(() => {
-    const totalVolume = analytics.totalVolume || 0
-    const totalFuelTypes = analytics.totalFuelTypes || 0
-    const totalReports = analytics.totalReports || 0
-    const mostRecentSubmission = analytics.mostRecentSubmission
-      ? new Date(analytics.mostRecentSubmission).toLocaleDateString('en-CA')
-      : t('org:supplyHistory.analytics.noData')
+  const dashboardMetricCards = useMemo(() => {
+    const year = selectedYearSummary.reportingYear || '—'
+    const priorYear = selectedYearSummary.priorYear
+    const previousVolume = selectedYearSummary.priorYearVolume
+    const previousComplianceUnits = selectedYearSummary.priorYearComplianceUnits
 
     return [
       {
-        key: 'total-volume',
-        title: t('org:supplyHistory.analytics.totalVolume'),
-        value: abbreviateNumber(totalVolume, { unitLabel: 'L' })
+        key: 'volume-yoy',
+        hasData: hasNumericValue(selectedYearSummary.totalVolume),
+        title: t('org:supplyHistory.analytics.fuelVolumeSupplyTrend'),
+        value: abbreviateNumber(selectedYearSummary.totalVolume || 0, {
+          unitLabel: 'L'
+        }),
+        period: year,
+        comparisons: [
+          {
+            label: `${formatSignedPercent(
+              selectedYearSummary.volumePctChangeYoy
+            )} ${t('org:supplyHistory.analytics.vsPreviousYear')}`,
+            color: getComparisonColor(selectedYearSummary.volumePctChangeYoy)
+          },
+          {
+            label: `${t('org:supplyHistory.analytics.previousYear')}: ${
+              priorYear || t('org:supplyHistory.analytics.noData')
+            } • ${abbreviateNumber(previousVolume, { unitLabel: 'L' })}`,
+            color: 'text'
+          }
+        ]
       },
       {
-        key: 'total-fuel-types',
-        title: t('org:supplyHistory.analytics.totalFuelTypes'),
-        value: abbreviateNumber(totalFuelTypes)
+        key: 'net-compliance-units',
+        hasData: hasNumericValue(selectedYearSummary.totalComplianceUnits),
+        title: t('org:supplyHistory.analytics.netComplianceUnitVolume'),
+        value: formatPlainNumber(selectedYearSummary.totalComplianceUnits, 2),
+        period: year,
+        comparisons: [
+          {
+            label: `${formatSignedPercent(
+              selectedYearSummary.complianceUnitsPctChangeYoy
+            )} ${t('org:supplyHistory.analytics.vsPreviousYear')}`,
+            color: getComparisonColor(
+              selectedYearSummary.complianceUnitsPctChangeYoy
+            )
+          },
+          {
+            label: `${t('org:supplyHistory.analytics.previousYear')}: ${
+              priorYear || t('org:supplyHistory.analytics.noData')
+            } • ${formatPlainNumber(previousComplianceUnits, 2)}`,
+            color: 'text'
+          }
+        ]
       },
       {
-        key: 'total-reports',
+        key: 'cu-efficiency',
+        hasData: hasNumericValue(
+          selectedYearSummary.complianceUnitsPerUnitSupply
+        ),
+        title: t('org:supplyHistory.analytics.complianceUnitsPerUnitSupply'),
+        value: formatPlainNumber(
+          selectedYearSummary.complianceUnitsPerUnitSupply,
+          6
+        ),
+        period: year,
+        comparisons: [
+          {
+            label: `${formatPlainNumber(
+              selectedYearSummary.complianceUnitsPerUnitSupplyChange,
+              6
+            )} ${t('org:supplyHistory.analytics.vsPreviousYear')}`,
+            color: getComparisonColor(
+              selectedYearSummary.complianceUnitsPerUnitSupplyChange
+            )
+          },
+          {
+            label: `${t('org:supplyHistory.analytics.previousYear')}: ${formatPlainNumber(
+              selectedYearSummary.priorYearComplianceUnitsPerUnitSupply,
+              6
+            )}`,
+            color: 'text'
+          }
+        ]
+      },
+      {
+        key: 'submission-activity',
+        hasData: Number(analytics.totalReports || 0) > 0,
         title: t('org:supplyHistory.analytics.totalReports'),
-        value: abbreviateNumber(totalReports)
-      },
-      {
-        key: 'recent-submission',
-        title: t('org:supplyHistory.analytics.mostRecentSubmission'),
-        value: mostRecentSubmission
+        value: formatPlainNumber(analytics.totalReports),
+        period:
+          selectedYears.length === 0
+            ? t('org:supplyHistory.allYears')
+            : selectedYears.join(', '),
+        comparisons: analytics.mostRecentSubmission
+          ? [
+              {
+                label: `${t(
+                  'org:supplyHistory.analytics.mostRecentSubmission'
+                )}: ${formatDisplayDate(analytics.mostRecentSubmission)}`,
+                color: 'text'
+              }
+            ]
+          : []
       }
-    ]
+    ].filter((card) => card.hasData)
   }, [
-    analytics.totalFuelTypes,
-    analytics.totalReports,
-    analytics.totalVolume,
     analytics.mostRecentSubmission,
+    analytics.totalReports,
+    selectedYears,
+    selectedYearSummary,
     t
   ])
 
-  // Prepare chart data
-  const fuelTypeChartData = useMemo(() => {
-    if (!analytics.totalByFuelType) return { labels: [], values: [] }
-    const entries = Object.entries(analytics.totalByFuelType)
-    return {
-      labels: entries.map(([key]) => key),
-      values: entries.map(([, value]) => value)
-    }
-  }, [analytics.totalByFuelType])
+  const complianceUnitCreditDebitTrendData = useMemo(() => {
+    const rows = analytics.complianceUnitCreditDebitTrend || []
+    const years = Array.from(
+      new Set(rows.map((row) => row.reportingYear))
+    ).sort()
+    const groups = [
+      'Positive compliance units',
+      'Zero or negative compliance units'
+    ]
 
-  const volumeOverTimeChartData = useMemo(() => {
-    if (!analytics.totalByYear) return { labels: [], values: [] }
-    const entries = Object.entries(analytics.totalByYear).sort((a, b) =>
-      a[0].localeCompare(b[0])
+    return {
+      labels: years,
+      series: groups.map((group) => ({
+        name: group,
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 7,
+        data: years.map((year) => {
+          const match = rows.find(
+            (row) =>
+              row.reportingYear === year && row.complianceUnitGroup === group
+          )
+          return match?.complianceUnits ?? 0
+        })
+      }))
+    }
+  }, [analytics.complianceUnitCreditDebitTrend])
+
+  const fuelTypeVolumeTrendData = useMemo(() => {
+    const rows = analytics.fuelTypeVolumeTrend || []
+    const years = Array.from(
+      new Set(rows.map((row) => row.reportingYear))
+    ).sort()
+    const topFuelTypes = Array.from(
+      rows
+        .reduce((acc, row) => {
+          acc.set(row.fuelType, (acc.get(row.fuelType) || 0) + row.totalVolume)
+          return acc
+        }, new Map())
+        .entries()
     )
-    return {
-      labels: entries.map(([key]) => key),
-      values: entries.map(([, value]) => value)
-    }
-  }, [analytics.totalByYear])
-
-  const categoryChartData = useMemo(() => {
-    if (!analytics.totalByFuelCategory) return []
-    return Object.entries(analytics.totalByFuelCategory).map(
-      ([label, value], index) => ({
-        id: index,
-        value,
-        label
-      })
-    )
-  }, [analytics.totalByFuelCategory])
-
-  const provisionChartData = useMemo(() => {
-    if (!analytics.totalByProvision) return { labels: [], series: [] }
-    const entries = Object.entries(analytics.totalByProvision)
-    return {
-      labels: entries.map(([key]) => key),
-      values: entries.map(([, value]) => value)
-    }
-  }, [analytics.totalByProvision])
-
-  // Top 10 fuel codes
-  const topFuelCodesChartData = useMemo(() => {
-    if (!fuelSupplies || fuelSupplies.length === 0)
-      return { labels: [], values: [] }
-
-    // Aggregate by fuel code
-    const fuelCodeTotals = {}
-    fuelSupplies.forEach((supply) => {
-      if (supply.fuelCode) {
-        fuelCodeTotals[supply.fuelCode] =
-          (fuelCodeTotals[supply.fuelCode] || 0) + supply.fuelQuantity
-      }
-    })
-
-    // Sort and take top 10
-    const sortedEntries = Object.entries(fuelCodeTotals)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
+      .slice(0, 8)
+      .map(([fuelType]) => fuelType)
 
     return {
-      labels: sortedEntries.map(([key]) => key),
-      values: sortedEntries.map(([, value]) => value)
+      labels: years,
+      series: topFuelTypes.map((fuelType) => ({
+        name: fuelType,
+        type: 'line',
+        smooth: true,
+        data: years.map((year) => {
+          const match = rows.find(
+            (row) => row.reportingYear === year && row.fuelType === fuelType
+          )
+          return match?.totalVolume ?? 0
+        })
+      }))
     }
-  }, [fuelSupplies])
+  }, [analytics.fuelTypeVolumeTrend])
 
-  // ECharts Options
-  const fuelTypeChartOption = useMemo(
+  const renewableSupplyVolumeChangeData = useMemo(() => {
+    const rows = analytics.fuelTypeVolumeTrend || []
+    const years = Array.from(
+      new Set(rows.map((row) => row.reportingYear))
+    ).sort()
+    const groups = [
+      t('org:supplyHistory.analytics.renewable'),
+      t('org:supplyHistory.analytics.nonRenewable')
+    ]
+    const totalsByYearAndGroup = rows.reduce((acc, row) => {
+      const year = row.reportingYear
+      const group = row.fossilDerived
+        ? t('org:supplyHistory.analytics.nonRenewable')
+        : t('org:supplyHistory.analytics.renewable')
+      acc[year] ||= {}
+      acc[year][group] = (acc[year][group] || 0) + (row.totalVolume || 0)
+      return acc
+    }, {})
+
+    return {
+      labels: years,
+      series: groups.map((group) => ({
+        name: group,
+        type: 'bar',
+        data: years.map((year, index) => {
+          const current = totalsByYearAndGroup[year]?.[group] || 0
+          if (index === 0) return null
+          const previousYear = years[index - 1]
+          const previous = totalsByYearAndGroup[previousYear]?.[group] || 0
+          return current - previous
+        })
+      }))
+    }
+  }, [analytics.fuelTypeVolumeTrend, t])
+
+  const topFuelCodesChartData = useMemo(() => {
+    const rows = analytics.topFuelCodes || []
+    return {
+      labels: rows.map((row) => row.fuelCode),
+      values: rows.map((row) => row.totalVolume)
+    }
+  }, [analytics.topFuelCodes])
+
+  const showComplianceUnitCreditDebitChart =
+    complianceUnitCreditDebitTrendData.labels.length > 1
+  const showFuelTypeVolumeTrendChart = fuelTypeVolumeTrendData.labels.length > 1
+  const showRenewableSupplyVolumeChangeChart =
+    renewableSupplyVolumeChangeData.labels.length > 1
+  const showTopFuelCodesChart = topFuelCodesChartData.labels.length > 1
+
+  const hasDashboardContent =
+    dashboardMetricCards.length > 0 ||
+    showComplianceUnitCreditDebitChart ||
+    showFuelTypeVolumeTrendChart ||
+    showRenewableSupplyVolumeChangeChart ||
+    showTopFuelCodesChart
+
+  const complianceUnitCreditDebitTrendOption = useMemo(
     () => ({
       tooltip: {
         trigger: 'axis',
-        axisPointer: { type: 'shadow' }
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '15%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: fuelTypeChartData.labels,
-        axisLabel: {
-          rotate: 45,
-          interval: 0
-        }
-      },
-      yAxis: {
-        type: 'value',
-        name: t('org:supplyHistory.analytics.quantity')
-      },
-      series: [
-        {
-          name: t('org:supplyHistory.analytics.quantity'),
-          type: 'bar',
-          data: fuelTypeChartData.values,
-          itemStyle: {
-            color: '#1976d2'
-          }
-        }
-      ]
-    }),
-    [fuelTypeChartData, t]
-  )
-
-  const volumeOverTimeChartOption = useMemo(
-    () => ({
-      tooltip: {
-        trigger: 'axis'
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '10%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: volumeOverTimeChartData.labels,
-        boundaryGap: false
-      },
-      yAxis: {
-        type: 'value',
-        name: t('org:supplyHistory.analytics.totalVolume')
-      },
-      series: [
-        {
-          name: t('org:supplyHistory.analytics.totalVolume'),
-          type: 'line',
-          data: volumeOverTimeChartData.values,
-          areaStyle: {
-            color: 'rgba(25, 118, 210, 0.2)'
-          },
-          itemStyle: {
-            color: '#1976d2'
-          },
-          lineStyle: {
-            color: '#1976d2'
-          }
-        }
-      ]
-    }),
-    [volumeOverTimeChartData, t]
-  )
-
-  const categoryChartOption = useMemo(
-    () => ({
-      tooltip: {
-        trigger: 'item',
-        formatter: '{b}: {c} ({d}%)'
+        valueFormatter: (value) => formatCompactAxisNumber(value)
       },
       legend: {
-        orient: 'vertical',
-        left: 'left'
+        top: 0,
+        left: 0,
+        right: 0,
+        icon: 'circle',
+        type: 'scroll'
       },
-      series: [
-        {
-          type: 'pie',
-          radius: '65%',
-          data: categoryChartData.map((item) => ({
-            name: item.label,
-            value: item.value
-          })),
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)'
-            }
+      grid: {
+        ...CHART_GRID,
+        top: 66
+      },
+      xAxis: {
+        type: 'category',
+        name: t('org:supplyHistory.analytics.complianceYear'),
+        nameGap: 28,
+        data: complianceUnitCreditDebitTrendData.labels,
+        axisLabel: CHART_CATEGORY_AXIS_LABEL
+      },
+      yAxis: {
+        type: 'value',
+        name: t('org:supplyHistory.analytics.complianceUnits'),
+        nameLocation: 'middle',
+        nameGap: 52,
+        nameRotate: 90,
+        nameTextStyle: {
+          color: CHART_COLORS.neutralText,
+          align: 'center'
+        },
+        axisLabel: {
+          ...CHART_AXIS_LABEL,
+          formatter: (value) => formatCompactAxisNumber(value)
+        }
+      },
+      series: complianceUnitCreditDebitTrendData.series.map((series) => {
+        const isPositive = series.name === 'Positive compliance units'
+        const lineColor = isPositive ? CHART_COLORS.green : CHART_COLORS.orange
+        return {
+          ...series,
+          areaStyle: {
+            color: isPositive
+              ? 'rgba(0, 158, 115, 0.2)'
+              : 'rgba(213, 94, 0, 0.16)'
+          },
+          itemStyle: {
+            color: lineColor
+          },
+          lineStyle: {
+            color: lineColor,
+            width: 2
+          },
+          label: {
+            show: true,
+            formatter: ({ value }) => formatCompactAxisNumber(value),
+            color: CHART_COLORS.neutralText,
+            overflow: 'truncate',
+            width: 56
           }
         }
-      ]
+      })
     }),
-    [categoryChartData]
+    [complianceUnitCreditDebitTrendData, t]
   )
 
-  const provisionChartOption = useMemo(
+  const fuelTypeVolumeTrendOption = useMemo(
     () => ({
       tooltip: {
         trigger: 'axis',
-        axisPointer: { type: 'shadow' }
+        valueFormatter: (value) => formatCompactAxisNumber(value)
       },
+      legend: {
+        type: 'scroll',
+        bottom: 0,
+        left: 8,
+        right: 8
+      },
+      color: CHART_PALETTE,
       grid: {
-        left: '20%',
-        right: '4%',
-        bottom: '3%',
-        containLabel: true
+        ...CHART_GRID,
+        top: 20,
+        bottom: 108
       },
       xAxis: {
-        type: 'value',
-        name: t('org:supplyHistory.analytics.quantity')
+        type: 'category',
+        name: t('org:supplyHistory.analytics.complianceYear'),
+        nameGap: 28,
+        data: fuelTypeVolumeTrendData.labels,
+        axisLabel: CHART_CATEGORY_AXIS_LABEL
       },
       yAxis: {
-        type: 'category',
-        data: provisionChartData.labels
-      },
-      series: [
-        {
-          name: t('org:supplyHistory.analytics.quantity'),
-          type: 'bar',
-          data: provisionChartData.values,
-          itemStyle: {
-            color: '#1976d2'
-          }
+        type: 'value',
+        name: t('org:supplyHistory.analytics.quantity'),
+        nameLocation: 'middle',
+        nameGap: 52,
+        nameRotate: 90,
+        nameTextStyle: {
+          color: CHART_COLORS.neutralText,
+          align: 'center'
+        },
+        axisLabel: {
+          ...CHART_AXIS_LABEL,
+          formatter: (value) => formatCompactAxisNumber(value)
         }
-      ]
+      },
+      series: fuelTypeVolumeTrendData.series
     }),
-    [provisionChartData, t]
+    [fuelTypeVolumeTrendData, t]
+  )
+
+  const renewableSupplyVolumeChangeOption = useMemo(
+    () => ({
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        valueFormatter: (value) => formatCompactAxisNumber(value)
+      },
+      legend: {
+        bottom: 0,
+        left: 8,
+        right: 8
+      },
+      grid: {
+        ...CHART_GRID,
+        top: 20,
+        bottom: 96
+      },
+      xAxis: {
+        type: 'category',
+        name: t('org:supplyHistory.analytics.complianceYear'),
+        nameGap: 28,
+        data: renewableSupplyVolumeChangeData.labels,
+        axisLabel: CHART_CATEGORY_AXIS_LABEL
+      },
+      yAxis: {
+        type: 'value',
+        name: t('org:supplyHistory.analytics.volumeChange'),
+        nameLocation: 'middle',
+        nameGap: 52,
+        nameRotate: 90,
+        nameTextStyle: {
+          color: CHART_COLORS.neutralText,
+          align: 'center'
+        },
+        axisLabel: {
+          ...CHART_AXIS_LABEL,
+          formatter: (value) => formatCompactAxisNumber(value)
+        }
+      },
+      series: renewableSupplyVolumeChangeData.series.map((series) => ({
+        ...series,
+        itemStyle: {
+          color:
+            series.name === t('org:supplyHistory.analytics.renewable')
+              ? CHART_COLORS.green
+              : CHART_COLORS.orange
+        }
+      }))
+    }),
+    [renewableSupplyVolumeChangeData, t]
   )
 
   const topFuelCodesChartOption = useMemo(
     () => ({
       tooltip: {
         trigger: 'axis',
-        axisPointer: { type: 'shadow' }
+        axisPointer: { type: 'shadow' },
+        valueFormatter: (value) => formatCompactAxisNumber(value)
       },
       grid: {
-        left: '15%',
-        right: '4%',
-        bottom: '3%',
-        containLabel: true
+        ...CHART_GRID,
+        top: 16,
+        bottom: 48
       },
       xAxis: {
         type: 'value',
-        name: t('org:supplyHistory.analytics.quantity')
+        name: t('org:supplyHistory.analytics.quantity'),
+        nameLocation: 'middle',
+        nameGap: 36,
+        nameTextStyle: {
+          color: CHART_COLORS.neutralText,
+          align: 'center'
+        },
+        axisLabel: {
+          ...CHART_AXIS_LABEL,
+          formatter: (value) => formatCompactAxisNumber(value)
+        }
       },
       yAxis: {
         type: 'category',
-        data: topFuelCodesChartData.labels
+        data: topFuelCodesChartData.labels,
+        axisLabel: {
+          ...CHART_AXIS_LABEL,
+          width: 96,
+          overflow: 'truncate'
+        }
       },
       series: [
         {
@@ -458,7 +908,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
           type: 'bar',
           data: topFuelCodesChartData.values,
           itemStyle: {
-            color: '#1976d2'
+            color: CHART_COLORS.blue
           }
         }
       ]
@@ -469,43 +919,166 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   return (
     <BCBox py={0}>
       {/* Filters */}
-      <Stack
-        spacing={2}
-        direction={{ xs: 'column', md: 'row' }}
-        alignItems={{ xs: 'stretch', md: 'flex-end' }}
-        sx={{ mb: 3 }}
-      >
-        <FormControl size="medium" sx={{ minWidth: 120 }}>
-          <BCTypography variant="body2" sx={{ mb: 1 }}>
-            {t('org:supplyHistory.filterByYear')}
-          </BCTypography>
-          <Select value={selectedYear} onChange={handleYearChange} displayEmpty>
-            <MenuItem value="all">{t('org:supplyHistory.allYears')}</MenuItem>
-            {availableYears.map((year) => (
-              <MenuItem key={year} value={year}>
-                {year}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <ClearFiltersButton
-          onClick={handleClearFilters}
-          disabled={!hasActiveFilters}
-          sx={{
-            minWidth: { xs: '100%', md: 'fit-content' },
-            whiteSpace: 'nowrap'
-          }}
-        />
-      </Stack>
-
-      {/* Summary Cards */}
-      <Grid container spacing={2} sx={{ mb: 4 }}>
-        {metricCards.map((card) => (
-          <Grid item xs={12} sm={6} md={3} key={card.key}>
-            <BCMetricCard {...card} />
+      <Grid container spacing={2} alignItems="flex-end" sx={{ mb: 3 }}>
+        <Grid item xs={12} lg={6}>
+          <Stack
+            direction="row"
+            spacing={1.5}
+            mb={2}
+            alignItems="center"
+            flexWrap="wrap"
+            useFlexGap
+          >
+            <BCTypography variant="body2" color="primary">
+              {t('org:supplyHistory.filterByYear')}
+            </BCTypography>
+            <FormControl size="small" sx={{ minWidth: 128 }}>
+              <Select
+                value={selectedYearRange.from}
+                onChange={handleFromYearChange}
+                displayEmpty
+              >
+                <MenuItem value="">{t('org:supplyHistory.fromYear')}</MenuItem>
+                {fromYearOptions.map((year) => (
+                  <MenuItem key={year} value={year}>
+                    {year}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <BCTypography variant="body2" color="primary">
+              {t('org:supplyHistory.toYear')}
+            </BCTypography>
+            <FormControl size="small" sx={{ minWidth: 128 }}>
+              <Select
+                value={selectedYearRange.to}
+                onChange={handleToYearChange}
+                displayEmpty
+              >
+                <MenuItem value="">{t('org:supplyHistory.toYear')}</MenuItem>
+                {toYearOptions.map((year) => (
+                  <MenuItem key={year} value={year}>
+                    {year}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <ClearFiltersButton
+              onClick={handleClearFilters}
+              disabled={!hasActiveFilters}
+              sx={{
+                minWidth: { xs: '100%', sm: 'fit-content' },
+                whiteSpace: 'nowrap'
+              }}
+            />
+          </Stack>
+        </Grid>
+        {isGovernment && (
+          <Grid
+            item
+            xs={12}
+            lg={6}
+            sx={{
+              display: 'flex',
+              justifyContent: { xs: 'flex-start', lg: 'flex-end' }
+            }}
+          >
+            <OrganizationList
+              selectedOrg={{ id: selectedOrganizationId }}
+              onOrgChange={handleOrganizationChange}
+              onlyRegistered={false}
+              includeAllOption={false}
+              label={t('org:supplyHistory.showOrganization')}
+              placeholder={t('org:supplyHistory.selectOrganization')}
+              showSelectedLabel={false}
+            />
           </Grid>
-        ))}
+        )}
       </Grid>
+
+      {hasDashboardContent && (
+        <Accordion defaultExpanded sx={{ mb: 4 }}>
+          <AccordionSummary
+            expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
+            sx={{
+              '& .MuiAccordionSummary-content': {
+                alignItems: 'center'
+              }
+            }}
+          >
+            <BCBox>
+              <BCTypography variant="h6" color="primary">
+                {t('org:supplyHistory.analytics.dashboardTitle')}
+              </BCTypography>
+              <BCTypography variant="body2" color="text.secondary">
+                {t('org:supplyHistory.analytics.dashboardDescription')}
+              </BCTypography>
+            </BCBox>
+          </AccordionSummary>
+          <AccordionDetails sx={{ minWidth: 0, overflow: 'hidden' }}>
+            {dashboardMetricCards.length > 0 && (
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                {dashboardMetricCards.map((card) => (
+                  <Grid
+                    item
+                    xs={12}
+                    sm={6}
+                    lg={3}
+                    key={card.key}
+                    sx={{ minWidth: 0 }}
+                  >
+                    <SupplyMetricCard {...card} />
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+
+            <Grid container spacing={3} sx={{ minWidth: 0 }}>
+              {showComplianceUnitCreditDebitChart && (
+                <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
+                  <ChartPanel
+                    title={t('org:supplyHistory.analytics.netCreditsDebitsYoy')}
+                    option={complianceUnitCreditDebitTrendOption}
+                    height={320}
+                  />
+                </Grid>
+              )}
+
+              {showTopFuelCodesChart && (
+                <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
+                  <ChartPanel
+                    title={t('org:supplyHistory.analytics.topFuelCodes')}
+                    option={topFuelCodesChartOption}
+                    height={360}
+                  />
+                </Grid>
+              )}
+
+              {showFuelTypeVolumeTrendChart && (
+                <Grid item xs={12} sx={{ minWidth: 0 }}>
+                  <ChartPanel
+                    title={t('org:supplyHistory.analytics.fuelTypeVolumeTrend')}
+                    option={fuelTypeVolumeTrendOption}
+                    height={380}
+                  />
+                </Grid>
+              )}
+
+              {showRenewableSupplyVolumeChangeChart && (
+                <Grid item xs={12} sx={{ minWidth: 0 }}>
+                  <ChartPanel
+                    title={t(
+                      'org:supplyHistory.analytics.renewableSupplyVolumeChange'
+                    )}
+                    option={renewableSupplyVolumeChangeOption}
+                    height={360}
+                  />
+                </Grid>
+              )}
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
+      )}
 
       {/* Data Grid */}
       <BCBox sx={{ mb: 4 }}>
@@ -519,120 +1092,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
           dataKey="fuelSupplies"
           paginationOptions={paginationOptions}
           onPaginationChange={handleGridPaginationChange}
+          onClearFilters={handleClearFilters}
         />
       </BCBox>
-
-      {/* Analytics Charts */}
-      <BCTypography variant="h6" color="primary" sx={{ mb: 2, mt: 4 }}>
-        {t('org:supplyHistory.analytics.chartsTitle')}
-      </BCTypography>
-
-      <Grid container spacing={3}>
-        {/* Fuel Type Distribution */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={2}>
-            <CardContent>
-              <BCTypography variant="subtitle1" sx={{ mb: 2 }}>
-                {t('org:supplyHistory.analytics.fuelTypeDistribution')}
-              </BCTypography>
-              {fuelTypeChartData.labels.length > 0 ? (
-                <ReactECharts
-                  option={fuelTypeChartOption}
-                  style={{ height: 300 }}
-                />
-              ) : (
-                <BCTypography variant="body2" color="text.secondary">
-                  {t('org:supplyHistory.analytics.noData')}
-                </BCTypography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Volume Over Time */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={2}>
-            <CardContent>
-              <BCTypography variant="subtitle1" sx={{ mb: 2 }}>
-                {t('org:supplyHistory.analytics.volumeOverTime')}
-              </BCTypography>
-              {volumeOverTimeChartData.labels.length > 0 ? (
-                <ReactECharts
-                  option={volumeOverTimeChartOption}
-                  style={{ height: 300 }}
-                />
-              ) : (
-                <BCTypography variant="body2" color="text.secondary">
-                  {t('org:supplyHistory.analytics.noData')}
-                </BCTypography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Fuel Category Breakdown */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={2}>
-            <CardContent>
-              <BCTypography variant="subtitle1" sx={{ mb: 2 }}>
-                {t('org:supplyHistory.analytics.categoryBreakdown')}
-              </BCTypography>
-              {categoryChartData.length > 0 ? (
-                <ReactECharts
-                  option={categoryChartOption}
-                  style={{ height: 300 }}
-                />
-              ) : (
-                <BCTypography variant="body2" color="text.secondary">
-                  {t('org:supplyHistory.analytics.noData')}
-                </BCTypography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Provision Distribution */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={2}>
-            <CardContent>
-              <BCTypography variant="subtitle1" sx={{ mb: 2 }}>
-                {t('org:supplyHistory.analytics.provisionDistribution')}
-              </BCTypography>
-              {provisionChartData.labels.length > 0 ? (
-                <ReactECharts
-                  option={provisionChartOption}
-                  style={{ height: 300 }}
-                />
-              ) : (
-                <BCTypography variant="body2" color="text.secondary">
-                  {t('org:supplyHistory.analytics.noData')}
-                </BCTypography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Top Fuel Codes */}
-        <Grid item xs={12}>
-          <Card elevation={2}>
-            <CardContent>
-              <BCTypography variant="subtitle1" sx={{ mb: 2 }}>
-                {t('org:supplyHistory.analytics.topFuelCodes')}
-              </BCTypography>
-              {topFuelCodesChartData.labels.length > 0 ? (
-                <ReactECharts
-                  option={topFuelCodesChartOption}
-                  style={{ height: 400 }}
-                />
-              ) : (
-                <BCTypography variant="body2" color="text.secondary">
-                  {t('org:supplyHistory.analytics.noData')}
-                </BCTypography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
     </BCBox>
   )
 }

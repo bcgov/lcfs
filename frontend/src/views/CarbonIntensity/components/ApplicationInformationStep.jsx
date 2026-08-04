@@ -1,15 +1,13 @@
 import { forwardRef, useEffect, useImperativeHandle } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import {
-  Box,
-  InputLabel,
-  MenuItem,
-  Stack,
-  TextField
-} from '@mui/material'
+import { Box, InputLabel, MenuItem, Stack, TextField } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers'
-import { format as formatDate, isValid as isValidDate, parseISO } from 'date-fns'
+import {
+  format as formatDate,
+  isValid as isValidDate,
+  parseISO
+} from 'date-fns'
 import * as Yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import Grid2 from '@mui/material/Grid2'
@@ -35,8 +33,12 @@ const dateToString = (value) => {
 
 const buildValidationSchema = (t) =>
   Yup.object({
-    facilityCity: Yup.string().nullable(),
-    facilityProvinceState: Yup.string().nullable(),
+    facilityCity: Yup.string()
+      .trim()
+      .required(t('carbonIntensity:step1.validation.cityRequired')),
+    facilityProvinceState: Yup.string()
+      .trim()
+      .required(t('carbonIntensity:step1.validation.provinceStateRequired')),
     facilityCountry: Yup.string()
       .trim()
       .required(t('carbonIntensity:step1.validation.countryRequired')),
@@ -61,8 +63,8 @@ const toFormValues = (data) => ({
 })
 
 const toApiPayload = (values) => ({
-  facilityCity: values.facilityCity || null,
-  facilityProvinceState: values.facilityProvinceState || null,
+  facilityCity: values.facilityCity?.trim(),
+  facilityProvinceState: values.facilityProvinceState?.trim(),
   facilityCountry: values.facilityCountry?.trim(),
   facilityNameplateCapacity: Number(values.facilityNameplateCapacity),
   facilityNameplateCapacityUnit: values.facilityNameplateCapacityUnit || null,
@@ -110,7 +112,6 @@ export const ApplicationInformationStep = forwardRef(
 
     const onSubmit = (values) => onSave?.(toApiPayload(values))
 
-    const optionalSuffix = ` ${t('carbonIntensity:labels.optional')}`
     const requiredSuffix = ` ${t('carbonIntensity:labels.required')}`
 
     return (
@@ -131,13 +132,23 @@ export const ApplicationInformationStep = forwardRef(
             {organization.email && (
               <BCTypography variant="body2">{organization.email}</BCTypography>
             )}
+            <BCTypography
+              variant="body2"
+              sx={{ mt: 1, fontStyle: 'italic' }}
+              data-test="ci-step1-org-info-confirmation"
+            >
+              "{t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
+              <a
+                href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+              >
+                {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
+              </a>
+              "
+            </BCTypography>
           </Box>
         )}
 
-        <BCTypography
-          variant="h6"
-          sx={{ pb: 2, color: colors.primary.main }}
-        >
+        <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
           {t('carbonIntensity:step1.facilityLocationLabel')}
         </BCTypography>
 
@@ -150,12 +161,13 @@ export const ApplicationInformationStep = forwardRef(
                 <Box mb={2}>
                   <InputLabel htmlFor="facilityCity" sx={{ pb: 1 }}>
                     {t('carbonIntensity:step1.city')}
-                    {optionalSuffix}:
+                    {requiredSuffix}:
                   </InputLabel>
                   <TextField
                     {...field}
                     id="facilityCity"
                     data-test="facilityCity"
+                    required
                     variant="outlined"
                     fullWidth
                     error={!!fieldState.error}
@@ -175,12 +187,13 @@ export const ApplicationInformationStep = forwardRef(
                 <Box mb={2}>
                   <InputLabel htmlFor="facilityProvinceState" sx={{ pb: 1 }}>
                     {t('carbonIntensity:step1.provinceState')}
-                    {optionalSuffix}:
+                    {requiredSuffix}:
                   </InputLabel>
                   <TextField
                     {...field}
                     id="facilityProvinceState"
                     data-test="facilityProvinceState"
+                    required
                     variant="outlined"
                     fullWidth
                     error={!!fieldState.error}
@@ -226,7 +239,9 @@ export const ApplicationInformationStep = forwardRef(
               control={control}
               render={({ field, fieldState }) => {
                 const displayValue =
-                  field.value === '' || field.value === null || field.value === undefined
+                  field.value === '' ||
+                  field.value === null ||
+                  field.value === undefined
                     ? ''
                     : Number(field.value).toLocaleString('en-CA')
                 return (
@@ -326,16 +341,13 @@ export const ApplicationInformationStep = forwardRef(
                     htmlFor="proposedFuelCodeEffectiveDate"
                     sx={{ pb: 1 }}
                   >
-                    {t('carbonIntensity:step1.proposedFuelCodeEffective')}
-                    {' '}
+                    {t('carbonIntensity:step1.proposedFuelCodeEffective')}{' '}
                     <BCTypography
                       variant="caption"
                       component="span"
                       color="text.secondary"
                     >
-                      {t(
-                        'carbonIntensity:step1.proposedFuelCodeEffectiveHelp'
-                      )}
+                      {t('carbonIntensity:step1.proposedFuelCodeEffectiveHelp')}
                     </BCTypography>
                   </InputLabel>
                   <DatePicker
@@ -369,11 +381,13 @@ export const ApplicationInformationStep = forwardRef(
           </Grid2>
         </Grid2>
 
+        {/* Delete sits far right, away from the primary action (#4770). */}
         <Stack
           direction="row"
           spacing={2}
           sx={{ mt: 2 }}
           alignItems="center"
+          justifyContent="space-between"
         >
           <BCButton
             type="submit"

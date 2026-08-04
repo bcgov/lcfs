@@ -69,6 +69,36 @@ describe('CIApplicationProgress', () => {
     ])
   })
 
+  it('builds moderate risk workflow WITH verification 2 (#4741)', () => {
+    // Medium risk keeps the Verification 2 step after Verification 1 completes.
+    const steps = buildCIWorkflowSteps({
+      status: { status: 'Submitted' },
+      signatureUser: 'Jane Submitter',
+      signatureDateTime: '2026-05-01T12:00:00Z',
+      preliminaryRiskAssessment: 'Medium',
+      verification1Date: '2026-05-02T12:00:00Z',
+      proposedFuelCodeEffectiveDate: '2026-06-01'
+    })
+    expect(steps.map((step) => step.key)).toEqual([
+      'submitted',
+      'verification1',
+      'verification2',
+      'target'
+    ])
+  })
+
+  it('treats legacy "Moderate" risk the same as Medium (#4741)', () => {
+    const steps = buildCIWorkflowSteps({
+      status: { status: 'Submitted' },
+      signatureUser: 'Jane Submitter',
+      signatureDateTime: '2026-05-01T12:00:00Z',
+      preliminaryRiskAssessment: 'Moderate',
+      verification1Date: '2026-05-02T12:00:00Z',
+      proposedFuelCodeEffectiveDate: '2026-06-01'
+    })
+    expect(steps.map((step) => step.key)).toContain('verification2')
+  })
+
   it('renders submitted workflow details and target countdown', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-19T12:00:00Z'))
@@ -78,7 +108,7 @@ describe('CIApplicationProgress', () => {
           status: { status: 'Submitted' },
           signatureUserDisplayName: 'Jane Submitter',
           signatureDateTime: '2026-05-01T12:00:00Z',
-          preliminaryRiskAssessment: 'Medium',
+          preliminaryRiskAssessment: 'High',
           assignedAnalyst: {
             initials: 'AA',
             fullName: 'Alex Analyst'
@@ -123,7 +153,29 @@ describe('CIApplicationProgress', () => {
     expect(screen.queryByText('5')).not.toBeInTheDocument()
   })
 
-  it('adds an hourglass supplier-wait step with days counted from request date', () => {
+  it('marks the final step complete for BCeID users once the application is Completed (ticket #4652)', () => {
+    mockHasAnyRole = vi.fn(() => false)
+    render(
+      <CIApplicationProgress
+        activeStep={0}
+        ciApplication={{
+          status: { status: 'Completed' },
+          signatureUserDisplayName: 'Jane Submitter',
+          signatureDateTime: '2026-05-01T12:00:00Z',
+          proposedFuelCodeEffectiveDate: '2026-06-01'
+        }}
+      />,
+      { wrapper }
+    )
+
+    // All five steps, including Government decision, are complete so the BCeID
+    // pipeline matches the grid's "Completed" status.
+    expect(screen.getByText('carbonIntensity:steps.step5')).toBeInTheDocument()
+    expect(screen.getByText('4')).toBeInTheDocument()
+    expect(screen.getByText('5')).toBeInTheDocument()
+  })
+
+  it('adds an hourglass applicant-wait step with days counted from request date', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-19T12:00:00Z'))
     render(
@@ -141,8 +193,10 @@ describe('CIApplicationProgress', () => {
       { wrapper }
     )
 
-    expect(screen.getByText('With supplier')).toBeInTheDocument()
-    expect(screen.getByText('2 days with supplier')).toBeInTheDocument()
+    expect(screen.getByText('With applicant')).toBeInTheDocument()
+    expect(screen.getByText('2 days with applicant')).toBeInTheDocument()
+    // Terminology is applicant-only within the CI process (#4743).
+    expect(screen.queryByText('With supplier')).not.toBeInTheDocument()
     vi.useRealTimers()
   })
 
@@ -243,7 +297,7 @@ describe('CIApplicationProgress', () => {
       status: { status: 'Submitted' },
       signatureUserDisplayName: 'Jane Submitter',
       signatureDateTime: '2026-05-01T12:00:00Z',
-      preliminaryRiskAssessment: 'Medium',
+      preliminaryRiskAssessment: 'High',
       verification1Date: '2026-05-02T12:00:00Z',
       verification1User: {
         initials: 'GW',

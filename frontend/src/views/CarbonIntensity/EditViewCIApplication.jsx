@@ -47,6 +47,19 @@ import { FuelCodesTabs } from './components/FuelCodesTabs'
 import colors from '@/themes/base/colors'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 
+const getApiError = (err, fallback) => {
+  const data = err?.response?.data
+  if (!data) return err?.message || fallback
+  if (Array.isArray(data.errors) && data.errors[0]?.message) {
+    return data.errors[0].message
+  }
+  if (typeof data.detail === 'string' && data.detail) return data.detail
+  if (typeof data.message === 'string' && data.message !== 'Validation failed') {
+    return data.message
+  }
+  return err?.message || fallback
+}
+
 const STEP_KEYS = CI_APPLICATION_STEPS.map((s) => s.key)
 
 const EditViewCIApplicationBase = () => {
@@ -177,10 +190,7 @@ const EditViewCIApplicationBase = () => {
         goToStep(4)
       } catch (err) {
         alertRef.current?.triggerAlert?.({
-          message:
-            err?.response?.data?.detail ||
-            err?.message ||
-            'Failed to submit application.',
+          message: getApiError(err, 'Failed to submit application.'),
           severity: 'error'
         })
       }
@@ -199,10 +209,7 @@ const EditViewCIApplicationBase = () => {
         goToStep(3)
       } catch (err) {
         alertRef.current?.triggerAlert?.({
-          message:
-            err?.response?.data?.detail ||
-            err?.message ||
-            'Failed to save Step 3.',
+          message: getApiError(err, 'Failed to save Step 3.'),
           severity: 'error'
         })
       }
@@ -221,10 +228,7 @@ const EditViewCIApplicationBase = () => {
         goToStep(2)
       } catch (err) {
         alertRef.current?.triggerAlert?.({
-          message:
-            err?.response?.data?.detail ||
-            err?.message ||
-            'Failed to save proposed fuel pathways.',
+          message: getApiError(err, 'Failed to save proposed fuel pathways.'),
           severity: 'error'
         })
       }
@@ -258,10 +262,7 @@ const EditViewCIApplicationBase = () => {
         goToStep(1)
       } catch (err) {
         alertRef.current?.triggerAlert?.({
-          message:
-            err?.response?.data?.detail ||
-            err?.message ||
-            'Failed to save application information.',
+          message: getApiError(err, 'Failed to save application information.'),
           severity: 'error'
         })
       }
@@ -288,16 +289,13 @@ const EditViewCIApplicationBase = () => {
       await deleteDraft(ciApplicationId)
       navigate(ROUTES.CI_APPLICATIONS.LIST, {
         state: {
-          message: t('carbonIntensity:step1.deleteConfirmTitle'),
+          message: t('carbonIntensity:step1.deleteSuccess'),
           severity: 'success'
         }
       })
     } catch (err) {
       alertRef.current?.triggerAlert?.({
-        message:
-          err?.response?.data?.detail ||
-          err?.message ||
-          'Failed to delete CI application.',
+        message: getApiError(err, 'Failed to delete CI application.'),
         severity: 'error'
       })
     } finally {
@@ -338,6 +336,12 @@ const EditViewCIApplicationBase = () => {
     !isGovernment &&
     ciApplication?.status?.status === 'Submitted' &&
     !!ciApplication?.pathwaySupplementalEditEnabled
+  // After an analyst requests further documentation, the BCeID supplier may
+  // upload additional documents to their submitted application (#4644).
+  const canSupplementallyEditDocuments =
+    !isGovernment &&
+    ciApplication?.status?.status === 'Submitted' &&
+    !!ciApplication?.documentUploadEnabled
 
   // Hooks must run on every render — keep this above the loading-state
   // early return so hook order stays stable across renders.
@@ -408,7 +412,6 @@ const EditViewCIApplicationBase = () => {
         ciApplication={ciApplicationWithSupplierRequest}
         isGovernment={isGovernment}
         readOnly={isDecisionReadOnly}
-        onDocumentUploadClick={() => setIsDocumentEditorOpen(true)}
         onSupplierRequest={() =>
           setSupplierRequestDate(new Date().toISOString())
         }
@@ -547,7 +550,9 @@ const EditViewCIApplicationBase = () => {
                 <ApplicationSummary
                   ciApplication={ciApplication}
                   currentUser={currentUser}
-                  canEditDocuments={canManageSummaryDocuments}
+                  canEditDocuments={
+                    canManageSummaryDocuments || canSupplementallyEditDocuments
+                  }
                   onEditDocuments={() => setIsDocumentEditorOpen(true)}
                   canEditPathways={canSupplementallyEditPathways}
                   pathwayEditorOptionsData={tableOptions}
@@ -584,25 +589,6 @@ const EditViewCIApplicationBase = () => {
           </Accordion>
         ))
       )}
-
-      <BCBox
-        sx={{
-          mt: 4,
-          p: 2,
-          bgcolor: 'grey.50',
-          border: 1,
-          borderColor: 'divider'
-        }}
-      >
-        <BCTypography
-          variant="caption"
-          color="text.secondary"
-          component="pre"
-          sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', m: 0 }}
-        >
-          {t('carbonIntensity:footer')}
-        </BCTypography>
-      </BCBox>
 
       {modalData && (
         <BCModal

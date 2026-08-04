@@ -8,9 +8,22 @@ import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import colors from '@/themes/base/colors'
 import BCTypography from '@/components/BCTypography'
+import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import i18n from '@/i18n'
 
 const APPLICATION_TYPE_RENEWAL = 'Renewal'
+
+export const normalizeTransportModes = (value) => {
+  if (!value && value !== 0) return []
+  if (Array.isArray(value)) return value.filter(Boolean)
+  if (typeof value === 'string' && value.trim()) {
+    return value
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean)
+  }
+  return []
+}
 
 export const isRenewalRow = (data, applicationTypes) => {
   if (!data?.applicationTypeId) return false
@@ -54,11 +67,7 @@ const applyFuelCodeAutofill = (rowData, fuelCode) => {
     fuelCodeId: fuelCode.fuelCodeId,
     fuelTypeId: fuelCode.fuelTypeId ?? rowData.fuelTypeId,
     feedstock: fuelCode.feedstock ?? rowData.feedstock,
-    feedstockRegion: fuelCode.feedstockLocation ?? rowData.feedstockRegion,
-    proposedCi:
-      fuelCode.carbonIntensity != null
-        ? Number(fuelCode.carbonIntensity)
-        : rowData.proposedCi
+    feedstockRegion: fuelCode.feedstockLocation ?? rowData.feedstockRegion
   }
 }
 
@@ -115,9 +124,9 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         const match = applicationTypes.find((t) => t.type === params.newValue)
         if (!match) return false
         params.data.applicationTypeId = match.pathwayApplicationTypeId
-        // Switching back to "New" must clear any renewal-specific fuel code
-        // reference; otherwise validation will reject the row server-side.
-        if (match.type !== APPLICATION_TYPE_RENEWAL) {
+        if (match.type === APPLICATION_TYPE_RENEWAL) {
+          params.data.proposedCi = null
+        } else {
           params.data.fuelCodeId = null
         }
         return true
@@ -195,6 +204,13 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         openOnFocus: true
       },
       suppressKeyboardEvent,
+      // When the applicant's organization owns no renewable iterations the
+      // editor dropdown is empty; a browser tooltip on the cell explains why
+      // (BCGridEditor sets enableBrowserTooltips).
+      tooltipValueGetter: (params) =>
+        isRenewal(params) && fuelCodes.length === 0
+          ? i18n.t('carbonIntensity:step2.noEligibleFuelCodes')
+          : null,
       cellRenderer: (params) => {
         if (!isRenewal(params)) {
           return <BCTypography variant="body4">—</BCTypography>
@@ -202,10 +218,13 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         const match = fuelCodes.find(
           (fc) => fc.fuelCodeId === params.data?.fuelCodeId
         )
-        return match ? (
-          match.fuelCode
-        ) : (
-          <BCTypography variant="body4">Select</BCTypography>
+        if (match) {
+          return match.fuelCode
+        }
+        return (
+          <BCTypography variant="body4">
+            {fuelCodes.length === 0 ? 'No eligible iterations' : 'Select'}
+          </BCTypography>
         )
       },
       cellStyle: (params) => {
@@ -304,13 +323,19 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: {
         options: transportModes,
-        multiple: false,
-        disableCloseOnSelect: false,
+        multiple: true,
+        disableCloseOnSelect: true,
         freeSolo: false,
         openOnFocus: true
       },
       suppressKeyboardEvent,
-      cellRenderer: renderSelectPlaceholder,
+      cellRenderer: (params) => {
+        const val = params.value
+        if (Array.isArray(val) && val.length > 0) {
+          return <CommonArrayRenderer {...params} disableLink />
+        }
+        return <BCTypography variant="body4">Select</BCTypography>
+      },
       minWidth: 240
     },
     {
@@ -340,13 +365,19 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: {
         options: transportModes,
-        multiple: false,
-        disableCloseOnSelect: false,
+        multiple: true,
+        disableCloseOnSelect: true,
         freeSolo: false,
         openOnFocus: true
       },
       suppressKeyboardEvent,
-      cellRenderer: renderSelectPlaceholder,
+      cellRenderer: (params) => {
+        const val = params.value
+        if (Array.isArray(val) && val.length > 0) {
+          return <CommonArrayRenderer {...params} disableLink />
+        }
+        return <BCTypography variant="body4">Select</BCTypography>
+      },
       minWidth: 260
     },
     {
@@ -466,6 +497,14 @@ export const ciApplicationPathwaySummaryColDefs = ({
     {
       field: 'feedstockTransportMode',
       headerName: i18n.t('carbonIntensity:step2.feedstockTransportMode'),
+      valueGetter: ({ data }) => normalizeTransportModes(data?.feedstockTransportMode),
+      cellRenderer: (params) => {
+        const val = params.value
+        if (Array.isArray(val) && val.length > 0) {
+          return <CommonArrayRenderer {...params} disableLink />
+        }
+        return ''
+      },
       minWidth: 240
     },
     {
@@ -481,6 +520,14 @@ export const ciApplicationPathwaySummaryColDefs = ({
     {
       field: 'finishedFuelTransportMode',
       headerName: i18n.t('carbonIntensity:step2.finishedFuelTransportMode'),
+      valueGetter: ({ data }) => normalizeTransportModes(data?.finishedFuelTransportMode),
+      cellRenderer: (params) => {
+        const val = params.value
+        if (Array.isArray(val) && val.length > 0) {
+          return <CommonArrayRenderer {...params} disableLink />
+        }
+        return ''
+      },
       minWidth: 260
     },
     {
@@ -559,7 +606,7 @@ export const validatePathwayRow = (row, applicationTypes) => {
   if (!row.fuelTypeId) errors.push('fuelTypeId')
   if (!row.feedstock?.toString().trim()) errors.push('feedstock')
   if (!row.feedstockRegion?.toString().trim()) errors.push('feedstockRegion')
-  if (!row.feedstockTransportMode) errors.push('feedstockTransportMode')
+  if (!row.feedstockTransportMode?.length) errors.push('feedstockTransportMode')
   if (
     row.feedstockTransportDistance === null ||
     row.feedstockTransportDistance === undefined ||
@@ -567,7 +614,7 @@ export const validatePathwayRow = (row, applicationTypes) => {
   ) {
     errors.push('feedstockTransportDistance')
   }
-  if (!row.finishedFuelTransportMode) errors.push('finishedFuelTransportMode')
+  if (!row.finishedFuelTransportMode?.length) errors.push('finishedFuelTransportMode')
   if (
     row.finishedFuelTransportDistance === null ||
     row.finishedFuelTransportDistance === undefined ||
@@ -637,9 +684,9 @@ export const apiToRow = (pathway) => ({
   fuelTypeId: pathway.fuelTypeId,
   feedstock: pathway.feedstock,
   feedstockRegion: pathway.feedstockRegion,
-  feedstockTransportMode: pathway.feedstockTransportMode,
+  feedstockTransportMode: normalizeTransportModes(pathway.feedstockTransportMode),
   feedstockTransportDistance: pathway.feedstockTransportDistance,
   coproducts: pathway.coproducts,
-  finishedFuelTransportMode: pathway.finishedFuelTransportMode,
+  finishedFuelTransportMode: normalizeTransportModes(pathway.finishedFuelTransportMode),
   finishedFuelTransportDistance: pathway.finishedFuelTransportDistance
 })

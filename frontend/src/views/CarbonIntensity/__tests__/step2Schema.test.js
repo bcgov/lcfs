@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   apiToRow,
+  buildPathwayColDefs,
   isRenewalRow,
   rowToApiPayload,
   validatePathwayRow
@@ -33,14 +34,12 @@ const validRow = {
 
 describe('isRenewalRow', () => {
   it('returns true when application type matches Renewal', () => {
-    expect(
-      isRenewalRow({ applicationTypeId: 2 }, APPLICATION_TYPES)
-    ).toBe(true)
+    expect(isRenewalRow({ applicationTypeId: 2 }, APPLICATION_TYPES)).toBe(true)
   })
   it('returns false for New rows', () => {
-    expect(
-      isRenewalRow({ applicationTypeId: 1 }, APPLICATION_TYPES)
-    ).toBe(false)
+    expect(isRenewalRow({ applicationTypeId: 1 }, APPLICATION_TYPES)).toBe(
+      false
+    )
   })
   it('returns false for unset rows', () => {
     expect(isRenewalRow({}, APPLICATION_TYPES)).toBe(false)
@@ -50,6 +49,15 @@ describe('isRenewalRow', () => {
 describe('validatePathwayRow', () => {
   it('returns no errors for a complete New row', () => {
     expect(validatePathwayRow(validRow, APPLICATION_TYPES)).toEqual([])
+  })
+
+  it('allows negative proposed CI values', () => {
+    expect(
+      validatePathwayRow(
+        { ...validRow, proposedCi: -5.61 },
+        APPLICATION_TYPES
+      )
+    ).toEqual([])
   })
 
   it('flags every required field on an empty row', () => {
@@ -70,7 +78,9 @@ describe('validatePathwayRow', () => {
 
   it('requires fuelCodeId on Renewal rows', () => {
     const renewal = { ...validRow, applicationTypeId: 2, fuelCodeId: null }
-    expect(validatePathwayRow(renewal, APPLICATION_TYPES)).toContain('fuelCodeId')
+    expect(validatePathwayRow(renewal, APPLICATION_TYPES)).toContain(
+      'fuelCodeId'
+    )
   })
 
   it('does not require fuelCodeId on New rows', () => {
@@ -106,6 +116,11 @@ describe('rowToApiPayload', () => {
     expect(payload.coproducts).toBeNull()
   })
 
+  it('preserves negative proposed CI values', () => {
+    const payload = rowToApiPayload({ ...validRow, proposedCi: '-5.61' })
+    expect(payload.proposedCi).toBe(-5.61)
+  })
+
   it('passes through fuelCodeId for renewals', () => {
     const payload = rowToApiPayload({ ...validRow, fuelCodeId: 99 })
     expect(payload.fuelCodeId).toBe(99)
@@ -134,5 +149,70 @@ describe('apiToRow', () => {
     expect(row.pathwayId).toBe(7)
     expect(row.proposedCi).toBe(23.23)
     expect(row.id).toBe('pathway-7')
+  })
+})
+
+describe('buildPathwayColDefs — fuel code iteration empty state', () => {
+  const fuelCodeCol = (fuelCodes) =>
+    buildPathwayColDefs({
+      optionsData: { pathwayApplicationTypes: APPLICATION_TYPES, fuelCodes },
+      canEdit: true
+    }).find((c) => c.field === 'fuelCodeId')
+
+  const renewalRow = { data: { applicationTypeId: 2 } }
+  const newRow = { data: { applicationTypeId: 1 } }
+
+  it('gives renewal rows an explanatory tooltip when no iterations are available', () => {
+    const tip = fuelCodeCol([]).tooltipValueGetter(renewalRow)
+    expect(typeof tip).toBe('string')
+    expect(tip.length).toBeGreaterThan(0)
+  })
+
+  it('shows no tooltip when the org owns renewable iterations', () => {
+    const col = fuelCodeCol([{ fuelCodeId: 1, fuelCode: 'BCLCF101.4' }])
+    expect(col.tooltipValueGetter(renewalRow)).toBeNull()
+  })
+
+  it('shows no tooltip on New rows even with an empty iteration list', () => {
+    expect(fuelCodeCol([]).tooltipValueGetter(newRow)).toBeNull()
+  })
+})
+
+describe('buildPathwayColDefs — Renewal CI carry-over prevention', () => {
+  const fuelCodes = [
+    {
+      fuelCodeId: 42,
+      fuelCode: 'C-BCLCF100.4',
+      carbonIntensity: 23.23,
+      fuelTypeId: 1,
+      feedstock: 'Corn',
+      feedstockLocation: 'Ontario'
+    }
+  ]
+
+  const colDefs = buildPathwayColDefs({
+    optionsData: { pathwayApplicationTypes: APPLICATION_TYPES, fuelCodes },
+    canEdit: true
+  })
+  const applicationTypeCol = colDefs.find((c) => c.field === 'applicationTypeId')
+  const fuelCodeCol = colDefs.find((c) => c.field === 'fuelCodeId')
+
+  it('blanks proposedCi when the applicant selects Renewal', () => {
+    const data = { applicationTypeId: 1, proposedCi: 5.61 }
+    applicationTypeCol.valueSetter({ data, newValue: 'Renewal' })
+    expect(data.proposedCi).toBeNull()
+  })
+
+  it('leaves proposedCi untouched when switching between non-Renewal types', () => {
+    const data = { applicationTypeId: 1, proposedCi: 5.61 }
+    applicationTypeCol.valueSetter({ data, newValue: 'New' })
+    expect(data.proposedCi).toBe(5.61)
+  })
+
+  it('does not populate proposedCi from the selected fuel code iteration', () => {
+    const data = { applicationTypeId: 2, proposedCi: null }
+    fuelCodeCol.valueSetter({ data, newValue: 'C-BCLCF100.4' })
+    expect(data.fuelCodeId).toBe(42)
+    expect(data.proposedCi).toBeNull()
   })
 })

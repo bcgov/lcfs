@@ -73,6 +73,7 @@ export const CommentRow = forwardRef(function CommentRow(
     index,
     showInternalBadge,
     isGovernmentUser,
+    allowPublicVisibility = true,
     onEdit,
     isEditPending
   },
@@ -85,7 +86,11 @@ export const CommentRow = forwardRef(function CommentRow(
 
   const startEdit = () => {
     setEditText(comment.comment ?? '')
-    setEditVisibility(comment.visibility ?? 'Internal')
+    // Threads that don't allow public comments stay Internal on save, whatever
+    // the stored value is — they never render the visibility choice.
+    setEditVisibility(
+      allowPublicVisibility ? (comment.visibility ?? 'Internal') : 'Internal'
+    )
     setEditing(true)
   }
 
@@ -339,7 +344,7 @@ export const CommentRow = forwardRef(function CommentRow(
               <BCTypography variant="subtitle2">
                 {t('internalComment:editComment')}
               </BCTypography>
-              {showInternalBadge && (
+              {showInternalBadge && allowPublicVisibility && (
                 <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Chip
                     size="small"

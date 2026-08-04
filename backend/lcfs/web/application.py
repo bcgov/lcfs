@@ -91,8 +91,11 @@ class LazyAuthenticationBackend(AuthenticationBackend):
         if (
             path.startswith("/api/calculator")
             or path == "/api/health"
+            or path == "/api/credit-market/public-overview"
+            or path == "/api/credit-market/public-report"
             or path == "/api/login-bg-images/active"
             or re.match(r"^/api/login-bg-images/\d+/stream$", path)
+            or path == "/api/release-notes/overrides"
             or path
             in {
                 "/api/fuel-codes/bulletins",

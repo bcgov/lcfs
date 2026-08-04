@@ -1,27 +1,24 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { AppBar, Tab, Tabs } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
 import { OrganizationDetailsCard } from './OrganizationDetailsCard'
 import { OrganizationUsers } from './OrganizationUsers'
 import { CreditLedger } from './CreditLedger'
-import CompanyOverview from './components/CompanyOverview'
 import { PenaltyLog } from './components/PenaltyLog/PenaltyLog'
 import PenaltyLogManage from './components/PenaltyLog/PenaltyLogManage'
 import SupplyHistory from './components/SupplyHistory'
 import ComplianceTracking from './components/ComplianceTracking'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/routes/routes'
-import breakpoints from '@/themes/base/breakpoints'
 import {
   orgDashboardRenderers,
   orgDashboardRoutes
 } from '@/routes/routeConfig/organizationRoutes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
+import { AppBar, Tab, Tabs } from '@mui/material'
 
 function TabPanel({ children, value, index }) {
   return (
@@ -36,9 +33,14 @@ function TabPanel({ children, value, index }) {
   )
 }
 
-export const OrganizationView = ({ addMode = false }) => {
-  const [tabsOrientation, setTabsOrientation] = useState('horizontal')
+function a11yProps(index) {
+  return {
+    id: `organization-tab-${index}`,
+    'aria-controls': `organization-tabpanel-${index}`
+  }
+}
 
+export const OrganizationView = ({ addMode = false }) => {
   const location = useLocation()
   const navigate = useNavigate()
   const { orgID } = useParams()
@@ -97,18 +99,6 @@ export const OrganizationView = ({ addMode = false }) => {
     })
     return matchIndex >= 0 ? matchIndex : 0
   }, [location.pathname, tabConfig])
-
-  useEffect(() => {
-    // A function that sets the orientation state of the tabs.
-    function handleTabsOrientation() {
-      return window.innerWidth < breakpoints.values.lg
-        ? setTabsOrientation('vertical')
-        : setTabsOrientation('horizontal')
-    }
-    window.addEventListener('resize', handleTabsOrientation)
-    handleTabsOrientation()
-    return () => window.removeEventListener('resize', handleTabsOrientation)
-  }, [tabsOrientation])
 
   const handleTabChange = (event, newValue) => {
     const targetPath = tabConfig[newValue]?.path
@@ -175,33 +165,32 @@ export const OrganizationView = ({ addMode = false }) => {
       )}
 
       <BCBox sx={{ mt: 0, bgcolor: 'background.paper' }}>
-        <AppBar
-          position="static"
-          sx={{ boxShadow: 'none', border: 'none', width: 'fit-content' }}
-        >
+        <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
           <Tabs
-            orientation={tabsOrientation}
             value={tabIndex}
             onChange={handleTabChange}
             aria-label="Organization tabs"
+            variant="scrollable"
+            scrollButtons="auto"
             sx={{
-              background: 'rgba(0, 0, 0, 0.08)',
+              backgroundColor: 'rgba(0, 0, 0, 0.08)',
+              width: 'fit-content',
               maxWidth: '100%',
               '& .MuiTab-root': {
                 minWidth: 'auto',
+                minHeight: 36,
                 paddingX: 2,
-                marginX: 1,
+                paddingY: 0.75,
+                marginX: 0.25,
                 whiteSpace: 'nowrap'
               },
               '& .MuiTabs-flexContainer': {
                 flexWrap: 'nowrap'
               }
             }}
-            variant="scrollable"
-            scrollButtons="auto"
           >
             {tabConfig.map((config, idx) => (
-              <Tab key={config.path} label={config.label} />
+              <Tab key={config.path} label={config.label} {...a11yProps(idx)} />
             ))}
           </Tabs>
         </AppBar>

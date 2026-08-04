@@ -26,3 +26,61 @@ class CreditLedgerTxnSchema(BaseSchema):
 class CreditLedgerListSchema(BaseSchema):
     pagination: PaginationResponseSchema
     ledger: List[CreditLedgerTxnSchema]
+
+
+# ---------------------------------------------------------------------------
+# Compliance-period ledger (#4714)
+# ---------------------------------------------------------------------------
+
+
+class PeriodLedgerTxnSchema(BaseSchema):
+    """A single transaction row within a compliance-period ledger."""
+
+    transaction_id: int
+    transaction_type: str
+    description: Optional[str] = None
+    effective_date: Optional[datetime] = None
+    units_in: int
+    units_out: int
+    # Cumulative balance from transactions within the selected period only.
+    running_balance: int
+    status: Optional[str] = None
+    is_pending: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PeriodLedgerTypeTotalSchema(BaseSchema):
+    """Units in/out and net for one transaction type (Show totals)."""
+
+    transaction_type: str
+    units_in: int
+    units_out: int
+    net: int
+
+
+class AssessedBalanceSchema(BaseSchema):
+    """
+    Assessed balances carried between compliance years. Values are raw (a
+    negative value is an assessed/carried-forward deficit) so the UI can
+    highlight negatives.
+    """
+
+    previous_year: Optional[int] = None
+    previous_balance: Optional[int] = None
+    current_year: int
+    current_balance: int
+
+
+class PeriodLedgerSchema(BaseSchema):
+    """Full compliance-period ledger response for one organization."""
+
+    organization_id: int
+    compliance_period: int
+    include_pending: bool
+    transactions: List[PeriodLedgerTxnSchema]
+    totals_by_type: List[PeriodLedgerTypeTotalSchema]
+    total_units_in: int
+    total_units_out: int
+    total_net: int
+    assessed_balance: AssessedBalanceSchema

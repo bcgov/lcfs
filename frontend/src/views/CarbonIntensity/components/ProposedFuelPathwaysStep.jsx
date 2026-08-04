@@ -28,10 +28,10 @@ const createEmptyRow = () => ({
   fuelTypeId: null,
   feedstock: '',
   feedstockRegion: '',
-  feedstockTransportMode: '',
+  feedstockTransportMode: [],
   feedstockTransportDistance: null,
   coproducts: '',
-  finishedFuelTransportMode: '',
+  finishedFuelTransportMode: [],
   finishedFuelTransportDistance: null
 })
 
@@ -173,13 +173,21 @@ export const ProposedFuelPathwaysStep = ({
           }
         })
       })
-      const labels = fieldLabels([...missingFields], t)
-      const message = hasDateOrderIssue
-        ? t('carbonIntensity:step2.validation.dateOrder')
-        : t('carbonIntensity:step2.validation.fixSpecificFields', {
-            count: Object.keys(newErrors).length,
-            fields: labels.join(', ')
-          })
+
+      const errorRowCount = Object.keys(newErrors).length
+      let message
+      if (hasDateOrderIssue) {
+        message = t('carbonIntensity:step2.validation.dateOrder')
+      } else if (missingFields.size <= 3 && errorRowCount === 1) {
+        const labels = fieldLabels([...missingFields], t)
+        message = t('carbonIntensity:step2.validation.missingSpecificFields', {
+          fields: labels.join(', ')
+        })
+      } else {
+        message = t('carbonIntensity:step2.validation.incompleteRows', {
+          count: errorRowCount
+        })
+      }
       onValidationError?.(message)
       return
     }
@@ -228,19 +236,30 @@ export const ProposedFuelPathwaysStep = ({
         />
       </Box>
 
-      <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
-        <BCButton
-          type="button"
-          variant="contained"
-          color="primary"
-          data-test="ci-step2-save-btn"
-          onClick={handleSave}
-          disabled={readOnly || isSaving}
-        >
-          {ciApplication?.status?.status === 'Submitted'
-            ? t('carbonIntensity:step2.saveSupplementalChanges')
-            : t('carbonIntensity:step2.saveAndProceed')}
-        </BCButton>
+      {/* Delete sits far right, away from the primary action (#4770). Any
+          secondaryAction (e.g. Cancel) stays grouped with Save on the left. */}
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{ mt: 2 }}
+        alignItems="center"
+        justifyContent="space-between"
+      >
+        <Stack direction="row" spacing={2} alignItems="center">
+          <BCButton
+            type="button"
+            variant="contained"
+            color="primary"
+            data-test="ci-step2-save-btn"
+            onClick={handleSave}
+            disabled={readOnly || isSaving}
+          >
+            {ciApplication?.status?.status === 'Submitted'
+              ? t('carbonIntensity:step2.saveSupplementalChanges')
+              : t('carbonIntensity:step2.saveAndProceed')}
+          </BCButton>
+          {secondaryAction}
+        </Stack>
         {ciApplication?.ciApplicationId && onDelete && (
           <BCButton
             type="button"
@@ -253,7 +272,6 @@ export const ProposedFuelPathwaysStep = ({
             {t('carbonIntensity:step1.deleteDraft')}
           </BCButton>
         )}
-        {secondaryAction}
       </Stack>
     </Box>
   )

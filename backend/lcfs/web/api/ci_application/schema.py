@@ -14,16 +14,24 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import EmailStr, Field, field_validator, model_validator
+from pydantic import (
+    ConfigDict,
+    EmailStr,
+    Field,
+    StrictInt,
+    field_validator,
+    model_validator,
+)
+
+from fastapi.exceptions import RequestValidationError
 
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
-from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.api.fuel_code.schema import (
     CoProcessedEnumSchema,
     FuelTypeQuantityUnitsEnumSchema,
 )
-
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 
 # ---------------------------------------------------------------------------
 # Enums (mirror the seeded lookup values in the migration)
@@ -165,18 +173,77 @@ class CIApplicationStep1Schema(BaseSchema):
     """
     Persisted fields for Step 1 of the CI application workflow.
 
-    Country and nameplate capacity (with its unit) are the only required
-    fields per the wireframe; the other facility location fields and the
-    proposed fuel code effective date are optional.
+    Facility location and nameplate capacity (with its unit) are required.
+    The proposed fuel code effective date is optional.
     """
 
-    facility_city: Optional[str] = Field(default=None, max_length=500)
-    facility_province_state: Optional[str] = Field(default=None, max_length=500)
-    facility_country: str = Field(..., max_length=500)
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    facility_city: str = Field(..., min_length=1, max_length=500)
+    facility_province_state: str = Field(..., min_length=1, max_length=500)
+    facility_country: str = Field(..., min_length=1, max_length=500)
     facility_iso: Optional[str] = Field(default=None, max_length=10)
     facility_nameplate_capacity: int = Field(..., gt=0)
     facility_nameplate_capacity_unit: FuelTypeQuantityUnitsEnumSchema
     proposed_fuel_code_effective_date: Optional[date] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _descriptive_required_field_errors(cls, data: Any) -> Any:
+        """
+        Raise field-level errors with user-friendly messages before Pydantic
+        produces generic ones ("Field required", "String should have at least 1
+        character", "Input should be greater than 0").
+        """
+        if not isinstance(data, dict):
+            return data
+
+        errors = []
+
+        # Accepts both camelCase (from API) and snake_case (from tests / internal).
+        def _get(camel: str, snake: str):
+            return data.get(camel) if data.get(camel) is not None else data.get(snake)
+
+        string_fields = [
+            ("facilityCity", "facility_city", "City"),
+            ("facilityProvinceState", "facility_province_state", "Province/State"),
+            ("facilityCountry", "facility_country", "Country"),
+        ]
+        for camel, snake, label in string_fields:
+            val = _get(camel, snake)
+            if val is None or (isinstance(val, str) and not val.strip()):
+                errors.append({
+                    "loc": (camel,),
+                    "msg": f"{label} is required.",
+                    "type": "value_error",
+                })
+
+        capacity = _get("facilityNameplateCapacity", "facility_nameplate_capacity")
+        if capacity is None or capacity == "":
+            errors.append({
+                "loc": ("facilityNameplateCapacity",),
+                "msg": "Facility nameplate capacity is required.",
+                "type": "value_error",
+            })
+        elif isinstance(capacity, (int, float)) and capacity <= 0:
+            errors.append({
+                "loc": ("facilityNameplateCapacity",),
+                "msg": "Facility nameplate capacity must be greater than zero.",
+                "type": "value_error",
+            })
+
+        unit = _get("facilityNameplateCapacityUnit", "facility_nameplate_capacity_unit")
+        if not unit:
+            errors.append({
+                "loc": ("facilityNameplateCapacityUnit",),
+                "msg": "Unit of measure is required.",
+                "type": "value_error",
+            })
+
+        if errors:
+            raise RequestValidationError(errors)
+
+        return data
 
 
 # ---------------------------------------------------------------------------
@@ -200,22 +267,24 @@ class PathwayInputSchema(BaseSchema):
     operating_data_from: date
     operating_data_to: date
     fuel_code_id: Optional[int] = None
-    proposed_ci: Decimal = Field(..., ge=0)
+    proposed_ci: Decimal
     fuel_type_id: int
     feedstock: str = Field(..., max_length=500)
     feedstock_region: str = Field(..., max_length=500)
-    feedstock_transport_mode: str = Field(..., max_length=500)
+    feedstock_transport_mode: List[str] = Field(..., min_length=1)
     feedstock_transport_distance: int = Field(..., ge=0)
     coproducts: Optional[str] = Field(default=None, max_length=1000)
-    finished_fuel_transport_mode: str = Field(..., max_length=500)
+    finished_fuel_transport_mode: List[str] = Field(..., min_length=1)
     finished_fuel_transport_distance: int = Field(..., ge=0)
 
     @model_validator(mode="after")
     def _validate_dates(self):
         if self.operating_data_to < self.operating_data_from:
-            raise ValueError(
-                "operating_data_to must be on or after operating_data_from."
-            )
+            raise RequestValidationError([{
+                "loc": ("operatingDataTo",),
+                "msg": "Operating data end date must be on or after the start date.",
+                "type": "value_error",
+            }])
         return self
 
 
@@ -254,10 +323,10 @@ class PathwaySchema(BaseSchema):
     fuel_type: Optional[FuelTypeOptionSchema] = None
     feedstock: str
     feedstock_region: str
-    feedstock_transport_mode: str
+    feedstock_transport_mode: List[str]
     feedstock_transport_distance: int
     coproducts: Optional[str] = None
-    finished_fuel_transport_mode: str
+    finished_fuel_transport_mode: List[str]
     finished_fuel_transport_distance: int
 
 
@@ -362,6 +431,7 @@ class CIApplicationBaseSchema(BaseSchema):
     facility_nameplate_capacity_unit: Optional[str] = None
     proposed_fuel_code_effective_date: Optional[date] = None
     pathway_supplemental_edit_enabled: bool = False
+    document_upload_enabled: bool = False
     preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
     priority_score: Optional[int] = None
     assigned_analyst: Optional[CIApplicationUserSchema] = None
@@ -396,6 +466,9 @@ class CIApplicationSchema(BaseSchema):
     pathway_supplemental_edit_enabled: bool = False
     pathway_changes_requested_at: Optional[datetime] = None
     pathway_changes_requested_by: Optional[str] = None
+    document_upload_enabled: bool = False
+    document_changes_requested_at: Optional[datetime] = None
+    document_changes_requested_by: Optional[str] = None
     pathway_changelog: List[Dict[str, Any]] = Field(default_factory=list)
     pathway_change_logs: List[PathwayChangeLogSchema] = Field(default_factory=list)
     generated_fuel_codes: List[CIGeneratedFuelCodeSchema] = Field(default_factory=list)
@@ -442,12 +515,12 @@ class CIApplicationAnalystAssignmentSchema(BaseSchema):
 
 class CIApplicationVerification1Schema(BaseSchema):
     preliminary_risk_assessment: CIRiskAssessmentEnum
-    priority_score: Optional[int] = Field(default=None, ge=0)
+    priority_score: Optional[StrictInt] = Field(default=None, ge=1, le=999)
 
 
 class CIApplicationVerification2Schema(BaseSchema):
     preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
-    priority_score: Optional[int] = Field(default=None, ge=0)
+    priority_score: Optional[StrictInt] = Field(default=None, ge=1, le=999)
 
 
 # ---------------------------------------------------------------------------
@@ -489,15 +562,27 @@ class CIApplicationStep4Schema(BaseSchema):
             if not getattr(self, field):
                 raise ValueError("All three declarations must be acknowledged.")
         if self.consultant_consent:
-            if (
-                not self.consultant_name
-                or not self.consultant_company
-                or not self.consultant_email
-            ):
-                raise ValueError(
-                    "Consultant name, company, and email are required when "
-                    "consenting to consultant communication."
-                )
+            consultant_errors = []
+            if not self.consultant_name:
+                consultant_errors.append({
+                    "loc": ("consultantName",),
+                    "msg": "Consultant name is required when consenting to consultant communication.",
+                    "type": "value_error",
+                })
+            if not self.consultant_company:
+                consultant_errors.append({
+                    "loc": ("consultantCompany",),
+                    "msg": "Consultant company is required when consenting to consultant communication.",
+                    "type": "value_error",
+                })
+            if not self.consultant_email:
+                consultant_errors.append({
+                    "loc": ("consultantEmail",),
+                    "msg": "Consultant email is required when consenting to consultant communication.",
+                    "type": "value_error",
+                })
+            if consultant_errors:
+                raise RequestValidationError(consultant_errors)
         return self
 
 

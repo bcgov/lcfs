@@ -148,10 +148,6 @@ class OrganizationBase(BaseSchema):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
-    company_details: Optional[str] = None
-    company_representation_agreements: Optional[str] = None
-    company_acting_as_aggregator: Optional[str] = None
-    company_additional_notes: Optional[str] = None
 
 
 class OrganizationSchema(OrganizationBase):
@@ -277,10 +273,6 @@ class OrganizationResponseSchema(BaseSchema):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
-    company_details: Optional[str] = None
-    company_representation_agreements: Optional[str] = None
-    company_acting_as_aggregator: Optional[str] = None
-    company_additional_notes: Optional[str] = None
     organization_type_id: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = None
     org_type: Optional[OrganizationTypeSchema] = None
@@ -371,15 +363,6 @@ class CreditMarketAuditLogListResponseSchema(BaseSchema):
     credit_market_audit_logs: List[CreditMarketAuditLogItemSchema]
 
 
-class OrganizationCompanyOverviewUpdateSchema(BaseSchema):
-    """Schema for updating company overview information"""
-
-    company_details: Optional[str] = None
-    company_representation_agreements: Optional[str] = None
-    company_acting_as_aggregator: Optional[str] = None
-    company_additional_notes: Optional[str] = None
-
-
 # --------------------------------------
 # Penalty Analytics
 # --------------------------------------
@@ -419,6 +402,24 @@ class PenaltyAnalyticsResponseSchema(BaseSchema):
     yearly_penalties: List[PenaltyYearlySummarySchema]
     totals: PenaltyTotalsSchema
     penalty_logs: List[PenaltyLogEntrySchema]
+
+
+class AllocationAgreementYearMetricsSchema(BaseSchema):
+    compliance_year: Optional[Union[int, str]] = None
+    allocated_organization_count: int
+    allocated_organizations: List[str]
+    added_organizations: List[str]
+    removed_organizations: List[str]
+    total_fse: float
+    prior_year_fse: Optional[float] = None
+    fse_change: Optional[float] = None
+    fse_pct_change: Optional[float] = None
+
+
+class AllocationAgreementAnalyticsResponseSchema(BaseSchema):
+    allocator_organization_id: int
+    allocator_organization_name: str
+    years: List[AllocationAgreementYearMetricsSchema]
 
 
 class PenaltyLogListResponseSchema(BaseSchema):

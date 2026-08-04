@@ -38,11 +38,11 @@ from .schema import (
     OrganizationCreditMarketUpdateSchema,
     OrganizationCreditMarketListingSchema,
     CreditMarketAuditLogListResponseSchema,
-    OrganizationCompanyOverviewUpdateSchema,
     OrganizationLinkKeyCreateSchema,
     OrganizationLinkKeysListSchema,
     LinkKeyOperationResponseSchema,
     LinkKeyValidationSchema,
+    AllocationAgreementAnalyticsResponseSchema,
     AvailableFormsSchema,
     PenaltyAnalyticsResponseSchema,
     PenaltyLogListResponseSchema,
@@ -205,6 +205,23 @@ async def get_penalty_analytics(
             detail="You do not have permission to view this organization's penalty data.",
         )
     return await service.get_penalty_analytics(organization_id)
+
+
+@router.get(
+    "/{organization_id}/allocation-agreements/analytics",
+    response_model=AllocationAgreementAnalyticsResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_allocation_agreement_analytics(
+    request: Request,
+    organization_id: int,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Retrieve allocator-level allocation agreement analytics for the specified organization.
+    """
+    return await service.get_allocation_agreement_analytics(organization_id)
 
 
 @router.post(
@@ -560,29 +577,6 @@ async def update_org_credit_market_details(
         credit_market_data.model_dump(exclude_unset=True),
         request.user,
         skip_notifications=True,
-    )
-
-
-@router.put(
-    "/{organization_id}/company-overview",
-    response_model=OrganizationResponseSchema,
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
-async def update_company_overview(
-    request: Request,
-    organization_id: int,
-    company_overview_data: OrganizationCompanyOverviewUpdateSchema,
-    service: OrganizationsService = Depends(),
-):
-    """
-    Update company overview details for an organization.
-    This endpoint allows analysts, managers, and directors to update company overview information.
-    """
-    return await service.update_organization_company_overview(
-        organization_id,
-        company_overview_data.model_dump(exclude_unset=True),
-        request.user,
     )
 
 
