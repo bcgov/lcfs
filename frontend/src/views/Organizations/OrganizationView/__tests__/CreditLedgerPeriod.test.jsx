@@ -24,7 +24,10 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-vi.mock('@/utils/formatters', () => ({
+// Only dateFormatter is stubbed (identity, so raw ISO strings stay assertable);
+// formatTransactionId is kept real so the id prefixes are exercised for real.
+vi.mock('@/utils/formatters', async (importOriginal) => ({
+  ...(await importOriginal()),
   dateFormatter: ({ value }) => value
 }))
 
@@ -161,6 +164,21 @@ describe('CreditLedgerPeriod (compliance-period ledger #4714)', () => {
     expect(balances[0]).toHaveTextContent('10,000')
     // Negative running balance rendered (styling handled by NumberCell)
     expect(balances[1]).toHaveTextContent('-1,500')
+  })
+
+  // Regression: every non-ComplianceReport type used to fall back to the "CT"
+  // transfer prefix, so initiative agreements and admin adjustments displayed
+  // a correct number under the wrong prefix.
+  it('prefixes transaction ids by type in both the list and totals views', () => {
+    renderComponent({ organizationId: 999 })
+    expect(screen.getByText('IA43')).toBeInTheDocument()
+    expect(screen.getByText('CT444')).toBeInTheDocument()
+    expect(screen.queryByText('CT43')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('toggle-show-totals'))
+    expect(screen.getByText('IA43')).toBeInTheDocument()
+    expect(screen.getByText('CT444')).toBeInTheDocument()
+    expect(screen.queryByText('CT43')).not.toBeInTheDocument()
   })
 
   it('switches to grouped totals view with per-type and grand totals', () => {
