@@ -236,19 +236,30 @@ export const ProposedFuelPathwaysStep = ({
         />
       </Box>
 
-      <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
-        <BCButton
-          type="button"
-          variant="contained"
-          color="primary"
-          data-test="ci-step2-save-btn"
-          onClick={handleSave}
-          disabled={readOnly || isSaving}
-        >
-          {ciApplication?.status?.status === 'Submitted'
-            ? t('carbonIntensity:step2.saveSupplementalChanges')
-            : t('carbonIntensity:step2.saveAndProceed')}
-        </BCButton>
+      {/* Delete sits far right, away from the primary action (#4770). Any
+          secondaryAction (e.g. Cancel) stays grouped with Save on the left. */}
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{ mt: 2 }}
+        alignItems="center"
+        justifyContent="space-between"
+      >
+        <Stack direction="row" spacing={2} alignItems="center">
+          <BCButton
+            type="button"
+            variant="contained"
+            color="primary"
+            data-test="ci-step2-save-btn"
+            onClick={handleSave}
+            disabled={readOnly || isSaving}
+          >
+            {ciApplication?.status?.status === 'Submitted'
+              ? t('carbonIntensity:step2.saveSupplementalChanges')
+              : t('carbonIntensity:step2.saveAndProceed')}
+          </BCButton>
+          {secondaryAction}
+        </Stack>
         {ciApplication?.ciApplicationId && onDelete && (
           <BCButton
             type="button"
@@ -261,7 +272,6 @@ export const ProposedFuelPathwaysStep = ({
             {t('carbonIntensity:step1.deleteDraft')}
           </BCButton>
         )}
-        {secondaryAction}
       </Stack>
     </Box>
   )
