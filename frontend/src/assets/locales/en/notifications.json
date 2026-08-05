@@ -126,6 +126,10 @@
         "title": "Compliance & supplemental reports",
         "managerRecommendation": "Compliance manager recommendation"
       },
+      "fuelCodes": {
+        "title": "Fuel codes",
+        "analystRecommendation": "Analyst recommendation"
+      },
       "ciApplications": {
         "title": "CI applications",
         "analystRecommendation": "Analyst recommendation"
