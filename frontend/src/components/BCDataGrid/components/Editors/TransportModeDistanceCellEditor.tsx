@@ -76,6 +76,7 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
     normalizeValue(value, fallbackDistance)
   )
   const firstInputRef = useRef(null)
+  const rootRef = useRef(null)
 
   const getCurrentValue = () =>
     selectedModes.map((item) => ({
@@ -100,6 +101,26 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
   useEffect(() => {
     firstInputRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined
+
+    const handleOutsidePointerDown = (event) => {
+      if (rootRef.current?.contains(event.target)) return
+      api.stopEditing()
+    }
+
+    const listenerTimer = window.setTimeout(() => {
+      document.addEventListener('mousedown', handleOutsidePointerDown, true)
+      document.addEventListener('touchstart', handleOutsidePointerDown, true)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(listenerTimer)
+      document.removeEventListener('mousedown', handleOutsidePointerDown, true)
+      document.removeEventListener('touchstart', handleOutsidePointerDown, true)
+    }
+  }, [api])
 
   const updateValue = (next) => {
     setSelectedModes(next)
@@ -136,6 +157,7 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
 
   return (
     <Box
+      ref={rootRef}
       role="group"
       className="ag-custom-component-popup"
       aria-label="Select transport modes and enter distance in kilometers"
