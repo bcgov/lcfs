@@ -84,6 +84,27 @@ def _effective_date(row):
     )
 
 
+def compliance_year_envelope(
+    compliance_period: int, first_assessed_year: Optional[int] = None
+) -> tuple[date, date]:
+    """
+    Date range a compliance year's ledger covers (#4832).
+
+    A compliance year runs April 1 through March 31 of the following year,
+    matching the reporting period rather than the calendar year. The earliest
+    year the organization has an assessed report for opens on January 1
+    instead: there is no earlier envelope to hold that January–March, so
+    without this those transactions would fall out of the ledger entirely.
+    """
+    start_month, start_day = (
+        (1, 1) if compliance_period == first_assessed_year else (4, 1)
+    )
+    return (
+        date(compliance_period, start_month, start_day),
+        date(compliance_period + 1, 3, 31),
+    )
+
+
 def _sort_key_datetime(value) -> datetime:
     """Normalize a date/datetime (tz-aware or naive) to a naive datetime so the
     aggregate's mixed effective-date types can be ordered together (real data
@@ -178,9 +199,17 @@ class CreditLedgerService:
         per-period running balance, totals grouped by transaction type, and the
         previous/current compliance-year assessed balances.
         """
+        first_assessed_year = await self.repo.get_first_assessed_year(
+            organization_id=organization_id,
+        )
+        envelope_start, envelope_end = compliance_year_envelope(
+            compliance_period, first_assessed_year
+        )
         rows = await self.repo.get_period_rows(
             organization_id=organization_id,
             compliance_period=compliance_period,
+            envelope_start=envelope_start,
+            envelope_end=envelope_end,
         )
 
         # 1. Keep only rows whose status is completed (always) or, when
@@ -253,13 +282,15 @@ class CreditLedgerService:
         total_units_in = sum(t.units_in for t in totals_by_type)
         total_units_out = sum(t.units_out for t in totals_by_type)
 
-        # 5. Assessed balances carried between compliance years (raw, so a
-        #    deficit surfaces as a negative value).
-        current_balance = await self.repo.get_period_assessed_balance(
+        # 5. Assessed balances, taken straight from Line 22 of the most recent
+        #    assessed report for each year (#4831). A year with no assessed
+        #    report has no assessed balance — None, not zero, so the UI leaves
+        #    it blank rather than implying the org ended the year at nil.
+        current_balance = await self.repo.get_assessed_line_22(
             organization_id=organization_id,
             compliance_period=compliance_period,
         )
-        previous_balance = await self.repo.get_period_assessed_balance(
+        previous_balance = await self.repo.get_assessed_line_22(
             organization_id=organization_id,
             compliance_period=compliance_period - 1,
         )

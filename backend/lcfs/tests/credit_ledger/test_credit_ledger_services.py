@@ -17,7 +17,8 @@ def mock_repo():
     repo.get_rows_paginated = AsyncMock(return_value=([], 0))
     repo.get_distinct_years = AsyncMock(return_value=[])
     repo.get_period_rows = AsyncMock(return_value=[])
-    repo.get_period_assessed_balance = AsyncMock(return_value=0)
+    repo.get_assessed_line_22 = AsyncMock(return_value=None)
+    repo.get_first_assessed_year = AsyncMock(return_value=None)
     return repo
 
 
@@ -183,7 +184,7 @@ async def test_period_ledger_running_balance_and_units(
             version=0,
         ),
     ]
-    mock_repo.get_period_assessed_balance.side_effect = [1850, 1000]  # current, prev
+    mock_repo.get_assessed_line_22.side_effect = [1850, 1000]  # current, prev
 
     data = await credit_ledger_service.get_period_ledger(
         organization_id=1, compliance_period=2024
@@ -321,7 +322,7 @@ async def test_period_ledger_assessed_balance_prev_and_current(
     credit_ledger_service, mock_repo
 ):
     mock_repo.get_period_rows.return_value = []
-    mock_repo.get_period_assessed_balance.side_effect = [750, 1850]  # current, prev
+    mock_repo.get_assessed_line_22.side_effect = [750, 1850]  # current, prev
 
     data = await credit_ledger_service.get_period_ledger(
         organization_id=1, compliance_period=2025
@@ -330,10 +331,10 @@ async def test_period_ledger_assessed_balance_prev_and_current(
     assert data.assessed_balance.current_balance == 750
     assert data.assessed_balance.previous_year == 2024
     assert data.assessed_balance.previous_balance == 1850
-    mock_repo.get_period_assessed_balance.assert_any_await(
+    mock_repo.get_assessed_line_22.assert_any_await(
         organization_id=1, compliance_period=2025
     )
-    mock_repo.get_period_assessed_balance.assert_any_await(
+    mock_repo.get_assessed_line_22.assert_any_await(
         organization_id=1, compliance_period=2024
     )
 
@@ -415,3 +416,63 @@ async def test_period_ledger_sorts_mixed_date_types(credit_ledger_service, mock_
     # Ordered April -> May -> June regardless of the source date type.
     assert [t.transaction_id for t in data.transactions] == [1, 2, 3]
     assert [t.running_balance for t in data.transactions] == [10, 30, 60]
+
+
+@pytest.mark.anyio
+async def test_period_ledger_blank_assessed_balance_when_no_assessed_report(
+    credit_ledger_service, mock_repo
+):
+    """
+    A year with no assessed report has no assessed balance at all (#4831) —
+    None rather than 0, so the UI leaves it blank instead of implying the
+    organization ended the year at nil.
+    """
+    mock_repo.get_period_rows.return_value = []
+    mock_repo.get_assessed_line_22.side_effect = [None, 1200]  # current, prev
+
+    data = await credit_ledger_service.get_period_ledger(
+        organization_id=1, compliance_period=2025
+    )
+
+    assert data.assessed_balance.current_balance is None
+    assert data.assessed_balance.previous_balance == 1200
+
+
+@pytest.mark.anyio
+async def test_period_ledger_requests_april_to_march_envelope(
+    credit_ledger_service, mock_repo
+):
+    """The repo is asked for the April 1 – March 31 envelope (#4832)."""
+    mock_repo.get_period_rows.return_value = []
+    mock_repo.get_first_assessed_year.return_value = 2019
+
+    await credit_ledger_service.get_period_ledger(
+        organization_id=1, compliance_period=2024
+    )
+
+    mock_repo.get_period_rows.assert_awaited_once_with(
+        organization_id=1,
+        compliance_period=2024,
+        envelope_start=date(2024, 4, 1),
+        envelope_end=date(2025, 3, 31),
+    )
+
+
+@pytest.mark.anyio
+async def test_period_ledger_first_assessed_year_envelope_opens_in_january(
+    credit_ledger_service, mock_repo
+):
+    """The organization's first assessed year also covers January–March (#4832)."""
+    mock_repo.get_period_rows.return_value = []
+    mock_repo.get_first_assessed_year.return_value = 2024
+
+    await credit_ledger_service.get_period_ledger(
+        organization_id=1, compliance_period=2024
+    )
+
+    mock_repo.get_period_rows.assert_awaited_once_with(
+        organization_id=1,
+        compliance_period=2024,
+        envelope_start=date(2024, 1, 1),
+        envelope_end=date(2025, 3, 31),
+    )
