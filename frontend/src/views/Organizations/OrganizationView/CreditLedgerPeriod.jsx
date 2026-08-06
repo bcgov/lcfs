@@ -59,7 +59,17 @@ const cellSx = {
 
 // A right-aligned number cell. Negatives are not colour-coded: red read as
 // alarming for what are ordinary deficits.
-const NumberCell = ({ value, bold = false, dataTest, align = 'right', sx }) => (
+//
+// `blankIfNull` is for the assessed balances, which are absent (not zero) for a
+// year with no assessed report — showing 0 there would read as a real balance.
+const NumberCell = ({
+  value,
+  bold = false,
+  dataTest,
+  align = 'right',
+  blankIfNull = false,
+  sx
+}) => (
   <TableCell
     align={align}
     data-test={dataTest}
@@ -69,7 +79,7 @@ const NumberCell = ({ value, bold = false, dataTest, align = 'right', sx }) => (
       ...sx
     }}
   >
-    {Number(value ?? 0).toLocaleString()}
+    {blankIfNull && value == null ? '' : Number(value ?? 0).toLocaleString()}
   </TableCell>
 )
 
@@ -376,6 +386,7 @@ export const CreditLedgerPeriod = ({ organizationId }) => {
                   <NumberCell
                     value={assessed.previousBalance}
                     bold
+                    blankIfNull
                     sx={assessedCellSx}
                     dataTest="assessed-previous"
                   />
@@ -389,6 +400,7 @@ export const CreditLedgerPeriod = ({ organizationId }) => {
                   <NumberCell
                     value={assessed.currentBalance}
                     bold
+                    blankIfNull
                     sx={assessedCellSx}
                     dataTest="assessed-current"
                   />
