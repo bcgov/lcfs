@@ -6,6 +6,7 @@ pathways, documents & GHGenius modelling, sign & submit, and government
 decision (with the comments thread).
 """
 
+import json
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -63,6 +64,12 @@ from lcfs.web.api.ci_application.schema import (
     PathwaySchema,
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.notification.schema import (
+    CI_APPLICATION_NOTIFICATION_MAPPER,
+    NotificationMessageSchema,
+    NotificationRequestSchema,
+)
+from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.core.decorators import service_handler
@@ -678,6 +685,18 @@ def _to_assigned_analyst(user) -> Optional[AssignedAnalystSchema]:
     )
 
 
+# Medium and High risk applications both go through a second verification;
+# only Low risk applications complete after Verification 1 (#4741).
+VERIFICATION_2_RISK_LEVELS = frozenset(
+    {CIRiskAssessmentEnum.Medium.value, CIRiskAssessmentEnum.High.value}
+)
+
+
+def _requires_verification_2(risk: Optional[str]) -> bool:
+    """Whether a preliminary risk assessment requires Verification 2."""
+    return risk in VERIFICATION_2_RISK_LEVELS
+
+
 def _verification_level_from_progress(ci: CIApplication) -> Optional[str]:
     if getattr(ci, "verification_2_date", None):
         return "VX2"
@@ -741,10 +760,12 @@ class CIApplicationServices:
         repo: CIApplicationRepository = Depends(CIApplicationRepository),
         user_repo: UserRepository = Depends(UserRepository),
         fuel_repo: FuelCodeRepository = Depends(FuelCodeRepository),
+        notification_service: NotificationService = Depends(NotificationService),
     ) -> None:
         self.repo = repo
         self.user_repo = user_repo
         self.fuel_repo = fuel_repo
+        self.notification_service = notification_service
 
     async def _to_full_schema_with_user(self, ci: CIApplication) -> CIApplicationSchema:
         """Serialize a CI application, resolving the signing-authority's
@@ -756,6 +777,48 @@ class CIApplicationServices:
             if display_name:
                 display_name = display_name.strip() or None
         return _to_full_schema(ci, signature_user_display_name=display_name)
+
+    async def _send_ci_notification(
+        self,
+        ci_application: CIApplication,
+        event_key: str,
+        notification_type: str,
+        origin_user_profile_id: Optional[int] = None,
+    ) -> None:
+        """Send a CI application notification to subscribed government users."""
+        notification_types = CI_APPLICATION_NOTIFICATION_MAPPER.get(event_key, [])
+        if not notification_types:
+            return
+        message_data = {
+            "id": ci_application.ci_application_id,
+            "status": (
+                ci_application.ci_application_status.status
+                if ci_application.ci_application_status
+                else None
+            ),
+            "service": "ciApplication",
+            "type": notification_type,
+        }
+        notification_data = NotificationMessageSchema(
+            type=notification_type,
+            message=json.dumps(message_data),
+            related_organization_id=None,
+            origin_user_profile_id=origin_user_profile_id,
+            related_transaction_id=str(ci_application.ci_application_id),
+        )
+        try:
+            await self.notification_service.send_notification(
+                NotificationRequestSchema(
+                    notification_types=notification_types,
+                    notification_data=notification_data,
+                )
+            )
+        except Exception:
+            logger.exception(
+                "Failed to send CI application notification",
+                ci_application_id=ci_application.ci_application_id,
+                event_key=event_key,
+            )
 
     @service_handler
     async def generate_fuel_codes(
@@ -774,7 +837,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
         verification_2_risk = ci_application.verification_2_risk_assessment or risk
-        requires_verification_2 = risk == CIRiskAssessmentEnum.High.value
+        requires_verification_2 = _requires_verification_2(risk)
         can_generate_after_verification_1 = (
             ci_application.verification_1_date and not requires_verification_2
         )
@@ -1141,7 +1204,11 @@ class CIApplicationServices:
         statuses = await self.repo.get_statuses()
         application_types = await self.repo.get_pathway_application_types()
         fuel_code_types = await self.repo.get_pathway_fuel_code_types()
-        fuel_types = await self.repo.get_fuel_types()
+        fuel_types = [
+            ft
+            for ft in await self.fuel_repo.get_fuel_types()
+            if not getattr(ft, "fossil_derived", False)
+        ]
         transport_modes = await self.repo.get_transport_modes()
         # Renewal iterations are scoped to the caller's organization for
         # supplier/CI-applicant users; government callers pass None (all).
@@ -1294,10 +1361,13 @@ class CIApplicationServices:
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
         self._validate_priority_score(priority_score)
-        if ci_application.preliminary_risk_assessment != CIRiskAssessmentEnum.High.value:
+        if not _requires_verification_2(ci_application.preliminary_risk_assessment):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Verification 2 is only required for High risk applications.",
+                detail=(
+                    "Verification 2 is only required for Medium and High risk "
+                    "applications."
+                ),
             )
         if not ci_application.verification_1_date:
             raise HTTPException(
@@ -1345,7 +1415,7 @@ class CIApplicationServices:
             )
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
-        requires_verification_2 = risk == CIRiskAssessmentEnum.High.value
+        requires_verification_2 = _requires_verification_2(risk)
         if not ci_application.verification_1_date or (
             requires_verification_2 and not ci_application.verification_2_date
         ):
@@ -1725,6 +1795,13 @@ class CIApplicationServices:
             )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        if is_supplemental_edit:
+            await self._send_ci_notification(
+                ci,
+                "applicant_activity",
+                "CI Application Additional Information Provided",
+                origin_user_profile_id=user.user_profile_id,
+            )
         return await self._to_full_schema_with_user(ci)
 
     @service_handler
@@ -1930,6 +2007,12 @@ class CIApplicationServices:
         await self.repo.add_history(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        await self._send_ci_notification(
+            ci,
+            "applicant_activity",
+            "CI Application Submitted",
+            origin_user_profile_id=user.user_profile_id,
+        )
         return await self._to_full_schema_with_user(ci)
 
     # ------------------------------------------------------------------
@@ -2043,14 +2126,16 @@ class CIApplicationServices:
             )
 
         ci_application.status_id = target_status.ci_application_status_id
-        if data.status == CIApplicationStatusEnum.Completed:
+        is_director_approval = data.status == CIApplicationStatusEnum.Completed
+        is_director_returned = (
+            data.status == CIApplicationStatusEnum.Submitted
+            and current_status == CIApplicationStatusEnum.Recommended.value
+        )
+        if is_director_approval:
             ci_application.approval_user_id = user.user_profile_id
             ci_application.approval_date = datetime.now(timezone.utc)
             await self._approve_generated_fuel_codes(ci_application)
-        elif (
-            data.status == CIApplicationStatusEnum.Submitted
-            and current_status == CIApplicationStatusEnum.Recommended.value
-        ):
+        elif is_director_returned:
             ci_application.recommendation_user_id = None
             ci_application.recommendation_date = None
             ci_application.approval_user_id = None
@@ -2067,4 +2152,18 @@ class CIApplicationServices:
         # widget before/after recording the decision.
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        if is_director_approval:
+            await self._send_ci_notification(
+                ci,
+                "director_approval",
+                "CI Application Director Approved",
+                origin_user_profile_id=user.user_profile_id,
+            )
+        elif is_director_returned:
+            await self._send_ci_notification(
+                ci,
+                "director_returned",
+                "CI Application Director Returned",
+                origin_user_profile_id=user.user_profile_id,
+            )
         return await self._to_full_schema_with_user(ci)

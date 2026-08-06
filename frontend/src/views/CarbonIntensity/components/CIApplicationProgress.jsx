@@ -65,7 +65,10 @@ export const buildCIWorkflowSteps = (
   const isApproved = status === 'Completed'
   const isWithdrawn = status === 'Withdrawn'
   const risk = ciApplication.preliminaryRiskAssessment
-  const showVerification2 = risk === 'High'
+  // Medium and High risk applications both go through Verification 2; only Low
+  // risk completes after Verification 1. Legacy rows may store 'Moderate'
+  // instead of 'Medium' (#4741).
+  const showVerification2 = ['Medium', 'Moderate', 'High'].includes(risk)
   const recommendationComplete = Boolean(ciApplication.recommendationDate)
   const targetDate = ciApplication.proposedFuelCodeEffectiveDate
   const supplierRequestDate = getSupplierRequestDate(ciApplication)
@@ -126,8 +129,11 @@ export const buildCIWorkflowSteps = (
 
   if (supplierRequestDate) {
     steps.push({
+      // Within the CI application process the external party is the "applicant"
+      // (the org that submitted the application), not a "supplier" (#4743). The
+      // step key stays 'withSupplier' to avoid touching state/data plumbing.
       key: 'withSupplier',
-      label: 'With supplier',
+      label: 'With applicant',
       date: supplierRequestDate,
       state: 'waiting',
       icon: 'hourglass',
@@ -355,7 +361,7 @@ const WorkflowNode = ({ step, isLast }) => {
             align="center"
             sx={{ fontWeight: 700, lineHeight: 1.15 }}
           >
-            {`${step.countdown} days with supplier`}
+            {`${step.countdown} days with applicant`}
           </Typography>
         )}
       </Stack>

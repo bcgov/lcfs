@@ -21,13 +21,20 @@ vi.mock('react-i18next', () => ({
 // Lightweight stubs so the test focuses on wiring, not the WYSIWYG editor.
 vi.mock('@/components/Comments/CommentForm', () => ({
   __esModule: true,
-  default: ({ commentText, onCommentChange, onSubmit, visibility }) => (
+  default: ({
+    commentText,
+    onCommentChange,
+    onSubmit,
+    visibility,
+    showVisibilityToggle
+  }) => (
     <div data-test="comment-form">
       <input
         data-test="comment-input"
         value={commentText}
         onChange={(e) => onCommentChange(e.target.value)}
       />
+      {showVisibilityToggle && <div data-test="visibility-toggle" />}
       <button
         data-test="comment-submit"
         onClick={() => onSubmit(commentText, visibility)}
@@ -39,12 +46,13 @@ vi.mock('@/components/Comments/CommentForm', () => ({
 }))
 
 vi.mock('../CommentLog/CommentRow', () => ({
-  CommentRow: ({ comment, onEdit }) => (
+  CommentRow: ({ comment, onEdit, allowPublicVisibility }) => (
     <div data-test="comment-row">
       <span>{comment.comment}</span>
+      {allowPublicVisibility && <div data-test="row-visibility-toggle" />}
       <button
         data-test={`edit-${comment.internalCommentId}`}
-        onClick={() => onEdit(comment.internalCommentId, 'edited', 'Internal')}
+        onClick={() => onEdit(comment.internalCommentId, 'edited', 'Public')}
       >
         edit
       </button>
@@ -128,6 +136,31 @@ describe('CompanyOverviewComments (#4608)', () => {
     renderCard(<CompanyOverviewComments organizationId={7} />)
     fireEvent.click(screen.getByTestId('comment-submit'))
     expect(createMutate).not.toHaveBeenCalled()
+  })
+
+  it('offers no public option on the create box, even for IDIR users', () => {
+    renderCard(
+      <CompanyOverviewComments organizationId={7} isGovernmentUser={true} />
+    )
+    expect(screen.queryByTestId('visibility-toggle')).not.toBeInTheDocument()
+  })
+
+  it('offers no public option when editing an existing comment', () => {
+    mockThread.mockReturnValue({
+      data: {
+        comments: [
+          { internalCommentId: 5, comment: '<p>Gamma</p>', canEdit: true }
+        ]
+      },
+      isLoading: false,
+      isError: false
+    })
+    renderCard(
+      <CompanyOverviewComments organizationId={7} isGovernmentUser={true} />
+    )
+    expect(
+      screen.queryByTestId('row-visibility-toggle')
+    ).not.toBeInTheDocument()
   })
 
   it('edits a comment via the edit mutation', () => {

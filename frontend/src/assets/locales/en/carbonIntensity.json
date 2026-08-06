@@ -187,6 +187,11 @@
   "stepStub": {
     "comingSoon": "This step is not yet available."
   },
+  "documents": {
+    "uploadTitle": "Upload supporting documents for application",
+    "documentLabel": "Supporting documents help provide additional context and evidence for this application.",
+    "returnButton": "Return to application"
+  },
   "columns": {
     "ciApplicationId": "ID",
     "status": "Status",
