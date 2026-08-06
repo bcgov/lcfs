@@ -24,7 +24,7 @@ import BCAlert from '@/components/BCAlert'
 import { DownloadButton } from '@/components/DownloadButton'
 import {
   usePeriodCreditLedger,
-  useDownloadCreditLedger,
+  useDownloadPeriodCreditLedger,
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -147,10 +147,16 @@ export const CreditLedgerPeriod = ({ organizationId }) => {
   const goPrev = () => setSelectedYear(year - 1)
   const goNext = () => setSelectedYear(year + 1)
 
-  const downloadLedger = useDownloadCreditLedger()
+  const downloadLedger = useDownloadPeriodCreditLedger()
+  // Pass the pending toggle through so the download matches what is on screen.
   const handleDownload = useCallback(
-    () => downloadLedger({ orgId: orgID, complianceYear: year }),
-    [downloadLedger, orgID, year]
+    () =>
+      downloadLedger({
+        orgId: orgID,
+        complianceYear: year,
+        includePending: showPending
+      }),
+    [downloadLedger, orgID, year, showPending]
   )
 
   const runningBalanceHeader = t('org:ledger.runningBalance', { year })

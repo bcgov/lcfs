@@ -83,6 +83,17 @@ class LCFS_Constants:
     CREDIT_LEDGER_EXPORT_SHEETNAME = "Credit ledger"
     CREDIT_LEDGER_EXPORT_FILENAME = "Credit-ledger"
 
+    # Export of the compliance-period ledger. Columns mirror the on-screen
+    # ledger so the download is the same view, not a second rendering of it.
+    CREDIT_LEDGER_PERIOD_EXPORT_COLUMNS = [
+        SpreadsheetColumn("ID", "text"),
+        SpreadsheetColumn("Effective date", "date"),
+        SpreadsheetColumn("Transaction type", "text"),
+        SpreadsheetColumn("Units in", "int"),
+        SpreadsheetColumn("Units out", "int"),
+        SpreadsheetColumn("Running balance", "int"),
+    ]
+
 
 class FILE_MEDIA_TYPE(Enum):
     PDF = "application/pdf"

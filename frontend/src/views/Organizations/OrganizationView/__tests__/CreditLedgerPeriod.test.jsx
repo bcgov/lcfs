@@ -33,7 +33,7 @@ vi.mock('@/utils/formatters', async (importOriginal) => ({
 
 vi.mock('@/hooks/useCreditLedger', () => ({
   usePeriodCreditLedger: vi.fn(),
-  useDownloadCreditLedger: vi.fn(),
+  useDownloadPeriodCreditLedger: vi.fn(),
   useCreditLedgerYears: vi.fn()
 }))
 
@@ -43,14 +43,14 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 import {
   usePeriodCreditLedger,
-  useDownloadCreditLedger,
+  useDownloadPeriodCreditLedger,
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 const mockPeriod = vi.mocked(usePeriodCreditLedger)
 const mockYears = vi.mocked(useCreditLedgerYears)
-const mockDownload = vi.mocked(useDownloadCreditLedger)
+const mockDownload = vi.mocked(useDownloadPeriodCreditLedger)
 const mockCurrentUser = vi.mocked(useCurrentUser)
 
 const PERIOD_PAYLOAD = {
@@ -201,6 +201,30 @@ describe('CreditLedgerPeriod (compliance-period ledger #4714)', () => {
     expect(mockPeriod).toHaveBeenLastCalledWith(
       expect.objectContaining({ includePending: true })
     )
+  })
+
+  it('downloads the period on screen, pending toggle included', () => {
+    // #4832: the export goes through the period endpoint so the spreadsheet
+    // carries the same April–March envelope the table is showing.
+    const download = vi.fn()
+    mockDownload.mockReturnValue(download)
+    renderComponent({ organizationId: 999 })
+
+    fireEvent.click(screen.getByTestId('download-credit-ledger'))
+    expect(download).toHaveBeenLastCalledWith({
+      orgId: 999,
+      complianceYear: 2024,
+      includePending: false
+    })
+
+    fireEvent.click(screen.getByTestId('toggle-show-pending'))
+    fireEvent.click(screen.getByTestId('ledger-prev-period'))
+    fireEvent.click(screen.getByTestId('download-credit-ledger'))
+    expect(download).toHaveBeenLastCalledWith({
+      orgId: 999,
+      complianceYear: 2023,
+      includePending: true
+    })
   })
 
   it('renders the assessed-balance section for previous and current year', () => {
