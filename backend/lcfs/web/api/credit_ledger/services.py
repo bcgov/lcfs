@@ -84,6 +84,38 @@ def _effective_date(row):
     )
 
 
+# Display labels and id prefixes, kept in step with the frontend's TYPE_LABELS
+# and TRANSACTION_ID_PREFIXES so an exported ledger reads like the screen.
+# Legacy transactions carry a raw id with no user-facing prefix.
+_TYPE_LABELS = {
+    "Transfer": "Transfer",
+    "InitiativeAgreement": "Initiative Agreement",
+    "AdminAdjustment": "Administrative Adjustment",
+    "ComplianceReport": "Compliance Report",
+    "AggregatorIssuance": "Aggregator Issuance",
+    "StandaloneTransaction": "Legacy Transaction",
+}
+
+_TYPE_ID_PREFIXES = {
+    "Transfer": "CT",
+    "AdminAdjustment": "AA",
+    "InitiativeAgreement": "IA",
+    "ComplianceReport": "CR",
+    "AggregatorIssuance": "AG",
+}
+
+
+def _display_transaction_id(transaction_type: str, transaction_id: int) -> str:
+    return f"{_TYPE_ID_PREFIXES.get(transaction_type, '')}{transaction_id}"
+
+
+def _display_transaction_type(transaction_type: str, description: Optional[str]) -> str:
+    label = _TYPE_LABELS.get(transaction_type, transaction_type)
+    if transaction_type == "ComplianceReport" and description:
+        return f"{label} - {description}"
+    return label
+
+
 def compliance_year_envelope(
     compliance_period: int, first_assessed_year: Optional[int] = None
 ) -> tuple[date, date]:
@@ -310,6 +342,64 @@ class CreditLedgerService:
                 current_year=compliance_period,
                 current_balance=current_balance,
             ),
+        )
+
+    @service_handler
+    async def export_period_ledger(
+        self,
+        *,
+        organization_id: int,
+        compliance_year: int,
+        include_pending: bool = False,
+        export_format: str = "xlsx",
+    ) -> StreamingResponse:
+        """
+        Excel/CSV export of one compliance-period ledger (#4832).
+
+        Built from ``get_period_ledger`` rather than querying separately, so the
+        download is exactly what the screen shows — same April–March envelope,
+        same rows, same running balance. Anything that changes the ledger changes
+        the export with it.
+        """
+        if export_format not in ["xls", "xlsx", "csv"]:
+            raise ValueError("Export format not supported")
+
+        ledger = await self.get_period_ledger(
+            organization_id=organization_id,
+            compliance_period=compliance_year,
+            include_pending=include_pending,
+        )
+
+        sheet_rows = [
+            [
+                _display_transaction_id(txn.transaction_type, txn.transaction_id),
+                txn.effective_date,
+                _display_transaction_type(txn.transaction_type, txn.description),
+                txn.units_in,
+                txn.units_out,
+                txn.running_balance,
+            ]
+            for txn in ledger.transactions
+        ]
+
+        builder = SpreadsheetBuilder(file_format=export_format)
+        builder.add_sheet(
+            sheet_name=LCFS_Constants.CREDIT_LEDGER_EXPORT_SHEETNAME,
+            columns=LCFS_Constants.CREDIT_LEDGER_PERIOD_EXPORT_COLUMNS,
+            rows=sheet_rows,
+            styles={"bold_headers": True},
+        )
+        file_content: bytes = builder.build_spreadsheet()
+
+        filename = (
+            f"{LCFS_Constants.CREDIT_LEDGER_EXPORT_FILENAME}"
+            f"-org{organization_id}-{compliance_year}.{export_format}"
+        )
+
+        return StreamingResponse(
+            io.BytesIO(file_content),
+            media_type=FILE_MEDIA_TYPE[export_format.upper()].value,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
     @service_handler

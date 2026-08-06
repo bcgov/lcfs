@@ -476,3 +476,118 @@ async def test_period_ledger_first_assessed_year_envelope_opens_in_january(
         envelope_start=date(2024, 1, 1),
         envelope_end=date(2025, 3, 31),
     )
+
+
+@pytest.mark.anyio
+async def test_export_period_ledger_matches_the_on_screen_rows(
+    credit_ledger_service, mock_repo
+):
+    """
+    The period export is built from get_period_ledger, so it carries the same
+    envelope, rows and running balance as the screen (#4832) — ids and type
+    labels formatted the way the ledger displays them.
+    """
+    mock_repo.get_first_assessed_year.return_value = 2019
+    mock_repo.get_period_rows.return_value = [
+        _txn(
+            transaction_id=43,
+            transaction_type="InitiativeAgreement",
+            status="Approved",
+            quantity=10000,
+            to_org=1,
+            effective_date=date(2024, 4, 3),
+        ),
+        _txn(
+            transaction_id=79,
+            transaction_type="ComplianceReport",
+            status="Assessed",
+            quantity=-50,
+            to_org=1,
+            effective_date=date(2025, 2, 5),
+            version=1,
+        ),
+    ]
+
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        resp = await credit_ledger_service.export_period_ledger(
+            organization_id=1, compliance_year=2024, export_format="xlsx"
+        )
+
+    assert isinstance(resp, StreamingResponse)
+    # The export asks for the same April–March envelope the screen renders.
+    mock_repo.get_period_rows.assert_awaited_once_with(
+        organization_id=1,
+        compliance_period=2024,
+        envelope_start=date(2024, 4, 1),
+        envelope_end=date(2025, 3, 31),
+    )
+
+    _, kwargs = mock_add_sheet.call_args
+    rows = kwargs["rows"]
+    assert [r[0] for r in rows] == ["IA43", "CR79"]
+    assert rows[0][2] == "Initiative Agreement"
+    assert rows[1][2] == "Compliance Report - Supplemental 1"
+    # Units in / out / running balance, same as the on-screen columns.
+    assert rows[0][3:] == [10000, 0, 10000]
+    assert rows[1][3:] == [0, 50, 9950]
+
+
+@pytest.mark.anyio
+async def test_export_period_ledger_passes_pending_toggle_through(
+    credit_ledger_service, mock_repo
+):
+    """Downloading with 'show pending' on includes those rows."""
+    mock_repo.get_period_rows.return_value = [
+        _txn(
+            transaction_id=91,
+            transaction_type="Transfer",
+            status="Submitted",
+            quantity=200,
+            to_org=1,
+            effective_date=date(2024, 9, 9),
+        )
+    ]
+
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        await credit_ledger_service.export_period_ledger(
+            organization_id=1,
+            compliance_year=2024,
+            include_pending=True,
+            export_format="xlsx",
+        )
+    assert [r[0] for r in mock_add_sheet.call_args[1]["rows"]] == ["CT91"]
+
+    # ...and with the toggle off the same pending row is left out.
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        await credit_ledger_service.export_period_ledger(
+            organization_id=1,
+            compliance_year=2024,
+            include_pending=False,
+            export_format="xlsx",
+        )
+    assert mock_add_sheet.call_args[1]["rows"] == []
+
+
+@pytest.mark.anyio
+async def test_export_period_ledger_rejects_unsupported_format(
+    credit_ledger_service, mock_repo
+):
+    with pytest.raises(ValueError):
+        await credit_ledger_service.export_period_ledger(
+            organization_id=1, compliance_year=2024, export_format="pdf"
+        )
