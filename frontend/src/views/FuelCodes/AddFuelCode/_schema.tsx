@@ -7,7 +7,8 @@ import {
   AutocompleteCellEditor,
   DateEditor,
   NumberEditor,
-  RequiredHeader
+  RequiredHeader,
+  TransportModeDistanceCellEditor
 } from '@/components/BCDataGrid/components'
 import { apiRoutes } from '@/constants/routes'
 import i18n from '@/i18n'
@@ -52,6 +53,55 @@ const createCellRenderer = (field, customRenderer = null) => {
   CellRenderer.displayName = `CellRenderer_${field}`
 
   return CellRenderer
+}
+
+const normalizeTransportModeDistances = (value) => {
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === 'string' && value.trim()
+      ? value.split(',').map((item) => item.trim())
+      : []
+
+  return values
+    .map((item) => {
+      if (!item) return null
+      if (typeof item === 'object') {
+        return {
+          transportMode:
+            item.transportMode ||
+            item.transport_mode ||
+            item.mode ||
+            item.label ||
+            item.name ||
+            '',
+          distance: item.distance ?? item.transportDistance ?? ''
+        }
+      }
+      return { transportMode: item, distance: '' }
+    })
+    .filter((item) => item?.transportMode)
+}
+
+const renderTransportModeDistances = (params) => {
+  const values = normalizeTransportModeDistances(params.value)
+  if (!values.length) return <BCTypography variant="body4">Select</BCTypography>
+  return (
+    <CommonArrayRenderer
+      {...params}
+      value={values.map(({ transportMode, distance }) =>
+        distance === null || distance === undefined || distance === ''
+          ? transportMode
+          : `${transportMode} (${distance} km)`
+      )}
+    />
+  )
+}
+
+const transportModeValueSetter = (params) => {
+  params.data[params.colDef.field] = normalizeTransportModeDistances(
+    params.newValue
+  )
+  return true
 }
 
 export const fuelCodeColDefs = (
@@ -643,15 +693,12 @@ export const fuelCodeColDefs = (
       headerName: i18n.t(
         'fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'
       ),
-      cellEditor: AutocompleteCellEditor,
+      cellEditor: TransportModeDistanceCellEditor,
+      cellEditorPopup: true,
+      cellEditorPopupPosition: 'under',
       cellRenderer: createCellRenderer(
         'feedstockFuelTransportMode',
-        (params) =>
-          params.value && params.value.length > 0 ? (
-            <CommonArrayRenderer {...params} />
-          ) : (
-            <BCTypography variant="body4">Select</BCTypography>
-          )
+        renderTransportModeDistances
       ),
       cellRendererParams: {
         disableLink: true,
@@ -659,12 +706,10 @@ export const fuelCodeColDefs = (
       },
       cellEditorParams: {
         options:
-          optionsData?.transportModes?.map((obj) => obj.transportMode) || [],
-        multiple: true,
-        openOnFocus: true,
-        disableCloseOnSelect: true
+          optionsData?.transportModes?.map((obj) => obj.transportMode) || []
       },
       suppressKeyboardEvent,
+      valueSetter: transportModeValueSetter,
       minWidth: 325
     },
     {
@@ -673,13 +718,11 @@ export const fuelCodeColDefs = (
       headerName: i18n.t(
         'fuelCode:fuelCodeColLabels.finishedFuelTransportMode'
       ),
-      cellEditor: AutocompleteCellEditor,
+      cellEditor: TransportModeDistanceCellEditor,
+      cellEditorPopup: true,
+      cellEditorPopupPosition: 'under',
       cellRenderer: createCellRenderer('finishedFuelTransportMode', (params) =>
-        params.value && params.value.length > 0 ? (
-          <CommonArrayRenderer {...params} />
-        ) : (
-          <BCTypography variant="body4">Select</BCTypography>
-        )
+        renderTransportModeDistances(params)
       ),
       cellRendererParams: {
         disableLink: true,
@@ -687,12 +730,10 @@ export const fuelCodeColDefs = (
       },
       cellEditorParams: {
         options:
-          optionsData?.transportModes?.map((obj) => obj.transportMode) || [],
-        multiple: true,
-        openOnFocus: true,
-        disableCloseOnSelect: true
+          optionsData?.transportModes?.map((obj) => obj.transportMode) || []
       },
       suppressKeyboardEvent,
+      valueSetter: transportModeValueSetter,
       minWidth: 325
     },
     {

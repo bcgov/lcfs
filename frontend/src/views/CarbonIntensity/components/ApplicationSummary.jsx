@@ -21,6 +21,7 @@ import colors from '@/themes/base/colors'
 import {
   ciApplicationPathwayChangelogColDefs,
   ciApplicationPathwaySummaryColDefs,
+  normalizeTransportModeDistances,
   normalizeTransportModes
 } from '@/views/CarbonIntensity/components/_step2Schema'
 import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
@@ -68,10 +69,10 @@ const PATHWAY_CHANGELOG_FIELD_MAP = {
   feedstock: 'feedstock',
   feedstock_region: 'feedstockRegion',
   feedstock_transport_mode: 'feedstockTransportMode',
-  feedstock_transport_distance: 'feedstockTransportDistance',
+  feedstock_transport_mode_details: 'feedstockTransportMode',
   coproducts: 'coproducts',
   finished_fuel_transport_mode: 'finishedFuelTransportMode',
-  finished_fuel_transport_distance: 'finishedFuelTransportDistance'
+  finished_fuel_transport_mode_details: 'finishedFuelTransportMode'
 }
 
 const toPathwayChangelogRow = (snapshot = {}) => ({
@@ -89,11 +90,13 @@ const toPathwayChangelogRow = (snapshot = {}) => ({
   fuelTypeId: snapshot.fuel_type_id,
   feedstock: snapshot.feedstock,
   feedstockRegion: snapshot.feedstock_region,
-  feedstockTransportMode: normalizeTransportModes(snapshot.feedstock_transport_mode),
-  feedstockTransportDistance: snapshot.feedstock_transport_distance,
+  feedstockTransportMode:
+    snapshot.feedstock_transport_mode_details ||
+    normalizeTransportModes(snapshot.feedstock_transport_mode),
   coproducts: snapshot.coproducts,
-  finishedFuelTransportMode: normalizeTransportModes(snapshot.finished_fuel_transport_mode),
-  finishedFuelTransportDistance: snapshot.finished_fuel_transport_distance
+  finishedFuelTransportMode:
+    snapshot.finished_fuel_transport_mode_details ||
+    normalizeTransportModes(snapshot.finished_fuel_transport_mode)
 })
 
 const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
@@ -120,18 +123,13 @@ const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
   fuelTypeId: pathway.fuelTypeId || pathway.fuel_type_id,
   feedstock: pathway.feedstock,
   feedstockRegion: pathway.feedstockRegion || pathway.feedstock_region,
-  feedstockTransportMode: normalizeTransportModes(
+  feedstockTransportMode: normalizeTransportModeDistances(
     pathway.feedstockTransportMode ?? pathway.feedstock_transport_mode
   ),
-  feedstockTransportDistance:
-    pathway.feedstockTransportDistance || pathway.feedstock_transport_distance,
   coproducts: pathway.coproducts,
-  finishedFuelTransportMode: normalizeTransportModes(
+  finishedFuelTransportMode: normalizeTransportModeDistances(
     pathway.finishedFuelTransportMode ?? pathway.finished_fuel_transport_mode
   ),
-  finishedFuelTransportDistance:
-    pathway.finishedFuelTransportDistance ||
-    pathway.finished_fuel_transport_distance,
   actionType: '',
   updated: false,
   diff: []

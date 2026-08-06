@@ -25,11 +25,9 @@ const validRow = {
   fuelTypeId: 1,
   feedstock: 'Canola',
   feedstockRegion: 'Saskatchewan',
-  feedstockTransportMode: 'Truck',
-  feedstockTransportDistance: 100,
+  feedstockTransportMode: [{ transportMode: 'Truck', distance: 100 }],
   coproducts: '',
-  finishedFuelTransportMode: 'Rail',
-  finishedFuelTransportDistance: 200
+  finishedFuelTransportMode: [{ transportMode: 'Rail', distance: 200 }]
 }
 
 describe('isRenewalRow', () => {
@@ -53,10 +51,7 @@ describe('validatePathwayRow', () => {
 
   it('allows negative proposed CI values', () => {
     expect(
-      validatePathwayRow(
-        { ...validRow, proposedCi: -5.61 },
-        APPLICATION_TYPES
-      )
+      validatePathwayRow({ ...validRow, proposedCi: -5.61 }, APPLICATION_TYPES)
     ).toEqual([])
   })
 
@@ -106,13 +101,15 @@ describe('rowToApiPayload', () => {
     const payload = rowToApiPayload({
       ...validRow,
       proposedCi: '5.61',
-      feedstockTransportDistance: '100',
-      finishedFuelTransportDistance: '200',
       coproducts: '   '
     })
     expect(payload.proposedCi).toBe(5.61)
-    expect(payload.feedstockTransportDistance).toBe(100)
-    expect(payload.finishedFuelTransportDistance).toBe(200)
+    expect(payload.feedstockTransportMode).toEqual([
+      { transportMode: 'Truck', distance: 100 }
+    ])
+    expect(payload.finishedFuelTransportMode).toEqual([
+      { transportMode: 'Rail', distance: 200 }
+    ])
     expect(payload.coproducts).toBeNull()
   })
 
@@ -140,11 +137,9 @@ describe('apiToRow', () => {
       fuelTypeId: 1,
       feedstock: 'Corn',
       feedstockRegion: 'Ontario',
-      feedstockTransportMode: 'Truck',
-      feedstockTransportDistance: 50,
+      feedstockTransportMode: [{ transportMode: 'Truck', distance: 50 }],
       coproducts: null,
-      finishedFuelTransportMode: 'Rail',
-      finishedFuelTransportDistance: 75
+      finishedFuelTransportMode: [{ transportMode: 'Rail', distance: 75 }]
     })
     expect(row.pathwayId).toBe(7)
     expect(row.proposedCi).toBe(23.23)
@@ -194,7 +189,9 @@ describe('buildPathwayColDefs — Renewal CI carry-over prevention', () => {
     optionsData: { pathwayApplicationTypes: APPLICATION_TYPES, fuelCodes },
     canEdit: true
   })
-  const applicationTypeCol = colDefs.find((c) => c.field === 'applicationTypeId')
+  const applicationTypeCol = colDefs.find(
+    (c) => c.field === 'applicationTypeId'
+  )
   const fuelCodeCol = colDefs.find((c) => c.field === 'fuelCodeId')
 
   it('blanks proposedCi when the applicant selects Renewal', () => {

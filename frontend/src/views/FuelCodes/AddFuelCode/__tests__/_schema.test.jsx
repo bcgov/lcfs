@@ -19,7 +19,8 @@ vi.mock('@/components/BCDataGrid/components', () => ({
   AutocompleteCellEditor: () => null,
   DateEditor: () => null,
   NumberEditor: () => null,
-  RequiredHeader: () => null
+  RequiredHeader: () => null,
+  TransportModeDistanceCellEditor: () => null
 }))
 
 vi.mock('@/utils/grid/eventHandlers', () => ({

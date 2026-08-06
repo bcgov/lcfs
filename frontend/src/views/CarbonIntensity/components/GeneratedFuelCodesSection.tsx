@@ -37,13 +37,16 @@ const getValidationFields = (row: any) =>
   )
 
 const toErrorMap = (rows: any[]) =>
-  rows.reduce((acc, row) => {
-    const rowErrors = getValidationFields(row)
-    if (row?.id && rowErrors.length) {
-      acc[row.id] = rowErrors
-    }
-    return acc
-  }, {} as Record<string, string[]>)
+  rows.reduce(
+    (acc, row) => {
+      const rowErrors = getValidationFields(row)
+      if (row?.id && rowErrors.length) {
+        acc[row.id] = rowErrors
+      }
+      return acc
+    },
+    {} as Record<string, string[]>
+  )
 
 const toUpdatePayload = (row: any) => {
   const {
@@ -134,6 +137,11 @@ export const GeneratedFuelCodesSection = ({
     ]
   }, [errors, fuelCodeOptions, isUpdating, pendingUpdates, readOnly])
 
+  const popupParent = useMemo(
+    () => (typeof document === 'undefined' ? undefined : document.body),
+    []
+  )
+
   const gridOptions = useMemo(
     () => ({
       suppressClickEdit: isUpdating,
@@ -193,7 +201,9 @@ export const GeneratedFuelCodesSection = ({
         })
         return nextRow
       } catch (error: any) {
-        const fallback = t('carbonIntensity:step5.generatedFuelCodeRowSaveError')
+        const fallback = t(
+          'carbonIntensity:step5.generatedFuelCodeRowSaveError'
+        )
         const errorMessage = getErrorMessage(error, fallback)
         const errorFields = getErrorFields(error)
         setErrors((prev) => ({
@@ -268,6 +278,7 @@ export const GeneratedFuelCodesSection = ({
         onCellEditingStopped={onCellEditingStopped}
         showAddRowsButton={false}
         showMandatoryColumns={!readOnly}
+        popupParent={popupParent}
         context={{ errors }}
         getRowStyle={getRowStyle}
         getRowId={(params: any) => params.data.id}

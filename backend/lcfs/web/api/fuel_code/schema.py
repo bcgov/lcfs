@@ -78,10 +78,19 @@ class TransportModeSchema(BaseSchema):
     transport_mode: str
 
 
+class TransportModeDistanceSchema(BaseSchema):
+    transport_mode: str
+    distance: int = Field(..., ge=0)
+
+
+TransportModeSelection = Union[str, TransportModeDistanceSchema]
+
+
 class FeedstockFuelTransportModeSchema(BaseSchema):
     feedstock_fuel_transport_mode_id: Optional[int] = None
     fuel_code_id: Optional[int] = None
     transport_mode_id: Optional[int] = None
+    distance: Optional[int] = None
     feedstock_fuel_transport_mode: Optional[TransportModeSchema] = None
 
 
@@ -89,6 +98,7 @@ class FinishedFuelTransportModeSchema(BaseSchema):
     finished_fuel_transport_mode_id: Optional[int] = None
     fuel_code_id: Optional[int] = None
     transport_mode_id: Optional[int] = None
+    distance: Optional[int] = None
     finished_fuel_transport_mode: Optional[TransportModeSchema] = None
 
 
@@ -385,8 +395,8 @@ class FuelCodeBulletinRowSchema(BaseSchema):
     fuel_production_facility_country: Optional[str] = None
     facility_nameplate_capacity: Optional[float] = None
     facility_nameplate_capacity_unit: Optional[str] = None
-    feedstock_fuel_transport_modes: Optional[List[str]] = None
-    finished_fuel_transport_modes: Optional[List[str]] = None
+    feedstock_fuel_transport_modes: Optional[List[TransportModeSelection]] = None
+    finished_fuel_transport_modes: Optional[List[TransportModeSelection]] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
 
@@ -440,8 +450,8 @@ class FuelCodeCreateUpdateSchema(BaseSchema):
     facility_nameplate_capacity_unit: Optional[
         Union[FuelTypeQuantityUnitsEnumSchema, str]
     ] = None
-    feedstock_fuel_transport_mode: Optional[List[str]] = None
-    finished_fuel_transport_mode: Optional[List[str]] = None
+    feedstock_fuel_transport_mode: Optional[List[TransportModeSelection]] = None
+    finished_fuel_transport_mode: Optional[List[TransportModeSelection]] = None
     feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
         None
     )

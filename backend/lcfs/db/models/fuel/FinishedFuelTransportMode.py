@@ -24,6 +24,11 @@ class FinishedFuelTransportMode(BaseModel, Auditable):
         ForeignKey("transport_mode.transport_mode_id", ondelete="CASCADE"),
         comment="Transport mode identifier",
     )
+    distance = Column(
+        Integer,
+        nullable=True,
+        comment="Distance in kilometres for this finished fuel transport mode",
+    )
     # Define relationships
     finished_fuel_code = relationship(
         "FuelCode", back_populates="finished_fuel_transport_modes"
