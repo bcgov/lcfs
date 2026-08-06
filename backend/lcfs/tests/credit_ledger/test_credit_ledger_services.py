@@ -1,11 +1,14 @@
 from math import ceil
+import io
 from datetime import datetime, date, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import openpyxl
 import pytest
 from starlette.responses import StreamingResponse
 
+from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.credit_ledger.schema import CreditLedgerTxnSchema
 from lcfs.web.api.credit_ledger.services import CreditLedgerService
@@ -109,6 +112,24 @@ async def test_export_transactions_generates_stream(credit_ledger_service, mock_
         assert mock_add_sheet.called
         _, kwargs = mock_add_sheet.call_args
         assert kwargs["rows"][0][3] == "Compliance Report – Supplemental 1"
+
+
+@pytest.mark.anyio
+async def test_export_transactions_ignores_compliance_year_filter(
+    credit_ledger_service, mock_repo
+):
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch("lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"):
+        mock_repo.get_rows_paginated.return_value = ([], 0)
+
+        await credit_ledger_service.export_transactions(
+            organization_id=1, compliance_year=2024, export_format="csv"
+        )
+
+        _, repo_kwargs = mock_repo.get_rows_paginated.call_args
+        assert len(repo_kwargs["conditions"]) == 1
 
 
 @pytest.mark.anyio
