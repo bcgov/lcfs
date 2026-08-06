@@ -591,3 +591,61 @@ async def test_export_period_ledger_rejects_unsupported_format(
         await credit_ledger_service.export_period_ledger(
             organization_id=1, compliance_year=2024, export_format="pdf"
         )
+
+
+@pytest.mark.anyio
+async def test_export_period_ledger_handles_timezone_aware_dates(
+    credit_ledger_service, mock_repo
+):
+    """
+    Regression: openpyxl refuses tz-aware datetimes ("Excel does not support
+    datetimes with timezones") and mv_transaction_aggregate emits a mix of
+    date, naive and tz-aware values, so writing them through unchanged failed
+    the whole download. Builds a real spreadsheet — no mocked builder — so the
+    serialization is actually exercised.
+    """
+    mock_repo.get_period_rows.return_value = [
+        _txn(
+            transaction_id=1,
+            transaction_type="Transfer",
+            status="Recorded",
+            quantity=10,
+            to_org=1,
+            effective_date=datetime(2024, 4, 3, 9, 30, tzinfo=timezone.utc),
+        ),
+        _txn(
+            transaction_id=2,
+            transaction_type="Transfer",
+            status="Recorded",
+            quantity=20,
+            to_org=1,
+            effective_date=date(2024, 5, 1),
+        ),
+        _txn(
+            transaction_id=3,
+            transaction_type="Transfer",
+            status="Recorded",
+            quantity=30,
+            to_org=1,
+            effective_date=datetime(2024, 6, 1, 12, 0),
+        ),
+    ]
+
+    resp = await credit_ledger_service.export_period_ledger(
+        organization_id=1, compliance_year=2024, export_format="xlsx"
+    )
+    assert isinstance(resp, StreamingResponse)
+
+    # Every effective date reaches the sheet as a plain, tz-free date.
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        await credit_ledger_service.export_period_ledger(
+            organization_id=1, compliance_year=2024, export_format="xlsx"
+        )
+    dates = [r[1] for r in mock_add_sheet.call_args[1]["rows"]]
+    assert dates == [date(2024, 4, 3), date(2024, 5, 1), date(2024, 6, 1)]
+    assert all(not isinstance(d, datetime) for d in dates)

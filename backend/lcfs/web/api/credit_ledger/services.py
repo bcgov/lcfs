@@ -109,6 +109,25 @@ def _display_transaction_id(transaction_type: str, transaction_id: int) -> str:
     return f"{_TYPE_ID_PREFIXES.get(transaction_type, '')}{transaction_id}"
 
 
+def _export_date(value) -> Optional[date]:
+    """
+    Reduce an effective date to a plain date for the spreadsheet.
+
+    openpyxl rejects tz-aware datetimes outright ("Excel does not support
+    datetimes with timezones"), and the aggregate view emits a mix of date,
+    naive and tz-aware values — so writing them through untouched fails the
+    whole export for any organization that happens to have one. The ledger
+    displays a date only, so nothing is lost by dropping the time.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return None
+
+
 def _display_transaction_type(transaction_type: str, description: Optional[str]) -> str:
     label = _TYPE_LABELS.get(transaction_type, transaction_type)
     if transaction_type == "ComplianceReport" and description:
@@ -373,7 +392,7 @@ class CreditLedgerService:
         sheet_rows = [
             [
                 _display_transaction_id(txn.transaction_type, txn.transaction_id),
-                txn.effective_date,
+                _export_date(txn.effective_date),
                 _display_transaction_type(txn.transaction_type, txn.description),
                 txn.units_in,
                 txn.units_out,

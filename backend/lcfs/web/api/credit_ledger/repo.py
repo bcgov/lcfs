@@ -244,7 +244,14 @@ class CreditLedgerRepository:
                 # would raise before the query ever ran.
                 cast(ComplianceReportStatus.status, String).in_(_ASSESSED_STATUSES),
             )
-            .order_by(desc(ComplianceReport.version))
+            # Version orders the supplemental chain. The id tiebreaker only
+            # matters if an organization somehow has two report chains for one
+            # year, where equal versions would otherwise pick arbitrarily and
+            # the displayed balance could change between requests.
+            .order_by(
+                desc(ComplianceReport.version),
+                desc(ComplianceReport.compliance_report_id),
+            )
             .limit(1)
         )
         line_22 = await self.db.scalar(stmt)
