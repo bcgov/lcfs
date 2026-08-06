@@ -204,12 +204,13 @@ import { EditViewCIApplication } from '@/views/CarbonIntensity/EditViewCIApplica
 
 describe('EditViewCIApplication', () => {
   beforeAll(() => {
-    // jsdom logs "Not implemented: window.scrollTo" — stub it so the
-    // smooth-scroll on step transitions stays out of the test output.
+    // jsdom logs "Not implemented: window.scrollTo" / Element.scrollIntoView —
+    // stub them so step-transition scrolling stays out of the test output.
     Object.defineProperty(window, 'scrollTo', {
       value: vi.fn(),
       writable: true
     })
+    Element.prototype.scrollIntoView = vi.fn()
   })
 
   beforeEach(() => {
@@ -301,6 +302,38 @@ describe('EditViewCIApplication', () => {
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled())
     expect(mockCreate).not.toHaveBeenCalled()
     expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('opens Step 2 and scrolls it into view after saving Step 1 (#4767)', async () => {
+    mockParams = { ciApplicationId: '10' }
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Draft' }
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, { wrapper })
+    fireEvent.click(await screen.findByTestId('step1-save-trigger'))
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalled())
+    await waitFor(() => {
+      expect(screen.getByTestId('ci-step-accordion-step2')).toHaveClass(
+        'Mui-expanded'
+      )
+    })
+    expect(screen.getByTestId('ci-step-accordion-step1')).not.toHaveClass(
+      'Mui-expanded'
+    )
+    await waitFor(() => {
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'start'
+      })
+    })
+    expect(window.scrollTo).not.toHaveBeenCalled()
   })
 
   it('shows the loader while options are loading', async () => {
