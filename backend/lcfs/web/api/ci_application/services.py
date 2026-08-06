@@ -47,6 +47,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
+    CIApplicationStep4DraftSchema,
     CIApplicationStep4Schema,
     CIApplicationUserSchema,
     CIGeneratedFuelCodeSchema,
@@ -1926,6 +1927,50 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
     # Step 4 — Sign & submit
     # ------------------------------------------------------------------
+
+    @service_handler
+    async def update_step4_draft(
+        self,
+        ci_application: CIApplication,
+        data: CIApplicationStep4DraftSchema,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        """
+        Persist the optional consultant block on a Draft without submitting
+        (#4772).
+
+        Step 4 previously had no save path, so consultant details typed by an
+        applicant were lost whenever they left the draft instead of submitting.
+        The UI now auto-saves each field on blur and calls this.
+
+        Consent mirrors :meth:`submit_application`: when it is withdrawn the
+        stored values are wiped, so a draft never retains consultant details
+        the applicant has un-consented to.
+        """
+        if (
+            ci_application.ci_application_status.status
+            != CIApplicationStatusEnum.Draft.value
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only Draft applications can be edited.",
+            )
+
+        if data.consultant_consent:
+            ci_application.consultant_name = data.consultant_name
+            ci_application.consultant_company = data.consultant_company
+            ci_application.consultant_email = data.consultant_email
+        else:
+            ci_application.consultant_name = None
+            ci_application.consultant_company = None
+            ci_application.consultant_email = None
+
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
 
     @service_handler
     async def submit_application(

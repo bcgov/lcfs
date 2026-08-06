@@ -198,6 +198,35 @@ export const useUpdateCIApplicationStep3 = (
   })
 }
 
+/**
+ * Draft auto-save for the Step 4 consultant block (#4772). Distinct from
+ * `useSubmitCIApplication`: this persists without transitioning the status,
+ * so applicants no longer lose consultant details by leaving a draft.
+ */
+export const useUpdateCIApplicationStep4 = (
+  ciApplicationId: number | string | undefined | null
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: any) => {
+      return (
+        await client.put(
+          apiRoutes.updateCIApplicationStep4.replace(
+            ':ciApplicationId',
+            String(ciApplicationId ?? '')
+          ),
+          payload
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
 export const useSubmitCIApplication = (
   ciApplicationId: number | string | undefined | null
 ) => {

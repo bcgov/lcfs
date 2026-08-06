@@ -125,6 +125,7 @@
     "consultantEmailLabel": "Email address",
     "submit": "Submit application",
     "submitSuccess": "Application submitted.",
+    "autoSaveSuccess": "Consultant details saved.",
     "declarations": {
       "requiredSuffix": "(required)",
       "informationTrue": "I certify that the information submitted is true and complete and the records regarding this application have been retained in accordance with the Low Carbon Fuels Act.",

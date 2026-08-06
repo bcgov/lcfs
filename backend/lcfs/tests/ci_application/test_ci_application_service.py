@@ -1195,6 +1195,19 @@ def _step4_payload(**overrides):
     return CIApplicationStep4Schema(**base)
 
 
+def _step4_draft_payload(**overrides):
+    from lcfs.web.api.ci_application.schema import CIApplicationStep4DraftSchema
+
+    base = dict(
+        consultant_consent=False,
+        consultant_name=None,
+        consultant_company=None,
+        consultant_email=None,
+    )
+    base.update(overrides)
+    return CIApplicationStep4DraftSchema(**base)
+
+
 def _draft_ci_with_pathways():
     """Draft CI with one pathway present (sentinel; the count check is all that matters)."""
     ci = _ci_application(status=_status("Draft", 1))
@@ -1310,6 +1323,84 @@ async def test_update_generated_fuel_code_clearing_required_date_raises_validati
 
     assert exc.value.errors["errors"][0]["fields"] == ["applicationDate"]
     # The cleared value never reached the database.
+    repo.update.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_step4_draft_save_persists_consultant_without_submitting(
+    service, repo, mock_user
+):
+    """#4772 — consultant details survive leaving a draft, and the status stays Draft."""
+    ci = _draft_ci_with_pathways()
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+    original_status_id = ci.status_id
+
+    payload = _step4_draft_payload(
+        consultant_consent=True,
+        consultant_name="Sam Anderson",
+        consultant_company="Anderson Fuel Consultants",
+        consultant_email="sam.anderson@afc.ar",
+    )
+
+    result = await service.update_step4_draft(ci, payload, mock_user)
+
+    assert ci.consultant_name == "Sam Anderson"
+    assert ci.consultant_company == "Anderson Fuel Consultants"
+    assert ci.consultant_email == "sam.anderson@afc.ar"
+    # Draft save must not transition status, sign, or write history.
+    assert ci.status_id == original_status_id
+    assert ci.signature_user is None
+    assert ci.signature_date_time is None
+    repo.add_history.assert_not_awaited()
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step4_draft_save_clears_consultant_when_consent_withdrawn(
+    service, repo, mock_user
+):
+    ci = _draft_ci_with_pathways()
+    ci.consultant_name = "Sam Anderson"
+    ci.consultant_company = "Anderson Fuel Consultants"
+    ci.consultant_email = "sam.anderson@afc.ar"
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    await service.update_step4_draft(ci, _step4_draft_payload(), mock_user)
+
+    assert ci.consultant_name is None
+    assert ci.consultant_company is None
+    assert ci.consultant_email is None
+
+
+@pytest.mark.anyio
+async def test_step4_draft_save_accepts_partial_consultant_details(
+    service, repo, mock_user
+):
+    """Auto-save fires on blur mid-entry, so incomplete blocks must not 400."""
+    ci = _draft_ci_with_pathways()
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    payload = _step4_draft_payload(
+        consultant_consent=True,
+        consultant_name="Sam Anderson",
+    )
+
+    await service.update_step4_draft(ci, payload, mock_user)
+
+    assert ci.consultant_name == "Sam Anderson"
+    assert ci.consultant_company is None
+    assert ci.consultant_email is None
+
+
+@pytest.mark.anyio
+async def test_step4_draft_save_rejects_non_draft(service, repo, mock_user):
+    ci = _ci_application(status=_status("Submitted", 2))
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step4_draft(ci, _step4_draft_payload(), mock_user)
+    assert exc.value.status_code == 400
     repo.update.assert_not_awaited()
 
 

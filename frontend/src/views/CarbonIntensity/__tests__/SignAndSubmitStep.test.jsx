@@ -191,4 +191,140 @@ describe('SignAndSubmitStep', () => {
     render(<SignAndSubmitStep {...baseProps} onDelete={vi.fn()} />, { wrapper })
     expect(screen.getByTestId('ci-step4-delete-btn')).toBeInTheDocument()
   })
+
+  // --- Consultant auto-save (#4772) -------------------------------------
+  describe('consultant auto-save', () => {
+    const openConsultantBlock = () => {
+      fireEvent.click(screen.getByTestId('ci-step4-consultant-consent'))
+    }
+
+    it('saves a consultant field on blur', async () => {
+      const onAutoSave = vi.fn()
+      render(<SignAndSubmitStep {...baseProps} onAutoSave={onAutoSave} />, {
+        wrapper
+      })
+      openConsultantBlock()
+
+      const name = screen.getByTestId('ci-step4-consultant-name')
+      fireEvent.change(name, { target: { value: 'Sam Anderson' } })
+      fireEvent.blur(name)
+
+      await waitFor(() => expect(onAutoSave).toHaveBeenCalledTimes(1))
+      expect(onAutoSave.mock.calls[0][0]).toMatchObject({
+        consultantConsent: true,
+        consultantName: 'Sam Anderson',
+        consultantCompany: null,
+        consultantEmail: null
+      })
+    })
+
+    it('does not re-save when a blur changed nothing', async () => {
+      const onAutoSave = vi.fn()
+      render(<SignAndSubmitStep {...baseProps} onAutoSave={onAutoSave} />, {
+        wrapper
+      })
+      openConsultantBlock()
+
+      const name = screen.getByTestId('ci-step4-consultant-name')
+      fireEvent.change(name, { target: { value: 'Sam Anderson' } })
+      fireEvent.blur(name)
+      await waitFor(() => expect(onAutoSave).toHaveBeenCalledTimes(1))
+
+      // Blurring again without editing must not fire a second toast.
+      fireEvent.blur(name)
+      fireEvent.blur(screen.getByTestId('ci-step4-consultant-company'))
+      expect(onAutoSave).toHaveBeenCalledTimes(1)
+    })
+
+    it('clears stored details when consent is withdrawn', async () => {
+      const onAutoSave = vi.fn()
+      render(
+        <SignAndSubmitStep
+          {...baseProps}
+          ciApplication={{
+            ciApplicationId: 10,
+            consultantName: 'Sam Anderson',
+            consultantCompany: 'Anderson Fuel Consultants',
+            consultantEmail: 'sam.anderson@afc.ar'
+          }}
+          onAutoSave={onAutoSave}
+        />,
+        { wrapper }
+      )
+
+      // Consent is derived from stored values, so the box starts ticked.
+      fireEvent.click(screen.getByTestId('ci-step4-consultant-consent'))
+
+      await waitFor(() => expect(onAutoSave).toHaveBeenCalledTimes(1))
+      expect(onAutoSave.mock.calls[0][0]).toMatchObject({
+        consultantConsent: false,
+        consultantName: null,
+        consultantCompany: null,
+        consultantEmail: null
+      })
+    })
+
+    it('restores saved consultant details when a draft is reopened', () => {
+      render(
+        <SignAndSubmitStep
+          {...baseProps}
+          ciApplication={{
+            ciApplicationId: 10,
+            consultantName: 'Sam Anderson',
+            consultantCompany: 'Anderson Fuel Consultants',
+            consultantEmail: 'sam.anderson@afc.ar'
+          }}
+          onAutoSave={vi.fn()}
+        />,
+        { wrapper }
+      )
+
+      // The block must be visible, not hidden behind an unticked box.
+      expect(screen.getByTestId('ci-step4-consultant-consent')).toBeChecked()
+      expect(screen.getByTestId('ci-step4-consultant-name')).toHaveValue(
+        'Sam Anderson'
+      )
+      expect(screen.getByTestId('ci-step4-consultant-email')).toHaveValue(
+        'sam.anderson@afc.ar'
+      )
+    })
+
+    it('does not auto-save before Step 1 has created the draft', () => {
+      const onAutoSave = vi.fn()
+      render(
+        <SignAndSubmitStep
+          {...baseProps}
+          ciApplication={undefined}
+          onAutoSave={onAutoSave}
+        />,
+        { wrapper }
+      )
+      openConsultantBlock()
+
+      const name = screen.getByTestId('ci-step4-consultant-name')
+      fireEvent.change(name, { target: { value: 'Sam Anderson' } })
+      fireEvent.blur(name)
+
+      expect(onAutoSave).not.toHaveBeenCalled()
+    })
+
+    it('does not auto-save when readOnly', () => {
+      const onAutoSave = vi.fn()
+      render(
+        <SignAndSubmitStep
+          {...baseProps}
+          ciApplication={{
+            ciApplicationId: 10,
+            consultantName: 'Sam Anderson'
+          }}
+          onAutoSave={onAutoSave}
+          readOnly
+        />,
+        { wrapper }
+      )
+
+      fireEvent.blur(screen.getByTestId('ci-step4-consultant-name'))
+      expect(onAutoSave).not.toHaveBeenCalled()
+    })
+  })
 })

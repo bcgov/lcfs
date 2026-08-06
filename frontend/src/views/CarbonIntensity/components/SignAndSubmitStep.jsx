@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Box,
@@ -23,11 +23,16 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
  * info auto-filled from the current user, and an optional consultant
  * block. The `Submit application` button performs final validation and
  * delegates the actual mutation to the parent through `onSave`.
+ *
+ * The consultant fields auto-save on blur through `onAutoSave` (#4772).
+ * Step 4 had no save path at all, so details typed here were lost whenever
+ * the applicant left the draft instead of submitting.
  */
 export const SignAndSubmitStep = ({
   ciApplication,
   currentUser,
   onSave,
+  onAutoSave,
   onDelete,
   isSaving = false,
   readOnly = false
@@ -55,12 +60,89 @@ export const SignAndSubmitStep = ({
 
   const [errors, setErrors] = useState({})
 
-  // Re-seed when the parent reloads the application
+  // Last values known to be persisted, so a blur that changed nothing does not
+  // fire a redundant request (and a redundant toast).
+  const savedRef = useRef({
+    consent: consultantConsent,
+    name: consultantName,
+    company: consultantCompany,
+    email: consultantEmail
+  })
+
+  const ciApplicationId = ciApplication?.ciApplicationId
+
+  // Re-seed when a *different* application loads. Keyed on the id rather than
+  // the object: an auto-save response is a new object, and re-seeding on that
+  // would overwrite whichever field the applicant is currently typing in.
   useEffect(() => {
-    setConsultantName(ciApplication?.consultantName || '')
-    setConsultantCompany(ciApplication?.consultantCompany || '')
-    setConsultantEmail(ciApplication?.consultantEmail || '')
-  }, [ciApplication])
+    const name = ciApplication?.consultantName || ''
+    const company = ciApplication?.consultantCompany || ''
+    const email = ciApplication?.consultantEmail || ''
+    // Derive consent from stored values, otherwise reopening a draft renders
+    // the box unticked and hides the applicant's own saved details.
+    const consent = !!(name || company || email)
+    setConsultantName(name)
+    setConsultantCompany(company)
+    setConsultantEmail(email)
+    setConsultantConsent(consent)
+    savedRef.current = { consent, name, company, email }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ciApplicationId])
+
+  /**
+   * Persist the consultant block if it differs from what is already stored.
+   * No-ops before Step 1 has created the draft, and while read-only.
+   */
+  const autoSave = useCallback(
+    (next) => {
+      if (readOnly || !ciApplicationId || !onAutoSave) return
+      const prev = savedRef.current
+      if (
+        prev.consent === next.consent &&
+        prev.name === next.name &&
+        prev.company === next.company &&
+        prev.email === next.email
+      ) {
+        return
+      }
+      savedRef.current = next
+      onAutoSave({
+        consultantConsent: next.consent,
+        consultantName: next.consent ? next.name.trim() || null : null,
+        consultantCompany: next.consent ? next.company.trim() || null : null,
+        consultantEmail: next.consent ? next.email.trim() || null : null
+      })
+    },
+    [readOnly, ciApplicationId, onAutoSave]
+  )
+
+  const handleConsultantBlur = useCallback(() => {
+    autoSave({
+      consent: consultantConsent,
+      name: consultantName,
+      company: consultantCompany,
+      email: consultantEmail
+    })
+  }, [
+    autoSave,
+    consultantConsent,
+    consultantName,
+    consultantCompany,
+    consultantEmail
+  ])
+
+  const handleConsentChange = useCallback(
+    (checked) => {
+      setConsultantConsent(checked)
+      // Withdrawing consent clears the stored values immediately, matching
+      // what submission already does server-side. Ticking the box has nothing
+      // to persist yet, so it waits for the first field blur.
+      if (!checked) {
+        autoSave({ consent: false, name: '', company: '', email: '' })
+      }
+    },
+    [autoSave]
+  )
 
   const signingAuthority = useMemo(() => {
     if (!currentUser) return { name: '', title: '', email: '' }
@@ -239,7 +321,7 @@ export const SignAndSubmitStep = ({
           control={
             <Checkbox
               checked={consultantConsent}
-              onChange={(e) => setConsultantConsent(e.target.checked)}
+              onChange={(e) => handleConsentChange(e.target.checked)}
               disabled={readOnly}
               inputProps={{ 'data-test': 'ci-step4-consultant-consent' }}
             />
@@ -268,6 +350,7 @@ export const SignAndSubmitStep = ({
                     }))
                   }
                 }}
+                onBlur={handleConsultantBlur}
                 disabled={readOnly}
                 fullWidth
                 variant="outlined"
@@ -292,6 +375,7 @@ export const SignAndSubmitStep = ({
                     }))
                   }
                 }}
+                onBlur={handleConsultantBlur}
                 disabled={readOnly}
                 fullWidth
                 variant="outlined"
@@ -316,6 +400,7 @@ export const SignAndSubmitStep = ({
                     }))
                   }
                 }}
+                onBlur={handleConsultantBlur}
                 disabled={readOnly}
                 fullWidth
                 variant="outlined"
