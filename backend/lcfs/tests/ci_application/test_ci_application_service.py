@@ -582,6 +582,22 @@ def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF", organization_id=1
     )
 
 
+def _transport_mode_obj(ident, name):
+    return SimpleNamespace(transport_mode_id=ident, transport_mode=name)
+
+
+def _transport_mode_link(name, distance, ident=1):
+    return SimpleNamespace(
+        transport_mode_id=ident,
+        transport_mode=_transport_mode_obj(ident, name),
+        distance=distance,
+    )
+
+
+def _transport_mode_selection(name, distance):
+    return {"transportMode": name, "distance": distance}
+
+
 def _new_pathway_input(**overrides):
     base = dict(
         application_type_id=1,
@@ -593,11 +609,9 @@ def _new_pathway_input(**overrides):
         fuel_type_id=1,
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode=["Truck"],
-        feedstock_transport_distance=100,
+        feedstock_transport_mode=[_transport_mode_selection("Truck", 100)],
         coproducts=None,
-        finished_fuel_transport_mode=["Rail"],
-        finished_fuel_transport_distance=200,
+        finished_fuel_transport_mode=[_transport_mode_selection("Rail", 200)],
     )
     base.update(overrides)
     return PathwayInputSchema(**base)
@@ -621,11 +635,9 @@ def _existing_pathway(**overrides):
         fuel_type_id=1,
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode="Truck",
-        feedstock_transport_distance=100,
+        feedstock_transport_modes=[_transport_mode_link("Truck", 100, 1)],
         coproducts=None,
-        finished_fuel_transport_mode="Rail",
-        finished_fuel_transport_distance=200,
+        finished_fuel_transport_modes=[_transport_mode_link("Rail", 200, 2)],
         group_uuid="pathway-group-1",
         version=0,
         action_type=ActionTypeEnum.CREATE,
@@ -647,6 +659,10 @@ def _stub_step2_lookups(repo, *, with_fuel_code=False):
     repo.get_fuel_codes_by_ids.return_value = (
         [_fuel_code_obj()] if with_fuel_code else []
     )
+    repo.get_transport_modes.return_value = [
+        _transport_mode_obj(1, "Truck"),
+        _transport_mode_obj(2, "Rail"),
+    ]
 
 
 def test_pathway_change_logs_from_versions_returns_empty_when_no_supplemental_edit():
@@ -895,7 +911,7 @@ async def test_update_step2_records_pathway_versions_for_change_log(
             _new_pathway_input(
                 pathway_id=1,
                 feedstock="Camelina",
-                feedstock_transport_distance=125,
+                feedstock_transport_mode=[_transport_mode_selection("Truck", 125)],
             ),
             _new_pathway_input(feedstock="Tallow"),
         ],
@@ -919,7 +935,7 @@ async def test_update_step2_records_pathway_versions_for_change_log(
     assert update_row.update_date >= before_update
     assert update_row.update_user == mock_user.keycloak_username
     assert update_row.feedstock == "Camelina"
-    assert update_row.feedstock_transport_distance == 125
+    assert update_row.feedstock_transport_modes[0].distance == 125
 
     create_row = version_rows[1]
     assert create_row.action_type == ActionTypeEnum.CREATE
@@ -1219,11 +1235,9 @@ def _generation_pathway():
         fuel_type=_fuel_type_obj(),
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode="Truck",
-        feedstock_transport_distance=100,
+        feedstock_transport_modes=[_transport_mode_link("Truck", 100, 1)],
         coproducts=None,
-        finished_fuel_transport_mode="Rail",
-        finished_fuel_transport_distance=200,
+        finished_fuel_transport_modes=[_transport_mode_link("Rail", 200, 2)],
     )
 
 
