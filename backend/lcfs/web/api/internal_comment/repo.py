@@ -489,6 +489,19 @@ class InternalCommentRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
+    async def is_organization_comment(self, internal_comment_id: int) -> bool:
+        """
+        True when the comment is an ORGANIZATION-entity comment (a Company
+        Overview note), identified by its association row.
+        """
+        result = await self.db.execute(
+            select(OrganizationInternalComment.internal_comment_id).where(
+                OrganizationInternalComment.internal_comment_id == internal_comment_id
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
+    @repo_handler
     async def get_entity_org_and_year(
         self, entity_type: EntityTypeEnum, entity_id: int
     ) -> Tuple[Optional[int], Optional[int]]:

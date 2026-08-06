@@ -1,3 +1,4 @@
+import json
 import re
 import structlog
 from math import ceil
@@ -25,6 +26,12 @@ from .schema import (
     OrganizationCommentsPaginationSchema,
     OrganizationCommentsResponseSchema,
 )
+from lcfs.web.api.notification.schema import (
+    CI_APPLICATION_NOTIFICATION_MAPPER,
+    NotificationMessageSchema,
+    NotificationRequestSchema,
+)
+from lcfs.web.api.notification.services import NotificationService
 
 logger = structlog.get_logger(__name__)
 
@@ -61,6 +68,7 @@ class InternalCommentService:
         self,
         request: Request = None,
         repo: InternalCommentRepository = Depends(InternalCommentRepository),
+        notification_service: NotificationService = Depends(NotificationService),
     ) -> None:
         """
         Initializes the InternalCommentService with a request object and an
@@ -69,12 +77,50 @@ class InternalCommentService:
         Args:
             request (Request, optional): The current HTTP request. Defaults to None.
             repo (InternalCommentRepository): The repository instance for internal comment operations.
+            notification_service: Notification service for sending notifications.
         """
         self.request = request
         self.repo = repo
+        self.notification_service = notification_service
 
     def _is_government_user(self) -> bool:
         return RoleEnum.GOVERNMENT in self.request.user.role_names
+
+    async def _send_ci_comment_notification(
+        self,
+        ci_application_id: int,
+        origin_user_profile_id: Optional[int],
+    ) -> None:
+        """Send an applicant-activity notification when a BCeID user posts a comment."""
+        notification_types = CI_APPLICATION_NOTIFICATION_MAPPER.get(
+            "applicant_activity", []
+        )
+        if not notification_types:
+            return
+        message_data = {
+            "id": ci_application_id,
+            "service": "ciApplication",
+            "type": "CI Application Comment Received",
+        }
+        notification_data = NotificationMessageSchema(
+            type="CI Application Comment Received",
+            message=json.dumps(message_data),
+            related_organization_id=None,
+            origin_user_profile_id=origin_user_profile_id,
+            related_transaction_id=str(ci_application_id),
+        )
+        try:
+            await self.notification_service.send_notification(
+                NotificationRequestSchema(
+                    notification_types=notification_types,
+                    notification_data=notification_data,
+                )
+            )
+        except Exception:
+            logger.exception(
+                "Failed to send CI application comment notification",
+                ci_application_id=ci_application_id,
+            )
 
     async def _populate_comment_metadata(
         self,
@@ -144,6 +190,12 @@ class InternalCommentService:
         """
         is_government_user = self._is_government_user()
 
+        # Company Overview notes are internal working notes — the thread offers
+        # no public commenting, so pin the visibility here rather than trusting
+        # the client to send it (#4608).
+        if data.entity_type == EntityTypeEnum.ORGANIZATION:
+            data.visibility = CommentVisibilityEnum.INTERNAL
+
         # Keep legacy behavior for existing entities and enforce CI-specific visibility rules.
         if not is_government_user:
             if data.entity_type not in (
@@ -181,6 +233,18 @@ class InternalCommentService:
         created_comment = await self.repo.create_internal_comment(
             comment, data.entity_type, data.entity_id
         )
+
+        if (
+            not is_government_user
+            and data.entity_type == EntityTypeEnum.CI_APPLICATION
+        ):
+            await self._send_ci_comment_notification(
+                data.entity_id,
+                self.request.user.user_profile_id
+                if hasattr(self.request.user, "user_profile_id")
+                else None,
+            )
+
         return InternalCommentResponseSchema.from_orm(created_comment)
 
     @service_handler
@@ -279,6 +343,11 @@ class InternalCommentService:
                 next_audience_scope = AudienceScopeEnum(
                     str(existing_comment.audience_scope)
                 )
+
+        # A Company Overview note can never be flipped to public by an edit,
+        # whatever the payload asks for (#4608).
+        if await self.repo.is_organization_comment(internal_comment_id):
+            next_visibility = CommentVisibilityEnum.INTERNAL
 
         if next_visibility == CommentVisibilityEnum.PUBLIC:
             next_audience_scope = None
