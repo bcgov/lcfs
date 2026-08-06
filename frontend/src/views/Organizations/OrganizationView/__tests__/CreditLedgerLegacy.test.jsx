@@ -353,8 +353,7 @@ describe('CreditLedgerLegacy Component Tests', () => {
       fireEvent.click(downloadButton)
 
       expect(mockDownload).toHaveBeenCalledWith({
-        orgId: 123,
-        complianceYear: undefined
+        orgId: 123
       })
     })
   })
