@@ -196,6 +196,36 @@ describe('CreditLedgerPeriod (compliance-period ledger #4714)', () => {
     )
   })
 
+  it('leaves an assessed balance blank when the year has no assessed report', () => {
+    // #4831: absent is not zero — a year with no assessed report has no
+    // assessed balance, and showing 0 would read as a real end-of-year balance.
+    mockPeriod.mockReturnValue({
+      data: {
+        ...PERIOD_PAYLOAD,
+        assessedBalance: {
+          previousYear: 2023,
+          previousBalance: 1000,
+          currentYear: 2024,
+          currentBalance: null
+        }
+      },
+      isLoading: false,
+      isError: false
+    })
+    renderComponent({ organizationId: 999 })
+    const section = screen.getByTestId('ledger-assessed-balance')
+    expect(within(section).getByTestId('assessed-current')).toHaveTextContent(
+      ''
+    )
+    expect(
+      within(section).getByTestId('assessed-current')
+    ).not.toHaveTextContent('0')
+    // The year that does have an assessed report still shows its value.
+    expect(within(section).getByTestId('assessed-previous')).toHaveTextContent(
+      '1,000'
+    )
+  })
+
   it('shows an empty state when the period has no transactions', () => {
     mockPeriod.mockReturnValue({
       data: {
