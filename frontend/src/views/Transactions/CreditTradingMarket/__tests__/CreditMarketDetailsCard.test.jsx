@@ -14,7 +14,13 @@ import { useQueryClient } from '@tanstack/react-query'
 // Mock the hooks
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganization')
-vi.mock('@tanstack/react-query')
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useQueryClient: vi.fn()
+  }
+})
 
 // Mock FontAwesome icons
 vi.mock('@fortawesome/react-fontawesome', () => ({

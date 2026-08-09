@@ -22,10 +22,14 @@ global.ResizeObserver = vi.fn().mockImplementation(function () {
   }
 })
 
-vi.mock('react-router-dom', () => ({
-  Link: ({ children, to }) => <a href={to}>{children}</a>,
-  useLocation: () => ({ pathname: '/test' })
-}))
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    Link: ({ children, to }) => <a href={to}>{children}</a>,
+    useLocation: () => ({ pathname: '/test' })
+  }
+})
 
 describe('YesNoTextRenderer', () => {
   it('renders "Yes" when value is true', () => {

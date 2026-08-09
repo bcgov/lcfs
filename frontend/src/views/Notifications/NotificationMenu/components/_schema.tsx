@@ -2,8 +2,9 @@
 import type { ColDef } from '@ag-grid-community/core'
 import { dateFormatter } from '@/utils/formatters'
 import { actions } from '@/components/BCDataGrid/columns'
-import { ROUTES } from '@/routes/routes'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components'
+
+export { routesMapping } from './routeMapping'
 
 export const columnDefs = (
   t: (key: string) => string,
@@ -72,25 +73,6 @@ export const defaultColDef = {
   resizable: true,
   sortable: true
 }
-
-export const routesMapping = (
-  currentUser: Record<string, any>
-): Record<string, string> => ({
-  Transfer: ROUTES.TRANSFERS.VIEW,
-  AdminAdjustment: currentUser.isGovernmentUser
-    ? ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW
-    : ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.ORG_VIEW,
-  InitiativeAgreement: currentUser.isGovernmentUser
-    ? ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW
-    : ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.ORG_VIEW,
-  ComplianceReport: ROUTES.REPORTS.VIEW,
-  'Fuel Code': ROUTES.FUEL_CODES.EDIT,
-  'Fuel Code Status Update': ROUTES.FUEL_CODES.EDIT,
-  'Fuel Code Recommended': ROUTES.FUEL_CODES.EDIT,
-  'Fuel Code Approved': ROUTES.FUEL_CODES.EDIT,
-  'Fuel Code Draft': ROUTES.FUEL_CODES.EDIT,
-  'Fuel Code Returned': ROUTES.FUEL_CODES.EDIT
-})
 
 export const defaultSortModel: Array<{ field: string; direction: string }> = [
   { field: 'date', direction: 'desc' }

@@ -1,29 +1,38 @@
-import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useFuelSupplyColumnStore } from '../useFuelSupplyColumnStore'
 
+const getStoreResult = () => ({
+  result: {
+    get current() {
+      return useFuelSupplyColumnStore.getState()
+    }
+  }
+})
+
+const run = <T>(callback: () => T): T => callback()
+
 describe('useFuelSupplyColumnStore', () => {
   beforeEach(() => {
-    act(() => {
+    run(() => {
       useFuelSupplyColumnStore.setState({ columnState: null })
     })
   })
 
   it('initializes with null column state', () => {
-    const { result } = renderHook(() => useFuelSupplyColumnStore())
+    const { result } = getStoreResult()
 
     expect(result.current.columnState).toBeNull()
   })
 
   it('stores column state via setColumnState', () => {
-    const { result } = renderHook(() => useFuelSupplyColumnStore())
+    const { result } = getStoreResult()
 
     const mockState = [
       { colId: 'fuelType' },
       { colId: 'complianceUnits' }
     ] as Array<Record<string, unknown>>
 
-    act(() => {
+    run(() => {
       result.current.setColumnState(mockState)
     })
 
@@ -31,17 +40,17 @@ describe('useFuelSupplyColumnStore', () => {
   })
 
   it('resets column state via resetColumnState', () => {
-    const { result } = renderHook(() => useFuelSupplyColumnStore())
+    const { result } = getStoreResult()
 
     const mockState = [{ colId: 'fuelType' }] as Array<Record<string, unknown>>
 
-    act(() => {
+    run(() => {
       result.current.setColumnState(mockState)
     })
 
     expect(result.current.columnState).toEqual(mockState)
 
-    act(() => {
+    run(() => {
       result.current.resetColumnState()
     })
 
@@ -49,12 +58,12 @@ describe('useFuelSupplyColumnStore', () => {
   })
 
   it('shares state across multiple hook consumers', () => {
-    const { result: a } = renderHook(() => useFuelSupplyColumnStore())
-    const { result: b } = renderHook(() => useFuelSupplyColumnStore())
+    const { result: a } = getStoreResult()
+    const { result: b } = getStoreResult()
 
     const mockState = [{ colId: 'fuelType' }] as Array<Record<string, unknown>>
 
-    act(() => {
+    run(() => {
       a.current.setColumnState(mockState)
     })
 
