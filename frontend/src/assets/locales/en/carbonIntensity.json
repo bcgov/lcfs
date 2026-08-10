@@ -127,6 +127,7 @@
     "submitSuccess": "Application submitted.",
     "declarations": {
       "requiredSuffix": "(required)",
+      "signingAuthorityRequired": "A Signing Authority role is required to complete the declarations and submit the application.",
       "informationTrue": "I certify that the information submitted is true and complete and the records regarding this application have been retained in accordance with the Low Carbon Fuels Act.",
       "response8Weeks": "I acknowledge that requests for additional information and/or corrections must be responded to within 8 weeks. Failure to respond within this period may result in rejection of the application, requiring the applicant to restart the application process and resulting in a deferred Effective Date.",
       "section206": "Pursuant to section 20(6) of the Low Carbon Fuels Act, I acknowledge my obligation to provide written notice to the Director if I become aware that the details of the fuel pathway(s) included in this application have changed or will change."

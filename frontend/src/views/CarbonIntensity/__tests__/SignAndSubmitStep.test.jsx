@@ -182,6 +182,36 @@ describe('SignAndSubmitStep', () => {
     expect(screen.getByTestId('ci-step4-submit-btn')).toBeDisabled()
   })
 
+  it('disables declarations and submit without Signing Authority role', () => {
+    const onSave = vi.fn()
+    render(
+      <SignAndSubmitStep
+        {...baseProps}
+        onSave={onSave}
+        hasSigningAuthority={false}
+      />,
+      { wrapper }
+    )
+
+    const tooltipText =
+      'carbonIntensity:step4.declarations.signingAuthorityRequired'
+
+    expect(screen.getByTestId('ci-step4-decl-1')).toBeDisabled()
+    expect(screen.getByTestId('ci-step4-decl-2')).toBeDisabled()
+    expect(screen.getByTestId('ci-step4-decl-3')).toBeDisabled()
+    expect(screen.getByTestId('ci-step4-decl-1-tooltip')).toHaveAttribute(
+      'aria-label',
+      tooltipText
+    )
+
+    fireEvent.click(screen.getByTestId('ci-step4-decl-1'))
+    fireEvent.click(screen.getByTestId('ci-step4-decl-2'))
+    fireEvent.click(screen.getByTestId('ci-step4-decl-3'))
+
+    expect(screen.getByTestId('ci-step4-submit-btn')).toBeDisabled()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
   it('disables submit when isSaving is true', () => {
     render(<SignAndSubmitStep {...baseProps} isSaving />, { wrapper })
     expect(screen.getByTestId('ci-step4-submit-btn')).toBeDisabled()

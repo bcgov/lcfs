@@ -69,7 +69,7 @@ const EditViewCIApplicationBase = () => {
   const { ciApplicationId } = useParams()
   const isAdd = !ciApplicationId
 
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
 
   const { data: ciApplication, isLoading: isLoadingApplication } =
     useGetCIApplication(ciApplicationId)
@@ -140,7 +140,6 @@ const EditViewCIApplicationBase = () => {
     isUpdatingStep3 ||
     isSubmitting
 
-  const { hasAnyRole } = useCurrentUser()
   const isGovernment = !!hasAnyRole?.(
     roles.government,
     roles.analyst,
@@ -342,6 +341,7 @@ const EditViewCIApplicationBase = () => {
     !isGovernment &&
     ciApplication?.status?.status === 'Submitted' &&
     !!ciApplication?.documentUploadEnabled
+  const hasSigningAuthority = !!hasRoles?.(roles.signing_authority)
 
   // Hooks must run on every render — keep this above the loading-state
   // early return so hook order stays stable across renders.
@@ -403,6 +403,7 @@ const EditViewCIApplicationBase = () => {
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
         readOnly={!isDraft}
+        hasSigningAuthority={hasSigningAuthority}
       />
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step4" />

@@ -8,7 +8,8 @@ import {
   FormHelperText,
   InputLabel,
   Stack,
-  TextField
+  TextField,
+  Tooltip
 } from '@mui/material'
 
 import BCButton from '@/components/BCButton'
@@ -30,7 +31,8 @@ export const SignAndSubmitStep = ({
   onSave,
   onDelete,
   isSaving = false,
-  readOnly = false
+  readOnly = false,
+  hasSigningAuthority = true
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
 
@@ -71,7 +73,14 @@ export const SignAndSubmitStep = ({
     }
   }, [currentUser])
 
+  const declarationsDisabled = readOnly || !hasSigningAuthority
+  const declarationTooltip = !hasSigningAuthority
+    ? t('carbonIntensity:step4.declarations.signingAuthorityRequired')
+    : ''
+
   const handleSubmit = () => {
+    if (!hasSigningAuthority) return
+
     const newErrors = {}
     if (!(decl1 && decl2 && decl3)) {
       newErrors.declarations = t(
@@ -104,6 +113,7 @@ export const SignAndSubmitStep = ({
       return
     }
     setErrors({})
+
     onSave?.({
       declarationInformationTrue: decl1,
       declarationResponse8Weeks: decl2,
@@ -131,13 +141,17 @@ export const SignAndSubmitStep = ({
             <FormControlLabel
               sx={{ alignItems: 'flex-start', m: 0 }}
               control={
-                <Checkbox
-                  checked={decl1}
-                  onChange={(e) => setDecl1(e.target.checked)}
-                  disabled={readOnly}
-                  sx={{ pt: 0, pb: 0 }}
-                  inputProps={{ 'data-test': 'ci-step4-decl-1' }}
-                />
+                <Tooltip title={declarationTooltip} arrow>
+                  <span data-test="ci-step4-decl-1-tooltip">
+                    <Checkbox
+                      checked={decl1}
+                      onChange={(e) => setDecl1(e.target.checked)}
+                      disabled={declarationsDisabled}
+                      sx={{ pt: 0, pb: 0 }}
+                      inputProps={{ 'data-test': 'ci-step4-decl-1' }}
+                    />
+                  </span>
+                </Tooltip>
               }
               label={
                 <BCTypography variant="body2" component="span">
@@ -155,13 +169,17 @@ export const SignAndSubmitStep = ({
             <FormControlLabel
               sx={{ alignItems: 'flex-start', m: 0 }}
               control={
-                <Checkbox
-                  checked={decl2}
-                  onChange={(e) => setDecl2(e.target.checked)}
-                  disabled={readOnly}
-                  sx={{ pt: 0, pb: 0 }}
-                  inputProps={{ 'data-test': 'ci-step4-decl-2' }}
-                />
+                <Tooltip title={declarationTooltip} arrow>
+                  <span data-test="ci-step4-decl-2-tooltip">
+                    <Checkbox
+                      checked={decl2}
+                      onChange={(e) => setDecl2(e.target.checked)}
+                      disabled={declarationsDisabled}
+                      sx={{ pt: 0, pb: 0 }}
+                      inputProps={{ 'data-test': 'ci-step4-decl-2' }}
+                    />
+                  </span>
+                </Tooltip>
               }
               label={
                 <BCTypography variant="body2" component="span">
@@ -179,13 +197,17 @@ export const SignAndSubmitStep = ({
             <FormControlLabel
               sx={{ alignItems: 'flex-start', m: 0 }}
               control={
-                <Checkbox
-                  checked={decl3}
-                  onChange={(e) => setDecl3(e.target.checked)}
-                  disabled={readOnly}
-                  sx={{ pt: 0, pb: 0 }}
-                  inputProps={{ 'data-test': 'ci-step4-decl-3' }}
-                />
+                <Tooltip title={declarationTooltip} arrow>
+                  <span data-test="ci-step4-decl-3-tooltip">
+                    <Checkbox
+                      checked={decl3}
+                      onChange={(e) => setDecl3(e.target.checked)}
+                      disabled={declarationsDisabled}
+                      sx={{ pt: 0, pb: 0 }}
+                      inputProps={{ 'data-test': 'ci-step4-decl-3' }}
+                    />
+                  </span>
+                </Tooltip>
               }
               label={
                 <BCTypography variant="body2" component="span">
@@ -341,7 +363,12 @@ export const SignAndSubmitStep = ({
           variant="contained"
           color="primary"
           onClick={handleSubmit}
-          disabled={readOnly || isSaving || !(decl1 && decl2 && decl3)}
+          disabled={
+            readOnly ||
+            isSaving ||
+            !hasSigningAuthority ||
+            !(decl1 && decl2 && decl3)
+          }
           data-test="ci-step4-submit-btn"
         >
           {t('carbonIntensity:step4.submit')}
