@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import List
 
 import structlog
 from fastapi import APIRouter, Depends, status, Request, Body, Query, Path
@@ -133,19 +133,17 @@ async def export_period_credit_ledger(
 async def export_credit_ledger(
     request: Request,
     organization_id: int,
-    compliance_year: Optional[int] = Query(default=None),
     format: str = Query(default="xlsx", description="File export format"),
     service: CreditLedgerService = Depends(),
     validate: CreditLedgerValidation = Depends(),
 ):
     """
-    Download the ledger in xlsx format.
+    Download the full organization ledger in xlsx format.
     """
     # ensure user may only fetch their own org
     await validate.validate_organization_access(organization_id)
 
     return await service.export_transactions(
         organization_id=organization_id,
-        compliance_year=compliance_year,
         export_format=format,
     )
