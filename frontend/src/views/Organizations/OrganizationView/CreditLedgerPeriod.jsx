@@ -139,8 +139,8 @@ export const CreditLedgerPeriod = ({ organizationId }) => {
 
   const downloadLedger = useDownloadCreditLedger()
   const handleDownload = useCallback(
-    () => downloadLedger({ orgId: orgID, complianceYear: year }),
-    [downloadLedger, orgID, year]
+    () => downloadLedger({ orgId: orgID }),
+    [downloadLedger, orgID]
   )
 
   const runningBalanceHeader = t('org:ledger.runningBalance', { year })
