@@ -55,7 +55,7 @@
   "saveConfirmation": "You have validation errors. Do you want to save anyway?",
   "saveAnyway": "Save anyway",
   "finalSupplyEquipmentColLabels": {
-    "complianceReportId": "Compliance Report ID",
+    "complianceReportId": "Compliance report ID",
     "organizationName": "Organization",
     "supplyFrom": "Supply date range",
     "kwhUsage": "kWh usage",
@@ -101,7 +101,7 @@
   },
   "map": {
     "title": "FSE map",
-    "fullViewTitle": "FSE map — Full view",
+    "fullViewTitle": "FSE map — full view",
     "chargingSite": "Charging site",
     "finalSupplyEquipment": "Final supply equipment",
     "validated": "Validated",
@@ -120,7 +120,7 @@
     "level1": "Level 1",
     "level2": "Level 2",
     "level3": "Level 3",
-    "dcFastCharging": "DC Fast Charging",
+    "dcFastCharging": "DC fast charging",
     "intendedUse": "Intended use",
     "intendedUsers": "Intended users",
     "sitesView": "Sites view",

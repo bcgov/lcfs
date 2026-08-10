@@ -470,7 +470,7 @@ export const Transactions = () => {
             </Grid>
           </Grid>
           <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-          <BCGridViewer
+            <BCGridViewer
               gridRef={gridRef}
               gridKey="transactions-grid"
               columnDefs={transactionsColDefs(t)}
@@ -499,7 +499,7 @@ export const Transactions = () => {
   // Add credit trading market tab if eligible
   if (showCreditTradingTab) {
     tabs.push({
-      label: t('txn:creditTradingMarketTab', 'Credit Trading Market'),
+      label: t('txn:creditTradingMarketTab', 'Credit trading market'),
       content: (
         <BCBox mt={0}>
           <CreditTradingMarket />

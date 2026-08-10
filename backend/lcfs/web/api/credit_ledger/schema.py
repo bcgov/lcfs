@@ -61,15 +61,15 @@ class PeriodLedgerTypeTotalSchema(BaseSchema):
 
 class AssessedBalanceSchema(BaseSchema):
     """
-    Assessed balances carried between compliance years. Values are raw (a
-    negative value is an assessed/carried-forward deficit) so the UI can
-    highlight negatives.
+    Assessed balances per compliance year, read from Line 22 of the most recent
+    assessed report for that year (#4831). A balance is ``None`` when the year
+    has no assessed report — the UI leaves it blank rather than showing zero.
     """
 
     previous_year: Optional[int] = None
     previous_balance: Optional[int] = None
     current_year: int
-    current_balance: int
+    current_balance: Optional[int] = None
 
 
 class PeriodLedgerSchema(BaseSchema):

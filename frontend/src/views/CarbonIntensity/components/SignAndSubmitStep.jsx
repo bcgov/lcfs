@@ -14,6 +14,7 @@ import {
 
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
+import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -22,8 +23,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
  * Step 4 — Sign & submit. Renders a locked summary of the CI application
  * (Steps 1-3) plus the three required declarations, signing-authority
  * info auto-filled from the current user, and an optional consultant
- * block. The `Submit application` button performs final validation and
- * delegates the actual mutation to the parent through `onSave`.
+ * block. The `Submit application` button performs final validation, asks
+ * for confirmation, then delegates the mutation to the parent via `onSave`.
  */
 export const SignAndSubmitStep = ({
   ciApplication,
@@ -56,6 +57,8 @@ export const SignAndSubmitStep = ({
   )
 
   const [errors, setErrors] = useState({})
+  const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = useState(false)
+  const [pendingPayload, setPendingPayload] = useState(null)
 
   // Re-seed when the parent reloads the application
   useEffect(() => {
@@ -77,6 +80,15 @@ export const SignAndSubmitStep = ({
   const declarationTooltip = !hasSigningAuthority
     ? t('carbonIntensity:step4.declarations.signingAuthorityRequired')
     : ''
+  const buildSubmitPayload = () => ({
+    declarationInformationTrue: decl1,
+    declarationResponse8Weeks: decl2,
+    declarationSection206: decl3,
+    consultantConsent,
+    consultantName: consultantConsent ? consultantName.trim() : null,
+    consultantCompany: consultantConsent ? consultantCompany.trim() : null,
+    consultantEmail: consultantConsent ? consultantEmail.trim() : null
+  })
 
   const handleSubmit = () => {
     if (!hasSigningAuthority) return
@@ -123,6 +135,20 @@ export const SignAndSubmitStep = ({
       consultantCompany: consultantConsent ? consultantCompany.trim() : null,
       consultantEmail: consultantConsent ? consultantEmail.trim() : null
     })
+    // Confirm before the irreversible submit (#4773).
+    setPendingPayload(buildSubmitPayload())
+    setIsSubmitConfirmOpen(true)
+  }
+
+  const closeSubmitConfirm = () => {
+    setIsSubmitConfirmOpen(false)
+    setPendingPayload(null)
+  }
+
+  const confirmSubmit = () => {
+    const payload = pendingPayload
+    closeSubmitConfirm()
+    if (payload) onSave?.(payload)
   }
 
   return (
@@ -386,6 +412,18 @@ export const SignAndSubmitStep = ({
           </BCButton>
         )}
       </Stack>
+
+      <BCModal
+        open={isSubmitConfirmOpen}
+        onClose={closeSubmitConfirm}
+        data={{
+          title: t('common:confirmation'),
+          primaryButtonText: t('carbonIntensity:step4.submit'),
+          primaryButtonAction: confirmSubmit,
+          secondaryButtonText: t('common:cancelBtn'),
+          content: t('carbonIntensity:step4.submitConfirmText')
+        }}
+      />
     </Box>
   )
 }

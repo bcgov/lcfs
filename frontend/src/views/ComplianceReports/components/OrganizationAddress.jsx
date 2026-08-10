@@ -74,20 +74,20 @@ export const OrganizationAddress = ({
       .required('Email address is required.')
       .email('Please enter a valid email address.'),
     serviceAddress: Yup.string()
-      .required('Service Address is required.')
+      .required('Service address is required.')
       .test(
         'postal-code',
-        'Service Address must include a valid postal code.',
+        'Service address must include a valid postal code.',
         addressHasPostalCode
       ),
     recordsAddress: Yup.string()
-      .required('Records Address is required.')
+      .required('Records address is required.')
       .test(
         'postal-code',
-        'Records Address must include a valid postal code.',
+        'Records address must include a valid postal code.',
         addressHasPostalCode
       ),
-    headOfficeAddress: Yup.string().required('Head Office Address is required.')
+    headOfficeAddress: Yup.string().required('Head office address is required.')
   })
 
   // Hook for updating the organization snapshot
