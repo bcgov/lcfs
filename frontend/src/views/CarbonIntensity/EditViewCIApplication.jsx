@@ -166,6 +166,7 @@ const EditViewCIApplicationBase = () => {
   const goToStep = useCallback(
     (index) => {
       const clamped = Math.max(0, Math.min(STEP_KEYS.length - 1, index))
+      const stepKey = STEP_KEYS[clamped]
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev)
@@ -174,9 +175,13 @@ const EditViewCIApplicationBase = () => {
         },
         { replace: true }
       )
-      setExpanded([STEP_KEYS[clamped]])
-      if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
+      setExpanded([stepKey])
+      if (typeof document !== 'undefined') {
+        requestAnimationFrame(() => {
+          document
+            .querySelector(`[data-test="ci-step-accordion-${stepKey}"]`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        })
       }
     },
     [setSearchParams]
@@ -598,7 +603,7 @@ const EditViewCIApplicationBase = () => {
             expanded={expanded.includes(step.key)}
             onChange={handleAccordionToggle(step.key)}
             data-test={`ci-step-accordion-${step.key}`}
-            sx={{ mb: 1 }}
+            sx={{ mb: 1, scrollMarginTop: 96 }}
           >
             <AccordionSummary expandIcon={<ExpandMore />}>
               <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
