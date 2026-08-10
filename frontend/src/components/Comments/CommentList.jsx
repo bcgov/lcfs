@@ -14,6 +14,7 @@ import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import BCModal from '@/components/BCModal'
 
 const CommentList = ({
   comments,
@@ -31,13 +32,17 @@ const CommentList = ({
   enableAttachments = false,
   attachments = [],
   onAttachmentsChange,
-  onDownloadAttachment
+  onDownloadAttachment,
+  sortOrder = 'desc',
+  onSortOrderChange
 }) => {
   const { t } = useTranslation(['internalComment'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
   const [editCommentId, setEditCommentId] = useState(null)
   const [editCommentText, setEditCommentText] = useState('')
   const [editVisibility, setEditVisibility] = useState('Internal')
+  const [editOriginalVisibility, setEditOriginalVisibility] =
+    useState('Internal')
   const [commentFilter, setCommentFilter] = useState('all')
   // Attachment changes staged while editing a comment.
   const [editNewFiles, setEditNewFiles] = useState([])
@@ -57,6 +62,7 @@ const CommentList = ({
     setEditCommentId(id)
     setEditCommentText(text)
     setEditVisibility(visibilityValue)
+    setEditOriginalVisibility(visibilityValue)
     setEditNewFiles([])
     setEditRemovedDocIds([])
   }
@@ -65,30 +71,40 @@ const CommentList = ({
     setEditCommentId(null)
     setEditCommentText('')
     setEditVisibility('Internal')
+    setEditOriginalVisibility('Internal')
     setEditNewFiles([])
     setEditRemovedDocIds([])
   }
 
   const submitEdit = () => {
-    onEditComment(editCommentId, editCommentText, editVisibility, {
-      newFiles: editNewFiles,
-      removedDocumentIds: editRemovedDocIds
-    })
-    stopEditing()
-  }
+    const performEdit = () => {
+      onEditComment(editCommentId, editCommentText, editVisibility, {
+        newFiles: editNewFiles,
+        removedDocumentIds: editRemovedDocIds
+      })
+      stopEditing()
+    }
 
+    if (
+      isDualMode &&
+      isGov &&
+      editVisibility === 'Public' &&
+      editOriginalVisibility !== 'Public'
+    ) {
+      setPendingPublicAction(() => performEdit)
+      return
+    }
+    performEdit()
+  }
   const handleEditCommentChange = (value) => {
     setEditCommentText(value)
   }
-
   const formatDate = (dateString) => {
     const options = {
-      year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: 'numeric',
       minute: 'numeric',
-      second: 'numeric',
       hour12: true
     }
     return new Date(dateString).toLocaleDateString(undefined, options)
@@ -178,6 +194,7 @@ const CommentList = ({
   // Show visibility toggle only for gov users in dual mode
   const showVisibilityToggle = isDualMode && isGov && allowInternalVisibility
   const showCommentTabs = isDualMode && isGov
+  const showSortTabs = isDualMode
 
   const filteredComments = useMemo(() => {
     if (!showCommentTabs || commentFilter === 'all') {
@@ -190,6 +207,34 @@ const CommentList = ({
       return commentVisibility === commentFilter
     })
   }, [comments, commentFilter, showCommentTabs])
+
+  const performAddComment = async (...args) => {
+    await onAddComment(...args)
+    if (showCommentTabs && commentFilter !== 'all') {
+      setCommentFilter('all')
+    }
+    if (sortOrder !== 'desc') {
+      onSortOrderChange?.('desc')
+    }
+  }
+
+  const [pendingPublicAction, setPendingPublicAction] = useState(null)
+
+  const handleAddComment = async (...args) => {
+    if (isDualMode && isGov && visibility === 'Public') {
+      setPendingPublicAction(() => () => performAddComment(...args))
+      return
+    }
+    await performAddComment(...args)
+  }
+
+  const confirmPendingPublicAction = async () => {
+    const action = pendingPublicAction
+    setPendingPublicAction(null)
+    await action?.()
+  }
+
+  const cancelPendingPublicAction = () => setPendingPublicAction(null)
 
   return (
     <>
@@ -214,36 +259,100 @@ const CommentList = ({
         mb={1}
         sx={{ backgroundColor: '#f2f2f2' }}
       >
-        {showCommentTabs && (
-          <BCBox sx={{ backgroundColor: '#fff', p: 2, pb: 1 }}>
+        {showSortTabs && (
+          <BCBox
+            sx={{
+              backgroundColor: '#fff',
+              p: 2,
+              pb: 1,
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                md: showCommentTabs
+                  ? 'minmax(0, 700px) minmax(290px, 340px) 1fr'
+                  : 'minmax(290px, 340px) 1fr'
+              },
+              alignItems: 'center',
+              gap: 2
+            }}
+          >
+            {showCommentTabs && (
+              <AppBar
+                position="static"
+                sx={{
+                  boxShadow: 'none',
+                  border: 'none',
+                  mb: 0,
+                  minWidth: 0,
+                  width: '100%'
+                }}
+              >
+                <Tabs
+                  value={commentFilter}
+                  onChange={(_, value) => setCommentFilter(value)}
+                  aria-label={t('internalComment:commentFilterTabs')}
+                  data-test="comment-filter-tabs"
+                  sx={{
+                    background: 'rgb(0, 0, 0, 0.08)',
+                    width: '100%',
+                    '& .MuiTab-root': {
+                      flex: 1,
+                      minWidth: 0,
+                      px: { xs: 1, md: 1.5 }
+                    }
+                  }}
+                >
+                  <Tab
+                    value="internal"
+                    label={t('internalComment:internalComments')}
+                    data-test="comment-filter-internal"
+                  />
+                  <Tab
+                    value="public"
+                    label={t('internalComment:publicComments')}
+                    data-test="comment-filter-public"
+                  />
+                  <Tab
+                    value="all"
+                    label={t('internalComment:allComments')}
+                    data-test="comment-filter-all"
+                  />
+                </Tabs>
+              </AppBar>
+            )}
             <AppBar
               position="static"
-              sx={{ boxShadow: 'none', border: 'none', mb: 3 }}
+              sx={{
+                boxShadow: 'none',
+                border: 'none',
+                mb: 0,
+                minWidth: 0,
+                width: { xs: '100%', md: 'auto' }
+              }}
             >
               <Tabs
-                value={commentFilter}
-                onChange={(_, value) => setCommentFilter(value)}
-                aria-label={t('internalComment:commentFilterTabs')}
-                data-test="comment-filter-tabs"
+                value={sortOrder}
+                onChange={(_, value) => value && onSortOrderChange?.(value)}
+                aria-label={t('internalComment:sortCommentsLabel')}
+                data-test="comment-sort-toggle"
                 sx={{
                   background: 'rgb(0, 0, 0, 0.08)',
-                  width: { xs: '100%', md: '60%' }
+                  width: { xs: '100%', md: 'auto' },
+                  '& .MuiTab-root': {
+                    minWidth: { xs: 0, md: 145 },
+                    px: { xs: 1, md: 2 }
+                  }
                 }}
               >
                 <Tab
-                  value="internal"
-                  label={t('internalComment:internalComments')}
-                  data-test="comment-filter-internal"
+                  value="desc"
+                  label={t('internalComment:sortNewestFirst')}
+                  data-test="comment-sort-newest"
                 />
                 <Tab
-                  value="public"
-                  label={t('internalComment:publicComments')}
-                  data-test="comment-filter-public"
-                />
-                <Tab
-                  value="all"
-                  label={t('internalComment:allComments')}
-                  data-test="comment-filter-all"
+                  value="asc"
+                  label={t('internalComment:sortOldestFirst')}
+                  data-test="comment-sort-oldest"
                 />
               </Tabs>
             </AppBar>
@@ -486,7 +595,7 @@ const CommentList = ({
           <BCBox sx={{ backgroundColor: '#fff' }} p={2}>
             <CommentForm
               title={getFormTitle()}
-              onSubmit={onAddComment}
+              onSubmit={handleAddComment}
               showAddCommentBtn={showAddCommentBtn}
               commentText={commentInput || ''}
               onCommentChange={onCommentInputChange}
@@ -503,6 +612,24 @@ const CommentList = ({
           </BCBox>
         )}
       </BCBox>
+      {pendingPublicAction && (
+        <BCModal
+          open={!!pendingPublicAction}
+          onClose={cancelPendingPublicAction}
+          data={{
+            title: t('internalComment:publicCommentConfirmTitle'),
+            content: (
+              <BCTypography variant="body2" color="text">
+                {t('internalComment:publicCommentConfirmText')}
+              </BCTypography>
+            ),
+            primaryButtonText: t('internalComment:postComment'),
+            primaryButtonAction: confirmPendingPublicAction,
+            secondaryButtonText: t('internalComment:cancel'),
+            secondaryButtonAction: cancelPendingPublicAction
+          }}
+        />
+      )}
     </>
   )
 }
@@ -539,7 +666,9 @@ CommentList.propTypes = {
   enableAttachments: PropTypes.bool,
   attachments: PropTypes.array,
   onAttachmentsChange: PropTypes.func,
-  onDownloadAttachment: PropTypes.func
+  onDownloadAttachment: PropTypes.func,
+  sortOrder: PropTypes.oneOf(['asc', 'desc']),
+  onSortOrderChange: PropTypes.func
 }
 
 export default CommentList

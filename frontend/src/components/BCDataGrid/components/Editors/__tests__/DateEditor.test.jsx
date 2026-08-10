@@ -14,60 +14,100 @@ const { mockFormat, mockParseISO } = vi.hoisted(() => ({
   }),
   mockParseISO: vi.fn((dateString) => {
     if (!dateString || dateString === 'YYYY-MM-DD') return null
-    return new Date(dateString)
+    const [year, month, day] = dateString.split('-').map(Number)
+    return new Date(year, month - 1, day)
   })
 }))
 
 vi.mock('date-fns', () => ({
   format: mockFormat,
+  isValid: vi.fn(
+    (date) => date instanceof Date && !Number.isNaN(date.getTime())
+  ),
   parseISO: mockParseISO
 }))
 
 // Mock @mui/x-date-pickers
 vi.mock('@mui/x-date-pickers', () => ({
-  DatePicker: vi.fn(({ value, onChange, onOpen, onClose, open, slotProps, minDate, maxDate, ...restProps }) => {
-    // Filter out MUI-specific props that shouldn't go on DOM elements
-    const { fullWidth, margin, format, variant, disableToolbar, sx, className, id, ...domProps } = restProps
-    
-    return (
-      <div data-test="date-picker">
-        <input
-          data-test="date-input"
-          value={value ? value.toISOString().split('T')[0] : ''}
-          onChange={(e) => {
-            const val = e.target.value ? new Date(e.target.value) : null
-            onChange?.(val)
-          }}
-          {...domProps}
-        />
-        <button
-          data-test="open-picker-button" 
-          onClick={() => {
-            slotProps?.openPickerButton?.onClick?.()
-            onOpen?.()
-          }}
-        >
-          Open
-        </button>
-        <button
-          data-test="clear-button"
-          onClick={() => {
-            slotProps?.clearButton?.onClick?.()
-            onChange?.(null)
-          }}
-        >
-          Clear
-        </button>
-        <button
-          data-test="close-button"
-          onClick={onClose}
-          style={{ display: open ? 'block' : 'none' }}
-        >
-          Close
-        </button>
-      </div>
-    )
-  })
+  DatePicker: vi.fn(
+    ({
+      value,
+      onChange,
+      onAccept,
+      onOpen,
+      onClose,
+      open,
+      slotProps,
+      minDate,
+      maxDate,
+      ...restProps
+    }) => {
+      // Filter out MUI-specific props that shouldn't go on DOM elements
+      const {
+        fullWidth,
+        margin,
+        format,
+        variant,
+        disableToolbar,
+        sx,
+        className,
+        id,
+        ...domProps
+      } = restProps
+      const inputValue = value
+        ? [
+            value.getFullYear(),
+            String(value.getMonth() + 1).padStart(2, '0'),
+            String(value.getDate()).padStart(2, '0')
+          ].join('-')
+        : ''
+
+      return (
+        <div data-test="date-picker">
+          <input
+            data-test="date-input"
+            value={inputValue}
+            onChange={(e) => {
+              const [year, month, day] = e.target.value.split('-').map(Number)
+              const val = e.target.value ? new Date(year, month - 1, day) : null
+              onChange?.(val)
+            }}
+            onKeyDown={slotProps?.textField?.onKeyDown}
+            onBlur={slotProps?.textField?.onBlur}
+            {...domProps}
+          />
+          <button data-test="accept-button" onClick={() => onAccept?.(value)}>
+            Accept
+          </button>
+          <button
+            data-test="open-picker-button"
+            onClick={() => {
+              slotProps?.openPickerButton?.onClick?.()
+              onOpen?.()
+            }}
+          >
+            Open
+          </button>
+          <button
+            data-test="clear-button"
+            onClick={() => {
+              slotProps?.clearButton?.onClick?.()
+              onChange?.(null)
+            }}
+          >
+            Clear
+          </button>
+          <button
+            data-test="close-button"
+            onClick={onClose}
+            style={{ display: open ? 'block' : 'none' }}
+          >
+            Close
+          </button>
+        </div>
+      )
+    }
+  )
 }))
 
 describe('DateEditor', () => {
@@ -105,7 +145,7 @@ describe('DateEditor', () => {
   describe('Basic Rendering', () => {
     it('renders with minimal props', () => {
       render(<DateEditor {...defaultProps} />)
-      
+
       expect(screen.getByTestId('date-picker')).toBeInTheDocument()
       expect(screen.getByTestId('date-input')).toBeInTheDocument()
     })
@@ -113,29 +153,29 @@ describe('DateEditor', () => {
 
   describe('Initial State - selectedDate', () => {
     it('initializes selectedDate with valid date value', () => {
-      mockParseISO.mockReturnValue(new Date('2023-12-25'))
-      
+      mockParseISO.mockReturnValue(new Date(2023, 11, 25))
+
       render(<DateEditor {...defaultProps} value="2023-12-25" />)
-      
+
       expect(mockParseISO).toHaveBeenCalledWith('2023-12-25')
       expect(screen.getByTestId('date-input')).toHaveValue('2023-12-25')
     })
 
     it('initializes selectedDate as null with invalid value', () => {
       render(<DateEditor {...defaultProps} value="YYYY-MM-DD" />)
-      
+
       expect(screen.getByTestId('date-input')).toHaveValue('')
     })
 
     it('initializes selectedDate as null with empty value', () => {
       render(<DateEditor {...defaultProps} value="" />)
-      
+
       expect(screen.getByTestId('date-input')).toHaveValue('')
     })
 
     it('initializes selectedDate as null with null value', () => {
       render(<DateEditor {...defaultProps} value={null} />)
-      
+
       expect(screen.getByTestId('date-input')).toHaveValue('')
     })
   })
@@ -143,30 +183,34 @@ describe('DateEditor', () => {
   describe('Initial State - isOpen', () => {
     it('initializes isOpen as false without autoOpenLastRow', () => {
       render(<DateEditor {...defaultProps} />)
-      
+
       expect(screen.queryByTestId('close-button')).not.toBeVisible()
     })
 
     it('initializes isOpen as false when autoOpenLastRow is false', () => {
       render(<DateEditor {...defaultProps} autoOpenLastRow={false} />)
-      
+
       expect(screen.queryByTestId('close-button')).not.toBeVisible()
     })
 
     it('initializes isOpen as true with autoOpenLastRow on last row', () => {
       mockApi.getLastDisplayedRowIndex.mockReturnValue(5)
-      
-      render(<DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />)
-      
+
+      render(
+        <DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />
+      )
+
       expect(mockApi.getLastDisplayedRowIndex).toHaveBeenCalled()
       expect(screen.getByTestId('close-button')).toBeVisible()
     })
 
     it('initializes isOpen as false with autoOpenLastRow not on last row', () => {
       mockApi.getLastDisplayedRowIndex.mockReturnValue(5)
-      
-      render(<DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={3} />)
-      
+
+      render(
+        <DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={3} />
+      )
+
       expect(mockApi.getLastDisplayedRowIndex).toHaveBeenCalled()
       expect(screen.queryByTestId('close-button')).not.toBeVisible()
     })
@@ -175,15 +219,15 @@ describe('DateEditor', () => {
   describe('useEffect Cleanup', () => {
     it('adds and removes event listener on mount/unmount', () => {
       const { unmount } = render(<DateEditor {...defaultProps} />)
-      
+
       expect(document.addEventListener).toHaveBeenCalledWith(
         'mousedown',
         expect.any(Function),
         { passive: true }
       )
-      
+
       unmount()
-      
+
       expect(document.removeEventListener).toHaveBeenCalledWith(
         'mousedown',
         expect.any(Function)
@@ -193,63 +237,85 @@ describe('DateEditor', () => {
 
   describe('Click Outside Handler', () => {
     it('does not close when clicking inside container', () => {
-      render(<DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />)
-      
+      render(
+        <DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />
+      )
+
       const container = screen.getByTestId('date-picker').parentElement
       const mockEvent = {
         target: container
       }
-      
+
       container.contains = vi.fn(() => true)
-      
+
       const addEventListenerCall = document.addEventListener.mock.calls.find(
-        call => call[0] === 'mousedown'
+        (call) => call[0] === 'mousedown'
       )
       const handleClickOutside = addEventListenerCall[1]
-      
+
       act(() => {
         handleClickOutside(mockEvent)
       })
-      
+
       expect(screen.getByTestId('close-button')).toBeVisible()
     })
 
     it('closes when clicking outside container', () => {
-      render(<DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />)
-      
+      render(
+        <DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />
+      )
+
       const container = screen.getByTestId('date-picker').parentElement
       const mockEvent = {
         target: document.body
       }
-      
+
       container.contains = vi.fn(() => false)
-      
+
       const addEventListenerCall = document.addEventListener.mock.calls.find(
-        call => call[0] === 'mousedown'
+        (call) => call[0] === 'mousedown'
       )
       const handleClickOutside = addEventListenerCall[1]
-      
+
       act(() => {
         handleClickOutside(mockEvent)
       })
-      
+
       expect(screen.queryByTestId('close-button')).not.toBeVisible()
     })
   })
 
   describe('updateValue Function', () => {
-    it('handles valid date correctly and stops editing to trigger grid save', () => {
-      vi.useFakeTimers()
-      mockFormat.mockReturnValue('2023-12-25')
-      
+    it('updates the visible date without stopping grid editing while the picker is still selecting', () => {
       render(<DateEditor {...defaultProps} />)
-      
+
       const input = screen.getByTestId('date-input')
-      
+
       act(() => {
         fireEvent.change(input, { target: { value: '2023-12-25' } })
       })
-      
+
+      expect(screen.getByTestId('date-input')).toHaveValue('2023-12-25')
+      expect(mockOnValueChange).not.toHaveBeenCalled()
+      expect(mockApi.stopEditing).not.toHaveBeenCalled()
+    })
+
+    it('commits valid accepted dates and stops editing to trigger grid save', () => {
+      vi.useFakeTimers()
+      mockFormat.mockReturnValue('2023-12-25')
+
+      render(<DateEditor {...defaultProps} />)
+
+      const input = screen.getByTestId('date-input')
+
+      act(() => {
+        fireEvent.change(input, { target: { value: '2023-12-25' } })
+      })
+
+      act(() => {
+        fireEvent.click(screen.getByTestId('accept-button'))
+      })
+
       expect(mockFormat).toHaveBeenCalledWith(expect.any(Date), 'yyyy-MM-dd')
       expect(mockOnValueChange).toHaveBeenCalledWith('2023-12-25')
       act(() => {
@@ -257,7 +323,82 @@ describe('DateEditor', () => {
       })
       expect(mockApi.stopEditing).toHaveBeenCalled()
       expect(mockApi.setFocusedCell).toHaveBeenCalledWith(0, 'approvalDate')
-      expect(window.scrollTo).toHaveBeenCalledWith(window.scrollX, window.scrollY)
+      expect(window.scrollTo).toHaveBeenCalledWith(
+        window.scrollX,
+        window.scrollY
+      )
+      vi.useRealTimers()
+    })
+
+    it('commits manually entered dates when Enter is pressed', () => {
+      vi.useFakeTimers()
+      mockFormat.mockReturnValue('2023-12-25')
+
+      render(<DateEditor {...defaultProps} />)
+
+      const input = screen.getByTestId('date-input')
+
+      act(() => {
+        fireEvent.change(input, { target: { value: '2023-12-25' } })
+      })
+
+      act(() => {
+        fireEvent.keyDown(input, { key: 'Enter' })
+      })
+
+      expect(mockOnValueChange).toHaveBeenCalledWith('2023-12-25')
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(mockApi.stopEditing).toHaveBeenCalled()
+      vi.useRealTimers()
+    })
+
+    it('commits manually entered dates when Tab is pressed', () => {
+      vi.useFakeTimers()
+      mockFormat.mockReturnValue('2023-12-25')
+
+      render(<DateEditor {...defaultProps} />)
+
+      const input = screen.getByTestId('date-input')
+
+      act(() => {
+        fireEvent.change(input, { target: { value: '2023-12-25' } })
+      })
+
+      act(() => {
+        fireEvent.keyDown(input, { key: 'Tab' })
+      })
+
+      expect(mockOnValueChange).toHaveBeenCalledWith('2023-12-25')
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(mockApi.stopEditing).toHaveBeenCalled()
+      vi.useRealTimers()
+    })
+
+    it('commits manually entered dates on blur', () => {
+      vi.useFakeTimers()
+      mockFormat.mockReturnValue('2023-12-25')
+
+      render(<DateEditor {...defaultProps} />)
+
+      const input = screen.getByTestId('date-input')
+
+      act(() => {
+        fireEvent.change(input, { target: { value: '2023-12-25' } })
+      })
+
+      act(() => {
+        fireEvent.blur(input)
+      })
+
+      expect(mockOnValueChange).toHaveBeenCalledWith('2023-12-25')
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(mockApi.stopEditing).toHaveBeenCalled()
       vi.useRealTimers()
     })
   })
@@ -265,27 +406,29 @@ describe('DateEditor', () => {
   describe('DatePicker Event Handlers', () => {
     it('opens date picker when handleDatePickerOpen is called', () => {
       render(<DateEditor {...defaultProps} />)
-      
+
       const openButton = screen.getByTestId('open-picker-button')
-      
+
       act(() => {
         fireEvent.click(openButton)
       })
-      
+
       expect(screen.getByTestId('close-button')).toBeVisible()
     })
 
     it('closes date picker when handleDatePickerClose is called', () => {
-      render(<DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />)
-      
+      render(
+        <DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />
+      )
+
       expect(screen.getByTestId('close-button')).toBeVisible()
-      
+
       const closeButton = screen.getByTestId('close-button')
-      
+
       act(() => {
         fireEvent.click(closeButton)
       })
-      
+
       expect(screen.queryByTestId('close-button')).not.toBeVisible()
     })
   })
@@ -293,9 +436,9 @@ describe('DateEditor', () => {
   describe('stopPropagation Function', () => {
     it('handles null/undefined event gracefully', () => {
       render(<DateEditor {...defaultProps} />)
-      
+
       const container = screen.getByTestId('date-picker').parentElement
-      
+
       expect(() => {
         act(() => {
           fireEvent.mouseDown(container, null)
@@ -307,17 +450,17 @@ describe('DateEditor', () => {
   describe('handleIconClick Function', () => {
     it('stops propagation and opens date picker', () => {
       render(<DateEditor {...defaultProps} />)
-      
+
       const openButton = screen.getByTestId('open-picker-button')
       const mockEvent = {
         stopPropagation: vi.fn(),
         preventDefault: vi.fn()
       }
-      
+
       act(() => {
         fireEvent.click(openButton, mockEvent)
       })
-      
+
       expect(screen.getByTestId('close-button')).toBeVisible()
     })
   })
@@ -326,13 +469,13 @@ describe('DateEditor', () => {
     it('clears selectedDate, calls onValueChange with null, and stops editing', () => {
       vi.useFakeTimers()
       render(<DateEditor {...defaultProps} value="2023-12-25" />)
-      
+
       const clearButton = screen.getByTestId('clear-button')
-      
+
       act(() => {
         fireEvent.click(clearButton)
       })
-      
+
       expect(mockOnValueChange).toHaveBeenCalledWith(null)
       expect(screen.getByTestId('date-input')).toHaveValue('')
       act(() => {
@@ -340,7 +483,10 @@ describe('DateEditor', () => {
       })
       expect(mockApi.stopEditing).toHaveBeenCalled()
       expect(mockApi.setFocusedCell).toHaveBeenCalledWith(0, 'approvalDate')
-      expect(window.scrollTo).toHaveBeenCalledWith(window.scrollX, window.scrollY)
+      expect(window.scrollTo).toHaveBeenCalledWith(
+        window.scrollX,
+        window.scrollY
+      )
       vi.useRealTimers()
     })
   })
@@ -349,15 +495,11 @@ describe('DateEditor', () => {
     it('passes minDate and maxDate props correctly', () => {
       const minDate = new Date('2023-01-01')
       const maxDate = new Date('2023-12-31')
-      
+
       render(
-        <DateEditor
-          {...defaultProps}
-          minDate={minDate}
-          maxDate={maxDate}
-        />
+        <DateEditor {...defaultProps} minDate={minDate} maxDate={maxDate} />
       )
-      
+
       const datePicker = screen.getByTestId('date-picker')
       expect(datePicker).toBeInTheDocument()
     })
@@ -386,6 +528,26 @@ describe('DateEditor', () => {
       ).toBe(true)
     })
 
+    it('uses year, month, and day views so selecting a year continues to month selection', () => {
+      render(<DateEditor {...defaultProps} />)
+
+      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+
+      expect(datePickerProps.views).toEqual(['year', 'month', 'day'])
+      expect(datePickerProps.onAccept).toEqual(expect.any(Function))
+    })
+
+    it('keeps manual text entry enabled with an explicit date placeholder', () => {
+      render(<DateEditor {...defaultProps} />)
+
+      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+
+      expect(datePickerProps.slotProps.textField.placeholder).toBe('yyyy-mm-dd')
+      expect(datePickerProps.slotProps.textField.inputProps.inputMode).toBe(
+        'numeric'
+      )
+    })
+
     it('renders with all prop combinations', () => {
       const props = {
         ...defaultProps,
@@ -395,9 +557,9 @@ describe('DateEditor', () => {
         autoOpenLastRow: true,
         rowIndex: 5
       }
-      
+
       render(<DateEditor {...props} />)
-      
+
       expect(screen.getByTestId('date-picker')).toBeInTheDocument()
       expect(screen.getByTestId('close-button')).toBeVisible()
     })

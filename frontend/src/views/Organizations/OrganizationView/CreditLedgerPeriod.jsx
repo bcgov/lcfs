@@ -28,7 +28,7 @@ import {
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { dateFormatter } from '@/utils/formatters'
+import { dateFormatter, formatTransactionId } from '@/utils/formatters'
 
 const TYPE_LABELS = {
   Transfer: 'Transfer',
@@ -139,8 +139,8 @@ export const CreditLedgerPeriod = ({ organizationId }) => {
 
   const downloadLedger = useDownloadCreditLedger()
   const handleDownload = useCallback(
-    () => downloadLedger({ orgId: orgID, complianceYear: year }),
-    [downloadLedger, orgID, year]
+    () => downloadLedger({ orgId: orgID }),
+    [downloadLedger, orgID]
   )
 
   const runningBalanceHeader = t('org:ledger.runningBalance', { year })
@@ -263,9 +263,10 @@ export const CreditLedgerPeriod = ({ organizationId }) => {
                     sx={bodyRowSx}
                   >
                     <TableCell sx={cellSx}>
-                      {txn.transactionType === 'ComplianceReport'
-                        ? `CR${txn.transactionId}`
-                        : `CT${txn.transactionId}`}
+                      {formatTransactionId(
+                        txn.transactionType,
+                        txn.transactionId
+                      )}
                     </TableCell>
                     <TableCell sx={cellSx}>
                       {formatDate(txn.effectiveDate)}
@@ -307,9 +308,10 @@ export const CreditLedgerPeriod = ({ organizationId }) => {
                           sx={bodyRowSx}
                         >
                           <TableCell sx={cellSx}>
-                            {txn.transactionType === 'ComplianceReport'
-                              ? `CR${txn.transactionId}`
-                              : `CT${txn.transactionId}`}
+                            {formatTransactionId(
+                              txn.transactionType,
+                              txn.transactionId
+                            )}
                           </TableCell>
                           <TableCell sx={cellSx}>
                             {formatDate(txn.effectiveDate)}
