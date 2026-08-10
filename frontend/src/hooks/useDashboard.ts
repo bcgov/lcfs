@@ -97,3 +97,17 @@ export const useOrgFuelCodeCounts = (options: QueryOptions<unknown> = {}) => {
     ...options
   })
 }
+
+export const useCIApplicationCounts = (options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+  const path = apiRoutes.ciApplicationCounts
+
+  return useQuery({
+    queryKey: ['ci-application-counts'],
+    queryFn: async () => {
+      const response = await client.get(path)
+      return response.data
+    },
+    ...options
+  })
+}

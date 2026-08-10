@@ -148,6 +148,32 @@ class CIApplicationRepository:
         return result.scalars().all()
 
     @repo_handler
+    async def get_in_progress_counts(self) -> Dict[str, int]:
+        """
+        Counts CI applications awaiting government action by status.
+        """
+        query = (
+            select(
+                CIApplicationStatus.status,
+                func.count(CIApplication.ci_application_id),
+            )
+            .select_from(CIApplication)
+            .join(
+                CIApplicationStatus,
+                CIApplication.status_id
+                == CIApplicationStatus.ci_application_status_id,
+            )
+            .where(CIApplicationStatus.status.in_(["Submitted", "Recommended"]))
+            .group_by(CIApplicationStatus.status)
+        )
+        result = await self.db.execute(query)
+        counts = {row[0]: row[1] for row in result.all()}
+        return {
+            "submitted": counts.get("Submitted", 0),
+            "recommended": counts.get("Recommended", 0),
+        }
+
+    @repo_handler
     async def get_status_by_name(self, status: str) -> Optional[CIApplicationStatus]:
         result = await self.db.execute(
             select(CIApplicationStatus).where(CIApplicationStatus.status == status)

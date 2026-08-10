@@ -3,8 +3,8 @@ import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
 import { FILTER_KEYS } from '@/constants/common'
 import { ROUTES } from '@/routes/routes'
-import { FUEL_CODE_STATUSES } from '@/constants/statuses'
-import { useFuelCodeCounts } from '@/hooks/useDashboard'
+import { CI_APPLICATION_STATUSES } from '@/constants/statuses'
+import { useCIApplicationCounts } from '@/hooks/useDashboard'
 import { List, ListItemButton, Stack } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -25,20 +25,23 @@ const CountDisplay = ({ count }) => (
 export const FuelCodeCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
-  const { data: counts, isLoading } = useFuelCodeCounts()
+  const { data: counts, isLoading } = useCIApplicationCounts()
 
   const handleNavigation = () => {
     sessionStorage.setItem(
-      FILTER_KEYS.FUEL_CODES_GRID,
+      FILTER_KEYS.CI_APPLICATIONS_GRID,
       JSON.stringify({
         status: {
-          filterType: 'text',
-          type: 'equals',
-          filter: FUEL_CODE_STATUSES.DRAFT
+          filterType: 'set',
+          type: 'set',
+          filter: [
+            CI_APPLICATION_STATUSES.SUBMITTED,
+            CI_APPLICATION_STATUSES.RECOMMENDED
+          ]
         }
       })
     )
-    navigate(ROUTES.FUEL_CODES.LIST)
+    navigate(ROUTES.CI_APPLICATIONS.LIST)
   }
 
   const renderLinkWithCount = (text, count, onClick) => {
@@ -64,15 +67,15 @@ export const FuelCodeCard = () => {
     <BCWidgetCard
       component="div"
       disableHover={true}
-      title={t('dashboard:fuelCodes.title')}
+      title={t('dashboard:ciApplications.title')}
       sx={{ '& .MuiCardContent-root': { padding: '16px' } }}
       content={
         isLoading ? (
-          <Loading message={t('dashboard:fuelCodes.loadingMessage')} />
+          <Loading message={t('dashboard:ciApplications.loadingMessage')} />
         ) : (
           <Stack spacing={1}>
             <BCTypography variant="body2" sx={{ marginBottom: 0 }}>
-              {t('dashboard:fuelCodes.thereAre')}
+              {t('dashboard:ciApplications.thereAre')}
             </BCTypography>
             <List
               component="div"
@@ -86,8 +89,8 @@ export const FuelCodeCard = () => {
             >
               <ListItemButton component="a" onClick={handleNavigation}>
                 {renderLinkWithCount(
-                  t('dashboard:fuelCodes.fcInProgress'),
-                  counts?.draftFuelCodes || 0,
+                  t('dashboard:ciApplications.inProgress'),
+                  counts?.inProgress || 0,
                   handleNavigation
                 )}
               </ListItemButton>
@@ -98,3 +101,4 @@ export const FuelCodeCard = () => {
     />
   )
 }
+

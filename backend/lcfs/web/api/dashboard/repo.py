@@ -19,13 +19,21 @@ from lcfs.db.models.fuel.FuelCodeCountView import FuelCodeCountView
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.ci_application.CIApplication import CIApplication
 from lcfs.db.models.ci_application.CIApplicationStatus import CIApplicationStatus
+from lcfs.web.api.ci_application.repo import CIApplicationRepository
 
 logger = structlog.get_logger(__name__)
 
 
 class DashboardRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(
+        self,
+        db: AsyncSession = Depends(get_async_db_session),
+        ci_application_repo: CIApplicationRepository = Depends(
+            CIApplicationRepository
+        ),
+    ):
         self.db = db
+        self.ci_application_repo = ci_application_repo
 
     @repo_handler
     async def get_director_review_counts(self):
@@ -139,3 +147,14 @@ class DashboardRepository:
         result = await self.db.execute(query)
         row = result.one()
         return {"draft": row.draft or 0, "submitted": row.submitted or 0}
+
+    @repo_handler
+    async def get_ci_application_counts(self):
+        """
+        IDIR dashboard count for CI applications awaiting action:
+        Submitted, including changes requested, and Recommended.
+        """
+        counts = await self.ci_application_repo.get_in_progress_counts()
+        return {
+            "in_progress": counts.get("submitted", 0) + counts.get("recommended", 0)
+        }

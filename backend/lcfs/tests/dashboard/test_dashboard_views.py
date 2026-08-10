@@ -8,7 +8,10 @@ from httpx import AsyncClient
 from starlette import status
 
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.dashboard.schema import OrgFuelCodeCountsSchema
+from lcfs.web.api.dashboard.schema import (
+    CIApplicationCountsSchema,
+    OrgFuelCodeCountsSchema,
+)
 
 
 @pytest.fixture
@@ -51,4 +54,34 @@ async def test_org_fuel_code_counts_forbidden_for_non_applicant(
     government analyst must not reach it."""
     set_user_role(RoleEnum.ANALYST)
     response = await client.get("/api/dashboard/org-fuel-code-counts")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_ci_application_counts_success_for_analyst(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    """An IDIR analyst gets the in-progress CI application count (#4789)."""
+    set_user_role(RoleEnum.ANALYST)
+    with patch(
+        "lcfs.web.api.dashboard.services.DashboardServices.get_ci_application_counts"
+    ) as mock:
+        mock.return_value = CIApplicationCountsSchema(in_progress=17)
+        response = await client.get("/api/dashboard/ci-application-counts")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {"in_progress": 17}
+
+
+@pytest.mark.anyio
+async def test_ci_application_counts_forbidden_for_non_analyst(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    """The endpoint is gated to IDIR analysts."""
+    set_user_role(RoleEnum.CI_APPLICANT)
+    response = await client.get("/api/dashboard/ci-application-counts")
     assert response.status_code == status.HTTP_403_FORBIDDEN
