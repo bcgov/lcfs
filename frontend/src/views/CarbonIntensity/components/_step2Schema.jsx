@@ -63,17 +63,20 @@ export const normalizeTransportModeDistances = (
     }
   })
 
-const hasCompleteTransportModeDistances = (value) => {
+const hasSelectedTransportModes = (value) =>
+  normalizeTransportModeDistances(value).length > 0
+
+const hasMissingTransportModeDistance = (value) => {
   const modes = normalizeTransportModeDistances(value)
   return (
     modes.length > 0 &&
-    modes.every(
+    modes.some(
       ({ distance }) =>
-        distance !== null &&
-        distance !== undefined &&
-        distance !== '' &&
-        !Number.isNaN(Number(distance)) &&
-        Number(distance) >= 0
+        distance === null ||
+        distance === undefined ||
+        distance === '' ||
+        Number.isNaN(Number(distance)) ||
+        Number(distance) < 0
     )
   )
 }
@@ -655,19 +658,18 @@ export const validatePathwayRow = (row, applicationTypes) => {
   if (!row.fuelTypeId) errors.push('fuelTypeId')
   if (!row.feedstock?.toString().trim()) errors.push('feedstock')
   if (!row.feedstockRegion?.toString().trim()) errors.push('feedstockRegion')
-  if (
-    !hasCompleteTransportModeDistances(
-      normalizeTransportModeDistances(row.feedstockTransportMode)
-    )
-  ) {
+  if (!hasSelectedTransportModes(row.feedstockTransportMode)) {
     errors.push('feedstockTransportMode')
+  } else if (hasMissingTransportModeDistance(row.feedstockTransportMode)) {
+    errors.push('feedstockTransportMode', 'feedstockTransportModeDistance')
   }
-  if (
-    !hasCompleteTransportModeDistances(
-      normalizeTransportModeDistances(row.finishedFuelTransportMode)
-    )
-  ) {
+  if (!hasSelectedTransportModes(row.finishedFuelTransportMode)) {
     errors.push('finishedFuelTransportMode')
+  } else if (hasMissingTransportModeDistance(row.finishedFuelTransportMode)) {
+    errors.push(
+      'finishedFuelTransportMode',
+      'finishedFuelTransportModeDistance'
+    )
   }
 
   if (isRenewalRow(row, applicationTypes) && !row.fuelCodeId) {
@@ -687,7 +689,11 @@ const FIELD_LABEL_KEYS = {
   feedstock: 'carbonIntensity:step2.feedstock',
   feedstockRegion: 'carbonIntensity:step2.feedstockRegion',
   feedstockTransportMode: 'carbonIntensity:step2.feedstockTransportMode',
-  finishedFuelTransportMode: 'carbonIntensity:step2.finishedFuelTransportMode'
+  feedstockTransportModeDistance:
+    'carbonIntensity:step2.feedstockTransportModeDistance',
+  finishedFuelTransportMode: 'carbonIntensity:step2.finishedFuelTransportMode',
+  finishedFuelTransportModeDistance:
+    'carbonIntensity:step2.finishedFuelTransportModeDistance'
 }
 
 export const fieldLabels = (fields, t) =>

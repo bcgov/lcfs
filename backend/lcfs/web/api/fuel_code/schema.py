@@ -80,7 +80,7 @@ class TransportModeSchema(BaseSchema):
 
 class TransportModeDistanceSchema(BaseSchema):
     transport_mode: str
-    distance: int = Field(..., ge=0)
+    distance: Optional[int] = Field(default=None, ge=0)
 
 
 TransportModeSelection = Union[str, TransportModeDistanceSchema]

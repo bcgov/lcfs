@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, {
+import {
   forwardRef,
   useEffect,
   useImperativeHandle,
@@ -7,9 +6,10 @@ import React, {
   useRef,
   useState
 } from 'react'
-import PropTypes from 'prop-types'
+import type { KeyboardEvent } from 'react'
 import {
   Box,
+  Button,
   Checkbox,
   FormControlLabel,
   InputAdornment,
@@ -17,18 +17,72 @@ import {
   TextField,
   Typography
 } from '@mui/material'
+import { useTranslation } from 'react-i18next'
 
-const getOptionLabel = (option) => {
+type TransportModeOption =
+  | string
+  | number
+  | {
+      label?: string
+      name?: string
+      transportMode?: string
+      value?: string | number
+    }
+
+type TransportModeValue =
+  | string
+  | number
+  | {
+      transportMode?: string
+      transport_mode?: string
+      mode?: string
+      label?: string
+      name?: string
+      value?: string | number
+      distance?: string | number | null
+      transportDistance?: string | number | null
+    }
+
+type SelectedMode = {
+  transportMode: string
+  distance: string | number | null
+}
+
+type GridEditorApi = {
+  stopEditing: (cancel?: boolean) => void
+}
+
+type TransportModeDistanceCellEditorRef = {
+  getValue: () => Array<{ transportMode: string; distance: number | null }>
+  isCancelBeforeStart: () => boolean
+  isCancelAfterEnd: () => boolean
+  isPopup: () => boolean
+  getPopupPosition: () => string
+  afterGuiAttached: () => void
+}
+
+type TransportModeDistanceCellEditorProps = {
+  value?: TransportModeValue | TransportModeValue[]
+  options?: TransportModeOption[]
+  api: GridEditorApi
+  onValueChange?: (value: SelectedMode[]) => void
+}
+
+const getOptionLabel = (option: TransportModeOption) => {
   if (option == null) return ''
   if (typeof option === 'string' || typeof option === 'number') {
     return option.toString()
   }
   return (
-    option.label || option.name || option.transportMode || option.value || ''
+    option.label ||
+    option.name ||
+    option.transportMode ||
+    option.value?.toString() ||
+    ''
   )
 }
 
-const getModeName = (value) => {
+const getModeName = (value: TransportModeValue) => {
   if (value == null) return ''
   if (typeof value === 'string' || typeof value === 'number')
     return value.toString()
@@ -42,14 +96,16 @@ const getModeName = (value) => {
   )
 }
 
-const getDistance = (value, fallbackDistance = '') => {
+const getDistance = (value: TransportModeValue) => {
   if (value && typeof value === 'object') {
-    return value.distance ?? value.transportDistance ?? fallbackDistance ?? ''
+    return value.distance ?? value.transportDistance ?? ''
   }
-  return fallbackDistance ?? ''
+  return ''
 }
 
-const normalizeValue = (value, fallbackDistance = '') => {
+const normalizeValue = (
+  value: TransportModeValue | TransportModeValue[] | undefined
+): SelectedMode[] => {
   if (!value && value !== 0) return []
   const values = Array.isArray(value)
     ? value
@@ -58,25 +114,28 @@ const normalizeValue = (value, fallbackDistance = '') => {
       : [value]
 
   return values
-    .map((item) => ({
-      transportMode: getModeName(item),
-      distance: getDistance(item, fallbackDistance)
+    .map((item: TransportModeValue) => ({
+      transportMode: getModeName(item).toString(),
+      distance: getDistance(item)
     }))
     .filter((item) => item.transportMode)
 }
 
-export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
-  const { value, options = [], api, data, colDef, onValueChange } = props
-  const fallbackDistance = data?.[colDef?.cellEditorParams?.distanceField]
+export const TransportModeDistanceCellEditor = forwardRef<
+  TransportModeDistanceCellEditorRef,
+  TransportModeDistanceCellEditorProps
+>((props, ref) => {
+  const { value, options = [], api, onValueChange } = props
+  const { t } = useTranslation(['carbonIntensity', 'common'])
   const normalizedOptions = useMemo(
     () => options.map((option) => getOptionLabel(option)).filter(Boolean),
     [options]
   )
   const [selectedModes, setSelectedModes] = useState(() =>
-    normalizeValue(value, fallbackDistance)
+    normalizeValue(value)
   )
-  const firstInputRef = useRef(null)
-  const rootRef = useRef(null)
+  const firstInputRef = useRef<HTMLInputElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   const getCurrentValue = () =>
     selectedModes.map((item) => ({
@@ -85,7 +144,7 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
         item.distance === '' ||
         item.distance === null ||
         item.distance === undefined
-          ? ''
+          ? null
           : Number(item.distance)
     }))
 
@@ -105,8 +164,13 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
   useEffect(() => {
     if (typeof document === 'undefined') return undefined
 
-    const handleOutsidePointerDown = (event) => {
-      if (rootRef.current?.contains(event.target)) return
+    const handleOutsidePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (
+        event.target instanceof Node &&
+        rootRef.current?.contains(event.target)
+      ) {
+        return
+      }
       api.stopEditing()
     }
 
@@ -122,15 +186,15 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
     }
   }, [api])
 
-  const updateValue = (next) => {
+  const updateValue = (next: SelectedMode[]) => {
     setSelectedModes(next)
     onValueChange?.(next)
   }
 
-  const isChecked = (mode) =>
+  const isChecked = (mode: string) =>
     selectedModes.some((item) => item.transportMode === mode)
 
-  const handleToggle = (mode) => {
+  const handleToggle = (mode: string) => {
     if (isChecked(mode)) {
       updateValue(selectedModes.filter((item) => item.transportMode !== mode))
       return
@@ -138,7 +202,7 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
     updateValue([...selectedModes, { transportMode: mode, distance: '' }])
   }
 
-  const handleDistanceChange = (mode, nextDistance) => {
+  const handleDistanceChange = (mode: string, nextDistance: string) => {
     updateValue(
       selectedModes.map((item) =>
         item.transportMode === mode ? { ...item, distance: nextDistance } : item
@@ -146,21 +210,40 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
     )
   }
 
-  const handleKeyDown = (event) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape') {
       api.stopEditing(true)
     }
-    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       api.stopEditing()
+    }
+    if (event.key === 'Tab' && rootRef.current) {
+      const focusable = Array.from(
+        rootRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      )
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
   }
 
   return (
     <Box
       ref={rootRef}
-      role="group"
+      role="dialog"
+      aria-modal="true"
       className="ag-custom-component-popup"
-      aria-label="Select transport modes and enter distance in kilometers"
+      aria-labelledby="transport-mode-distance-title"
+      aria-describedby="transport-mode-distance-description"
       onKeyDown={handleKeyDown}
       sx={{
         width: 460,
@@ -172,16 +255,20 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
         borderColor: 'divider',
         borderRadius: 1,
         boxShadow: 3,
-        zIndex: (theme) => theme.zIndex.modal,
+        zIndex: 1300,
         p: 2
       }}
     >
       <Stack spacing={0.5} sx={{ mb: 1.5 }}>
-        <Typography variant="subtitle2">
-          Select transport modes and enter distance (km)
+        <Typography id="transport-mode-distance-title" variant="subtitle2">
+          {t('carbonIntensity:transportModeDistance.title')}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Add a distance for each selected transport mode.
+        <Typography
+          id="transport-mode-distance-description"
+          variant="caption"
+          color="text.secondary"
+        >
+          {t('carbonIntensity:transportModeDistance.description')}
         </Typography>
       </Stack>
 
@@ -211,7 +298,12 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
                     checked={checked}
                     onChange={() => handleToggle(mode)}
                     inputRef={index === 0 ? firstInputRef : undefined}
-                    inputProps={{ 'aria-label': `Select ${mode}` }}
+                    inputProps={{
+                      'aria-label': t(
+                        'carbonIntensity:transportModeDistance.selectMode',
+                        { mode }
+                      )
+                    }}
                   />
                 }
                 label={<Typography variant="body2">{mode}</Typography>}
@@ -224,11 +316,16 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
                   handleDistanceChange(mode, event.target.value)
                 }
                 disabled={!checked}
-                placeholder="Enter"
+                placeholder={t(
+                  'carbonIntensity:transportModeDistance.placeholder'
+                )}
                 inputProps={{
                   min: 0,
                   step: 1,
-                  'aria-label': `${mode} distance in kilometers`
+                  'aria-label': t(
+                    'carbonIntensity:transportModeDistance.distanceLabel',
+                    { mode }
+                  )
                 }}
                 InputProps={{
                   endAdornment: (
@@ -243,21 +340,29 @@ export const TransportModeDistanceCellEditor = forwardRef((props, ref) => {
           )
         })}
       </Stack>
+      <Stack
+        direction="row"
+        spacing={1}
+        justifyContent="flex-end"
+        sx={{ mt: 2 }}
+      >
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => api.stopEditing(true)}
+        >
+          {t('common:cancelBtn')}
+        </Button>
+        <Button
+          variant="contained"
+          size="small"
+          onClick={() => api.stopEditing()}
+        >
+          {t('common:doneBtn', 'Done')}
+        </Button>
+      </Stack>
     </Box>
   )
 })
-
-TransportModeDistanceCellEditor.propTypes = {
-  value: PropTypes.oneOfType([
-    PropTypes.array,
-    PropTypes.string,
-    PropTypes.object
-  ]),
-  options: PropTypes.array.isRequired,
-  api: PropTypes.object.isRequired,
-  data: PropTypes.object,
-  colDef: PropTypes.object,
-  onValueChange: PropTypes.func
-}
 
 TransportModeDistanceCellEditor.displayName = 'TransportModeDistanceCellEditor'

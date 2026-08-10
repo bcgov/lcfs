@@ -100,10 +100,8 @@ PATHWAY_LOG_FIELDS = [
     "fuel_type_id",
     "feedstock",
     "feedstock_region",
-    "feedstock_transport_mode",
     "feedstock_transport_mode_details",
     "coproducts",
-    "finished_fuel_transport_mode",
     "finished_fuel_transport_mode_details",
 ]
 
@@ -272,7 +270,7 @@ def _transport_mode_details_from_selection(
     for item in value:
         name = _transport_mode_name(item)
         distance = _transport_mode_distance(item)
-        if name and distance is not None:
+        if name:
             details.append({"transportMode": name, "distance": distance})
     return details
 
@@ -330,7 +328,6 @@ def _pathway_input_snapshot(
         "pathway_group_uuid": pathway_group_uuid
         or getattr(pathway, "group_uuid", None),
     }
-    _transport_fields = {"feedstock_transport_mode", "finished_fuel_transport_mode"}
     for field in PATHWAY_LOG_FIELDS:
         if field == "feedstock_transport_mode_details":
             value = _transport_mode_details_from_selection(row.feedstock_transport_mode)
@@ -340,8 +337,6 @@ def _pathway_input_snapshot(
             )
         else:
             value = getattr(row, field, None)
-        if field in _transport_fields and isinstance(value, list):
-            value = ",".join(_transport_mode_names_from_selection(value))
         snapshot[field] = _json_value(value)
     return snapshot
 
@@ -1258,6 +1253,8 @@ class CIApplicationServices:
         details = _transport_mode_details_from_selection(selected_modes)
         links = []
         for detail in details:
+            if detail["distance"] is None:
+                continue
             matching_transport_mode = next(
                 (
                     mode

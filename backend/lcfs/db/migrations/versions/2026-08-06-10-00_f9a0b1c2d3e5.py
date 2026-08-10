@@ -1,7 +1,7 @@
 """Add per-mode transport distance tables to CI pathways.
 
 Revision ID: f9a0b1c2d3e5
-Revises: a8f0b1c2d3e4
+Revises: 9b5d3c7e1f0a
 Create Date: 2026-08-06 10:00:00.000000
 """
 
@@ -10,9 +10,36 @@ import sqlalchemy as sa
 
 
 revision = "f9a0b1c2d3e5"
-down_revision = "a8f0b1c2d3e4"
+down_revision = "9b5d3c7e1f0a"
 branch_labels = None
 depends_on = None
+
+
+def _raise_on_unmatched_pathway_transport_modes(column_name):
+    bind = op.get_bind()
+    unmatched_modes = (
+        bind.execute(
+            sa.text(
+                f"""
+            SELECT DISTINCT btrim(mode_name) AS mode_name
+            FROM pathway p
+            CROSS JOIN LATERAL regexp_split_to_table(p.{column_name}, ',') AS mode_name
+            LEFT JOIN transport_mode tm ON tm.transport_mode = btrim(mode_name)
+            WHERE p.{column_name} IS NOT NULL
+              AND btrim(mode_name) <> ''
+              AND tm.transport_mode_id IS NULL
+            ORDER BY mode_name
+            """
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if unmatched_modes:
+        raise RuntimeError(
+            "Cannot migrate pathway transport modes because these values do not "
+            f"match transport_mode lookup rows: {', '.join(unmatched_modes)}"
+        )
 
 
 def upgrade():
@@ -176,6 +203,8 @@ def upgrade():
         sa.UniqueConstraint("pathway_id", "transport_mode_id"),
         comment="Transport modes and distances associated with pathway finished fuel",
     )
+    _raise_on_unmatched_pathway_transport_modes("feedstock_transport_mode")
+    _raise_on_unmatched_pathway_transport_modes("finished_fuel_transport_mode")
     op.execute(
         """
         INSERT INTO pathway_feedstock_transport_mode (

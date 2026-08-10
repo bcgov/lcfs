@@ -77,6 +77,17 @@ const filterNonNullValues = (data) => {
   return result
 }
 
+const formatFastApiDetail = (detail) => {
+  if (!Array.isArray(detail)) return detail
+  return detail
+    .map((item) => {
+      const loc = Array.isArray(item?.loc) ? item.loc.join('.') : item?.loc
+      return [loc, item?.msg].filter(Boolean).join(': ')
+    })
+    .filter(Boolean)
+    .join('; ')
+}
+
 const AddEditFuelCodeBase = () => {
   const { fuelCodeID } = useParams()
   const gridRef = useRef(null)
@@ -373,7 +384,9 @@ const AddEditFuelCodeBase = () => {
           )
           errMsg = `Unable to save row: ${fieldLabels?.length === 1 ? fieldLabels[0] : ''} ${message}`
         } else {
-          errMsg = `Unable to save row: ${error.response?.data?.detail || error.message}`
+          errMsg = `Unable to save row: ${
+            formatFastApiDetail(error.response?.data?.detail) || error.message
+          }`
         }
 
         // Update errors state

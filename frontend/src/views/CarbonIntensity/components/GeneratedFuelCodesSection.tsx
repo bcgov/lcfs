@@ -11,6 +11,7 @@ import {
   defaultColDef,
   fuelCodeColDefs
 } from '@/views/FuelCodes/AddFuelCode/_schema'
+import type { OptionsData } from '@/types/schema'
 
 type GeneratedFuelCodesSectionProps = {
   ciApplication: any
@@ -65,13 +66,28 @@ const toUpdatePayload = (row: any) => {
 const replaceRow = (rows: any[], nextRow: any) =>
   rows.map((row) => (row.id === nextRow.id ? nextRow : row))
 
+const formatFastApiDetail = (detail: any) => {
+  if (!Array.isArray(detail)) return detail
+  return detail
+    .map((item) => {
+      const loc = Array.isArray(item?.loc) ? item.loc.join('.') : item?.loc
+      return [loc, item?.msg].filter(Boolean).join(': ')
+    })
+    .filter(Boolean)
+    .join('; ')
+}
+
 const getErrorMessage = (error: any, fallback: string) => {
   if (error?.response?.data?.errors?.[0]) {
     const { fields, message } = error.response.data.errors[0]
     const fieldText = fields?.length === 1 ? `${fields[0]} ` : ''
     return `Unable to save row: ${fieldText}${message}`
   }
-  return error?.response?.data?.detail || error?.message || fallback
+  return (
+    formatFastApiDetail(error?.response?.data?.detail) ||
+    error?.message ||
+    fallback
+  )
 }
 
 const getErrorFields = (error: any) =>
@@ -102,7 +118,7 @@ export const GeneratedFuelCodesSection = ({
 
   const columnDefs = useMemo(() => {
     const baseDefs = fuelCodeColDefs(
-      fuelCodeOptions,
+      fuelCodeOptions as OptionsData | undefined,
       errors,
       false,
       !readOnly,
@@ -174,7 +190,7 @@ export const GeneratedFuelCodesSection = ({
   }, [])
 
   const updateRowWithValidation = useCallback(
-    async (params: any, updatedData: any) => {
+    async (updatedData: any) => {
       const rowId = updatedData.id
 
       setPendingUpdates((prev) => new Set([...prev, rowId]))
@@ -251,7 +267,7 @@ export const GeneratedFuelCodesSection = ({
         severity: 'pending'
       })
 
-      const finalRow = await updateRowWithValidation(params, pendingRow)
+      const finalRow = await updateRowWithValidation(pendingRow)
       params.node.updateData(finalRow)
       setRowData((prev) => replaceRow(prev, finalRow))
     },

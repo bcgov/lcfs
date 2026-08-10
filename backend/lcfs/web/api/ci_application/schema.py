@@ -133,7 +133,13 @@ class TransportModeDistanceSchema(BaseSchema):
     distance: int = Field(..., ge=0)
 
 
+class NullableTransportModeDistanceSchema(BaseSchema):
+    transport_mode: str
+    distance: Optional[int] = Field(default=None, ge=0)
+
+
 TransportModeSelection = Union[str, TransportModeDistanceSchema]
+NullableTransportModeSelection = Union[str, NullableTransportModeDistanceSchema]
 
 
 class FuelTypeOptionSchema(BaseSchema):
@@ -287,9 +293,11 @@ class PathwayInputSchema(BaseSchema):
     fuel_type_id: int
     feedstock: str = Field(..., max_length=500)
     feedstock_region: str = Field(..., max_length=500)
-    feedstock_transport_mode: List[TransportModeSelection] = Field(..., min_length=1)
+    feedstock_transport_mode: List[TransportModeDistanceSchema] = Field(
+        ..., min_length=1
+    )
     coproducts: Optional[str] = Field(default=None, max_length=1000)
-    finished_fuel_transport_mode: List[TransportModeSelection] = Field(
+    finished_fuel_transport_mode: List[TransportModeDistanceSchema] = Field(
         ..., min_length=1
     )
 
@@ -305,21 +313,6 @@ class PathwayInputSchema(BaseSchema):
                     }
                 ]
             )
-        for field_name, selected_modes in (
-            ("feedstockTransportMode", self.feedstock_transport_mode),
-            ("finishedFuelTransportMode", self.finished_fuel_transport_mode),
-        ):
-            for selected_mode in selected_modes:
-                if isinstance(selected_mode, str):
-                    raise RequestValidationError(
-                        [
-                            {
-                                "loc": (field_name,),
-                                "msg": "Transport mode distance is required.",
-                                "type": "value_error",
-                            }
-                        ]
-                    )
         return self
 
 
@@ -407,10 +400,10 @@ class CIGeneratedFuelCodeSchema(BaseSchema):
     ] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
-    feedstock_fuel_transport_mode: List[TransportModeSelection] = Field(
+    feedstock_fuel_transport_mode: List[NullableTransportModeSelection] = Field(
         default_factory=list
     )
-    finished_fuel_transport_mode: List[TransportModeSelection] = Field(
+    finished_fuel_transport_mode: List[NullableTransportModeSelection] = Field(
         default_factory=list
     )
     is_valid: bool = False
@@ -445,8 +438,8 @@ class CIGeneratedFuelCodeUpdateSchema(BaseSchema):
     ] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
-    feedstock_fuel_transport_mode: Optional[List[TransportModeSelection]] = None
-    finished_fuel_transport_mode: Optional[List[TransportModeSelection]] = None
+    feedstock_fuel_transport_mode: Optional[List[NullableTransportModeSelection]] = None
+    finished_fuel_transport_mode: Optional[List[NullableTransportModeSelection]] = None
 
 
 # ---------------------------------------------------------------------------

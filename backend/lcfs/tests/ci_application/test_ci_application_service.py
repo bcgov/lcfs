@@ -32,6 +32,9 @@ from lcfs.web.api.ci_application.schema import (
 from lcfs.web.api.ci_application.services import (
     CIApplicationServices,
     _pathway_change_logs_from_versions,
+    _pathway_input_snapshot,
+    _pathway_snapshot,
+    _transport_mode_details_from_any,
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -633,6 +636,50 @@ def test_pathway_input_allows_negative_proposed_ci():
     payload = _new_pathway_input(proposed_ci=-5.61)
 
     assert payload.proposed_ci == Decimal("-5.61")
+
+
+def test_pathway_input_requires_mode_level_distances():
+    with pytest.raises(ValidationError):
+        _new_pathway_input(feedstock_transport_mode=["Truck"])
+
+
+def test_pathway_snapshots_do_not_write_removed_transport_mode_scalars():
+    row = _new_pathway_input(
+        feedstock_transport_mode=[_transport_mode_selection("Truck", 100)],
+        finished_fuel_transport_mode=[_transport_mode_selection("Rail", 200)],
+    )
+    pathway = _existing_pathway(
+        feedstock_transport_modes=[_transport_mode_link("Truck", 100, 1)],
+        finished_fuel_transport_modes=[_transport_mode_link("Rail", 200, 2)],
+    )
+
+    before = _pathway_snapshot(pathway)
+    after = _pathway_input_snapshot(row, pathway)
+
+    assert "feedstock_transport_mode" not in before
+    assert "finished_fuel_transport_mode" not in before
+    assert "feedstock_transport_mode" not in after
+    assert "finished_fuel_transport_mode" not in after
+    assert before["feedstock_transport_mode_details"] == [
+        {"transportMode": "Truck", "distance": 100}
+    ]
+    assert after["finished_fuel_transport_mode_details"] == [
+        {"transportMode": "Rail", "distance": 200}
+    ]
+
+
+def test_transport_mode_details_from_any_preserves_mixed_null_distances():
+    details = _transport_mode_details_from_any(
+        [
+            _transport_mode_selection("Truck", 100),
+            _transport_mode_selection("Rail", None),
+        ]
+    )
+
+    assert details == [
+        {"transportMode": "Truck", "distance": 100},
+        {"transportMode": "Rail", "distance": None},
+    ]
 
 
 def _existing_pathway(**overrides):
@@ -1337,6 +1384,32 @@ async def test_update_generated_fuel_code_clearing_required_date_raises_validati
     assert exc.value.errors["errors"][0]["fields"] == ["applicationDate"]
     # The cleared value never reached the database.
     repo.update.assert_not_awaited()
+
+
+def test_sync_generated_fuel_code_transport_modes_preserves_null_distance(service):
+    existing_links = [
+        SimpleNamespace(transport_mode_id=1, distance=100),
+        SimpleNamespace(transport_mode_id=2, distance=200),
+    ]
+    transport_modes = [
+        _transport_mode_obj(1, "Truck"),
+        _transport_mode_obj(2, "Rail"),
+    ]
+
+    service._sync_fuel_code_transport_mode_links(
+        existing_links,
+        [
+            _transport_mode_selection("Truck", 125),
+            _transport_mode_selection("Rail", None),
+        ],
+        transport_modes,
+        SimpleNamespace,
+    )
+
+    by_id = {link.transport_mode_id: link for link in existing_links}
+    assert set(by_id) == {1, 2}
+    assert by_id[1].distance == 125
+    assert by_id[2].distance is None
 
 
 @pytest.mark.anyio

@@ -94,6 +94,29 @@ describe('validatePathwayRow', () => {
       'operatingDataTo'
     )
   })
+
+  it('distinguishes a selected transport mode with missing distance', () => {
+    const errs = validatePathwayRow(
+      {
+        ...validRow,
+        feedstockTransportMode: [{ transportMode: 'Truck', distance: null }]
+      },
+      APPLICATION_TYPES
+    )
+
+    expect(errs).toContain('feedstockTransportMode')
+    expect(errs).toContain('feedstockTransportModeDistance')
+  })
+
+  it('does not add distance-specific errors when no transport mode is selected', () => {
+    const errs = validatePathwayRow(
+      { ...validRow, feedstockTransportMode: [] },
+      APPLICATION_TYPES
+    )
+
+    expect(errs).toContain('feedstockTransportMode')
+    expect(errs).not.toContain('feedstockTransportModeDistance')
+  })
 })
 
 describe('rowToApiPayload', () => {

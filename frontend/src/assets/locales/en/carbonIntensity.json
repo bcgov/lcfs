@@ -64,8 +64,10 @@
     "feedstock": "Feedstock",
     "feedstockRegion": "Feedstock region",
     "feedstockTransportMode": "Feedstock transport mode",
+    "feedstockTransportModeDistance": "Feedstock transport mode distance",
     "coproducts": "Co-products",
     "finishedFuelTransportMode": "Finished fuel transport mode",
+    "finishedFuelTransportModeDistance": "Finished fuel transport mode distance",
     "descriptionLabel": "Description of distinctive or unique characteristics of the fuel pathway(s) included in this application",
     "descriptionHelp": "e.g. use of carbon capture and sequestration (CCS), novel energy sources for fuel production, upgrades made to facility (for fuel code renewal applications), etc.",
     "validation": {
@@ -75,6 +77,13 @@
       "incompleteRows": "{{count}} pathway row(s) have missing required fields — complete all cells highlighted in red before saving.",
       "dateOrder": "Operating data collection end date must be on or after the start date. Please fix the dates and try again."
     }
+  },
+  "transportModeDistance": {
+    "title": "Select transport modes and enter distance (km)",
+    "description": "Add a distance for each selected transport mode.",
+    "selectMode": "Select {{mode}}",
+    "distanceLabel": "{{mode}} distance in kilometers",
+    "placeholder": "Enter"
   },
   "step3": {
     "title": "Documents & GHGenius template",
