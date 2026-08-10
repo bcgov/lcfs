@@ -503,19 +503,21 @@ export const ApplicationSummary = ({
           {org.email && (
             <BCTypography variant="body2">{org.email}</BCTypography>
           )}
-          <BCTypography
-            variant="body2"
-            sx={{ mt: 1, fontStyle: 'italic' }}
-            data-test="ci-summary-org-info-confirmation"
-          >
-            "{t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
-            <a
-              href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+          {organizationAddress && (
+            <BCTypography
+              variant="body2"
+              sx={{ mt: 1 }}
+              data-test="ci-summary-org-info-confirmation"
             >
-              {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
-            </a>
-            "
-          </BCTypography>
+              {t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
+              <a
+                href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+              >
+                {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
+              </a>
+              .
+            </BCTypography>
+          )}
         </Grid>
         <Grid item xs={12} md={6}>
           <Stack spacing={0.5}>

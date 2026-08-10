@@ -93,6 +93,38 @@ async def get_organization_ledger_years(
 
 
 @router.get(
+    "/organization/{organization_id}/period/{compliance_year}/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def export_period_credit_ledger(
+    request: Request,
+    organization_id: int = Path(..., ge=1),
+    compliance_year: int = Path(..., ge=2000, le=2100),
+    include_pending: bool = Query(
+        default=False,
+        description="Include in-flight pending transactions in the export.",
+    ),
+    format: str = Query(default="xlsx", description="File export format"),
+    service: CreditLedgerService = Depends(),
+    validate: CreditLedgerValidation = Depends(),
+):
+    """
+    Download one compliance-period ledger, matching the on-screen view row for
+    row — same April–March envelope and running balance (#4832).
+    """
+    await validate.validate_organization_access(organization_id)
+
+    return await service.export_period_ledger(
+        organization_id=organization_id,
+        compliance_year=compliance_year,
+        include_pending=include_pending,
+        export_format=format,
+    )
+
+
+@router.get(
     "/organization/{organization_id}/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,

@@ -96,9 +96,9 @@ export const PenaltySummaryTable = ({
           <TableHead>
             <TableRow>
               <TableCell>Year</TableCell>
-              <TableCell>Auto Renewable</TableCell>
-              <TableCell>Auto Low Carbon</TableCell>
-              <TableCell>Total Automatic</TableCell>
+              <TableCell>Auto renewable</TableCell>
+              <TableCell>Auto low carbon</TableCell>
+              <TableCell>Total automatic</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
