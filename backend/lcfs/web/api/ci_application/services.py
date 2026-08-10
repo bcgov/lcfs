@@ -33,6 +33,8 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.services.geocoder.client import Address, BCGeocoderService
+from lcfs.services.geocoder.dependency import get_geocoder_service_async
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
@@ -754,17 +756,32 @@ def _to_list_item(
     )
 
 
+def _format_place_suggestion(place: Address, place_type: str) -> Optional[str]:
+    city = (place.city or "").strip()
+    province = (place.province or "").strip()
+    country = (place.country or "").strip()
+    if place_type == "city" and city:
+        return f"{city}, {province}, {country}"
+    if place_type == "province" and province:
+        return f"{province}, {country}" if country else province
+    if place_type == "country" and country:
+        return country
+    return None
+
+
 class CIApplicationServices:
     def __init__(
         self,
         repo: CIApplicationRepository = Depends(CIApplicationRepository),
         user_repo: UserRepository = Depends(UserRepository),
         fuel_repo: FuelCodeRepository = Depends(FuelCodeRepository),
+        geocoder: BCGeocoderService = Depends(get_geocoder_service_async),
         notification_service: NotificationService = Depends(NotificationService),
     ) -> None:
         self.repo = repo
         self.user_repo = user_repo
         self.fuel_repo = fuel_repo
+        self.geocoder = geocoder
         self.notification_service = notification_service
 
     async def _to_full_schema_with_user(self, ci: CIApplication) -> CIApplicationSchema:
@@ -1196,6 +1213,33 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
     # Reference data
     # ------------------------------------------------------------------
+
+    @service_handler
+    async def search_facility_location(
+        self,
+        city: Optional[str] = None,
+        province: Optional[str] = None,
+        country: Optional[str] = None,
+    ) -> List[str]:
+        """Facility location typeahead via Nominatim place search."""
+        if city:
+            place_type, query = "city", city
+        elif province:
+            place_type, query = "province", province
+        elif country:
+            place_type, query = "country", country
+        else:
+            return []
+
+        places = await self.geocoder.search_places(
+            query, place_type=place_type, max_results=10
+        )
+        suggestions = []
+        for place in places:
+            label = _format_place_suggestion(place, place_type)
+            if label:
+                suggestions.append(label)
+        return suggestions
 
     @service_handler
     async def get_table_options(

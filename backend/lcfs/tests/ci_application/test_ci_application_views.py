@@ -150,6 +150,79 @@ async def test_table_options_success(
 
 
 # ---------------------------------------------------------------------------
+# /location-search
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_location_search_by_city(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.CI_APPLICANT)
+    with patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.search_facility_location"
+    ) as mock:
+        mock.return_value = ["Vancouver, BC, Canada"]
+        response = await client.get(
+            "/api/ci-applications/location-search", params={"city": "Van"}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == ["Vancouver, BC, Canada"]
+        mock.assert_awaited_once_with("Van", None, None)
+
+
+@pytest.mark.anyio
+async def test_location_search_by_province(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.SIGNING_AUTHORITY)
+    with patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.search_facility_location"
+    ) as mock:
+        mock.return_value = ["BC, Canada"]
+        response = await client.get(
+            "/api/ci-applications/location-search", params={"province": "BC"}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == ["BC, Canada"]
+        mock.assert_awaited_once_with(None, "BC", None)
+
+
+@pytest.mark.anyio
+async def test_location_search_by_country(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.GOVERNMENT)
+    with patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.search_facility_location"
+    ) as mock:
+        mock.return_value = ["Canada"]
+        response = await client.get(
+            "/api/ci-applications/location-search", params={"country": "Can"}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == ["Canada"]
+        mock.assert_awaited_once_with(None, None, "Can")
+
+
+@pytest.mark.anyio
+async def test_location_search_requires_a_filter(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.CI_APPLICANT)
+    response = await client.get("/api/ci-applications/location-search")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
 # POST /list
 # ---------------------------------------------------------------------------
 
