@@ -1441,6 +1441,12 @@ class CIApplicationServices:
         await self.repo.add_history(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        await self._send_ci_notification(
+            ci,
+            "analyst_recommendation",
+            "CI Application Recommended",
+            origin_user_profile_id=user.user_profile_id,
+        )
         return await self._to_full_schema_with_user(ci)
 
     def _validate_priority_score(self, priority_score: Optional[int]) -> None:
