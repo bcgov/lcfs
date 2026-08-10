@@ -26,7 +26,9 @@ const Comments = ({
     downloadCommentAttachment,
     visibility,
     handleVisibilityChange,
-    allowInternalVisibility
+    allowInternalVisibility,
+    sortOrder,
+    handleSortOrderChange
   } = useComments(entityType, entityId, { commentMode })
 
   const showAddCommentBtn = entityId !== null
@@ -73,6 +75,8 @@ const Comments = ({
       attachments={attachments}
       onAttachmentsChange={handleAttachmentsChange}
       onDownloadAttachment={downloadCommentAttachment}
+      sortOrder={sortOrder}
+      onSortOrderChange={handleSortOrderChange}
     />
   )
 }
