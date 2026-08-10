@@ -2,7 +2,9 @@ import {
   numberFormatter,
   currencyFormatter,
   dateFormatter,
-  spacesFormatter
+  spacesFormatter,
+  formatTransactionId,
+  parseTransactionIdNumber
 } from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/grid/cellRenderers'
 import {
@@ -10,14 +12,6 @@ import {
   BCDateFloatingFilter
 } from '@/components/BCDataGrid/components'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
-
-const prefixMap = {
-  Transfer: 'CT',
-  AdminAdjustment: 'AA',
-  InitiativeAgreement: 'IA',
-  ComplianceReport: 'CR',
-  AggregatorIssuance: 'AG'
-}
 
 export const transactionsColDefs = (t) => [
   {
@@ -57,20 +51,16 @@ export const transactionsColDefs = (t) => [
     field: 'transactionId',
     headerName: t('txn:txnColLabels.txnId'),
     minWidth: 130,
-    valueGetter: (params) => {
-      const transactionType = params.data.transactionType
-      const prefix = prefixMap[transactionType] || ''
-      return `${prefix}${params.data.transactionId}`
-    },
+    valueGetter: (params) =>
+      formatTransactionId(
+        params.data.transactionType,
+        params.data.transactionId
+      ),
     filterParams: {
       buttons: ['clear']
     },
-    comparator: (valueA, valueB) => {
-      const numberA = parseInt(valueA.slice(1), 10)
-      const numberB = parseInt(valueB.slice(1), 10)
-
-      return numberB - numberA
-    }
+    comparator: (valueA, valueB) =>
+      parseTransactionIdNumber(valueB) - parseTransactionIdNumber(valueA)
   },
   {
     colId: 'compliancePeriod',
@@ -124,8 +114,14 @@ export const transactionsColDefs = (t) => [
           { transactionType: 'Compliance Report', type: 'ComplianceReport' },
           { transactionType: 'Admin Adjustment', type: 'AdminAdjustment' },
           { transactionType: 'Transfer', type: 'Transfer' },
-          { transactionType: 'Initiative Agreement', type: 'InitiativeAgreement' },
-          { transactionType: 'Legacy Transaction', type: 'StandaloneTransaction' },
+          {
+            transactionType: 'Initiative Agreement',
+            type: 'InitiativeAgreement'
+          },
+          {
+            transactionType: 'Legacy Transaction',
+            type: 'StandaloneTransaction'
+          },
           { transactionType: 'Aggregator Issuance', type: 'AggregatorIssuance' }
         ],
         isLoading: false
