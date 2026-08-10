@@ -214,6 +214,92 @@ async def test_copy_internal_comments_large_number_of_comments():
     mock_db.flush.assert_called_once()
 
 
+@pytest.mark.anyio
+async def test_create_ci_application_public_comment_for_non_government_user():
+    mock_repo = MagicMock()
+    mock_repo.get_entity_org_and_year = AsyncMock(return_value=(None, None))
+    mock_repo.get_category_id_by_name = AsyncMock(return_value=None)
+    mock_repo.create_internal_comment = AsyncMock()
+    mock_repo.create_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=1,
+        comment="Public applicant comment",
+        audience_scope=None,
+        visibility=CommentVisibilityEnum.PUBLIC,
+        create_user="BCEIDUSER",
+        create_date=None,
+        update_date=None,
+        update_user=None,
+        update_full_name=None,
+        full_name="BCeID User",
+        documents=[],
+    )
+    mock_notification_service = MagicMock()
+    mock_notification_service.send_notification = AsyncMock()
+
+    service = InternalCommentService(
+        request=SimpleNamespace(
+            user=SimpleNamespace(
+                role_names=[RoleEnum.SUPPLIER],
+                keycloak_username="BCEIDUSER",
+                user_profile_id=12,
+            )
+        ),
+        repo=mock_repo,
+        notification_service=mock_notification_service,
+    )
+
+    result = await service.create_internal_comment(
+        InternalCommentCreateSchema(
+            entity_type=EntityTypeEnum.CI_APPLICATION,
+            entity_id=123,
+            comment="Public applicant comment",
+            visibility=CommentVisibilityEnum.PUBLIC,
+            audience_scope=AudienceScopeEnum.ANALYST,
+        )
+    )
+
+    created_comment = mock_repo.create_internal_comment.call_args.args[0]
+    assert result.visibility == CommentVisibilityEnum.PUBLIC
+    assert result.audience_scope is None
+    assert created_comment.visibility == CommentVisibilityEnum.PUBLIC
+    assert created_comment.audience_scope is None
+    mock_repo.create_internal_comment.assert_called_once()
+    mock_notification_service.send_notification.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_create_ci_application_internal_comment_for_non_government_user_forbidden():
+    mock_repo = MagicMock()
+    mock_repo.create_internal_comment = AsyncMock()
+    mock_notification_service = MagicMock()
+    mock_notification_service.send_notification = AsyncMock()
+
+    service = InternalCommentService(
+        request=SimpleNamespace(
+            user=SimpleNamespace(
+                role_names=[RoleEnum.SUPPLIER],
+                keycloak_username="BCEIDUSER",
+            )
+        ),
+        repo=mock_repo,
+        notification_service=mock_notification_service,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_internal_comment(
+            InternalCommentCreateSchema(
+                entity_type=EntityTypeEnum.CI_APPLICATION,
+                entity_id=123,
+                comment="Internal applicant comment",
+                visibility=CommentVisibilityEnum.INTERNAL,
+            )
+        )
+
+    assert exc_info.value.status_code == 403
+    mock_repo.create_internal_comment.assert_not_called()
+    mock_notification_service.send_notification.assert_not_awaited()
+
+
 def _build_service_with_user_roles(role_names):
     service = InternalCommentService()
     service.request = MagicMock()
@@ -231,6 +317,9 @@ def _build_service_with_user_roles(role_names):
     service.repo.get_category_id_by_name = AsyncMock(return_value=99)
     service.repo.get_entity_org_and_year = AsyncMock(return_value=(7, 2025))
     service.repo.get_comments_for_organization = AsyncMock()
+    # Most comments are not Company Overview notes; tests that need the
+    # organization-comment path override this.
+    service.repo.is_organization_comment = AsyncMock(return_value=False)
     return service
 
 
@@ -394,6 +483,72 @@ async def test_update_internal_comment_non_gov_clamps_to_public():
     assert call_kwargs["visibility"] == CommentVisibilityEnum.PUBLIC.value
     assert call_kwargs["audience_scope"] is None
     assert call_kwargs["new_comment_text"] == "updated text"
+
+
+@pytest.mark.anyio
+async def test_create_organization_comment_is_forced_internal():
+    """
+    Company Overview notes have no public option in the UI; the service pins
+    the visibility so a client cannot file one as Public (#4608).
+    """
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.create_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=101,
+        comment="Overview note",
+        audience_scope="Analyst",
+        visibility="Internal",
+        create_user="mockuser",
+        create_date=None,
+        update_date=None,
+        full_name="Mock User",
+    )
+    payload = InternalCommentCreateSchema(
+        entity_type=EntityTypeEnum.ORGANIZATION,
+        entity_id=7,
+        comment="Overview note",
+        visibility=CommentVisibilityEnum.PUBLIC,
+    )
+
+    await service.create_internal_comment(payload)
+
+    service.repo.create_internal_comment.assert_awaited_once()
+    created_comment_arg = service.repo.create_internal_comment.await_args.args[0]
+    assert created_comment_arg.visibility == CommentVisibilityEnum.INTERNAL
+    # Internal comments still need an audience scope, resolved from the role.
+    assert created_comment_arg.audience_scope == AudienceScopeEnum.ANALYST
+
+
+@pytest.mark.anyio
+async def test_update_organization_comment_cannot_be_flipped_to_public():
+    """An edit cannot turn a Company Overview note public (#4608)."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.is_organization_comment = AsyncMock(return_value=True)
+    service.repo.get_internal_comment_by_id.return_value = SimpleNamespace(
+        internal_comment_id=11,
+        comment="existing",
+        audience_scope="Analyst",
+        visibility="Internal",
+    )
+    service.repo.update_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=11,
+        comment="updated",
+        audience_scope="Analyst",
+        visibility="Internal",
+        create_user="mockuser",
+        create_date=None,
+        update_date=None,
+        full_name="Mock User",
+    )
+    payload = InternalCommentUpdateSchema(
+        comment="updated",
+        visibility=CommentVisibilityEnum.PUBLIC,  # smuggled — service ignores
+    )
+
+    await service.update_internal_comment(11, payload)
+
+    call_kwargs = service.repo.update_internal_comment.await_args.kwargs
+    assert call_kwargs["visibility"] == CommentVisibilityEnum.INTERNAL.value
+    assert call_kwargs["audience_scope"] == AudienceScopeEnum.ANALYST.value
 
 
 @pytest.mark.anyio

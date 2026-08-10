@@ -242,8 +242,15 @@ export const DocumentsModellingStep = ({
         sx={{ mb: 4 }}
       />
 
+      {/* Delete sits far right, away from the primary action (#4770). */}
       {showSaveControls && (
-        <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ mt: 2 }}
+          alignItems="center"
+          justifyContent="space-between"
+        >
           <BCButton
             type="button"
             variant="contained"

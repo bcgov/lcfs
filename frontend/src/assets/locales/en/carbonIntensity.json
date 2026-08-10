@@ -139,8 +139,7 @@
       "consultantEmailRequired": "Consultant email address is required.",
       "consultantEmailInvalid": "Enter a valid consultant email address."
     },
-    "submitConfirmTitle": "Submit application?",
-    "submitConfirmText": "Once submitted you will not be able to edit Steps 1-4. Continue?"
+    "submitConfirmText": "Are you sure you want to sign and submit this application? Once submitted, you will not be able to edit steps 1–4."
   },
   "step5": {
     "title": "Government decision",
@@ -199,7 +198,7 @@
     "organization": "Organization",
     "priorityScore": "Priority score",
     "verification": "Verification",
-    "productionFacilityLocation": "Production facility Location",
+    "productionFacilityLocation": "Production facility location",
     "proposedEffectiveDate": "Proposed fuel code effective date",
     "lastUpdated": "Last updated",
     "lastComment": "Last comment"

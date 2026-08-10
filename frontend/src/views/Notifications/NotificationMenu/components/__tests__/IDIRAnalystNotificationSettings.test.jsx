@@ -46,11 +46,11 @@ describe('IDIRAnalystNotificationSettings', () => {
   it('defines complete categories object structure', () => {
     render(<IDIRAnalystNotificationSettings />)
     
-    // Verify all 4 main categories exist
+    // Verify all main categories exist
     expect(screen.getByTestId('category-idirAnalyst.categories.transfers')).toBeInTheDocument()
     expect(screen.getByTestId('category-idirAnalyst.categories.initiativeAgreements')).toBeInTheDocument()
     expect(screen.getByTestId('category-idirAnalyst.categories.complianceReports')).toBeInTheDocument()
-    expect(screen.getByTestId('category-idirAnalyst.categories.fuelCodes')).toBeInTheDocument()
+    expect(screen.getByTestId('category-idirAnalyst.categories.ciApplications')).toBeInTheDocument()
   })
 
   // Transfers Category Coverage Tests
@@ -117,25 +117,27 @@ describe('IDIRAnalystNotificationSettings', () => {
     expect(screen.getByText(/idirAnalyst\.categories\.complianceReports\.directorDecision/)).toBeInTheDocument()
   })
 
-  // Fuel Codes Category Coverage Tests
-  it('includes complete fuelCodes category with title', () => {
+  // CI Applications Category Coverage Tests
+  it('includes complete ciApplications category with title', () => {
     render(<IDIRAnalystNotificationSettings />)
-    const fuelCodesCategory = screen.getByTestId('category-idirAnalyst.categories.fuelCodes')
-    expect(fuelCodesCategory).toHaveTextContent('idirAnalyst.categories.fuelCodes.title')
+    const ciApplicationsCategory = screen.getByTestId('category-idirAnalyst.categories.ciApplications')
+    expect(ciApplicationsCategory).toHaveTextContent('idirAnalyst.categories.ciApplications.title')
   })
 
-  it('includes all fuelCodes notification types', () => {
+  it('includes all ciApplications notification types', () => {
     render(<IDIRAnalystNotificationSettings />)
     
-    expect(screen.getByTestId('notification-IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED')).toBeInTheDocument()
-    expect(screen.getByTestId('notification-IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL')).toBeInTheDocument()
+    expect(screen.getByTestId('notification-IDIR_ANALYST__CI_APPLICATION__DIRECTOR_APPROVAL')).toBeInTheDocument()
+    expect(screen.getByTestId('notification-IDIR_ANALYST__CI_APPLICATION__DIRECTOR_RETURNED')).toBeInTheDocument()
+    expect(screen.getByTestId('notification-IDIR_ANALYST__CI_APPLICATION__APPLICANT_ACTIVITY')).toBeInTheDocument()
   })
 
-  it('has correct fuelCodes notification translation keys', () => {
+  it('has correct ciApplications notification translation keys', () => {
     render(<IDIRAnalystNotificationSettings />)
     
-    expect(screen.getByText(/idirAnalyst\.categories\.fuelCodes\.directorReturned/)).toBeInTheDocument()
-    expect(screen.getByText(/idirAnalyst\.categories\.fuelCodes\.directorApproval/)).toBeInTheDocument()
+    expect(screen.getByText(/idirAnalyst\.categories\.ciApplications\.directorApproval/)).toBeInTheDocument()
+    expect(screen.getByText(/idirAnalyst\.categories\.ciApplications\.directorReturned/)).toBeInTheDocument()
+    expect(screen.getByText(/idirAnalyst\.categories\.ciApplications\.applicantActivity/)).toBeInTheDocument()
   })
 
   // Branch Coverage Tests
@@ -145,10 +147,10 @@ describe('IDIRAnalystNotificationSettings', () => {
     expect(categoryElements).toHaveLength(5)
   })
 
-  it('has exactly 2 fuel code notification types', () => {
+  it('has exactly 3 CI application notification types', () => {
     render(<IDIRAnalystNotificationSettings />)
-    const fuelCodeNotifications = screen.getAllByTestId(/notification-IDIR_ANALYST__FUEL_CODE__/)
-    expect(fuelCodeNotifications).toHaveLength(2)
+    const ciApplicationNotifications = screen.getAllByTestId(/notification-IDIR_ANALYST__CI_APPLICATION__/)
+    expect(ciApplicationNotifications).toHaveLength(3)
   })
 
   it('has exactly 4 transfer notification types', () => {

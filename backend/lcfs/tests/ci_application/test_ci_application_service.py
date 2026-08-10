@@ -16,7 +16,7 @@ from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import NotificationTypeEnum, PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
     CIApplicationSchema,
     CIApplicationsListSchema,
@@ -198,8 +198,26 @@ def geocoder():
 
 
 @pytest.fixture
-def service(repo, user_repo, geocoder):
-    return CIApplicationServices(repo=repo, user_repo=user_repo, geocoder=geocoder)
+def fuel_repo():
+    return AsyncMock()
+
+
+@pytest.fixture
+def notification_service():
+    service = AsyncMock()
+    service.send_notification = AsyncMock()
+    return service
+
+
+@pytest.fixture
+def service(repo, user_repo, fuel_repo, geocoder, notification_service):
+    return CIApplicationServices(
+        repo=repo,
+        user_repo=user_repo,
+        fuel_repo=fuel_repo,
+        geocoder=geocoder,
+        notification_service=notification_service,
+    )
 
 
 @pytest.fixture
@@ -318,7 +336,7 @@ def test_step1_schema_requires_non_empty_location_fields(field_name, value):
 
 
 @pytest.mark.anyio
-async def test_get_table_options_returns_lookup_data(service, repo):
+async def test_get_table_options_returns_lookup_data(service, repo, fuel_repo):
     repo.get_statuses.return_value = [
         _status("Draft", 1),
         _status("Submitted", 2),
@@ -326,11 +344,30 @@ async def test_get_table_options_returns_lookup_data(service, repo):
         _status("Completed", 4),
         _status("Withdrawn", 5),
     ]
-    repo.get_pathway_application_types.return_value = []
-    repo.get_pathway_fuel_code_types.return_value = []
-    repo.get_fuel_types.return_value = []
-    repo.get_transport_modes.return_value = []
-    repo.get_approved_fuel_codes.return_value = []
+    repo.get_fuel_types.side_effect = AssertionError(
+        "CI table options should reuse FuelCode fuel type options"
+    )
+    fuel_repo.get_fuel_types.return_value = [
+        FuelType(
+            fuel_type_id=1,
+            fuel_type="Biodiesel",
+            fossil_derived=False,
+            is_legacy=False,
+        ),
+        FuelType(
+            fuel_type_id=2,
+            fuel_type="Fossil-derived diesel",
+            fossil_derived=True,
+            is_legacy=False,
+        ),
+        FuelType(
+            fuel_type_id=3,
+            fuel_type="Electricity",
+            fossil_derived=False,
+            is_legacy=False,
+        ),
+    ]
+
     result = await service.get_table_options()
 
     assert isinstance(result, CITableOptionsSchema)
@@ -342,6 +379,9 @@ async def test_get_table_options_returns_lookup_data(service, repo):
         CIApplicationStatusEnum.Withdrawn,
     ]
     assert set(result.units_of_measure) == {u.value for u in QuantityUnitsEnum}
+    assert [ft.fuel_type for ft in result.fuel_types] == ["Biodiesel", "Electricity"]
+    fuel_repo.get_fuel_types.assert_awaited_once()
+    repo.get_fuel_types.assert_not_called()
 
 
 @pytest.mark.anyio
@@ -1546,7 +1586,7 @@ async def test_step5_decision_rejects_approval_when_not_recommended(
 
 @pytest.mark.anyio
 async def test_recommend_to_director_transitions_status_to_recommended(
-    service, repo, mock_user
+    service, repo, notification_service, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _ci_application(status=_status("Submitted", 2))
@@ -1565,6 +1605,12 @@ async def test_recommend_to_director_transitions_status_to_recommended(
     assert ci.assigned_analyst_id == 12
     assert ci.recommendation_date is not None
     repo.get_status_by_name.assert_awaited_with("Recommended")
+    notification_service.send_notification.assert_awaited_once()
+    request = notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION
+    ]
+    assert request.notification_data.type == "CI Application Recommended"
     assert isinstance(result, CIApplicationSchema)
 
 

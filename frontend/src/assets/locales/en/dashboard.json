@@ -27,9 +27,9 @@
     "loadingMessage": "Loading transactions card..."
   },
   "fuelCodes": {
-    "title": "Fuel Codes",
+    "title": "Fuel codes",
     "thereAre": "There are:",
-    "fcInProgress": "Fuel Code(s) in progress",
+    "fcInProgress": "Fuel code(s) in progress",
     "loadingMessage": "Loading fuel codes card..."
   },
   "orgFuelCodes": {
@@ -45,8 +45,8 @@
   "complianceReports": {
     "title": "Compliance reports",
     "thereAre": "There are:",
-    "crInProgress": "Compliance Report(s) in progress",
-    "loadingMessage": "Loading Compliance Report card..."
+    "crInProgress": "Compliance report(s) in progress",
+    "loadingMessage": "Loading compliance report card..."
   },
   "feedback": {
     "title": "We want to hear from you",
@@ -75,7 +75,7 @@
     "administration": "Administration"
   },
   "orgDetails": {
-    "orgDetailsLabel": "Organization Details",
+    "orgDetailsLabel": "Organization details",
     "orgDetailsLoadingMsg": "Loading organization details...",
     "users": "Users",
     "createNewUsrLabel": "Create new BCeID account",

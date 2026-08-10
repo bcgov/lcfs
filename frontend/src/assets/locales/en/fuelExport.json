@@ -10,7 +10,7 @@
   "addRow": "Add row",
   "rows": "rows",
   "fuelExportColLabels": {
-    "complianceReportId": "Compliance Report ID",
+    "complianceReportId": "Compliance report ID",
     "fuelExportId": "Fuel export ID",
     "fuelTypeId": "Fuel type",
     "exportDate": "Export date",
@@ -27,7 +27,7 @@
     "uci": "UCI",
     "energyDensity": "Energy density",
     "eer": "EER",
-    "energy": "Energy Content",
+    "energy": "Energy content",
     "determiningCarbonIntensity": "Determining carbon intensity"
   },
   "validateMsg": {

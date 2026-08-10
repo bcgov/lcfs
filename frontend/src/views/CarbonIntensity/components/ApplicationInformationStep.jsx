@@ -323,19 +323,21 @@ export const ApplicationInformationStep = forwardRef(
             {organization.email && (
               <BCTypography variant="body2">{organization.email}</BCTypography>
             )}
-            <BCTypography
-              variant="body2"
-              sx={{ mt: 1, fontStyle: 'italic' }}
-              data-test="ci-step1-org-info-confirmation"
-            >
-              "{t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
-              <a
-                href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+            {organization.addressLine && (
+              <BCTypography
+                variant="body2"
+                sx={{ mt: 1 }}
+                data-test="ci-step1-org-info-confirmation"
               >
-                {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
-              </a>
-              "
-            </BCTypography>
+                {t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
+                <a
+                  href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+                >
+                  {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
+                </a>
+                .
+              </BCTypography>
+            )}
           </Box>
         )}
 
@@ -575,7 +577,14 @@ export const ApplicationInformationStep = forwardRef(
           </Grid2>
         </Grid2>
 
-        <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
+        {/* Delete sits far right, away from the primary action (#4770). */}
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ mt: 2 }}
+          alignItems="center"
+          justifyContent="space-between"
+        >
           <BCButton
             type="submit"
             variant="contained"

@@ -178,3 +178,18 @@ FUEL_CODE_STATUS_NOTIFICATION_MAPPER = {
         NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED
     ],
 }
+
+CI_APPLICATION_NOTIFICATION_MAPPER = {
+    "analyst_recommendation": [
+        NotificationTypeEnum.IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION,
+    ],
+    "director_approval": [
+        NotificationTypeEnum.IDIR_ANALYST__CI_APPLICATION__DIRECTOR_APPROVAL,
+    ],
+    "director_returned": [
+        NotificationTypeEnum.IDIR_ANALYST__CI_APPLICATION__DIRECTOR_RETURNED,
+    ],
+    "applicant_activity": [
+        NotificationTypeEnum.IDIR_ANALYST__CI_APPLICATION__APPLICANT_ACTIVITY,
+    ],
+}

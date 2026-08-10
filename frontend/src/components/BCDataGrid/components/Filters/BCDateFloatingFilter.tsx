@@ -25,7 +25,7 @@ export const BCDateFloatingFilter = ({
   minDate = '2013-01-01',
   maxDate = '2040-01-01',
   initialFilterType = 'any',
-  label = 'Select Date'
+  label = 'Select date'
 }: BCDateFloatingFilterProps) => {
   const [selectedDate, setSelectedDate] = useState(null)
   const [open, setOpen] = useState(false)
@@ -96,7 +96,7 @@ export const BCDateFloatingFilter = ({
     >
       <DatePicker
         id="date-picker"
-        aria-label="Date Picker"
+        aria-label="Date picker"
         aria-describedby="date-picker-description"
         sx={{
           border: 'none',
