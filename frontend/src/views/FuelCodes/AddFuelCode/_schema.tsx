@@ -55,7 +55,26 @@ const createCellRenderer = (field, customRenderer = null) => {
   return CellRenderer
 }
 
-const normalizeTransportModeDistances = (value) => {
+const getTransportModeName = (value) => {
+  if (!value) return ''
+  if (typeof value === 'string' || typeof value === 'number') {
+    return value.toString()
+  }
+  return (
+    getTransportModeName(value.transportMode) ||
+    getTransportModeName(value.transport_mode) ||
+    getTransportModeName(value.mode) ||
+    getTransportModeName(value.name) ||
+    getTransportModeName(value.label) ||
+    getTransportModeName(value.value) ||
+    getTransportModeName(value.feedstockFuelTransportMode) ||
+    getTransportModeName(value.feedstock_fuel_transport_mode) ||
+    getTransportModeName(value.finishedFuelTransportMode) ||
+    getTransportModeName(value.finished_fuel_transport_mode)
+  )
+}
+
+export const normalizeTransportModeDistances = (value) => {
   const values = Array.isArray(value)
     ? value
     : typeof value === 'string' && value.trim()
@@ -67,14 +86,20 @@ const normalizeTransportModeDistances = (value) => {
       if (!item) return null
       if (typeof item === 'object') {
         return {
-          transportMode: item.transportMode || '',
+          transportMode: getTransportModeName(item),
           distance: item.distance ?? ''
         }
       }
-      return { transportMode: item, distance: '' }
+      return { transportMode: getTransportModeName(item), distance: '' }
     })
     .filter((item) => item?.transportMode)
 }
+
+export const normalizeTransportModeDistancesForSave = (value) =>
+  normalizeTransportModeDistances(value).map((item) => ({
+    transport_mode: item.transportMode,
+    distance: item.distance
+  }))
 
 const renderTransportModeDistances = (params) => {
   const values = normalizeTransportModeDistances(params.value)

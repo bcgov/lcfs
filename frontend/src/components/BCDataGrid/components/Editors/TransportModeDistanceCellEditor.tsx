@@ -9,7 +9,6 @@ import {
 import type { KeyboardEvent } from 'react'
 import {
   Box,
-  Button,
   Checkbox,
   FormControlLabel,
   InputAdornment,
@@ -189,18 +188,28 @@ export const TransportModeDistanceCellEditor = forwardRef<
     if (event.key === 'Tab' && rootRef.current) {
       const focusable = Array.from(
         rootRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
         )
       )
       if (!focusable.length) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
+      const currentIndex = focusable.indexOf(
+        document.activeElement as HTMLElement
+      )
+      const nextIndex = currentIndex + (event.shiftKey ? -1 : 1)
+
+      if (currentIndex === -1) {
         event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
+        event.stopPropagation()
+        event.nativeEvent.stopImmediatePropagation?.()
+        focusable[event.shiftKey ? focusable.length - 1 : 0].focus()
+        return
+      }
+
+      if (nextIndex >= 0 && nextIndex < focusable.length) {
         event.preventDefault()
-        first.focus()
+        event.stopPropagation()
+        event.nativeEvent.stopImmediatePropagation?.()
+        focusable[nextIndex].focus()
       }
     }
   }
@@ -308,27 +317,6 @@ export const TransportModeDistanceCellEditor = forwardRef<
             </Stack>
           )
         })}
-      </Stack>
-      <Stack
-        direction="row"
-        spacing={1}
-        justifyContent="flex-end"
-        sx={{ mt: 2 }}
-      >
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => api.stopEditing(true)}
-        >
-          {t('common:cancelBtn')}
-        </Button>
-        <Button
-          variant="contained"
-          size="small"
-          onClick={() => api.stopEditing()}
-        >
-          {t('common:doneBtn', 'Done')}
-        </Button>
       </Stack>
     </Box>
   )

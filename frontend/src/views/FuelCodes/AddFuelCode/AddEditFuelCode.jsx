@@ -13,7 +13,11 @@ import {
   useGetFuelCode
 } from '@/hooks/useFuelCode'
 import withRole from '@/utils/withRole'
-import { defaultColDef, fuelCodeColDefs } from './_schema'
+import {
+  defaultColDef,
+  fuelCodeColDefs,
+  normalizeTransportModeDistancesForSave
+} from './_schema'
 import { useNavigate, useParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCButton from '@/components/BCButton'
@@ -76,6 +80,16 @@ const filterNonNullValues = (data) => {
   }
   return result
 }
+
+const normalizeFuelCodeRowForSave = (row) => ({
+  ...row,
+  feedstockFuelTransportMode: normalizeTransportModeDistancesForSave(
+    row.feedstockFuelTransportMode
+  ),
+  finishedFuelTransportMode: normalizeTransportModeDistancesForSave(
+    row.finishedFuelTransportMode
+  )
+})
 
 const formatFastApiDetail = (detail) => {
   if (!Array.isArray(detail)) return detail
@@ -343,21 +357,22 @@ const AddEditFuelCodeBase = () => {
           errors: { ...prev.errors, [rowId]: undefined }
         }))
 
+        const saveData = normalizeFuelCodeRowForSave(updatedData)
         const action =
-          updatedData.validationStatus === 'pending'
+          saveData.validationStatus === 'pending'
             ? 'save'
-            : updatedData.fuelCodeId
+            : saveData.fuelCodeId
               ? 'update'
               : 'create'
 
         const result = await fuelCodeMutation.mutateAsync({
           action,
-          data: { ...updatedData, id: rowId },
-          fuelCodeId: updatedData.fuelCodeId
+          data: { ...saveData, id: rowId },
+          fuelCodeId: saveData.fuelCodeId
         })
 
         const finalData = {
-          ...updatedData,
+          ...saveData,
           id: rowId,
           fuelCodeId: result.data.fuelCodeId,
           fuelSuffix: result.data.fuelSuffix,

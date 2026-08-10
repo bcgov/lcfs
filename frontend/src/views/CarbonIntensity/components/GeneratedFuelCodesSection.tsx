@@ -9,7 +9,8 @@ import { useFuelCodeOptions } from '@/hooks/useFuelCode'
 import { useUpdateCIApplicationGeneratedFuelCode } from '@/hooks/useCIApplication'
 import {
   defaultColDef,
-  fuelCodeColDefs
+  fuelCodeColDefs,
+  normalizeTransportModeDistancesForSave
 } from '@/views/FuelCodes/AddFuelCode/_schema'
 import type { OptionsData } from '@/types/schema'
 
@@ -60,7 +61,15 @@ const toUpdatePayload = (row: any) => {
     validationStatus,
     ...rest
   } = row
-  return rest
+  return {
+    ...rest,
+    feedstockFuelTransportMode: normalizeTransportModeDistancesForSave(
+      rest.feedstockFuelTransportMode
+    ),
+    finishedFuelTransportMode: normalizeTransportModeDistancesForSave(
+      rest.finishedFuelTransportMode
+    )
+  }
 }
 
 const replaceRow = (rows: any[], nextRow: any) =>
