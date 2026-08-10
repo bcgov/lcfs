@@ -16,6 +16,33 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
 
+vi.mock('lodash', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    debounce: (fn) => {
+      const wrapped = (...args) => fn(...args)
+      wrapped.cancel = vi.fn()
+      return wrapped
+    }
+  }
+})
+
+vi.mock('@/hooks/useCIApplication', () => ({
+  useCIFacilityLocationSearch: vi.fn(({ city, province, country } = {}) => {
+    if (city?.toLowerCase().includes('coquit')) {
+      return { data: ['Coquitlam, British Columbia, Canada'] }
+    }
+    if (province?.toLowerCase().includes('alb')) {
+      return { data: ['Alberta, Canada'] }
+    }
+    if (country?.toLowerCase().includes('can')) {
+      return { data: ['Canada'] }
+    }
+    return { data: [] }
+  })
+}))
+
 const baseProps = {
   ciApplication: undefined,
   organization: {
@@ -28,8 +55,15 @@ const baseProps = {
   unitsOfMeasure: ['L', 'kg']
 }
 
+const selectUnit = async (user, unit = 'kg') => {
+  await user.click(document.getElementById('facilityNameplateCapacityUnit'))
+  await user.click(await screen.findByRole('option', { name: unit }))
+}
+
 describe('ApplicationInformationStep', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
   afterEach(cleanup)
 
   it('renders the organization summary block when provided', () => {
@@ -84,7 +118,6 @@ describe('ApplicationInformationStep', () => {
 
     fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
 
-    // i18n mock returns keys as-is; we assert the validation key surfaces
     await waitFor(() => {
       expect(
         screen.getByText('carbonIntensity:step1.validation.countryRequired')
@@ -100,12 +133,10 @@ describe('ApplicationInformationStep', () => {
       wrapper
     })
 
+    await user.click(document.getElementById('facilityCountry'))
     await user.type(document.getElementById('facilityCountry'), 'Canada')
     await user.type(document.getElementById('facilityNameplateCapacity'), '2500')
-
-    const combobox = screen.getByRole('combobox')
-    await user.click(combobox)
-    await user.click(await screen.findByRole('option', { name: 'kg' }))
+    await selectUnit(user)
 
     fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
 
@@ -129,6 +160,7 @@ describe('ApplicationInformationStep', () => {
       wrapper
     })
 
+    await user.click(document.getElementById('facilityCountry'))
     await user.type(document.getElementById('facilityCountry'), 'Argentina')
     const capacity = document.getElementById('facilityNameplateCapacity')
     await user.clear(capacity)
@@ -151,19 +183,17 @@ describe('ApplicationInformationStep', () => {
       wrapper
     })
 
+    await user.click(document.getElementById('facilityCity'))
     await user.type(document.getElementById('facilityCity'), 'Vancouver')
+    await user.click(document.getElementById('facilityProvinceState'))
     await user.type(document.getElementById('facilityProvinceState'), 'BC')
+    await user.click(document.getElementById('facilityCountry'))
     await user.type(document.getElementById('facilityCountry'), 'Canada')
     await user.type(
       document.getElementById('facilityNameplateCapacity'),
       '2500'
     )
-
-    // MUI Select: open the listbox and click the desired option.
-    const combobox = screen.getByRole('combobox')
-    await user.click(combobox)
-    const option = await screen.findByRole('option', { name: 'kg' })
-    await user.click(option)
+    await selectUnit(user)
 
     fireEvent.change(document.getElementById('proposedFuelCodeEffectiveDate'), {
       target: { value: '2026-09-01' }
@@ -181,6 +211,81 @@ describe('ApplicationInformationStep', () => {
       facilityNameplateCapacityUnit: 'kg',
       proposedFuelCodeEffectiveDate: '2026-09-01'
     })
+  })
+
+  it('shows API suggestions and auto-populates on select', async () => {
+    const user = userEvent.setup()
+    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+
+    await user.click(document.getElementById('facilityCity'))
+    await user.type(document.getElementById('facilityCity'), 'coquit')
+
+    const option = await screen.findByRole('option', {
+      name: 'Coquitlam, British Columbia, Canada'
+    })
+    await user.click(option)
+
+    await waitFor(() => {
+      expect(document.getElementById('facilityCity').value).toBe('Coquitlam')
+      expect(document.getElementById('facilityProvinceState').value).toBe(
+        'British Columbia'
+      )
+      expect(document.getElementById('facilityCountry').value).toBe('Canada')
+    })
+  })
+
+  it('province autocomplete works without entering city first', async () => {
+    const user = userEvent.setup()
+    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+
+    await user.click(document.getElementById('facilityProvinceState'))
+    await user.type(document.getElementById('facilityProvinceState'), 'alb')
+
+    const option = await screen.findByRole('option', {
+      name: 'Alberta, Canada'
+    })
+    await user.click(option)
+
+    await waitFor(() => {
+      expect(document.getElementById('facilityCity').value).toBe('')
+      expect(document.getElementById('facilityProvinceState').value).toBe(
+        'Alberta'
+      )
+      expect(document.getElementById('facilityCountry').value).toBe('Canada')
+    })
+  })
+
+  it('country autocomplete works without entering city first', async () => {
+    const user = userEvent.setup()
+    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+
+    await user.click(document.getElementById('facilityCountry'))
+    await user.type(document.getElementById('facilityCountry'), 'can')
+
+    const option = await screen.findByRole('option', { name: 'Canada' })
+    await user.click(option)
+
+    await waitFor(() => {
+      expect(document.getElementById('facilityCity').value).toBe('')
+      expect(document.getElementById('facilityProvinceState').value).toBe('')
+      expect(document.getElementById('facilityCountry').value).toBe('Canada')
+    })
+  })
+
+  it('disables browser autofill attributes on location fields', () => {
+    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+    expect(document.getElementById('facilityCity')).toHaveAttribute(
+      'autocomplete',
+      'lcfs-no-autofill-facilityCity'
+    )
+    expect(document.getElementById('facilityProvinceState')).toHaveAttribute(
+      'autocomplete',
+      'lcfs-no-autofill-facilityProvinceState'
+    )
+    expect(document.getElementById('facilityCountry')).toHaveAttribute(
+      'autocomplete',
+      'lcfs-no-autofill-facilityCountry'
+    )
   })
 
   it('pre-populates fields from an existing application', () => {
@@ -205,7 +310,6 @@ describe('ApplicationInformationStep', () => {
     expect(document.getElementById('facilityCity').value).toBe('San Martin')
     expect(document.getElementById('facilityProvinceState').value).toBe('Santa Fe')
     expect(document.getElementById('facilityCountry').value).toBe('Argentina')
-    // Nameplate capacity is rendered with thousands separators.
     expect(document.getElementById('facilityNameplateCapacity').value).toBe('1,500')
     expect(document.getElementById('proposedFuelCodeEffectiveDate').value).toBe(
       '2026-06-01'
