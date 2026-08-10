@@ -193,6 +193,11 @@ def user_repo():
 
 
 @pytest.fixture
+def geocoder():
+    return AsyncMock()
+
+
+@pytest.fixture
 def fuel_repo():
     return AsyncMock()
 
@@ -205,11 +210,12 @@ def notification_service():
 
 
 @pytest.fixture
-def service(repo, user_repo, fuel_repo, notification_service):
+def service(repo, user_repo, fuel_repo, geocoder, notification_service):
     return CIApplicationServices(
         repo=repo,
         user_repo=user_repo,
         fuel_repo=fuel_repo,
+        geocoder=geocoder,
         notification_service=notification_service,
     )
 
@@ -376,6 +382,78 @@ async def test_get_table_options_returns_lookup_data(service, repo, fuel_repo):
     assert [ft.fuel_type for ft in result.fuel_types] == ["Biodiesel", "Electricity"]
     fuel_repo.get_fuel_types.assert_awaited_once()
     repo.get_fuel_types.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_search_facility_location_formats_geocoder_places(service, geocoder):
+    from lcfs.services.geocoder.client import Address
+
+    geocoder.search_places.return_value = [
+        Address(
+            full_address="Vancouver, British Columbia, Canada",
+            city="Vancouver",
+            province="British Columbia",
+            country="Canada",
+        ),
+        Address(
+            full_address="Vancouver, Washington, United States",
+            city="Vancouver",
+            province="Washington",
+            country="United States",
+        ),
+    ]
+
+    result = await service.search_facility_location(
+        city="Van", province=None, country=None
+    )
+
+    assert result == [
+        "Vancouver, British Columbia, Canada",
+        "Vancouver, Washington, United States",
+    ]
+    geocoder.search_places.assert_awaited_once_with(
+        "Van", place_type="city", max_results=10
+    )
+
+
+@pytest.mark.anyio
+async def test_search_facility_location_by_province(service, geocoder):
+    from lcfs.services.geocoder.client import Address
+
+    geocoder.search_places.return_value = [
+        Address(
+            full_address="Alberta, Canada",
+            province="Alberta",
+            country="Canada",
+        )
+    ]
+
+    result = await service.search_facility_location(
+        city=None, province="Alb", country=None
+    )
+
+    assert result == ["Alberta, Canada"]
+    geocoder.search_places.assert_awaited_once_with(
+        "Alb", place_type="province", max_results=10
+    )
+
+
+@pytest.mark.anyio
+async def test_search_facility_location_by_country(service, geocoder):
+    from lcfs.services.geocoder.client import Address
+
+    geocoder.search_places.return_value = [
+        Address(full_address="Canada", country="Canada")
+    ]
+
+    result = await service.search_facility_location(
+        city=None, province=None, country="Ca"
+    )
+
+    assert result == ["Canada"]
+    geocoder.search_places.assert_awaited_once_with(
+        "Ca", place_type="country", max_results=10
+    )
 
 
 # ---------------------------------------------------------------------------
