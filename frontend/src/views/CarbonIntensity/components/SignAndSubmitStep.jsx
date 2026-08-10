@@ -126,15 +126,6 @@ export const SignAndSubmitStep = ({
     }
     setErrors({})
 
-    onSave?.({
-      declarationInformationTrue: decl1,
-      declarationResponse8Weeks: decl2,
-      declarationSection206: decl3,
-      consultantConsent,
-      consultantName: consultantConsent ? consultantName.trim() : null,
-      consultantCompany: consultantConsent ? consultantCompany.trim() : null,
-      consultantEmail: consultantConsent ? consultantEmail.trim() : null
-    })
     // Confirm before the irreversible submit (#4773).
     setPendingPayload(buildSubmitPayload())
     setIsSubmitConfirmOpen(true)

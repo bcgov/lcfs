@@ -207,23 +207,6 @@ const EditViewCIApplicationBase = () => {
     [submitApplication, goToStep, t]
   )
 
-  const openSubmitConfirmation = useCallback(
-    (payload) => {
-      setModalData({
-        primaryButtonAction: () => handleSubmitApplication(payload),
-        primaryButtonText: t('carbonIntensity:step4.submit'),
-        secondaryButtonText: t('common:cancelBtn'),
-        title: t('carbonIntensity:step4.submitConfirmTitle'),
-        content: (
-          <BCTypography variant="body1">
-            {t('carbonIntensity:step4.submitConfirmText')}
-          </BCTypography>
-        )
-      })
-    },
-    [handleSubmitApplication, t]
-  )
-
   const handleStep3Save = useCallback(
     async (payload) => {
       try {
@@ -426,7 +409,7 @@ const EditViewCIApplicationBase = () => {
       <SignAndSubmitStep
         ciApplication={ciApplication}
         currentUser={currentUser}
-        onSave={openSubmitConfirmation}
+        onSave={handleSubmitApplication}
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
         readOnly={!isDraft}
