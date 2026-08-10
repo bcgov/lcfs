@@ -438,7 +438,6 @@ class CreditLedgerService:
         self,
         *,
         organization_id: int,
-        compliance_year: Optional[int],
         export_format: str = "xlsx",
     ) -> StreamingResponse:
         """
@@ -447,11 +446,8 @@ class CreditLedgerService:
         if export_format not in ["xls", "xlsx", "csv"]:
             raise ValueError("Export format not supported")
 
+        # organization dashboard exports full-ledger.
         conditions: List[any] = [CreditLedgerView.organization_id == organization_id]
-        if compliance_year:
-            conditions.append(
-                CreditLedgerView.compliance_period == str(compliance_year)
-            )
 
         sort_orders = [SortOrder(field="update_date", direction="desc")]
 
@@ -482,7 +478,7 @@ class CreditLedgerService:
 
             sheet_rows.append(
                 [
-                    int(ledger_view.compliance_period),
+                    str(ledger_view.compliance_period),
                     int(ledger_view.available_balance or 0),
                     int(ledger_view.compliance_units or 0),
                     transaction_type,

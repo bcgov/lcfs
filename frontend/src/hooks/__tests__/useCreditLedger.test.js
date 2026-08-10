@@ -320,7 +320,6 @@ describe('useDownloadCreditLedger', () => {
 
     downloadFn({
       orgId: '123',
-      complianceYear: '2024',
       format: 'xlsx'
     })
 
@@ -328,7 +327,6 @@ describe('useDownloadCreditLedger', () => {
       url: expect.stringContaining('123'),
       method: 'get',
       params: {
-        compliance_year: '2024',
         format: 'xlsx'
       }
     })
@@ -338,15 +336,13 @@ describe('useDownloadCreditLedger', () => {
     const downloadFn = useDownloadCreditLedger()
 
     downloadFn({
-      orgId: '123',
-      complianceYear: '2024'
+      orgId: '123'
     })
 
     expect(mockDownload).toHaveBeenCalledWith({
       url: expect.stringContaining('123'),
       method: 'get',
       params: {
-        compliance_year: '2024',
         format: 'xlsx'
       }
     })
@@ -374,7 +370,6 @@ describe('useDownloadCreditLedger', () => {
 
     downloadFn({
       orgId: '123',
-      complianceYear: '2024',
       format: 'csv'
     })
 
@@ -382,8 +377,25 @@ describe('useDownloadCreditLedger', () => {
       url: expect.stringContaining('123'),
       method: 'get',
       params: {
-        compliance_year: '2024',
         format: 'csv'
+      }
+    })
+  })
+
+  it('should ignore compliance year so filtered dashboards download the full ledger', () => {
+    const downloadFn = useDownloadCreditLedger()
+
+    downloadFn({
+      orgId: '123',
+      complianceYear: '2024',
+      format: 'xlsx'
+    })
+
+    expect(mockDownload).toHaveBeenCalledWith({
+      url: expect.stringContaining('123'),
+      method: 'get',
+      params: {
+        format: 'xlsx'
       }
     })
   })
@@ -408,7 +420,6 @@ describe('useDownloadCreditLedger', () => {
       url: expect.stringContaining('/credit-ledger/organization//'),
       method: 'get',
       params: {
-        compliance_year: '2024',
         format: 'xlsx'
       }
     })
