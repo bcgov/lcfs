@@ -281,8 +281,8 @@ class FuelCodeBaseSchema(BaseSchema):
     facility_nameplate_capacity: Optional[int] = None
     facility_nameplate_capacity_unit: Optional[str] = None
     former_company: Optional[str] = None
-    finished_fuel_transport_modes: Optional[List[str]] = None
-    feedstock_fuel_transport_modes: Optional[List[str]] = None
+    finished_fuel_transport_modes: Optional[List[TransportModeSelection]] = None
+    feedstock_fuel_transport_modes: Optional[List[TransportModeSelection]] = None
     notes: Optional[str] = None
 
     @field_validator("co_processed", mode="before")
