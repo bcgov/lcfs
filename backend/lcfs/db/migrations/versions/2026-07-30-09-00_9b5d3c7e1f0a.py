@@ -1,4 +1,4 @@
-"""Add CI application notification types for IDIR analysts.
+"""Add CI application notification types.
 
 Revision ID: 9b5d3c7e1f0a
 Revises: a8f0b1c2d3e4
@@ -24,6 +24,10 @@ _TYPES = [
     (
         "IDIR_ANALYST__CI_APPLICATION__APPLICANT_ACTIVITY",
         "CI application submitted, additional information provided or comment received by BCeID applicant",
+    ),
+    (
+        "IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION",
+        "Analyst recommendation provided for the CI application",
     ),
 ]
 
