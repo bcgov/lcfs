@@ -20,7 +20,8 @@ def mock_repo():
     repo.get_rows_paginated = AsyncMock(return_value=([], 0))
     repo.get_distinct_years = AsyncMock(return_value=[])
     repo.get_period_rows = AsyncMock(return_value=[])
-    repo.get_period_assessed_balance = AsyncMock(return_value=0)
+    repo.get_assessed_line_22 = AsyncMock(return_value=None)
+    repo.get_first_assessed_year = AsyncMock(return_value=None)
     return repo
 
 
@@ -188,7 +189,7 @@ async def test_period_ledger_running_balance_and_units(
             version=0,
         ),
     ]
-    mock_repo.get_period_assessed_balance.side_effect = [1850, 1000]  # current, prev
+    mock_repo.get_assessed_line_22.side_effect = [1850, 1000]  # current, prev
 
     data = await credit_ledger_service.get_period_ledger(
         organization_id=1, compliance_period=2024
@@ -326,7 +327,7 @@ async def test_period_ledger_assessed_balance_prev_and_current(
     credit_ledger_service, mock_repo
 ):
     mock_repo.get_period_rows.return_value = []
-    mock_repo.get_period_assessed_balance.side_effect = [750, 1850]  # current, prev
+    mock_repo.get_assessed_line_22.side_effect = [750, 1850]  # current, prev
 
     data = await credit_ledger_service.get_period_ledger(
         organization_id=1, compliance_period=2025
@@ -335,10 +336,10 @@ async def test_period_ledger_assessed_balance_prev_and_current(
     assert data.assessed_balance.current_balance == 750
     assert data.assessed_balance.previous_year == 2024
     assert data.assessed_balance.previous_balance == 1850
-    mock_repo.get_period_assessed_balance.assert_any_await(
+    mock_repo.get_assessed_line_22.assert_any_await(
         organization_id=1, compliance_period=2025
     )
-    mock_repo.get_period_assessed_balance.assert_any_await(
+    mock_repo.get_assessed_line_22.assert_any_await(
         organization_id=1, compliance_period=2024
     )
 
@@ -420,3 +421,236 @@ async def test_period_ledger_sorts_mixed_date_types(credit_ledger_service, mock_
     # Ordered April -> May -> June regardless of the source date type.
     assert [t.transaction_id for t in data.transactions] == [1, 2, 3]
     assert [t.running_balance for t in data.transactions] == [10, 30, 60]
+
+
+@pytest.mark.anyio
+async def test_period_ledger_blank_assessed_balance_when_no_assessed_report(
+    credit_ledger_service, mock_repo
+):
+    """
+    A year with no assessed report has no assessed balance at all (#4831) —
+    None rather than 0, so the UI leaves it blank instead of implying the
+    organization ended the year at nil.
+    """
+    mock_repo.get_period_rows.return_value = []
+    mock_repo.get_assessed_line_22.side_effect = [None, 1200]  # current, prev
+
+    data = await credit_ledger_service.get_period_ledger(
+        organization_id=1, compliance_period=2025
+    )
+
+    assert data.assessed_balance.current_balance is None
+    assert data.assessed_balance.previous_balance == 1200
+
+
+@pytest.mark.anyio
+async def test_period_ledger_requests_april_to_march_envelope(
+    credit_ledger_service, mock_repo
+):
+    """The repo is asked for the April 1 – March 31 envelope (#4832)."""
+    mock_repo.get_period_rows.return_value = []
+    mock_repo.get_first_assessed_year.return_value = 2019
+
+    await credit_ledger_service.get_period_ledger(
+        organization_id=1, compliance_period=2024
+    )
+
+    mock_repo.get_period_rows.assert_awaited_once_with(
+        organization_id=1,
+        compliance_period=2024,
+        envelope_start=date(2024, 4, 1),
+        envelope_end=date(2025, 3, 31),
+    )
+
+
+@pytest.mark.anyio
+async def test_period_ledger_first_assessed_year_envelope_opens_in_january(
+    credit_ledger_service, mock_repo
+):
+    """The organization's first assessed year also covers January–March (#4832)."""
+    mock_repo.get_period_rows.return_value = []
+    mock_repo.get_first_assessed_year.return_value = 2024
+
+    await credit_ledger_service.get_period_ledger(
+        organization_id=1, compliance_period=2024
+    )
+
+    mock_repo.get_period_rows.assert_awaited_once_with(
+        organization_id=1,
+        compliance_period=2024,
+        envelope_start=date(2024, 1, 1),
+        envelope_end=date(2025, 3, 31),
+    )
+
+
+@pytest.mark.anyio
+async def test_export_period_ledger_matches_the_on_screen_rows(
+    credit_ledger_service, mock_repo
+):
+    """
+    The period export is built from get_period_ledger, so it carries the same
+    envelope, rows and running balance as the screen (#4832) — ids and type
+    labels formatted the way the ledger displays them.
+    """
+    mock_repo.get_first_assessed_year.return_value = 2019
+    mock_repo.get_period_rows.return_value = [
+        _txn(
+            transaction_id=43,
+            transaction_type="InitiativeAgreement",
+            status="Approved",
+            quantity=10000,
+            to_org=1,
+            effective_date=date(2024, 4, 3),
+        ),
+        _txn(
+            transaction_id=79,
+            transaction_type="ComplianceReport",
+            status="Assessed",
+            quantity=-50,
+            to_org=1,
+            effective_date=date(2025, 2, 5),
+            version=1,
+        ),
+    ]
+
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        resp = await credit_ledger_service.export_period_ledger(
+            organization_id=1, compliance_year=2024, export_format="xlsx"
+        )
+
+    assert isinstance(resp, StreamingResponse)
+    # The export asks for the same April–March envelope the screen renders.
+    mock_repo.get_period_rows.assert_awaited_once_with(
+        organization_id=1,
+        compliance_period=2024,
+        envelope_start=date(2024, 4, 1),
+        envelope_end=date(2025, 3, 31),
+    )
+
+    _, kwargs = mock_add_sheet.call_args
+    rows = kwargs["rows"]
+    assert [r[0] for r in rows] == ["IA43", "CR79"]
+    assert rows[0][2] == "Initiative Agreement"
+    assert rows[1][2] == "Compliance Report - Supplemental 1"
+    # Units in / out / running balance, same as the on-screen columns.
+    assert rows[0][3:] == [10000, 0, 10000]
+    assert rows[1][3:] == [0, 50, 9950]
+
+
+@pytest.mark.anyio
+async def test_export_period_ledger_passes_pending_toggle_through(
+    credit_ledger_service, mock_repo
+):
+    """Downloading with 'show pending' on includes those rows."""
+    mock_repo.get_period_rows.return_value = [
+        _txn(
+            transaction_id=91,
+            transaction_type="Transfer",
+            status="Submitted",
+            quantity=200,
+            to_org=1,
+            effective_date=date(2024, 9, 9),
+        )
+    ]
+
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        await credit_ledger_service.export_period_ledger(
+            organization_id=1,
+            compliance_year=2024,
+            include_pending=True,
+            export_format="xlsx",
+        )
+    assert [r[0] for r in mock_add_sheet.call_args[1]["rows"]] == ["CT91"]
+
+    # ...and with the toggle off the same pending row is left out.
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        await credit_ledger_service.export_period_ledger(
+            organization_id=1,
+            compliance_year=2024,
+            include_pending=False,
+            export_format="xlsx",
+        )
+    assert mock_add_sheet.call_args[1]["rows"] == []
+
+
+@pytest.mark.anyio
+async def test_export_period_ledger_rejects_unsupported_format(
+    credit_ledger_service, mock_repo
+):
+    with pytest.raises(ValueError):
+        await credit_ledger_service.export_period_ledger(
+            organization_id=1, compliance_year=2024, export_format="pdf"
+        )
+
+
+@pytest.mark.anyio
+async def test_export_period_ledger_handles_timezone_aware_dates(
+    credit_ledger_service, mock_repo
+):
+    """
+    Regression: openpyxl refuses tz-aware datetimes ("Excel does not support
+    datetimes with timezones") and mv_transaction_aggregate emits a mix of
+    date, naive and tz-aware values, so writing them through unchanged failed
+    the whole download. Builds a real spreadsheet — no mocked builder — so the
+    serialization is actually exercised.
+    """
+    mock_repo.get_period_rows.return_value = [
+        _txn(
+            transaction_id=1,
+            transaction_type="Transfer",
+            status="Recorded",
+            quantity=10,
+            to_org=1,
+            effective_date=datetime(2024, 4, 3, 9, 30, tzinfo=timezone.utc),
+        ),
+        _txn(
+            transaction_id=2,
+            transaction_type="Transfer",
+            status="Recorded",
+            quantity=20,
+            to_org=1,
+            effective_date=date(2024, 5, 1),
+        ),
+        _txn(
+            transaction_id=3,
+            transaction_type="Transfer",
+            status="Recorded",
+            quantity=30,
+            to_org=1,
+            effective_date=datetime(2024, 6, 1, 12, 0),
+        ),
+    ]
+
+    resp = await credit_ledger_service.export_period_ledger(
+        organization_id=1, compliance_year=2024, export_format="xlsx"
+    )
+    assert isinstance(resp, StreamingResponse)
+
+    # Every effective date reaches the sheet as a plain, tz-free date.
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        await credit_ledger_service.export_period_ledger(
+            organization_id=1, compliance_year=2024, export_format="xlsx"
+        )
+    dates = [r[1] for r in mock_add_sheet.call_args[1]["rows"]]
+    assert dates == [date(2024, 4, 3), date(2024, 5, 1), date(2024, 6, 1)]
+    assert all(not isinstance(d, datetime) for d in dates)
