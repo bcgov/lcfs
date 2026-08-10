@@ -37,7 +37,7 @@ vi.mock('../_schema', () => ({
   ],
   nonComplianceColumns: (t, penaltyEnabled) => [
     { field: 'line', headerName: 'Line' },
-    { field: 'totalValue', headerName: 'Total Value', editable: penaltyEnabled }
+    { field: 'totalValue', headerName: 'Total value', editable: penaltyEnabled }
   ]
 }))
 
@@ -234,7 +234,7 @@ describe('ComplianceReportSummary', () => {
     [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
       {
         id: 'submit-report-btn',
-        label: 'Submit Report',
+        label: 'Submit report',
         variant: 'contained',
         color: 'primary',
         disabled: true,
@@ -669,7 +669,7 @@ describe('ComplianceReportSummary', () => {
       [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
         {
           id: 'submit-report-btn',
-          label: 'Submit Report',
+          label: 'Submit report',
           variant: 'contained',
           color: 'primary',
           disabled: false,
