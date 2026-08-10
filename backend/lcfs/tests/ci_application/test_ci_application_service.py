@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 
@@ -208,6 +208,11 @@ def mock_user():
     user.keycloak_username = "ci_applicant_user"
     user.user_profile_id = 123
     user.role_names = set()
+    return user
+
+
+def _grant_signing_authority(user):
+    user.role_names = {RoleEnum.SIGNING_AUTHORITY}
     return user
 
 
@@ -1315,6 +1320,7 @@ async def test_update_generated_fuel_code_clearing_required_date_raises_validati
 
 @pytest.mark.anyio
 async def test_step4_submit_validates_status_must_be_draft(service, repo, mock_user):
+    _grant_signing_authority(mock_user)
     ci = _ci_application(status=_status("Submitted", 2))
     ci.pathways = [object()]
     with pytest.raises(HTTPException) as exc:
@@ -1325,6 +1331,7 @@ async def test_step4_submit_validates_status_must_be_draft(service, repo, mock_u
 
 @pytest.mark.anyio
 async def test_step4_submit_requires_at_least_one_pathway(service, repo, mock_user):
+    _grant_signing_authority(mock_user)
     ci = _ci_application(status=_status("Draft", 1))
     ci.pathways = []
     with pytest.raises(HTTPException) as exc:
@@ -1335,6 +1342,7 @@ async def test_step4_submit_requires_at_least_one_pathway(service, repo, mock_us
 
 @pytest.mark.anyio
 async def test_step4_submit_succeeds_when_documents_missing(service, repo, mock_user):
+    _grant_signing_authority(mock_user)
     # Step 3 upload validation is disabled for the simplified flow (#4669), so
     # submission no longer requires the Technical report / GHGenius uploads.
     ci = _draft_ci_with_pathways()
@@ -1354,6 +1362,7 @@ async def test_step4_submit_succeeds_when_documents_missing(service, repo, mock_
 
 @pytest.mark.anyio
 async def test_step4_submit_succeeds_and_transitions_status(service, repo, mock_user):
+    _grant_signing_authority(mock_user)
     ci = _draft_ci_with_pathways()
     repo.get_document_categories.return_value = [
         "technical_report",
@@ -1379,9 +1388,28 @@ async def test_step4_submit_succeeds_and_transitions_status(service, repo, mock_
 
 
 @pytest.mark.anyio
+async def test_step4_submit_requires_signing_authority_and_does_not_transition(
+    service, repo, mock_user
+):
+    ci = _draft_ci_with_pathways()
+    original_status_id = ci.status_id
+
+    with pytest.raises(HTTPException) as exc:
+        await service.submit_application(ci, _step4_payload(), mock_user)
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert "Signing Authority" in exc.value.detail
+    assert ci.status_id == original_status_id
+    repo.get_status_by_name.assert_not_awaited()
+    repo.update.assert_not_awaited()
+    repo.add_history.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_step4_submit_persists_consultant_when_consented(
     service, repo, mock_user
 ):
+    _grant_signing_authority(mock_user)
     ci = _draft_ci_with_pathways()
     repo.get_document_categories.return_value = [
         "technical_report",
@@ -1409,6 +1437,7 @@ async def test_step4_submit_persists_consultant_when_consented(
 async def test_step4_submit_clears_consultant_when_not_consented(
     service, repo, mock_user
 ):
+    _grant_signing_authority(mock_user)
     ci = _draft_ci_with_pathways()
     ci.consultant_name = "stale"
     ci.consultant_company = "stale"

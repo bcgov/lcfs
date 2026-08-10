@@ -1939,6 +1939,12 @@ class CIApplicationServices:
         and consultant info and validating that prior steps left the
         record in a submittable state.
         """
+        if not user_has_roles(user, [RoleEnum.SIGNING_AUTHORITY]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Signing Authority role is required to submit a CI application.",
+            )
+
         if (
             ci_application.ci_application_status.status
             != CIApplicationStatusEnum.Draft.value
