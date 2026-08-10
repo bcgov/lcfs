@@ -47,8 +47,8 @@ vi.mock('react-i18next', () => ({
         'fuelCode:detail.chartAriaDescription': 'Volume over time',
         'fuelCode:detail.complianceUnitsChartAriaDescription':
           'Compliance units over time',
-        'fuelCode:detail.totalVolume': 'Total Volume',
-        'fuelCode:detail.totalComplianceUnits': 'Compliance Units',
+        'fuelCode:detail.totalVolume': 'Total volume',
+        'fuelCode:detail.totalComplianceUnits': 'Compliance units',
         'fuelCode:detail.year': 'Year',
         'fuelCode:detail.volumeOverTimeTitle': 'Volume over time',
         'fuelCode:detail.complianceUnitsOverTimeTitle':

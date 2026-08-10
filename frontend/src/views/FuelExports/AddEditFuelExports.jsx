@@ -26,6 +26,13 @@ export const AddEditFuelExports = () => {
   const [columnDefs, setColumnDefs] = useState([])
   const [gridReady, setGridReady] = useState(false)
   const alertRef = useRef()
+  // Pending grid timers, cleared on unmount. `onGridReady` is invoked by the
+  // grid asynchronously and can land after unmount, so clearing alone is not
+  // enough — isMountedRef also stops a late call scheduling a fresh timer.
+  // Without both, the queued callback calls setState against a torn-down
+  // environment ("window is not defined").
+  const gridTimersRef = useRef([])
+  const isMountedRef = useRef(true)
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelExport'])
   const params = useParams()
@@ -72,6 +79,7 @@ export const AddEditFuelExports = () => {
 
   const onGridReady = useCallback(
     async (params) => {
+      if (!isMountedRef.current) return
       if (!isArrayEmpty(data)) {
         const updatedRowData = data.fuelExports.map((item) => ({
           ...item,
@@ -96,17 +104,29 @@ export const AddEditFuelExports = () => {
       }
       params.api.sizeColumnsToFit()
 
-      setTimeout(() => {
-        const lastRowIndex = params.api.getLastDisplayedRowIndex()
-        params.api.startEditingCell({
-          rowIndex: lastRowIndex,
-          colKey: 'fuelTypeId'
-        })
-        setGridReady(true)
-      }, 500)
+      gridTimersRef.current.push(
+        setTimeout(() => {
+          if (!isMountedRef.current) return
+          const lastRowIndex = params.api.getLastDisplayedRowIndex()
+          params.api.startEditingCell({
+            rowIndex: lastRowIndex,
+            colKey: 'fuelTypeId'
+          })
+          setGridReady(true)
+        }, 500)
+      )
     },
     [compliancePeriod, complianceReportId, data, isSupplemental]
   )
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      gridTimersRef.current.forEach(clearTimeout)
+      gridTimersRef.current = []
+    }
+  }, [])
 
   useEffect(() => {
     if (optionsData?.fuelTypes?.length > 0) {

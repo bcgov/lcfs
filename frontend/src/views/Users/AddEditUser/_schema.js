@@ -152,8 +152,8 @@ const toOption = (role, t) => ({
 export const adminRoleOptions = (t) => [
   toOption(roles.administrator, t),
   {
-    label: 'System Admin',
-    header: 'System Admin',
+    label: 'System admin',
+    header: 'System admin',
     text: t('admin:userForm.system_admin'),
     // roles.system_admin is 'System Admin'; lowercase matches RoleEnum.SYSTEM_ADMIN.value.lower()
     value: roles.system_admin.toLowerCase()

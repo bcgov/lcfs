@@ -41,7 +41,7 @@ vi.mock('react-i18next', () => ({
       if (key === 'common:saveBtn') return 'Save'
       if (key === 'common:backBtn') return 'Back'
       if (key === 'admin:deleteUser.button') return 'Delete User'
-      if (key === 'admin:deleteUser.confirmTitle') return 'Confirm Deletion'
+      if (key === 'admin:deleteUser.confirmTitle') return 'Confirm deletion'
       if (key === 'admin:deleteUser.confirmMessage')
         return 'Are you sure you want to delete this user?'
       if (key === 'admin:deleteUser.success')
@@ -760,7 +760,7 @@ describe('AddEditUser', () => {
     fireEvent.click(screen.getByTestId('delete-user-btn'))
     
     await waitFor(() => {
-      expect(screen.getByText('Confirm Deletion')).toBeInTheDocument()
+      expect(screen.getByText('Confirm deletion')).toBeInTheDocument()
       expect(screen.getByText('Are you sure you want to delete this user?')).toBeInTheDocument()
     })
   })
@@ -795,14 +795,14 @@ describe('AddEditUser', () => {
     fireEvent.click(screen.getByTestId('delete-user-btn'))
     
     await waitFor(() => {
-      expect(screen.getByText('Confirm Deletion')).toBeInTheDocument()
+      expect(screen.getByText('Confirm deletion')).toBeInTheDocument()
     })
     
     // Close dialog - the cancel button in dialog has data-test="back-btn"
     fireEvent.click(screen.getByTestId('back-btn'))
     
     await waitFor(() => {
-      expect(screen.queryByText('Confirm Deletion')).not.toBeInTheDocument()
+      expect(screen.queryByText('Confirm deletion')).not.toBeInTheDocument()
     })
   })
 
@@ -838,7 +838,7 @@ describe('AddEditUser', () => {
     fireEvent.click(screen.getByTestId('delete-user-btn'))
     
     await waitFor(() => {
-      expect(screen.getByText('Confirm Deletion')).toBeInTheDocument()
+      expect(screen.getByText('Confirm deletion')).toBeInTheDocument()
     })
     
     // Confirm deletion - look for the button specifically in the dialog

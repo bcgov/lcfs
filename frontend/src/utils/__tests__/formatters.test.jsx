@@ -14,7 +14,9 @@ import {
   formatNumberWithCommas,
   spacesFormatter,
   timezoneFormatter,
-  convertObjectKeys
+  convertObjectKeys,
+  formatTransactionId,
+  parseTransactionIdNumber
 } from '@/utils/formatters'
 import { roles } from '@/constants/roles'
 
@@ -409,5 +411,54 @@ describe('dateToLongString', () => {
     expect(dateToLongString(undefined)).toBe('')
     expect(dateToLongString('')).toBe('')
     expect(dateToLongString('not a date')).toBe('Invalid Date')
+  })
+})
+
+describe('formatTransactionId', () => {
+  it('should prefix each transaction type with its own code', () => {
+    expect(formatTransactionId('Transfer', 4825)).toBe('CT4825')
+    expect(formatTransactionId('InitiativeAgreement', 3113)).toBe('IA3113')
+    expect(formatTransactionId('AdminAdjustment', 70)).toBe('AA70')
+    expect(formatTransactionId('ComplianceReport', 3798)).toBe('CR3798')
+    expect(formatTransactionId('AggregatorIssuance', 12)).toBe('AG12')
+  })
+
+  it('should return the bare id for types without a user-facing prefix', () => {
+    expect(formatTransactionId('StandaloneTransaction', 91)).toBe('91')
+    expect(formatTransactionId('SomethingNew', 5)).toBe('5')
+  })
+
+  it('should handle missing type or id', () => {
+    expect(formatTransactionId(null, 7)).toBe('7')
+    expect(formatTransactionId(undefined, 7)).toBe('7')
+    expect(formatTransactionId('Transfer', null)).toBe('CT')
+  })
+})
+
+describe('parseTransactionIdNumber', () => {
+  it('should strip the prefix and return the number', () => {
+    expect(parseTransactionIdNumber('CT4825')).toBe(4825)
+    expect(parseTransactionIdNumber('IA3113')).toBe(3113)
+    expect(parseTransactionIdNumber('AA70')).toBe(70)
+    expect(parseTransactionIdNumber('CR3798')).toBe(3798)
+  })
+
+  it('should handle ids with no prefix', () => {
+    expect(parseTransactionIdNumber('91')).toBe(91)
+    expect(parseTransactionIdNumber(91)).toBe(91)
+  })
+
+  it('should return 0 for unparseable input', () => {
+    expect(parseTransactionIdNumber('')).toBe(0)
+    expect(parseTransactionIdNumber('CT')).toBe(0)
+    expect(parseTransactionIdNumber(null)).toBe(0)
+    expect(parseTransactionIdNumber(undefined)).toBe(0)
+  })
+
+  it('should order mixed-prefix ids numerically, not lexically', () => {
+    const sorted = ['CT9', 'IA100', 'AA70'].sort(
+      (a, b) => parseTransactionIdNumber(a) - parseTransactionIdNumber(b)
+    )
+    expect(sorted).toEqual(['CT9', 'AA70', 'IA100'])
   })
 })

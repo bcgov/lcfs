@@ -313,6 +313,76 @@ class TestBCGeocoderService:
         assert suggestions == []
 
     @pytest.mark.anyio
+    async def test_search_places_city(self, geocoder_service):
+        """BC Geocoder supplies BC cities first; Nominatim fills the rest; duplicates dropped."""
+
+        bc_geocoder_response = {
+            "features": [
+                {
+                    "properties": {
+                        "localityName": "Vancouver",
+                        "provinceCode": "BC",
+                        "fullAddress": "Vancouver, BC",
+                        "score": 90,
+                    },
+                    "geometry": {"coordinates": [-123.1207, 49.2827]},
+                }
+            ]
+        }
+
+        def _nom(name, state, country, lat, lon):
+            return {
+                "lat": str(lat), "lon": str(lon), "name": name,
+                "display_name": f"{name}, {state}, {country}",
+                "address": {"city": name, "state": state, "country": country},
+            }
+
+        # Canada Nominatim pass — Vancouver BC is a duplicate, US Vancouver is new.
+        nominatim_ca = [
+            _nom("Vancouver", "British Columbia", "Canada", 49.2827, -123.1207),
+            _nom("Vancouver", "Washington", "United States", 45.628, -122.6739),
+        ]
+
+        with patch.object(
+            geocoder_service, "_make_request", new_callable=AsyncMock
+        ) as mock_request:
+            # Call order: BC Geocoder, Nominatim CA, Nominatim worldwide (not reached — full)
+            mock_request.side_effect = [bc_geocoder_response, nominatim_ca]
+
+            places = await geocoder_service.search_places(
+                "Van", place_type="city", max_results=10
+            )
+
+            # BC geocoder result first, then unique worldwide entry.
+            assert places[0].city == "Vancouver"
+            assert places[0].province == "British Columbia"
+            assert places[0].country == "Canada"
+            # US Vancouver deduplicated in from Nominatim CA pass.
+            assert any(p.country == "United States" for p in places)
+
+            # First HTTP call must be BC Geocoder autocomplete.
+            first_url = mock_request.call_args_list[0].args[0]
+            first_params = mock_request.call_args_list[0].args[1]
+            assert "geocoder.api.gov.bc.ca" in first_url
+            assert first_params["addressString"] == "Van"
+            assert first_params["autoComplete"] == "true"
+
+    @pytest.mark.anyio
+    async def test_search_places_empty_query(self, geocoder_service):
+        places = await geocoder_service.search_places("", place_type="city")
+        assert places == []
+
+    @pytest.mark.anyio
+    async def test_search_places_api_error_returns_empty(self, geocoder_service):
+        with patch.object(
+            geocoder_service, "_make_request", new_callable=AsyncMock
+        ) as mock_request:
+            mock_request.side_effect = RuntimeError("network")
+            places = await geocoder_service.search_places("Vancouver", place_type="city")
+            assert places == []
+            assert geocoder_service._metrics["api_errors"] >= 1
+
+    @pytest.mark.anyio
     async def test_clear_cache(self, geocoder_service):
         """Test cache clearing functionality."""
         # Add something to cache

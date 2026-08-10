@@ -8,11 +8,13 @@ import {
   FormHelperText,
   InputLabel,
   Stack,
-  TextField
+  TextField,
+  Tooltip
 } from '@mui/material'
 
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
+import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -35,7 +37,8 @@ export const SignAndSubmitStep = ({
   onAutoSave,
   onDelete,
   isSaving = false,
-  readOnly = false
+  readOnly = false,
+  hasSigningAuthority = true
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
 
@@ -59,6 +62,8 @@ export const SignAndSubmitStep = ({
   )
 
   const [errors, setErrors] = useState({})
+  const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = useState(false)
+  const [pendingPayload, setPendingPayload] = useState(null)
 
   // Last values known to be persisted, so a blur that changed nothing does not
   // fire a redundant request (and a redundant toast).
@@ -153,7 +158,23 @@ export const SignAndSubmitStep = ({
     }
   }, [currentUser])
 
+  const declarationsDisabled = readOnly || !hasSigningAuthority
+  const declarationTooltip = !hasSigningAuthority
+    ? t('carbonIntensity:step4.declarations.signingAuthorityRequired')
+    : ''
+  const buildSubmitPayload = () => ({
+    declarationInformationTrue: decl1,
+    declarationResponse8Weeks: decl2,
+    declarationSection206: decl3,
+    consultantConsent,
+    consultantName: consultantConsent ? consultantName.trim() : null,
+    consultantCompany: consultantConsent ? consultantCompany.trim() : null,
+    consultantEmail: consultantConsent ? consultantEmail.trim() : null
+  })
+
   const handleSubmit = () => {
+    if (!hasSigningAuthority) return
+
     const newErrors = {}
     if (!(decl1 && decl2 && decl3)) {
       newErrors.declarations = t(
@@ -186,15 +207,21 @@ export const SignAndSubmitStep = ({
       return
     }
     setErrors({})
-    onSave?.({
-      declarationInformationTrue: decl1,
-      declarationResponse8Weeks: decl2,
-      declarationSection206: decl3,
-      consultantConsent,
-      consultantName: consultantConsent ? consultantName.trim() : null,
-      consultantCompany: consultantConsent ? consultantCompany.trim() : null,
-      consultantEmail: consultantConsent ? consultantEmail.trim() : null
-    })
+
+    // Confirm before the irreversible submit (#4773).
+    setPendingPayload(buildSubmitPayload())
+    setIsSubmitConfirmOpen(true)
+  }
+
+  const closeSubmitConfirm = () => {
+    setIsSubmitConfirmOpen(false)
+    setPendingPayload(null)
+  }
+
+  const confirmSubmit = () => {
+    const payload = pendingPayload
+    closeSubmitConfirm()
+    if (payload) onSave?.(payload)
   }
 
   return (
@@ -213,13 +240,17 @@ export const SignAndSubmitStep = ({
             <FormControlLabel
               sx={{ alignItems: 'flex-start', m: 0 }}
               control={
-                <Checkbox
-                  checked={decl1}
-                  onChange={(e) => setDecl1(e.target.checked)}
-                  disabled={readOnly}
-                  sx={{ pt: 0, pb: 0 }}
-                  inputProps={{ 'data-test': 'ci-step4-decl-1' }}
-                />
+                <Tooltip title={declarationTooltip} arrow>
+                  <span data-test="ci-step4-decl-1-tooltip">
+                    <Checkbox
+                      checked={decl1}
+                      onChange={(e) => setDecl1(e.target.checked)}
+                      disabled={declarationsDisabled}
+                      sx={{ pt: 0, pb: 0 }}
+                      inputProps={{ 'data-test': 'ci-step4-decl-1' }}
+                    />
+                  </span>
+                </Tooltip>
               }
               label={
                 <BCTypography variant="body2" component="span">
@@ -237,13 +268,17 @@ export const SignAndSubmitStep = ({
             <FormControlLabel
               sx={{ alignItems: 'flex-start', m: 0 }}
               control={
-                <Checkbox
-                  checked={decl2}
-                  onChange={(e) => setDecl2(e.target.checked)}
-                  disabled={readOnly}
-                  sx={{ pt: 0, pb: 0 }}
-                  inputProps={{ 'data-test': 'ci-step4-decl-2' }}
-                />
+                <Tooltip title={declarationTooltip} arrow>
+                  <span data-test="ci-step4-decl-2-tooltip">
+                    <Checkbox
+                      checked={decl2}
+                      onChange={(e) => setDecl2(e.target.checked)}
+                      disabled={declarationsDisabled}
+                      sx={{ pt: 0, pb: 0 }}
+                      inputProps={{ 'data-test': 'ci-step4-decl-2' }}
+                    />
+                  </span>
+                </Tooltip>
               }
               label={
                 <BCTypography variant="body2" component="span">
@@ -261,13 +296,17 @@ export const SignAndSubmitStep = ({
             <FormControlLabel
               sx={{ alignItems: 'flex-start', m: 0 }}
               control={
-                <Checkbox
-                  checked={decl3}
-                  onChange={(e) => setDecl3(e.target.checked)}
-                  disabled={readOnly}
-                  sx={{ pt: 0, pb: 0 }}
-                  inputProps={{ 'data-test': 'ci-step4-decl-3' }}
-                />
+                <Tooltip title={declarationTooltip} arrow>
+                  <span data-test="ci-step4-decl-3-tooltip">
+                    <Checkbox
+                      checked={decl3}
+                      onChange={(e) => setDecl3(e.target.checked)}
+                      disabled={declarationsDisabled}
+                      sx={{ pt: 0, pb: 0 }}
+                      inputProps={{ 'data-test': 'ci-step4-decl-3' }}
+                    />
+                  </span>
+                </Tooltip>
               }
               label={
                 <BCTypography variant="body2" component="span">
@@ -426,7 +465,12 @@ export const SignAndSubmitStep = ({
           variant="contained"
           color="primary"
           onClick={handleSubmit}
-          disabled={readOnly || isSaving || !(decl1 && decl2 && decl3)}
+          disabled={
+            readOnly ||
+            isSaving ||
+            !hasSigningAuthority ||
+            !(decl1 && decl2 && decl3)
+          }
           data-test="ci-step4-submit-btn"
         >
           {t('carbonIntensity:step4.submit')}
@@ -444,6 +488,18 @@ export const SignAndSubmitStep = ({
           </BCButton>
         )}
       </Stack>
+
+      <BCModal
+        open={isSubmitConfirmOpen}
+        onClose={closeSubmitConfirm}
+        data={{
+          title: t('common:confirmation'),
+          primaryButtonText: t('carbonIntensity:step4.submit'),
+          primaryButtonAction: confirmSubmit,
+          secondaryButtonText: t('common:cancelBtn'),
+          content: t('carbonIntensity:step4.submitConfirmText')
+        }}
+      />
     </Box>
   )
 }

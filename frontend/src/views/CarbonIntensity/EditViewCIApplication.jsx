@@ -55,7 +55,10 @@ const getApiError = (err, fallback) => {
     return data.errors[0].message
   }
   if (typeof data.detail === 'string' && data.detail) return data.detail
-  if (typeof data.message === 'string' && data.message !== 'Validation failed') {
+  if (
+    typeof data.message === 'string' &&
+    data.message !== 'Validation failed'
+  ) {
     return data.message
   }
   return err?.message || fallback
@@ -70,7 +73,7 @@ const EditViewCIApplicationBase = () => {
   const { ciApplicationId } = useParams()
   const isAdd = !ciApplicationId
 
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
 
   const { data: ciApplication, isLoading: isLoadingApplication } =
     useGetCIApplication(ciApplicationId)
@@ -144,7 +147,6 @@ const EditViewCIApplicationBase = () => {
     isUpdatingStep4 ||
     isSubmitting
 
-  const { hasAnyRole } = useCurrentUser()
   const isGovernment = !!hasAnyRole?.(
     roles.government,
     roles.analyst,
@@ -167,6 +169,7 @@ const EditViewCIApplicationBase = () => {
   const goToStep = useCallback(
     (index) => {
       const clamped = Math.max(0, Math.min(STEP_KEYS.length - 1, index))
+      const stepKey = STEP_KEYS[clamped]
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev)
@@ -175,9 +178,13 @@ const EditViewCIApplicationBase = () => {
         },
         { replace: true }
       )
-      setExpanded([STEP_KEYS[clamped]])
-      if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
+      setExpanded([stepKey])
+      if (typeof document !== 'undefined') {
+        requestAnimationFrame(() => {
+          document
+            .querySelector(`[data-test="ci-step-accordion-${stepKey}"]`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        })
       }
     },
     [setSearchParams]
@@ -197,6 +204,8 @@ const EditViewCIApplicationBase = () => {
           message: getApiError(err, 'Failed to submit application.'),
           severity: 'error'
         })
+      } finally {
+        setModalData(null)
       }
     },
     [submitApplication, goToStep, t]
@@ -366,6 +375,7 @@ const EditViewCIApplicationBase = () => {
     !isGovernment &&
     ciApplication?.status?.status === 'Submitted' &&
     !!ciApplication?.documentUploadEnabled
+  const hasSigningAuthority = !!hasRoles?.(roles.signing_authority)
 
   // Hooks must run on every render — keep this above the loading-state
   // early return so hook order stays stable across renders.
@@ -428,6 +438,7 @@ const EditViewCIApplicationBase = () => {
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
         readOnly={!isDraft}
+        hasSigningAuthority={hasSigningAuthority}
       />
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step4" />
@@ -601,7 +612,7 @@ const EditViewCIApplicationBase = () => {
             expanded={expanded.includes(step.key)}
             onChange={handleAccordionToggle(step.key)}
             data-test={`ci-step-accordion-${step.key}`}
-            sx={{ mb: 1 }}
+            sx={{ mb: 1, scrollMarginTop: 96 }}
           >
             <AccordionSummary expandIcon={<ExpandMore />}>
               <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>

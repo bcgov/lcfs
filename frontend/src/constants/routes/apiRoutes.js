@@ -38,6 +38,8 @@ export const apiRoutes = {
   creditLedgerPeriod: '/credit-ledger/organization/:orgID/period/:year',
   creditLedgerYears: '/credit-ledger/organization/:orgID/years',
   exportCreditLedger: '/credit-ledger/organization/:orgID/export',
+  exportCreditLedgerPeriod:
+    '/credit-ledger/organization/:orgID/period/:year/export',
 
   // organizations
   organizationSearch: '/organizations/search?',
@@ -87,6 +89,7 @@ export const apiRoutes = {
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',
+  ciApplicationLocationSearch: '/ci-applications/location-search?',
   getCIApplications: '/ci-applications/list',
   getCIApplication: '/ci-applications/:ciApplicationId',
   createCIApplication: '/ci-applications',

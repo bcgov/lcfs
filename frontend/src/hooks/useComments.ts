@@ -42,12 +42,27 @@ export const useComments = (
     enabled = true,
     autoFetch = true,
     optimisticUpdates = true,
-    sortOrder = 'desc',
+    sortOrder: initialSortOrder = 'desc',
     commentMode = 'internal-only',
     ...restOptions
   } = options
 
-  const isGov = useMemo(() => hasAnyRole(roles.government), [hasAnyRole])
+  const [sortOrder, setSortOrder] = useState(initialSortOrder)
+
+  const handleSortOrderChange = useCallback((newSortOrder: any) => {
+    setSortOrder(newSortOrder)
+  }, [])
+
+  const isGov = useMemo(
+    () =>
+      hasAnyRole(
+        roles.government,
+        roles.director,
+        roles.analyst,
+        roles.compliance_manager
+      ),
+    [hasAnyRole]
+  )
   const hasInternalAudienceScopeRole = useMemo(
     () =>
       isGov ||
@@ -110,19 +125,11 @@ export const useComments = (
       `/internal_comments/${entityType}/${entityId}`
     )
 
-    const sortedComments = response.data.sort((a: any, b: any) => {
-      if (sortOrder === 'desc') {
-        return b.internalCommentId - a.internalCommentId
-      } else {
-        return a.internalCommentId - b.internalCommentId
-      }
-    })
-
-    return sortedComments
-  }, [apiService, entityType, entityId, sortOrder])
+    return response.data
+  }, [apiService, entityType, entityId])
 
   const commentsQuery = useQuery({
-    queryKey: ['internal-comments', entityType, entityId, { sortOrder }],
+    queryKey: ['internal-comments', entityType, entityId],
     queryFn: fetchComments,
     enabled: enabled && autoFetch && !!entityId && !!entityType,
     staleTime,
@@ -140,7 +147,10 @@ export const useComments = (
       const { commentText, files } =
         typeof variables === 'string'
           ? { commentText: variables, files: [] as File[] }
-          : { commentText: variables?.commentText, files: variables?.files || [] }
+          : {
+              commentText: variables?.commentText,
+              files: variables?.files || []
+            }
 
       if (!commentText?.trim()) {
         throw new Error('Comment text is required')
@@ -182,8 +192,7 @@ export const useComments = (
       const previousComments = queryClient.getQueryData([
         'internal-comments',
         entityType,
-        entityId,
-        { sortOrder }
+        entityId
       ]) as any
 
       if (previousComments) {
@@ -203,7 +212,7 @@ export const useComments = (
             : [...previousComments, optimisticComment]
 
         queryClient.setQueryData(
-          ['internal-comments', entityType, entityId, { sortOrder }],
+          ['internal-comments', entityType, entityId],
           newComments
         )
       }
@@ -213,14 +222,14 @@ export const useComments = (
     onError: (_err, _commentText, context) => {
       if (context?.previousComments && optimisticUpdates) {
         queryClient.setQueryData(
-          ['internal-comments', entityType, entityId, { sortOrder }],
+          ['internal-comments', entityType, entityId],
           context.previousComments
         )
       }
     },
     onSuccess: (newComment) => {
       queryClient.setQueryData(
-        ['internal-comments', entityType, entityId, { sortOrder }],
+        ['internal-comments', entityType, entityId],
         (oldData: any) => {
           if (!oldData) return [newComment]
 
@@ -327,8 +336,7 @@ export const useComments = (
       const previousComments = queryClient.getQueryData([
         'internal-comments',
         entityType,
-        entityId,
-        { sortOrder }
+        entityId
       ]) as any
 
       if (previousComments) {
@@ -346,7 +354,7 @@ export const useComments = (
         )
 
         queryClient.setQueryData(
-          ['internal-comments', entityType, entityId, { sortOrder }],
+          ['internal-comments', entityType, entityId],
           updatedComments
         )
       }
@@ -356,14 +364,14 @@ export const useComments = (
     onError: (_err, _variables, context) => {
       if (context?.previousComments && optimisticUpdates) {
         queryClient.setQueryData(
-          ['internal-comments', entityType, entityId, { sortOrder }],
+          ['internal-comments', entityType, entityId],
           context.previousComments
         )
       }
     },
     onSuccess: (updatedComment) => {
       queryClient.setQueryData(
-        ['internal-comments', entityType, entityId, { sortOrder }],
+        ['internal-comments', entityType, entityId],
         (oldData: any) =>
           oldData?.map((comment: any) =>
             comment.internalCommentId === updatedComment.internalCommentId
@@ -400,8 +408,7 @@ export const useComments = (
       const previousComments = queryClient.getQueryData([
         'internal-comments',
         entityType,
-        entityId,
-        { sortOrder }
+        entityId
       ]) as any
 
       if (previousComments) {
@@ -410,7 +417,7 @@ export const useComments = (
         )
 
         queryClient.setQueryData(
-          ['internal-comments', entityType, entityId, { sortOrder }],
+          ['internal-comments', entityType, entityId],
           filteredComments
         )
       }
@@ -420,14 +427,14 @@ export const useComments = (
     onError: (_err, _commentId, context) => {
       if (context?.previousComments && optimisticUpdates) {
         queryClient.setQueryData(
-          ['internal-comments', entityType, entityId, { sortOrder }],
+          ['internal-comments', entityType, entityId],
           context.previousComments
         )
       }
     },
     onSuccess: ({ commentId }) => {
       queryClient.setQueryData(
-        ['internal-comments', entityType, entityId, { sortOrder }],
+        ['internal-comments', entityType, entityId],
         (oldData: any) =>
           oldData?.filter(
             (comment: any) => comment.internalCommentId !== commentId
@@ -524,9 +531,18 @@ export const useComments = (
     return !!audienceScope && !!entityId && !!entityType
   }, [audienceScope, entityId, entityType, isDualMode])
 
+  const sortedComments = useMemo(() => {
+    const comments = commentsQuery.data || []
+    return [...comments].sort((a: any, b: any) =>
+      sortOrder === 'desc'
+        ? b.internalCommentId - a.internalCommentId
+        : a.internalCommentId - b.internalCommentId
+    )
+  }, [commentsQuery.data, sortOrder])
+
   return {
     // Data
-    comments: commentsQuery.data || [],
+    comments: sortedComments,
     audienceScope,
     commentInput,
     attachments,
@@ -565,6 +581,10 @@ export const useComments = (
     // Visibility management (dual mode)
     handleVisibilityChange,
 
+    // Sort order management
+    sortOrder,
+    handleSortOrderChange,
+
     // Utilities
     canComment,
 
@@ -575,7 +595,7 @@ export const useComments = (
       }),
     prefetchComments: () =>
       queryClient.prefetchQuery({
-        queryKey: ['internal-comments', entityType, entityId, { sortOrder }],
+        queryKey: ['internal-comments', entityType, entityId],
         queryFn: fetchComments,
         staleTime,
         gcTime

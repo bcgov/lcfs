@@ -38,9 +38,9 @@ describe('AgreementDate Component', () => {
     // Setup translation mock
     mockT.mockImplementation((key) => {
       const translations = {
-        'transfer:agrDateLabel': 'Agreement Date (required)',
+        'transfer:agrDateLabel': 'Agreement date (required)',
         'transfer:agrDateDescText': 'Date on which the written agreement for the transfer was reached between the organizations:',
-        'transfer:agrDateHeader': 'Agreement Date:'
+        'transfer:agrDateHeader': 'Agreement date:'
       }
       return translations[key] || key
     })
@@ -61,7 +61,7 @@ describe('AgreementDate Component', () => {
         </MockFormProvider>,
         { wrapper }
       )
-      expect(screen.getByText('Agreement Date (required)')).toBeInTheDocument()
+      expect(screen.getByText('Agreement date (required)')).toBeInTheDocument()
       expect(
         screen.getByText(
           'Date on which the written agreement for the transfer was reached between the organizations:'
@@ -90,7 +90,7 @@ describe('AgreementDate Component', () => {
         </MockFormProvider>,
         { wrapper }
       )
-      expect(screen.getByText('Agreement Date:')).toBeInTheDocument()
+      expect(screen.getByText('Agreement date:')).toBeInTheDocument()
     })
 
     it('calls translation function with correct keys', () => {
@@ -337,7 +337,7 @@ describe('AgreementDate Component', () => {
       )
       
       // The Box should contain the typography and text field
-      expect(screen.getByText('Agreement Date:')).toBeInTheDocument()
+      expect(screen.getByText('Agreement date:')).toBeInTheDocument()
       expect(screen.getByTestId('transfer-agreement-date')).toBeInTheDocument()
     })
   })
