@@ -31,7 +31,10 @@ class PathwayFinishedFuelTransportMode(BaseModel, Auditable):
     distance = Column(
         Integer,
         nullable=False,
-        comment="Distance in kilometres for this finished fuel transport mode",
+        comment=(
+            "Distance in kilometres for this finished fuel transport mode. CI pathway "
+            "applications require mode-level distances."
+        ),
     )
 
     pathway = relationship("Pathway", back_populates="finished_fuel_transport_modes")

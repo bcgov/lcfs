@@ -258,6 +258,11 @@ def upgrade():
 
 
 def downgrade():
+    # Downgrade restores the old single-distance shape from per-mode rows.
+    # If multiple modes have different distances, the legacy column can only
+    # hold one value, so use max(distance) below as a deterministic collapse.
+    # Columns are restored nullable because rows with no link records cannot
+    # be reconstructed after the normalized tables are dropped.
     op.add_column(
         "pathway",
         sa.Column(

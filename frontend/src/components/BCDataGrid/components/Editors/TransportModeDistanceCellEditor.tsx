@@ -21,26 +21,15 @@ import { useTranslation } from 'react-i18next'
 
 type TransportModeOption =
   | string
-  | number
   | {
-      label?: string
-      name?: string
       transportMode?: string
-      value?: string | number
     }
 
 type TransportModeValue =
   | string
-  | number
   | {
       transportMode?: string
-      transport_mode?: string
-      mode?: string
-      label?: string
-      name?: string
-      value?: string | number
       distance?: string | number | null
-      transportDistance?: string | number | null
     }
 
 type SelectedMode = {
@@ -56,9 +45,6 @@ type TransportModeDistanceCellEditorRef = {
   getValue: () => Array<{ transportMode: string; distance: number | null }>
   isCancelBeforeStart: () => boolean
   isCancelAfterEnd: () => boolean
-  isPopup: () => boolean
-  getPopupPosition: () => string
-  afterGuiAttached: () => void
 }
 
 type TransportModeDistanceCellEditorProps = {
@@ -70,35 +56,21 @@ type TransportModeDistanceCellEditorProps = {
 
 const getOptionLabel = (option: TransportModeOption) => {
   if (option == null) return ''
-  if (typeof option === 'string' || typeof option === 'number') {
-    return option.toString()
+  if (typeof option === 'string') {
+    return option
   }
-  return (
-    option.label ||
-    option.name ||
-    option.transportMode ||
-    option.value?.toString() ||
-    ''
-  )
+  return option.transportMode || ''
 }
 
 const getModeName = (value: TransportModeValue) => {
   if (value == null) return ''
-  if (typeof value === 'string' || typeof value === 'number')
-    return value.toString()
-  return (
-    value.transportMode ||
-    value.mode ||
-    value.label ||
-    value.name ||
-    value.value ||
-    ''
-  )
+  if (typeof value === 'string') return value
+  return value.transportMode || ''
 }
 
 const getDistance = (value: TransportModeValue) => {
   if (value && typeof value === 'object') {
-    return value.distance ?? value.transportDistance ?? ''
+    return value.distance ?? ''
   }
   return ''
 }
@@ -115,7 +87,7 @@ const normalizeValue = (
 
   return values
     .map((item: TransportModeValue) => ({
-      transportMode: getModeName(item).toString(),
+      transportMode: getModeName(item),
       distance: getDistance(item)
     }))
     .filter((item) => item.transportMode)
@@ -151,10 +123,7 @@ export const TransportModeDistanceCellEditor = forwardRef<
   useImperativeHandle(ref, () => ({
     getValue: () => getCurrentValue(),
     isCancelBeforeStart: () => false,
-    isCancelAfterEnd: () => false,
-    isPopup: () => true,
-    getPopupPosition: () => 'under',
-    afterGuiAttached: () => firstInputRef.current?.focus()
+    isCancelAfterEnd: () => false
   }))
 
   useEffect(() => {

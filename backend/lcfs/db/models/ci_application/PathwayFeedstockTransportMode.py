@@ -29,7 +29,10 @@ class PathwayFeedstockTransportMode(BaseModel, Auditable):
     distance = Column(
         Integer,
         nullable=False,
-        comment="Distance in kilometres for this feedstock transport mode",
+        comment=(
+            "Distance in kilometres for this feedstock transport mode. CI pathway "
+            "applications require mode-level distances."
+        ),
     )
 
     pathway = relationship("Pathway", back_populates="feedstock_transport_modes")

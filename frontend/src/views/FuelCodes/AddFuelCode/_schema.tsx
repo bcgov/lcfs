@@ -67,14 +67,8 @@ const normalizeTransportModeDistances = (value) => {
       if (!item) return null
       if (typeof item === 'object') {
         return {
-          transportMode:
-            item.transportMode ||
-            item.transport_mode ||
-            item.mode ||
-            item.label ||
-            item.name ||
-            '',
-          distance: item.distance ?? item.transportDistance ?? ''
+          transportMode: item.transportMode || '',
+          distance: item.distance ?? ''
         }
       }
       return { transportMode: item, distance: '' }

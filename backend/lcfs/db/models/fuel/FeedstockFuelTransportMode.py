@@ -27,7 +27,11 @@ class FeedstockFuelTransportMode(BaseModel, Auditable):
     distance = Column(
         Integer,
         nullable=True,
-        comment="Distance in kilometres for this feedstock fuel transport mode",
+        comment=(
+            "Distance in kilometres for this feedstock fuel transport mode. "
+            "Nullable for legacy fuel code records that do not have mode-level "
+            "distance data."
+        ),
     )
     # Define relationships
     feedstock_fuel_code = relationship(

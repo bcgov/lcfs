@@ -21,9 +21,7 @@ export const normalizeTransportModes = (value) => {
       .map((item) => {
         if (!item) return ''
         if (typeof item === 'object') {
-          return (
-            item.transportMode || item.mode || item.label || item.name || ''
-          )
+          return item.transportMode || ''
         }
         return item
       })
@@ -46,19 +44,14 @@ export const normalizeTransportModeDistances = (
     const source = Array.isArray(value)
       ? value.find((item) => {
           if (!item || typeof item !== 'object') return item === transportMode
-          return (
-            item.transportMode === transportMode ||
-            item.mode === transportMode ||
-            item.label === transportMode ||
-            item.name === transportMode
-          )
+          return item.transportMode === transportMode
         })
       : null
     return {
       transportMode,
       distance:
         source && typeof source === 'object'
-          ? (source.distance ?? source.transportDistance ?? fallbackDistance)
+          ? (source.distance ?? fallbackDistance)
           : fallbackDistance
     }
   })
@@ -100,9 +93,8 @@ const hasModeLevelDistances = (value) =>
     (item) =>
       item &&
       typeof item === 'object' &&
-      ((item.distance !== null && item.distance !== undefined) ||
-        (item.transportDistance !== null &&
-          item.transportDistance !== undefined))
+      item.distance !== null &&
+      item.distance !== undefined
   )
 
 const transportModePayloadValue = (value) =>

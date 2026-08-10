@@ -212,27 +212,17 @@ def _transport_mode_name(value: Any) -> Optional[str]:
     if isinstance(value, str):
         return value.strip() or None
     if isinstance(value, dict):
-        return (
-            value.get("transportMode")
-            or value.get("transport_mode")
-            or value.get("mode")
-            or value.get("label")
-            or value.get("name")
-        )
-    return (
-        getattr(value, "transport_mode", None)
-        or getattr(value, "transportMode", None)
-        or getattr(value, "mode", None)
-        or getattr(value, "label", None)
-        or getattr(value, "name", None)
+        return value.get("transportMode") or value.get("transport_mode")
+    return getattr(value, "transport_mode", None) or getattr(
+        value, "transportMode", None
     )
 
 
 def _transport_mode_distance(value: Any) -> Optional[int]:
     if isinstance(value, dict):
-        distance = value.get("distance", value.get("transportDistance"))
+        distance = value.get("distance")
     else:
-        distance = getattr(value, "distance", getattr(value, "transportDistance", None))
+        distance = getattr(value, "distance", None)
     if distance in (None, ""):
         return None
     return int(distance)
