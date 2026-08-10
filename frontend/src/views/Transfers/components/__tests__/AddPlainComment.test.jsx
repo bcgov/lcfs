@@ -1,8 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { AddPlainComment } from '../AddPlainComment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/hooks/useCurrentUser')
 
@@ -14,7 +14,10 @@ describe('AddPlainComment Component', () => {
   })
 
   describe('Rendering based on props', () => {
-    it('renders for government user with transferStatus "Submitted"', () => {
+    test('renders for government user with transferStatus "Submitted"', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => false) })
       render(
         <AddPlainComment
@@ -24,7 +27,7 @@ describe('AddPlainComment Component', () => {
           transferStatus="Submitted"
           isGovernmentUser={true}
         />,
-        { wrapper }
+        app
       )
 
       expect(
@@ -32,7 +35,10 @@ describe('AddPlainComment Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('renders for government user with transferStatus "Recommended"', () => {
+    test('renders for government user with transferStatus "Recommended"', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => false) })
       render(
         <AddPlainComment
@@ -42,7 +48,7 @@ describe('AddPlainComment Component', () => {
           transferStatus="Recommended"
           isGovernmentUser={true}
         />,
-        { wrapper }
+        app
       )
 
       expect(
@@ -50,7 +56,10 @@ describe('AddPlainComment Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('does not render for government user with invalid transferStatus', () => {
+    test('does not render for government user with invalid transferStatus', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => false) })
       render(
         <AddPlainComment
@@ -60,7 +69,7 @@ describe('AddPlainComment Component', () => {
           transferStatus="Draft"
           isGovernmentUser={true}
         />,
-        { wrapper }
+        app
       )
 
       expect(
@@ -68,7 +77,10 @@ describe('AddPlainComment Component', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('renders for non-government user when sameOrganization returns true and transferStatus is "Sent"', () => {
+    test('renders for non-government user when sameOrganization returns true and transferStatus is "Sent"', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       render(
         <AddPlainComment
@@ -78,15 +90,16 @@ describe('AddPlainComment Component', () => {
           transferStatus="Sent"
           isGovernmentUser={false}
         />,
-        { wrapper }
+        app
       )
 
-      expect(
-        screen.getByText('Your comments (optional)')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Your comments (optional)')).toBeInTheDocument()
     })
 
-    it('does not render for non-government user when transferStatus is not "Sent"', () => {
+    test('does not render for non-government user when transferStatus is not "Sent"', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       render(
         <AddPlainComment
@@ -96,7 +109,7 @@ describe('AddPlainComment Component', () => {
           transferStatus="Draft"
           isGovernmentUser={false}
         />,
-        { wrapper }
+        app
       )
 
       expect(
@@ -104,7 +117,10 @@ describe('AddPlainComment Component', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('does not render for non-government user when sameOrganization returns false', () => {
+    test('does not render for non-government user when sameOrganization returns false', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => false) })
       render(
         <AddPlainComment
@@ -114,7 +130,7 @@ describe('AddPlainComment Component', () => {
           transferStatus="Sent"
           isGovernmentUser={false}
         />,
-        { wrapper }
+        app
       )
 
       expect(
@@ -122,7 +138,10 @@ describe('AddPlainComment Component', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('uses government label when both isGovernmentUser and sameOrganization return true', () => {
+    test('uses government label when both isGovernmentUser and sameOrganization return true', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       render(
         <AddPlainComment
@@ -132,7 +151,7 @@ describe('AddPlainComment Component', () => {
           transferStatus="Submitted"
           isGovernmentUser={true}
         />,
-        { wrapper }
+        app
       )
 
       expect(
@@ -145,7 +164,10 @@ describe('AddPlainComment Component', () => {
   })
 
   describe('Functionality', () => {
-    it('toggles the comment input visibility when clicking the toggle button', async () => {
+    test('toggles the comment input visibility when clicking the toggle button', async ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       render(
         <AddPlainComment
@@ -155,7 +177,7 @@ describe('AddPlainComment Component', () => {
           transferStatus="Sent"
           isGovernmentUser={false}
         />,
-        { wrapper }
+        app
       )
 
       // Initially, the comment input should not be visible
@@ -174,7 +196,7 @@ describe('AddPlainComment Component', () => {
       })
     })
 
-    it('displays initial comment value correctly', () => {
+    test('displays initial comment value correctly', ({ render, app }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       const initialComment = 'Initial comment'
       render(
@@ -185,7 +207,7 @@ describe('AddPlainComment Component', () => {
           transferStatus="Sent"
           isGovernmentUser={false}
         />,
-        { wrapper }
+        app
       )
 
       // Expand the comment input
@@ -194,7 +216,7 @@ describe('AddPlainComment Component', () => {
       expect(screen.getByRole('textbox')).toHaveValue(initialComment)
     })
 
-    it('calls handleCommentChange with correct value', () => {
+    test('calls handleCommentChange with correct value', ({ render, app }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       render(
         <AddPlainComment
@@ -204,20 +226,23 @@ describe('AddPlainComment Component', () => {
           transferStatus="Sent"
           isGovernmentUser={false}
         />,
-        { wrapper }
+        app
       )
-    
+
       fireEvent.click(screen.getByTestId('toggle-comments'))
-    
+
       const newComment = 'New comment'
       fireEvent.change(screen.getByRole('textbox'), {
         target: { value: newComment }
       })
-    
+
       expect(mockHandleCommentChange).toHaveBeenCalledWith(newComment)
     })
 
-    it('shows correct toggle icon based on isExpanded state', () => {
+    test('shows correct toggle icon based on isExpanded state', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       render(
         <AddPlainComment
@@ -227,28 +252,32 @@ describe('AddPlainComment Component', () => {
           transferStatus="Sent"
           isGovernmentUser={false}
         />,
-        { wrapper }
+        app
       )
-    
+
       const toggleButton = screen.getByTestId('toggle-comments')
-    
+
       // Initially, the comment input should not be visible
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
-    
+
       // The expand icon should be present
-      expect(toggleButton.querySelector('svg[data-testid="ExpandMoreIcon"]')).toBeInTheDocument()
-    
+      expect(
+        toggleButton.querySelector('svg[data-testid="ExpandMoreIcon"]')
+      ).toBeInTheDocument()
+
       // Click to expand
       fireEvent.click(toggleButton)
-    
+
       // The collapse icon should be present
-      expect(toggleButton.querySelector('svg[data-testid="ExpandLessIcon"]')).toBeInTheDocument()
-    
+      expect(
+        toggleButton.querySelector('svg[data-testid="ExpandLessIcon"]')
+      ).toBeInTheDocument()
+
       // The comment input should now be visible
       expect(screen.getByRole('textbox')).toBeInTheDocument()
-    })    
+    })
 
-    it('calls sameOrganization with toOrgId', () => {
+    test('calls sameOrganization with toOrgId', ({ render, app }) => {
       const mockSameOrganization = vi.fn(() => true)
       useCurrentUser.mockReturnValue({ sameOrganization: mockSameOrganization })
       const toOrgId = 1
@@ -260,13 +289,16 @@ describe('AddPlainComment Component', () => {
           transferStatus="Sent"
           isGovernmentUser={false}
         />,
-        { wrapper }
+        app
       )
 
       expect(mockSameOrganization).toHaveBeenCalledWith(toOrgId)
     })
 
-    it('should handle default isGovernmentUser prop when not provided', () => {
+    test('should handle default isGovernmentUser prop when not provided', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       render(
         <AddPlainComment
@@ -275,13 +307,16 @@ describe('AddPlainComment Component', () => {
           comment="test"
           transferStatus="Sent"
         />,
-        { wrapper }
+        app
       )
 
       expect(screen.getByText('Your comments (optional)')).toBeInTheDocument()
     })
 
-    it('should render input field with correct properties when expanded', () => {
+    test('should render input field with correct properties when expanded', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       render(
         <AddPlainComment
@@ -290,17 +325,17 @@ describe('AddPlainComment Component', () => {
           comment="test comment"
           transferStatus="Sent"
         />,
-        { wrapper }
+        app
       )
 
       fireEvent.click(screen.getByTestId('toggle-comments'))
-      
+
       const textField = screen.getByRole('textbox')
       expect(textField).toHaveAttribute('rows', '4')
       expect(textField).toHaveValue('test comment')
     })
 
-    it('should handle empty comment string', () => {
+    test('should handle empty comment string', ({ render, app }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       render(
         <AddPlainComment
@@ -309,16 +344,16 @@ describe('AddPlainComment Component', () => {
           comment=""
           transferStatus="Sent"
         />,
-        { wrapper }
+        app
       )
 
       fireEvent.click(screen.getByTestId('toggle-comments'))
-      
+
       const textField = screen.getByRole('textbox')
       expect(textField).toHaveValue('')
     })
 
-    it('should handle click on toggle box area', () => {
+    test('should handle click on toggle box area', ({ render, app }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
       render(
         <AddPlainComment
@@ -327,24 +362,24 @@ describe('AddPlainComment Component', () => {
           comment=""
           transferStatus="Sent"
         />,
-        { wrapper }
+        app
       )
 
       // Initially collapsed
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
-      
+
       // Click anywhere on the toggle area (not just the button)
       const toggleBox = screen.getByTestId('toggle-comments').closest('div')
       fireEvent.click(toggleBox)
-      
+
       // Should expand
       expect(screen.getByRole('textbox')).toBeInTheDocument()
     })
 
-    it('should use different toOrgId values correctly', () => {
+    test('should use different toOrgId values correctly', ({ render, app }) => {
       const mockSameOrganization = vi.fn(() => false)
       useCurrentUser.mockReturnValue({ sameOrganization: mockSameOrganization })
-      
+
       const { rerender } = render(
         <AddPlainComment
           toOrgId={999}
@@ -352,11 +387,11 @@ describe('AddPlainComment Component', () => {
           comment=""
           transferStatus="Sent"
         />,
-        { wrapper }
+        app
       )
 
       expect(mockSameOrganization).toHaveBeenCalledWith(999)
-      
+
       mockSameOrganization.mockReturnValue(true)
       rerender(
         <AddPlainComment
@@ -366,13 +401,16 @@ describe('AddPlainComment Component', () => {
           transferStatus="Sent"
         />
       )
-      
+
       expect(mockSameOrganization).toHaveBeenCalledWith(123)
     })
 
-    it('should handle multiple status values for government user', () => {
+    test('should handle multiple status values for government user', ({
+      render,
+      app
+    }) => {
       useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => false) })
-      
+
       // Test with additional valid statuses
       const { rerender } = render(
         <AddPlainComment
@@ -382,11 +420,13 @@ describe('AddPlainComment Component', () => {
           transferStatus="Submitted"
           isGovernmentUser={true}
         />,
-        { wrapper }
+        app
       )
-      
-      expect(screen.getByText('Government comments to organizations (optional)')).toBeInTheDocument()
-      
+
+      expect(
+        screen.getByText('Government comments to organizations (optional)')
+      ).toBeInTheDocument()
+
       rerender(
         <AddPlainComment
           toOrgId={1}
@@ -396,8 +436,10 @@ describe('AddPlainComment Component', () => {
           isGovernmentUser={true}
         />
       )
-      
-      expect(screen.getByText('Government comments to organizations (optional)')).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Government comments to organizations (optional)')
+      ).toBeInTheDocument()
     })
   })
 })

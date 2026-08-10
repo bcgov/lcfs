@@ -6,7 +6,7 @@ import { router } from '../index'
 import { useKeycloak } from '@react-keycloak/web'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { testQueryClient } from '@/tests/utils/wrapper'
+import { createTestQueryClient } from '@/tests/utils/wrapper'
 
 // Mock special route components
 vi.mock('@/components/ApiDocs', () => ({
@@ -130,8 +130,9 @@ const createTestRouter = (initialEntries = ['/']) => {
 
 // Helper function to render router with providers
 const renderRouterWithProviders = (testRouter) => {
+  const queryClient = createTestQueryClient()
   return render(
-    <QueryClientProvider client={testQueryClient}>
+    <QueryClientProvider client={queryClient}>
       <RouterProvider router={testRouter} />
     </QueryClientProvider>
   )

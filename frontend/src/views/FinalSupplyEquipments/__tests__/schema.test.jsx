@@ -5,7 +5,8 @@ import { DateEditor } from '@/components/BCDataGrid/components'
 // Mock i18n.t function
 vi.mock('i18next', () => ({
   default: {
-    t: (key) => key
+    t: (key) => key,
+    init: vi.fn()
   }
 }))
 

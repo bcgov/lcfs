@@ -1,15 +1,9 @@
 import { Logout } from '@/components/Logout'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { wrapper } from '@/tests/utils/wrapper'
 import * as keycloakUtils from '@/utils/keycloak'
-import {
-  fireEvent,
-  render,
-  renderHook,
-  screen,
-  waitFor
-} from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { describe, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/contexts/AuthorizationContext', () => ({
   useAuthorization: () => ({
@@ -31,35 +25,36 @@ describe('Logout.jsx', () => {
   })
 
   describe('is not authenticated', () => {
-    it('returns null', () => {
+    test('returns null', ({ render, query, theme, router }) => {
       keycloak.useKeycloak.mockReturnValue({
         keycloak: { authenticated: false }
       })
 
-      const { container } = render(<Logout />, { wrapper })
+      const { container } = render(<Logout />, [query, theme, router])
 
       expect(container.firstChild).toBeNull()
     })
   })
 
   describe('is authenticated', () => {
-    beforeEach(async () => {
-      keycloak.useKeycloak.mockReturnValue({
-        keycloak: { authenticated: true }
-      })
-      const { result } = renderHook(() => useCurrentUser(), {
-        wrapper
-      })
-      await waitFor(() => expect(result.current.isSuccess).toBeTruthy())
+    test.beforeEach(
+      async ({ render, renderHook, query, theme, router, server }) => {
+        void server
+        keycloak.useKeycloak.mockReturnValue({
+          keycloak: { authenticated: true }
+        })
+        const { result } = renderHook(() => useCurrentUser(), [query])
+        await waitFor(() => expect(result.current.isSuccess).toBeTruthy())
 
-      render(<Logout />, { wrapper })
-    })
-    it('should render Logout', async () => {
+        render(<Logout />, [query, theme, router])
+      }
+    )
+    test('should render Logout', async () => {
       const logout = await screen.findByTestId('logout')
 
       expect(logout).toBeInTheDocument()
     })
-    it('should fire the logout function once', async () => {
+    test('should fire the logout function once', async () => {
       const logoutFn = vi
         .spyOn(keycloakUtils, 'logout')
         .mockImplementation(() => {})

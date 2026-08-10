@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { waitFor } from '@testing-library/react'
+import { describe, beforeEach, afterEach, expect, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { useApiService } from '@/services/useApiService'
 import { useOrganizationFuelSupply } from '../useFuelSupply'
 
@@ -20,7 +20,10 @@ describe('useOrganizationFuelSupply', () => {
     vi.clearAllMocks()
   })
 
-  it('should fetch organization fuel supply successfully', async () => {
+  test('should fetch organization fuel supply successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockResponseData = {
       fuelSupplies: [
         {
@@ -76,7 +79,7 @@ describe('useOrganizationFuelSupply', () => {
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -91,7 +94,10 @@ describe('useOrganizationFuelSupply', () => {
     expect(result.current.data.pagination.total).toBe(2)
   })
 
-  it('should handle year filter in pagination', async () => {
+  test('should handle year filter in pagination', async ({
+    renderHook,
+    query
+  }) => {
     const mockResponseData = {
       fuelSupplies: [
         {
@@ -138,7 +144,7 @@ describe('useOrganizationFuelSupply', () => {
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -151,7 +157,7 @@ describe('useOrganizationFuelSupply', () => {
     expect(result.current.data.fuelSupplies[0].compliancePeriod).toBe('2023')
   })
 
-  it('should handle empty results', async () => {
+  test('should handle empty results', async ({ renderHook, query }) => {
     const mockResponseData = {
       fuelSupplies: [],
       analytics: {
@@ -179,7 +185,7 @@ describe('useOrganizationFuelSupply', () => {
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -189,7 +195,7 @@ describe('useOrganizationFuelSupply', () => {
     expect(result.current.data.pagination.total).toBe(0)
   })
 
-  it('should handle pagination correctly', async () => {
+  test('should handle pagination correctly', async ({ renderHook, query }) => {
     const mockResponseData = {
       fuelSupplies: Array.from({ length: 5 }, (_, i) => ({
         fuelSupplyId: i + 6,
@@ -228,7 +234,7 @@ describe('useOrganizationFuelSupply', () => {
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -240,13 +246,16 @@ describe('useOrganizationFuelSupply', () => {
     expect(result.current.data.pagination.totalPages).toBe(3)
   })
 
-  it('should not fetch when organization ID is missing', async () => {
+  test('should not fetch when organization ID is missing', async ({
+    renderHook,
+    query
+  }) => {
     const organizationId = null
     const pagination = { page: 1, size: 10, filters: [] }
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination),
-      { wrapper }
+      [query]
     )
 
     // Should remain in idle state
@@ -255,7 +264,7 @@ describe('useOrganizationFuelSupply', () => {
     expect(mockPost).not.toHaveBeenCalled()
   })
 
-  it('should handle API errors gracefully', async () => {
+  test('should handle API errors gracefully', async ({ renderHook, query }) => {
     const errorMessage = 'Failed to fetch fuel supply data'
     mockPost.mockRejectedValue(new Error(errorMessage))
 
@@ -264,7 +273,7 @@ describe('useOrganizationFuelSupply', () => {
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination, { retry: false }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isError).toBe(true))
@@ -276,7 +285,10 @@ describe('useOrganizationFuelSupply', () => {
     )
   })
 
-  it('should cache results based on query key', async () => {
+  test('should cache results based on query key', async ({
+    renderHook,
+    query
+  }) => {
     const mockResponseData = {
       fuelSupplies: [],
       analytics: {
@@ -301,14 +313,14 @@ describe('useOrganizationFuelSupply', () => {
     // First call
     const { result: result1 } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination1),
-      { wrapper }
+      [query]
     )
     await waitFor(() => expect(result1.current.isSuccess).toBe(true))
 
     // Second call with different pagination should trigger new fetch
     const { result: result2 } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination2),
-      { wrapper }
+      [query]
     )
     await waitFor(() => expect(result2.current.isSuccess).toBe(true))
 
@@ -316,7 +328,10 @@ describe('useOrganizationFuelSupply', () => {
     expect(mockPost).toHaveBeenCalledTimes(2)
   })
 
-  it('should handle null submission dates in response', async () => {
+  test('should handle null submission dates in response', async ({
+    renderHook,
+    query
+  }) => {
     const mockResponseData = {
       fuelSupplies: [
         {
@@ -349,7 +364,7 @@ describe('useOrganizationFuelSupply', () => {
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(1, { page: 1, size: 10, filters: [] }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))

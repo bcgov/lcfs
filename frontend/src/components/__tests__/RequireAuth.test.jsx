@@ -1,10 +1,8 @@
 import { RequireAuth } from '@/components/RequireAuth'
 import { apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { render, renderHook, waitFor } from '@testing-library/react'
-import { HttpResponse, delay } from 'msw'
-import { httpOverwrite } from '@/tests/utils/server'
-import { wrapper } from '@/tests/utils/wrapper'
+import { waitFor } from '@testing-library/react'
+import { test } from '@/tests/utils/fixtures'
 
 const keycloak = vi.hoisted(() => ({
   useKeycloak: vi.fn()
@@ -25,20 +23,26 @@ describe('RequireAuth', () => {
     vi.resetAllMocks()
   })
   describe('network error', async () => {
-    it('should navigate ( null return )', async () => {
+    test('should navigate ( null return )', async ({
+      render,
+      renderHook,
+      query,
+      router,
+      server
+    }) => {
       keycloak.useKeycloak.mockReturnValue({
         keycloak: { authenticated: true },
         initialized: true
       })
-      httpOverwrite('get', apiRoutes.currentUser, async () =>
+      const { HttpResponse } = await import('msw')
+      server.httpOverwrite('get', apiRoutes.currentUser, async () =>
         HttpResponse.error()
       )
 
-      const { result } = renderHook(useCurrentUser, { wrapper })
+      const providers = [query, router]
+      const { result } = renderHook(useCurrentUser, providers)
 
-      const { container } = render(<RequireAuth />, {
-        wrapper
-      })
+      const { container } = render(<RequireAuth />, providers)
 
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
@@ -46,29 +50,33 @@ describe('RequireAuth', () => {
     })
   })
   describe('keycloak not authenticated', () => {
-    it('should navigate ( null return )', () => {
+    test('should navigate ( null return )', ({ render, query, router }) => {
       keycloak.useKeycloak.mockReturnValue({
         keycloak: { authenticated: false },
         initialized: true
       })
 
-      const { container } = render(<RequireAuth />, {
-        wrapper
-      })
+      const { container } = render(<RequireAuth />, [query, router])
 
       expect(container.firstChild).toBeNull()
     })
   })
   describe('ok', () => {
-    it('renders children', async () => {
+    test('renders children', async ({
+      render,
+      renderHook,
+      query,
+      router,
+      server
+    }) => {
+      void server
       keycloak.useKeycloak.mockReturnValue({
         keycloak: { authenticated: true },
         initialized: true
       })
-      const { result } = renderHook(useCurrentUser, { wrapper })
-      const { getByText } = render(<RequireAuth>asdf</RequireAuth>, {
-        wrapper
-      })
+      const providers = [query, router]
+      const { result } = renderHook(useCurrentUser, providers)
+      const { getByText } = render(<RequireAuth>asdf</RequireAuth>, providers)
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
       expect(getByText('asdf')).toBeInTheDocument()

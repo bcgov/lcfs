@@ -1,9 +1,9 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { OrganizationBadge } from '../OrganizationBadge'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/hooks/useOrganization')
 
@@ -44,7 +44,7 @@ describe('OrganizationBadge Component', () => {
     })
   })
 
-  it('renders correctly with organization name', () => {
+  test('renders correctly with organization name', ({ render, app }) => {
     render(
       <OrganizationBadge
         organizationId={1}
@@ -52,12 +52,15 @@ describe('OrganizationBadge Component', () => {
         transferStatus="Submitted"
         isGovernmentUser={true}
       />,
-      { wrapper }
+      app
     )
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
   })
 
-  it('displays balance and registration status for government users with valid transfer status', () => {
+  test('displays balance and registration status for government users with valid transfer status', ({
+    render,
+    app
+  }) => {
     render(
       <OrganizationBadge
         organizationId={1}
@@ -65,13 +68,16 @@ describe('OrganizationBadge Component', () => {
         transferStatus="Submitted"
         isGovernmentUser={true}
       />,
-      { wrapper }
+      app
     )
     expect(screen.getByText('Balance: 1,000 (200)')).toBeInTheDocument()
     expect(screen.getByText('Registered: Yes')).toBeInTheDocument()
   })
 
-  it('does not display balance and registration status for non-government users', () => {
+  test('does not display balance and registration status for non-government users', ({
+    render,
+    app
+  }) => {
     render(
       <OrganizationBadge
         organizationId={1}
@@ -79,13 +85,16 @@ describe('OrganizationBadge Component', () => {
         transferStatus="Submitted"
         isGovernmentUser={false}
       />,
-      { wrapper }
+      app
     )
     expect(screen.queryByText('Balance:')).not.toBeInTheDocument()
     expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
   })
 
-  it('does not display balance and registration status for invalid transfer status', () => {
+  test('does not display balance and registration status for invalid transfer status', ({
+    render,
+    app
+  }) => {
     render(
       <OrganizationBadge
         organizationId={1}
@@ -93,17 +102,17 @@ describe('OrganizationBadge Component', () => {
         transferStatus="Pending"
         isGovernmentUser={true}
       />,
-      { wrapper }
+      app
     )
     expect(screen.queryByText('Balance:')).not.toBeInTheDocument()
     expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
   })
 
-  it('handles loading state correctly', () => {
+  test('handles loading state correctly', ({ render, app }) => {
     useOrganizationBalance.mockReturnValue({
       data: null,
       isLoading: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
 
     render(
@@ -113,18 +122,18 @@ describe('OrganizationBadge Component', () => {
         transferStatus="Submitted"
         isGovernmentUser={true}
       />,
-      { wrapper }
+      app
     )
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
     expect(screen.queryByText('Balance:')).not.toBeInTheDocument()
     expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
   })
 
-  it('handles error state gracefully', () => {
+  test('handles error state gracefully', ({ render, app }) => {
     useOrganizationBalance.mockReturnValue({
       data: null,
       isLoading: false,
-      isLoadingError: true,
+      isLoadingError: true
     })
 
     render(
@@ -134,22 +143,22 @@ describe('OrganizationBadge Component', () => {
         transferStatus="Submitted"
         isGovernmentUser={true}
       />,
-      { wrapper }
+      app
     )
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
     expect(screen.queryByText('Balance:')).not.toBeInTheDocument()
     expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
   })
 
-  it('displays correct balance formatting', () => {
+  test('displays correct balance formatting', ({ render, app }) => {
     useOrganizationBalance.mockReturnValue({
       data: {
         totalBalance: 1234567.89,
         reservedBalance: -123456.78,
-        registered: false,
+        registered: false
       },
       isLoading: false,
-      isLoadingError: false,
+      isLoadingError: false
     })
 
     render(
@@ -159,9 +168,11 @@ describe('OrganizationBadge Component', () => {
         transferStatus="Submitted"
         isGovernmentUser={true}
       />,
-      { wrapper }
+      app
     )
-    expect(screen.getByText('Balance: 1,234,567.89 (123,456.78)')).toBeInTheDocument()
+    expect(
+      screen.getByText('Balance: 1,234,567.89 (123,456.78)')
+    ).toBeInTheDocument()
     expect(screen.getByText('Registered: No')).toBeInTheDocument()
   })
 })

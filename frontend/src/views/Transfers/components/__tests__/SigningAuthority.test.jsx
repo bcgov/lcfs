@@ -1,10 +1,10 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import { SigningAuthority } from '../SigningAuthority'
 import SigningAuthorityWithRole from '../SigningAuthority'
 import { FormProvider, useForm } from 'react-hook-form'
 import { describe, expect, vi, beforeEach } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -17,7 +17,11 @@ vi.mock('@/utils/withRole', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-typography" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-typography" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 const MockFormProvider = ({ children, formProps = {} }) => {
@@ -30,7 +34,7 @@ const MockFormProviderWithErrors = ({ children }) => {
     defaultValues: { signingAuthorityDeclaration: false },
     mode: 'onChange'
   })
-  
+
   // Override the formState errors via Object.defineProperty to avoid read-only error
   Object.defineProperty(methods.formState, 'errors', {
     value: {
@@ -40,7 +44,7 @@ const MockFormProviderWithErrors = ({ children }) => {
     },
     writable: false
   })
-  
+
   return <FormProvider {...methods}>{children}</FormProvider>
 }
 
@@ -49,22 +53,34 @@ describe('SigningAuthority Component', () => {
     vi.clearAllMocks()
   })
 
-  it('renders correctly with title', () => {
+  test('renders correctly with title', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      { wrapper }
+      [query, theme, localization, router]
     )
     expect(screen.getByText('transfer:saLabel')).toBeInTheDocument()
   })
 
-  it('renders checkbox and allows checking/unchecking', () => {
+  test('renders checkbox and allows checking/unchecking', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      { wrapper }
+      [query, theme, localization, router]
     )
     expect(screen.getByLabelText('transfer:saConfirmation')).toBeInTheDocument()
 
@@ -81,66 +97,102 @@ describe('SigningAuthority Component', () => {
     expect(checkbox.checked).toEqual(false)
   })
 
-  it('checkbox has defaultChecked as false', () => {
+  test('checkbox has defaultChecked as false', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      { wrapper }
+      [query, theme, localization, router]
     )
     const checkbox = screen.getByLabelText('transfer:saConfirmation')
     expect(checkbox).not.toBeChecked()
   })
 
-  it('contains correct data-test attributes', () => {
+  test('contains correct data-test attributes', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      { wrapper }
+      [query, theme, localization, router]
     )
     expect(screen.getByTestId('signing-authority')).toBeInTheDocument()
     expect(screen.getByTestId('signing-authority-checkbox')).toBeInTheDocument()
   })
 
-  it('checkbox renders and is unchecked by default', () => {
+  test('checkbox renders and is unchecked by default', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      { wrapper }
+      [query, theme, localization, router]
     )
     const checkbox = screen.getByTestId('signing-authority-checkbox')
     expect(checkbox).not.toBeChecked()
   })
 
-  it('integrates with withRole HOC', () => {
+  test('integrates with withRole HOC', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <MockFormProvider>
         <SigningAuthorityWithRole />
       </MockFormProvider>,
-      { wrapper }
+      [query, theme, localization, router]
     )
     expect(screen.getByText('transfer:saLabel')).toBeInTheDocument()
   })
 
-  it('uses translation keys correctly', () => {
+  test('uses translation keys correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      { wrapper }
+      [query, theme, localization, router]
     )
     expect(screen.getByText('transfer:saLabel')).toBeInTheDocument()
     expect(screen.getByText('transfer:saConfirmation')).toBeInTheDocument()
   })
 
-  it('does not display error by default', () => {
+  test('does not display error by default', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      { wrapper }
+      [query, theme, localization, router]
     )
     // Check that no error message is displayed when there are no errors
     const errorElements = screen.queryAllByText(/error/i)

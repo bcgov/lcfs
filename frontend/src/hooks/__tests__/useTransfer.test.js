@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import {
   useTransfer,
   useCreateUpdateTransfer,
@@ -29,7 +29,10 @@ describe('useTransfer', () => {
   })
 
   describe('useTransfer', () => {
-    it('should fetch transfer successfully', async () => {
+    test('should fetch transfer successfully', async ({
+      renderHook,
+      query
+    }) => {
       const transferID = 123
       const mockData = {
         transferId: transferID,
@@ -39,7 +42,7 @@ describe('useTransfer', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useTransfer(transferID), { wrapper })
+      const { result } = renderHook(() => useTransfer(transferID), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -49,12 +52,12 @@ describe('useTransfer', () => {
       expect(mockGet).toHaveBeenCalledWith('/transfers/123')
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const transferID = 123
       const mockError = new Error('Transfer not found')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useTransfer(transferID), { wrapper })
+      const { result } = renderHook(() => useTransfer(transferID), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -63,7 +66,10 @@ describe('useTransfer', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should pass through custom options', async () => {
+    test('should pass through custom options', async ({
+      renderHook,
+      query
+    }) => {
       const transferID = 123
       const mockData = { transferId: transferID }
       mockGet.mockResolvedValue({ data: mockData })
@@ -71,7 +77,7 @@ describe('useTransfer', () => {
 
       const { result } = renderHook(
         () => useTransfer(transferID, customOptions),
-        { wrapper }
+        [query]
       )
 
       expect(result.current.fetchStatus).toBe('idle')
@@ -79,15 +85,19 @@ describe('useTransfer', () => {
   })
 
   describe('useCreateUpdateTransfer', () => {
-    it('should create transfer when orgId provided but no transferId', async () => {
+    test('should create transfer when orgId provided but no transferId', async ({
+      renderHook,
+      query
+    }) => {
       const orgId = 123
       const transferData = { quantity: 1000, toOrganization: 'Org B' }
       const mockResponse = { data: { transferId: 456 } }
       mockPost.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useCreateUpdateTransfer(orgId), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useCreateUpdateTransfer(orgId),
+        [query]
+      )
 
       result.current.mutate({ data: transferData })
 
@@ -102,7 +112,10 @@ describe('useTransfer', () => {
       expect(result.current.data).toEqual(mockResponse)
     })
 
-    it('should update transfer when both orgId and transferId provided', async () => {
+    test('should update transfer when both orgId and transferId provided', async ({
+      renderHook,
+      query
+    }) => {
       const orgId = 123
       const transferId = 456
       const transferData = { quantity: 2000 }
@@ -111,7 +124,7 @@ describe('useTransfer', () => {
 
       const { result } = renderHook(
         () => useCreateUpdateTransfer(orgId, transferId),
-        { wrapper }
+        [query]
       )
 
       result.current.mutate({ data: transferData })
@@ -126,7 +139,10 @@ describe('useTransfer', () => {
       )
     })
 
-    it('should update transfer when only transferId provided (no orgId)', async () => {
+    test('should update transfer when only transferId provided (no orgId)', async ({
+      renderHook,
+      query
+    }) => {
       const transferId = 456
       const transferData = { quantity: 1500 }
       const mockResponse = { data: { transferId } }
@@ -134,7 +150,7 @@ describe('useTransfer', () => {
 
       const { result } = renderHook(
         () => useCreateUpdateTransfer(null, transferId),
-        { wrapper }
+        [query]
       )
 
       result.current.mutate({ data: transferData })
@@ -146,35 +162,18 @@ describe('useTransfer', () => {
       expect(mockPut).toHaveBeenCalledWith('transfers/456', transferData)
     })
 
-    it('should handle API errors during creation', async () => {
+    test('should handle API errors during creation', async ({
+      renderHook,
+      query
+    }) => {
       const orgId = 123
       const transferData = { quantity: 1000 }
       const mockError = new Error('Creation failed')
       mockPost.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useCreateUpdateTransfer(orgId), {
-        wrapper
-      })
-
-      result.current.mutate({ data: transferData })
-
-      await waitFor(() => {
-        expect(result.current.isError).toBe(true)
-      })
-
-      expect(result.current.error).toEqual(mockError)
-    })
-
-    it('should handle API errors during update', async () => {
-      const orgId = 123
-      const transferId = 456
-      const transferData = { quantity: 1000 }
-      const mockError = new Error('Update failed')
-      mockPut.mockRejectedValue(mockError)
-
       const { result } = renderHook(
-        () => useCreateUpdateTransfer(orgId, transferId),
-        { wrapper }
+        () => useCreateUpdateTransfer(orgId),
+        [query]
       )
 
       result.current.mutate({ data: transferData })
@@ -186,10 +185,35 @@ describe('useTransfer', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should return mutation object with correct properties', () => {
-      const { result } = renderHook(() => useCreateUpdateTransfer(123), {
-        wrapper
+    test('should handle API errors during update', async ({
+      renderHook,
+      query
+    }) => {
+      const orgId = 123
+      const transferId = 456
+      const transferData = { quantity: 1000 }
+      const mockError = new Error('Update failed')
+      mockPut.mockRejectedValue(mockError)
+
+      const { result } = renderHook(
+        () => useCreateUpdateTransfer(orgId, transferId),
+        [query]
+      )
+
+      result.current.mutate({ data: transferData })
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true)
       })
+
+      expect(result.current.error).toEqual(mockError)
+    })
+
+    test('should return mutation object with correct properties', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useCreateUpdateTransfer(123), [query])
 
       expect(result.current).toHaveProperty('mutate')
       expect(result.current).toHaveProperty('mutateAsync')
@@ -203,15 +227,19 @@ describe('useTransfer', () => {
   })
 
   describe('useUpdateCategory', () => {
-    it('should update transfer category successfully', async () => {
+    test('should update transfer category successfully', async ({
+      renderHook,
+      query
+    }) => {
       const transferId = 123
       const category = 'Category A'
       const mockResponse = { data: { success: true } }
       mockPut.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useUpdateCategory(transferId), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useUpdateCategory(transferId),
+        [query]
+      )
 
       result.current.mutate(category)
 
@@ -223,15 +251,19 @@ describe('useTransfer', () => {
       expect(result.current.data).toEqual(mockResponse)
     })
 
-    it('should handle API errors during category update', async () => {
+    test('should handle API errors during category update', async ({
+      renderHook,
+      query
+    }) => {
       const transferId = 123
       const category = 'Category A'
       const mockError = new Error('Category update failed')
       mockPut.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useUpdateCategory(transferId), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useUpdateCategory(transferId),
+        [query]
+      )
 
       result.current.mutate(category)
 
@@ -242,7 +274,10 @@ describe('useTransfer', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should pass through custom options', async () => {
+    test('should pass through custom options', async ({
+      renderHook,
+      query
+    }) => {
       const transferId = 123
       const customOptions = { retry: 3 }
       const mockResponse = { data: { success: true } }
@@ -250,7 +285,7 @@ describe('useTransfer', () => {
 
       const { result } = renderHook(
         () => useUpdateCategory(transferId, customOptions),
-        { wrapper }
+        [query]
       )
 
       result.current.mutate('Category A')
@@ -265,8 +300,11 @@ describe('useTransfer', () => {
       )
     })
 
-    it('should return mutation object with correct properties', () => {
-      const { result } = renderHook(() => useUpdateCategory(123), { wrapper })
+    test('should return mutation object with correct properties', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useUpdateCategory(123), [query])
 
       expect(result.current).toHaveProperty('mutate')
       expect(result.current).toHaveProperty('mutateAsync')

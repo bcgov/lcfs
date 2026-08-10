@@ -33,6 +33,10 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+vi.mock('@/i18n', () => ({
+  default: { t: (key) => key }
+}))
+
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
     keycloak: {

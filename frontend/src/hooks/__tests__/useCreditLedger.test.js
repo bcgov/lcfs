@@ -1,5 +1,5 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import {
   useCreditLedger,
   usePeriodCreditLedger,
@@ -7,7 +7,7 @@ import {
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/services/useApiService')
 
@@ -19,7 +19,10 @@ describe('useCreditLedger', () => {
     vi.mocked(useApiService).mockReturnValue({ post: mockPost })
   })
 
-  it('should fetch credit ledger successfully with all parameters', async () => {
+  test('should fetch credit ledger successfully with all parameters', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       transactions: [
         { id: 1, credits: 100, type: 'allocation' },
@@ -38,7 +41,7 @@ describe('useCreditLedger', () => {
       extraFilters: [{ field: 'type', filter: 'allocation', type: 'equals' }]
     }
 
-    const { result } = renderHook(() => useCreditLedger(params), { wrapper })
+    const { result } = renderHook(() => useCreditLedger(params), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -62,13 +65,17 @@ describe('useCreditLedger', () => {
     )
   })
 
-  it('should fetch credit ledger with default parameters', async () => {
+  test('should fetch credit ledger with default parameters', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { transactions: [], totalCount: 0 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
-    const { result } = renderHook(() => useCreditLedger({ orgId: '123' }), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCreditLedger({ orgId: '123' }),
+      [query]
+    )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -81,13 +88,16 @@ describe('useCreditLedger', () => {
     })
   })
 
-  it('should add period filter when period is provided', async () => {
+  test('should add period filter when period is provided', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { transactions: [], totalCount: 0 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
     const { result } = renderHook(
       () => useCreditLedger({ orgId: '123', period: '2023' }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -107,7 +117,10 @@ describe('useCreditLedger', () => {
     )
   })
 
-  it('should combine period filter with extra filters', async () => {
+  test('should combine period filter with extra filters', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { transactions: [], totalCount: 0 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
@@ -122,7 +135,7 @@ describe('useCreditLedger', () => {
           period: '2023',
           extraFilters
         }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -143,37 +156,37 @@ describe('useCreditLedger', () => {
     )
   })
 
-  it('should not fetch when orgId is missing', () => {
-    const { result } = renderHook(() => useCreditLedger({ orgId: null }), {
-      wrapper
-    })
+  test('should not fetch when orgId is missing', ({ renderHook, query }) => {
+    const { result } = renderHook(
+      () => useCreditLedger({ orgId: null }),
+      [query]
+    )
 
     expect(result.current.isLoading).toBe(false)
     expect(mockPost).not.toHaveBeenCalled()
   })
 
-  it('should be disabled when orgId is empty', () => {
-    const { result } = renderHook(() => useCreditLedger({ orgId: '' }), {
-      wrapper
-    })
+  test('should be disabled when orgId is empty', ({ renderHook, query }) => {
+    const { result } = renderHook(() => useCreditLedger({ orgId: '' }), [query])
 
     expect(result.current.isLoading).toBe(false)
     expect(mockPost).not.toHaveBeenCalled()
   })
 
-  it('should handle API errors', async () => {
+  test('should handle API errors', async ({ renderHook, query }) => {
     const mockError = new Error('API Error')
     mockPost.mockRejectedValueOnce(mockError)
 
-    const { result } = renderHook(() => useCreditLedger({ orgId: '123' }), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCreditLedger({ orgId: '123' }),
+      [query]
+    )
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.error).toEqual(mockError)
   })
 
-  it('should pass through custom options', async () => {
+  test('should pass through custom options', async ({ renderHook, query }) => {
     const mockData = { transactions: [], totalCount: 0 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
@@ -185,14 +198,17 @@ describe('useCreditLedger', () => {
 
     const { result } = renderHook(
       () => useCreditLedger({ orgId: '123' }, customOptions),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toEqual(mockData)
   })
 
-  it('should handle pagination parameters correctly', async () => {
+  test('should handle pagination parameters correctly', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { transactions: [], totalCount: 100 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
@@ -203,7 +219,7 @@ describe('useCreditLedger', () => {
           page: 3,
           size: 25
         }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -219,7 +235,7 @@ describe('useCreditLedger', () => {
     )
   })
 
-  it('should handle sort orders correctly', async () => {
+  test('should handle sort orders correctly', async ({ renderHook, query }) => {
     const mockData = { transactions: [], totalCount: 0 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
@@ -234,7 +250,7 @@ describe('useCreditLedger', () => {
           orgId: '123',
           sortOrders
         }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -256,7 +272,10 @@ describe('usePeriodCreditLedger', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('fetches the period ledger with the include_pending param', async () => {
+  test('fetches the period ledger with the include_pending param', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { compliancePeriod: 2024, transactions: [] }
     mockGet.mockResolvedValueOnce({ data: mockData })
 
@@ -267,7 +286,7 @@ describe('usePeriodCreditLedger', () => {
           complianceYear: 2024,
           includePending: true
         }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -278,11 +297,11 @@ describe('usePeriodCreditLedger', () => {
     )
   })
 
-  it('defaults include_pending to false', async () => {
+  test('defaults include_pending to false', async ({ renderHook, query }) => {
     mockGet.mockResolvedValueOnce({ data: {} })
     const { result } = renderHook(
       () => usePeriodCreditLedger({ orgId: 5, complianceYear: 2023 }),
-      { wrapper }
+      [query]
     )
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith(
@@ -291,10 +310,13 @@ describe('usePeriodCreditLedger', () => {
     )
   })
 
-  it('does not fetch until org and year are present', () => {
+  test('does not fetch until org and year are present', ({
+    renderHook,
+    query
+  }) => {
     const { result } = renderHook(
       () => usePeriodCreditLedger({ orgId: null, complianceYear: 2024 }),
-      { wrapper }
+      [query]
     )
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
@@ -309,12 +331,12 @@ describe('useDownloadCreditLedger', () => {
     vi.mocked(useApiService).mockReturnValue({ download: mockDownload })
   })
 
-  it('should return a download function', () => {
+  test('should return a download function', () => {
     const downloadFn = useDownloadCreditLedger()
     expect(typeof downloadFn).toBe('function')
   })
 
-  it('should call download with correct parameters for xlsx format', () => {
+  test('should call download with correct parameters for xlsx format', () => {
     const downloadFn = useDownloadCreditLedger()
 
     downloadFn({
@@ -333,7 +355,7 @@ describe('useDownloadCreditLedger', () => {
     })
   })
 
-  it('should call download with default format when not specified', () => {
+  test('should call download with default format when not specified', () => {
     const downloadFn = useDownloadCreditLedger()
 
     downloadFn({
@@ -351,7 +373,7 @@ describe('useDownloadCreditLedger', () => {
     })
   })
 
-  it('should call download without compliance year when not provided', () => {
+  test('should call download without compliance year when not provided', () => {
     const downloadFn = useDownloadCreditLedger()
 
     downloadFn({
@@ -368,7 +390,7 @@ describe('useDownloadCreditLedger', () => {
     })
   })
 
-  it('should handle different formats', () => {
+  test('should handle different formats', () => {
     const downloadFn = useDownloadCreditLedger()
 
     downloadFn({
@@ -387,14 +409,14 @@ describe('useDownloadCreditLedger', () => {
     })
   })
 
-  it('should pass through API options', () => {
+  test('should pass through API options', () => {
     const apiOptions = { timeout: 30000 }
     const downloadFn = useDownloadCreditLedger(apiOptions)
 
     expect(vi.mocked(useApiService)).toHaveBeenCalledWith(apiOptions)
   })
 
-  it('should handle missing orgId in download parameters', () => {
+  test('should handle missing orgId in download parameters', () => {
     const downloadFn = useDownloadCreditLedger()
 
     downloadFn({
@@ -422,13 +444,14 @@ describe('useCreditLedgerYears', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('should fetch organization years successfully', async () => {
+  test('should fetch organization years successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockYears = ['2024', '2023', '2022']
     mockGet.mockResolvedValueOnce({ data: mockYears })
 
-    const { result } = renderHook(() => useCreditLedgerYears(123), {
-      wrapper: wrapper
-    })
+    const { result } = renderHook(() => useCreditLedgerYears(123), [query])
 
     await waitFor(() => {
       expect(result.current.data).toEqual(mockYears)
@@ -439,21 +462,20 @@ describe('useCreditLedgerYears', () => {
     )
   })
 
-  it('should not fetch when orgId is not provided', () => {
-    const { result } = renderHook(() => useCreditLedgerYears(null), {
-      wrapper: wrapper
-    })
+  test('should not fetch when orgId is not provided', ({
+    renderHook,
+    query
+  }) => {
+    const { result } = renderHook(() => useCreditLedgerYears(null), [query])
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should handle empty years list', async () => {
+  test('should handle empty years list', async ({ renderHook, query }) => {
     mockGet.mockResolvedValueOnce({ data: [] })
 
-    const { result } = renderHook(() => useCreditLedgerYears(456), {
-      wrapper: wrapper
-    })
+    const { result } = renderHook(() => useCreditLedgerYears(456), [query])
 
     await waitFor(() => {
       expect(result.current.data).toEqual([])
@@ -464,13 +486,11 @@ describe('useCreditLedgerYears', () => {
     )
   })
 
-  it('should handle API errors gracefully', async () => {
+  test('should handle API errors gracefully', async ({ renderHook, query }) => {
     const mockError = new Error('API Error')
     mockGet.mockRejectedValueOnce(mockError)
 
-    const { result } = renderHook(() => useCreditLedgerYears(123), {
-      wrapper: wrapper
-    })
+    const { result } = renderHook(() => useCreditLedgerYears(123), [query])
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true)
@@ -479,7 +499,7 @@ describe('useCreditLedgerYears', () => {
     expect(result.current.error).toEqual(mockError)
   })
 
-  it('should pass through custom options', async () => {
+  test('should pass through custom options', async ({ renderHook, query }) => {
     const mockYears = ['2024']
     mockGet.mockResolvedValueOnce({ data: mockYears })
 
@@ -490,9 +510,7 @@ describe('useCreditLedgerYears', () => {
 
     const { result } = renderHook(
       () => useCreditLedgerYears(123, customOptions),
-      {
-        wrapper: wrapper
-      }
+      [query]
     )
 
     await waitFor(() => {

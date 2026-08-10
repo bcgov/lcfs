@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import {
   useUser,
   useUsers,
@@ -31,7 +31,10 @@ describe('useUser', () => {
   })
 
   describe('useUser', () => {
-    it('should fetch user successfully when ID provided', async () => {
+    test('should fetch user successfully when ID provided', async ({
+      renderHook,
+      query
+    }) => {
       const userId = 123
       const mockData = {
         userId,
@@ -42,7 +45,7 @@ describe('useUser', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useUser(userId), { wrapper })
+      const { result } = renderHook(() => useUser(userId), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -52,8 +55,11 @@ describe('useUser', () => {
       expect(mockGet).toHaveBeenCalledWith('/users/123')
     })
 
-    it('should not fetch when ID is not provided', () => {
-      const { result } = renderHook(() => useUser(), { wrapper })
+    test('should not fetch when ID is not provided', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useUser(), [query])
 
       // With enabled: !!id, the query should be disabled and not fetch
       expect(result.current.status).toBe('pending')
@@ -61,12 +67,12 @@ describe('useUser', () => {
       expect(mockGet).not.toHaveBeenCalled()
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const userId = 123
       const mockError = new Error('User not found')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useUser(userId), { wrapper })
+      const { result } = renderHook(() => useUser(userId), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -77,7 +83,7 @@ describe('useUser', () => {
   })
 
   describe('useCreateUser', () => {
-    it('should create user successfully', async () => {
+    test('should create user successfully', async ({ renderHook, query }) => {
       const userData = {
         email: 'newuser@example.com',
         firstName: 'Jane',
@@ -87,7 +93,7 @@ describe('useUser', () => {
       const mockResponse = { data: { userId: 456 } }
       mockPost.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useCreateUser(), { wrapper })
+      const { result } = renderHook(() => useCreateUser(), [query])
 
       result.current.mutate(userData)
 
@@ -99,12 +105,15 @@ describe('useUser', () => {
       expect(result.current.data).toEqual(mockResponse)
     })
 
-    it('should handle API errors during creation', async () => {
+    test('should handle API errors during creation', async ({
+      renderHook,
+      query
+    }) => {
       const userData = { email: 'invalid-email' }
       const mockError = new Error('Invalid email format')
       mockPost.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useCreateUser(), { wrapper })
+      const { result } = renderHook(() => useCreateUser(), [query])
 
       result.current.mutate(userData)
 
@@ -117,13 +126,13 @@ describe('useUser', () => {
   })
 
   describe('useUpdateUser', () => {
-    it('should update user successfully', async () => {
+    test('should update user successfully', async ({ renderHook, query }) => {
       const userId = 123
       const updateData = { firstName: 'Updated Name' }
       const mockResponse = { data: { success: true } }
       mockPut.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useUpdateUser(), { wrapper })
+      const { result } = renderHook(() => useUpdateUser(), [query])
 
       result.current.mutate({ userID: userId, payload: updateData })
 
@@ -134,13 +143,16 @@ describe('useUser', () => {
       expect(mockPut).toHaveBeenCalledWith('/users/123', updateData)
     })
 
-    it('should handle API errors during update', async () => {
+    test('should handle API errors during update', async ({
+      renderHook,
+      query
+    }) => {
       const userId = 123
       const updateData = { firstName: 'Updated' }
       const mockError = new Error('Update failed')
       mockPut.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useUpdateUser(), { wrapper })
+      const { result } = renderHook(() => useUpdateUser(), [query])
 
       result.current.mutate({ userID: userId, payload: updateData })
 
@@ -153,7 +165,7 @@ describe('useUser', () => {
   })
 
   describe('useDeleteUser', () => {
-    it('should delete user successfully', async () => {
+    test('should delete user successfully', async ({ renderHook, query }) => {
       const userId = 123
       const mockResponse = { data: { deleted: true } }
       const mockDelete = vi.fn()
@@ -165,7 +177,7 @@ describe('useUser', () => {
       })
       mockDelete.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useDeleteUser(), { wrapper })
+      const { result } = renderHook(() => useDeleteUser(), [query])
 
       result.current.mutate(userId)
 
@@ -176,7 +188,10 @@ describe('useUser', () => {
       expect(mockDelete).toHaveBeenCalledWith('/users/123')
     })
 
-    it('should handle API errors during deletion', async () => {
+    test('should handle API errors during deletion', async ({
+      renderHook,
+      query
+    }) => {
       const userId = 123
       const mockError = new Error('Deletion failed')
       const mockDelete = vi.fn()
@@ -188,7 +203,7 @@ describe('useUser', () => {
       })
       mockDelete.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useDeleteUser(), { wrapper })
+      const { result } = renderHook(() => useDeleteUser(), [query])
 
       result.current.mutate(userId)
 
@@ -201,7 +216,7 @@ describe('useUser', () => {
   })
 
   describe('useUsers', () => {
-    it('should fetch users successfully', async () => {
+    test('should fetch users successfully', async ({ renderHook, query }) => {
       const mockData = {
         users: [
           { userId: 1, email: 'user1@example.com' },
@@ -210,7 +225,7 @@ describe('useUser', () => {
       }
       mockPost.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useUsers(), { wrapper })
+      const { result } = renderHook(() => useUsers(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -220,11 +235,11 @@ describe('useUser', () => {
       expect(mockPost).toHaveBeenCalledWith('/users/')
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch users')
       mockPost.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useUsers(), { wrapper })
+      const { result } = renderHook(() => useUsers(), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -233,14 +248,15 @@ describe('useUser', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should pass through custom options', async () => {
+    test('should pass through custom options', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { users: [] }
       mockPost.mockResolvedValue({ data: mockData })
       const customOptions = { staleTime: 5000 }
 
-      const { result } = renderHook(() => useUsers(customOptions), {
-        wrapper
-      })
+      const { result } = renderHook(() => useUsers(customOptions), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)

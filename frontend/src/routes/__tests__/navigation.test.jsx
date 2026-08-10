@@ -14,7 +14,7 @@ import { useKeycloak } from '@react-keycloak/web'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { buildPath } from '../routes'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { testQueryClient } from '@/tests/utils/wrapper'
+import { createTestQueryClient } from '@/tests/utils/wrapper'
 
 // Helper function to create test router
 const createTestRouter = (initialEntries = ['/']) => {
@@ -25,8 +25,9 @@ const createTestRouter = (initialEntries = ['/']) => {
 
 // Helper function to render router with providers
 const renderRouterWithProviders = (testRouter) => {
+  const queryClient = createTestQueryClient()
   return render(
-    <QueryClientProvider client={testQueryClient}>
+    <QueryClientProvider client={queryClient}>
       <RouterProvider router={testRouter} />
     </QueryClientProvider>
   )
@@ -573,8 +574,9 @@ describe('Dynamic Routes and Navigation', () => {
       const onNavigate = vi.fn()
 
       const testRouter = createTestRouter(['/'])
+      const queryClient = createTestQueryClient()
       render(
-        <QueryClientProvider client={testQueryClient}>
+        <QueryClientProvider client={queryClient}>
           <div>
             <RouterProvider router={testRouter} />
             <NavigationTestComponent onNavigate={onNavigate} />
@@ -600,8 +602,9 @@ describe('Dynamic Routes and Navigation', () => {
       const onNavigate = vi.fn()
 
       const testRouter = createTestRouter(['/'])
+      const queryClient = createTestQueryClient()
       render(
-        <QueryClientProvider client={testQueryClient}>
+        <QueryClientProvider client={queryClient}>
           <div>
             <RouterProvider router={testRouter} />
             <NavigationTestComponent onNavigate={onNavigate} />
