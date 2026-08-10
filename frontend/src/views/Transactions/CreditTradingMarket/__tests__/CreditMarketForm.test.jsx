@@ -6,7 +6,14 @@ import { CreditMarketForm } from '../CreditMarketForm'
 // Mock dependencies
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, fallback) => fallback || key
+    t: (key, fallback) => {
+      const translations = {
+        'creditMarket:manageListing': 'Manage your credit market listing',
+        'creditMarket:addListing': 'Add listing',
+        'creditMarket:creditsAvailable': 'Credits available'
+      }
+      return translations[key] || fallback || key
+    }
   })
 }))
 
@@ -43,7 +50,7 @@ describe('CreditMarketForm', () => {
     it('should render component with initial state', () => {
       render(<CreditMarketForm />)
       
-      expect(screen.getByText('Manage Your Credit Market Listing')).toBeInTheDocument()
+      expect(screen.getByText('Manage your credit market listing')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /add listing/i })).toBeInTheDocument()
       expect(screen.getByText(/Your organization is not currently listed/)).toBeInTheDocument()
     })

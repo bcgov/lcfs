@@ -54,7 +54,10 @@ const getApiError = (err, fallback) => {
     return data.errors[0].message
   }
   if (typeof data.detail === 'string' && data.detail) return data.detail
-  if (typeof data.message === 'string' && data.message !== 'Validation failed') {
+  if (
+    typeof data.message === 'string' &&
+    data.message !== 'Validation failed'
+  ) {
     return data.message
   }
   return err?.message || fallback
@@ -198,9 +201,28 @@ const EditViewCIApplicationBase = () => {
           message: getApiError(err, 'Failed to submit application.'),
           severity: 'error'
         })
+      } finally {
+        setModalData(null)
       }
     },
     [submitApplication, goToStep, t]
+  )
+
+  const openSubmitConfirmation = useCallback(
+    (payload) => {
+      setModalData({
+        primaryButtonAction: () => handleSubmitApplication(payload),
+        primaryButtonText: t('carbonIntensity:step4.submit'),
+        secondaryButtonText: t('common:cancelBtn'),
+        title: t('carbonIntensity:step4.submitConfirmTitle'),
+        content: (
+          <BCTypography variant="body1">
+            {t('carbonIntensity:step4.submitConfirmText')}
+          </BCTypography>
+        )
+      })
+    },
+    [handleSubmitApplication, t]
   )
 
   const handleStep3Save = useCallback(
@@ -404,7 +426,7 @@ const EditViewCIApplicationBase = () => {
       <SignAndSubmitStep
         ciApplication={ciApplication}
         currentUser={currentUser}
-        onSave={handleSubmitApplication}
+        onSave={openSubmitConfirmation}
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
         readOnly={!isDraft}

@@ -26,6 +26,15 @@ const IDIRAnalystNotificationSettings = () => {
       IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST:
         'idirAnalyst.categories.initiativeAgreements.returnedToAnalyst'
     },
+    'idirAnalyst.categories.ciApplications': {
+      title: 'idirAnalyst.categories.ciApplications.title',
+      IDIR_ANALYST__CI_APPLICATION__DIRECTOR_APPROVAL:
+        'idirAnalyst.categories.ciApplications.directorApproval',
+      IDIR_ANALYST__CI_APPLICATION__DIRECTOR_RETURNED:
+        'idirAnalyst.categories.ciApplications.directorReturned',
+      IDIR_ANALYST__CI_APPLICATION__APPLICANT_ACTIVITY:
+        'idirAnalyst.categories.ciApplications.applicantActivity'
+    },
     'idirAnalyst.categories.complianceReports': {
       title: 'idirAnalyst.categories.complianceReports.title',
       IDIR_ANALYST__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW:
@@ -34,13 +43,6 @@ const IDIRAnalystNotificationSettings = () => {
         'idirAnalyst.categories.complianceReports.managerRecommendation',
       IDIR_ANALYST__COMPLIANCE_REPORT__DIRECTOR_DECISION:
         'idirAnalyst.categories.complianceReports.directorDecision'
-    },
-    'idirAnalyst.categories.fuelCodes': {
-      title: 'idirAnalyst.categories.fuelCodes.title',
-      IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED:
-        'idirAnalyst.categories.fuelCodes.directorReturned',
-      IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL:
-        'idirAnalyst.categories.fuelCodes.directorApproval'
     }
   }
 

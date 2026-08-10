@@ -132,19 +132,21 @@ export const ApplicationInformationStep = forwardRef(
             {organization.email && (
               <BCTypography variant="body2">{organization.email}</BCTypography>
             )}
-            <BCTypography
-              variant="body2"
-              sx={{ mt: 1, fontStyle: 'italic' }}
-              data-test="ci-step1-org-info-confirmation"
-            >
-              "{t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
-              <a
-                href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+            {organization.addressLine && (
+              <BCTypography
+                variant="body2"
+                sx={{ mt: 1 }}
+                data-test="ci-step1-org-info-confirmation"
               >
-                {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
-              </a>
-              "
-            </BCTypography>
+                {t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
+                <a
+                  href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+                >
+                  {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
+                </a>
+                .
+              </BCTypography>
+            )}
           </Box>
         )}
 
