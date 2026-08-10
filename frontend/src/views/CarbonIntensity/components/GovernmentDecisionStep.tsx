@@ -97,6 +97,10 @@ export const GovernmentDecisionStep = ({
     isRequestDocumentationConfirmOpen,
     setIsRequestDocumentationConfirmOpen
   ] = useState(false)
+  const [
+    isRequestPathwayChangesConfirmOpen,
+    setIsRequestPathwayChangesConfirmOpen
+  ] = useState(false)
   const [priorityScoreTouched, setPriorityScoreTouched] = useState(false)
   const [
     priorityScoreVerificationAttempted,
@@ -259,6 +263,14 @@ export const GovernmentDecisionStep = ({
   }
 
   const handleRequestPathwayChanges = () => {
+    // Ask the analyst to confirm before requesting pathway changes (#4829).
+    // Cancelling leaves the button enabled; only confirming performs the
+    // action and disables it.
+    setIsRequestPathwayChangesConfirmOpen(true)
+  }
+
+  const confirmRequestPathwayChanges = () => {
+    setIsRequestPathwayChangesConfirmOpen(false)
     setRequestedPathwayChanges(true)
     onSupplierRequest?.('pathwayChanges')
     recordWorkflowAction(
@@ -647,6 +659,21 @@ export const GovernmentDecisionStep = ({
           content: (
             <BCTypography variant="body1">
               {t('carbonIntensity:step5.requestDocumentationConfirmText')}
+            </BCTypography>
+          )
+        }}
+      />
+      <BCModal
+        open={isRequestPathwayChangesConfirmOpen}
+        onClose={() => setIsRequestPathwayChangesConfirmOpen(false)}
+        data={{
+          title: t('carbonIntensity:step5.requestPathwayChangesConfirmTitle'),
+          primaryButtonText: t('carbonIntensity:step5.requestPathwayChanges'),
+          primaryButtonAction: confirmRequestPathwayChanges,
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <BCTypography variant="body1">
+              {t('carbonIntensity:step5.requestPathwayChangesConfirmText')}
             </BCTypography>
           )
         }}

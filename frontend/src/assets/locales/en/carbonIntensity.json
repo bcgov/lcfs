@@ -166,6 +166,8 @@
     "requestDocumentationConfirmTitle": "Request further documentation?",
     "requestDocumentationConfirmText": "This lets the applicant upload additional documents for this application. Do you want to continue?",
     "requestPathwayChanges": "Request pathway changes",
+    "requestPathwayChangesConfirmTitle": "Request pathway changes?",
+    "requestPathwayChangesConfirmText": "This lets the applicant edit the proposed fuel pathways for this application and reopens the application for their changes. Do you want to continue?",
     "recommendToDirector": "Recommend to director",
     "approveBtn": "Approve",
     "returnToAnalyst": "Return to analyst",
