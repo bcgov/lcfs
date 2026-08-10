@@ -93,7 +93,7 @@ describe('Organization Form Schema Validation', () => {
       }
 
       await expect(bceidSchema.validate(invalidData)).rejects.toThrow(
-        'Phone Number is required.'
+        'Phone number is required.'
       )
     })
 
@@ -112,7 +112,7 @@ describe('Organization Form Schema Validation', () => {
       }
 
       await expect(bceidSchema.validate(invalidData)).rejects.toThrow(
-        'Street Address / PO Box is required.'
+        'Street address / PO box is required.'
       )
     })
   })
@@ -173,7 +173,7 @@ describe('Organization Form Schema Validation', () => {
       }
 
       await expect(nonBceidSchema.validate(invalidData)).rejects.toThrow(
-        'Email Address is required.'
+        'Email address is required.'
       )
     })
 
@@ -206,7 +206,7 @@ describe('Organization Form Schema Validation', () => {
       }
 
       await expect(nonBceidSchema.validate(invalidData)).rejects.toThrow(
-        'Please enter a valid Postal / ZIP Code.'
+        'Please enter a valid postal / ZIP code.'
       )
     })
   })

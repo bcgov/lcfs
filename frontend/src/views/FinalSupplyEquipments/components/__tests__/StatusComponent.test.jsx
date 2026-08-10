@@ -93,39 +93,39 @@ describe('StatusComponent', () => {
       render(<OverlapSummary overlapStats={mockOverlapStatsWithOverlaps} />)
       
       expect(screen.getByTestId('alert')).toHaveAttribute('data-severity', 'warning')
-      expect(screen.getByText('Period Overlaps Detected')).toBeInTheDocument()
+      expect(screen.getByText('Period overlaps detected')).toBeInTheDocument()
     })
 
     it('renders success severity when no overlaps exist', () => {
       render(<OverlapSummary overlapStats={mockOverlapStatsNoOverlaps} />)
       
       expect(screen.getByTestId('alert')).toHaveAttribute('data-severity', 'success')
-      expect(screen.getByText('No Period Overlaps')).toBeInTheDocument()
+      expect(screen.getByText('No period overlaps')).toBeInTheDocument()
     })
 
     it('displays all statistics correctly with overlaps', () => {
       render(<OverlapSummary overlapStats={mockOverlapStatsWithOverlaps} />)
       
-      expect(screen.getByText('Total Supply Units:')).toBeInTheDocument()
+      expect(screen.getByText('Total supply units:')).toBeInTheDocument()
       expect(screen.getByText('10')).toBeInTheDocument()
-      expect(screen.getByText('Units with Overlaps:')).toBeInTheDocument()
+      expect(screen.getByText('Units with overlaps:')).toBeInTheDocument()
       expect(screen.getByText('3')).toBeInTheDocument()
-      expect(screen.getByText('Units without Overlaps:')).toBeInTheDocument()
+      expect(screen.getByText('Units without overlaps:')).toBeInTheDocument()
       expect(screen.getByText('7')).toBeInTheDocument()
-      expect(screen.getByText('BC Units with Overlaps:')).toBeInTheDocument()
+      expect(screen.getByText('BC units with overlaps:')).toBeInTheDocument()
       expect(screen.getByText('2')).toBeInTheDocument()
-      expect(screen.getByText('Outside BC with Overlaps:')).toBeInTheDocument()
+      expect(screen.getByText('Outside BC with overlaps:')).toBeInTheDocument()
       expect(screen.getByText('1')).toBeInTheDocument()
     })
 
     it('displays all statistics correctly without overlaps', () => {
       render(<OverlapSummary overlapStats={mockOverlapStatsNoOverlaps} />)
       
-      expect(screen.getByText('Total Supply Units:')).toBeInTheDocument()
+      expect(screen.getByText('Total supply units:')).toBeInTheDocument()
       expect(screen.getAllByText('5')).toHaveLength(2) // total and nonOverlapping are both 5
-      expect(screen.getByText('Units with Overlaps:')).toBeInTheDocument()
+      expect(screen.getByText('Units with overlaps:')).toBeInTheDocument()
       expect(screen.getAllByText('0')).toHaveLength(3) // overlapping, bcOverlapping, nonBcOverlapping
-      expect(screen.getByText('Units without Overlaps:')).toBeInTheDocument()
+      expect(screen.getByText('Units without overlaps:')).toBeInTheDocument()
     })
 
     it('handles edge case with zero total', () => {
@@ -223,7 +223,7 @@ describe('StatusComponent', () => {
         />
       )
       
-      const button = screen.getByRole('button', { name: /Refresh Map Data/i })
+      const button = screen.getByRole('button', { name: /Refresh map data/i })
       await userEvent.click(button)
       
       expect(mockRefetch).toHaveBeenCalledTimes(1)
@@ -271,7 +271,7 @@ describe('StatusComponent', () => {
         />
       )
       
-      const button = screen.getByRole('button', { name: /Refresh Map Data/i })
+      const button = screen.getByRole('button', { name: /Refresh map data/i })
       await userEvent.click(button)
       
       expect(mockRefetch).toHaveBeenCalledTimes(1)
@@ -286,7 +286,7 @@ describe('StatusComponent', () => {
         />
       )
       
-      const button = screen.getByRole('button', { name: /Refresh Map Data/i })
+      const button = screen.getByRole('button', { name: /Refresh map data/i })
       expect(button).toHaveAttribute('variant', 'outlined')
       expect(button).toHaveAttribute('color', 'dark')
     })
