@@ -16,7 +16,7 @@ from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import NotificationTypeEnum, PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
     CIApplicationSchema,
     CIApplicationsListSchema,
@@ -198,8 +198,20 @@ def fuel_repo():
 
 
 @pytest.fixture
-def service(repo, user_repo, fuel_repo):
-    return CIApplicationServices(repo=repo, user_repo=user_repo, fuel_repo=fuel_repo)
+def notification_service():
+    service = AsyncMock()
+    service.send_notification = AsyncMock()
+    return service
+
+
+@pytest.fixture
+def service(repo, user_repo, fuel_repo, notification_service):
+    return CIApplicationServices(
+        repo=repo,
+        user_repo=user_repo,
+        fuel_repo=fuel_repo,
+        notification_service=notification_service,
+    )
 
 
 @pytest.fixture
@@ -1510,7 +1522,7 @@ async def test_step5_decision_rejects_approval_when_not_recommended(
 
 @pytest.mark.anyio
 async def test_recommend_to_director_transitions_status_to_recommended(
-    service, repo, mock_user
+    service, repo, notification_service, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _ci_application(status=_status("Submitted", 2))
@@ -1529,6 +1541,12 @@ async def test_recommend_to_director_transitions_status_to_recommended(
     assert ci.assigned_analyst_id == 12
     assert ci.recommendation_date is not None
     repo.get_status_by_name.assert_awaited_with("Recommended")
+    notification_service.send_notification.assert_awaited_once()
+    request = notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION
+    ]
+    assert request.notification_data.type == "CI Application Recommended"
     assert isinstance(result, CIApplicationSchema)
 
 
