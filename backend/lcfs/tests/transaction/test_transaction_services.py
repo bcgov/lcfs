@@ -215,3 +215,58 @@ async def test_export_recorded_date_utc_midnight(transactions_service):
     # Make sure Feb 11 does NOT appear as the recorded date
     # (effective date is also 2026-02-10 so only that date should appear)
     assert "2026-02-11" not in data_line
+
+
+# A government export scoped to an organisation must not go through the
+# repository's supplier visibility rules — those restrict non-transfer rows to
+# Approved/Assessed and so silently drop legacy ("Recorded") transactions that
+# the analyst can see in the grid (#4809).
+@pytest.mark.anyio
+async def test_export_transactions_government_org_keeps_government_visibility(
+    transactions_service,
+):
+    await transactions_service.export_transactions(
+        export_format="csv",
+        pagination=None,
+        organization_id=42,
+        is_government=True,
+    )
+
+    args, _ = transactions_service.repo.get_transactions_paginated.call_args
+    offset, limit, conditions, _sort_orders, repo_organization_id = args
+
+    # organization_id withheld from the repo so the government branch applies…
+    assert repo_organization_id is None
+    # …and the organisation scope applied as an explicit condition instead.
+    assert any("from_organization_id" in str(c) for c in conditions)
+    assert any("to_organization_id" in str(c) for c in conditions)
+    assert offset == 0
+    assert limit is None
+
+
+# A supplier export must keep the repository's role-based visibility rules.
+@pytest.mark.anyio
+async def test_export_transactions_supplier_keeps_role_visibility(
+    transactions_service,
+):
+    await transactions_service.export_transactions(
+        export_format="csv",
+        pagination=None,
+        organization_id=42,
+    )
+
+    args, _ = transactions_service.repo.get_transactions_paginated.call_args
+    assert args[4] == 42
+
+
+# The all-transactions government export has no organisation to scope by.
+@pytest.mark.anyio
+async def test_export_transactions_government_all_orgs(transactions_service):
+    await transactions_service.export_transactions(
+        export_format="csv",
+        pagination=None,
+        is_government=True,
+    )
+
+    args, _ = transactions_service.repo.get_transactions_paginated.call_args
+    assert args[4] is None

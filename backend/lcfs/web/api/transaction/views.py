@@ -51,7 +51,9 @@ async def export_transactions_by_org(
     """
     Endpoint to export information of all transactions for a specific organization
     """
-    return await service.export_transactions(format, pagination, organization_id)
+    return await service.export_transactions(
+        format, pagination, organization_id, is_government=True
+    )
 
 
 @router.post("/", response_model=TransactionListSchema, status_code=status.HTTP_200_OK)
@@ -80,7 +82,7 @@ async def export_transactions(
     """
     Endpoint to export information of all transactions
     """
-    return await service.export_transactions(format, pagination)
+    return await service.export_transactions(format, pagination, is_government=True)
 
 
 @router.get(
