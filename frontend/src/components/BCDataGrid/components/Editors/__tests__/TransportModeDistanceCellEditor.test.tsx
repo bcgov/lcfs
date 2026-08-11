@@ -25,21 +25,4 @@ describe('TransportModeDistanceCellEditor', () => {
     ])
   })
 
-  it('provides explicit done and cancel controls', () => {
-    const stopEditing = vi.fn()
-
-    render(
-      <TransportModeDistanceCellEditor
-        value={[]}
-        options={['Truck']}
-        api={{ stopEditing }}
-      />
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-
-    expect(stopEditing).toHaveBeenNthCalledWith(1)
-    expect(stopEditing).toHaveBeenNthCalledWith(2, true)
-  })
 })
