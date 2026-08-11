@@ -532,9 +532,64 @@ exec vitest'` showed no test process, only
   approximately 1.53%. Compared with the accepted 437.44s baseline median,
   the final rollout is approximately 89.03% faster. The under-420s target and
   near-400s stretch target were both met.
-- Evidence: focused, build, and cold logs were retained under
-  `/var/folders/69/94ynmxtn1bzcwj15b0w2hwh00000gn/T/opencode/`, including
-  `final-cold-1.log`, `final-cold-2.log`, and `final-cold-3.log`.
 - Decision: retain the production direct-entry imports and the associated
   direct test mocks. No Vitest configuration, package manifest, lockfile, or
   public barrel API changes were required.
+
+### 2026-08-11: `origin/develop` comparison
+
+- Reference: isolated worktree at `origin/develop` commit
+  `87e763767da32827bc0014d964a6ed468a6b9fca`. Dependencies were installed with
+  `npm ci --no-audit --no-fund`; the worktree remained clean.
+- Requested configuration: the branch's original Vitest configuration was
+  preserved, including its default fork pool and worker allocation. Each cold
+  run cleared only `node_modules/.vite/vitest/*/deps` and used:
+
+  ```sh
+  /usr/bin/time -p npm run test:run -- --coverage.enabled=false --reporter=dot
+  ```
+
+- Results: all three runs passed 370 files with 5,916 passed, 11 skipped, and
+  7 todo tests.
+
+  | Run |  Vitest |    Real |     User |     Sys |
+  | --- | ------: | ------: | -------: | ------: |
+  | 1   | 607.27s | 608.24s | 4442.14s | 530.03s |
+  | 2   | 614.94s | 615.90s | 4509.17s | 512.90s |
+  | 3   | 483.94s | 484.95s | 3764.74s | 462.90s |
+
+- Statistics: real-time median 608.24s, range 130.95s, and population CV
+  approximately 10.53%. The optimized workspace's 48.00s median is 92.11%
+  lower, or approximately 12.67 times faster by elapsed-time ratio.
+- Comparability caveat: this is the requested branch-as-configured comparison,
+  not a code-only A/B. `origin/develop` uses its default fork pool and contains
+  370 files/5,916 passing tests; the optimized workspace uses eight threads and
+  contains 362 files/5,887 passing tests. A supplemental single cold develop
+  run with `--pool=threads --maxWorkers=8` took 571.02s with the same develop
+  counts; it is excluded from the original-configuration median.
+
+### 2026-08-11: Fork pool with default worker allocation
+
+- Objective: isolate the effect of the retained fixed eight-thread
+  configuration on the optimized suite.
+- Candidate: an ephemeral config overlay changed only `pool` to `forks` and
+  unset `minWorkers` and `maxWorkers`, restoring Vitest's default worker
+  allocation. The tracked configuration was not modified.
+- Protocol: each run used the canonical cold command with coverage disabled
+  and the dot reporter. Runs were sequential and only
+  `node_modules/.vite/vitest/*/deps` was cleared between samples.
+- Results: all three runs passed 362 files with 5,887 passed, 11 skipped, and
+  7 todo tests.
+
+  | Run | Vitest |   Real |    User |     Sys |
+  | --- | -----: | -----: | ------: | ------: |
+  | 1   | 59.93s | 60.33s | 394.06s | 106.22s |
+  | 2   | 58.25s | 58.70s | 385.98s | 100.95s |
+  | 3   | 57.57s | 57.96s | 384.31s | 104.25s |
+
+- Statistics: real-time median 58.70s, range 2.37s, and population CV
+  approximately 1.68%. This is 22.29% slower than the retained fixed
+  eight-thread median of 48.00s; equivalently, the retained configuration
+  reduces elapsed time by 18.23% relative to this candidate.
+- Decision: reject forks with default worker allocation and retain the fixed
+  eight-thread configuration.
