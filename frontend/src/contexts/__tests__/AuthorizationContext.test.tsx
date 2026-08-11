@@ -1,42 +1,51 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
-import { AuthorizationProvider, useAuthorization } from '../AuthorizationContext'
+import { vi, describe, expect, beforeEach } from 'vitest'
+import { act } from '@testing-library/react'
+import {
+  AuthorizationProvider,
+  useAuthorization
+} from '../AuthorizationContext'
 import React from 'react'
+import { makeProvider, test, type TestRenderHook } from '@/tests/utils/fixtures'
+
+const authorization = makeProvider('custom', (children) => (
+  <AuthorizationProvider>{children}</AuthorizationProvider>
+))
+
+const renderAuthorization = (renderHook: TestRenderHook) =>
+  renderHook(() => useAuthorization(), [authorization])
 
 describe('AuthorizationContext', () => {
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <AuthorizationProvider>{children}</AuthorizationProvider>
-  )
-
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   describe('Initial State', () => {
-    it('should initialize with forbidden as false', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should initialize with forbidden as false', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
       expect(result.current.forbidden).toBe(false)
     })
 
-    it('should initialize with empty errorRefs array', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should initialize with empty errorRefs array', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
       expect(result.current.errorRefs).toEqual([])
     })
 
-    it('should initialize with errorStatus as null', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should initialize with errorStatus as null', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
       expect(result.current.errorStatus).toBe(null)
     })
 
-    it('should initialize with serverErrorBlockedRef as false', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should initialize with serverErrorBlockedRef as false', ({
+      renderHook
+    }) => {
+      const { result } = renderAuthorization(renderHook)
       expect(result.current.serverErrorBlockedRef.current).toBe(false)
     })
   })
 
   describe('setForbidden', () => {
-    it('should update forbidden state to true', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should update forbidden state to true', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.setForbidden(true)
@@ -45,8 +54,8 @@ describe('AuthorizationContext', () => {
       expect(result.current.forbidden).toBe(true)
     })
 
-    it('should update forbidden state to false', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should update forbidden state to false', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.setForbidden(true)
@@ -61,8 +70,8 @@ describe('AuthorizationContext', () => {
   })
 
   describe('addErrorRef', () => {
-    it('should add a reference number to errorRefs', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should add a reference number to errorRefs', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.addErrorRef('ref-123')
@@ -71,8 +80,8 @@ describe('AuthorizationContext', () => {
       expect(result.current.errorRefs).toEqual(['ref-123'])
     })
 
-    it('should add multiple reference numbers', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should add multiple reference numbers', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.addErrorRef('ref-123')
@@ -80,11 +89,15 @@ describe('AuthorizationContext', () => {
         result.current.addErrorRef('ref-789')
       })
 
-      expect(result.current.errorRefs).toEqual(['ref-123', 'ref-456', 'ref-789'])
+      expect(result.current.errorRefs).toEqual([
+        'ref-123',
+        'ref-456',
+        'ref-789'
+      ])
     })
 
-    it('should not add duplicate reference numbers', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should not add duplicate reference numbers', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.addErrorRef('ref-123')
@@ -96,8 +109,8 @@ describe('AuthorizationContext', () => {
       expect(result.current.errorRefs).toEqual(['ref-123', 'ref-456'])
     })
 
-    it('should not add empty string reference', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should not add empty string reference', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.addErrorRef('')
@@ -106,8 +119,8 @@ describe('AuthorizationContext', () => {
       expect(result.current.errorRefs).toEqual([])
     })
 
-    it('should not add null or undefined reference', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should not add null or undefined reference', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.addErrorRef(null as any)
@@ -119,8 +132,8 @@ describe('AuthorizationContext', () => {
   })
 
   describe('clearErrorRefs', () => {
-    it('should clear all error references', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should clear all error references', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.addErrorRef('ref-123')
@@ -135,8 +148,10 @@ describe('AuthorizationContext', () => {
       expect(result.current.errorRefs).toEqual([])
     })
 
-    it('should do nothing when errorRefs is already empty', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should do nothing when errorRefs is already empty', ({
+      renderHook
+    }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.clearErrorRefs()
@@ -147,8 +162,8 @@ describe('AuthorizationContext', () => {
   })
 
   describe('setErrorStatus', () => {
-    it('should set error status to 500', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should set error status to 500', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.setErrorStatus(500)
@@ -157,8 +172,10 @@ describe('AuthorizationContext', () => {
       expect(result.current.errorStatus).toBe(500)
     })
 
-    it('should set serverErrorBlockedRef to true when status is 500', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should set serverErrorBlockedRef to true when status is 500', ({
+      renderHook
+    }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.setErrorStatus(500)
@@ -167,8 +184,10 @@ describe('AuthorizationContext', () => {
       expect(result.current.serverErrorBlockedRef.current).toBe(true)
     })
 
-    it('should not set serverErrorBlockedRef to true for non-500 errors', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should not set serverErrorBlockedRef to true for non-500 errors', ({
+      renderHook
+    }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.setErrorStatus(404)
@@ -178,8 +197,8 @@ describe('AuthorizationContext', () => {
       expect(result.current.serverErrorBlockedRef.current).toBe(false)
     })
 
-    it('should update error status to null', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should update error status to null', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.setErrorStatus(500)
@@ -193,8 +212,8 @@ describe('AuthorizationContext', () => {
       expect(result.current.errorStatus).toBe(null)
     })
 
-    it('should handle multiple error status changes', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should handle multiple error status changes', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.setErrorStatus(404)
@@ -215,8 +234,8 @@ describe('AuthorizationContext', () => {
   })
 
   describe('resetServerError', () => {
-    it('should reset all error-related state', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should reset all error-related state', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.addErrorRef('ref-123')
@@ -237,8 +256,8 @@ describe('AuthorizationContext', () => {
       expect(result.current.serverErrorBlockedRef.current).toBe(false)
     })
 
-    it('should work when called on clean state', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should work when called on clean state', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.resetServerError()
@@ -249,8 +268,10 @@ describe('AuthorizationContext', () => {
       expect(result.current.serverErrorBlockedRef.current).toBe(false)
     })
 
-    it('should reset serverErrorBlockedRef even if set manually', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should reset serverErrorBlockedRef even if set manually', ({
+      renderHook
+    }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.serverErrorBlockedRef.current = true
@@ -271,8 +292,8 @@ describe('AuthorizationContext', () => {
   })
 
   describe('Integration Scenarios', () => {
-    it('should handle complete 500 error flow', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should handle complete 500 error flow', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.addErrorRef('correlation-id-abc')
@@ -292,8 +313,8 @@ describe('AuthorizationContext', () => {
       expect(result.current.serverErrorBlockedRef.current).toBe(false)
     })
 
-    it('should handle multiple errors before reset', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should handle multiple errors before reset', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.addErrorRef('ref-1')
@@ -314,8 +335,10 @@ describe('AuthorizationContext', () => {
       expect(result.current.errorStatus).toBe(null)
     })
 
-    it('should maintain forbidden state independently from error state', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should maintain forbidden state independently from error state', ({
+      renderHook
+    }) => {
+      const { result } = renderAuthorization(renderHook)
 
       act(() => {
         result.current.setForbidden(true)
@@ -336,16 +359,20 @@ describe('AuthorizationContext', () => {
   })
 
   describe('Error Handling', () => {
-    it('should throw error when useAuthorization is used outside provider', () => {
+    test('should throw error when useAuthorization is used outside provider', ({
+      renderHook
+    }) => {
       expect(() => {
-        renderHook(() => useAuthorization())
-      }).toThrow('useAuthorization must be used within an AuthorizationProvider')
+        renderHook(() => useAuthorization(), [])
+      }).toThrow(
+        'useAuthorization must be used within an AuthorizationProvider'
+      )
     })
   })
 
   describe('Memoization', () => {
-    it('should update context value when state changes', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should update context value when state changes', ({ renderHook }) => {
+      const { result } = renderAuthorization(renderHook)
 
       const initialValue = result.current
 
@@ -357,8 +384,10 @@ describe('AuthorizationContext', () => {
       expect(result.current.errorStatus).toBe(500)
     })
 
-    it('should preserve function references across re-renders', () => {
-      const { result, rerender } = renderHook(() => useAuthorization(), { wrapper })
+    test('should preserve function references across re-renders', ({
+      renderHook
+    }) => {
+      const { result, rerender } = renderAuthorization(renderHook)
 
       const initialSetForbidden = result.current.setForbidden
       const initialAddErrorRef = result.current.addErrorRef
@@ -377,8 +406,10 @@ describe('AuthorizationContext', () => {
   })
 
   describe('Default Values', () => {
-    it('should provide default values when context is missing properties', () => {
-      const { result } = renderHook(() => useAuthorization(), { wrapper })
+    test('should provide default values when context is missing properties', ({
+      renderHook
+    }) => {
+      const { result } = renderAuthorization(renderHook)
 
       expect(result.current.forbidden).toBeDefined()
       expect(result.current.setForbidden).toBeDefined()

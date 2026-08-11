@@ -197,14 +197,6 @@ const makeRouterProvider = (
   return value
 }
 
-const readModuleExport = <Value,>(module: object, name: string) => {
-  try {
-    return (module as Record<string, unknown>)[name] as Value
-  } catch {
-    return undefined
-  }
-}
-
 let unhandledRejectionGuardInstalled = false
 
 const installUnhandledRejectionGuard = () => {
@@ -235,7 +227,7 @@ const buildI18nProvider = async (): Promise<I18nProviderValue> => {
   const [
     { default: i18next },
     { I18nextProvider, initReactI18next },
-    { loadI18nResources }
+    { configureLazyI18n }
   ] = await Promise.all([
     import('i18next'),
     import('react-i18next'),
@@ -246,11 +238,12 @@ const buildI18nProvider = async (): Promise<I18nProviderValue> => {
     instance.use(initReactI18next)
   }
   await instance.init({
-    resources: await loadI18nResources(),
+    resources: { en: {} },
     defaultNS: 'common',
     lng: 'en',
     interpolation: { escapeValue: false }
   })
+  configureLazyI18n(instance)
 
   return {
     kind: 'i18n',
@@ -317,18 +310,25 @@ export const test = baseTest
   )
   .extend('router', async (): Promise<RouterProviderValue> => {
     const routerDom = await import('react-router-dom')
-    const routerDomMemoryRouter = readModuleExport<
-      typeof import('react-router').MemoryRouter
-    >(routerDom, 'MemoryRouter')
-    if (routerDomMemoryRouter) {
-      return makeRouterProvider(routerDomMemoryRouter)
+    let MemoryRouter
+    try {
+      MemoryRouter = routerDom.MemoryRouter
+    } catch {
+      // File-local mocks may omit the router component export.
     }
-    const { MemoryRouter } = await import('react-router')
+    MemoryRouter ??= (await import('react-router')).MemoryRouter
     return makeRouterProvider(MemoryRouter)
   })
   .extend('theme', async () => {
-    const [{ CssBaseline, ThemeProvider }, { default: theme }] =
-      await Promise.all([import('@mui/material'), import('@/themes')])
+    const [
+      { default: CssBaseline },
+      { default: ThemeProvider },
+      { default: theme }
+    ] = await Promise.all([
+      import('@mui/material/CssBaseline'),
+      import('@mui/material/styles/ThemeProvider'),
+      import('@/themes')
+    ])
     return makeProvider('theme', (children) => (
       <ThemeProvider theme={theme}>
         <CssBaseline />
@@ -338,7 +338,7 @@ export const test = baseTest
   })
   .extend('localization', async () => {
     const [{ LocalizationProvider }, { AdapterDateFns }] = await Promise.all([
-      import('@mui/x-date-pickers'),
+      import('@mui/x-date-pickers/LocalizationProvider'),
       import('@mui/x-date-pickers/AdapterDateFnsV3')
     ])
     return makeProvider('localization', (children) => (

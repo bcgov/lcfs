@@ -1,8 +1,8 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
 import { ReportsMenu } from '../ReportsMenu'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -52,64 +52,110 @@ describe('ReportsMenu - FSE / charging-sites tab visibility', () => {
     }
   })
 
-  it('hides FSE and charging-sites tabs for BCeID signing-authority-only user', () => {
+  test('hides FSE and charging-sites tabs for BCeID signing-authority-only user', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = ['Signing Authority']
-    render(<ReportsMenu />, { wrapper })
+    render(<ReportsMenu />, [query, theme, localization, router])
 
     expect(screen.queryByText('tabs.manageFSE')).not.toBeInTheDocument()
     expect(screen.queryByText('tabs.fseMap')).not.toBeInTheDocument()
-    expect(screen.queryByText('tabs.manageChargingSites')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('tabs.manageChargingSites')
+    ).not.toBeInTheDocument()
   })
 
-  it('shows FSE and charging-sites tabs for BCeID compliance-reporting user when feature flags enabled', () => {
+  test('shows FSE and charging-sites tabs for BCeID compliance-reporting user when feature flags enabled', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = ['Compliance Reporting']
-    render(<ReportsMenu />, { wrapper })
+    render(<ReportsMenu />, [query, theme, localization, router])
 
     expect(screen.getByText('tabs.manageFSE')).toBeInTheDocument()
     expect(screen.getByText('tabs.fseMap')).toBeInTheDocument()
     expect(screen.getByText('tabs.manageChargingSites')).toBeInTheDocument()
   })
 
-  it('hides FSE tabs for compliance-reporting user when feature flag is disabled', () => {
+  test('hides FSE tabs for compliance-reporting user when feature flag is disabled', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = ['Compliance Reporting']
     mockFeatureFlags = { manageFse: false, manageChargingSites: false }
-    render(<ReportsMenu />, { wrapper })
+    render(<ReportsMenu />, [query, theme, localization, router])
 
     expect(screen.queryByText('tabs.manageFSE')).not.toBeInTheDocument()
     expect(screen.queryByText('tabs.fseMap')).not.toBeInTheDocument()
-    expect(screen.queryByText('tabs.manageChargingSites')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('tabs.manageChargingSites')
+    ).not.toBeInTheDocument()
   })
 
-  it('shows FSE tabs for IDIR user regardless of feature flag', () => {
+  test('shows FSE tabs for IDIR user regardless of feature flag', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = ['Government', 'Analyst']
     mockFeatureFlags = { manageFse: false, manageChargingSites: false }
-    render(<ReportsMenu />, { wrapper })
+    render(<ReportsMenu />, [query, theme, localization, router])
 
     expect(screen.getByText('tabs.fseIndex')).toBeInTheDocument()
     expect(screen.getByText('tabs.fseMap')).toBeInTheDocument()
     expect(screen.getByText('tabs.chargingSites')).toBeInTheDocument()
   })
 
-  it('blocks direct navigation to FSE content for signing-authority-only user', () => {
+  test('blocks direct navigation to FSE content for signing-authority-only user', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = ['Signing Authority']
     mockLocation.pathname = '/compliance-reporting/fse'
-    render(<ReportsMenu />, { wrapper })
+    render(<ReportsMenu />, [query, theme, localization, router])
 
     expect(screen.queryByTestId('outlet')).not.toBeInTheDocument()
   })
 
-  it('blocks direct navigation to charging-sites for signing-authority-only user', () => {
+  test('blocks direct navigation to charging-sites for signing-authority-only user', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = ['Signing Authority']
     mockLocation.pathname = '/compliance-reporting/charging-sites'
-    render(<ReportsMenu />, { wrapper })
+    render(<ReportsMenu />, [query, theme, localization, router])
 
     expect(screen.queryByTestId('outlet')).not.toBeInTheDocument()
   })
 
-  it('allows direct navigation to FSE content for compliance-reporting user', () => {
+  test('allows direct navigation to FSE content for compliance-reporting user', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = ['Compliance Reporting']
     mockLocation.pathname = '/compliance-reporting/fse'
-    render(<ReportsMenu />, { wrapper })
+    render(<ReportsMenu />, [query, theme, localization, router])
 
     expect(screen.getByTestId('outlet')).toBeInTheDocument()
   })

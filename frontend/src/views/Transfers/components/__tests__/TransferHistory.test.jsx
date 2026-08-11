@@ -56,57 +56,39 @@ describe('TransferHistory Component', () => {
   describe('Early return conditions', () => {
     test('returns null when transferData is null', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       useTransfer.mockReturnValue({ data: null })
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
       const { container } = render(<TransferHistory transferHistory={[]} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
       expect(container.firstChild).toBeNull()
     })
 
     test('returns null when transferData is undefined', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       useTransfer.mockReturnValue({ data: undefined })
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
       const { container } = render(<TransferHistory transferHistory={[]} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
       expect(container.firstChild).toBeNull()
     })
 
     test('returns null when useTransfer returns undefined', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       useTransfer.mockReturnValue({})
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
       const { container } = render(<TransferHistory transferHistory={[]} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
       expect(container.firstChild).toBeNull()
     })
@@ -126,10 +108,7 @@ describe('TransferHistory Component', () => {
 
     test('handles RECOMMENDED status with RECORD recommendation', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       const history = [
         {
@@ -154,10 +133,7 @@ describe('TransferHistory Component', () => {
       })
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
       expect(
         screen.getByText('Recommended recording transfer')
@@ -166,10 +142,7 @@ describe('TransferHistory Component', () => {
 
     test('handles RECOMMENDED status with REFUSE recommendation', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       const history = [
         {
@@ -194,10 +167,7 @@ describe('TransferHistory Component', () => {
       })
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
       expect(
         screen.getByText('Recommended refusing transfer')
@@ -206,10 +176,7 @@ describe('TransferHistory Component', () => {
 
     test('handles non-RECOMMENDED status', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       const history = [
         {
@@ -227,20 +194,14 @@ describe('TransferHistory Component', () => {
       ]
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
       expect(screen.getByText('Signed and submitted')).toBeInTheDocument()
     })
 
     test('handles unknown status', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       const history = [
         {
@@ -255,10 +216,7 @@ describe('TransferHistory Component', () => {
       ]
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
       expect(screen.getByText('Status not found')).toBeInTheDocument()
     })
@@ -267,10 +225,7 @@ describe('TransferHistory Component', () => {
   describe('Category calculation logic', () => {
     test('uses transferCategory when provided', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       useTransfer.mockReturnValue({
         data: {
@@ -282,20 +237,14 @@ describe('TransferHistory Component', () => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
       render(<TransferHistory transferHistory={[]} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
       expect(screen.getByText(/Category B/)).toBeInTheDocument()
     })
 
     test('displays A1 when the A1 category flag is set', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       useTransfer.mockReturnValue({
         data: {
@@ -308,20 +257,14 @@ describe('TransferHistory Component', () => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
       render(<TransferHistory transferHistory={[]} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
       expect(screen.getByText(/Category A1/)).toBeInTheDocument()
     })
 
     test('defaults to calculated category when transferCategory not provided', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       useTransfer.mockReturnValue({
         data: {
@@ -332,10 +275,7 @@ describe('TransferHistory Component', () => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
       render(<TransferHistory transferHistory={[]} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
       expect(screen.getByText(/Category/)).toBeInTheDocument()
     })
@@ -354,10 +294,7 @@ describe('TransferHistory Component', () => {
 
     test('filters out DRAFT records', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       const history = [
         {
@@ -387,10 +324,7 @@ describe('TransferHistory Component', () => {
       ]
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
 
       expect(screen.queryByText('Draft User')).not.toBeInTheDocument()
@@ -399,10 +333,7 @@ describe('TransferHistory Component', () => {
 
     test('handles empty history after filtering', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       const history = [
         {
@@ -420,10 +351,7 @@ describe('TransferHistory Component', () => {
       ]
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+       theme
       ])
 
       const listItems = screen.queryAllByRole('listitem')
@@ -432,12 +360,9 @@ describe('TransferHistory Component', () => {
 
     test('handles undefined transferHistory', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
-      render(<TransferHistory />, [query, theme, localization, router])
+      render(<TransferHistory />, [theme])
 
       const listItems = screen.queryAllByRole('listitem')
       expect(listItems).toHaveLength(1) // Only agreement date item
@@ -472,18 +397,12 @@ describe('TransferHistory Component', () => {
 
     test('shows director text for RECORDED status when user is not government', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: false } })
 
       render(<TransferHistory transferHistory={recordedHistory} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
 
       expect(screen.getByText('Director')).toBeInTheDocument()
@@ -494,18 +413,12 @@ describe('TransferHistory Component', () => {
 
     test('shows user details for RECORDED status when user is government', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
       render(<TransferHistory transferHistory={recordedHistory} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
 
       expect(screen.getByText('System User')).toBeInTheDocument()
@@ -514,10 +427,7 @@ describe('TransferHistory Component', () => {
 
     test('shows user details for non-RECORDED status regardless of user type', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       const nonRecordedHistory = [
         {
@@ -537,10 +447,7 @@ describe('TransferHistory Component', () => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: false } })
 
       render(<TransferHistory transferHistory={nonRecordedHistory} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
 
       expect(screen.getByText('John Doe')).toBeInTheDocument()
@@ -561,10 +468,7 @@ describe('TransferHistory Component', () => {
 
     test('displays agreement date for qualifying statuses', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       const qualifyingStatuses = [
         TRANSFER_STATUSES.SENT,
@@ -579,10 +483,7 @@ describe('TransferHistory Component', () => {
         })
 
         render(<TransferHistory transferHistory={[]} />, [
-          query,
-          theme,
-          localization,
-          router
+         theme
         ])
         expect(
           screen.getByText(/Date of written agreement/)
@@ -593,10 +494,7 @@ describe('TransferHistory Component', () => {
 
     test('does not display agreement date for non-qualifying statuses', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       useTransfer.mockReturnValue({
         data: {
@@ -606,10 +504,7 @@ describe('TransferHistory Component', () => {
       })
 
       render(<TransferHistory transferHistory={[]} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
       expect(
         screen.queryByText(/Date of written agreement/)
@@ -618,20 +513,14 @@ describe('TransferHistory Component', () => {
 
     test('does not display agreement date when agreementDate is null', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       useTransfer.mockReturnValue({
         data: { ...mockTransferData, agreementDate: null }
       })
 
       render(<TransferHistory transferHistory={[]} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
       expect(
         screen.queryByText(/Date of written agreement/)
@@ -652,10 +541,7 @@ describe('TransferHistory Component', () => {
 
     test('renders history items with user profile names', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       const history = [
         {
@@ -673,10 +559,7 @@ describe('TransferHistory Component', () => {
       ]
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
 
       expect(screen.getByText('John Doe')).toBeInTheDocument()
@@ -685,10 +568,7 @@ describe('TransferHistory Component', () => {
 
     test('renders history items with displayName when available', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       const history = [
         {
@@ -707,10 +587,7 @@ describe('TransferHistory Component', () => {
       ]
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
 
       expect(screen.getByText('Custom Display Name')).toBeInTheDocument()
@@ -719,10 +596,7 @@ describe('TransferHistory Component', () => {
 
     test('handles missing organization gracefully', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       const history = [
         {
@@ -736,10 +610,7 @@ describe('TransferHistory Component', () => {
       ]
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
 
       expect(screen.getByText('John Doe')).toBeInTheDocument()
@@ -748,10 +619,7 @@ describe('TransferHistory Component', () => {
 
     test('formats dates correctly', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       const history = [
         {
@@ -769,10 +637,7 @@ describe('TransferHistory Component', () => {
       ]
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
 
       expect(
@@ -794,16 +659,10 @@ describe('TransferHistory Component', () => {
 
     test('renders main container with data-test attribute', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       render(<TransferHistory transferHistory={[]} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
 
       expect(screen.getByTestId('transfer-history')).toBeInTheDocument()
@@ -811,16 +670,10 @@ describe('TransferHistory Component', () => {
 
     test('renders transaction history title', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       render(<TransferHistory transferHistory={[]} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
 
       expect(screen.getByText('Transaction History')).toBeInTheDocument()
@@ -828,10 +681,7 @@ describe('TransferHistory Component', () => {
 
     test('renders list structure', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+         theme
     }) => {
       const history = [
         {
@@ -849,10 +699,7 @@ describe('TransferHistory Component', () => {
       ]
 
       render(<TransferHistory transferHistory={history} />, [
-        query,
-        theme,
-        localization,
-        router
+         theme
       ])
 
       const list = screen.getByRole('list')

@@ -1,8 +1,16 @@
 import React from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
+
+let render
+const fixtureOptions = undefined
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [theme], options)
+    return fn()
+  })
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -48,9 +56,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
         <button
           type="button"
           data-test="trigger-pagination"
-          onClick={() =>
-            props.onPaginationChange?.({ page: 3, size: 25 })
-          }
+          onClick={() => props.onPaginationChange?.({ page: 3, size: 25 })}
         >
           Change pagination
         </button>
@@ -106,12 +112,11 @@ describe('MyFuelCodes', () => {
   })
 
   afterEach(() => {
-    cleanup()
     vi.clearAllMocks()
   })
 
   it('renders the organization-scoped title and grid for a CI Applicant', () => {
-    render(<MyFuelCodes />, { wrapper })
+    render(<MyFuelCodes />, { fixtureOptions })
 
     expect(screen.getByTestId('title')).toHaveTextContent(
       "My organization's fuel codes"
@@ -122,7 +127,7 @@ describe('MyFuelCodes', () => {
   })
 
   it('queries the my-fuel-codes hook (not the IDIR list hook)', () => {
-    render(<MyFuelCodes />, { wrapper })
+    render(<MyFuelCodes />, { fixtureOptions })
 
     expect(mockUseGetMyFuelCodes).toHaveBeenCalled()
     const [pagination] = mockUseGetMyFuelCodes.mock.calls[0]
@@ -138,7 +143,7 @@ describe('MyFuelCodes', () => {
   it('redirects users without the CI Applicant role away from the page', () => {
     mockUserRoles = [{ name: roles.read_only }]
 
-    render(<MyFuelCodes />, { wrapper })
+    render(<MyFuelCodes />, { fixtureOptions })
 
     expect(screen.getByTestId('redirect')).toBeInTheDocument()
     expect(screen.queryByTestId('title')).not.toBeInTheDocument()
@@ -150,14 +155,14 @@ describe('MyFuelCodes', () => {
       severity: 'success'
     }
 
-    render(<MyFuelCodes />, { wrapper })
+    render(<MyFuelCodes />, { fixtureOptions })
 
     const alertBox = screen.getByTestId('alert-box')
     expect(alertBox).toHaveTextContent('Saved successfully')
   })
 
   it('does not turn rows into navigation links (no detail page yet)', () => {
-    render(<MyFuelCodes />, { wrapper })
+    render(<MyFuelCodes />, { fixtureOptions })
 
     const gridProps = mockBCGridViewer.mock.calls.at(-1)[0]
     expect(gridProps.defaultColDef).toBeUndefined()
@@ -165,7 +170,7 @@ describe('MyFuelCodes', () => {
 
   it('forwards the grid pagination changes back into the query hook', async () => {
     const user = (await import('@testing-library/user-event')).default.setup()
-    render(<MyFuelCodes />, { wrapper })
+    render(<MyFuelCodes />, { fixtureOptions })
 
     await user.click(screen.getByTestId('trigger-pagination'))
 
@@ -173,9 +178,7 @@ describe('MyFuelCodes', () => {
       mockUseGetMyFuelCodes.mock.calls[
         mockUseGetMyFuelCodes.mock.calls.length - 1
       ]
-    expect(lastCall[0]).toEqual(
-      expect.objectContaining({ page: 3, size: 25 })
-    )
+    expect(lastCall[0]).toEqual(expect.objectContaining({ page: 3, size: 25 }))
   })
 
   it('shows a localized error message when the data load fails', () => {
@@ -186,7 +189,7 @@ describe('MyFuelCodes', () => {
       error: { message: '' }
     })
 
-    render(<MyFuelCodes />, { wrapper })
+    render(<MyFuelCodes />, { fixtureOptions })
 
     const alertBox = screen.getByTestId('alert-box')
     expect(alertBox).toHaveTextContent('Failed to load fuel code information.')
@@ -200,7 +203,7 @@ describe('MyFuelCodes', () => {
       error: { message: 'Server unreachable' }
     })
 
-    render(<MyFuelCodes />, { wrapper })
+    render(<MyFuelCodes />, { fixtureOptions })
 
     expect(screen.getByTestId('alert-box')).toHaveTextContent(
       'Server unreachable'

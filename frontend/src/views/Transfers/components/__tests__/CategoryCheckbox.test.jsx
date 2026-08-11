@@ -75,19 +75,13 @@ describe('CategoryCheckbox Component', () => {
     vi.clearAllMocks()
   })
 
-  test('should render the component', ({
-    render,
-    theme,
-    localization,
-    router,
-    i18n
-  }) => {
+  test('should render the component', ({ render, theme, i18n }) => {
     useTransfer.mockReturnValue({
       data: {},
       isFetching: false
     })
 
-    render(<CategoryCheckbox />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox />, [theme, i18n])
 
     expect(screen.getByTestId('category-checkbox')).toBeInTheDocument()
     expect(screen.getByTestId('checkbox')).toBeInTheDocument()
@@ -96,8 +90,6 @@ describe('CategoryCheckbox Component', () => {
   test('should display A1 as checked when transfer is flagged A1', ({
     render,
     theme,
-    localization,
-    router,
     i18n
   }) => {
     useTransfer.mockReturnValue({
@@ -105,7 +97,7 @@ describe('CategoryCheckbox Component', () => {
       isFetching: false
     })
 
-    render(<CategoryCheckbox />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox />, [theme, i18n])
 
     const checkbox = screen.getByRole('checkbox')
     expect(checkbox).toBeChecked()
@@ -114,8 +106,6 @@ describe('CategoryCheckbox Component', () => {
   test('should display A1 as unchecked when transfer is not flagged A1', ({
     render,
     theme,
-    localization,
-    router,
     i18n
   }) => {
     useTransfer.mockReturnValue({
@@ -123,7 +113,7 @@ describe('CategoryCheckbox Component', () => {
       isFetching: false
     })
 
-    render(<CategoryCheckbox />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox />, [theme, i18n])
 
     const checkbox = screen.getByTestId('checkbox')
     expect(checkbox).not.toBeChecked()
@@ -132,8 +122,6 @@ describe('CategoryCheckbox Component', () => {
   test('should confirm and call updateCategory with A1 false when unchecking A1', ({
     render,
     theme,
-    localization,
-    router,
     i18n
   }) => {
     useTransfer.mockReturnValue({
@@ -141,7 +129,7 @@ describe('CategoryCheckbox Component', () => {
       isFetching: false
     })
 
-    render(<CategoryCheckbox />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox />, [theme, i18n])
 
     const checkbox = screen.getByTestId('checkbox')
     fireEvent.click(checkbox)
@@ -156,8 +144,6 @@ describe('CategoryCheckbox Component', () => {
   test('should confirm and call updateCategory with category A when checking A1', ({
     render,
     theme,
-    localization,
-    router,
     i18n
   }) => {
     useTransfer.mockReturnValue({
@@ -165,7 +151,7 @@ describe('CategoryCheckbox Component', () => {
       isFetching: false
     })
 
-    render(<CategoryCheckbox />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox />, [theme, i18n])
 
     const checkbox = screen.getByTestId('checkbox')
     fireEvent.click(checkbox)
@@ -180,8 +166,6 @@ describe('CategoryCheckbox Component', () => {
   test('should clear A1 when selecting category B', ({
     render,
     theme,
-    localization,
-    router,
     i18n
   }) => {
     useTransfer.mockReturnValue({
@@ -189,7 +173,7 @@ describe('CategoryCheckbox Component', () => {
       isFetching: false
     })
 
-    render(<CategoryCheckbox />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox />, [theme, i18n])
 
     fireEvent.click(screen.getByTestId('category-radio-B'))
     fireEvent.click(screen.getByText('Yes'))
@@ -203,8 +187,6 @@ describe('CategoryCheckbox Component', () => {
   test('should set loading state appropriately during fetch', ({
     render,
     theme,
-    localization,
-    router,
     i18n
   }) => {
     useTransfer.mockReturnValue({
@@ -212,7 +194,7 @@ describe('CategoryCheckbox Component', () => {
       isFetching: false
     })
 
-    render(<CategoryCheckbox />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox />, [theme, i18n])
 
     expect(setLoadingMock).toHaveBeenCalledWith(false)
   })
@@ -220,8 +202,6 @@ describe('CategoryCheckbox Component', () => {
   test('should disable the checkbox when isDisabled is true', ({
     render,
     theme,
-    localization,
-    router,
     i18n
   }) => {
     useTransfer.mockReturnValue({
@@ -229,7 +209,7 @@ describe('CategoryCheckbox Component', () => {
       isFetching: false
     })
 
-    render(<CategoryCheckbox isDisabled />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox isDisabled />, [theme, i18n])
 
     const checkboxWrapper = screen.getByTestId('checkbox')
     const checkboxInput = checkboxWrapper.querySelector(
@@ -243,8 +223,6 @@ describe('CategoryCheckbox Component', () => {
   test('should execute onMutate callback and set loading to true', ({
     render,
     theme,
-    localization,
-    router,
     i18n
   }) => {
     useTransfer.mockReturnValue({
@@ -252,7 +230,7 @@ describe('CategoryCheckbox Component', () => {
       isFetching: false
     })
 
-    render(<CategoryCheckbox />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox />, [theme, i18n])
 
     // Call the onMutate callback directly
     onMutateCallback()
@@ -263,8 +241,6 @@ describe('CategoryCheckbox Component', () => {
   test('should execute onSuccess callback and invalidate queries', ({
     render,
     theme,
-    localization,
-    router,
     i18n
   }) => {
     useTransfer.mockReturnValue({
@@ -272,7 +248,7 @@ describe('CategoryCheckbox Component', () => {
       isFetching: false
     })
 
-    render(<CategoryCheckbox />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox />, [theme, i18n])
 
     // Call the onSuccess callback directly
     onSuccessCallback()
@@ -283,8 +259,6 @@ describe('CategoryCheckbox Component', () => {
   test('should not call setLoading when isFetching is true', ({
     render,
     theme,
-    localization,
-    router,
     i18n
   }) => {
     useTransfer.mockReturnValue({
@@ -292,7 +266,7 @@ describe('CategoryCheckbox Component', () => {
       isFetching: true
     })
 
-    render(<CategoryCheckbox />, [theme, localization, router, i18n])
+    render(<CategoryCheckbox />, [theme, i18n])
 
     // setLoading(false) should not be called when isFetching is true
     expect(setLoadingMock).not.toHaveBeenCalledWith(false)

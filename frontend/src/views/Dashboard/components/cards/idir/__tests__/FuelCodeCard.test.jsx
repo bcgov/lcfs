@@ -1,9 +1,9 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { FuelCodeCard } from '../FuelCodeCard'
 import { useFuelCodeCounts } from '@/hooks/useDashboard'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
@@ -51,25 +51,25 @@ describe('FuelCodeCard Component', () => {
     })
   })
 
-  it('renders loading state correctly', () => {
+  test('renders loading state correctly', ({ render, query, theme, i18n }) => {
     useFuelCodeCounts.mockReturnValue({
       data: null,
       isLoading: true
     })
 
-    render(<FuelCodeCard />, { wrapper })
+    render(<FuelCodeCard />, [query, theme, i18n])
 
     const loadingElement = screen.getByText(/Loading.*card/, { exact: false })
     expect(loadingElement).toBeInTheDocument()
   })
 
-  it('renders with counts data', () => {
+  test('renders with counts data', ({ render, query, theme, i18n }) => {
     useFuelCodeCounts.mockReturnValue({
       data: { draftFuelCodes: 3 },
       isLoading: false
     })
 
-    render(<FuelCodeCard />, { wrapper })
+    render(<FuelCodeCard />, [query, theme, i18n])
 
     expect(screen.getByText('Fuel Codes')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
@@ -77,13 +77,18 @@ describe('FuelCodeCard Component', () => {
     expect(screen.getByText(/Fuel Code\(s\) in progress/)).toBeInTheDocument()
   })
 
-  it('navigates to fuel codes page on link click with correct filter', () => {
+  test('navigates to fuel codes page on link click with correct filter', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useFuelCodeCounts.mockReturnValue({
       data: { draftFuelCodes: 3 },
       isLoading: false
     })
 
-    render(<FuelCodeCard />, { wrapper })
+    render(<FuelCodeCard />, [query, theme, i18n])
 
     // Find and click the link
     const link = screen.getByText(/Fuel Code\(s\) in progress/)
@@ -105,13 +110,13 @@ describe('FuelCodeCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.LIST)
   })
 
-  it('handles zero counts correctly', () => {
+  test('handles zero counts correctly', ({ render, query, theme, i18n }) => {
     useFuelCodeCounts.mockReturnValue({
       data: { draftFuelCodes: 0 },
       isLoading: false
     })
 
-    render(<FuelCodeCard />, { wrapper })
+    render(<FuelCodeCard />, [query, theme, i18n])
 
     expect(screen.getByText('0')).toBeInTheDocument()
   })

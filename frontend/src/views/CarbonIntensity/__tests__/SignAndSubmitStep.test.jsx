@@ -1,15 +1,9 @@
 import React from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor
-} from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { SignAndSubmitStep } from '@/views/CarbonIntensity/components/SignAndSubmitStep'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -29,22 +23,37 @@ describe('SignAndSubmitStep', () => {
   beforeEach(() => vi.clearAllMocks())
   afterEach(cleanup)
 
-  it('renders all three declarations and signing-authority info', () => {
-    render(<SignAndSubmitStep {...baseProps} />, { wrapper })
+  test('renders all three declarations and signing-authority info', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<SignAndSubmitStep {...baseProps} />, [theme, router])
     expect(screen.getByTestId('ci-step4-decl-1')).toBeInTheDocument()
     expect(screen.getByTestId('ci-step4-decl-2')).toBeInTheDocument()
     expect(screen.getByTestId('ci-step4-decl-3')).toBeInTheDocument()
-    expect(screen.getByTestId('ci-step4-signing-authority-block').textContent).toContain(
-      'Jonathan Zimmerman'
-    )
-    expect(screen.getByTestId('ci-step4-signing-authority-block').textContent).toContain(
-      'jzimmerman@fuelproducerltd.ar'
-    )
+    expect(
+      screen.getByTestId('ci-step4-signing-authority-block').textContent
+    ).toContain('Jonathan Zimmerman')
+    expect(
+      screen.getByTestId('ci-step4-signing-authority-block').textContent
+    ).toContain('jzimmerman@fuelproducerltd.ar')
   })
 
-  it('disables submission until all required declarations are checked', () => {
+  test('disables submission until all required declarations are checked', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn()
-    render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, { wrapper })
+    render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Submit is gated on the three required declarations (ticket #4536).
     expect(screen.getByTestId('ci-step4-submit-btn')).toBeDisabled()
@@ -61,9 +70,20 @@ describe('SignAndSubmitStep', () => {
     expect(screen.getByTestId('ci-step4-submit-btn')).toBeEnabled()
   })
 
-  it('calls onSave with the correct payload when all declarations are checked', async () => {
+  test('calls onSave with the correct payload when all declarations are checked', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn()
-    render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, { wrapper })
+    render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     fireEvent.click(screen.getByTestId('ci-step4-decl-1'))
     fireEvent.click(screen.getByTestId('ci-step4-decl-2'))
@@ -82,18 +102,44 @@ describe('SignAndSubmitStep', () => {
     })
   })
 
-  it('exposes consultant inputs only when consent is checked', () => {
-    render(<SignAndSubmitStep {...baseProps} />, { wrapper })
-    expect(screen.queryByTestId('ci-step4-consultant-name')).not.toBeInTheDocument()
+  test('exposes consultant inputs only when consent is checked', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<SignAndSubmitStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+    expect(
+      screen.queryByTestId('ci-step4-consultant-name')
+    ).not.toBeInTheDocument()
     fireEvent.click(screen.getByTestId('ci-step4-consultant-consent'))
     expect(screen.getByTestId('ci-step4-consultant-name')).toBeInTheDocument()
-    expect(screen.getByTestId('ci-step4-consultant-company')).toBeInTheDocument()
+    expect(
+      screen.getByTestId('ci-step4-consultant-company')
+    ).toBeInTheDocument()
     expect(screen.getByTestId('ci-step4-consultant-email')).toBeInTheDocument()
   })
 
-  it('rejects submission when consultant consent is on but fields are empty', async () => {
+  test('rejects submission when consultant consent is on but fields are empty', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn()
-    render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, { wrapper })
+    render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     fireEvent.click(screen.getByTestId('ci-step4-decl-1'))
     fireEvent.click(screen.getByTestId('ci-step4-decl-2'))
@@ -103,7 +149,9 @@ describe('SignAndSubmitStep', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('carbonIntensity:step4.validation.consultantNameRequired')
+        screen.getByText(
+          'carbonIntensity:step4.validation.consultantNameRequired'
+        )
       ).toBeInTheDocument()
       expect(
         screen.getByText(
@@ -119,9 +167,20 @@ describe('SignAndSubmitStep', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('rejects an invalid consultant email', async () => {
+  test('rejects an invalid consultant email', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn()
-    render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, { wrapper })
+    render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     fireEvent.click(screen.getByTestId('ci-step4-decl-1'))
     fireEvent.click(screen.getByTestId('ci-step4-decl-2'))
     fireEvent.click(screen.getByTestId('ci-step4-decl-3'))
@@ -148,9 +207,20 @@ describe('SignAndSubmitStep', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('passes consultant info through to onSave when consented and valid', async () => {
+  test('passes consultant info through to onSave when consented and valid', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn()
-    render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, { wrapper })
+    render(<SignAndSubmitStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     fireEvent.click(screen.getByTestId('ci-step4-decl-1'))
     fireEvent.click(screen.getByTestId('ci-step4-decl-2'))
@@ -177,18 +247,51 @@ describe('SignAndSubmitStep', () => {
     })
   })
 
-  it('disables submit when readOnly is true', () => {
-    render(<SignAndSubmitStep {...baseProps} readOnly />, { wrapper })
+  test('disables submit when readOnly is true', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<SignAndSubmitStep {...baseProps} readOnly />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByTestId('ci-step4-submit-btn')).toBeDisabled()
   })
 
-  it('disables submit when isSaving is true', () => {
-    render(<SignAndSubmitStep {...baseProps} isSaving />, { wrapper })
+  test('disables submit when isSaving is true', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<SignAndSubmitStep {...baseProps} isSaving />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByTestId('ci-step4-submit-btn')).toBeDisabled()
   })
 
-  it('renders the delete button when onDelete is wired', () => {
-    render(<SignAndSubmitStep {...baseProps} onDelete={vi.fn()} />, { wrapper })
+  test('renders the delete button when onDelete is wired', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<SignAndSubmitStep {...baseProps} onDelete={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByTestId('ci-step4-delete-btn')).toBeInTheDocument()
   })
 })

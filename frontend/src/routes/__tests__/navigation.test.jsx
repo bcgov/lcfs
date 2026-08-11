@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   createMemoryRouter,
@@ -8,13 +8,12 @@ import {
   useParams,
   useLocation
 } from 'react-router-dom'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
 import { router } from '../index'
 import { useKeycloak } from '@react-keycloak/web'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { buildPath } from '../routes'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { createTestQueryClient } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Helper function to create test router
 const createTestRouter = (initialEntries = ['/']) => {
@@ -24,14 +23,8 @@ const createTestRouter = (initialEntries = ['/']) => {
 }
 
 // Helper function to render router with providers
-const renderRouterWithProviders = (testRouter) => {
-  const queryClient = createTestQueryClient()
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={testRouter} />
-    </QueryClientProvider>
-  )
-}
+const renderRouterWithProviders = (testRouter, render, query) =>
+  render(<RouterProvider router={testRouter} />, [query])
 
 // Mock navigation hook for testing
 let mockNavigate
@@ -460,9 +453,12 @@ describe('Dynamic Routes and Navigation', () => {
   })
 
   describe('Dynamic Route Parameters', () => {
-    it('should handle organization ID parameter correctly', async () => {
+    test('should handle organization ID parameter correctly', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/organizations/123'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('organization-view')).toBeInTheDocument()
@@ -471,9 +467,12 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle transaction ID parameter correctly', async () => {
+    test('should handle transaction ID parameter correctly', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/transactions/456'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(
@@ -484,9 +483,12 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle transfer ID parameter correctly', async () => {
+    test('should handle transfer ID parameter correctly', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/transfers/789'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('add-edit-view-transfer')).toBeInTheDocument()
@@ -495,11 +497,14 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle compliance report multiple parameters', async () => {
+    test('should handle compliance report multiple parameters', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter([
         '/compliance-reporting/2024/report123'
       ])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('compliance-report-view')).toBeInTheDocument()
@@ -508,9 +513,9 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle audit log ID parameter', async () => {
+    test('should handle audit log ID parameter', async ({ render, query }) => {
       const testRouter = createTestRouter(['/admin/audit-log/audit456'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('view-audit-log')).toBeInTheDocument()
@@ -518,9 +523,9 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle fuel code ID parameter', async () => {
+    test('should handle fuel code ID parameter', async ({ render, query }) => {
       const testRouter = createTestRouter(['/fuel-codes/FC001'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('add-edit-fuel-code')).toBeInTheDocument()
@@ -528,11 +533,14 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle nested user parameters in organizations', async () => {
+    test('should handle nested user parameters in organizations', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter([
         '/organizations/org123/users/user456'
       ])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(
@@ -545,9 +553,12 @@ describe('Dynamic Routes and Navigation', () => {
   })
 
   describe('Query Parameters', () => {
-    it('should handle highlighted transaction query parameter', async () => {
+    test('should handle highlighted transaction query parameter', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/transactions?hid=transaction123'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('transactions')).toBeInTheDocument()
@@ -557,9 +568,12 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle missing query parameters gracefully', async () => {
+    test('should handle missing query parameters gracefully', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/transactions'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('transactions')).toBeInTheDocument()
@@ -569,19 +583,20 @@ describe('Dynamic Routes and Navigation', () => {
   })
 
   describe('Programmatic Navigation', () => {
-    it('should navigate between routes programmatically', async () => {
+    test('should navigate between routes programmatically', async ({
+      render,
+      query
+    }) => {
       const user = userEvent.setup()
       const onNavigate = vi.fn()
 
       const testRouter = createTestRouter(['/'])
-      const queryClient = createTestQueryClient()
       render(
-        <QueryClientProvider client={queryClient}>
-          <div>
-            <RouterProvider router={testRouter} />
-            <NavigationTestComponent onNavigate={onNavigate} />
-          </div>
-        </QueryClientProvider>
+        <div>
+          <RouterProvider router={testRouter} />
+          <NavigationTestComponent onNavigate={onNavigate} />
+        </div>,
+        [query]
       )
 
       // Start at dashboard
@@ -597,19 +612,17 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle navigation with state', async () => {
+    test('should handle navigation with state', async ({ render, query }) => {
       const user = userEvent.setup()
       const onNavigate = vi.fn()
 
       const testRouter = createTestRouter(['/'])
-      const queryClient = createTestQueryClient()
       render(
-        <QueryClientProvider client={queryClient}>
-          <div>
-            <RouterProvider router={testRouter} />
-            <NavigationTestComponent onNavigate={onNavigate} />
-          </div>
-        </QueryClientProvider>
+        <div>
+          <RouterProvider router={testRouter} />
+          <NavigationTestComponent onNavigate={onNavigate} />
+        </div>,
+        [query]
       )
 
       // Navigate with state
@@ -620,9 +633,9 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle back/forward navigation', async () => {
+    test('should handle back/forward navigation', async ({ render, query }) => {
       const testRouter = createTestRouter(['/transactions'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       // Should start at transactions (index 2)
       await waitFor(() => {
@@ -632,9 +645,12 @@ describe('Dynamic Routes and Navigation', () => {
   })
 
   describe('Route Validation', () => {
-    it('should handle invalid route parameters gracefully', async () => {
+    test('should handle invalid route parameters gracefully', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/organizations/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       // Should match organizations list route, not the view route
       await waitFor(() => {
@@ -642,9 +658,12 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle routes with special characters in parameters', async () => {
+    test('should handle routes with special characters in parameters', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/transactions/tx-123-abc'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(
@@ -656,9 +675,12 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle routes with encoded characters', async () => {
+    test('should handle routes with encoded characters', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/fuel-codes/FC%20001'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('add-edit-fuel-code')).toBeInTheDocument()
@@ -668,12 +690,12 @@ describe('Dynamic Routes and Navigation', () => {
   })
 
   describe('Route Path Building Utility', () => {
-    it('should build paths with single parameter', () => {
+    test('should build paths with single parameter', () => {
       const path = buildPath('/organizations/:orgID', { orgID: '123' })
       expect(path).toBe('/organizations/123')
     })
 
-    it('should build paths with multiple parameters', () => {
+    test('should build paths with multiple parameters', () => {
       const path = buildPath('/organizations/:orgID/users/:userID', {
         orgID: '123',
         userID: '456'
@@ -681,14 +703,14 @@ describe('Dynamic Routes and Navigation', () => {
       expect(path).toBe('/organizations/123/users/456')
     })
 
-    it('should build paths with missing parameters', () => {
+    test('should build paths with missing parameters', () => {
       const path = buildPath('/organizations/:orgID/users/:userID', {
         orgID: '123'
       })
       expect(path).toBe('/organizations/123/users/:userID')
     })
 
-    it('should build paths with extra parameters', () => {
+    test('should build paths with extra parameters', () => {
       const path = buildPath('/organizations/:orgID', {
         orgID: '123',
         extra: 'ignored'
@@ -696,21 +718,24 @@ describe('Dynamic Routes and Navigation', () => {
       expect(path).toBe('/organizations/123')
     })
 
-    it('should handle empty parameters object', () => {
+    test('should handle empty parameters object', () => {
       const path = buildPath('/organizations/:orgID', {})
       expect(path).toBe('/organizations/:orgID')
     })
 
-    it('should handle no parameters', () => {
+    test('should handle no parameters', () => {
       const path = buildPath('/organizations/:orgID')
       expect(path).toBe('/organizations/:orgID')
     })
   })
 
   describe('Complex Route Scenarios', () => {
-    it('should handle admin adjustment transaction route', async () => {
+    test('should handle admin adjustment transaction route', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/admin-adjustment/edit/txn456'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(
@@ -723,9 +748,12 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle initiative agreement organization view', async () => {
+    test('should handle initiative agreement organization view', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/org-initiative-agreement/ia123'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('view-org-transaction')).toBeInTheDocument()
@@ -733,11 +761,14 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle compliance report nested routes', async () => {
+    test('should handle compliance report nested routes', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter([
         '/compliance-reporting/2024/123/supply-of-fuel'
       ])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       // This should render the supply of fuel component for the nested route
       await waitFor(() => {
@@ -749,9 +780,12 @@ describe('Dynamic Routes and Navigation', () => {
   })
 
   describe('Navigation Edge Cases', () => {
-    it('should handle navigation to non-existent routes', async () => {
+    test('should handle navigation to non-existent routes', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/non-existent-route'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('not-found')).toBeInTheDocument()
@@ -759,13 +793,16 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should preserve location state during navigation', async () => {
+    test('should preserve location state during navigation', async ({
+      render,
+      query
+    }) => {
       const state = { fromDashboard: true, timestamp: Date.now() }
 
       const testRouter = createTestRouter([
         { pathname: '/organizations/123', state }
       ])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('organization-view')).toBeInTheDocument()
@@ -773,10 +810,13 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle rapid navigation changes', async () => {
+    test('should handle rapid navigation changes', async ({
+      render,
+      query
+    }) => {
       // Test final state navigation directly instead of rerendering
       const testRouter = createTestRouter(['/transactions'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('transactions')).toBeInTheDocument()

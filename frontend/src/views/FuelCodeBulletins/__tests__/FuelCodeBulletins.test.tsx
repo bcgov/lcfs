@@ -1,7 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { beforeEach, describe, expect, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import FuelCodeBulletins from '../FuelCodeBulletins'
 import { CurrentFuelCodes } from '../components/CurrentFuelCodes'
 import { ArchivedFuelCodes } from '../components/ArchivedFuelCodes'
@@ -141,8 +141,12 @@ describe('FuelCodeBulletins UI', () => {
     })
   })
 
-  it('renders current bulletin when no type query param is present', () => {
-    render(<FuelCodeBulletins />, { wrapper })
+  test('renders current bulletin when no type query param is present', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<FuelCodeBulletins />, [theme, router])
 
     expect(
       screen.getByText('Approved carbon intensities - Current')
@@ -152,10 +156,14 @@ describe('FuelCodeBulletins UI', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders archived bulletin when ?type=archived is in the URL', () => {
+  test('renders archived bulletin when ?type=archived is in the URL', ({
+    render,
+    theme,
+    router
+  }) => {
     mockSearch = '?type=archived'
 
-    render(<FuelCodeBulletins />, { wrapper })
+    render(<FuelCodeBulletins />, [theme, router])
 
     expect(
       screen.getByText('Approved carbon intensities - Archived')
@@ -169,8 +177,12 @@ describe('FuelCodeBulletins UI', () => {
     )
   })
 
-  it('passes default grid config and pagination for current bulletin', () => {
-    render(<CurrentFuelCodes />, { wrapper })
+  test('passes default grid config and pagination for current bulletin', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<CurrentFuelCodes />, [theme, router])
 
     const gridProps = mockBCGridViewer.mock.calls[0][0]
     expect(gridProps.paginationOptions).toEqual({
@@ -193,8 +205,12 @@ describe('FuelCodeBulletins UI', () => {
     )
   })
 
-  it('updates pagination options after grid pagination change', async () => {
-    render(<CurrentFuelCodes />, { wrapper })
+  test('updates pagination options after grid pagination change', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<CurrentFuelCodes />, [theme, router])
 
     await userEvent.click(
       screen.getByRole('button', { name: 'Change pagination' })
@@ -208,15 +224,23 @@ describe('FuelCodeBulletins UI', () => {
     })
   })
 
-  it('renders current cutoff date in description', () => {
-    render(<CurrentFuelCodes />, { wrapper })
+  test('renders current cutoff date in description', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<CurrentFuelCodes />, [theme, router])
 
     expect(
       screen.getByText('Current description after March 31, 2026')
     ).toBeInTheDocument()
   })
 
-  it('renders API error message when archived bulletin fails', () => {
+  test('renders API error message when archived bulletin fails', ({
+    render,
+    theme,
+    router
+  }) => {
     mockUseFuelCodeBulletins.mockReturnValueOnce({
       data: { fuelCodes: [] },
       isLoading: false,
@@ -224,13 +248,17 @@ describe('FuelCodeBulletins UI', () => {
       error: { message: 'Backend unavailable' }
     })
 
-    render(<ArchivedFuelCodes />, { wrapper })
+    render(<ArchivedFuelCodes />, [theme, router])
 
     expect(screen.getByText('Backend unavailable')).toBeInTheDocument()
   })
 
-  it('downloads current bulletin with current filters and sorting', async () => {
-    render(<CurrentFuelCodes />, { wrapper })
+  test('downloads current bulletin with current filters and sorting', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<CurrentFuelCodes />, [theme, router])
 
     await userEvent.click(
       screen.getByRole('button', { name: 'Download Excel' })
@@ -251,10 +279,14 @@ describe('FuelCodeBulletins UI', () => {
     })
   })
 
-  it('shows download error when archived bulletin export fails', async () => {
+  test('shows download error when archived bulletin export fails', async ({
+    render,
+    theme,
+    router
+  }) => {
     mockDownloadMutate.mockRejectedValueOnce(new Error('Download failed'))
 
-    render(<ArchivedFuelCodes />, { wrapper })
+    render(<ArchivedFuelCodes />, [theme, router])
 
     await userEvent.click(
       screen.getByRole('button', { name: 'Download Excel' })

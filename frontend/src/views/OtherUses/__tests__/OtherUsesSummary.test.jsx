@@ -1,12 +1,20 @@
-import { render, screen, act, fireEvent } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { screen, act, fireEvent } from '@testing-library/react'
+import { describe, expect, beforeEach, vi } from 'vitest'
 import { OtherUsesSummary } from '../OtherUsesSummary'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+
+let render
+const fixtureOptions = undefined
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [theme], options)
+    return fn()
+  })
 
 // Mock BCGridViewer with comprehensive props capture
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: ({ 
+  BCGridViewer: ({
     gridKey,
     columnDefs,
     queryData,
@@ -32,9 +40,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
       <div data-test="current-page">
         {queryData?.data?.pagination?.page || 1}
       </div>
-      <div data-test="page-size">
-        {queryData?.data?.pagination?.size || 10}
-      </div>
+      <div data-test="page-size">{queryData?.data?.pagination?.size || 10}</div>
       <div data-test="pagination-suppressed">
         {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
       </div>
@@ -48,7 +54,9 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
         {autoSizeStrategy ? 'has-auto-size' : 'no-auto-size'}
       </div>
       <div data-test="cell-text-selection">
-        {enableCellTextSelection ? 'text-selection-enabled' : 'text-selection-disabled'}
+        {enableCellTextSelection
+          ? 'text-selection-enabled'
+          : 'text-selection-disabled'}
       </div>
       <div data-test="page-caching">
         {enablePageCaching ? 'page-caching-enabled' : 'page-caching-disabled'}
@@ -56,9 +64,11 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
       <div data-test="default-col-def-cell-renderer">
         {defaultColDef?.cellRenderer ? 'has-cell-renderer' : 'no-cell-renderer'}
       </div>
-      <button 
-        data-test="pagination-trigger" 
-        onClick={() => onPaginationChange && onPaginationChange({ page: 2, size: 5 })}
+      <button
+        data-test="pagination-trigger"
+        onClick={() =>
+          onPaginationChange && onPaginationChange({ page: 2, size: 5 })
+        }
       >
         Change Pagination
       </button>
@@ -113,13 +123,15 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     expect(screen.getByTestId('grid-key')).toHaveTextContent('other-uses')
     expect(screen.getByTestId('data-key')).toHaveTextContent('otherUses')
-    expect(screen.getByTestId('has-get-row-id')).toHaveTextContent('has-get-row-id')
+    expect(screen.getByTestId('has-get-row-id')).toHaveTextContent(
+      'has-get-row-id'
+    )
   })
 
   it('renders container with correct test id', () => {
@@ -128,7 +140,7 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('container')).toBeInTheDocument()
@@ -141,7 +153,7 @@ describe('OtherUsesSummary', () => {
         data={undefined}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -152,11 +164,8 @@ describe('OtherUsesSummary', () => {
 
   it('handles data without otherUses property', () => {
     render(
-      <OtherUsesSummary 
-        data={{}} 
-        status={COMPLIANCE_REPORT_STATUSES.DRAFT} 
-      />,
-      { wrapper }
+      <OtherUsesSummary data={{}} status={COMPLIANCE_REPORT_STATUSES.DRAFT} />,
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -165,11 +174,11 @@ describe('OtherUsesSummary', () => {
 
   it('handles null otherUses property', () => {
     render(
-      <OtherUsesSummary 
-        data={{ otherUses: null }} 
-        status={COMPLIANCE_REPORT_STATUSES.DRAFT} 
+      <OtherUsesSummary
+        data={{ otherUses: null }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -190,7 +199,7 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
@@ -210,7 +219,7 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
@@ -229,7 +238,7 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -243,10 +252,12 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
-    expect(screen.getByTestId('default-col-def-cell-renderer')).toHaveTextContent('has-cell-renderer')
+    expect(
+      screen.getByTestId('default-col-def-cell-renderer')
+    ).toHaveTextContent('has-cell-renderer')
   })
 
   it('does not use LinkRenderer for non-DRAFT status', () => {
@@ -255,10 +266,12 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
-    expect(screen.getByTestId('default-col-def-cell-renderer')).toHaveTextContent('no-cell-renderer')
+    expect(
+      screen.getByTestId('default-col-def-cell-renderer')
+    ).toHaveTextContent('no-cell-renderer')
   })
 
   // Pagination suppression tests
@@ -276,10 +289,12 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
-    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-suppressed')
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-suppressed'
+    )
   })
 
   it('enables pagination for more than 10 items', () => {
@@ -296,10 +311,12 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
-    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-enabled')
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-enabled'
+    )
   })
 
   it('suppresses pagination when exactly 10 items', () => {
@@ -316,10 +333,12 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
-    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-suppressed')
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-suppressed'
+    )
   })
 
   // Pagination change handler tests
@@ -337,16 +356,18 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     const paginationTrigger = screen.getByTestId('pagination-trigger')
-    
+
     await act(async () => {
       fireEvent.click(paginationTrigger)
     })
 
-    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent('has-pagination-change')
+    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
+      'has-pagination-change'
+    )
   })
 
   // Grid configuration tests
@@ -356,12 +377,18 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
-    expect(screen.getByTestId('has-auto-size')).toHaveTextContent('has-auto-size')
-    expect(screen.getByTestId('cell-text-selection')).toHaveTextContent('text-selection-enabled')
-    expect(screen.getByTestId('page-caching')).toHaveTextContent('page-caching-disabled')
+    expect(screen.getByTestId('has-auto-size')).toHaveTextContent(
+      'has-auto-size'
+    )
+    expect(screen.getByTestId('cell-text-selection')).toHaveTextContent(
+      'text-selection-enabled'
+    )
+    expect(screen.getByTestId('page-caching')).toHaveTextContent(
+      'page-caching-disabled'
+    )
   })
 
   // Grid configuration tests
@@ -371,21 +398,27 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
-    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent('has-pagination-change')
-    expect(screen.getByTestId('has-auto-size')).toHaveTextContent('has-auto-size')
-    expect(screen.getByTestId('cell-text-selection')).toHaveTextContent('text-selection-enabled')
-    expect(screen.getByTestId('page-caching')).toHaveTextContent('page-caching-disabled')
+    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
+      'has-pagination-change'
+    )
+    expect(screen.getByTestId('has-auto-size')).toHaveTextContent(
+      'has-auto-size'
+    )
+    expect(screen.getByTestId('cell-text-selection')).toHaveTextContent(
+      'text-selection-enabled'
+    )
+    expect(screen.getByTestId('page-caching')).toHaveTextContent(
+      'page-caching-disabled'
+    )
   })
 
   // getRowId function tests
   it('getRowId returns correct string ID', () => {
     const mockData = {
-      otherUses: [
-        { otherUsesId: 123, fuelType: 'Test', actionType: 'CREATE' }
-      ]
+      otherUses: [{ otherUsesId: 123, fuelType: 'Test', actionType: 'CREATE' }]
     }
 
     render(
@@ -393,10 +426,12 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
-    expect(screen.getByTestId('has-get-row-id')).toHaveTextContent('has-get-row-id')
+    expect(screen.getByTestId('has-get-row-id')).toHaveTextContent(
+      'has-get-row-id'
+    )
   })
 
   // Complex data scenarios
@@ -415,7 +450,7 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
@@ -437,23 +472,28 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows') // First page
     expect(screen.getByTestId('total-count')).toHaveTextContent('50 total')
-    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-enabled')
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-enabled'
+    )
   })
 
   it('handles long content with proper configuration', () => {
     const mockData = {
-      otherUses: [{
-        otherUsesId: 1,
-        fuelType: 'Very Long Fuel Type Name That Tests Auto Sizing Functionality',
-        quantitySupplied: 1000,
-        units: 'Liters',
-        actionType: 'CREATE'
-      }]
+      otherUses: [
+        {
+          otherUsesId: 1,
+          fuelType:
+            'Very Long Fuel Type Name That Tests Auto Sizing Functionality',
+          quantitySupplied: 1000,
+          units: 'Liters',
+          actionType: 'CREATE'
+        }
+      ]
     }
 
     render(
@@ -461,11 +501,13 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
-    expect(screen.getByTestId('has-auto-size')).toHaveTextContent('has-auto-size')
+    expect(screen.getByTestId('has-auto-size')).toHaveTextContent(
+      'has-auto-size'
+    )
   })
 
   // Edge cases
@@ -475,37 +517,47 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
     expect(screen.getByTestId('total-count')).toHaveTextContent('0 total')
-    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-suppressed')
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-suppressed'
+    )
   })
 
   it('maintains state consistency across re-renders', async () => {
     const { rerender } = render(
       <OtherUsesSummary
-        data={{ otherUses: [{ otherUsesId: 1, fuelType: 'Test', actionType: 'CREATE' }] }}
+        data={{
+          otherUses: [
+            { otherUsesId: 1, fuelType: 'Test', actionType: 'CREATE' }
+          ]
+        }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
 
     rerender(
       <OtherUsesSummary
-        data={{ otherUses: [
-          { otherUsesId: 1, fuelType: 'Test', actionType: 'CREATE' },
-          { otherUsesId: 2, fuelType: 'Test2', actionType: 'CREATE' }
-        ] }}
+        data={{
+          otherUses: [
+            { otherUsesId: 1, fuelType: 'Test', actionType: 'CREATE' },
+            { otherUsesId: 2, fuelType: 'Test2', actionType: 'CREATE' }
+          ]
+        }}
         status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
       />
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
-    expect(screen.getByTestId('default-col-def-cell-renderer')).toHaveTextContent('no-cell-renderer')
+    expect(
+      screen.getByTestId('default-col-def-cell-renderer')
+    ).toHaveTextContent('no-cell-renderer')
   })
 
   it('handles different status values correctly', () => {
@@ -518,7 +570,7 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(
@@ -532,7 +584,7 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('has-auto-size')).toHaveTextContent(
@@ -549,7 +601,7 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     rerender(
@@ -569,7 +621,7 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(
@@ -594,7 +646,7 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
@@ -617,7 +669,7 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
@@ -629,7 +681,7 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('has-auto-size')).toHaveTextContent(
@@ -643,7 +695,7 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -655,13 +707,12 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('current-page')).toHaveTextContent('1')
     expect(screen.getByTestId('page-size')).toHaveTextContent('10')
   })
-
 
   it('verifies all grid configuration properties', () => {
     render(
@@ -669,25 +720,33 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     // Verify all expected grid configuration
     expect(screen.getByTestId('grid-key')).toHaveTextContent('other-uses')
     expect(screen.getByTestId('data-key')).toHaveTextContent('otherUses')
-    expect(screen.getByTestId('has-get-row-id')).toHaveTextContent('has-get-row-id')
-    expect(screen.getByTestId('has-auto-size')).toHaveTextContent('has-auto-size')
-    expect(screen.getByTestId('cell-text-selection')).toHaveTextContent('text-selection-enabled')
-    expect(screen.getByTestId('page-caching')).toHaveTextContent('page-caching-disabled')
-    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent('has-pagination-change')
+    expect(screen.getByTestId('has-get-row-id')).toHaveTextContent(
+      'has-get-row-id'
+    )
+    expect(screen.getByTestId('has-auto-size')).toHaveTextContent(
+      'has-auto-size'
+    )
+    expect(screen.getByTestId('cell-text-selection')).toHaveTextContent(
+      'text-selection-enabled'
+    )
+    expect(screen.getByTestId('page-caching')).toHaveTextContent(
+      'page-caching-disabled'
+    )
+    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
+      'has-pagination-change'
+    )
   })
 
   // Additional complex logic tests to increase coverage
   it('handles component re-render with useMemo dependencies', () => {
     const initialData = {
-      otherUses: [
-        { otherUsesId: 1, fuelType: 'Diesel', actionType: 'CREATE' }
-      ]
+      otherUses: [{ otherUsesId: 1, fuelType: 'Diesel', actionType: 'CREATE' }]
     }
 
     const { rerender } = render(
@@ -695,7 +754,7 @@ describe('OtherUsesSummary', () => {
         data={initialData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
@@ -724,10 +783,12 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
-    expect(screen.getByTestId('default-col-def-cell-renderer')).toHaveTextContent('has-cell-renderer')
+    expect(
+      screen.getByTestId('default-col-def-cell-renderer')
+    ).toHaveTextContent('has-cell-renderer')
 
     // Change status to trigger defaultColDef recalculation
     rerender(
@@ -737,15 +798,32 @@ describe('OtherUsesSummary', () => {
       />
     )
 
-    expect(screen.getByTestId('default-col-def-cell-renderer')).toHaveTextContent('no-cell-renderer')
+    expect(
+      screen.getByTestId('default-col-def-cell-renderer')
+    ).toHaveTextContent('no-cell-renderer')
   })
 
   it('handles data edge case with numeric values', () => {
     const mockData = {
       otherUses: [
-        { otherUsesId: 1, fuelType: 'Test', quantitySupplied: 0, actionType: 'CREATE' },
-        { otherUsesId: 2, fuelType: 'Test2', quantitySupplied: -100, actionType: 'CREATE' },
-        { otherUsesId: 3, fuelType: 'Test3', quantitySupplied: null, actionType: 'CREATE' }
+        {
+          otherUsesId: 1,
+          fuelType: 'Test',
+          quantitySupplied: 0,
+          actionType: 'CREATE'
+        },
+        {
+          otherUsesId: 2,
+          fuelType: 'Test2',
+          quantitySupplied: -100,
+          actionType: 'CREATE'
+        },
+        {
+          otherUsesId: 3,
+          fuelType: 'Test3',
+          quantitySupplied: null,
+          actionType: 'CREATE'
+        }
       ]
     }
 
@@ -754,7 +832,7 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
@@ -764,9 +842,24 @@ describe('OtherUsesSummary', () => {
   it('handles boolean and string field values', () => {
     const mockData = {
       otherUses: [
-        { otherUsesId: 1, fuelType: 'Test', isActive: true, actionType: 'CREATE' },
-        { otherUsesId: 2, fuelType: 'Test2', isActive: false, actionType: 'CREATE' },
-        { otherUsesId: 3, fuelType: '', description: 'Empty fuel type', actionType: 'CREATE' }
+        {
+          otherUsesId: 1,
+          fuelType: 'Test',
+          isActive: true,
+          actionType: 'CREATE'
+        },
+        {
+          otherUsesId: 2,
+          fuelType: 'Test2',
+          isActive: false,
+          actionType: 'CREATE'
+        },
+        {
+          otherUsesId: 3,
+          fuelType: '',
+          description: 'Empty fuel type',
+          actionType: 'CREATE'
+        }
       ]
     }
 
@@ -775,7 +868,7 @@ describe('OtherUsesSummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
@@ -787,21 +880,17 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     // The component should have auto sizing enabled
-    expect(screen.getByTestId('has-auto-size')).toHaveTextContent('has-auto-size')
+    expect(screen.getByTestId('has-auto-size')).toHaveTextContent(
+      'has-auto-size'
+    )
   })
 
   it('handles component with minimal required props only', () => {
-    render(
-      <OtherUsesSummary
-        data={null}
-        status={null}
-      />,
-      { wrapper }
-    )
+    render(<OtherUsesSummary data={null} status={null} />, { fixtureOptions })
 
     // Should render without crashing
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -814,12 +903,11 @@ describe('OtherUsesSummary', () => {
         data={{ otherUses: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     // Initial pagination state should be reflected in the grid
     expect(screen.getByTestId('current-page')).toHaveTextContent('1')
     expect(screen.getByTestId('page-size')).toHaveTextContent('10')
   })
-
 })

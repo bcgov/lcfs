@@ -55,32 +55,26 @@ describe('SigningAuthority Component', () => {
 
   test('renders correctly with title', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      [query, theme, localization, router]
+      [theme]
     )
     expect(screen.getByText('transfer:saLabel')).toBeInTheDocument()
   })
 
   test('renders checkbox and allows checking/unchecking', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      [query, theme, localization, router]
+      [theme]
     )
     expect(screen.getByLabelText('transfer:saConfirmation')).toBeInTheDocument()
 
@@ -99,16 +93,13 @@ describe('SigningAuthority Component', () => {
 
   test('checkbox has defaultChecked as false', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      [query, theme, localization, router]
+      [theme]
     )
     const checkbox = screen.getByLabelText('transfer:saConfirmation')
     expect(checkbox).not.toBeChecked()
@@ -116,16 +107,13 @@ describe('SigningAuthority Component', () => {
 
   test('contains correct data-test attributes', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      [query, theme, localization, router]
+      [theme]
     )
     expect(screen.getByTestId('signing-authority')).toBeInTheDocument()
     expect(screen.getByTestId('signing-authority-checkbox')).toBeInTheDocument()
@@ -133,16 +121,13 @@ describe('SigningAuthority Component', () => {
 
   test('checkbox renders and is unchecked by default', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      [query, theme, localization, router]
+      [theme]
     )
     const checkbox = screen.getByTestId('signing-authority-checkbox')
     expect(checkbox).not.toBeChecked()
@@ -150,32 +135,26 @@ describe('SigningAuthority Component', () => {
 
   test('integrates with withRole HOC', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(
       <MockFormProvider>
         <SigningAuthorityWithRole />
       </MockFormProvider>,
-      [query, theme, localization, router]
+      [theme]
     )
     expect(screen.getByText('transfer:saLabel')).toBeInTheDocument()
   })
 
   test('uses translation keys correctly', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      [query, theme, localization, router]
+      [theme]
     )
     expect(screen.getByText('transfer:saLabel')).toBeInTheDocument()
     expect(screen.getByText('transfer:saConfirmation')).toBeInTheDocument()
@@ -183,16 +162,13 @@ describe('SigningAuthority Component', () => {
 
   test('does not display error by default', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(
       <MockFormProvider>
         <SigningAuthority />
       </MockFormProvider>,
-      [query, theme, localization, router]
+      [theme]
     )
     // Check that no error message is displayed when there are no errors
     const errorElements = screen.queryAllByText(/error/i)

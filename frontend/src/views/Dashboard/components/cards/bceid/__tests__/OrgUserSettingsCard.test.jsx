@@ -1,12 +1,12 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import OrgUserSettingsCard from '../OrgUserSettingsCard'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { HELP_GUIDE_URL } from '@/constants/common'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/hooks/useCurrentUser')
 
@@ -31,7 +31,11 @@ vi.mock('@/utils/withRole', () => ({
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
   FontAwesomeIcon: ({ icon, style }) => (
-    <span data-test="font-awesome-icon" data-icon={icon?.iconName} style={style}>
+    <span
+      data-test="font-awesome-icon"
+      data-icon={icon?.iconName}
+      style={style}
+    >
       📄
     </span>
   )
@@ -49,7 +53,11 @@ describe('OrgUserSettingsCard', () => {
     useNavigate.mockReturnValue(mockNavigate)
   })
 
-  it('renders the user’s full name and title correctly', () => {
+  test('renders the user’s full name and title correctly', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'Test',
@@ -60,7 +68,7 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     expect(screen.getByText('Test User, Developer')).toBeInTheDocument()
 
@@ -72,7 +80,7 @@ describe('OrgUserSettingsCard', () => {
     ).toBeInTheDocument()
   })
 
-  it('handles missing title gracefully', () => {
+  test('handles missing title gracefully', ({ render, query, theme }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'Test',
@@ -83,13 +91,17 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     // Should be "Test User" with no comma
     expect(screen.getByText('Test User')).toBeInTheDocument()
   })
 
-  it('handles missing firstName or lastName gracefully', () => {
+  test('handles missing firstName or lastName gracefully', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'Test',
@@ -100,13 +112,17 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     // Should show "Test, Developer"
     expect(screen.getByText('Test, Developer')).toBeInTheDocument()
   })
 
-  it('navigates to Notifications page when "mock__dashboard:orgUserSettings.notifications" is clicked', () => {
+  test('navigates to Notifications page when "mock__dashboard:orgUserSettings.notifications" is clicked', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'Test',
@@ -117,7 +133,7 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     const notificationsLink = screen.getByText(
       'mock__dashboard:orgUserSettings.notifications'
@@ -127,7 +143,11 @@ describe('OrgUserSettingsCard', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.NOTIFICATIONS.LIST)
   })
 
-  it('navigates to Notifications Settings page when "mock__dashboard:orgUserSettings.configureNotifications" is clicked', () => {
+  test('navigates to Notifications Settings page when "mock__dashboard:orgUserSettings.configureNotifications" is clicked', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'Test',
@@ -138,7 +158,7 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     const configureLink = screen.getByText(
       'mock__dashboard:orgUserSettings.configureNotifications'
@@ -148,31 +168,47 @@ describe('OrgUserSettingsCard', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.NOTIFICATIONS.SETTINGS)
   })
 
-  it('renders with empty/undefined currentUser data', () => {
+  test('renders with empty/undefined currentUser data', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: null,
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
-    expect(screen.getByText('mock__dashboard:orgUserSettings.title')).toBeInTheDocument()
-    expect(screen.getByText('mock__dashboard:orgUserSettings.notifications')).toBeInTheDocument()
+    expect(
+      screen.getByText('mock__dashboard:orgUserSettings.title')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('mock__dashboard:orgUserSettings.notifications')
+    ).toBeInTheDocument()
   })
 
-  it('handles undefined currentUser hook response', () => {
+  test('handles undefined currentUser hook response', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: undefined,
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
-    expect(screen.getByText('mock__dashboard:orgUserSettings.title')).toBeInTheDocument()
-    expect(screen.getByText('mock__dashboard:orgUserSettings.notifications')).toBeInTheDocument()
+    expect(
+      screen.getByText('mock__dashboard:orgUserSettings.title')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('mock__dashboard:orgUserSettings.notifications')
+    ).toBeInTheDocument()
   })
 
-  it('handles empty firstName and lastName', () => {
+  test('handles empty firstName and lastName', ({ render, query, theme }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: '',
@@ -183,12 +219,12 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     expect(screen.getByText('Developer')).toBeInTheDocument()
   })
 
-  it('handles missing all user name fields', () => {
+  test('handles missing all user name fields', ({ render, query, theme }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: null,
@@ -199,13 +235,17 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
-    expect(screen.getByText('mock__dashboard:orgUserSettings.title')).toBeInTheDocument()
-    expect(screen.getByText('mock__dashboard:orgUserSettings.notifications')).toBeInTheDocument()
+    expect(
+      screen.getByText('mock__dashboard:orgUserSettings.title')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('mock__dashboard:orgUserSettings.notifications')
+    ).toBeInTheDocument()
   })
 
-  it('handles only firstName present', () => {
+  test('handles only firstName present', ({ render, query, theme }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'John',
@@ -216,12 +256,12 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     expect(screen.getByText('John')).toBeInTheDocument()
   })
 
-  it('handles only lastName present', () => {
+  test('handles only lastName present', ({ render, query, theme }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: null,
@@ -232,12 +272,16 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     expect(screen.getByText('Doe')).toBeInTheDocument()
   })
 
-  it('renders external help link with correct attributes', () => {
+  test('renders external help link with correct attributes', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'Test',
@@ -248,15 +292,21 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
-    const helpLink = screen.getByText('mock__dashboard:orgUserSettings.help').closest('a')
+    const helpLink = screen
+      .getByText('mock__dashboard:orgUserSettings.help')
+      .closest('a')
     expect(helpLink).toHaveAttribute('href', HELP_GUIDE_URL)
     expect(helpLink).toHaveAttribute('target', '_blank')
     expect(helpLink).toHaveAttribute('rel', 'noreferrer')
   })
 
-  it('renders FontAwesome icon with correct props', () => {
+  test('renders FontAwesome icon with correct props', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'Test',
@@ -267,14 +317,18 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     const icon = screen.getByTestId('font-awesome-icon')
     expect(icon).toHaveAttribute('data-icon', 'share-from-square')
     expect(icon).toHaveStyle({ color: '#547D59', marginLeft: '6px' })
   })
 
-  it('renders BCWidgetCard with correct props', () => {
+  test('renders BCWidgetCard with correct props', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'Test',
@@ -285,12 +339,14 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
-    expect(screen.getByText('mock__dashboard:orgUserSettings.title')).toBeInTheDocument()
+    expect(
+      screen.getByText('mock__dashboard:orgUserSettings.title')
+    ).toBeInTheDocument()
   })
 
-  it('renders all navigation links', () => {
+  test('renders all navigation links', ({ render, query, theme }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'Test',
@@ -301,7 +357,7 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     expect(
       screen.getByText('mock__dashboard:orgUserSettings.notifications')
@@ -314,7 +370,11 @@ describe('OrgUserSettingsCard', () => {
     ).toBeInTheDocument()
   })
 
-  it('displays user name in bold with correct color', () => {
+  test('displays user name in bold with correct color', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         firstName: 'Test',
@@ -325,7 +385,7 @@ describe('OrgUserSettingsCard', () => {
       isLoading: false
     })
 
-    render(<OrgUserSettingsCard />, { wrapper })
+    render(<OrgUserSettingsCard />, [query, theme])
 
     const displayName = screen.getByText('Test User, Developer')
     expect(displayName).toBeInTheDocument()

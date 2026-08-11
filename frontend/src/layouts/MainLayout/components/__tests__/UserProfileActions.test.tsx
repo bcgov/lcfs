@@ -1,17 +1,9 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { screen, fireEvent, act } from '@testing-library/react'
 import { UserProfileActions } from '../UserProfileActions'
-import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterEach,
-  type Mock
-} from 'vitest'
+import { vi, describe, expect, type Mock } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNotificationsCount } from '@/hooks/useNotifications'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { logout } from '@/utils/keycloak'
 import { CONFIG } from '@/constants/config'
 import type { ReactNode } from 'react'
@@ -68,7 +60,10 @@ vi.mock('../RoleSwitcher', async () => {
       }
       return (
         <>
-          <button aria-label="roleSwitcher.buttonLabel" onClick={props.onToggle as () => void}>
+          <button
+            aria-label="roleSwitcher.buttonLabel"
+            onClick={props.onToggle as () => void}
+          >
             Toggle Role
           </button>
           <div data-testid="role-switcher" data-open={props.open} />
@@ -111,7 +106,7 @@ const mockedUseNotificationsCount = useNotificationsCount as unknown as Mock
 const mockedLogout = logout as unknown as Mock
 
 describe('UserProfileActions', () => {
-  beforeEach(() => {
+  test.beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
     CONFIG.feature_flags.roleSwitcher = true
@@ -140,7 +135,7 @@ describe('UserProfileActions', () => {
     mockedLogout.mockImplementation(() => {})
   })
 
-  afterEach(() => {
+  test.afterEach(() => {
     CONFIG.feature_flags.roleSwitcher = originalRoleSwitcherFlag
     vi.useRealTimers()
     if (initialHiddenDescriptor) {
@@ -150,55 +145,83 @@ describe('UserProfileActions', () => {
     }
   })
 
-  it('renders user information and the logout button', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('renders user information and the logout button', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(screen.getByText('John Doe')).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'logout' })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'logout' })).toBeInTheDocument()
   })
 
-  it('shows the notifications badge when the count is greater than zero', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('shows the notifications badge when the count is greater than zero', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(screen.getByText('5')).toBeInTheDocument()
   })
 
-  it('does not show a badge when notifications count is zero', () => {
+  test('does not show a badge when notifications count is zero', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseNotificationsCount.mockReturnValue({
       data: { count: 0 },
       isLoading: false,
       refetch: mockRefetch
     })
 
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(screen.queryByText('0')).not.toBeInTheDocument()
   })
 
-  it('shows a loading spinner while notifications are fetching', () => {
+  test('shows a loading spinner while notifications are fetching', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseNotificationsCount.mockReturnValue({
       data: null,
       isLoading: true,
       refetch: mockRefetch
     })
 
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(screen.getByRole('progressbar')).toBeInTheDocument()
   })
 
-  it('calls logout when the logout button is clicked', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('calls logout when the logout button is clicked', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     fireEvent.click(screen.getByRole('button', { name: 'logout' }))
 
     expect(mockedLogout).toHaveBeenCalled()
   })
 
-  it('refetches notifications on the manual interval', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('refetches notifications on the manual interval', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     act(() => {
       vi.advanceTimersByTime(60000)
@@ -207,8 +230,13 @@ describe('UserProfileActions', () => {
     expect(mockRefetch).toHaveBeenCalled()
   })
 
-  it('refetches notifications when the window gains focus', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('refetches notifications when the window gains focus', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     mockRefetch.mockClear()
 
@@ -219,8 +247,13 @@ describe('UserProfileActions', () => {
     expect(mockRefetch).toHaveBeenCalled()
   })
 
-  it('refetches notifications when the page becomes visible', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('refetches notifications when the page becomes visible', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     mockRefetch.mockClear()
 
@@ -236,8 +269,13 @@ describe('UserProfileActions', () => {
     expect(mockRefetch).toHaveBeenCalled()
   })
 
-  it('renders the RoleSwitcher with anchor props for administrators', () => {
-    const { rerender } = render(<UserProfileActions />, { wrapper })
+  test('renders the RoleSwitcher with anchor props for administrators', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    const { rerender } = render(<UserProfileActions />, [query, theme, router])
 
     expect(mockRoleSwitcher).toHaveBeenCalled()
     const initialProps = getLastRoleSwitcherProps()
@@ -250,7 +288,12 @@ describe('UserProfileActions', () => {
     expect(rerenderedProps?.anchorEl).toBeInstanceOf(HTMLElement)
   })
 
-  it('does not render the RoleSwitcher toggle for non administrators', () => {
+  test('does not render the RoleSwitcher toggle for non administrators', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseCurrentUser.mockReturnValue({
       data: {
         firstName: 'Jane',
@@ -262,7 +305,7 @@ describe('UserProfileActions', () => {
       hasRoles: () => false
     })
 
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(
       screen.queryByRole('button', {
@@ -271,10 +314,15 @@ describe('UserProfileActions', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('does not render the RoleSwitcher toggle when the feature flag is disabled', () => {
+  test('does not render the RoleSwitcher toggle when the feature flag is disabled', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     CONFIG.feature_flags.roleSwitcher = false
 
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(
       screen.queryByRole('button', {
@@ -283,18 +331,17 @@ describe('UserProfileActions', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('cleans up timers and listeners on unmount', () => {
+  test('cleans up timers and listeners on unmount', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     const clearIntervalSpy = vi.spyOn(global, 'clearInterval')
-    const removeDocumentListenerSpy = vi.spyOn(
-      document,
-      'removeEventListener'
-    )
-    const removeWindowListenerSpy = vi.spyOn(
-      window,
-      'removeEventListener'
-    )
+    const removeDocumentListenerSpy = vi.spyOn(document, 'removeEventListener')
+    const removeWindowListenerSpy = vi.spyOn(window, 'removeEventListener')
 
-    const { unmount } = render(<UserProfileActions />, { wrapper })
+    const { unmount } = render(<UserProfileActions />, [query, theme, router])
     unmount()
 
     expect(clearIntervalSpy).toHaveBeenCalled()

@@ -5,60 +5,60 @@ import { test } from '@/tests/utils/fixtures'
 import { describe, expect } from 'vitest'
 
 describe('LabelBox Component', () => {
-  test('renders with children only (minimal props)', ({ render, app }) => {
+  test('renders with children only (minimal props)', ({ render, theme }) => {
     render(
       <LabelBox>
         <div data-test="child-content">Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
     expect(screen.getByTestId('child-content')).toBeInTheDocument()
     expect(screen.getByText('Child Content')).toBeInTheDocument()
   })
 
-  test('renders label when label prop is provided', ({ render, app }) => {
+  test('renders label when label prop is provided', ({ render, theme }) => {
     render(
       <LabelBox label="Test Label">
         <div>Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
     expect(screen.getByText('Test Label')).toBeInTheDocument()
   })
 
   test('does not render label when label prop is not provided', ({
     render,
-    app
+    theme
   }) => {
     render(
       <LabelBox>
         <div>Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
     expect(screen.queryByText('Test Label')).not.toBeInTheDocument()
   })
 
   test('uses default labelVariant "h6" when labelVariant not provided', ({
     render,
-    app
+    theme
   }) => {
     render(
       <LabelBox label="Test Label">
         <div>Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
     const labelElement = screen.getByText('Test Label')
     expect(labelElement.closest('.MuiTypography-h6')).toBeInTheDocument()
   })
 
-  test('uses custom labelVariant when provided', ({ render, app }) => {
+  test('uses custom labelVariant when provided', ({ render, theme }) => {
     render(
       <LabelBox label="Test Label" labelVariant="h4">
         <div>Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
     const labelElement = screen.getByText('Test Label')
     expect(labelElement.closest('.MuiTypography-h4')).toBeInTheDocument()
@@ -66,68 +66,68 @@ describe('LabelBox Component', () => {
 
   test('renders description when description prop is provided', ({
     render,
-    app
+    theme
   }) => {
     render(
       <LabelBox description="Test Description">
         <div>Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
     expect(screen.getByText('Test Description')).toBeInTheDocument()
   })
 
   test('does not render description when description prop is not provided', ({
     render,
-    app
+    theme
   }) => {
     render(
       <LabelBox>
         <div>Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
     expect(screen.queryByText('Test Description')).not.toBeInTheDocument()
   })
 
   test('uses default descriptionVariant "body2" when descriptionVariant not provided', ({
     render,
-    app
+    theme
   }) => {
     render(
       <LabelBox description="Test Description">
         <div>Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
     const descElement = screen.getByText('Test Description')
     expect(descElement.closest('.MuiTypography-body2')).toBeInTheDocument()
   })
 
-  test('uses custom descriptionVariant when provided', ({ render, app }) => {
+  test('uses custom descriptionVariant when provided', ({ render, theme }) => {
     render(
       <LabelBox description="Test Description" descriptionVariant="body1">
         <div>Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
     const descElement = screen.getByText('Test Description')
     expect(descElement.closest('.MuiTypography-body1')).toBeInTheDocument()
   })
 
-  test('spreads boxProps correctly to main BCBox', ({ render, app }) => {
+  test('spreads boxProps correctly to main BCBox', ({ render, theme }) => {
     render(
       <LabelBox data-test="custom-box" className="custom-class">
         <div>Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
     const boxElement = screen.getByTestId('custom-box')
     expect(boxElement).toBeInTheDocument()
     expect(boxElement).toHaveClass('custom-class')
   })
 
-  test('renders complete component with all props', ({ render, app }) => {
+  test('renders complete component with all props', ({ render, theme }) => {
     render(
       <LabelBox
         label="Complete Label"
@@ -139,7 +139,7 @@ describe('LabelBox Component', () => {
       >
         <div data-test="complete-child">Complete Child Content</div>
       </LabelBox>,
-      app
+      [theme]
     )
 
     expect(screen.getByText('Complete Label')).toBeInTheDocument()
@@ -157,14 +157,14 @@ describe('LabelBox Component', () => {
 
   test('always renders children regardless of other props', ({
     render,
-    app
+    theme
   }) => {
     const childText = 'Always Visible Child'
     render(
       <LabelBox>
         <span>{childText}</span>
       </LabelBox>,
-      app
+      [theme]
     )
     expect(screen.getByText(childText)).toBeInTheDocument()
   })

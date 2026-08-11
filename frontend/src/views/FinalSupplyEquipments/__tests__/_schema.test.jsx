@@ -12,6 +12,16 @@ vi.mock('@/i18n', () => ({
   t: (key) => key
 }))
 
+vi.mock('@/components/BCDataGrid/components', () => ({
+  AsyncSuggestionEditor: () => null,
+  AutocompleteCellEditor: () => null,
+  DateEditor: () => null,
+  NumberEditor: () => null,
+  RequiredHeader: () => null,
+  TextCellEditor: () => null,
+  ValidationRenderer2: () => null
+}))
+
 describe('FinalSupplyEquipment _schema', () => {
   const t = (key) => key
 

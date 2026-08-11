@@ -75,17 +75,14 @@ describe('TransferDetails Component', () => {
   describe('Component Rendering', () => {
     test('renders the component with basic elements', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('transfer-details')).toBeInTheDocument()
@@ -96,10 +93,7 @@ describe('TransferDetails Component', () => {
 
     test('renders without user organization name when user data is null', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useCurrentUser.mockReturnValue({ data: null })
       const MockFormProvider = createMockFormProvider()
@@ -107,7 +101,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('transfer-details')).toBeInTheDocument()
@@ -117,10 +111,7 @@ describe('TransferDetails Component', () => {
   describe('availableBalance useMemo calculation', () => {
     test('calculates available balance correctly with valid balance data', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useCurrentOrgBalance.mockReturnValue({
         data: { totalBalance: 2000, reservedBalance: 300 }
@@ -130,7 +121,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // Available balance should be 2000 - 300 = 1700
@@ -139,10 +130,7 @@ describe('TransferDetails Component', () => {
 
     test('returns 0 available balance when balance data is null', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useCurrentOrgBalance.mockReturnValue({ data: null })
       const MockFormProvider = createMockFormProvider()
@@ -150,7 +138,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('transfer-details')).toBeInTheDocument()
@@ -158,10 +146,7 @@ describe('TransferDetails Component', () => {
 
     test('returns 0 when reserved balance exceeds total balance', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useCurrentOrgBalance.mockReturnValue({
         data: { totalBalance: 500, reservedBalance: 800 }
@@ -171,7 +156,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('transfer-details')).toBeInTheDocument()
@@ -181,17 +166,14 @@ describe('TransferDetails Component', () => {
   describe('organizations mapping', () => {
     test('maps organizations correctly when data exists', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const selectField = screen.getByRole('combobox')
@@ -203,10 +185,7 @@ describe('TransferDetails Component', () => {
 
     test('handles empty organizations array when data is null', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useRegExtOrgs.mockReturnValue({ data: null })
       const MockFormProvider = createMockFormProvider()
@@ -214,7 +193,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('transfer-details')).toBeInTheDocument()
@@ -222,10 +201,7 @@ describe('TransferDetails Component', () => {
 
     test('handles organizations without names', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useRegExtOrgs.mockReturnValue({
         data: [{ organizationId: '1', name: null }]
@@ -235,7 +211,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const selectField = screen.getByRole('combobox')
@@ -248,10 +224,7 @@ describe('TransferDetails Component', () => {
   describe('renderError function', () => {
     test('displays error message when field has error', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const errors = {
         quantity: { message: 'Quantity is required' }
@@ -261,7 +234,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Quantity is required')).toBeInTheDocument()
@@ -269,17 +242,14 @@ describe('TransferDetails Component', () => {
 
     test('does not display error when field has no error', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.queryByText('Quantity is required')).not.toBeInTheDocument()
@@ -287,10 +257,7 @@ describe('TransferDetails Component', () => {
 
     test('does not display error for valid toOrganizationId field', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const errors = {
         quantity: { message: 'Quantity is required' }
@@ -300,7 +267,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // Only quantity error should be visible, not toOrganizationId error
@@ -312,10 +279,7 @@ describe('TransferDetails Component', () => {
 
     test('displays toOrganizationId error when present', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const errors = {
         toOrganizationId: { message: 'Organization is required' }
@@ -325,7 +289,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // Error should be visible when present
@@ -334,10 +298,7 @@ describe('TransferDetails Component', () => {
 
     test('displays pricePerUnit error when present', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const errors = {
         pricePerUnit: { message: 'Price is required' }
@@ -347,7 +308,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // Error should be visible when present
@@ -358,17 +319,14 @@ describe('TransferDetails Component', () => {
   describe('totalValue calculation useEffect', () => {
     test('calculates total value when quantity and price change', async ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const quantityInput = screen.getByTestId('quantity')
@@ -394,17 +352,14 @@ describe('TransferDetails Component', () => {
 
     test('handles zero values in calculation', async ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const totalValueDisplay = screen.getByTestId('transfer-total-value')
@@ -418,17 +373,14 @@ describe('TransferDetails Component', () => {
   describe('form field interactions', () => {
     test('handles quantity field input', async ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const quantityInput = screen.getByTestId('quantity')
@@ -442,17 +394,14 @@ describe('TransferDetails Component', () => {
 
     test('handles price per unit field input', async ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const priceInput = screen.getByTestId('price-per-unit')
@@ -466,17 +415,14 @@ describe('TransferDetails Component', () => {
 
     test('handles organization selection', async ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const selectField = screen.getByRole('combobox')
@@ -494,10 +440,7 @@ describe('TransferDetails Component', () => {
   describe('adjustment alert functionality', () => {
     test('renders without adjustment alert by default', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useCurrentOrgBalance.mockReturnValue({
         data: { totalBalance: 100, reservedBalance: 50 }
@@ -507,7 +450,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // Alert should not be visible by default
@@ -521,10 +464,7 @@ describe('TransferDetails Component', () => {
 
     test('renders component with very low balance', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useCurrentOrgBalance.mockReturnValue({
         data: { totalBalance: 1, reservedBalance: 0 }
@@ -534,7 +474,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('transfer-details')).toBeInTheDocument()
@@ -542,10 +482,7 @@ describe('TransferDetails Component', () => {
 
     test('renders component with zero available balance', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useCurrentOrgBalance.mockReturnValue({
         data: { totalBalance: 100, reservedBalance: 200 }
@@ -555,7 +492,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('transfer-details')).toBeInTheDocument()
@@ -565,10 +502,7 @@ describe('TransferDetails Component', () => {
   describe('error handling edge cases', () => {
     test('handles missing balance data gracefully', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useCurrentOrgBalance.mockReturnValue({})
       const MockFormProvider = createMockFormProvider()
@@ -576,7 +510,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('transfer-details')).toBeInTheDocument()
@@ -584,10 +518,7 @@ describe('TransferDetails Component', () => {
 
     test('handles missing user data gracefully', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useCurrentUser.mockReturnValue({})
       const MockFormProvider = createMockFormProvider()
@@ -595,7 +526,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('transfer-details')).toBeInTheDocument()
@@ -603,10 +534,7 @@ describe('TransferDetails Component', () => {
 
     test('handles missing organizations data gracefully', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useRegExtOrgs.mockReturnValue({})
       const MockFormProvider = createMockFormProvider()
@@ -614,7 +542,7 @@ describe('TransferDetails Component', () => {
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('transfer-details')).toBeInTheDocument()
@@ -624,17 +552,14 @@ describe('TransferDetails Component', () => {
   describe('static content rendering', () => {
     test('displays zero dollar instruction text', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -644,17 +569,14 @@ describe('TransferDetails Component', () => {
 
     test('displays transfer details label', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('transfer:detailsLabel')).toBeInTheDocument()
@@ -662,17 +584,14 @@ describe('TransferDetails Component', () => {
 
     test('displays placeholder text for organization select', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       const MockFormProvider = createMockFormProvider()
       render(
         <MockFormProvider>
           <TransferDetails />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('org:selectOrgLabel')).toBeInTheDocument()

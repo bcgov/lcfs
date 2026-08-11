@@ -25,12 +25,12 @@ describe('Logout.jsx', () => {
   })
 
   describe('is not authenticated', () => {
-    test('returns null', ({ render, query, theme, router }) => {
+    test('returns null', ({ render, query, theme }) => {
       keycloak.useKeycloak.mockReturnValue({
         keycloak: { authenticated: false }
       })
 
-      const { container } = render(<Logout />, [query, theme, router])
+      const { container } = render(<Logout />, [query, theme])
 
       expect(container.firstChild).toBeNull()
     })
@@ -38,7 +38,7 @@ describe('Logout.jsx', () => {
 
   describe('is authenticated', () => {
     test.beforeEach(
-      async ({ render, renderHook, query, theme, router, server }) => {
+      async ({ render, renderHook, query, theme, server }) => {
         void server
         keycloak.useKeycloak.mockReturnValue({
           keycloak: { authenticated: true }
@@ -46,7 +46,7 @@ describe('Logout.jsx', () => {
         const { result } = renderHook(() => useCurrentUser(), [query])
         await waitFor(() => expect(result.current.isSuccess).toBeTruthy())
 
-        render(<Logout />, [query, theme, router])
+        render(<Logout />, [query, theme])
       }
     )
     test('should render Logout', async () => {

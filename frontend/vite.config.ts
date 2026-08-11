@@ -36,7 +36,8 @@ export default defineConfig({
   test: {
     globals: true,
     pool: 'threads',
-    maxWorkers: '100%',
+    minWorkers: 8,
+    maxWorkers: 8,
     silent: 'passed-only',
     coverage: {
       provider: 'v8',

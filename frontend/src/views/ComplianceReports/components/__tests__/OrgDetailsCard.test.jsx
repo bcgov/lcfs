@@ -1,8 +1,8 @@
 import React from 'react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, beforeEach, vi } from 'vitest'
+import { screen } from '@testing-library/react'
 import { OrgDetailsCard } from '../OrgDetailsCard'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 import { constructAddress } from '@/utils/constructAddress'
 
 // Mock translation
@@ -44,14 +44,20 @@ describe('OrgDetailsCard', () => {
     )
   })
 
-  it('renders organization name and addresses', () => {
+  test('renders organization name and addresses', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <OrgDetailsCard
         orgName="Test Organization"
         orgAddress={mockOrgAddress}
         orgAttorneyAddress={mockAttorneyAddress}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(screen.getByText('report:orgDetails')).toBeInTheDocument()
@@ -68,7 +74,13 @@ describe('OrgDetailsCard', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders contact message if not a government user', () => {
+  test('renders contact message if not a government user', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <OrgDetailsCard
         orgName="Test Organization"
@@ -76,7 +88,7 @@ describe('OrgDetailsCard', () => {
         orgAttorneyAddress={mockAttorneyAddress}
         isGovernmentUser={false}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(
@@ -84,7 +96,13 @@ describe('OrgDetailsCard', () => {
     ).toBeInTheDocument()
   })
 
-  it('does NOT render contact message if government user', () => {
+  test('does NOT render contact message if government user', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <OrgDetailsCard
         orgName="Test Organization"
@@ -92,7 +110,7 @@ describe('OrgDetailsCard', () => {
         orgAttorneyAddress={mockAttorneyAddress}
         isGovernmentUser={true}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(
@@ -100,8 +118,19 @@ describe('OrgDetailsCard', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('renders empty addresses gracefully when not provided', () => {
-    render(<OrgDetailsCard orgName="Test Organization" />, { wrapper })
+  test('renders empty addresses gracefully when not provided', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<OrgDetailsCard orgName="Test Organization" />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('report:orgDetails')).toBeInTheDocument()
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
@@ -111,50 +140,72 @@ describe('OrgDetailsCard', () => {
     expect(constructAddress).not.toHaveBeenCalled() // No addresses provided
   })
 
-  it('renders only service address when attorney address is null', () => {
+  test('renders only service address when attorney address is null', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <OrgDetailsCard
         orgName="Test Organization"
         orgAddress={mockOrgAddress}
         orgAttorneyAddress={null}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
-    expect(screen.getByText('123 Main St., Victoria, BC, V1A 2B3')).toBeInTheDocument()
+    expect(
+      screen.getByText('123 Main St., Victoria, BC, V1A 2B3')
+    ).toBeInTheDocument()
     expect(screen.getByText('report:bcAddrLabel:')).toBeInTheDocument()
-    
+
     expect(constructAddress).toHaveBeenCalledTimes(1)
     expect(constructAddress).toHaveBeenCalledWith(mockOrgAddress)
   })
 
-  it('renders only attorney address when service address is null', () => {
+  test('renders only attorney address when service address is null', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <OrgDetailsCard
         orgName="Test Organization"
         orgAddress={null}
         orgAttorneyAddress={mockAttorneyAddress}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
-    expect(screen.getByText('456 Second Ave., Vancouver, BC, V2C 3D4')).toBeInTheDocument()
+    expect(
+      screen.getByText('456 Second Ave., Vancouver, BC, V2C 3D4')
+    ).toBeInTheDocument()
     expect(screen.getByText('report:serviceAddrLabel:')).toBeInTheDocument()
-    
+
     expect(constructAddress).toHaveBeenCalledTimes(1)
     expect(constructAddress).toHaveBeenCalledWith(mockAttorneyAddress)
   })
 
-  it('uses default isGovernmentUser=false when not provided', () => {
+  test('uses default isGovernmentUser=false when not provided', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <OrgDetailsCard
         orgName="Test Organization"
         orgAddress={mockOrgAddress}
         orgAttorneyAddress={mockAttorneyAddress}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     // Should show contact message when isGovernmentUser defaults to false
@@ -163,7 +214,13 @@ describe('OrgDetailsCard', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders all translation keys correctly', () => {
+  test('renders all translation keys correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <OrgDetailsCard
         orgName="Test Organization"
@@ -171,17 +228,25 @@ describe('OrgDetailsCard', () => {
         orgAttorneyAddress={mockAttorneyAddress}
         isGovernmentUser={false}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     // Verify all translation keys are rendered
     expect(screen.getByText('report:orgDetails')).toBeInTheDocument()
     expect(screen.getByText('report:serviceAddrLabel:')).toBeInTheDocument()
     expect(screen.getByText('report:bcAddrLabel:')).toBeInTheDocument()
-    expect(screen.getByText('report:contactForAddrChange', { exact: false })).toBeInTheDocument()
+    expect(
+      screen.getByText('report:contactForAddrChange', { exact: false })
+    ).toBeInTheDocument()
   })
 
-  it('handles undefined addresses properly', () => {
+  test('handles undefined addresses properly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <OrgDetailsCard
         orgName="Test Organization"
@@ -189,7 +254,7 @@ describe('OrgDetailsCard', () => {
         orgAttorneyAddress={undefined}
         isGovernmentUser={false}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
@@ -198,14 +263,20 @@ describe('OrgDetailsCard', () => {
     expect(constructAddress).not.toHaveBeenCalled()
   })
 
-  it('calls constructAddress with correct parameters when addresses are provided', () => {
+  test('calls constructAddress with correct parameters when addresses are provided', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <OrgDetailsCard
         orgName="Test Organization"
         orgAddress={mockOrgAddress}
         orgAttorneyAddress={mockAttorneyAddress}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(constructAddress).toHaveBeenCalledTimes(2)
@@ -213,8 +284,19 @@ describe('OrgDetailsCard', () => {
     expect(constructAddress).toHaveBeenNthCalledWith(2, mockAttorneyAddress)
   })
 
-  it('renders with minimal required props', () => {
-    render(<OrgDetailsCard orgName="Minimal Test Org" />, { wrapper })
+  test('renders with minimal required props', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<OrgDetailsCard orgName="Minimal Test Org" />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Minimal Test Org')).toBeInTheDocument()
     expect(screen.getByText('report:orgDetails')).toBeInTheDocument()

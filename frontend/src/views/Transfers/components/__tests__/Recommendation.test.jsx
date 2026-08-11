@@ -45,16 +45,13 @@ describe('Recommendation Component', () => {
   describe('Component Rendering', () => {
     test('renders with correct title', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Analyst Recommendation')).toBeInTheDocument()
@@ -62,10 +59,7 @@ describe('Recommendation Component', () => {
 
     test('renders correctly with currentStatus prop', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const currentStatus = { status: TRANSFER_STATUSES.SUBMITTED }
 
@@ -73,7 +67,7 @@ describe('Recommendation Component', () => {
         <MockFormProvider>
           <Recommendation currentStatus={currentStatus} />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Analyst Recommendation')).toBeInTheDocument()
@@ -92,16 +86,13 @@ describe('Recommendation Component', () => {
 
     test('displays radio buttons when status is SUBMITTED', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByLabelText('Record')).toBeInTheDocument()
@@ -110,16 +101,13 @@ describe('Recommendation Component', () => {
 
     test('renders Controller component with radiogroup', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const radioGroup = screen.getByRole('radiogroup')
@@ -128,16 +116,13 @@ describe('Recommendation Component', () => {
 
     test('allows selecting Record radio button', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const recordRadio = screen.getByLabelText('Record')
@@ -151,16 +136,13 @@ describe('Recommendation Component', () => {
 
     test('allows selecting Refuse radio button', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const recordRadio = screen.getByLabelText('Record')
@@ -174,16 +156,13 @@ describe('Recommendation Component', () => {
 
     test('allows switching between radio button selections', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const recordRadio = screen.getByLabelText('Record')
@@ -202,16 +181,13 @@ describe('Recommendation Component', () => {
 
     test('has correct data-test attributes on radio buttons', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('recommend-record-radio')).toBeInTheDocument()
@@ -222,10 +198,7 @@ describe('Recommendation Component', () => {
   describe('Non-SUBMITTED Status - Typography Branch', () => {
     test('displays recommendation message when status is RECOMMENDED', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useTransfer.mockReturnValue({
         data: {
@@ -238,7 +211,7 @@ describe('Recommendation Component', () => {
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -249,10 +222,7 @@ describe('Recommendation Component', () => {
 
     test('displays recommendation message when status is APPROVED', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useTransfer.mockReturnValue({
         data: {
@@ -265,7 +235,7 @@ describe('Recommendation Component', () => {
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -276,10 +246,7 @@ describe('Recommendation Component', () => {
 
     test('displays recommendation message when status is DECLINED', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useTransfer.mockReturnValue({
         data: {
@@ -292,7 +259,7 @@ describe('Recommendation Component', () => {
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -303,10 +270,7 @@ describe('Recommendation Component', () => {
 
     test('does not display radio buttons when status is not SUBMITTED', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useTransfer.mockReturnValue({
         data: {
@@ -319,7 +283,7 @@ describe('Recommendation Component', () => {
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument()
@@ -331,10 +295,7 @@ describe('Recommendation Component', () => {
   describe('Hook Integration and Edge Cases', () => {
     test('handles different recommendation values', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       useTransfer.mockReturnValue({
         data: {
@@ -347,7 +308,7 @@ describe('Recommendation Component', () => {
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Custom Recommendation')).toBeInTheDocument()
@@ -355,16 +316,13 @@ describe('Recommendation Component', () => {
 
     test('correctly calls useTransfer hook with expected parameters', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // Verify the hook was called
@@ -378,10 +336,7 @@ describe('Recommendation Component', () => {
   describe('Form Integration', () => {
     test('integrates with form context correctly for Record selection', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const TestWrapper = () => {
         const methods = useForm({ defaultValues: { recommendation: 'Record' } })
@@ -392,7 +347,7 @@ describe('Recommendation Component', () => {
         )
       }
 
-      render(<TestWrapper />, [query, theme, localization, router])
+      render(<TestWrapper />, [theme])
 
       const recordRadio = screen.getByLabelText('Record')
       expect(recordRadio).toBeChecked()
@@ -400,10 +355,7 @@ describe('Recommendation Component', () => {
 
     test('integrates with form context correctly for Refuse selection', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const TestWrapper = () => {
         const methods = useForm({ defaultValues: { recommendation: 'Refuse' } })
@@ -414,7 +366,7 @@ describe('Recommendation Component', () => {
         )
       }
 
-      render(<TestWrapper />, [query, theme, localization, router])
+      render(<TestWrapper />, [theme])
 
       const refuseRadio = screen.getByLabelText('Refuse')
       expect(refuseRadio).toBeChecked()
@@ -422,16 +374,13 @@ describe('Recommendation Component', () => {
 
     test('has correct Controller configuration', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <Recommendation />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // Controller should render radiogroup when status is SUBMITTED

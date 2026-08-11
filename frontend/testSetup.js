@@ -1,38 +1,18 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, configure } from '@testing-library/react'
+import { configure } from '@testing-library/react'
 import { vi } from 'vitest'
 import { config } from './public/config/config'
 import React from 'react'
 
 configure({ testIdAttribute: 'data-test' })
 
-beforeAll(async () => {
+beforeAll(() => {
   vi.stubGlobal('lcfs_config', config)
   vi.stubGlobal('scrollTo', vi.fn())
 })
 
-vi.mock('react-snowfall')
-
 vi.mock('@/i18n', async () => ({
-  default: (await import('./src/tests/utils/capabilities/testI18n.js')).default
-}))
-
-// Mock problematic leaflet components
-vi.mock('react-leaflet-custom-control', () => ({
-  default: ({ children }) => children
-}))
-
-vi.mock('react-leaflet-cluster', () => ({
-  default: ({ children }) => children
-}))
-
-vi.mock('react-leaflet', () => ({
-  useMap: () => ({
-    fitBounds: vi.fn()
-  }),
-  Marker: ({ children }) => children,
-  Popup: ({ children }) => children,
-  TileLayer: () => null
+  default: (await import('./src/tests/i18nSetup.js')).default
 }))
 
 // Global component mocks to fix common warnings
@@ -259,7 +239,6 @@ vi.mock('@/components/BCModal', () => ({
   }
 }))
 
-// Mock AddressAutocomplete component
 vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
   default: ({ name, ...props }) => {
     return React.createElement('input', {
@@ -270,7 +249,3 @@ vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
     })
   }
 }))
-
-afterEach(() => {
-  cleanup()
-})

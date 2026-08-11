@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import { loadI18nResources } from './resources'
+import { configureLazyI18n } from './resources'
 
 const hasCreateInstance = typeof i18next.createInstance === 'function'
 const testI18n = hasCreateInstance ? i18next.createInstance() : i18next
@@ -18,11 +18,12 @@ if (hasCreateInstance && initReactI18next) {
 
 if (hasCreateInstance) {
   await testI18n.init({
-    resources: await loadI18nResources(),
+    resources: { en: {} },
     defaultNS: 'common',
     lng: 'en',
     interpolation: { escapeValue: false }
   })
+  configureLazyI18n(testI18n)
 }
 
 export default testI18n

@@ -17,7 +17,7 @@ import {
 } from '@testing-library/react'
 
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { ROUTES } from '@/routes/routes'
 
 // ---------------- Mocks ----------------
@@ -236,8 +236,14 @@ describe('EditViewCIApplication', () => {
   })
   afterEach(cleanup)
 
-  it('renders all five accordion steps in add mode', async () => {
-    render(<EditViewCIApplication />, { wrapper })
+  test('renders all five accordion steps in add mode', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<EditViewCIApplication />, [query, theme, localization, router])
     await waitFor(() => {
       expect(screen.getByTestId('ci-step-accordion-step1')).toBeInTheDocument()
       expect(screen.getByTestId('ci-step-accordion-step2')).toBeInTheDocument()
@@ -247,8 +253,14 @@ describe('EditViewCIApplication', () => {
     })
   })
 
-  it('passes organization info from current user into Step 1 in add mode', async () => {
-    render(<EditViewCIApplication />, { wrapper })
+  test('passes organization info from current user into Step 1 in add mode', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<EditViewCIApplication />, [query, theme, localization, router])
     await waitFor(() => {
       expect(screen.getByTestId('org-name').textContent).toBe(
         'Fuel Producer Ltd.'
@@ -256,7 +268,13 @@ describe('EditViewCIApplication', () => {
     })
   })
 
-  it('shows status badge when editing an existing application', async () => {
+  test('shows status badge when editing an existing application', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockParams = { ciApplicationId: '10' }
     mockGetCIApplication = {
       data: {
@@ -266,14 +284,20 @@ describe('EditViewCIApplication', () => {
       },
       isLoading: false
     }
-    render(<EditViewCIApplication />, { wrapper })
+    render(<EditViewCIApplication />, [query, theme, localization, router])
     await waitFor(() => {
       expect(screen.getByText(/Status: Draft/)).toBeInTheDocument()
     })
   })
 
-  it('creates a new draft and navigates to the edit URL on Save (add mode)', async () => {
-    render(<EditViewCIApplication />, { wrapper })
+  test('creates a new draft and navigates to the edit URL on Save (add mode)', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<EditViewCIApplication />, [query, theme, localization, router])
 
     fireEvent.click(await screen.findByTestId('step1-save-trigger'))
 
@@ -284,7 +308,13 @@ describe('EditViewCIApplication', () => {
     )
   })
 
-  it('updates Step 1 (no navigate) when editing an existing application', async () => {
+  test('updates Step 1 (no navigate) when editing an existing application', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockParams = { ciApplicationId: '10' }
     mockGetCIApplication = {
       data: {
@@ -295,7 +325,7 @@ describe('EditViewCIApplication', () => {
       isLoading: false
     }
 
-    render(<EditViewCIApplication />, { wrapper })
+    render(<EditViewCIApplication />, [query, theme, localization, router])
     fireEvent.click(await screen.findByTestId('step1-save-trigger'))
 
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled())
@@ -303,14 +333,25 @@ describe('EditViewCIApplication', () => {
     expect(mockNavigate).not.toHaveBeenCalled()
   })
 
-  it('shows the loader while options are loading', async () => {
+  test('shows the loader while options are loading', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     // Re-apply the mock with isLoading: true
     const useCIApplicationModule = await import('@/hooks/useCIApplication')
     useCIApplicationModule.useCIApplicationOptions.mockReturnValueOnce({
       data: undefined,
       isLoading: true
     })
-    const { container } = render(<EditViewCIApplication />, { wrapper })
+    const { container } = render(<EditViewCIApplication />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     // Loading component is rendered — accordion should NOT be present
     await waitFor(() => {
       expect(
@@ -319,7 +360,13 @@ describe('EditViewCIApplication', () => {
     })
   })
 
-  it('opens delete confirmation modal when Delete is clicked', async () => {
+  test('opens delete confirmation modal when Delete is clicked', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockParams = { ciApplicationId: '10' }
     mockGetCIApplication = {
       data: {
@@ -330,7 +377,7 @@ describe('EditViewCIApplication', () => {
       isLoading: false
     }
 
-    render(<EditViewCIApplication />, { wrapper })
+    render(<EditViewCIApplication />, [query, theme, localization, router])
     fireEvent.click(await screen.findByTestId('step1-delete-trigger'))
 
     // BCModal renders dialog content from the modal data — confirmation copy
@@ -344,18 +391,21 @@ describe('EditViewCIApplication', () => {
     const confirmBtn = screen.getByText('common:deleteBtn')
     fireEvent.click(confirmBtn)
     await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('10'))
-    expect(mockNavigate).toHaveBeenCalledWith(
-      ROUTES.CI_APPLICATIONS.LIST,
-      {
-        state: {
-          message: 'carbonIntensity:step1.deleteSuccess',
-          severity: 'success'
-        }
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.LIST, {
+      state: {
+        message: 'carbonIntensity:step1.deleteSuccess',
+        severity: 'success'
       }
-    )
+    })
   })
 
-  it('resumes a draft on the first incomplete step (Steps 1–2 saved -> Step 3)', async () => {
+  test('resumes a draft on the first incomplete step (Steps 1–2 saved -> Step 3)', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockParams = { ciApplicationId: '10' }
     mockGetCIApplication = {
       data: {
@@ -376,7 +426,7 @@ describe('EditViewCIApplication', () => {
       isLoading: false
     }
 
-    render(<EditViewCIApplication />, { wrapper })
+    render(<EditViewCIApplication />, [query, theme, localization, router])
 
     await waitFor(() => {
       // Step 3 accordion is expanded; Steps 1 and 2 are collapsed.
@@ -392,7 +442,13 @@ describe('EditViewCIApplication', () => {
     )
   })
 
-  it('opens a brand-new draft (nothing saved) on Step 1', async () => {
+  test('opens a brand-new draft (nothing saved) on Step 1', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockParams = { ciApplicationId: '10' }
     mockGetCIApplication = {
       data: {
@@ -405,7 +461,7 @@ describe('EditViewCIApplication', () => {
       isLoading: false
     }
 
-    render(<EditViewCIApplication />, { wrapper })
+    render(<EditViewCIApplication />, [query, theme, localization, router])
 
     await waitFor(() => {
       expect(screen.getByTestId('ci-step-accordion-step1')).toHaveClass(
@@ -417,7 +473,13 @@ describe('EditViewCIApplication', () => {
     )
   })
 
-  it('enables supplemental pathway editing for a requested Submitted application', async () => {
+  test('enables supplemental pathway editing for a requested Submitted application', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockParams = { ciApplicationId: '10' }
     mockGetCIApplication = {
       data: {
@@ -431,7 +493,7 @@ describe('EditViewCIApplication', () => {
       isLoading: false
     }
 
-    render(<EditViewCIApplication />, { wrapper })
+    render(<EditViewCIApplication />, [query, theme, localization, router])
 
     fireEvent.click(await screen.findByTestId('summary-pathways-edit'))
     await waitFor(() => {

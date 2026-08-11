@@ -57,16 +57,13 @@ describe('AgreementDate Component', () => {
   describe('Rendering', () => {
     test('renders correctly with label and description', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
       expect(screen.getByText('Agreement Date (required)')).toBeInTheDocument()
       expect(
@@ -78,16 +75,13 @@ describe('AgreementDate Component', () => {
 
     test('renders the date input with correct attributes', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')
@@ -98,32 +92,26 @@ describe('AgreementDate Component', () => {
 
     test('renders the agreement date header text', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
       expect(screen.getByText('Agreement Date:')).toBeInTheDocument()
     })
 
     test('calls translation function with correct keys', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(mockT).toHaveBeenCalledWith('transfer:agrDateLabel')
@@ -133,16 +121,13 @@ describe('AgreementDate Component', () => {
 
     test('renders with correct data-test attributes', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByTestId('agreement-date')).toBeInTheDocument()
@@ -154,10 +139,7 @@ describe('AgreementDate Component', () => {
 
     test('sets max date correctly using dateFormatter', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const expectedMaxDate = '2024-01-15'
       formatters.dateFormatter.mockReturnValue(expectedMaxDate)
@@ -166,7 +148,7 @@ describe('AgreementDate Component', () => {
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')
@@ -176,16 +158,13 @@ describe('AgreementDate Component', () => {
 
     test('calls dateFormatter with current date', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(formatters.dateFormatter).toHaveBeenCalled()
@@ -193,16 +172,13 @@ describe('AgreementDate Component', () => {
 
     test('renders input with small size', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const textField = screen.getByTestId('transfer-agreement-date')
@@ -211,10 +187,7 @@ describe('AgreementDate Component', () => {
 
     test('displays error message when agreementDate has errors', async ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const errorMessage = 'Agreement date is required'
       render(
@@ -225,7 +198,7 @@ describe('AgreementDate Component', () => {
         >
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // Wait for the error message to appear
@@ -236,16 +209,13 @@ describe('AgreementDate Component', () => {
 
     test('does not display error when no errors exist', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')
@@ -254,16 +224,13 @@ describe('AgreementDate Component', () => {
 
     test('handles error object without message property', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider errors={{ agreementDate: { type: 'required' } }}>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')
@@ -275,16 +242,13 @@ describe('AgreementDate Component', () => {
   describe('Functionality', () => {
     test('renders input with correct name attribute', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')
@@ -293,16 +257,13 @@ describe('AgreementDate Component', () => {
 
     test('updates the form value when date is changed', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')
@@ -315,16 +276,13 @@ describe('AgreementDate Component', () => {
   describe('Hook Integration', () => {
     test('calls useTranslation with transfer namespace', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(useTranslation).toHaveBeenCalledWith(['transfer'])
@@ -334,10 +292,7 @@ describe('AgreementDate Component', () => {
   describe('Error State Branches', () => {
     test('handles !!errors.agreementDate branch when error exists', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider
@@ -345,7 +300,7 @@ describe('AgreementDate Component', () => {
         >
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')
@@ -354,16 +309,13 @@ describe('AgreementDate Component', () => {
 
     test('handles !!errors.agreementDate branch when no error exists', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')
@@ -372,10 +324,7 @@ describe('AgreementDate Component', () => {
 
     test('handles errors.agreementDate?.message optional chaining when error has message', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const errorMessage = 'Test error message'
       render(
@@ -386,7 +335,7 @@ describe('AgreementDate Component', () => {
         >
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText(errorMessage)).toBeInTheDocument()
@@ -394,16 +343,13 @@ describe('AgreementDate Component', () => {
 
     test('handles errors.agreementDate?.message optional chaining when error has no message', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider errors={{ agreementDate: { type: 'required' } }}>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // Should not crash and should not display any error text
@@ -415,16 +361,13 @@ describe('AgreementDate Component', () => {
   describe('Component Structure and Props', () => {
     test('renders LabelBox with correct props', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const labelBox = screen.getByTestId('agreement-date')
@@ -433,16 +376,13 @@ describe('AgreementDate Component', () => {
 
     test('renders TextField with all required props', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')
@@ -456,16 +396,13 @@ describe('AgreementDate Component', () => {
 
     test('renders Box component with correct styling props', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // The Box should contain the typography and text field
@@ -477,10 +414,7 @@ describe('AgreementDate Component', () => {
   describe('Date Processing Logic', () => {
     test('processes maxDate through dateFormatter correctly', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const testDate = '2024-12-31'
       formatters.dateFormatter.mockReturnValue(testDate)
@@ -489,7 +423,7 @@ describe('AgreementDate Component', () => {
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')
@@ -501,16 +435,13 @@ describe('AgreementDate Component', () => {
   describe('Form State Integration', () => {
     test('handles empty form state without errors', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       // Should render without crashing
@@ -519,17 +450,14 @@ describe('AgreementDate Component', () => {
 
     test('displays form state errors correctly', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       const testError = 'Custom error message'
       render(
         <MockFormProvider errors={{ agreementDate: { message: testError } }}>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText(testError)).toBeInTheDocument()
@@ -537,16 +465,13 @@ describe('AgreementDate Component', () => {
 
     test('integrates with form context properly', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+      theme
     }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
-        [query, theme, localization, router]
+        [theme]
       )
 
       const dateInput = screen.getByTestId('transfer-agreement-date-input')

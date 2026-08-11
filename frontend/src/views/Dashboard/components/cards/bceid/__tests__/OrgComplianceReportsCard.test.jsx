@@ -1,10 +1,10 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import OrgComplianceReportsCard from '../OrgComplianceReportsCard'
 import { useOrgComplianceReportCounts } from '@/hooks/useDashboard'
 import { useOrganization } from '@/hooks/useOrganization'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
@@ -48,8 +48,16 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@mui/material', () => ({
-  Stack: ({ children, ...props }) => <div data-test="stack" {...props}>{children}</div>,
-  List: ({ children, ...props }) => <div data-test="list" {...props}>{children}</div>,
+  Stack: ({ children, ...props }) => (
+    <div data-test="stack" {...props}>
+      {children}
+    </div>
+  ),
+  List: ({ children, ...props }) => (
+    <div data-test="list" {...props}>
+      {children}
+    </div>
+  ),
   ListItemButton: ({ children, onClick, ...props }) => (
     <button data-test="list-item-button" onClick={onClick} {...props}>
       {children}
@@ -84,13 +92,17 @@ describe('OrgComplianceReportsCard Component', () => {
   })
 
   describe('CountDisplay Component', () => {
-    it('renders count display with provided count', () => {
+    test('renders count display with provided count', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 5, awaitingGovReview: 3 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       const countElements = screen.getAllByText('5')
       expect(countElements.length).toBeGreaterThan(0)
@@ -98,189 +110,253 @@ describe('OrgComplianceReportsCard Component', () => {
       expect(countElements2.length).toBeGreaterThan(0)
     })
 
-    it('renders count display with zero count', () => {
+    test('renders count display with zero count', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 1 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText('1')).toBeInTheDocument()
     })
   })
 
   describe('Loading State', () => {
-    it('renders loading state when isLoading is true', () => {
+    test('renders loading state when isLoading is true', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: null,
         isLoading: true
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByTestId('loading')).toBeInTheDocument()
-      expect(screen.getByText(/Loading compliance reports card/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Loading compliance reports card/)
+      ).toBeInTheDocument()
     })
 
-    it('renders title even when loading', () => {
+    test('renders title even when loading', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: null,
         isLoading: true
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText('Compliance reports')).toBeInTheDocument()
     })
   })
 
   describe('No Action Required State', () => {
-    it('displays no action required message when both counts are 0', () => {
+    test('displays no action required message when both counts are 0', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
-      expect(screen.getByText(/There are no reports that require any action./)).toBeInTheDocument()
-      expect(screen.queryByText(/Compliance report\(s\) in progress/)).not.toBeInTheDocument()
-      expect(screen.queryByText(/Compliance report\(s\) awaiting government review/)).not.toBeInTheDocument()
+      expect(
+        screen.getByText(/There are no reports that require any action./)
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText(/Compliance report\(s\) in progress/)
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/Compliance report\(s\) awaiting government review/)
+      ).not.toBeInTheDocument()
     })
 
-    it('displays no action required when inProgress is 0 and awaitingGovReview is 0', () => {
+    test('displays no action required when inProgress is 0 and awaitingGovReview is 0', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
-      expect(screen.getByText(/There are no reports that require any action./)).toBeInTheDocument()
+      expect(
+        screen.getByText(/There are no reports that require any action./)
+      ).toBeInTheDocument()
     })
   })
 
   describe('Reports List State', () => {
-    it('renders organization name when data is available', () => {
+    test('renders organization name when data is available', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrganization.mockReturnValue({
         data: { name: 'My Test Org' },
         isLoading: false
       })
-      
+
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 2, awaitingGovReview: 1 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText(/My Test Org has:/)).toBeInTheDocument()
     })
 
-    it('handles undefined organization name gracefully', () => {
+    test('handles undefined organization name gracefully', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrganization.mockReturnValue({
         data: {},
         isLoading: false
       })
-      
+
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 1, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText(/has:/)).toBeInTheDocument()
     })
 
-    it('displays reports when inProgress > 0', () => {
+    test('displays reports when inProgress > 0', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 3, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText('3')).toBeInTheDocument()
-      expect(screen.getByText(/Compliance report\(s\) in progress/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Compliance report\(s\) in progress/)
+      ).toBeInTheDocument()
     })
 
-    it('displays reports when awaitingGovReview > 0', () => {
+    test('displays reports when awaitingGovReview > 0', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 2 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText('2')).toBeInTheDocument()
-      expect(screen.getByText(/Compliance report\(s\) awaiting government review/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Compliance report\(s\) awaiting government review/)
+      ).toBeInTheDocument()
     })
   })
 
   describe('Count Handling Edge Cases', () => {
-    it('handles undefined counts data gracefully', () => {
+    test('handles undefined counts data gracefully', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: undefined,
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
-      expect(screen.getByText(/There are no reports that require any action./)).toBeInTheDocument()
+      expect(
+        screen.getByText(/There are no reports that require any action./)
+      ).toBeInTheDocument()
     })
 
-    it('handles null counts data gracefully', () => {
+    test('handles null counts data gracefully', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: null,
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
-      expect(screen.getByText(/There are no reports that require any action./)).toBeInTheDocument()
+      expect(
+        screen.getByText(/There are no reports that require any action./)
+      ).toBeInTheDocument()
     })
 
-    it('handles missing inProgress property', () => {
+    test('handles missing inProgress property', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { awaitingGovReview: 1 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText('1')).toBeInTheDocument()
-      expect(screen.getByText(/Compliance report\(s\) awaiting government review/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Compliance report\(s\) awaiting government review/)
+      ).toBeInTheDocument()
     })
 
-    it('handles missing awaitingGovReview property', () => {
+    test('handles missing awaitingGovReview property', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 2 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText('2')).toBeInTheDocument()
-      expect(screen.getByText(/Compliance report\(s\) in progress/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Compliance report\(s\) in progress/)
+      ).toBeInTheDocument()
     })
   })
 
   describe('Navigation Functionality', () => {
-    it('navigates to reports with DRAFT filter when in-progress link clicked', () => {
+    test('navigates to reports with DRAFT filter when in-progress link clicked', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 2, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
-      const inProgressLink = screen.getByText(/Compliance report\(s\) in progress/)
+      const inProgressLink = screen.getByText(
+        /Compliance report\(s\) in progress/
+      )
       fireEvent.click(inProgressLink)
 
       const expectedFilter = JSON.stringify({
-        status: { filterType: 'text', type: 'equals', filter: COMPLIANCE_REPORT_STATUSES.DRAFT }
+        status: {
+          filterType: 'text',
+          type: 'equals',
+          filter: COMPLIANCE_REPORT_STATUSES.DRAFT
+        }
       })
 
       expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
@@ -290,19 +366,29 @@ describe('OrgComplianceReportsCard Component', () => {
       expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.LIST)
     })
 
-    it('navigates to reports with SUBMITTED filter when awaiting-review link clicked', () => {
+    test('navigates to reports with SUBMITTED filter when awaiting-review link clicked', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 1 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
-      const awaitingReviewLink = screen.getByText(/Compliance report\(s\) awaiting government review/)
+      const awaitingReviewLink = screen.getByText(
+        /Compliance report\(s\) awaiting government review/
+      )
       fireEvent.click(awaitingReviewLink)
 
       const expectedFilter = JSON.stringify({
-        status: { filterType: 'text', type: 'equals', filter: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+        status: {
+          filterType: 'text',
+          type: 'equals',
+          filter: COMPLIANCE_REPORT_STATUSES.SUBMITTED
+        }
       })
 
       expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
@@ -312,13 +398,17 @@ describe('OrgComplianceReportsCard Component', () => {
       expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.LIST)
     })
 
-    it('navigates to calculator when calculator button clicked', () => {
+    test('navigates to calculator when calculator button clicked', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 1, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       const calculatorButton = screen.getByText(/Compliance unit calculator/)
       fireEvent.click(calculatorButton)
@@ -326,13 +416,17 @@ describe('OrgComplianceReportsCard Component', () => {
       expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CREDIT_CALCULATOR)
     })
 
-    it('shows calculator button even when no reports require action', () => {
+    test('shows calculator button even when no reports require action', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       const calculatorButton = screen.getByText(/Compliance unit calculator/)
       expect(calculatorButton).toBeInTheDocument()
@@ -343,128 +437,154 @@ describe('OrgComplianceReportsCard Component', () => {
   })
 
   describe('renderLinkWithCount Function Coverage', () => {
-    it('does not render link when count is 0', () => {
+    test('does not render link when count is 0', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 5 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
-      expect(screen.queryByText(/Compliance report\(s\) in progress/)).not.toBeInTheDocument()
-      expect(screen.getByText(/Compliance report\(s\) awaiting government review/)).toBeInTheDocument()
+      expect(
+        screen.queryByText(/Compliance report\(s\) in progress/)
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByText(/Compliance report\(s\) awaiting government review/)
+      ).toBeInTheDocument()
     })
 
-    it('renders link when count > 0', () => {
+    test('renders link when count > 0', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 3, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
-      expect(screen.getByText(/Compliance report\(s\) in progress/)).toBeInTheDocument()
-      expect(screen.queryByText(/Compliance report\(s\) awaiting government review/)).not.toBeInTheDocument()
+      expect(
+        screen.getByText(/Compliance report\(s\) in progress/)
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText(/Compliance report\(s\) awaiting government review/)
+      ).not.toBeInTheDocument()
     })
   })
 
   describe('Widget Card Props', () => {
-    it('renders widget card with correct title', () => {
+    test('renders widget card with correct title', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
-      expect(screen.getByTestId('widget-title')).toHaveTextContent('Compliance reports')
+      expect(screen.getByTestId('widget-title')).toHaveTextContent(
+        'Compliance reports'
+      )
     })
 
-    it('passes content to widget card', () => {
+    test('passes content to widget card', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByTestId('widget-content')).toBeInTheDocument()
     })
   })
 
   describe('Hook Coverage', () => {
-    it('calls useTranslation hook', () => {
+    test('calls useTranslation hook', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText('Compliance reports')).toBeInTheDocument()
     })
 
-    it('calls useNavigate hook', () => {
+    test('calls useNavigate hook', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 1, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(useNavigate).toHaveBeenCalled()
     })
 
-    it('calls useOrganization hook', () => {
+    test('calls useOrganization hook', ({ render, query, i18n }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(useOrganization).toHaveBeenCalled()
     })
 
-    it('calls useOrgComplianceReportCounts hook', () => {
+    test('calls useOrgComplianceReportCounts hook', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 0, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(useOrgComplianceReportCounts).toHaveBeenCalled()
     })
   })
 
   describe('Complex Scenarios', () => {
-    it('handles both counts present and positive', () => {
+    test('handles both counts present and positive', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 3, awaitingGovReview: 2 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText('3')).toBeInTheDocument()
       expect(screen.getByText('2')).toBeInTheDocument()
-      expect(screen.getByText(/Compliance report\(s\) in progress/)).toBeInTheDocument()
-      expect(screen.getByText(/Compliance report\(s\) awaiting government review/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Compliance report\(s\) in progress/)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Compliance report\(s\) awaiting government review/)
+      ).toBeInTheDocument()
     })
 
-    it('handles organization loading state', () => {
+    test('handles organization loading state', ({ render, query, i18n }) => {
       useOrganization.mockReturnValue({
         data: null,
         isLoading: true
       })
-      
+
       useOrgComplianceReportCounts.mockReturnValue({
         data: { inProgress: 1, awaitingGovReview: 0 },
         isLoading: false
       })
 
-      render(<OrgComplianceReportsCard />, { wrapper })
+      render(<OrgComplianceReportsCard />, [query, i18n])
 
       expect(screen.getByText(/has:/)).toBeInTheDocument()
     })

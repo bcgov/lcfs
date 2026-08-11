@@ -32,32 +32,20 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('renders the comment section title from translation keys', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(<CommentList comments={mockComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getByText('transfer:commentList.title')).toBeInTheDocument()
   })
 
   test('renders the correct number of comment items', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(<CommentList comments={mockComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     const items = screen.getAllByRole('listitem')
     expect(items).toHaveLength(mockComments.length)
@@ -65,27 +53,18 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('displays no items when the comments array is empty', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
-    render(<CommentList comments={[]} />, [query, theme, localization, router])
+    render(<CommentList comments={[]} />, [theme])
     expect(screen.queryAllByRole('listitem')).toHaveLength(0)
   })
 
   test('displays userLine for non-gov users and govLine for gov user when viewer is non-gov', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(<CommentList comments={mockComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(
       screen.getByText('transfer:commentList.userLine')
@@ -95,16 +74,10 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('displays userLine for non-gov authors and govLineForGov for gov authors when viewer is gov', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(<CommentList comments={mockComments} viewerIsGovernment={true} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(
       screen.getByText('transfer:commentList.userLine')
@@ -116,16 +89,10 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('renders correct avatar initials for each comment (non-gov viewer)', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(<CommentList comments={mockComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getByText('A')).toBeInTheDocument()
     expect(screen.getByText('BC')).toBeInTheDocument()
@@ -133,16 +100,10 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('renders correct avatar initials for each comment (gov viewer)', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(<CommentList comments={mockComments} viewerIsGovernment={true} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getByText('A')).toBeInTheDocument()
     expect(screen.getByText('B')).toBeInTheDocument()
@@ -150,10 +111,7 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('renders a large number of comments without errors', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const largeComments = Array.from({ length: 50 }, (_, idx) => ({
       createdBy: `User${idx}`,
@@ -162,26 +120,17 @@ describe('CommentList Component - Full Coverage', () => {
       comment: `Comment ${idx}`
     }))
     render(<CommentList comments={largeComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getAllByRole('listitem')).toHaveLength(50)
   })
 
   test('ensures the list has an aria-label for accessibility', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     render(<CommentList comments={mockComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getByRole('list')).toHaveAttribute(
       'aria-label',
@@ -192,10 +141,7 @@ describe('CommentList Component - Full Coverage', () => {
   // Edge cases for getInitials function coverage
   test('handles users with multiple names correctly in avatars (first + last initials)', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const multiNameComments = [
       {
@@ -206,20 +152,14 @@ describe('CommentList Component - Full Coverage', () => {
       }
     ]
     render(<CommentList comments={multiNameComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getByText('JW')).toBeInTheDocument() // First + Last initials
   })
 
   test('handles single word names correctly', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const singleNameComments = [
       {
@@ -230,20 +170,14 @@ describe('CommentList Component - Full Coverage', () => {
       }
     ]
     render(<CommentList comments={singleNameComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getByText('C')).toBeInTheDocument()
   })
 
   test('handles names with only spaces (returns ? for user initials)', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const spacesNameComments = [
       {
@@ -254,10 +188,7 @@ describe('CommentList Component - Full Coverage', () => {
       }
     ]
     render(<CommentList comments={spacesNameComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getByText('?')).toBeInTheDocument() // getInitials returns ? for spaces-only name
   })
@@ -265,10 +196,7 @@ describe('CommentList Component - Full Coverage', () => {
   // Edge cases for getAvatarLetters function coverage
   test('handles comments without user but with org (orgLine case)', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const orgOnlyComments = [
       {
@@ -279,10 +207,7 @@ describe('CommentList Component - Full Coverage', () => {
       }
     ]
     render(<CommentList comments={orgOnlyComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getByText('transfer:commentList.orgLine')).toBeInTheDocument()
     expect(screen.getByText('S')).toBeInTheDocument() // First letter of org
@@ -290,10 +215,7 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('handles comments without user and org (fallback case)', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const emptyComments = [
       {
@@ -304,20 +226,14 @@ describe('CommentList Component - Full Coverage', () => {
       }
     ]
     render(<CommentList comments={emptyComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getByText('?')).toBeInTheDocument() // Fallback avatar
   })
 
   test('handles undefined createdBy and createdByOrg fields', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const undefinedComments = [
       {
@@ -326,10 +242,7 @@ describe('CommentList Component - Full Coverage', () => {
       }
     ]
     render(<CommentList comments={undefinedComments} />, [
-      query,
-      theme,
-      localization,
-      router
+      theme
     ])
     expect(screen.getByText('?')).toBeInTheDocument() // Fallback avatar
   })
@@ -337,10 +250,7 @@ describe('CommentList Component - Full Coverage', () => {
   // Edge cases for buildLine function coverage
   test('handles government user without username when viewer is government', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+      theme
   }) => {
     const govCommentNoUser = [
       {
@@ -352,7 +262,7 @@ describe('CommentList Component - Full Coverage', () => {
     ]
     render(
       <CommentList comments={govCommentNoUser} viewerIsGovernment={true} />,
-      [query, theme, localization, router]
+      [theme]
     )
     expect(screen.getByText('transfer:commentList.govLine')).toBeInTheDocument()
     expect(screen.getByText('G')).toBeInTheDocument() // Falls back to first letter of org
@@ -360,10 +270,7 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('handles mixed case organization names', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+      theme
   }) => {
     const mixedCaseComments = [
       {
@@ -375,7 +282,7 @@ describe('CommentList Component - Full Coverage', () => {
     ]
     render(
       <CommentList comments={mixedCaseComments} viewerIsGovernment={false} />,
-      [query, theme, localization, router]
+      [theme]
     )
     expect(screen.getByText('BC')).toBeInTheDocument() // Should still recognize as gov
     expect(screen.getByText('transfer:commentList.govLine')).toBeInTheDocument()
@@ -383,10 +290,7 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('handles lower case government org name', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+      theme
   }) => {
     const lowerCaseComments = [
       {
@@ -398,7 +302,7 @@ describe('CommentList Component - Full Coverage', () => {
     ]
     render(
       <CommentList comments={lowerCaseComments} viewerIsGovernment={false} />,
-      [query, theme, localization, router]
+      [theme]
     )
     expect(screen.getByText('BC')).toBeInTheDocument()
     expect(screen.getByText('transfer:commentList.govLine')).toBeInTheDocument()
@@ -406,10 +310,7 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('handles undefined comment properties gracefully', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const incompleteComments = [
       {
@@ -419,10 +320,7 @@ describe('CommentList Component - Full Coverage', () => {
       }
     ]
     render(<CommentList comments={incompleteComments} />, [
-      query,
-      theme,
-      localization,
-      router
+       theme
     ])
     expect(screen.getByText('TU')).toBeInTheDocument() // Should still show initials
   })
@@ -431,10 +329,7 @@ describe('CommentList Component - Full Coverage', () => {
 
   test('handles two-word names correctly', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const twoWordComments = [
       {
@@ -445,20 +340,14 @@ describe('CommentList Component - Full Coverage', () => {
       }
     ]
     render(<CommentList comments={twoWordComments} />, [
-      query,
-      theme,
-      localization,
-      router
+       theme
     ])
     expect(screen.getByText('JD')).toBeInTheDocument()
   })
 
   test('handles org name starting with lowercase', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const lowerOrgComments = [
       {
@@ -469,20 +358,14 @@ describe('CommentList Component - Full Coverage', () => {
       }
     ]
     render(<CommentList comments={lowerOrgComments} />, [
-      query,
-      theme,
-      localization,
-      router
+       theme
     ])
     expect(screen.getByText('A')).toBeInTheDocument() // Should uppercase the first letter
   })
 
   test('handles government org with partial match', ({
     render,
-    query,
-    theme,
-    localization,
-    router
+    theme
   }) => {
     const partialGovComments = [
       {
@@ -494,7 +377,7 @@ describe('CommentList Component - Full Coverage', () => {
     ]
     render(
       <CommentList comments={partialGovComments} viewerIsGovernment={false} />,
-      [query, theme, localization, router]
+      [theme]
     )
     expect(screen.getByText('BC')).toBeInTheDocument()
     expect(screen.getByText('transfer:commentList.govLine')).toBeInTheDocument()

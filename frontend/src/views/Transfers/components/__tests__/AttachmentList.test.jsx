@@ -10,52 +10,52 @@ describe('AttachmentList Component', () => {
     { attachmentID: '2', fileName: 'Image1.png' }
   ]
 
-  test('renders correctly with attachments', ({ render, app }) => {
-    render(<AttachmentList attachments={mockAttachments} />, app)
+  test('renders correctly with attachments', ({ render, theme }) => {
+    render(<AttachmentList attachments={mockAttachments} />, [theme])
     expect(screen.getByText('Attachments')).toBeInTheDocument()
   })
 
-  test('renders the correct number of attachment items', ({ render, app }) => {
-    render(<AttachmentList attachments={mockAttachments} />, app)
+  test('renders the correct number of attachment items', ({ render, theme }) => {
+    render(<AttachmentList attachments={mockAttachments} />, [theme])
     const items = screen.getAllByRole('button')
     expect(items).toHaveLength(mockAttachments.length)
   })
 
-  test('displays the correct file names', ({ render, app }) => {
-    render(<AttachmentList attachments={mockAttachments} />, app)
+  test('displays the correct file names', ({ render, theme }) => {
+    render(<AttachmentList attachments={mockAttachments} />, [theme])
     mockAttachments.forEach((attachment) => {
       expect(screen.getByText(attachment.fileName)).toBeInTheDocument()
     })
   })
 
-  test('renders an icon for each attachment', ({ render, app }) => {
-    render(<AttachmentList attachments={mockAttachments} />, app)
+  test('renders an icon for each attachment', ({ render, theme }) => {
+    render(<AttachmentList attachments={mockAttachments} />, [theme])
     const icons = screen.getAllByTestId('AttachFileIcon')
     expect(icons).toHaveLength(mockAttachments.length)
   })
 
-  test('handles empty attachments array gracefully', ({ render, app }) => {
-    render(<AttachmentList attachments={[]} />, app)
+  test('handles empty attachments array gracefully', ({ render, theme }) => {
+    render(<AttachmentList attachments={[]} />, [theme])
     expect(screen.getByText('Attachments')).toBeInTheDocument()
     const items = screen.queryAllByRole('button')
     expect(items).toHaveLength(0)
   })
 
-  test('renders ListItemButton with component="a"', ({ render, app }) => {
-    render(<AttachmentList attachments={mockAttachments} />, app)
+  test('renders ListItemButton with component="a"', ({ render, theme }) => {
+    render(<AttachmentList attachments={mockAttachments} />, [theme])
     const items = screen.getAllByRole('button')
     items.forEach((item) => {
       expect(item.tagName.toLowerCase()).toBe('a')
     })
   })
 
-  test('renders correctly with long file names', ({ render, app }) => {
+  test('renders correctly with long file names', ({ render, theme }) => {
     const longFileName =
       'ThisIsAVeryLongFileNameThatShouldBeHandledProperly.txt'
     const attachmentsWithLongName = [
       { attachmentID: '3', fileName: longFileName }
     ]
-    render(<AttachmentList attachments={attachmentsWithLongName} />, app)
+    render(<AttachmentList attachments={attachmentsWithLongName} />, [theme])
     expect(screen.getByText(longFileName)).toBeInTheDocument()
   })
 })

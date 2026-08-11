@@ -1,8 +1,8 @@
 import { Login } from '@/components/Login'
 import { IDENTITY_PROVIDERS } from '@/constants/auth'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { wrapper } from '@/tests/utils/wrapper'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { BrowserRouter } from 'react-router-dom'
 
 const mockNavigate = vi.fn()
@@ -73,32 +73,40 @@ describe('Login Component', () => {
   })
 
   describe('Component Rendering', () => {
-    it('should render the login component with correct structure', () => {
-      render(<Login />, { wrapper })
+    test('should render the login component with correct structure', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       expect(screen.getByTestId('login')).toBeInTheDocument()
       expect(screen.getByTestId('login-container')).toBeInTheDocument()
       expect(screen.getByText('Login')).toBeInTheDocument()
     })
 
-    it('should render both login buttons and public dashboard button', () => {
-      render(<Login />, { wrapper })
+    test('should render both login buttons and public dashboard button', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       expect(screen.getByTestId('link-bceid')).toBeInTheDocument()
       expect(screen.getByTestId('link-idir')).toBeInTheDocument()
-      expect(
-        screen.getByTestId('link-public-dashboard')
-      ).toBeInTheDocument()
+      expect(screen.getByTestId('link-public-dashboard')).toBeInTheDocument()
       expect(screen.getAllByText(/Login with/)).toHaveLength(2)
       expect(screen.getByText('BCeID')).toBeInTheDocument()
       expect(screen.getByText('IDIR')).toBeInTheDocument()
-      expect(
-        screen.getByText('Public LCFS information')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Public LCFS information')).toBeInTheDocument()
     })
 
-    it('should render seasonal effects (snowfall)', () => {
-      render(<Login />, { wrapper })
+    test('should render seasonal effects (snowfall)', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       // Snowfall should be present for non-summer seasons
       const snowfall = screen.queryByTestId('snowfall')
@@ -109,8 +117,12 @@ describe('Login Component', () => {
   })
 
   describe('Authentication Flow', () => {
-    it('should call keycloak.login with BCeID when BCeID button is clicked', () => {
-      render(<Login />, { wrapper })
+    test('should call keycloak.login with BCeID when BCeID button is clicked', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       const bceidButton = screen.getByTestId('link-bceid')
       fireEvent.click(bceidButton)
@@ -121,8 +133,12 @@ describe('Login Component', () => {
       })
     })
 
-    it('should call keycloak.login with IDIR when IDIR button is clicked', () => {
-      render(<Login />, { wrapper })
+    test('should call keycloak.login with IDIR when IDIR button is clicked', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       const idirButton = screen.getByTestId('link-idir')
       fireEvent.click(idirButton)
@@ -133,8 +149,8 @@ describe('Login Component', () => {
       })
     })
 
-    it('should use correct redirect URI', () => {
-      render(<Login />, { wrapper })
+    test('should use correct redirect URI', ({ render, theme, router }) => {
+      render(<Login />, [theme, router])
 
       const bceidButton = screen.getByTestId('link-bceid')
       fireEvent.click(bceidButton)
@@ -146,8 +162,12 @@ describe('Login Component', () => {
       )
     })
 
-    it('should navigate to public dashboard when public dashboard button is clicked', () => {
-      render(<Login />, { wrapper })
+    test('should navigate to public dashboard when public dashboard button is clicked', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       const publicDashboardButton = screen.getByTestId('link-public-dashboard')
       fireEvent.click(publicDashboardButton)
@@ -157,43 +177,59 @@ describe('Login Component', () => {
   })
 
   describe('Error Handling', () => {
-    it('should display error message when provided in location state', () => {
+    test('should display error message when provided in location state', ({
+      render,
+      theme,
+      router
+    }) => {
       mockLocation.state = {
         message: 'Authentication failed',
         severity: 'error'
       }
 
-      render(<Login />, { wrapper })
+      render(<Login />, [theme, router])
 
       expect(screen.getByText('Authentication failed')).toBeInTheDocument()
     })
 
-    it('should display success message when provided in location state', () => {
+    test('should display success message when provided in location state', ({
+      render,
+      theme,
+      router
+    }) => {
       mockLocation.state = {
         message: 'Successfully logged out',
         severity: 'success'
       }
 
-      render(<Login />, { wrapper })
+      render(<Login />, [theme, router])
 
       expect(screen.getByText('Successfully logged out')).toBeInTheDocument()
     })
 
-    it('should display warning message when provided in location state', () => {
+    test('should display warning message when provided in location state', ({
+      render,
+      theme,
+      router
+    }) => {
       mockLocation.state = {
         message: 'Session expired',
         severity: 'warning'
       }
 
-      render(<Login />, { wrapper })
+      render(<Login />, [theme, router])
 
       expect(screen.getByText('Session expired')).toBeInTheDocument()
     })
 
-    it('should not display alert when no message in location state', () => {
+    test('should not display alert when no message in location state', ({
+      render,
+      theme,
+      router
+    }) => {
       mockLocation.state = null
 
-      render(<Login />, { wrapper })
+      render(<Login />, [theme, router])
 
       // Should not find any Alert component
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -201,7 +237,11 @@ describe('Login Component', () => {
   })
 
   describe('Loading States', () => {
-    it('should handle keycloak initialization properly', () => {
+    test('should handle keycloak initialization properly', ({
+      render,
+      theme,
+      router
+    }) => {
       keycloak.useKeycloak.mockReturnValue({
         keycloak: {
           ...mockKeycloak,
@@ -209,7 +249,7 @@ describe('Login Component', () => {
         }
       })
 
-      render(<Login />, { wrapper })
+      render(<Login />, [theme, router])
 
       // Component should render properly even when not authenticated
       expect(screen.getByTestId('login')).toBeInTheDocument()
@@ -219,15 +259,19 @@ describe('Login Component', () => {
   })
 
   describe('Form Validation', () => {
-    it('should have proper form structure', () => {
-      render(<Login />, { wrapper })
+    test('should have proper form structure', ({ render, theme, router }) => {
+      render(<Login />, [theme, router])
 
       const form = screen.getByTestId('login-container')
       expect(form).toHaveAttribute('role', 'form')
     })
 
-    it('should have accessible button labels', () => {
-      render(<Login />, { wrapper })
+    test('should have accessible button labels', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       const bceidButton = screen.getByTestId('link-bceid')
       const idirButton = screen.getByTestId('link-idir')
@@ -236,8 +280,12 @@ describe('Login Component', () => {
       expect(idirButton).toHaveAttribute('aria-label', 'Login with IDIR')
     })
 
-    it('should have correct button IDs for testing', () => {
-      render(<Login />, { wrapper })
+    test('should have correct button IDs for testing', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       expect(screen.getByTestId('link-bceid')).toHaveAttribute(
         'id',
@@ -248,10 +296,14 @@ describe('Login Component', () => {
   })
 
   describe('Redirect Behavior', () => {
-    it('should maintain current origin as redirect URI', () => {
+    test('should maintain current origin as redirect URI', ({
+      render,
+      theme,
+      router
+    }) => {
       const originalLocation = window.location.origin
 
-      render(<Login />, { wrapper })
+      render(<Login />, [theme, router])
 
       const bceidButton = screen.getByTestId('link-bceid')
       fireEvent.click(bceidButton)
@@ -265,15 +317,23 @@ describe('Login Component', () => {
   })
 
   describe('Accessibility', () => {
-    it('should have proper heading structure', () => {
-      render(<Login />, { wrapper })
+    test('should have proper heading structure', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       const heading = screen.getByText('Login')
       expect(heading).toHaveClass('visually-hidden')
     })
 
-    it('should have proper button focus handling', async () => {
-      render(<Login />, { wrapper })
+    test('should have proper button focus handling', async ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       const bceidButton = screen.getByTestId('link-bceid')
       const idirButton = screen.getByTestId('link-idir')
@@ -289,14 +349,22 @@ describe('Login Component', () => {
   })
 
   describe('Integration Tests', () => {
-    it('should work with standalone rendering', () => {
-      render(<Login />, { wrapper })
+    test('should work with standalone rendering', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       expect(screen.getByTestId('login')).toBeInTheDocument()
     })
 
-    it('should handle multiple rapid clicks gracefully', () => {
-      render(<Login />, { wrapper })
+    test('should handle multiple rapid clicks gracefully', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Login />, [theme, router])
 
       const bceidButton = screen.getByTestId('link-bceid')
 

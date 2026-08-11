@@ -51,17 +51,14 @@ describe('TransferSummary', () => {
   describe('Component Rendering', () => {
     test('renders with valid props', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
@@ -75,10 +72,7 @@ describe('TransferSummary', () => {
 
     test('renders with default props', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
@@ -92,7 +86,7 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
@@ -108,10 +102,7 @@ describe('TransferSummary', () => {
 
     test('renders with empty formData', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
@@ -122,7 +113,7 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
@@ -132,17 +123,14 @@ describe('TransferSummary', () => {
   describe('Translation Usage', () => {
     test('uses all translation keys correctly', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
@@ -167,17 +155,14 @@ describe('TransferSummary', () => {
 
     test('applies trimEnd to complianceUnitsTo translation', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -189,17 +174,14 @@ describe('TransferSummary', () => {
   describe('Formatter Function Calls', () => {
     test('calls formatNumberWithCommas for quantity', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -209,17 +191,14 @@ describe('TransferSummary', () => {
 
     test('calls decimalFormatter for pricePerUnit', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Value per unit: $25.5.00')).toBeInTheDocument()
@@ -227,17 +206,14 @@ describe('TransferSummary', () => {
 
     test('calls calculateTotalValue and decimalFormatter for total', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Total value: $25500.00')).toBeInTheDocument()
@@ -245,17 +221,14 @@ describe('TransferSummary', () => {
 
     test('calls dateFormatter for agreementDate', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -267,17 +240,14 @@ describe('TransferSummary', () => {
   describe('Organization Names Display', () => {
     test('displays fromOrganization name correctly', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -287,17 +257,14 @@ describe('TransferSummary', () => {
 
     test('displays toOrganization name correctly', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -310,10 +277,7 @@ describe('TransferSummary', () => {
 
     test('handles empty organization names with defaults', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
@@ -327,7 +291,7 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -349,17 +313,14 @@ describe('TransferSummary', () => {
   describe('Edge Cases', () => {
     test('handles zero quantity', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={{ ...mockFormData, quantity: 0 }}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -369,17 +330,14 @@ describe('TransferSummary', () => {
 
     test('handles zero pricePerUnit', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={{ ...mockFormData, pricePerUnit: 0 }}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Value per unit: $0.00')).toBeInTheDocument()
@@ -387,10 +345,7 @@ describe('TransferSummary', () => {
 
     test('handles different date formats', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       const testDate = new Date('2023-12-25')
 
@@ -399,7 +354,7 @@ describe('TransferSummary', () => {
           transferData={mockTransferData}
           formData={{ ...mockFormData, agreementDate: testDate }}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -409,10 +364,7 @@ describe('TransferSummary', () => {
 
     test('renders with missing formData properties', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
@@ -423,7 +375,7 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
@@ -431,10 +383,7 @@ describe('TransferSummary', () => {
 
     test('handles undefined formData', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
@@ -445,7 +394,7 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
@@ -455,10 +404,7 @@ describe('TransferSummary', () => {
   describe('Default Values', () => {
     test('uses default formData when not provided', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
@@ -472,7 +418,7 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
@@ -485,10 +431,7 @@ describe('TransferSummary', () => {
 
     test('handles partial transferData with valid organization', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
@@ -498,7 +441,7 @@ describe('TransferSummary', () => {
           }}
           formData={mockFormData}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(
@@ -511,10 +454,7 @@ describe('TransferSummary', () => {
 
     test('handles partial formData with missing values', ({
       render,
-      query,
-      theme,
-      localization,
-      router
+       theme
     }) => {
       render(
         <TransferSummary
@@ -525,7 +465,7 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        [query, theme, localization, router]
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()

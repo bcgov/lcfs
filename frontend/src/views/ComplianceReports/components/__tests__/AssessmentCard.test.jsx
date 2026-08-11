@@ -1,8 +1,8 @@
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
-import { expect, describe, it, vi, beforeEach } from 'vitest'
+import { screen, waitFor, fireEvent, act } from '@testing-library/react'
+import { expect, describe, vi, beforeEach } from 'vitest'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { AssessmentCard } from '../AssessmentCard'
 
 // Comprehensive mock setup
@@ -14,13 +14,9 @@ const mockTriggerAlert = vi.fn()
 const mockSetModalData = vi.fn()
 
 // Mock external dependencies
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom')
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate
-  }
-})
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate
+}))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -77,16 +73,17 @@ vi.mock('@/hooks/useComplianceReports', () => ({
 }))
 
 // Mock constants
-vi.mock('@/constants/config', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    FEATURE_FLAGS: {
-      SUPPLEMENTAL_REPORTING: 'SUPPLEMENTAL_REPORTING'
-    },
-    isFeatureEnabled: vi.fn(() => true)
-  }
-})
+vi.mock('@/constants/config', () => ({
+  FEATURE_FLAGS: {
+    SUPPLEMENTAL_REPORTING: 'SUPPLEMENTAL_REPORTING'
+  },
+  isFeatureEnabled: vi.fn(() => true)
+}))
+
+vi.mock('@mui/icons-material', () => ({
+  Assignment: () => null,
+  FileDownload: () => null
+}))
 
 // Mock components
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
@@ -217,24 +214,57 @@ describe('AssessmentCard', () => {
 
   // Basic Rendering Tests (3 tests)
   describe('Basic Rendering', () => {
-    it('renders with minimal props', () => {
-      render(<AssessmentCard {...defaultProps} />, { wrapper })
+    test('renders with minimal props', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AssessmentCard {...defaultProps} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
     })
 
-    it('renders with all props provided', () => {
+    test('renders with all props provided', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const fullProps = {
         ...defaultProps,
         hasSupplemental: true,
         isGovernmentUser: true,
         chain: [{ version: 0, history: ['item'] }]
       }
-      render(<AssessmentCard {...fullProps} />, { wrapper })
+      render(<AssessmentCard {...fullProps} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
     })
 
-    it('calls hooks correctly on render', () => {
-      render(<AssessmentCard {...defaultProps} />, { wrapper })
+    test('calls hooks correctly on render', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AssessmentCard {...defaultProps} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(useOrganizationSnapshot).toHaveBeenCalledWith('123')
       expect(mockHasRoles).toHaveBeenCalled()
     })
@@ -242,14 +272,20 @@ describe('AssessmentCard', () => {
 
   // Function Coverage Tests (6 tests)
   describe('Function Coverage', () => {
-    it('tests onEdit function', async () => {
+    test('tests onEdit function', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockHasRoles.mockReturnValue(true)
       render(
         <AssessmentCard
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       const editButton = screen.getByTestId('edit-button')
@@ -260,9 +296,20 @@ describe('AssessmentCard', () => {
       })
     })
 
-    it('tests onDownloadReport success path', async () => {
+    test('tests onDownloadReport success path', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockApiServiceDownload.mockResolvedValue(undefined)
-      render(<AssessmentCard {...defaultProps} />, { wrapper })
+      render(<AssessmentCard {...defaultProps} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const downloadButton = screen.getByTestId('download-report')
       fireEvent.click(downloadButton)
@@ -276,14 +323,20 @@ describe('AssessmentCard', () => {
 
     // Removed error handling test to prevent unhandled promise rejection
 
-    it('tests handleCreateSupplementalClick', async () => {
+    test('tests handleCreateSupplementalClick', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockShowRoleContent = true // Enable role content to show supplemental button
       render(
         <AssessmentCard
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       const supplementalButton = screen.getByTestId('create-supplemental')
@@ -298,14 +351,20 @@ describe('AssessmentCard', () => {
       )
     })
 
-    it('tests primaryButtonAction execution', async () => {
+    test('tests primaryButtonAction execution', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockShowRoleContent = true
       render(
         <AssessmentCard
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       const supplementalButton = screen.getByTestId('create-supplemental')
@@ -321,7 +380,13 @@ describe('AssessmentCard', () => {
       expect(mockMutateSupplementalReport).toHaveBeenCalled()
     })
 
-    it('tests createSupplementalReport success callback', async () => {
+    test('tests createSupplementalReport success callback', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const mockSuccessData = {
         data: {
           complianceReportId: '456',
@@ -335,7 +400,7 @@ describe('AssessmentCard', () => {
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       // Trigger the success callback directly
@@ -355,7 +420,13 @@ describe('AssessmentCard', () => {
       })
     })
 
-    it('tests createSupplementalReport error callback', async () => {
+    test('tests createSupplementalReport error callback', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const mockError = { message: 'Creation failed' }
 
       mockShowRoleContent = true // Enable role content for this test
@@ -364,7 +435,7 @@ describe('AssessmentCard', () => {
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       // Trigger the error callback directly
@@ -384,19 +455,36 @@ describe('AssessmentCard', () => {
 
   // State Management Tests (3 tests)
   describe('State Management', () => {
-    it('tests initial state values', () => {
-      render(<AssessmentCard {...defaultProps} />, { wrapper })
+    test('tests initial state values', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AssessmentCard {...defaultProps} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.queryByTestId('editing-mode')).not.toBeInTheDocument()
     })
 
-    it('tests isEditing state changes', async () => {
+    test('tests isEditing state changes', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockHasRoles.mockReturnValue(true)
       render(
         <AssessmentCard
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       fireEvent.click(screen.getByTestId('edit-button'))
@@ -412,7 +500,13 @@ describe('AssessmentCard', () => {
       })
     })
 
-    it('tests isDownloading state during download', async () => {
+    test('tests isDownloading state during download', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       let resolveDownload
       mockApiServiceDownload.mockImplementation(
         () =>
@@ -421,7 +515,12 @@ describe('AssessmentCard', () => {
           })
       )
 
-      render(<AssessmentCard {...defaultProps} />, { wrapper })
+      render(<AssessmentCard {...defaultProps} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const downloadButton = screen.getByTestId('download-report')
       fireEvent.click(downloadButton)
@@ -439,58 +538,94 @@ describe('AssessmentCard', () => {
 
   // UseMemo Computed Values Tests (6 tests)
   describe('UseMemo Computed Values', () => {
-    it('tests filteredChain with history items', () => {
+    test('tests filteredChain with history items', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const chainWithHistory = [
         { version: 0, history: ['item1'] },
         { version: 1, history: [] }
       ]
-      render(<AssessmentCard {...defaultProps} chain={chainWithHistory} />, {
-        wrapper
-      })
+      render(<AssessmentCard {...defaultProps} chain={chainWithHistory} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.getByText('History Card v0')).toBeInTheDocument()
       expect(screen.queryByText('History Card v1')).not.toBeInTheDocument()
     })
 
-    it('tests filteredChain without history items', () => {
+    test('tests filteredChain without history items', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const chainWithoutHistory = [{ version: 0, history: [] }, { version: 1 }]
-      render(<AssessmentCard {...defaultProps} chain={chainWithoutHistory} />, {
-        wrapper
-      })
+      render(<AssessmentCard {...defaultProps} chain={chainWithoutHistory} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.queryByText('History Card v0')).not.toBeInTheDocument()
     })
 
-    it('tests isAddressEditable - true for draft status and not editing', () => {
+    test('tests isAddressEditable - true for draft status and not editing', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockHasRoles.mockReturnValue(true)
       render(
         <AssessmentCard
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(screen.getByTestId('edit-button')).toBeInTheDocument()
     })
 
-    it('tests isAddressEditable - true for analyst role and submitted status', () => {
+    test('tests isAddressEditable - true for analyst role and submitted status', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockHasRoles.mockImplementation((role) => role === roles.analyst)
       render(
         <AssessmentCard
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(screen.getByTestId('edit-button')).toBeInTheDocument()
     })
 
-    it('tests isAddressEditable - false when editing', async () => {
+    test('tests isAddressEditable - false when editing', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockHasRoles.mockReturnValue(true)
       render(
         <AssessmentCard
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       fireEvent.click(screen.getByTestId('edit-button'))
@@ -500,14 +635,20 @@ describe('AssessmentCard', () => {
       })
     })
 
-    it('tests isAddressEditable - false for other conditions', () => {
+    test('tests isAddressEditable - false for other conditions', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockHasRoles.mockReturnValue(false)
       render(
         <AssessmentCard
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(screen.queryByTestId('edit-button')).not.toBeInTheDocument()
     })
@@ -516,85 +657,187 @@ describe('AssessmentCard', () => {
   // Conditional Rendering Tests (24 tests)
   describe('Conditional Rendering', () => {
     describe('Title Rendering', () => {
-      it('shows assessment title when status is assessed', () => {
+      test('shows assessment title when status is assessed', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         render(
           <AssessmentCard
             {...defaultProps}
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.getByText('Assessment')).toBeInTheDocument()
       })
 
-      it('shows assessment title when isGovernmentUser is true', () => {
-        render(<AssessmentCard {...defaultProps} isGovernmentUser={true} />, {
-          wrapper
-        })
+      test('shows assessment title when isGovernmentUser is true', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
+        render(<AssessmentCard {...defaultProps} isGovernmentUser={true} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.getByText('Assessment')).toBeInTheDocument()
       })
 
-      it('shows assessment title when hasSupplemental is true', () => {
-        render(<AssessmentCard {...defaultProps} hasSupplemental={true} />, {
-          wrapper
-        })
+      test('shows assessment title when hasSupplemental is true', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
+        render(<AssessmentCard {...defaultProps} hasSupplemental={true} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.getByText('Assessment')).toBeInTheDocument()
       })
 
-      it('shows organization details in default case', () => {
-        render(<AssessmentCard {...defaultProps} />, { wrapper })
+      test('shows organization details in default case', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
+        render(<AssessmentCard {...defaultProps} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.getByText('Organization Details')).toBeInTheDocument()
       })
     })
 
     describe('UI Element Display', () => {
-      it('shows edit button when isAddressEditable is true', () => {
+      test('shows edit button when isAddressEditable is true', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockHasRoles.mockReturnValue(true)
         render(
           <AssessmentCard
             {...defaultProps}
             currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.getByTestId('edit-button')).toBeInTheDocument()
       })
 
-      it('hides edit button when isAddressEditable is false', () => {
+      test('hides edit button when isAddressEditable is false', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockHasRoles.mockReturnValue(false)
-        render(<AssessmentCard {...defaultProps} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.queryByTestId('edit-button')).not.toBeInTheDocument()
       })
 
-      it('shows loading component when snapshotLoading is true', () => {
+      test('shows loading component when snapshotLoading is true', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         vi.mocked(useOrganizationSnapshot).mockReturnValue({
           data: {},
           isLoading: true
         })
-        render(<AssessmentCard {...defaultProps} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.getByTestId('loading')).toBeInTheDocument()
       })
 
-      it('shows OrganizationAddress when snapshotLoading is false', () => {
-        render(<AssessmentCard {...defaultProps} />, { wrapper })
+      test('shows OrganizationAddress when snapshotLoading is false', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
+        render(<AssessmentCard {...defaultProps} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.getByTestId('organization-address')).toBeInTheDocument()
       })
     })
 
     describe('Report History Section', () => {
-      it('shows report history when filteredChain has items and not draft', () => {
+      test('shows report history when filteredChain has items and not draft', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         const chain = [{ version: 0, history: ['item'] }]
-        render(<AssessmentCard {...defaultProps} chain={chain} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} chain={chain} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.getByText('Report History')).toBeInTheDocument()
       })
 
-      it('hides report history when filteredChain is empty', () => {
+      test('hides report history when filteredChain is empty', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         const chain = [{ version: 0, history: [] }]
-        render(<AssessmentCard {...defaultProps} chain={chain} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} chain={chain} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.queryByText('Report History')).not.toBeInTheDocument()
       })
 
-      it('hides report history when status is draft', () => {
+      test('hides report history when status is draft', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         const chain = [{ version: 0, history: ['item'] }]
         render(
           <AssessmentCard
@@ -602,24 +845,41 @@ describe('AssessmentCard', () => {
             chain={chain}
             currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.queryByText('Report History')).not.toBeInTheDocument()
       })
 
-      it('renders HistoryCard for each report in filteredChain', () => {
+      test('renders HistoryCard for each report in filteredChain', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         const chain = [
           { version: 0, history: ['item'] },
           { version: 1, history: ['item'] }
         ]
-        render(<AssessmentCard {...defaultProps} chain={chain} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} chain={chain} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.getByText('History Card v0')).toBeInTheDocument()
         expect(screen.getByText('History Card v1')).toBeInTheDocument()
       })
     })
 
     describe('Assessment Statement Logic', () => {
-      it('shows assessment statement for first report with statement', () => {
+      test('shows assessment statement for first report with statement', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         const chain = [
           {
             version: 0,
@@ -633,14 +893,20 @@ describe('AssessmentCard', () => {
             chain={chain}
             isGovernmentUser={false}
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.getByTestId('assessed-message')).toHaveTextContent(
           'Test statement'
         )
       })
 
-      it('shows assessment statement on first card even when statement is from later report', () => {
+      test('shows assessment statement on first card even when statement is from later report', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         const chain = [
           { version: 0, history: ['item'] },
           {
@@ -649,7 +915,12 @@ describe('AssessmentCard', () => {
             assessmentStatement: 'Test statement'
           }
         ]
-        render(<AssessmentCard {...defaultProps} chain={chain} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} chain={chain} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
 
         // Assessment statement from any report in chain shows on first card
         const historyCards = screen.getAllByTestId('history-card')
@@ -659,15 +930,32 @@ describe('AssessmentCard', () => {
         )
       })
 
-      it('hides assessment statement when statement is null', () => {
+      test('hides assessment statement when statement is null', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         const chain = [
           { version: 0, history: ['item'], assessmentStatement: null }
         ]
-        render(<AssessmentCard {...defaultProps} chain={chain} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} chain={chain} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.queryByTestId('assessed-message')).not.toBeInTheDocument()
       })
 
-      it('hides assessment statement for government user with supplemental version', () => {
+      test('hides assessment statement for government user with supplemental version', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         const chain = [
           {
             version: 1,
@@ -681,52 +969,76 @@ describe('AssessmentCard', () => {
             chain={chain}
             isGovernmentUser={true}
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.queryByTestId('assessed-message')).not.toBeInTheDocument()
       })
     })
 
     describe('Role-Based Display', () => {
-      it('shows supplemental warning for assessed status when role content enabled', () => {
+      test('shows supplemental warning for assessed status when role content enabled', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockShowRoleContent = true
         render(
           <AssessmentCard
             {...defaultProps}
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.getByText('Supplemental Warning')).toBeInTheDocument()
       })
 
-      it('shows supplemental button for assessed status when role content enabled', () => {
+      test('shows supplemental button for assessed status when role content enabled', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockShowRoleContent = true
         render(
           <AssessmentCard
             {...defaultProps}
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
       })
 
-      it('hides supplemental button when role content disabled', () => {
+      test('hides supplemental button when role content disabled', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockShowRoleContent = false
         render(
           <AssessmentCard
             {...defaultProps}
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(
           screen.queryByTestId('create-supplemental')
         ).not.toBeInTheDocument()
       })
 
-      it('hides supplemental button when report openings disable the year', () => {
+      test('hides supplemental button when report openings disable the year', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockShowRoleContent = true
         vi.mocked(useReportOpenings).mockReturnValue({
           data: [{ complianceYear: 2024, createSupplementalEnabled: false }]
@@ -737,14 +1049,20 @@ describe('AssessmentCard', () => {
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
             compliancePeriodYear="2024"
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(
           screen.queryByTestId('create-supplemental')
         ).not.toBeInTheDocument()
       })
 
-      it('shows supplemental button when report openings enable the year', () => {
+      test('shows supplemental button when report openings enable the year', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockShowRoleContent = true
         vi.mocked(useReportOpenings).mockReturnValue({
           data: [{ complianceYear: 2024, createSupplementalEnabled: true }]
@@ -755,12 +1073,18 @@ describe('AssessmentCard', () => {
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
             compliancePeriodYear="2024"
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
       })
 
-      it('shows supplemental button when the year has no report opening config', () => {
+      test('shows supplemental button when the year has no report opening config', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockShowRoleContent = true
         vi.mocked(useReportOpenings).mockReturnValue({
           data: [{ complianceYear: 2030, createSupplementalEnabled: false }]
@@ -771,7 +1095,7 @@ describe('AssessmentCard', () => {
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
             compliancePeriodYear="2024"
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
       })
@@ -779,7 +1103,13 @@ describe('AssessmentCard', () => {
       // #4691 — the legacy lock feature flag is enabled in these tests
       // (isFeatureEnabled is mocked to true), mirroring the deployed
       // environment where the bug was reported.
-      it('shows supplemental button for a 2023 report when an admin enabled the year', () => {
+      test('shows supplemental button for a 2023 report when an admin enabled the year', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockShowRoleContent = true
         vi.mocked(useReportOpenings).mockReturnValue({
           data: [{ complianceYear: 2023, createSupplementalEnabled: true }]
@@ -790,12 +1120,18 @@ describe('AssessmentCard', () => {
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
             compliancePeriodYear="2023"
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
       })
 
-      it('hides supplemental button for a 2023 report when an admin disabled the year', () => {
+      test('hides supplemental button for a 2023 report when an admin disabled the year', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockShowRoleContent = true
         vi.mocked(useReportOpenings).mockReturnValue({
           data: [{ complianceYear: 2023, createSupplementalEnabled: false }]
@@ -806,14 +1142,20 @@ describe('AssessmentCard', () => {
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
             compliancePeriodYear="2023"
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(
           screen.queryByTestId('create-supplemental')
         ).not.toBeInTheDocument()
       })
 
-      it('keeps the legacy lock for a pre-2019 year that has no configurable row', () => {
+      test('keeps the legacy lock for a pre-2019 year that has no configurable row', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         // Report openings are only configurable for 2019-2030, so an older year
         // can never be enabled by an admin and stays locked.
         mockShowRoleContent = true
@@ -826,14 +1168,20 @@ describe('AssessmentCard', () => {
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
             compliancePeriodYear="2017"
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(
           screen.queryByTestId('create-supplemental')
         ).not.toBeInTheDocument()
       })
 
-      it('keeps the legacy lock for a 2023 report while the config is still loading', () => {
+      test('keeps the legacy lock for a 2023 report while the config is still loading', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockShowRoleContent = true
         vi.mocked(useReportOpenings).mockReturnValue({ data: undefined })
         render(
@@ -842,14 +1190,20 @@ describe('AssessmentCard', () => {
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
             compliancePeriodYear="2023"
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(
           screen.queryByTestId('create-supplemental')
         ).not.toBeInTheDocument()
       })
 
-      it('still shows supplemental button for 2025 while the config is loading', () => {
+      test('still shows supplemental button for 2025 while the config is loading', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         mockShowRoleContent = true
         vi.mocked(useReportOpenings).mockReturnValue({ data: undefined })
         render(
@@ -858,40 +1212,79 @@ describe('AssessmentCard', () => {
             currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
             compliancePeriodYear="2025"
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
       })
 
-      it('shows download button for non-draft status', () => {
-        render(<AssessmentCard {...defaultProps} />, { wrapper })
+      test('shows download button for non-draft status', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
+        render(<AssessmentCard {...defaultProps} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.getByTestId('download-report')).toBeInTheDocument()
       })
 
-      it('hides download button for draft status', () => {
+      test('hides download button for draft status', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         render(
           <AssessmentCard
             {...defaultProps}
             currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
           />,
-          { wrapper }
+          [query, theme, localization, router]
         )
         expect(screen.queryByTestId('download-report')).not.toBeInTheDocument()
       })
     })
 
     describe('Organization Data Display', () => {
-      it('displays organization name', () => {
-        render(<AssessmentCard {...defaultProps} />, { wrapper })
+      test('displays organization name', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
+        render(<AssessmentCard {...defaultProps} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.getByText('Test Organization')).toBeInTheDocument()
       })
 
-      it('shows address edited indicator when snapshot is edited', () => {
+      test('shows address edited indicator when snapshot is edited', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         vi.mocked(useOrganizationSnapshot).mockReturnValue({
           data: { isEdited: true },
           isLoading: false
         })
-        render(<AssessmentCard {...defaultProps} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(
           screen.getByText(
             (content, element) =>
@@ -901,21 +1294,43 @@ describe('AssessmentCard', () => {
         ).toBeInTheDocument()
       })
 
-      it('hides address edited indicator when snapshot is not edited', () => {
+      test('hides address edited indicator when snapshot is not edited', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         vi.mocked(useOrganizationSnapshot).mockReturnValue({
           data: { isEdited: false },
           isLoading: false
         })
-        render(<AssessmentCard {...defaultProps} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
         expect(screen.queryByText('(address edited)')).not.toBeInTheDocument()
       })
 
-      it('shows first history card as expanded', () => {
+      test('shows first history card as expanded', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
         const chain = [
           { version: 0, history: ['item'] },
           { version: 1, history: ['item'] }
         ]
-        render(<AssessmentCard {...defaultProps} chain={chain} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} chain={chain} />, [
+          query,
+          theme,
+          localization,
+          router
+        ])
 
         // First history card should be expanded
         const historyCards = screen.getAllByTestId('history-card')
@@ -927,7 +1342,13 @@ describe('AssessmentCard', () => {
 
   // Integration and Edge Cases Tests (8 tests)
   describe('Integration and Edge Cases', () => {
-    it('handles complete government user scenario', () => {
+    test('handles complete government user scenario', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockShowRoleContent = false // Government user shouldn't see role-based content
       const chain = [
         { version: 0, history: ['item'], assessmentStatement: 'Statement' }
@@ -939,7 +1360,7 @@ describe('AssessmentCard', () => {
           currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
           chain={chain}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(screen.getByText('Assessment')).toBeInTheDocument()
@@ -948,49 +1369,103 @@ describe('AssessmentCard', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('handles complete supplier user scenario', () => {
+    test('handles complete supplier user scenario', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockShowRoleContent = true // Supplier should see role-based content
       render(
         <AssessmentCard
           {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(screen.getByText('Assessment')).toBeInTheDocument() // ASSESSED status shows Assessment
       expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
     })
 
-    it('handles null orgData gracefully', () => {
-      render(<AssessmentCard {...defaultProps} orgData={null} />, { wrapper })
+    test('handles null orgData gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AssessmentCard {...defaultProps} orgData={null} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
     })
 
-    it('handles empty chain array', () => {
-      render(<AssessmentCard {...defaultProps} chain={[]} />, { wrapper })
+    test('handles empty chain array', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AssessmentCard {...defaultProps} chain={[]} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.queryByText('Report History')).not.toBeInTheDocument()
     })
 
-    it('handles malformed chain data', () => {
+    test('handles malformed chain data', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const malformedChain = [
         { version: 0 }, // no history property
         { history: null, version: 1 }
       ]
-      render(<AssessmentCard {...defaultProps} chain={malformedChain} />, {
-        wrapper
-      })
+      render(<AssessmentCard {...defaultProps} chain={malformedChain} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.queryByText('Report History')).not.toBeInTheDocument()
     })
 
     // Removed API error test to prevent unhandled promise rejection
 
-    it('handles missing alertRef', () => {
-      render(<AssessmentCard {...defaultProps} alertRef={null} />, { wrapper })
+    test('handles missing alertRef', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AssessmentCard {...defaultProps} alertRef={null} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
     })
 
-    it('handles all combinations of title conditions', () => {
+    test('handles all combinations of title conditions', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       // Test all true conditions
       render(
         <AssessmentCard
@@ -999,7 +1474,7 @@ describe('AssessmentCard', () => {
           isGovernmentUser={true}
           hasSupplemental={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(screen.getByText('Assessment')).toBeInTheDocument()
 
@@ -1011,7 +1486,7 @@ describe('AssessmentCard', () => {
           isGovernmentUser={false}
           hasSupplemental={false}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
     })

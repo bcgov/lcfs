@@ -1,9 +1,18 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   PROVISION_APPROVED_FUEL_CODE,
   PROVISION_GHGENIUS,
   fuelSupplyColDefs
 } from '../_schema'
+
+vi.mock('@/components/BCDataGrid/components', () => ({
+  AsyncSuggestionEditor: () => null,
+  AutocompleteCellEditor: () => null,
+  NumberEditor: () => null,
+  RequiredHeader: () => null,
+  ActionsRenderer: () => null,
+  ValidationRenderer2: () => null
+}))
 
 describe('Fuel Supply Schema', () => {
   const mockOptionsData = {

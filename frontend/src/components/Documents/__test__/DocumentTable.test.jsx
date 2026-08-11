@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import DocumentTable from '../DocumentTable'
 import { validateFile } from '@/utils/fileValidation'
 import {
@@ -107,8 +107,12 @@ describe('DocumentTable', () => {
 
   // High Priority Tests - Component Rendering and Core Functionality
 
-  it('should render with initial state and basic UI elements', () => {
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+  test('should render with initial state and basic UI elements', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     expect(screen.getByTestId('file-input')).toBeInTheDocument()
     expect(
@@ -120,10 +124,14 @@ describe('DocumentTable', () => {
     expect(screen.getByText('Virus Scan')).toBeInTheDocument()
   })
 
-  it('should handle file input change and trigger upload', async () => {
+  test('should handle file input change and trigger upload', async ({
+    render,
+    theme,
+    router
+  }) => {
     const validFile = createMockFile('test.pdf', 'application/pdf', 1000)
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [validFile] } })
@@ -138,17 +146,25 @@ describe('DocumentTable', () => {
     })
   })
 
-  it('allows selecting multiple files at once (#4739)', () => {
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+  test('allows selecting multiple files at once (#4739)', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentTable {...defaultProps} />, [theme, router])
     expect(screen.getByTestId('file-input')).toHaveAttribute('multiple')
   })
 
-  it('uploads every file selected in a single action (#4739)', async () => {
+  test('uploads every file selected in a single action (#4739)', async ({
+    render,
+    theme,
+    router
+  }) => {
     const fileA = createMockFile('a.pdf', 'application/pdf', 1000)
     const fileB = createMockFile('b.pdf', 'application/pdf', 1000)
     const fileC = createMockFile('c.pdf', 'application/pdf', 1000)
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [fileA, fileB, fileC] } })
@@ -159,11 +175,15 @@ describe('DocumentTable', () => {
     })
   })
 
-  it('uploads every file dropped in a single action (#4739)', async () => {
+  test('uploads every file dropped in a single action (#4739)', async ({
+    render,
+    theme,
+    router
+  }) => {
     const fileA = createMockFile('a.pdf', 'application/pdf', 1000)
     const fileB = createMockFile('b.pdf', 'application/pdf', 1000)
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const uploadCard = screen
       .getByText('Click or drag files here to upload')
@@ -177,8 +197,12 @@ describe('DocumentTable', () => {
     })
   })
 
-  it('should handle card click to open file dialog', () => {
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+  test('should handle card click to open file dialog', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const uploadCard = screen
       .getByText('Click or drag files here to upload')
@@ -194,10 +218,14 @@ describe('DocumentTable', () => {
     clickSpy.mockRestore()
   })
 
-  it('should handle drag and drop file upload', async () => {
+  test('should handle drag and drop file upload', async ({
+    render,
+    theme,
+    router
+  }) => {
     const validFile = createMockFile('test.pdf', 'application/pdf', 1000)
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const uploadCard = screen
       .getByText('Click or drag files here to upload')
@@ -221,7 +249,11 @@ describe('DocumentTable', () => {
     })
   })
 
-  it('should display error alert for invalid files', async () => {
+  test('should display error alert for invalid files', async ({
+    render,
+    theme,
+    router
+  }) => {
     const invalidFile = createMockFile('test.txt', 'text/plain', 1000)
 
     validateFile.mockReturnValue({
@@ -229,7 +261,7 @@ describe('DocumentTable', () => {
       errorMessage: 'File type "text/plain" is not allowed'
     })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [invalidFile] } })
@@ -246,7 +278,11 @@ describe('DocumentTable', () => {
     expect(mockUploadMutate).not.toHaveBeenCalled()
   })
 
-  it('should handle file deletion successfully', async () => {
+  test('should handle file deletion successfully', async ({
+    render,
+    theme,
+    router
+  }) => {
     const mockFiles = [
       {
         documentId: 1,
@@ -259,7 +295,7 @@ describe('DocumentTable', () => {
 
     useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByText('test.pdf')).toBeInTheDocument()
@@ -273,7 +309,11 @@ describe('DocumentTable', () => {
     })
   })
 
-  it('should handle file download when filename is clicked', async () => {
+  test('should handle file download when filename is clicked', async ({
+    render,
+    theme,
+    router
+  }) => {
     const mockFiles = [
       {
         documentId: 1,
@@ -286,7 +326,7 @@ describe('DocumentTable', () => {
 
     useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByText('test.pdf')).toBeInTheDocument()
@@ -298,7 +338,11 @@ describe('DocumentTable', () => {
     expect(mockDownloadDocument).toHaveBeenCalledWith(1)
   })
 
-  it('should display loaded files from server', async () => {
+  test('should display loaded files from server', async ({
+    render,
+    theme,
+    router
+  }) => {
     const mockFiles = [
       {
         documentId: 1,
@@ -318,7 +362,7 @@ describe('DocumentTable', () => {
 
     useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByText('report.pdf')).toBeInTheDocument()
@@ -326,7 +370,11 @@ describe('DocumentTable', () => {
     })
   })
 
-  it('should handle upload error responses correctly', async () => {
+  test('should handle upload error responses correctly', async ({
+    render,
+    theme,
+    router
+  }) => {
     const validFile = createMockFile('test.pdf', 'application/pdf', 1000)
 
     // Mock upload to trigger error callback
@@ -334,7 +382,7 @@ describe('DocumentTable', () => {
       onError({ response: { status: 422 } })
     })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [validFile] } })
@@ -349,10 +397,14 @@ describe('DocumentTable', () => {
 
   // Medium Priority Tests - Edge Cases and Advanced Features
 
-  it('should show scanning state for uploading files', async () => {
+  test('should show scanning state for uploading files', async ({
+    render,
+    theme,
+    router
+  }) => {
     const file = createMockFile('test.pdf', 'application/pdf', 1000)
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [file] } })
@@ -363,10 +415,14 @@ describe('DocumentTable', () => {
     })
   })
 
-  it('should handle drag state changes correctly', () => {
+  test('should handle drag state changes correctly', ({
+    render,
+    theme,
+    router
+  }) => {
     const file = createMockFile('test.pdf', 'application/pdf', 1000)
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const uploadCard = screen
       .getByText('Click or drag files here to upload')
@@ -388,7 +444,11 @@ describe('DocumentTable', () => {
     expect(uploadCard).toBeInTheDocument()
   })
 
-  it('should not show delete button for files uploaded by other users', async () => {
+  test('should not show delete button for files uploaded by other users', async ({
+    render,
+    theme,
+    router
+  }) => {
     const mockFiles = [
       {
         documentId: 1,
@@ -401,7 +461,7 @@ describe('DocumentTable', () => {
 
     useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByText('other-user-file.pdf')).toBeInTheDocument()
@@ -410,14 +470,18 @@ describe('DocumentTable', () => {
     expect(screen.queryByTestId('delete-button')).not.toBeInTheDocument()
   })
 
-  it('should handle file with virus detection', async () => {
+  test('should handle file with virus detection', async ({
+    render,
+    theme,
+    router
+  }) => {
     const file = createMockFile('infected.pdf', 'application/pdf', 1000)
 
     mockUploadMutate.mockImplementation((file, { onError }) => {
       onError({ response: { status: 422 } })
     })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [file] } })
@@ -427,7 +491,11 @@ describe('DocumentTable', () => {
     })
   })
 
-  it('should show user information for non-supplier roles', async () => {
+  test('should show user information for non-supplier roles', async ({
+    render,
+    theme,
+    router
+  }) => {
     const mockFiles = [
       {
         documentId: 1,
@@ -444,7 +512,7 @@ describe('DocumentTable', () => {
       hasRoles: vi.fn((role) => role !== 'Supplier')
     })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByText(/adminuser/)).toBeInTheDocument()
@@ -453,25 +521,37 @@ describe('DocumentTable', () => {
 
   // Low Priority Tests - UI Variations and Edge Cases
 
-  it('should handle empty file list gracefully', () => {
+  test('should handle empty file list gracefully', ({
+    render,
+    theme,
+    router
+  }) => {
     useDocuments.mockReturnValue({ data: [], isLoading: false })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     expect(screen.getByText('File Name')).toBeInTheDocument()
     expect(screen.queryByTestId('delete-button')).not.toBeInTheDocument()
   })
 
-  it('should handle null data from useDocuments', () => {
+  test('should handle null data from useDocuments', ({
+    render,
+    theme,
+    router
+  }) => {
     useDocuments.mockReturnValue({ data: null, isLoading: false })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     expect(screen.getByText('File Name')).toBeInTheDocument()
     expect(screen.getByTestId('file-input')).toBeInTheDocument()
   })
 
-  it('should handle error dismissal correctly', async () => {
+  test('should handle error dismissal correctly', async ({
+    render,
+    theme,
+    router
+  }) => {
     const invalidFile = createMockFile('test.bad', 'application/unknown', 1000)
 
     validateFile.mockReturnValue({
@@ -479,7 +559,7 @@ describe('DocumentTable', () => {
       errorMessage: 'File type not allowed'
     })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [invalidFile] } })
@@ -494,8 +574,12 @@ describe('DocumentTable', () => {
 
   // Additional Coverage Tests
 
-  it('should handle file input without selected file', () => {
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+  test('should handle file input without selected file', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [] } })
@@ -503,8 +587,8 @@ describe('DocumentTable', () => {
     expect(mockUploadMutate).not.toHaveBeenCalled()
   })
 
-  it('should handle null file input', () => {
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+  test('should handle null file input', ({ render, theme, router }) => {
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: null } })
@@ -512,7 +596,7 @@ describe('DocumentTable', () => {
     expect(mockUploadMutate).not.toHaveBeenCalled()
   })
 
-  it('should handle undefined current user', () => {
+  test('should handle undefined current user', ({ render, theme, router }) => {
     useCurrentUser.mockReturnValue({
       data: null,
       hasRoles: vi.fn(() => false)
@@ -520,7 +604,7 @@ describe('DocumentTable', () => {
 
     const file = createMockFile('test.pdf', 'application/pdf', 1000)
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [file] } })
@@ -528,7 +612,11 @@ describe('DocumentTable', () => {
     expect(mockUploadMutate).toHaveBeenCalled()
   })
 
-  it('should handle deletion error gracefully', async () => {
+  test('should handle deletion error gracefully', async ({
+    render,
+    theme,
+    router
+  }) => {
     const mockFiles = [
       {
         documentId: 1,
@@ -544,7 +632,7 @@ describe('DocumentTable', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockDeleteMutate.mockRejectedValue(new Error('Deletion failed'))
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByTestId('delete-button')).toBeInTheDocument()
@@ -563,7 +651,11 @@ describe('DocumentTable', () => {
     consoleSpy.mockRestore()
   })
 
-  it('should handle files with missing properties gracefully', async () => {
+  test('should handle files with missing properties gracefully', async ({
+    render,
+    theme,
+    router
+  }) => {
     const incompleteFiles = [
       {
         documentId: 1,
@@ -574,24 +666,33 @@ describe('DocumentTable', () => {
 
     useDocuments.mockReturnValue({ data: incompleteFiles, isLoading: false })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByText('incomplete.pdf')).toBeInTheDocument()
     })
   })
 
-  it('should render with different parent types and IDs', () => {
-    render(<DocumentTable parentType="fuel-export" parentID="456" />, {
-      wrapper
-    })
+  test('should render with different parent types and IDs', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentTable parentType="fuel-export" parentID="456" />, [
+      theme,
+      router
+    ])
 
     expect(useDocuments).toHaveBeenCalledWith('fuel-export', '456')
     expect(useUploadDocument).toHaveBeenCalledWith('fuel-export', '456')
     expect(useDeleteDocument).toHaveBeenCalledWith('fuel-export', '456')
   })
 
-  it('should clear error message when new file is uploaded', async () => {
+  test('should clear error message when new file is uploaded', async ({
+    render,
+    theme,
+    router
+  }) => {
     const invalidFile = createMockFile('bad.xyz', 'application/unknown')
     const validFile = createMockFile('good.pdf', 'application/pdf')
 
@@ -602,7 +703,7 @@ describe('DocumentTable', () => {
       })
       .mockReturnValueOnce({ isValid: true, errorMessage: null })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
 
@@ -627,8 +728,8 @@ describe('DocumentTable', () => {
 
   // Additional Edge Case Tests for Maximum Coverage
 
-  it('should handle drop with no files', () => {
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+  test('should handle drop with no files', ({ render, theme, router }) => {
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const uploadCard = screen
       .getByText('Click or drag files here to upload')
@@ -640,7 +741,11 @@ describe('DocumentTable', () => {
     expect(mockUploadMutate).not.toHaveBeenCalled()
   })
 
-  it('should show deleting state when deletion in progress', async () => {
+  test('should show deleting state when deletion in progress', async ({
+    render,
+    theme,
+    router
+  }) => {
     const mockFiles = [
       {
         documentId: 1,
@@ -656,7 +761,7 @@ describe('DocumentTable', () => {
     // Mock deletion to be pending
     mockDeleteMutate.mockImplementation(() => new Promise(() => {})) // Never resolves
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByTestId('delete-button')).toBeInTheDocument()
@@ -670,7 +775,11 @@ describe('DocumentTable', () => {
     })
   })
 
-  it('should not show delete button for files in error states', async () => {
+  test('should not show delete button for files in error states', async ({
+    render,
+    theme,
+    router
+  }) => {
     const mockFiles = [
       {
         documentId: 1,
@@ -700,7 +809,7 @@ describe('DocumentTable', () => {
 
     useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(
@@ -714,7 +823,11 @@ describe('DocumentTable', () => {
     expect(screen.queryByTestId('delete-button')).not.toBeInTheDocument()
   })
 
-  it('should handle non-422 upload errors correctly', async () => {
+  test('should handle non-422 upload errors correctly', async ({
+    render,
+    theme,
+    router
+  }) => {
     const validFile = createMockFile('test.pdf', 'application/pdf', 1000)
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -724,7 +837,7 @@ describe('DocumentTable', () => {
       onError({ response: { status: 500 }, message: 'Server error' })
     })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const fileInput = screen.getByTestId('file-input')
     fireEvent.change(fileInput, { target: { files: [validFile] } })
@@ -741,7 +854,11 @@ describe('DocumentTable', () => {
     consoleSpy.mockRestore()
   })
 
-  it('should handle file size display correctly', async () => {
+  test('should handle file size display correctly', async ({
+    render,
+    theme,
+    router
+  }) => {
     const mockFiles = [
       {
         documentId: 1,
@@ -754,14 +871,18 @@ describe('DocumentTable', () => {
 
     useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByText('1 MB')).toBeInTheDocument()
     })
   })
 
-  it('should hide user information for supplier roles', async () => {
+  test('should hide user information for supplier roles', async ({
+    render,
+    theme,
+    router
+  }) => {
     const mockFiles = [
       {
         documentId: 1,
@@ -778,7 +899,7 @@ describe('DocumentTable', () => {
       hasRoles: vi.fn((role) => role === 'Supplier')
     })
 
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByText('test.pdf')).toBeInTheDocument()
@@ -787,8 +908,12 @@ describe('DocumentTable', () => {
     expect(screen.queryByText(/supplieruser/)).not.toBeInTheDocument()
   })
 
-  it('should handle rapid successive file uploads', async () => {
-    render(<DocumentTable {...defaultProps} />, { wrapper })
+  test('should handle rapid successive file uploads', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentTable {...defaultProps} />, [theme, router])
 
     const file1 = createMockFile('test1.pdf', 'application/pdf', 1000)
     const file2 = createMockFile('test2.pdf', 'application/pdf', 1000)
