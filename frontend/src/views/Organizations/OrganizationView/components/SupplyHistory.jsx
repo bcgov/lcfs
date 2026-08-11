@@ -208,6 +208,19 @@ const getComparisonColor = (value) => {
 const hasNumericValue = (value) =>
   value !== null && value !== undefined && !Number.isNaN(Number(value))
 
+const getTopFuelTypesByVolume = (rows, limit = 8) =>
+  Array.from(
+    rows
+      .reduce((acc, row) => {
+        acc.set(row.fuelType, (acc.get(row.fuelType) || 0) + row.totalVolume)
+        return acc
+      }, new Map())
+      .entries()
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([fuelType]) => fuelType)
+
 const SupplyMetricCard = ({ title, value, period, comparisons = [] }) => (
   <Card
     elevation={1}
@@ -252,7 +265,7 @@ const SupplyMetricCard = ({ title, value, period, comparisons = [] }) => (
   </Card>
 )
 
-const ChartPanel = ({ title, option, height = 340 }) => (
+const ChartPanel = ({ title, subtitle, option, height = 340 }) => (
   <Card
     elevation={2}
     sx={{
@@ -262,9 +275,14 @@ const ChartPanel = ({ title, option, height = 340 }) => (
     }}
   >
     <CardContent sx={{ minWidth: 0, overflow: 'hidden' }}>
-      <BCTypography variant="subtitle1" sx={{ mb: 2 }}>
+      <BCTypography variant="subtitle1" sx={{ mb: subtitle ? 0.5 : 2 }}>
         {title}
       </BCTypography>
+      {subtitle && (
+        <BCTypography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {subtitle}
+        </BCTypography>
+      )}
       <BCBox sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
         <ReactECharts
           option={option}
@@ -421,10 +439,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
         page: 1
       }))
       navigate(
-        ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(
-          ':orgID',
-          String(id)
-        )
+        ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(':orgID', String(id))
       )
     },
     [navigate]
@@ -616,24 +631,23 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()
-    const topFuelTypes = Array.from(
-      rows
-        .reduce((acc, row) => {
-          acc.set(row.fuelType, (acc.get(row.fuelType) || 0) + row.totalVolume)
-          return acc
-        }, new Map())
-        .entries()
+    const topFuelTypes = getTopFuelTypesByVolume(rows)
+    const fuelTypeColors = Object.fromEntries(
+      topFuelTypes.map((fuelType, index) => [
+        fuelType,
+        CHART_PALETTE[index % CHART_PALETTE.length]
+      ])
     )
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([fuelType]) => fuelType)
 
     return {
       labels: years,
+      fuelTypeColors,
       series: topFuelTypes.map((fuelType) => ({
         name: fuelType,
         type: 'line',
         smooth: true,
+        itemStyle: { color: fuelTypeColors[fuelType] },
+        lineStyle: { color: fuelTypeColors[fuelType] },
         data: years.map((year) => {
           const match = rows.find(
             (row) => row.reportingYear === year && row.fuelType === fuelType
@@ -642,6 +656,56 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
         })
       }))
     }
+  }, [analytics.fuelTypeVolumeTrend])
+
+  // YoY % change per fuel type/year, used to annotate the volume trend tooltip.
+  const fuelTypeYoyChangeData = useMemo(() => {
+    const rows = analytics.fuelTypeVolumeTrend || []
+    const years = Array.from(
+      new Set(rows.map((row) => row.reportingYear))
+    ).sort()
+    const topFuelTypes = getTopFuelTypesByVolume(rows)
+
+    // Skip the first year in the range since there is no prior year to compare against.
+    const yoyYears = years.slice(1)
+
+    const lookup = {}
+    topFuelTypes.forEach((fuelType) => {
+      yoyYears.forEach((year) => {
+        const previousYear = years[years.indexOf(year) - 1]
+        // Use 0 when a fuel type has no row for a year, matching the volume chart's fallback.
+        const currentVolume =
+          rows.find(
+            (row) => row.reportingYear === year && row.fuelType === fuelType
+          )?.totalVolume ?? 0
+        const previousVolume =
+          rows.find(
+            (row) =>
+              row.reportingYear === previousYear && row.fuelType === fuelType
+          )?.totalVolume ?? 0
+
+        if (!previousVolume) {
+          // Can't express a % change from a zero baseline, but a 0 -> nonzero jump is
+          // still real and worth surfacing, so show the prior-year volume instead.
+          if (currentVolume > 0) {
+            lookup[fuelType] ||= {}
+            lookup[fuelType][year] = { previousVolume: 0 }
+          }
+          return
+        }
+
+        lookup[fuelType] ||= {}
+        lookup[fuelType][year] = {
+          pct: Number(
+            (((currentVolume - previousVolume) / previousVolume) * 100).toFixed(
+              2
+            )
+          )
+        }
+      })
+    })
+
+    return { lookup }
   }, [analytics.fuelTypeVolumeTrend])
 
   const renewableSupplyVolumeChangeData = useMemo(() => {
@@ -705,6 +769,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     () => ({
       tooltip: {
         trigger: 'axis',
+        appendToBody: true,
         valueFormatter: (value) => formatCompactAxisNumber(value)
       },
       legend: {
@@ -774,7 +839,33 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     () => ({
       tooltip: {
         trigger: 'axis',
-        valueFormatter: (value) => formatCompactAxisNumber(value)
+        appendToBody: true,
+        formatter: (params) => {
+          if (!params?.length) {
+            return ''
+          }
+          const year = params[0].axisValueLabel ?? params[0].axisValue
+          const rows = params
+            .map((param) => {
+              const change =
+                fuelTypeYoyChangeData.lookup[param.seriesName]?.[year]
+              let changeText = ''
+              if (change?.pct !== undefined) {
+                changeText = ` (${formatSignedPercent(change.pct)} ${t(
+                  'org:supplyHistory.analytics.vsPreviousYear'
+                )})`
+              } else if (change?.previousVolume !== undefined) {
+                changeText = ` (${t(
+                  'org:supplyHistory.analytics.previousYear'
+                )}: ${formatCompactAxisNumber(change.previousVolume)})`
+              }
+              return `<div>${param.marker}${param.seriesName}: ${formatCompactAxisNumber(
+                param.value
+              )}${changeText}</div>`
+            })
+            .join('')
+          return `<div style="font-weight:600;margin-bottom:4px;">${year}</div>${rows}`
+        }
       },
       legend: {
         type: 'scroll',
@@ -812,13 +903,14 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
       },
       series: fuelTypeVolumeTrendData.series
     }),
-    [fuelTypeVolumeTrendData, t]
+    [fuelTypeVolumeTrendData, fuelTypeYoyChangeData, t]
   )
 
   const renewableSupplyVolumeChangeOption = useMemo(
     () => ({
       tooltip: {
         trigger: 'axis',
+        appendToBody: true,
         axisPointer: { type: 'shadow' },
         valueFormatter: (value) => formatCompactAxisNumber(value)
       },
@@ -871,6 +963,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     () => ({
       tooltip: {
         trigger: 'axis',
+        appendToBody: true,
         axisPointer: { type: 'shadow' },
         valueFormatter: (value) => formatCompactAxisNumber(value)
       },
@@ -1058,6 +1151,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                 <Grid item xs={12} sx={{ minWidth: 0 }}>
                   <ChartPanel
                     title={t('org:supplyHistory.analytics.fuelTypeVolumeTrend')}
+                    subtitle={t(
+                      'org:supplyHistory.analytics.fuelTypeVolumeTrendHelp'
+                    )}
                     option={fuelTypeVolumeTrendOption}
                     height={380}
                   />
