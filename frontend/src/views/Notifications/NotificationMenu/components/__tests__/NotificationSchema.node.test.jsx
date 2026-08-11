@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { routesMapping, columnDefs, defaultSortModel } from '../_schema'
 import { ROUTES } from '@/routes/routes'
 
@@ -60,6 +60,8 @@ describe('Notification Schema', () => {
         'AdminAdjustment',
         'InitiativeAgreement',
         'ComplianceReport',
+        'ciApplication',
+        'CI Application Recommended',
         'Fuel Code',
         'Fuel Code Status Update',
         'Fuel Code Recommended',
@@ -153,6 +155,9 @@ describe('Notification Schema', () => {
       // Compliance report route should have parameters
       expect(mapping.ComplianceReport).toContain(':compliancePeriod')
       expect(mapping.ComplianceReport).toContain(':complianceReportId')
+
+      // CI application routes should have :ciApplicationId
+      expect(mapping.ciApplication).toContain(':ciApplicationId')
 
       // Fuel code routes should have :fuelCodeID
       Object.entries(mapping).forEach(([key, value]) => {

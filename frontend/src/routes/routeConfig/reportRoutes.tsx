@@ -68,10 +68,9 @@ export const reportRoutes: AppRouteObject[] = [
       },
       {
         path: 'fse-map',
-        element: <FSEFullMap />, 
+        element: <FSEFullMap />,
         handle: { title: 'FSE map' }
-      }
-      ,
+      },
       {
         path: 'report-openings',
         element: <ReportOpenings />,
@@ -143,6 +142,6 @@ export const reportRoutes: AppRouteObject[] = [
   {
     path: ROUTES.CHARGING_SITES.EQUIPMENT_PROCESSING,
     element: <FSEProcessing />,
-    handle: { title: 'FSE Processing' }
+    handle: { title: 'FSE processing' }
   }
 ]

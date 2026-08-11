@@ -9,7 +9,7 @@ import theme from '@/themes'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: vi.fn((key, fallback) => {
-      if (key === 'txn:txnHistoryLabel') return 'Transaction History'
+      if (key === 'txn:txnHistoryLabel') return 'Transaction history'
       if (key === 'govOrg') return 'Government Organization'
       if (key.includes('txn:txnHistory.')) {
         const status = key.split('.').pop()
@@ -70,7 +70,7 @@ describe('TransactionHistory Component', () => {
   describe('Empty transaction history handling', () => {
     it('renders empty fragment when transactionHistory is empty array', () => {
       renderComponent({ transactionHistory: [] })
-      expect(screen.queryByText('Transaction History')).not.toBeInTheDocument()
+      expect(screen.queryByText('Transaction history')).not.toBeInTheDocument()
     })
 
     it('renders empty fragment when transactionHistory length is 0', () => {
@@ -80,12 +80,12 @@ describe('TransactionHistory Component', () => {
 
     it('renders component when transactionHistory is null', () => {
       renderComponent({ transactionHistory: null })
-      expect(screen.getByText('Transaction History')).toBeInTheDocument()
+      expect(screen.getByText('Transaction history')).toBeInTheDocument()
     })
 
     it('renders component when transactionHistory is undefined', () => {
       renderComponent({ transactionHistory: undefined })
-      expect(screen.getByText('Transaction History')).toBeInTheDocument()
+      expect(screen.getByText('Transaction history')).toBeInTheDocument()
     })
   })
 
@@ -102,8 +102,7 @@ describe('TransactionHistory Component', () => {
       ]
 
       renderComponent({ transactionHistory: mockHistory })
-
-      expect(screen.getByText('Transaction History')).toBeInTheDocument()
+      expect(screen.getByText('Transaction history')).toBeInTheDocument()
       expect(screen.getByText('Approved')).toBeInTheDocument()
       expect(screen.getByText('Formatted: 2023-05-01')).toBeInTheDocument()
       expect(screen.getByText('John Doe')).toBeInTheDocument()
@@ -245,8 +244,7 @@ describe('TransactionHistory Component', () => {
       ]
 
       renderComponent({ transactionHistory: mockHistory })
-
-      expect(screen.getByText('Transaction History')).toBeInTheDocument()
+      expect(screen.getByText('Transaction history')).toBeInTheDocument()
       expect(screen.getAllByText('on').length).toBeGreaterThan(0)
       expect(screen.getAllByText('by').length).toBeGreaterThan(0)
       expect(screen.getAllByText('of').length).toBeGreaterThan(0)

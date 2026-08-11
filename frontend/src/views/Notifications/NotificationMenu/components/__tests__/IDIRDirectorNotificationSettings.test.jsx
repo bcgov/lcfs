@@ -1,7 +1,8 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { screen } from '@testing-library/react'
+import { describe, expect, vi } from 'vitest'
 import IDIRDirectorNotificationSettings from '../IDIRDirectorNotificationSettings'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock the NotificationSettingsForm component
 vi.mock('../NotificationSettingsForm', () => ({
@@ -13,7 +14,10 @@ vi.mock('../NotificationSettingsForm', () => ({
           {Object.entries(categories[categoryKey])
             .filter(([key]) => key !== 'title')
             .map(([notificationKey, translationKey]) => (
-              <div key={notificationKey} data-test={`notification-${notificationKey}`}>
+              <div
+                key={notificationKey}
+                data-test={`notification-${notificationKey}`}
+              >
                 {notificationKey}: {translationKey}
               </div>
             ))}
@@ -24,65 +28,114 @@ vi.mock('../NotificationSettingsForm', () => ({
 }))
 
 describe('IDIRDirectorNotificationSettings', () => {
-  it('renders the notification settings form with all categories', () => {
+  test('renders the notification settings form with all categories', ({
+    render
+  }) => {
     render(<IDIRDirectorNotificationSettings />)
-    
+
     expect(screen.getByTestId('notification-settings-form')).toBeInTheDocument()
   })
 
-  it('includes fuel codes category in the settings', () => {
+  test('includes CI applications category in the settings', ({ render }) => {
     render(<IDIRDirectorNotificationSettings />)
-    
-    expect(screen.getByTestId('category-idirDirector.categories.fuelCodes')).toBeInTheDocument()
+
+    expect(
+      screen.getByTestId('category-idirDirector.categories.ciApplications')
+    ).toBeInTheDocument()
   })
 
-  it('includes fuel code analyst recommendation notification', () => {
+  test('includes CI application analyst recommendation notification', ({
+    render
+  }) => {
     render(<IDIRDirectorNotificationSettings />)
-    
-    expect(screen.getByTestId('notification-IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION')).toBeInTheDocument()
-    expect(screen.getByText('IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION: idirDirector.categories.fuelCodes.analystRecommendation')).toBeInTheDocument()
+
+    expect(
+      screen.getByTestId(
+        'notification-IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION'
+      )
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION: idirDirector.categories.ciApplications.analystRecommendation'
+      )
+    ).toBeInTheDocument()
   })
 
-  it('includes all expected categories', () => {
+  test('includes all expected categories', ({ render }) => {
     render(<IDIRDirectorNotificationSettings />)
-    
+
     // Check that all categories are present
-    expect(screen.getByTestId('category-idirDirector.categories.transfers')).toBeInTheDocument()
-    expect(screen.getByTestId('category-idirDirector.categories.initiativeAgreements')).toBeInTheDocument()
-    expect(screen.getByTestId('category-idirDirector.categories.complianceReports')).toBeInTheDocument()
-    expect(screen.getByTestId('category-idirDirector.categories.fuelCodes')).toBeInTheDocument()
+    expect(
+      screen.getByTestId('category-idirDirector.categories.transfers')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(
+        'category-idirDirector.categories.initiativeAgreements'
+      )
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId('category-idirDirector.categories.complianceReports')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId('category-idirDirector.categories.ciApplications')
+    ).toBeInTheDocument()
   })
 
-  it('has correct structure for fuel codes category', () => {
+  test('has correct structure for CI applications category', ({ render }) => {
     render(<IDIRDirectorNotificationSettings />)
-    
-    const fuelCodesCategory = screen.getByTestId('category-idirDirector.categories.fuelCodes')
-    expect(fuelCodesCategory).toBeInTheDocument()
-    
-    // Check that the fuel codes category has the correct title
-    expect(fuelCodesCategory).toHaveTextContent('idirDirector.categories.fuelCodes.title')
-    
-    // Check that it has exactly 1 fuel code notification for director
-    const fuelCodeNotifications = fuelCodesCategory.querySelectorAll('[data-test^="notification-IDIR_DIRECTOR__FUEL_CODE"]')
-    expect(fuelCodeNotifications).toHaveLength(1)
+
+    const ciApplicationsCategory = screen.getByTestId(
+      'category-idirDirector.categories.ciApplications'
+    )
+    expect(ciApplicationsCategory).toBeInTheDocument()
+
+    // Check that the CI applications category has the correct title
+    expect(ciApplicationsCategory).toHaveTextContent(
+      'idirDirector.categories.ciApplications.title'
+    )
+
+    // Check that it has exactly 1 CI application notification for director
+    const ciApplicationNotifications = ciApplicationsCategory.querySelectorAll(
+      '[data-test^="notification-IDIR_DIRECTOR__CI_APPLICATION"]'
+    )
+    expect(ciApplicationNotifications).toHaveLength(1)
   })
 
-  it('does not include analyst-only fuel code notifications', () => {
+  test('does not include analyst-only fuel code notifications', ({
+    render
+  }) => {
     render(<IDIRDirectorNotificationSettings />)
-    
+
     // Should not include analyst notifications
-    expect(screen.queryByTestId('notification-IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('notification-IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId(
+        'notification-IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED'
+      )
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId(
+        'notification-IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL'
+      )
+    ).not.toBeInTheDocument()
   })
 
-  it('has only one notification in fuel codes category', () => {
+  test('has only one notification in CI applications category', ({
+    render
+  }) => {
     render(<IDIRDirectorNotificationSettings />)
-    
-    const fuelCodesCategory = screen.getByTestId('category-idirDirector.categories.fuelCodes')
-    const allNotifications = fuelCodesCategory.querySelectorAll('[data-test^="notification-"]')
-    
-    // Director should only have one fuel code notification
+
+    const ciApplicationsCategory = screen.getByTestId(
+      'category-idirDirector.categories.ciApplications'
+    )
+    const allNotifications = ciApplicationsCategory.querySelectorAll(
+      '[data-test^="notification-"]'
+    )
+
+    // Director should only have one CI application notification
     expect(allNotifications).toHaveLength(1)
-    expect(allNotifications[0]).toHaveAttribute('data-test', 'notification-IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION')
+    expect(allNotifications[0]).toHaveAttribute(
+      'data-test',
+      'notification-IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION'
+    )
   })
 })

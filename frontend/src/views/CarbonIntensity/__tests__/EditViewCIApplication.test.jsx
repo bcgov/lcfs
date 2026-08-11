@@ -1,20 +1,6 @@
 import React from 'react'
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi
-} from 'vitest'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor
-} from '@testing-library/react'
+import { afterEach, beforeAll, beforeEach, describe, expect, vi } from 'vitest'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { roles } from '@/constants/roles'
 import { test } from '@/tests/utils/fixtures'
@@ -48,8 +34,12 @@ let mockCurrentUser = {
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
     ...mockCurrentUser,
-    hasRoles: vi.fn(() => false),
-    hasAnyRole: vi.fn(() => false)
+    hasRoles: vi.fn((...names) =>
+      names.every((name) => mockUserRoles.some((role) => role.name === name))
+    ),
+    hasAnyRole: vi.fn((...names) =>
+      names.some((name) => mockUserRoles.some((role) => role.name === name))
+    )
   })
 }))
 
@@ -98,6 +88,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
   })),
+  useUpdateCIApplicationStep4: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
+    isPending: false
+  })),
   useSubmitCIApplication: vi.fn(() => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
@@ -129,7 +123,12 @@ vi.mock('@/views/CarbonIntensity/components/DocumentsModellingStep', () => ({
 }))
 
 vi.mock('@/views/CarbonIntensity/components/SignAndSubmitStep', () => ({
-  SignAndSubmitStep: () => <div data-test="step4-stub" />
+  SignAndSubmitStep: ({ hasSigningAuthority }) => (
+    <div
+      data-test="step4-stub"
+      data-has-signing-authority={String(hasSigningAuthority)}
+    />
+  )
 }))
 
 vi.mock('@/views/CarbonIntensity/components/GovernmentDecisionStep', () => ({
@@ -204,12 +203,13 @@ import { EditViewCIApplication } from '@/views/CarbonIntensity/EditViewCIApplica
 
 describe('EditViewCIApplication', () => {
   beforeAll(() => {
-    // jsdom logs "Not implemented: window.scrollTo" — stub it so the
-    // smooth-scroll on step transitions stays out of the test output.
+    // jsdom logs "Not implemented: window.scrollTo" / Element.scrollIntoView —
+    // stub them so step-transition scrolling stays out of the test output.
     Object.defineProperty(window, 'scrollTo', {
       value: vi.fn(),
       writable: true
     })
+    Element.prototype.scrollIntoView = vi.fn()
   })
 
   beforeEach(() => {
@@ -290,6 +290,65 @@ describe('EditViewCIApplication', () => {
     })
   })
 
+  test('passes no Signing Authority access into Step 4 for CI Applicant only users', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockParams = { ciApplicationId: '10' }
+    mockUserRoles = [{ name: roles.ci_applicant }]
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Draft' }
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, [query, theme, localization, router])
+
+    await waitFor(() => {
+      expect(screen.getByTestId('step4-stub')).toHaveAttribute(
+        'data-has-signing-authority',
+        'false'
+      )
+    })
+  })
+
+  test('passes Signing Authority access into Step 4 when the user has the role', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockParams = { ciApplicationId: '10' }
+    mockUserRoles = [
+      { name: roles.ci_applicant },
+      { name: roles.signing_authority }
+    ]
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Draft' }
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, [query, theme, localization, router])
+
+    await waitFor(() => {
+      expect(screen.getByTestId('step4-stub')).toHaveAttribute(
+        'data-has-signing-authority',
+        'true'
+      )
+    })
+  })
+
   test('creates a new draft and navigates to the edit URL on Save (add mode)', async ({
     render,
     query,
@@ -331,6 +390,44 @@ describe('EditViewCIApplication', () => {
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled())
     expect(mockCreate).not.toHaveBeenCalled()
     expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  test('opens Step 2 and scrolls it into view after saving Step 1 (#4767)', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockParams = { ciApplicationId: '10' }
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Draft' }
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, [query, theme, localization, router])
+    fireEvent.click(await screen.findByTestId('step1-save-trigger'))
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalled())
+    await waitFor(() => {
+      expect(screen.getByTestId('ci-step-accordion-step2')).toHaveClass(
+        'Mui-expanded'
+      )
+    })
+    expect(screen.getByTestId('ci-step-accordion-step1')).not.toHaveClass(
+      'Mui-expanded'
+    )
+    await waitFor(() => {
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'start'
+      })
+    })
+    expect(window.scrollTo).not.toHaveBeenCalled()
   })
 
   test('shows the loader while options are loading', async ({

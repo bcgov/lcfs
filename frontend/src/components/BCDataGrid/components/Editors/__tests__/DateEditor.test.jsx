@@ -14,12 +14,16 @@ const { mockFormat, mockParseISO } = vi.hoisted(() => ({
   }),
   mockParseISO: vi.fn((dateString) => {
     if (!dateString || dateString === 'YYYY-MM-DD') return null
-    return new Date(dateString)
+    const [year, month, day] = dateString.split('-').map(Number)
+    return new Date(year, month - 1, day)
   })
 }))
 
 vi.mock('date-fns', () => ({
   format: mockFormat,
+  isValid: vi.fn(
+    (date) => date instanceof Date && !Number.isNaN(date.getTime())
+  ),
   parseISO: mockParseISO
 }))
 
@@ -29,6 +33,7 @@ vi.mock('@mui/x-date-pickers/DatePicker', () => ({
     ({
       value,
       onChange,
+      onAccept,
       onOpen,
       onClose,
       open,
@@ -50,17 +55,31 @@ vi.mock('@mui/x-date-pickers/DatePicker', () => ({
         ...domProps
       } = restProps
 
+      const inputValue = value
+        ? [
+            value.getFullYear(),
+            String(value.getMonth() + 1).padStart(2, '0'),
+            String(value.getDate()).padStart(2, '0')
+          ].join('-')
+        : ''
+
       return (
         <div data-test="date-picker">
           <input
             data-test="date-input"
-            value={value ? value.toISOString().split('T')[0] : ''}
+            value={inputValue}
             onChange={(e) => {
-              const val = e.target.value ? new Date(e.target.value) : null
+              const [year, month, day] = e.target.value.split('-').map(Number)
+              const val = e.target.value ? new Date(year, month - 1, day) : null
               onChange?.(val)
             }}
+            onKeyDown={slotProps?.textField?.onKeyDown}
+            onBlur={slotProps?.textField?.onBlur}
             {...domProps}
           />
+          <button data-test="accept-button" onClick={() => onAccept?.(value)}>
+            Accept
+          </button>
           <button
             data-test="open-picker-button"
             onClick={() => {
@@ -135,7 +154,7 @@ describe('DateEditor', () => {
 
   describe('Initial State - selectedDate', () => {
     it('initializes selectedDate with valid date value', () => {
-      mockParseISO.mockReturnValue(new Date('2023-12-25'))
+      mockParseISO.mockReturnValue(new Date(2023, 11, 25))
 
       render(<DateEditor {...defaultProps} value="2023-12-25" />)
 
@@ -268,7 +287,21 @@ describe('DateEditor', () => {
   })
 
   describe('updateValue Function', () => {
-    it('handles valid date correctly and stops editing to trigger grid save', () => {
+    it('updates the visible date without stopping grid editing while the picker is still selecting', () => {
+      render(<DateEditor {...defaultProps} />)
+
+      const input = screen.getByTestId('date-input')
+
+      act(() => {
+        fireEvent.change(input, { target: { value: '2023-12-25' } })
+      })
+
+      expect(screen.getByTestId('date-input')).toHaveValue('2023-12-25')
+      expect(mockOnValueChange).not.toHaveBeenCalled()
+      expect(mockApi.stopEditing).not.toHaveBeenCalled()
+    })
+
+    it('commits valid accepted dates and stops editing to trigger grid save', () => {
       vi.useFakeTimers()
       mockFormat.mockReturnValue('2023-12-25')
 
@@ -278,6 +311,10 @@ describe('DateEditor', () => {
 
       act(() => {
         fireEvent.change(input, { target: { value: '2023-12-25' } })
+      })
+
+      act(() => {
+        fireEvent.click(screen.getByTestId('accept-button'))
       })
 
       expect(mockFormat).toHaveBeenCalledWith(expect.any(Date), 'yyyy-MM-dd')
@@ -291,6 +328,78 @@ describe('DateEditor', () => {
         window.scrollX,
         window.scrollY
       )
+      vi.useRealTimers()
+    })
+
+    it('commits manually entered dates when Enter is pressed', () => {
+      vi.useFakeTimers()
+      mockFormat.mockReturnValue('2023-12-25')
+
+      render(<DateEditor {...defaultProps} />)
+
+      const input = screen.getByTestId('date-input')
+
+      act(() => {
+        fireEvent.change(input, { target: { value: '2023-12-25' } })
+      })
+
+      act(() => {
+        fireEvent.keyDown(input, { key: 'Enter' })
+      })
+
+      expect(mockOnValueChange).toHaveBeenCalledWith('2023-12-25')
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(mockApi.stopEditing).toHaveBeenCalled()
+      vi.useRealTimers()
+    })
+
+    it('commits manually entered dates when Tab is pressed', () => {
+      vi.useFakeTimers()
+      mockFormat.mockReturnValue('2023-12-25')
+
+      render(<DateEditor {...defaultProps} />)
+
+      const input = screen.getByTestId('date-input')
+
+      act(() => {
+        fireEvent.change(input, { target: { value: '2023-12-25' } })
+      })
+
+      act(() => {
+        fireEvent.keyDown(input, { key: 'Tab' })
+      })
+
+      expect(mockOnValueChange).toHaveBeenCalledWith('2023-12-25')
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(mockApi.stopEditing).toHaveBeenCalled()
+      vi.useRealTimers()
+    })
+
+    it('commits manually entered dates on blur', () => {
+      vi.useFakeTimers()
+      mockFormat.mockReturnValue('2023-12-25')
+
+      render(<DateEditor {...defaultProps} />)
+
+      const input = screen.getByTestId('date-input')
+
+      act(() => {
+        fireEvent.change(input, { target: { value: '2023-12-25' } })
+      })
+
+      act(() => {
+        fireEvent.blur(input)
+      })
+
+      expect(mockOnValueChange).toHaveBeenCalledWith('2023-12-25')
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(mockApi.stopEditing).toHaveBeenCalled()
       vi.useRealTimers()
     })
   })
@@ -418,6 +527,26 @@ describe('DateEditor', () => {
       expect(
         datePickerProps.slotProps.desktopTrapFocus.disableRestoreFocus
       ).toBe(true)
+    })
+
+    it('uses year, month, and day views so selecting a year continues to month selection', () => {
+      render(<DateEditor {...defaultProps} />)
+
+      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+
+      expect(datePickerProps.views).toEqual(['year', 'month', 'day'])
+      expect(datePickerProps.onAccept).toEqual(expect.any(Function))
+    })
+
+    it('keeps manual text entry enabled with an explicit date placeholder', () => {
+      render(<DateEditor {...defaultProps} />)
+
+      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+
+      expect(datePickerProps.slotProps.textField.placeholder).toBe('yyyy-mm-dd')
+      expect(datePickerProps.slotProps.textField.inputProps.inputMode).toBe(
+        'numeric'
+      )
     })
 
     it('renders with all prop combinations', () => {

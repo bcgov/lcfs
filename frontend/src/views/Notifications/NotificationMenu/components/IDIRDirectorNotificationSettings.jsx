@@ -25,10 +25,10 @@ const IDIRDirectorNotificationSettings = () => {
       IDIR_DIRECTOR__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION:
         'idirDirector.categories.complianceReports.managerRecommendation'
     },
-    'idirDirector.categories.fuelCodes': {
-      title: 'idirDirector.categories.fuelCodes.title',
-      IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION:
-        'idirDirector.categories.fuelCodes.analystRecommendation'
+    'idirDirector.categories.ciApplications': {
+      title: 'idirDirector.categories.ciApplications.title',
+      IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION:
+        'idirDirector.categories.ciApplications.analystRecommendation'
     }
   }
 

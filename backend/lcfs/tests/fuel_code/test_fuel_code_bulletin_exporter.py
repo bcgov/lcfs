@@ -55,7 +55,7 @@ async def test_bulletin_export_success():
     headers = await response.body_iterator.__anext__()
     file_content = await response.body_iterator.__anext__()
     assert (
-        b"Fuel Code,Fuel,Company,Carbon Intensity (gCO2e/MJ),Effective Date,Expiry Date"
+        b"Fuel code,Fuel,Company,Carbon intensity (gCO2e/MJ),Effective date,Expiry date"
         in headers
     )
     assert b"C-BCLCF264.3,CNG,FortisBC,2.89,2025-12-31,2028-12-30" in file_content

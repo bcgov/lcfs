@@ -13,7 +13,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 
 
 FUEL_CODE_EXPORT_FILENAME = "BC-LCFS-Fuel-Codes"
-FUEL_CODE_EXPORT_SHEETNAME = "Fuel Codes"
+FUEL_CODE_EXPORT_SHEETNAME = "Fuel codes"
 FUEL_CODE_EXPORT_COLUMNS = [
     SpreadsheetColumn("Status", "text"),
     SpreadsheetColumn("Prefix", "text"),

@@ -11,7 +11,7 @@
   "addRow": "Add row",
   "rows": "rows",
   "fuelSupplyColLabels": {
-    "complianceReportId": "Compliance Report ID",
+    "complianceReportId": "Compliance report ID",
     "fuelSupplyId": "Fuel supply ID",
     "fuelType": "Fuel type",
     "fuelTypeOther": "Fuel type other",
@@ -24,7 +24,7 @@
     "q2Quantity": "Q2 (Apr-Jun)",
     "q3Quantity": "Q3 (Jul-Sep)",
     "q4Quantity": "Q4 (Oct-Dec)",
-    "totalQuantity": "Total Quantity",
+    "totalQuantity": "Total quantity",
     "units": "Units",
     "complianceUnits": "Compliance units",
     "targetCi": "Target CI",
@@ -32,7 +32,7 @@
     "uci": "UCI",
     "energyDensity": "Energy density",
     "eer": "EER",
-    "energy": "Energy Content",
+    "energy": "Energy content",
     "determiningCarbonIntensity": "Determining carbon intensity",
     "isCanadaProduced": "Fuel produced in Canada?",
     "isQ1Supplied": "Supplied in Q1?"

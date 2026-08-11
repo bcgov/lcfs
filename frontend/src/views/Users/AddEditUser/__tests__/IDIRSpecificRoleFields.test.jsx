@@ -114,8 +114,8 @@ vi.mock('../_schema', () => ({
       dataTestId: 'adminRole1'
     },
     {
-      label: 'System Admin',
-      header: 'System Admin',
+      label: 'System admin',
+      header: 'System admin',
       text: 'system admin desc',
       value: 'system admin',
       dataTestId: 'adminRole2'

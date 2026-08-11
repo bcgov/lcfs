@@ -38,10 +38,10 @@ describe('AgreementDate Component', () => {
     // Setup translation mock
     mockT.mockImplementation((key) => {
       const translations = {
-        'transfer:agrDateLabel': 'Agreement Date (required)',
+        'transfer:agrDateLabel': 'Agreement date (required)',
         'transfer:agrDateDescText':
           'Date on which the written agreement for the transfer was reached between the organizations:',
-        'transfer:agrDateHeader': 'Agreement Date:'
+        'transfer:agrDateHeader': 'Agreement date:'
       }
       return translations[key] || key
     })
@@ -57,7 +57,7 @@ describe('AgreementDate Component', () => {
   describe('Rendering', () => {
     test('renders correctly with label and description', ({
       render,
-       theme
+      theme
     }) => {
       render(
         <MockFormProvider>
@@ -65,7 +65,7 @@ describe('AgreementDate Component', () => {
         </MockFormProvider>,
         [theme]
       )
-      expect(screen.getByText('Agreement Date (required)')).toBeInTheDocument()
+      expect(screen.getByText('Agreement date (required)')).toBeInTheDocument()
       expect(
         screen.getByText(
           'Date on which the written agreement for the transfer was reached between the organizations:'
@@ -90,17 +90,14 @@ describe('AgreementDate Component', () => {
       expect(dateInput).toHaveAttribute('placeholder', 'yyyy-mm-dd')
     })
 
-    test('renders the agreement date header text', ({
-      render,
-      theme
-    }) => {
+    test('renders the agreement date header text', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
         </MockFormProvider>,
         [theme]
       )
-      expect(screen.getByText('Agreement Date:')).toBeInTheDocument()
+      expect(screen.getByText('Agreement date:')).toBeInTheDocument()
     })
 
     test('calls translation function with correct keys', ({
@@ -119,10 +116,7 @@ describe('AgreementDate Component', () => {
       expect(mockT).toHaveBeenCalledWith('transfer:agrDateHeader')
     })
 
-    test('renders with correct data-test attributes', ({
-      render,
-      theme
-    }) => {
+    test('renders with correct data-test attributes', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
@@ -137,10 +131,7 @@ describe('AgreementDate Component', () => {
       ).toBeInTheDocument()
     })
 
-    test('sets max date correctly using dateFormatter', ({
-      render,
-      theme
-    }) => {
+    test('sets max date correctly using dateFormatter', ({ render, theme }) => {
       const expectedMaxDate = '2024-01-15'
       formatters.dateFormatter.mockReturnValue(expectedMaxDate)
 
@@ -156,10 +147,7 @@ describe('AgreementDate Component', () => {
       expect(formatters.dateFormatter).toHaveBeenCalledWith(expect.any(Date))
     })
 
-    test('calls dateFormatter with current date', ({
-      render,
-      theme
-    }) => {
+    test('calls dateFormatter with current date', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
@@ -170,10 +158,7 @@ describe('AgreementDate Component', () => {
       expect(formatters.dateFormatter).toHaveBeenCalled()
     })
 
-    test('renders input with small size', ({
-      render,
-      theme
-    }) => {
+    test('renders input with small size', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
@@ -207,10 +192,7 @@ describe('AgreementDate Component', () => {
       expect(dateInput.parentElement).toHaveClass('Mui-error')
     })
 
-    test('does not display error when no errors exist', ({
-      render,
-      theme
-    }) => {
+    test('does not display error when no errors exist', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
@@ -240,10 +222,7 @@ describe('AgreementDate Component', () => {
   })
 
   describe('Functionality', () => {
-    test('renders input with correct name attribute', ({
-      render,
-      theme
-    }) => {
+    test('renders input with correct name attribute', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
@@ -255,10 +234,7 @@ describe('AgreementDate Component', () => {
       expect(dateInput).toHaveAttribute('name', 'agreementDate')
     })
 
-    test('updates the form value when date is changed', ({
-      render,
-      theme
-    }) => {
+    test('updates the form value when date is changed', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
@@ -359,10 +335,7 @@ describe('AgreementDate Component', () => {
   })
 
   describe('Component Structure and Props', () => {
-    test('renders LabelBox with correct props', ({
-      render,
-      theme
-    }) => {
+    test('renders LabelBox with correct props', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
@@ -374,10 +347,7 @@ describe('AgreementDate Component', () => {
       expect(labelBox).toBeInTheDocument()
     })
 
-    test('renders TextField with all required props', ({
-      render,
-      theme
-    }) => {
+    test('renders TextField with all required props', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
@@ -396,7 +366,7 @@ describe('AgreementDate Component', () => {
 
     test('renders Box component with correct styling props', ({
       render,
-       theme
+      theme
     }) => {
       render(
         <MockFormProvider>
@@ -406,7 +376,7 @@ describe('AgreementDate Component', () => {
       )
 
       // The Box should contain the typography and text field
-      expect(screen.getByText('Agreement Date:')).toBeInTheDocument()
+      expect(screen.getByText('Agreement date:')).toBeInTheDocument()
       expect(screen.getByTestId('transfer-agreement-date')).toBeInTheDocument()
     })
   })
@@ -433,10 +403,7 @@ describe('AgreementDate Component', () => {
   })
 
   describe('Form State Integration', () => {
-    test('handles empty form state without errors', ({
-      render,
-      theme
-    }) => {
+    test('handles empty form state without errors', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />
@@ -448,10 +415,7 @@ describe('AgreementDate Component', () => {
       expect(screen.getByTestId('transfer-agreement-date')).toBeInTheDocument()
     })
 
-    test('displays form state errors correctly', ({
-      render,
-      theme
-    }) => {
+    test('displays form state errors correctly', ({ render, theme }) => {
       const testError = 'Custom error message'
       render(
         <MockFormProvider errors={{ agreementDate: { message: testError } }}>
@@ -463,10 +427,7 @@ describe('AgreementDate Component', () => {
       expect(screen.getByText(testError)).toBeInTheDocument()
     })
 
-    test('integrates with form context properly', ({
-      render,
-      theme
-    }) => {
+    test('integrates with form context properly', ({ render, theme }) => {
       render(
         <MockFormProvider>
           <AgreementDate />

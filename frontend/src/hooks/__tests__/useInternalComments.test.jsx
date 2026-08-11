@@ -1,17 +1,7 @@
 import { waitFor, act } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi, describe, expect, beforeEach } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
 
-let fixtureRenderHook
-let fixtureProviders
-const it = (name, callback) =>
-  test(name, ({ renderHook, query }) => {
-    fixtureRenderHook = renderHook
-    fixtureProviders = [query]
-    return callback()
-  })
-const renderHook = (callback) => fixtureRenderHook(callback, fixtureProviders)
 import { useComments } from '../useComments'
 
 // Mock the API service
@@ -44,18 +34,6 @@ vi.mock('@/constants/roles', () => ({
   }
 }))
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false }
-    }
-  })
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  )
-}
-
 describe('useComments', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -63,8 +41,13 @@ describe('useComments', () => {
   })
 
   describe('Comments fetching', () => {
-    it('should fetch internal comments successfully with director role', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should fetch internal comments successfully with director role', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
       const mockComments = [
         {
@@ -82,7 +65,7 @@ describe('useComments', () => {
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       await waitFor(() => {
@@ -95,8 +78,13 @@ describe('useComments', () => {
       )
     })
 
-    it('should fetch internal comments with analyst role', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'analyst')
+    test('should fetch internal comments with analyst role', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('analyst')
+      )
 
       const mockComments = [
         {
@@ -109,7 +97,7 @@ describe('useComments', () => {
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       await waitFor(() => {
@@ -119,8 +107,13 @@ describe('useComments', () => {
       expect(result.current.comments).toEqual(mockComments)
     })
 
-    it('should fetch internal comments with compliance manager role', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'compliance_manager')
+    test('should fetch internal comments with compliance manager role', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('compliance_manager')
+      )
 
       const mockComments = [
         {
@@ -133,7 +126,7 @@ describe('useComments', () => {
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       await waitFor(() => {
@@ -143,8 +136,13 @@ describe('useComments', () => {
       expect(result.current.comments).toEqual(mockComments)
     })
 
-    it('should sort comments in descending order by default', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should sort comments in descending order by default', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
       const mockComments = [
         { internalCommentId: 1, comment: 'First comment' },
@@ -160,7 +158,7 @@ describe('useComments', () => {
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       await waitFor(() => {
@@ -170,8 +168,13 @@ describe('useComments', () => {
       expect(result.current.comments).toEqual(expectedSorted)
     })
 
-    it('should sort comments in ascending order when specified', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should sort comments in ascending order when specified', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
       const mockComments = [
         { internalCommentId: 3, comment: 'Third comment' },
@@ -187,7 +190,7 @@ describe('useComments', () => {
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123, { sortOrder: 'asc' }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       await waitFor(() => {
@@ -197,61 +200,111 @@ describe('useComments', () => {
       expect(result.current.comments).toEqual(expectedSorted)
     })
 
-    it('should not fetch when entityId is missing', () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should reorder cached comments without refetching when sort order changes', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
+
+      const mockComments = [
+        { internalCommentId: 1, comment: 'First comment' },
+        { internalCommentId: 3, comment: 'Third comment' },
+        { internalCommentId: 2, comment: 'Second comment' }
+      ]
+      mockApiService.get.mockResolvedValue({ data: mockComments })
+
+      const { result } = renderHook(
+        () => useComments('compliance_report', 123),
+        [query]
+      )
+
+      await waitFor(() => {
+        expect(
+          result.current.comments.map((comment) => comment.internalCommentId)
+        ).toEqual([3, 2, 1])
+      })
+
+      act(() => {
+        result.current.handleSortOrderChange('asc')
+      })
+
+      expect(
+        result.current.comments.map((comment) => comment.internalCommentId)
+      ).toEqual([1, 2, 3])
+      expect(mockApiService.get).toHaveBeenCalledTimes(1)
+    })
+
+    test('should not fetch when entityId is missing', ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
       const { result } = renderHook(
         () => useComments('compliance_report', null),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       expect(result.current.isLoading).toBe(false)
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should not fetch when entityType is missing', () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should not fetch when entityType is missing', ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
-      const { result } = renderHook(() => useComments(null, 123), {
-        wrapper: createWrapper()
-      })
+      const { result } = renderHook(() => useComments(null, 123), [query])
 
       expect(result.current.isLoading).toBe(false)
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should handle enabled option', () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should handle enabled option', ({ renderHook, query }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123, { enabled: false }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       expect(result.current.isLoading).toBe(false)
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should handle autoFetch option', () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should handle autoFetch option', ({ renderHook, query }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123, { autoFetch: false }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       expect(result.current.isLoading).toBe(false)
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should handle API errors', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should handle API errors', async ({ renderHook, query }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
       const mockError = new Error('Failed to fetch comments')
       mockApiService.get.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123, { retry: 0 }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       await waitFor(() => {
@@ -263,8 +316,13 @@ describe('useComments', () => {
   })
 
   describe('Adding comments', () => {
-    it('should add comment successfully with director role', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should add comment successfully with director role', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
       const mockNewComment = {
         internalCommentId: 123,
         comment: 'New comment',
@@ -274,7 +332,7 @@ describe('useComments', () => {
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       await act(async () => {
@@ -294,12 +352,14 @@ describe('useComments', () => {
       })
     })
 
-    it('should handle comment input state', () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should handle comment input state', ({ renderHook, query }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       act(() => {
@@ -309,8 +369,13 @@ describe('useComments', () => {
       expect(result.current.commentInput).toBe('Test comment')
     })
 
-    it('should clear comment input after successful addition', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should clear comment input after successful addition', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
       const mockNewComment = {
         internalCommentId: 123,
         comment: 'Test comment',
@@ -320,7 +385,7 @@ describe('useComments', () => {
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       act(() => {
@@ -338,14 +403,16 @@ describe('useComments', () => {
       })
     })
 
-    it('should handle add comment errors', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should handle add comment errors', async ({ renderHook, query }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
       const mockError = new Error('Failed to add comment')
       mockApiService.post.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       act(() => {
@@ -365,12 +432,15 @@ describe('useComments', () => {
       })
     })
 
-    it('should submit with null audience scope when user has no gov role', async () => {
+    test('should submit with null audience scope when user has no gov role', async ({
+      renderHook,
+      query
+    }) => {
       mockHasAnyRole.mockReturnValue(false) // No valid role
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       act(() => {
@@ -394,8 +464,13 @@ describe('useComments', () => {
       })
     })
 
-    it('should trim comment text before submission', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should trim comment text before submission', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
       const mockNewComment = {
         internalCommentId: 123,
         comment: 'Trimmed comment',
@@ -405,7 +480,7 @@ describe('useComments', () => {
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       act(() => {
@@ -425,12 +500,14 @@ describe('useComments', () => {
       })
     })
 
-    it('should reject empty comments', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should reject empty comments', async ({ renderHook, query }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
       const { result } = renderHook(
         () => useComments('compliance_report', 123),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       act(() => {
@@ -444,7 +521,10 @@ describe('useComments', () => {
       expect(mockApiService.post).not.toHaveBeenCalled()
     })
 
-    it('should force Public visibility for non-gov users in dual mode', async () => {
+    test('should force Public visibility for non-gov users in dual mode', async ({
+      renderHook,
+      query
+    }) => {
       mockHasAnyRole.mockReturnValue(false)
       mockApiService.post.mockResolvedValue({
         data: {
@@ -460,7 +540,7 @@ describe('useComments', () => {
           useComments('compliance_report', 123, {
             commentMode: 'dual'
           }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       act(() => {
@@ -481,8 +561,13 @@ describe('useComments', () => {
       })
     })
 
-    it('should default gov-only users to Analyst audience scope in dual mode', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'government')
+    test('should default gov-only users to Analyst audience scope in dual mode', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('government')
+      )
       mockApiService.post.mockResolvedValue({
         data: {
           internalCommentId: 201,
@@ -497,7 +582,7 @@ describe('useComments', () => {
           useComments('compliance_report', 123, {
             commentMode: 'dual'
           }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       act(() => {
@@ -518,8 +603,13 @@ describe('useComments', () => {
       })
     })
 
-    it('should reset visibility to Internal after a gov user submits a Public comment in dual mode', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'government')
+    test('should reset visibility to Internal after a gov user submits a Public comment in dual mode', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('government')
+      )
       mockApiService.post.mockResolvedValue({
         data: {
           internalCommentId: 202,
@@ -534,7 +624,7 @@ describe('useComments', () => {
           useComments('compliance_report', 123, {
             commentMode: 'dual'
           }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       act(() => {
@@ -555,8 +645,13 @@ describe('useComments', () => {
   })
 
   describe('Editing comments', () => {
-    it('should omit audience_scope when setting visibility to Public so the backend preserves existing scope semantics', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should omit audience_scope when setting visibility to Public so the backend preserves existing scope semantics', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
       mockApiService.put.mockResolvedValue({
         data: {
           internalCommentId: 99,
@@ -571,7 +666,7 @@ describe('useComments', () => {
           useComments('compliance_report', 123, {
             commentMode: 'dual'
           }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       await act(async () => {
@@ -588,8 +683,13 @@ describe('useComments', () => {
       })
     })
 
-    it('should omit audience_scope when setting visibility to Internal so the backend preserves the original author scope', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'government')
+    test('should omit audience_scope when setting visibility to Internal so the backend preserves the original author scope', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('government')
+      )
       mockApiService.put.mockResolvedValue({
         data: {
           internalCommentId: 100,
@@ -604,7 +704,7 @@ describe('useComments', () => {
           useComments('compliance_report', 123, {
             commentMode: 'dual'
           }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       await act(async () => {
@@ -626,7 +726,10 @@ describe('useComments', () => {
   })
 
   describe('Role and mode helpers', () => {
-    it('should expose dual-mode permissions for non-gov users', () => {
+    test('should expose dual-mode permissions for non-gov users', ({
+      renderHook,
+      query
+    }) => {
       mockHasAnyRole.mockReturnValue(false)
 
       const { result } = renderHook(
@@ -635,7 +738,7 @@ describe('useComments', () => {
             commentMode: 'dual',
             autoFetch: false
           }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       expect(result.current.canComment).toBe(true)
@@ -643,8 +746,13 @@ describe('useComments', () => {
       expect(result.current.allowInternalVisibility).toBe(false)
     })
 
-    it('should expose internal visibility control for gov users', () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'government')
+    test('should expose internal visibility control for gov users', ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('government')
+      )
 
       const { result } = renderHook(
         () =>
@@ -652,7 +760,7 @@ describe('useComments', () => {
             commentMode: 'dual',
             autoFetch: false
           }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       expect(result.current.canComment).toBe(true)
@@ -662,8 +770,13 @@ describe('useComments', () => {
   })
 
   describe('Optimistic updates', () => {
-    it('should perform optimistic updates when enabled', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should perform optimistic updates when enabled', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
       // Mock initial comments
       const mockComments = [
@@ -683,7 +796,7 @@ describe('useComments', () => {
           useComments('compliance_report', 123, {
             optimisticUpdates: true
           }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       // Wait for initial fetch
@@ -702,8 +815,13 @@ describe('useComments', () => {
       expect(mockApiService.post).toHaveBeenCalled()
     })
 
-    it('should not perform optimistic updates when disabled', async () => {
-      mockHasAnyRole.mockImplementation((role) => role === 'director')
+    test('should not perform optimistic updates when disabled', async ({
+      renderHook,
+      query
+    }) => {
+      mockHasAnyRole.mockImplementation((...requested) =>
+        requested.includes('director')
+      )
 
       // Mock initial comments
       const mockComments = [
@@ -723,7 +841,7 @@ describe('useComments', () => {
           useComments('compliance_report', 123, {
             optimisticUpdates: false
           }),
-        { wrapper: createWrapper() }
+        [query]
       )
 
       // Wait for initial fetch

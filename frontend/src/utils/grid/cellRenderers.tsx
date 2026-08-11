@@ -1157,7 +1157,7 @@ export const CIApplicationStatusRenderer = createStatusRenderer(
   {
     Draft: 'info',
     Submitted: 'warning',
-    'Changes Requested': 'warning',
+    'Changes requested': 'warning',
     Approved: 'success',
     Completed: 'success',
     Withdrawn: 'error'

@@ -16,7 +16,7 @@ export const Admin = () => {
       }
       onClick={() => navigate('/admin/users')}
     >
-      <BCTypography variant="subtitle2">Admin Settings</BCTypography>
+      <BCTypography variant="subtitle2">Admin settings</BCTypography>
     </BCButton>
   )
 }

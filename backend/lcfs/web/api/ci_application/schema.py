@@ -586,6 +586,27 @@ class CIApplicationStep4Schema(BaseSchema):
         return self
 
 
+class CIApplicationStep4DraftSchema(BaseSchema):
+    """
+    Payload for ``PUT /ci-applications/{id}/step4`` — draft auto-save (#4772).
+
+    Deliberately laxer than :class:`CIApplicationStep4Schema`: the declarations
+    are absent and the consultant fields are all optional, because the UI
+    auto-saves each field on blur while the applicant is still filling the
+    block in. ``consultant_email`` is a plain string rather than ``EmailStr``
+    for the same reason — a half-typed address must not 422 an auto-save.
+
+    Submission remains the enforcement point: ``CIApplicationStep4Schema``
+    still requires the declarations and a complete, valid consultant block
+    whenever consent is given.
+    """
+
+    consultant_consent: bool = False
+    consultant_name: Optional[str] = Field(default=None, max_length=500)
+    consultant_company: Optional[str] = Field(default=None, max_length=500)
+    consultant_email: Optional[str] = Field(default=None, max_length=500)
+
+
 # ---------------------------------------------------------------------------
 # Step 5 — Government decision & comments
 # ---------------------------------------------------------------------------

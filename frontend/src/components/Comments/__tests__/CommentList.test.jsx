@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, vi } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
 import { roles } from '@/constants/roles'
@@ -36,7 +36,17 @@ vi.mock('react-i18next', () => ({
         'internalComment:internal': 'Internal',
         'internalComment:internalComments': 'Internal comments',
         'internalComment:public': 'Public',
-        'internalComment:publicComments': 'Public comments'
+        'internalComment:publicComments': 'Public comments',
+        'internalComment:cancel': 'Cancel',
+        'internalComment:editComment': 'Edit comment:',
+        'internalComment:postComment': 'Post comment',
+        'internalComment:publicCommentConfirmText':
+          'This comment will be visible outside the internal team.',
+        'internalComment:publicCommentConfirmTitle': 'Post public comment?',
+        'internalComment:saveChanges': 'Save Changes',
+        'internalComment:sortCommentsLabel': 'Sort comments',
+        'internalComment:sortNewestFirst': 'Sort newest first',
+        'internalComment:sortOldestFirst': 'Sort oldest first'
       }
       if (key === 'internalComment:editedBy') {
         return `Edited by ${options?.name}`
@@ -125,15 +135,143 @@ describe('CommentList comment filters', () => {
     expect(screen.getByText('Public comment body')).toBeInTheDocument()
   })
 
-  test('does not render filter tabs for BCeID dual-mode users', ({
+  test('changes sort order from the sort tabs', ({ render, theme }) => {
+    const onSortOrderChange = vi.fn()
+
+    render(
+      <CommentList
+        {...baseProps}
+        sortOrder="desc"
+        onSortOrderChange={onSortOrderChange}
+      />,
+      [theme]
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort oldest first' }))
+
+    expect(onSortOrderChange).toHaveBeenCalledWith('asc')
+  })
+
+  test('resets filter and sort order after adding a comment', async ({
+    render,
+    theme
+  }) => {
+    const onAddComment = vi.fn().mockResolvedValue({})
+    const onSortOrderChange = vi.fn()
+
+    render(
+      <CommentList
+        {...baseProps}
+        onAddComment={onAddComment}
+        commentInput="New internal comment"
+        sortOrder="asc"
+        onSortOrderChange={onSortOrderChange}
+      />,
+      [theme]
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Internal comments' }))
+    expect(
+      screen.getByRole('tab', { name: 'Internal comments' })
+    ).toHaveAttribute('aria-selected', 'true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add comment' }))
+
+    await waitFor(() => expect(onAddComment).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: 'All comments' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      )
+    )
+    expect(onSortOrderChange).toHaveBeenCalledWith('desc')
+  })
+
+  test('confirms before posting a public comment', async ({
+    render,
+    theme
+  }) => {
+    const onAddComment = vi.fn().mockResolvedValue({})
+
+    render(
+      <CommentList
+        {...baseProps}
+        onAddComment={onAddComment}
+        commentInput="New public comment"
+        visibility="Public"
+      />,
+      [theme]
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add comment' }))
+
+    expect(onAddComment).not.toHaveBeenCalled()
+    expect(screen.getByText('Post public comment?')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onAddComment).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add comment' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Post comment' }))
+
+    await waitFor(() => expect(onAddComment).toHaveBeenCalled())
+  })
+
+  test('confirms before changing an internal comment to public', async ({
+    render,
+    theme
+  }) => {
+    const onEditComment = vi.fn()
+
+    render(
+      <CommentList
+        {...baseProps}
+        onEditComment={onEditComment}
+        comments={[
+          {
+            internalCommentId: 9,
+            comment: 'Internal editable comment',
+            fullName: 'IDIR User',
+            createDate: '2026-06-01T12:00:00Z',
+            visibility: 'Internal',
+            createUser: 'idir-user'
+          }
+        ]}
+      />,
+      [theme]
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getAllByRole('radio', { name: 'Public' })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+    expect(onEditComment).not.toHaveBeenCalled()
+    expect(screen.getByText('Post public comment?')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Post comment' }))
+
+    await waitFor(() => expect(onEditComment).toHaveBeenCalled())
+  })
+
+  test('renders sort tabs but not filter tabs for BCeID dual-mode users', ({
     render,
     theme
   }) => {
     mockUserState.roles = [roles.ci_applicant]
+    const onSortOrderChange = vi.fn()
 
-    render(<CommentList {...baseProps} />, [theme])
+    render(
+      <CommentList {...baseProps} onSortOrderChange={onSortOrderChange} />,
+      [theme]
+    )
 
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('comment-filter-tabs')).not.toBeInTheDocument()
+    expect(screen.getByTestId('comment-sort-toggle')).toBeInTheDocument()
+    expect(
+      screen.getByRole('tab', { name: 'Sort newest first' })
+    ).toHaveAttribute('aria-selected', 'true')
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort oldest first' }))
+    expect(onSortOrderChange).toHaveBeenCalledWith('asc')
     expect(screen.getByText('Internal comment body')).toBeInTheDocument()
     expect(screen.getByText('Public comment body')).toBeInTheDocument()
   })

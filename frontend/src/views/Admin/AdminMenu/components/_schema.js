@@ -123,7 +123,7 @@ export const userActivityColDefs = [
   {
     colId: 'actionTaken',
     field: 'actionTaken',
-    headerName: 'Action Taken',
+    headerName: 'Action taken',
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       valueKey: 'action',
@@ -153,7 +153,7 @@ export const userActivityColDefs = [
   {
     colId: 'transactionType',
     field: 'transactionType',
-    headerName: 'Transaction Type',
+    headerName: 'Transaction type',
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       valueKey: 'value',

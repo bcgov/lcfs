@@ -355,6 +355,207 @@ class BCGeocoderService:
         
         return addresses
 
+    async def search_places(
+        self,
+        query: str,
+        place_type: str = "city",
+        max_results: int = 10,
+    ) -> List[Address]:
+        """Typeahead for city / province / country names.
+
+        Cities: BC Geocoder first (superior prefix matching for BC), then
+        Nominatim Canada, then Nominatim worldwide.
+        Province / country: Nominatim only.
+        """
+        query = (query or "").strip()
+        if not query:
+            return []
+
+        cache_key = self._cache.cache_key_for_method(
+            "search_places", query, place_type, max_results
+        )
+        cached = await self._cache.get(cache_key)
+        if cached is not None:
+            self._metrics["cache_hits"] += 1
+            return cached
+
+        results = await self._search_places_uncached(query, place_type, max_results)
+        if results:
+            await self._cache.set(cache_key, results)
+        return results
+
+    async def _search_places_uncached(
+        self,
+        query: str,
+        place_type: str,
+        max_results: int,
+    ) -> List[Address]:
+        seen: set = set()
+        results: List[Address] = []
+
+        def _dedup_add(candidates: List[Address]) -> None:
+            for addr in candidates:
+                key = (
+                    (addr.city or "").casefold(),
+                    (addr.province or "").casefold(),
+                    (addr.country or "").casefold(),
+                )
+                if key not in seen and len(results) < max_results:
+                    seen.add(key)
+                    results.append(addr)
+
+        if place_type == "city":
+            bc_quota = max(3, max_results // 3)
+            _dedup_add((await self._bc_geocoder_city_search(query, bc_quota))[:bc_quota])
+
+        if len(results) < max_results:
+            _dedup_add(await self._nominatim_place_search(query, place_type, max_results, countrycodes="ca"))
+
+        if len(results) < max_results:
+            _dedup_add(await self._nominatim_place_search(query, place_type, max_results))
+
+        return results
+
+    async def _bc_geocoder_city_search(self, query: str, max_results: int) -> List[Address]:
+        self._metrics["requests_made"] += 1
+        self._metrics["bc_geocoder_calls"] += 1
+        params = {
+            "addressString": query,
+            "autoComplete": "true",
+            "maxResults": max_results * 3,
+            "minScore": 1,
+            "brief": "false",
+            "outputSRS": "4326",
+        }
+        if self.api_key:
+            params["apikey"] = self.api_key
+        try:
+            raw = await self._make_request(f"{self.bc_geocoder_url}/addresses.json", params)
+            addresses = self._parse_bc_geocoder_response(raw)
+        except Exception as e:
+            self._metrics["api_errors"] += 1
+            logger.error("BC Geocoder city search failed: %s", e)
+            return []
+
+        seen_cities: set = set()
+        city_results: List[Address] = []
+        for addr in addresses:
+            city = (addr.city or "").strip()
+            if not city or city.casefold() in seen_cities:
+                continue
+            seen_cities.add(city.casefold())
+            city_results.append(
+                Address(
+                    full_address=f"{city}, BC, Canada",
+                    city=city,
+                    province="British Columbia",
+                    country="Canada",
+                    latitude=addr.latitude,
+                    longitude=addr.longitude,
+                )
+            )
+        return city_results
+
+    _PLACE_TO_FEATURE = {"city": "settlement", "province": "state", "country": "country"}
+
+    async def _nominatim_place_search(
+        self,
+        query: str,
+        place_type: str,
+        max_results: int,
+        countrycodes: Optional[str] = None,
+    ) -> List[Address]:
+        feature_type = self._PLACE_TO_FEATURE.get(place_type)
+        if not feature_type:
+            return []
+        self._metrics["requests_made"] += 1
+        self._metrics["nominatim_calls"] += 1
+        params: Dict[str, Any] = {
+            "q": query,
+            "format": "json",
+            "addressdetails": 1,
+            "featureType": feature_type,
+            "limit": max_results,
+        }
+        if countrycodes:
+            params["countrycodes"] = countrycodes
+        try:
+            raw = await self._make_request(
+                f"{self.nominatim_url}/search",
+                params,
+                headers={"Accept-Language": "en"},
+            )
+            return self._parse_nominatim_place_response(
+                raw if isinstance(raw, list) else [],
+                place_type,
+            )
+        except Exception as e:
+            self._metrics["api_errors"] += 1
+            logger.error("Nominatim place search failed: %s", e)
+            return []
+
+    def _parse_nominatim_place_response(
+        self,
+        response: List[Dict[str, Any]],
+        place_type: str,
+    ) -> List[Address]:
+        addresses: List[Address] = []
+        seen: set = set()
+
+        for item in response or []:
+            details = item.get("address") or {}
+            city = (
+                details.get("city")
+                or details.get("town")
+                or details.get("village")
+                or details.get("municipality")
+                or details.get("hamlet")
+                or (item.get("name") if place_type == "city" else None)
+            )
+            province = (
+                details.get("state")
+                or details.get("province")
+                or details.get("region")
+                or (item.get("name") if place_type == "province" else None)
+            )
+            country = details.get("country") or (
+                item.get("name") if place_type == "country" else None
+            )
+
+            primary = {"city": city, "province": province, "country": country}.get(
+                place_type
+            )
+            if not primary:
+                continue
+
+            key = (
+                (city or "").casefold(),
+                (province or "").casefold(),
+                (country or "").casefold(),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+
+            try:
+                lat = float(item["lat"]) if item.get("lat") is not None else None
+                lon = float(item["lon"]) if item.get("lon") is not None else None
+            except (TypeError, ValueError):
+                lat, lon = None, None
+
+            addresses.append(
+                Address(
+                    full_address=item.get("display_name") or "",
+                    city=city,
+                    province=province,
+                    country=country,
+                    latitude=lat,
+                    longitude=lon,
+                )
+            )
+
+        return addresses
+
     async def clear_cache(self):
         """Clear the internal cache."""
         await self._cache.clear()

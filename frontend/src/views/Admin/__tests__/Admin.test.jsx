@@ -1,8 +1,8 @@
-import { render } from '@testing-library/react'
 import { vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { faSpaceShuttle } from '@fortawesome/free-solid-svg-icons'
 import { Admin } from '../Admin'
+import { test } from '@/tests/utils/fixtures'
 
 const mockNavigate = vi.fn()
 
@@ -39,29 +39,31 @@ describe('Admin Component', () => {
   })
 
   describe('Component Rendering', () => {
-    it('renders without crashing', () => {
+    test('renders without crashing', ({ render }) => {
       const { container } = render(<Admin />)
       expect(container.querySelector('[data-test="bc-button"]')).toBeTruthy()
     })
 
-    it('renders button and typography components', () => {
+    test('renders button and typography components', ({ render }) => {
       const { container } = render(<Admin />)
-      
+
       expect(container.querySelector('[data-test="bc-button"]')).toBeTruthy()
-      expect(container.querySelector('[data-test="bc-typography"]')).toBeTruthy()
+      expect(
+        container.querySelector('[data-test="bc-typography"]')
+      ).toBeTruthy()
     })
 
-    it('renders button with admin settings text', () => {
+    test('renders button with admin settings text', ({ render }) => {
       const { container } = render(<Admin />)
-      
+
       const typography = container.querySelector('[data-test="bc-typography"]')
       expect(typography).toBeTruthy()
-      expect(typography.textContent).toBe('Admin Settings')
+      expect(typography.textContent).toBe('Admin settings')
     })
 
-    it('renders icon within button', () => {
+    test('renders icon within button', ({ render }) => {
       const { container } = render(<Admin />)
-      
+
       const button = container.querySelector('[data-test="bc-button"]')
       const icon = button.querySelector('[data-test="font-awesome-icon"]')
       expect(icon).toBeTruthy()
@@ -69,14 +71,16 @@ describe('Admin Component', () => {
   })
 
   describe('User Interactions', () => {
-    it('calls navigate with /admin/users when button is clicked', async () => {
+    test('calls navigate with /admin/users when button is clicked', async ({
+      render
+    }) => {
       const user = userEvent.setup()
-      
+
       render(<Admin />)
-      
+
       const button = document.querySelector('[data-test="bc-button"]')
       await user.click(button)
-      
+
       expect(mockNavigate).toHaveBeenCalledTimes(1)
       expect(mockNavigate).toHaveBeenCalledWith('/admin/users')
     })

@@ -13,17 +13,17 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
 FUEL_CODE_BULLETIN_EXPORT_COLUMNS = [
-    SpreadsheetColumn("Fuel Code", "text"),
+    SpreadsheetColumn("Fuel code", "text"),
     SpreadsheetColumn("Fuel", "text"),
     SpreadsheetColumn("Company", "text"),
-    SpreadsheetColumn("Carbon Intensity (gCO2e/MJ)", "float"),
-    SpreadsheetColumn("Effective Date", "date"),
-    SpreadsheetColumn("Expiry Date", "date"),
+    SpreadsheetColumn("Carbon intensity (gCO2e/MJ)", "float"),
+    SpreadsheetColumn("Effective date", "date"),
+    SpreadsheetColumn("Expiry date", "date"),
 ]
 
 FUEL_CODE_BULLETIN_SHEET_NAMES = {
-    "current": "Current Fuel Codes",
-    "archived": "Archived Fuel Codes",
+    "current": "Current fuel codes",
+    "archived": "Archived fuel codes",
 }
 
 FUEL_CODE_BULLETIN_FILE_PREFIXES = {

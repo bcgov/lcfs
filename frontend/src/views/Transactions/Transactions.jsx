@@ -503,7 +503,7 @@ export const Transactions = () => {
   // Add credit trading market tab if eligible
   if (showCreditTradingTab) {
     tabs.push({
-      label: t('txn:creditTradingMarketTab', 'Credit Trading Market'),
+      label: t('txn:creditTradingMarketTab', 'Credit trading market'),
       content: (
         <BCBox mt={0}>
           <CreditTradingMarket />

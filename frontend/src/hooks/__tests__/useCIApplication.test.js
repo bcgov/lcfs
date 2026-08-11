@@ -5,6 +5,7 @@ import { test } from '@/tests/utils/fixtures'
 import {
   useAssignCIApplicationAnalyst,
   useCIApplicationOptions,
+  useCIFacilityLocationSearch,
   useCreateCIApplication,
   useDeleteCIApplication,
   useGetCIApplication,
@@ -76,6 +77,39 @@ describe('useCIApplication hooks', () => {
       const { result } = renderHook(() => useCIApplicationOptions(), [query])
       await waitFor(() => expect(result.current.isError).toBe(true))
       expect(result.current.error).toBe(err)
+    })
+  })
+
+  describe('useCIFacilityLocationSearch', () => {
+    test('GETs /ci-applications/location-search with city param', async ({
+      renderHook,
+      query
+    }) => {
+      mockGet.mockResolvedValue({ data: ['Vancouver, BC, Canada'] })
+
+      const { result } = renderHook(
+        () => useCIFacilityLocationSearch({ city: 'Van' }),
+        [query]
+      )
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+      expect(result.current.data).toEqual(['Vancouver, BC, Canada'])
+      expect(mockGet).toHaveBeenCalledWith(
+        '/ci-applications/location-search?city=Van'
+      )
+    })
+
+    test('does not fetch when no search term is provided', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(
+        () => useCIFacilityLocationSearch({}),
+        [query]
+      )
+
+      expect(result.current.fetchStatus).toBe('idle')
+      expect(mockGet).not.toHaveBeenCalled()
     })
   })
 

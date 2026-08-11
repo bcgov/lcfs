@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { screen } from '@testing-library/react'
 
 import {
   ciApplicationsColDefs,
@@ -6,6 +7,7 @@ import {
   getVerificationColumnValue,
   getResumeStep
 } from '@/views/CarbonIntensity/_schema'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/hooks/useCIApplication', () => ({
   useCIApplicationStatuses: () => ({ data: [] }),
@@ -88,7 +90,13 @@ describe('ciApplicationsColDefs (IDIR)', () => {
     expect(status.sortable).toBe(false)
   })
 
-  it('displays Changes Requested when supplemental pathway edits are enabled', () => {
+  test('displays sentence-case copy when supplemental pathway edits are enabled', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const cols = ciApplicationsColDefs(t, { isGovernment: true })
     const status = cols.find((c) => c.field === 'status.status')
     const rendererElement = status.cellRenderer({
@@ -98,7 +106,8 @@ describe('ciApplicationsColDefs (IDIR)', () => {
       }
     })
 
-    expect(rendererElement.props.data.status.status).toBe('Changes Requested')
+    render(rendererElement, [query, theme, localization, router])
+    expect(screen.getByText('Changes requested')).toBeInTheDocument()
   })
 
   it('Assigned analyst / Last comment columns are non-sortable display pills', () => {

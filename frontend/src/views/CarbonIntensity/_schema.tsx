@@ -9,7 +9,10 @@ import {
   useCIApplicationStatuses,
   useGetCIApplicationAnalysts
 } from '@/hooks/useCIApplication'
-import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
+import {
+  CIApplicationStatusRenderer,
+  createStatusRenderer
+} from '@/utils/grid/cellRenderers'
 import { CIAssignedAnalystCell } from './components/CIAssignedAnalystCell'
 
 const ANALYST_CHIP_SX = {
@@ -93,7 +96,12 @@ const productionFacilityLocation = (data) => {
   return cityProvince || country
 }
 
-const CI_APPLICATION_CHANGES_REQUESTED_STATUS = 'Changes Requested'
+const CI_APPLICATION_CHANGES_REQUESTED_LABEL = 'Changes requested'
+const CIApplicationChangesRequestedRenderer = createStatusRenderer(
+  { [CI_APPLICATION_CHANGES_REQUESTED_LABEL]: 'warning' },
+  { statusField: 'status.status' },
+  CI_APPLICATION_CHANGES_REQUESTED_LABEL
+)
 
 const CIApplicationListStatusRenderer = (props) => {
   const supplementalEditEnabled =
@@ -104,18 +112,7 @@ const CIApplicationListStatusRenderer = (props) => {
     return <CIApplicationStatusRenderer {...props} />
   }
 
-  return (
-    <CIApplicationStatusRenderer
-      {...props}
-      data={{
-        ...props.data,
-        status: {
-          ...props.data?.status,
-          status: CI_APPLICATION_CHANGES_REQUESTED_STATUS
-        }
-      }}
-    />
-  )
+  return <CIApplicationChangesRequestedRenderer {...props} />
 }
 
 CIApplicationListStatusRenderer.filterPillRenderer =

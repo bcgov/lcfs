@@ -9,7 +9,7 @@ vi.mock('react-i18next', () => ({
     t: (key) => {
       const translations = {
         'chargingEquipment:submitSelected': 'Submit Selected',
-        'chargingEquipment:setToDecommissioned': 'Set to Decommissioned'
+        'chargingEquipment:setToDecommissioned': 'Set to decommissioned'
       }
       return translations[key] || key
     }
@@ -92,7 +92,7 @@ describe('BulkActionButtons', () => {
     )
 
     const decommissionButton = screen.getByRole('button', {
-      name: /Set to Decommissioned \(2\)/
+      name: /Set to decommissioned \(2\)/
     })
     expect(decommissionButton).toBeInTheDocument()
 
@@ -122,7 +122,7 @@ describe('BulkActionButtons', () => {
       screen.getByRole('button', { name: /Submit Selected \(1\)/ })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /Set to Decommissioned \(1\)/ })
+      screen.getByRole('button', { name: /Set to decommissioned \(1\)/ })
     ).toBeInTheDocument()
   })
 
@@ -176,7 +176,7 @@ describe('BulkActionButtons', () => {
 
     // Should only count Validated statuses
     expect(
-      screen.getByRole('button', { name: /Set to Decommissioned \(3\)/ })
+      screen.getByRole('button', { name: /Set to decommissioned \(3\)/ })
     ).toBeInTheDocument()
   })
 })

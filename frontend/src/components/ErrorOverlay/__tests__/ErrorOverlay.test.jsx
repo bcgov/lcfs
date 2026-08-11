@@ -70,7 +70,7 @@ vi.mock('@/routes', () => ({
 describe('ErrorOverlay', () => {
   const mockT = vi.fn((key) => {
     const translations = {
-      'internalServerError.title': 'Internal Server Error',
+      'internalServerError.title': 'Internal server error',
       'internalServerError.message': 'Sorry, something went wrong on our end.',
       'errorPage.genericMessage': 'An unexpected error occurred.',
       'errorPage.referenceNumberLabel': 'Reference number',
@@ -126,7 +126,7 @@ describe('ErrorOverlay', () => {
 
       render(<ErrorOverlay />)
       expect(screen.getByText(/Error 500/i)).toBeInTheDocument()
-      expect(screen.getByText('Internal Server Error')).toBeInTheDocument()
+      expect(screen.getByText('Internal server error')).toBeInTheDocument()
     })
 
     it('should render generic error message for unknown error codes', () => {
@@ -160,7 +160,7 @@ describe('ErrorOverlay', () => {
       })
 
       render(<ErrorOverlay />)
-      expect(screen.getByText('Internal Server Error')).toBeInTheDocument()
+      expect(screen.getByText('Internal server error')).toBeInTheDocument()
     })
 
     it('should not display title when titleKey is null', () => {
@@ -341,7 +341,7 @@ describe('ErrorOverlay', () => {
 
       render(<ErrorOverlay />)
       const modalContent = screen
-        .getByText('Internal Server Error')
+        .getByText('Internal server error')
         .closest('div')
 
       fireEvent.click(modalContent)
@@ -425,7 +425,7 @@ describe('ErrorOverlay', () => {
       })
 
       render(<ErrorOverlay />)
-      const modalContent = screen.getByText('Internal Server Error')
+      const modalContent = screen.getByText('Internal server error')
 
       expect(modalContent).toBeInTheDocument()
       expect(modalContent.closest('div')).toBeInTheDocument()
@@ -520,7 +520,7 @@ describe('ErrorOverlay', () => {
       render(<ErrorOverlay />)
 
       expect(screen.getByText(/Error 500/i)).toBeInTheDocument()
-      expect(screen.getByText('Internal Server Error')).toBeInTheDocument()
+      expect(screen.getByText('Internal server error')).toBeInTheDocument()
       expect(
         screen.getByText('Sorry, something went wrong on our end.')
       ).toBeInTheDocument()
@@ -545,7 +545,7 @@ describe('ErrorOverlay', () => {
       render(<ErrorOverlay />)
 
       expect(screen.getByText(/Error 500/i)).toBeInTheDocument()
-      expect(screen.getByText('Internal Server Error')).toBeInTheDocument()
+      expect(screen.getByText('Internal server error')).toBeInTheDocument()
       expect(screen.queryByText('Reference number')).not.toBeInTheDocument()
       expect(screen.getByTestId('error-overlay-close-btn')).toBeInTheDocument()
     })

@@ -30,7 +30,7 @@ export const BulkProcessingModals = ({
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Validate Equipment</DialogTitle>
+        <DialogTitle>Validate equipment</DialogTitle>
         <DialogContent>
           <Box py={2}>
             <BCTypography variant="body1" gutterBottom>
@@ -62,7 +62,7 @@ export const BulkProcessingModals = ({
               ) : null
             }
           >
-            {isValidating ? 'Validating...' : 'Validate Equipment'}
+            {isValidating ? 'Validating...' : 'Validate equipment'}
           </BCButton>
         </DialogActions>
       </Dialog>
@@ -74,7 +74,7 @@ export const BulkProcessingModals = ({
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Return to Draft</DialogTitle>
+        <DialogTitle>Return to draft</DialogTitle>
         <DialogContent>
           <Box py={2}>
             <BCTypography variant="body1" gutterBottom>
@@ -106,7 +106,7 @@ export const BulkProcessingModals = ({
               ) : null
             }
           >
-            {isReturningToDraft ? 'Returning...' : 'Return to Draft'}
+            {isReturningToDraft ? 'Returning...' : 'Return to draft'}
           </BCButton>
         </DialogActions>
       </Dialog>

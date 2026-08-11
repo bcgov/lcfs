@@ -128,6 +128,7 @@ export const AutocompleteCellEditor = forwardRef(
       shouldUseInputState ? getLabel(value) : ''
     )
     const [isOpen, setIsOpen] = useState(false)
+    const [highlightedOption, setHighlightedOption] = useState(null)
     const inputRef = useRef(null)
 
     const getMultipleValue = () => {
@@ -151,6 +152,32 @@ export const AutocompleteCellEditor = forwardRef(
 
     const getCurrentValue = () =>
       multiple ? getMultipleValue() : getSingleValue()
+
+    const commitHighlightedOption = (event) => {
+      if (!highlightedOption) return false
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      if (multiple) {
+        const currentSelection = Array.isArray(selected) ? selected : []
+        const alreadySelected = currentSelection.some((option) =>
+          isOptionEqualToValue(option, highlightedOption)
+        )
+        const nextSelection = alreadySelected
+          ? currentSelection
+          : [...currentSelection, highlightedOption]
+        handleChange(event, nextSelection)
+      } else {
+        handleChange(event, highlightedOption)
+      }
+
+      setHighlightedOption(null)
+      setIsOpen(false)
+      api?.stopEditing?.()
+      navigateToAdjacentCell('next')
+      return true
+    }
 
     useImperativeHandle(ref, () => ({
       getValue: () => getCurrentValue(),
@@ -190,19 +217,28 @@ export const AutocompleteCellEditor = forwardRef(
       }
     }
 
-    const navigateToNextCell = () => {
-      const focusedCell = api.getFocusedCell()
-      if (focusedCell) {
-        api.startEditingCell({
-          rowIndex: focusedCell.rowIndex,
-          colKey: focusedCell.column.getId()
-        })
+    const navigateToAdjacentCell = (direction = 'next') => {
+      if (direction === 'previous') {
+        api.tabToPreviousCell?.()
+      } else {
+        api.tabToNextCell?.()
       }
+
+      setTimeout(() => {
+        const focusedCell = api.getFocusedCell?.()
+        if (focusedCell) {
+          api.startEditingCell?.({
+            rowIndex: focusedCell.rowIndex,
+            colKey: focusedCell.column.getId()
+          })
+        }
+      }, 0)
     }
 
     const handleKeyDown = (event) => {
       onKeyDownCapture?.(event)
       if (event.key === 'Enter') {
+        if (commitHighlightedOption(event)) return
         event.preventDefault()
         setIsOpen((o) => !o)
         return
@@ -212,27 +248,9 @@ export const AutocompleteCellEditor = forwardRef(
         onValueChange?.(getCurrentValue())
         api.stopEditing()
         if (event.shiftKey) {
-          api.tabToPreviousCell()
-          setTimeout(() => {
-            const focusedCell = api.getFocusedCell()
-            if (focusedCell) {
-              api.startEditingCell({
-                rowIndex: focusedCell.rowIndex,
-                colKey: focusedCell.column.getId()
-              })
-            }
-          }, 0)
+          navigateToAdjacentCell('previous')
         } else {
-          api.tabToNextCell()
-          setTimeout(() => {
-            const focusedCell = api.getFocusedCell()
-            if (focusedCell) {
-              api.startEditingCell({
-                rowIndex: focusedCell.rowIndex,
-                colKey: focusedCell.column.getId()
-              })
-            }
-          }, 0)
+          navigateToAdjacentCell('next')
         }
       }
     }
@@ -276,10 +294,14 @@ export const AutocompleteCellEditor = forwardRef(
           }}
           open={isOpen}
           onOpen={() => setIsOpen(true)}
-          onClose={() => setIsOpen(false)}
+          onClose={() => {
+            setIsOpen(false)
+            setHighlightedOption(null)
+          }}
           openOnFocus={openOnFocus}
           value={selected}
           onChange={handleChange}
+          onHighlightChange={(_, option) => setHighlightedOption(option)}
           multiple={multiple}
           disableCloseOnSelect={disableCloseOnSelect}
           limitTags={limitTags}

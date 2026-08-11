@@ -30,7 +30,7 @@ vi.mock('react-i18next', () => ({
       const translations = {
         'txn:title': 'Transactions',
         'txn:transactionsTab': 'Transactions',
-        'txn:creditTradingMarketTab': 'Credit Trading Market',
+        'txn:creditTradingMarketTab': 'Credit trading market',
         'txn:creditTradingMarketTitle': 'Credit Trading Market',
         'txn:newTransferBtn': 'New Transfer',
         'txn:newTransactionBtn': 'New Transaction',
@@ -585,7 +585,7 @@ describe('Transactions Component', () => {
       )
 
       expect(screen.getAllByText('Transactions')).toHaveLength(2)
-      expect(screen.getByText('Credit Trading Market')).toBeInTheDocument()
+      expect(screen.getByText('Credit trading market')).toBeInTheDocument()
     })
 
     it('should handle tab switching', () => {
@@ -599,7 +599,7 @@ describe('Transactions Component', () => {
         </TestWrapper>
       )
 
-      const creditTradingTab = screen.getByText('Credit Trading Market')
+      const creditTradingTab = screen.getByText('Credit trading market')
       fireEvent.click(creditTradingTab)
       expect(mockNavigate).toHaveBeenCalledWith(
         '/transactions/credit-trading-market'

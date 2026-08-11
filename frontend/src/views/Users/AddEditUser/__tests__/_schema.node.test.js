@@ -39,7 +39,7 @@ describe('adminRoleOptions', () => {
     const opts = adminRoleOptions(t)
     expect(opts).toHaveLength(2)
     expect(opts[0].label).toBe(roles.administrator)
-    expect(opts[1].label).toBe('System Admin')
+    expect(opts[1].label).toBe('System admin')
   })
 
   it('System Admin value lowercases to "system admin"', () => {
