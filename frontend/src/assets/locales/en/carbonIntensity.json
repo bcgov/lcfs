@@ -125,6 +125,7 @@
     "consultantEmailLabel": "Email address",
     "submit": "Submit application",
     "submitSuccess": "Application submitted.",
+    "autoSaveSuccess": "Consultant details saved.",
     "declarations": {
       "requiredSuffix": "(required)",
       "signingAuthorityRequired": "A Signing Authority role is required to complete the declarations and submit the application.",
