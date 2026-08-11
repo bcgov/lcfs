@@ -27,7 +27,8 @@ import {
   useSubmitCIApplication,
   useUpdateCIApplicationStep1,
   useUpdateCIApplicationStep2,
-  useUpdateCIApplicationStep3
+  useUpdateCIApplicationStep3,
+  useUpdateCIApplicationStep4
 } from '@/hooks/useCIApplication'
 
 import {
@@ -72,7 +73,7 @@ const EditViewCIApplicationBase = () => {
   const { ciApplicationId } = useParams()
   const isAdd = !ciApplicationId
 
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
 
   const { data: ciApplication, isLoading: isLoadingApplication } =
     useGetCIApplication(ciApplicationId)
@@ -131,6 +132,8 @@ const EditViewCIApplicationBase = () => {
     useUpdateCIApplicationStep2(ciApplicationId)
   const { mutateAsync: updateStep3, isPending: isUpdatingStep3 } =
     useUpdateCIApplicationStep3(ciApplicationId)
+  const { mutateAsync: updateStep4, isPending: isUpdatingStep4 } =
+    useUpdateCIApplicationStep4(ciApplicationId)
   const { mutateAsync: submitApplication, isPending: isSubmitting } =
     useSubmitCIApplication(ciApplicationId)
   const { mutateAsync: deleteDraft, isPending: isDeleting } =
@@ -141,9 +144,9 @@ const EditViewCIApplicationBase = () => {
     isUpdating ||
     isUpdatingStep2 ||
     isUpdatingStep3 ||
+    isUpdatingStep4 ||
     isSubmitting
 
-  const { hasAnyRole } = useCurrentUser()
   const isGovernment = !!hasAnyRole?.(
     roles.government,
     roles.analyst,
@@ -208,21 +211,24 @@ const EditViewCIApplicationBase = () => {
     [submitApplication, goToStep, t]
   )
 
-  const openSubmitConfirmation = useCallback(
-    (payload) => {
-      setModalData({
-        primaryButtonAction: () => handleSubmitApplication(payload),
-        primaryButtonText: t('carbonIntensity:step4.submit'),
-        secondaryButtonText: t('common:cancelBtn'),
-        title: t('carbonIntensity:step4.submitConfirmTitle'),
-        content: (
-          <BCTypography variant="body1">
-            {t('carbonIntensity:step4.submitConfirmText')}
-          </BCTypography>
-        )
-      })
+  // Step 4 consultant block auto-saves on blur (#4772). Unlike Steps 1-3 this
+  // must not advance the wizard — the applicant is still on Step 4.
+  const handleStep4AutoSave = useCallback(
+    async (payload) => {
+      try {
+        await updateStep4(payload)
+        alertRef.current?.triggerAlert?.({
+          message: t('carbonIntensity:step4.autoSaveSuccess'),
+          severity: 'success'
+        })
+      } catch (err) {
+        alertRef.current?.triggerAlert?.({
+          message: getApiError(err, 'Failed to save consultant details.'),
+          severity: 'error'
+        })
+      }
     },
-    [handleSubmitApplication, t]
+    [updateStep4, t]
   )
 
   const handleStep3Save = useCallback(
@@ -369,6 +375,7 @@ const EditViewCIApplicationBase = () => {
     !isGovernment &&
     ciApplication?.status?.status === 'Submitted' &&
     !!ciApplication?.documentUploadEnabled
+  const hasSigningAuthority = !!hasRoles?.(roles.signing_authority)
 
   // Hooks must run on every render — keep this above the loading-state
   // early return so hook order stays stable across renders.
@@ -426,10 +433,12 @@ const EditViewCIApplicationBase = () => {
       <SignAndSubmitStep
         ciApplication={ciApplication}
         currentUser={currentUser}
-        onSave={openSubmitConfirmation}
+        onSave={handleSubmitApplication}
+        onAutoSave={handleStep4AutoSave}
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
         readOnly={!isDraft}
+        hasSigningAuthority={hasSigningAuthority}
       />
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step4" />
