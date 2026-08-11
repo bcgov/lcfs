@@ -147,6 +147,7 @@ class TestFuelCodeEmailTemplates:
         # Templates that are intentionally reused across multiple notification types
         allowed_shared_templates = {
             "government_notification.html",  # Shared by all government notification types
+            "ci_application_notification.html",  # Shared by all CI application notification types
         }
         
         # Filter out intentionally shared templates

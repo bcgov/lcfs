@@ -71,10 +71,10 @@ describe('FuelCodeCard Component', () => {
 
     render(<FuelCodeCard />, { wrapper })
 
-    expect(screen.getByText('Fuel Codes')).toBeInTheDocument()
+    expect(screen.getByText('Fuel codes')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
     expect(screen.getByText(/There are/)).toBeInTheDocument()
-    expect(screen.getByText(/Fuel Code\(s\) in progress/)).toBeInTheDocument()
+    expect(screen.getByText(/Fuel code\(s\) in progress/)).toBeInTheDocument()
   })
 
   it('navigates to fuel codes page on link click with correct filter', () => {
@@ -86,7 +86,7 @@ describe('FuelCodeCard Component', () => {
     render(<FuelCodeCard />, { wrapper })
 
     // Find and click the link
-    const link = screen.getByText(/Fuel Code\(s\) in progress/)
+    const link = screen.getByText(/Fuel code\(s\) in progress/)
     fireEvent.click(link)
 
     // Check that sessionStorage was updated with the correct filter

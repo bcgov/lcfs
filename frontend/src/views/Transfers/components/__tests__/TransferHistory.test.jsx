@@ -27,7 +27,7 @@ vi.mock('react-i18next', () => {
       'Recommended recording transfer',
     'transfer:transferHistory.RecommendedRefuse':
       'Recommended refusing transfer',
-    'transfer:txnHistory': 'Transaction History',
+    'transfer:txnHistory': 'Transaction history',
     'transfer:director': 'Director',
     underAct: 'Low Carbon Fuel Standard Act',
     govOrg: 'Government of BC'
@@ -561,7 +561,7 @@ describe('TransferHistory Component', () => {
     it('renders transaction history title', () => {
       render(<TransferHistory transferHistory={[]} />, { wrapper })
 
-      expect(screen.getByText('Transaction History')).toBeInTheDocument()
+      expect(screen.getByText('Transaction history')).toBeInTheDocument()
     })
 
     it('renders list structure', () => {

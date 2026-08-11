@@ -28,7 +28,7 @@
     "notificationSettings": "Loading notification settings..."
   },
   "aria": {
-    "notificationsTabs": "Notifications Tabs"
+    "notificationsTabs": "Notifications tabs"
   },
   "bceid": {
     "categories": {
@@ -80,6 +80,12 @@
         "title": "Fuel codes",
         "directorReturned": "Director returned to analyst",
         "directorApproval": "Director approved"
+      },
+      "ciApplications": {
+        "title": "CI applications",
+        "directorApproval": "Director approved",
+        "directorReturned": "Director returned to analyst",
+        "applicantActivity": "CI application submitted, additional information provided or comment received"
       }
     }
   },
@@ -120,8 +126,8 @@
         "title": "Compliance & supplemental reports",
         "managerRecommendation": "Compliance manager recommendation"
       },
-      "fuelCodes": {
-        "title": "Fuel codes",
+      "ciApplications": {
+        "title": "CI applications",
         "analystRecommendation": "Analyst recommendation"
       }
     }
