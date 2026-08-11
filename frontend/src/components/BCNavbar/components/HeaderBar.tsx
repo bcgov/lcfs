@@ -1,5 +1,6 @@
 import React from 'react'
-import { Icon, Toolbar } from '@mui/material'
+import Icon from '@mui/material/Icon'
+import Toolbar from '@mui/material/Toolbar'
 import { bindTrigger } from 'material-ui-popup-state'
 import type { PopupState } from 'material-ui-popup-state/hooks'
 import BCBox from '@/components/BCBox'
@@ -80,9 +81,7 @@ const HeaderBar = ({
         sx={{ cursor: 'pointer' }}
         {...bindTrigger(popupState)}
       >
-        <Icon fontSize="inherit">
-          {popupState.isOpen ? 'close' : 'menu'}
-        </Icon>
+        <Icon fontSize="inherit">{popupState.isOpen ? 'close' : 'menu'}</Icon>
       </BCBox>
     </Toolbar>
   )

@@ -80,9 +80,12 @@ vi.mock('@/constants/config', () => ({
   isFeatureEnabled: vi.fn(() => true)
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  Assignment: () => null,
-  FileDownload: () => null
+vi.mock('@mui/icons-material/Assignment', () => ({
+  default: () => null
+}))
+
+vi.mock('@mui/icons-material/FileDownload', () => ({
+  default: () => null
 }))
 
 // Mock components

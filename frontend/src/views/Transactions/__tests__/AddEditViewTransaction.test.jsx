@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { AddEditViewTransaction } from '../AddEditViewTransaction'
 import { useTranslation } from 'react-i18next'
@@ -38,14 +38,9 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
-// Partial mock for @mui/material to retain ThemeProvider
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material')
-  return {
-    ...actual,
-    useMediaQuery: vi.fn()
-  }
-})
+vi.mock('@mui/material/useMediaQuery', () => ({
+  default: vi.fn()
+}))
 
 // Partial mock for react-router-dom to retain MemoryRouter
 vi.mock('react-router-dom', async () => {
@@ -190,10 +185,11 @@ vi.mock('react-hook-form', () => ({
     register: vi.fn(),
     control: {}
   })),
-  Controller: ({ render, name }) => render({
-    field: { value: '', onChange: vi.fn() },
-    fieldState: { error: null }
-  })
+  Controller: ({ render, name }) =>
+    render({
+      field: { value: '', onChange: vi.fn() },
+      fieldState: { error: null }
+    })
 }))
 
 const renderComponent = (
@@ -240,7 +236,6 @@ const renderComponent = (
     isLoading: false
   })
 
-
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
@@ -268,7 +263,6 @@ describe('AddEditViewTransaction Component Tests', () => {
     useInitiativeAgreement.mockReturnValue({ data: null })
     renderComponent()
   })
-
 
   it('displays an error message when there is a loading error', () => {
     useInitiativeAgreement.mockReturnValue({
@@ -625,7 +619,11 @@ describe('AddEditViewTransaction Component Tests', () => {
       })
 
       renderComponent('view', ADMIN_ADJUSTMENT)
-      expect(screen.getByText('administrativeAdjustment:administrativeAdjustment AA123')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'administrativeAdjustment:administrativeAdjustment AA123'
+        )
+      ).toBeInTheDocument()
     })
 
     it('should format initiative agreement transaction ID correctly', () => {
@@ -647,7 +645,9 @@ describe('AddEditViewTransaction Component Tests', () => {
       })
 
       renderComponent('view', INITIATIVE_AGREEMENT)
-      expect(screen.getByText('initiativeAgreement:initiativeAgreement IA456')).toBeInTheDocument()
+      expect(
+        screen.getByText('initiativeAgreement:initiativeAgreement IA456')
+      ).toBeInTheDocument()
     })
   })
 
@@ -676,8 +676,4 @@ describe('AddEditViewTransaction Component Tests', () => {
       })
     })
   })
-
-
-
-
 })

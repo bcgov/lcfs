@@ -1,14 +1,13 @@
-import { Edit, FileDownloadOutlined } from '@mui/icons-material'
-import {
-  Box,
-  Divider,
-  FormControlLabel,
-  Grid,
-  IconButton,
-  Stack,
-  Switch,
-  Tooltip
-} from '@mui/material'
+import Edit from '@mui/icons-material/Edit'
+import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined'
+import Box from '@mui/material/Box'
+import Divider from '@mui/material/Divider'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Grid from '@mui/material/Grid'
+import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
+import Switch from '@mui/material/Switch'
+import Tooltip from '@mui/material/Tooltip'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -89,10 +88,14 @@ const toPathwayChangelogRow = (snapshot = {}) => ({
   fuelTypeId: snapshot.fuel_type_id,
   feedstock: snapshot.feedstock,
   feedstockRegion: snapshot.feedstock_region,
-  feedstockTransportMode: normalizeTransportModes(snapshot.feedstock_transport_mode),
+  feedstockTransportMode: normalizeTransportModes(
+    snapshot.feedstock_transport_mode
+  ),
   feedstockTransportDistance: snapshot.feedstock_transport_distance,
   coproducts: snapshot.coproducts,
-  finishedFuelTransportMode: normalizeTransportModes(snapshot.finished_fuel_transport_mode),
+  finishedFuelTransportMode: normalizeTransportModes(
+    snapshot.finished_fuel_transport_mode
+  ),
   finishedFuelTransportDistance: snapshot.finished_fuel_transport_distance
 })
 

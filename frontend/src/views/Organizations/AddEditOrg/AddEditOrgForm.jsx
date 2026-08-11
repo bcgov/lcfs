@@ -6,20 +6,18 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { yupResolver } from '@hookform/resolvers/yup'
-import {
-  Box,
-  Checkbox,
-  FormControl,
-  FormControlLabel,
-  FormLabel,
-  Grid,
-  InputLabel,
-  Paper,
-  Radio,
-  RadioGroup,
-  TextField
-} from '@mui/material'
-import { Close as CloseIcon } from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import Checkbox from '@mui/material/Checkbox'
+import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import FormLabel from '@mui/material/FormLabel'
+import Grid from '@mui/material/Grid'
+import InputLabel from '@mui/material/InputLabel'
+import Paper from '@mui/material/Paper'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import TextField from '@mui/material/TextField'
+import CloseIcon from '@mui/icons-material/Close'
 import BCTypography from '@/components/BCTypography'
 import { useMutation } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
@@ -35,7 +33,7 @@ import Loading from '@/components/Loading'
 import { ROUTES } from '@/routes/routes'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
-import { AddressAutocomplete } from '@/components/BCForm/index.js'
+import { AddressAutocomplete } from '@/components/BCForm/AddressAutocomplete'
 import colors from '@/themes/base/colors'
 import { getCurrentEarlyIssuanceYear } from '@/constants/common'
 import ReferenceCompareBox from './ReferenceCompareBox'
@@ -417,7 +415,10 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         'orgHeadOfficePostalCodeZipCode',
         watch('orgPostalCodeZipCode')
       )
-      setValueAndTriggerValidation('orgHeadOfficeProvince', watch('orgProvince'))
+      setValueAndTriggerValidation(
+        'orgHeadOfficeProvince',
+        watch('orgProvince')
+      )
       setValueAndTriggerValidation('orgHeadOfficeCountry', watch('orgCountry'))
     } else {
       if (watch('orgHeadOfficeStreetAddress') === orgStreetAddress) {

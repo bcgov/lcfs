@@ -1,15 +1,14 @@
 import React, { useMemo, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  FormControl,
-  MenuItem,
-  Select,
-  Stack,
-  Typography,
-  IconButton,
-  Box
-} from '@mui/material'
-import { ChevronLeft, ChevronRight } from '@mui/icons-material'
+import FormControl from '@mui/material/FormControl'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
+import Stack from '@mui/material/Stack'
+import Typography from '@mui/material/Typography'
+import IconButton from '@mui/material/IconButton'
+import Box from '@mui/material/Box'
+import ChevronLeft from '@mui/icons-material/ChevronLeft'
+import ChevronRight from '@mui/icons-material/ChevronRight'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
@@ -147,8 +146,8 @@ export const LookupTableView = () => {
           <BCTypography
             variant="h4"
             fontWeight="bold"
-            sx={{ 
-              minWidth: '80px', 
+            sx={{
+              minWidth: '80px',
               textAlign: 'center',
               color: '#003366'
             }}

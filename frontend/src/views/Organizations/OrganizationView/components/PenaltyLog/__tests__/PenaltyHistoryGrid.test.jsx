@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { PenaltyHistoryGrid } from '../PenaltyHistoryGrid'
 
@@ -81,7 +81,9 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock Role component
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => <div data-testid="role-wrapper">{children}</div>
+  Role: ({ children, roles }) => (
+    <div data-testid="role-wrapper">{children}</div>
+  )
 }))
 
 // Mock ClearFiltersButton
@@ -125,7 +127,9 @@ describe('PenaltyHistoryGrid - Button Label', () => {
   it('should render the button with correct label "Add/Edit discretionary penalties"', () => {
     renderComponent()
 
-    expect(screen.getByText('Add/Edit discretionary penalties')).toBeInTheDocument()
+    expect(
+      screen.getByText('Add/Edit discretionary penalties')
+    ).toBeInTheDocument()
   })
 
   it('should use the translation key "org:penaltyLog.addPenaltyBtn"', () => {
@@ -141,7 +145,9 @@ describe('PenaltyHistoryGrid - Button Label', () => {
     expect(button).toBeInTheDocument()
     fireEvent.click(button)
 
-    expect(mockNavigate).toHaveBeenCalledWith('/organizations/456/penalty-log/manage')
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/organizations/456/penalty-log/manage'
+    )
   })
 
   it('should not navigate if organizationId is not provided', () => {
@@ -260,11 +266,16 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   }
 
   it('should handle empty penalty logs', async () => {
-    const { useOrganizationPenaltyLogs } = await import('@/hooks/useOrganization')
+    const { useOrganizationPenaltyLogs } = await import(
+      '@/hooks/useOrganization'
+    )
     const mockHook = vi.mocked(useOrganizationPenaltyLogs)
 
     mockHook.mockReturnValue({
-      data: { penaltyLogs: [], pagination: { total: 0, page: 1, size: 10, totalPages: 0 } },
+      data: {
+        penaltyLogs: [],
+        pagination: { total: 0, page: 1, size: 10, totalPages: 0 }
+      },
       isLoading: false,
       refetch: vi.fn()
     })
@@ -276,7 +287,9 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   })
 
   it('should handle loading state', async () => {
-    const { useOrganizationPenaltyLogs } = await import('@/hooks/useOrganization')
+    const { useOrganizationPenaltyLogs } = await import(
+      '@/hooks/useOrganization'
+    )
     const mockHook = vi.mocked(useOrganizationPenaltyLogs)
 
     mockHook.mockReturnValue({

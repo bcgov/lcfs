@@ -4,13 +4,11 @@ import BCTypography from '@/components/BCTypography'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
-import {
-  FormControl,
-  MenuItem,
-  Select,
-  TextField,
-  InputAdornment
-} from '@mui/material'
+import FormControl from '@mui/material/FormControl'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
+import TextField from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'

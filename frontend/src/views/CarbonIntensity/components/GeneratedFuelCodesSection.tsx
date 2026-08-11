@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Box, Stack } from '@mui/material'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
 
 import BCTypography from '@/components/BCTypography'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
@@ -37,13 +38,16 @@ const getValidationFields = (row: any) =>
   )
 
 const toErrorMap = (rows: any[]) =>
-  rows.reduce((acc, row) => {
-    const rowErrors = getValidationFields(row)
-    if (row?.id && rowErrors.length) {
-      acc[row.id] = rowErrors
-    }
-    return acc
-  }, {} as Record<string, string[]>)
+  rows.reduce(
+    (acc, row) => {
+      const rowErrors = getValidationFields(row)
+      if (row?.id && rowErrors.length) {
+        acc[row.id] = rowErrors
+      }
+      return acc
+    },
+    {} as Record<string, string[]>
+  )
 
 const toUpdatePayload = (row: any) => {
   const {
@@ -193,7 +197,9 @@ export const GeneratedFuelCodesSection = ({
         })
         return nextRow
       } catch (error: any) {
-        const fallback = t('carbonIntensity:step5.generatedFuelCodeRowSaveError')
+        const fallback = t(
+          'carbonIntensity:step5.generatedFuelCodeRowSaveError'
+        )
         const errorMessage = getErrorMessage(error, fallback)
         const errorFields = getErrorFields(error)
         setErrors((prev) => ({

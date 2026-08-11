@@ -93,29 +93,9 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 // Mock Material-UI components
-vi.mock('@mui/material', () => ({
-  Box: ({ children, mb, ...props }) => (
+vi.mock('@mui/material/Box', () => ({
+  default: ({ children, mb, ...props }) => (
     <div data-test="mui-box" data-mb={mb} {...props}>
-      {children}
-    </div>
-  ),
-  TextField: ({ children, ...props }) => (
-    <div data-test="text-field" {...props}>
-      {children}
-    </div>
-  ),
-  Button: ({ children, ...props }) => (
-    <div data-test="button" {...props}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, ...props }) => (
-    <div data-test="typography" {...props}>
-      {children}
-    </div>
-  ),
-  Paper: ({ children, ...props }) => (
-    <div data-test="paper" {...props}>
       {children}
     </div>
   )

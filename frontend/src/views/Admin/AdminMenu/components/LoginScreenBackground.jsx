@@ -1,21 +1,20 @@
 import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Box,
-  Card,
-  CardMedia,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-  Grid,
-  Radio,
-  TextField,
-  Typography
-} from '@mui/material'
-import { CloudUpload, Edit } from '@mui/icons-material'
-import { CircularProgress } from '@mui/material'
+import Box from '@mui/material/Box'
+import Card from '@mui/material/Card'
+import CardMedia from '@mui/material/CardMedia'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Grid from '@mui/material/Grid'
+import Radio from '@mui/material/Radio'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
+import CloudUpload from '@mui/icons-material/CloudUpload'
+import Edit from '@mui/icons-material/Edit'
+import CircularProgress from '@mui/material/CircularProgress'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
@@ -88,7 +87,11 @@ export function LoginScreenBackground() {
 
   const handleUploadSubmit = async () => {
     if (!file || !displayName.trim()) return
-    await uploadMutation.mutateAsync({ file, displayName: displayName.trim(), caption: caption.trim() || null })
+    await uploadMutation.mutateAsync({
+      file,
+      displayName: displayName.trim(),
+      caption: caption.trim() || null
+    })
     handleUploadClose()
   }
 
@@ -148,7 +151,10 @@ export function LoginScreenBackground() {
               sx={{
                 position: 'relative',
                 cursor: 'pointer',
-                outline: selectedId === image.loginBgImageId ? '3px solid #003366' : 'none',
+                outline:
+                  selectedId === image.loginBgImageId
+                    ? '3px solid #003366'
+                    : 'none',
                 borderRadius: 1
               }}
               onClick={() => setSelectedId(image.loginBgImageId)}
@@ -214,11 +220,19 @@ export function LoginScreenBackground() {
                 }}
               >
                 <Box>
-                  <Typography variant="caption" display="block" fontWeight="bold">
+                  <Typography
+                    variant="caption"
+                    display="block"
+                    fontWeight="bold"
+                  >
                     {image.displayName}
                   </Typography>
                   {image.caption && (
-                    <Typography variant="caption" display="block" color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      display="block"
+                      color="text.secondary"
+                    >
                       {image.caption}
                     </Typography>
                   )}
@@ -287,7 +301,10 @@ export function LoginScreenBackground() {
         <DialogContent>
           {!editTarget && (
             <Box
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragOver(true)
+              }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
@@ -305,11 +322,20 @@ export function LoginScreenBackground() {
               <CloudUpload sx={{ fontSize: 48, color: 'grey.500', mb: 1 }} />
               <Typography variant="body2" color="text.secondary">
                 {t('loginBg.dragDropText')}{' '}
-                <Typography component="span" color="primary" sx={{ textDecoration: 'underline' }}>
+                <Typography
+                  component="span"
+                  color="primary"
+                  sx={{ textDecoration: 'underline' }}
+                >
                   {t('loginBg.clickToSelect')}
                 </Typography>
               </Typography>
-              <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+                mt={1}
+              >
                 {t('loginBg.minResolution')}
               </Typography>
               {file && (
@@ -327,7 +353,10 @@ export function LoginScreenBackground() {
             </Box>
           )}
 
-          <BCTypography variant="body2" sx={{ mt: 2, mb: 0.5, fontWeight: 500 }}>
+          <BCTypography
+            variant="body2"
+            sx={{ mt: 2, mb: 0.5, fontWeight: 500 }}
+          >
             {t('loginBg.nameLabel')}
           </BCTypography>
           <TextField
@@ -336,12 +365,18 @@ export function LoginScreenBackground() {
             value={editTarget ? editTarget.displayName : displayName}
             onChange={(e) =>
               editTarget
-                ? setEditTarget((prev) => ({ ...prev, displayName: e.target.value }))
+                ? setEditTarget((prev) => ({
+                    ...prev,
+                    displayName: e.target.value
+                  }))
                 : setDisplayName(e.target.value)
             }
             placeholder={t('loginBg.namePlaceholder')}
           />
-          <BCTypography variant="body2" sx={{ mt: 2, mb: 0.5, fontWeight: 500 }}>
+          <BCTypography
+            variant="body2"
+            sx={{ mt: 2, mb: 0.5, fontWeight: 500 }}
+          >
             {t('loginBg.captionLabel')}
           </BCTypography>
           <TextField
@@ -350,7 +385,10 @@ export function LoginScreenBackground() {
             value={editTarget ? editTarget.caption : caption}
             onChange={(e) =>
               editTarget
-                ? setEditTarget((prev) => ({ ...prev, caption: e.target.value }))
+                ? setEditTarget((prev) => ({
+                    ...prev,
+                    caption: e.target.value
+                  }))
                 : setCaption(e.target.value)
             }
             placeholder={t('loginBg.captionPlaceholder')}
@@ -374,12 +412,16 @@ export function LoginScreenBackground() {
             }
             onClick={editTarget ? handleEditSubmit : handleUploadSubmit}
             startIcon={
-              (editTarget ? updateMutation.isPending : uploadMutation.isPending)
-                ? <CircularProgress size={16} color="inherit" />
-                : null
+              (
+                editTarget ? updateMutation.isPending : uploadMutation.isPending
+              ) ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : null
             }
           >
-            {editTarget ? t('loginBg.saveChangesBtn') : t('loginBg.uploadImageBtn')}
+            {editTarget
+              ? t('loginBg.saveChangesBtn')
+              : t('loginBg.uploadImageBtn')}
           </BCButton>
         </DialogActions>
       </Dialog>
@@ -393,9 +435,7 @@ export function LoginScreenBackground() {
       >
         <DialogTitle>{t('loginBg.deleteConfirmTitle')}</DialogTitle>
         <DialogContent>
-          <Typography>
-            {t('loginBg.deleteConfirmMessage')}
-          </Typography>
+          <Typography>{t('loginBg.deleteConfirmMessage')}</Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <BCButton

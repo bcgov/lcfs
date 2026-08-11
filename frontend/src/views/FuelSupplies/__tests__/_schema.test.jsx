@@ -5,14 +5,33 @@ import {
   fuelSupplyColDefs
 } from '../_schema'
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  AsyncSuggestionEditor: () => null,
-  AutocompleteCellEditor: () => null,
-  NumberEditor: () => null,
-  RequiredHeader: () => null,
-  ActionsRenderer: () => null,
-  ValidationRenderer2: () => null
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor',
+  () => ({
+    AsyncSuggestionEditor: () => null
+  })
+)
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor',
+  () => ({
+    AutocompleteCellEditor: () => null
+  })
+)
+vi.mock('@/components/BCDataGrid/components/Editors/NumberEditor', () => ({
+  NumberEditor: () => null
 }))
+vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
+  RequiredHeader: () => null
+}))
+vi.mock('@/components/BCDataGrid/components/Renderers/ActionsRenderer', () => ({
+  ActionsRenderer: () => null
+}))
+vi.mock(
+  '@/components/BCDataGrid/components/Renderers/ValidationRenderer2',
+  () => ({
+    ValidationRenderer2: () => null
+  })
+)
 
 describe('Fuel Supply Schema', () => {
   const mockOptionsData = {

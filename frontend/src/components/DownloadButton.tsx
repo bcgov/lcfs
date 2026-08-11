@@ -3,7 +3,7 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { faFileExcel } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { CircularProgress } from '@mui/material'
+import CircularProgress from '@mui/material/CircularProgress'
 
 interface DownloadButtonProps {
   onDownload?: () => void
@@ -13,13 +13,10 @@ interface DownloadButtonProps {
   dataTest?: string
 }
 
-export const DownloadButton = forwardRef<HTMLButtonElement, DownloadButtonProps>(({
-  onDownload,
-  isDownloading,
-  label,
-  downloadLabel,
-  dataTest
-}, ref) => (
+export const DownloadButton = forwardRef<
+  HTMLButtonElement,
+  DownloadButtonProps
+>(({ onDownload, isDownloading, label, downloadLabel, dataTest }, ref) => (
   <BCButton
     ref={ref}
     data-test={dataTest}

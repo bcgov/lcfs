@@ -141,49 +141,9 @@ vi.mock('@/themes/base/colors', () => ({
 }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Box: ({ children, ...props }) => (
+vi.mock('@mui/material/Box', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="mui-box" {...props}>
-      {children}
-    </div>
-  ),
-  TextField: ({ children, ...props }) => (
-    <input data-test="mui-textfield" {...props}>
-      {children}
-    </input>
-  ),
-  Button: ({ children, ...props }) => (
-    <button data-test="mui-button" {...props}>
-      {children}
-    </button>
-  ),
-  IconButton: ({ children, ...props }) => (
-    <button data-test="mui-icon-button" {...props}>
-      {children}
-    </button>
-  ),
-  Typography: ({ children, ...props }) => (
-    <div data-test="mui-typography" {...props}>
-      {children}
-    </div>
-  ),
-  Grid: ({ children, ...props }) => (
-    <div data-test="mui-grid" {...props}>
-      {children}
-    </div>
-  ),
-  Paper: ({ children, ...props }) => (
-    <div data-test="mui-paper" {...props}>
-      {children}
-    </div>
-  ),
-  Card: ({ children, ...props }) => (
-    <div data-test="mui-card" {...props}>
-      {children}
-    </div>
-  ),
-  CardContent: ({ children, ...props }) => (
-    <div data-test="mui-card-content" {...props}>
       {children}
     </div>
   )

@@ -1,7 +1,7 @@
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { describe, it, vi, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { roles } from '@/constants/roles'
 import { MemoryRouter } from 'react-router-dom'
@@ -67,7 +67,6 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   )
 }))
 
-
 vi.mock('@/components/Role', () => ({
   Role: ({ children }) => <div data-testid="role-wrapper">{children}</div>
 }))
@@ -96,7 +95,10 @@ vi.mock('@/routes/routes', () => ({
     return `/mock-path/${route}`
   }),
   ROUTES: {
-    ORGANIZATIONS: { ADD_USER: 'org-add-user', VIEW_USER: 'ORGANIZATIONS.VIEW_USER' },
+    ORGANIZATIONS: {
+      ADD_USER: 'org-add-user',
+      VIEW_USER: 'ORGANIZATIONS.VIEW_USER'
+    },
     ORGANIZATION: { ADD_USER: 'add-user', VIEW_USER: 'ORGANIZATION.VIEW_USER' }
   }
 }))
@@ -156,7 +158,6 @@ describe('OrganizationUsers', () => {
     expect(screen.getByTestId('grid')).toBeInTheDocument()
   })
 
-
   it('renders new user button', () => {
     render(
       <Wrapper>
@@ -165,7 +166,6 @@ describe('OrganizationUsers', () => {
     )
     expect(screen.getByText('New user')).toBeInTheDocument()
   })
-
 
   it('handles new user button click', () => {
     render(

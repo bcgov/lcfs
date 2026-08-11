@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Stack } from '@mui/material'
+import Stack from '@mui/material/Stack'
 import Grid2 from '@mui/material/Grid2'
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
@@ -864,7 +864,9 @@ const AddEditFuelCodeBase = () => {
           setButtonOperationState(true, 'return')
           // Set original status before changing to draft if not already set
           if (originalStatus === null && existingFuelCode) {
-            updateState({ originalStatus: existingFuelCode.fuelCodeStatus.status })
+            updateState({
+              originalStatus: existingFuelCode.fuelCodeStatus.status
+            })
           }
 
           await fuelCodeMutation.mutateAsync({

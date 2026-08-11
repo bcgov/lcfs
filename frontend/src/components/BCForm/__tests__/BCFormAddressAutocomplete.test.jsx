@@ -8,8 +8,10 @@ import { useForm, FormProvider } from 'react-hook-form'
 import {
   addressHasPostalCode,
   BCFormAddressAutocomplete
-} from '../BCFormAddressAutocomplete'
+} from '@/components/BCForm/BCFormAddressAutocomplete'
 import { test as fixtureTest } from '@/tests/utils/fixtures'
+
+vi.unmock('@/components/BCForm/BCFormAddressAutocomplete')
 
 const test = (name, callback) =>
   fixtureTest(name, ({ render: fixtureRender, theme }) =>

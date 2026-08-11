@@ -336,16 +336,17 @@ vi.mock('@/components/ImportDialog', () => ({
 }))
 
 // Mock Material-UI components
-vi.mock('@mui/material', () => ({
-  CssBaseline: () => null,
-  ThemeProvider: ({ children }) => children,
-  Menu: ({ children, open, onClose }) =>
+vi.mock('@mui/material/Menu', () => ({
+  default: ({ children, open, onClose }) =>
     open ? (
       <div data-test="menu" onClick={onClose}>
         {children}
       </div>
-    ) : null,
-  MenuItem: ({ children, onClick }) => (
+    ) : null
+}))
+
+vi.mock('@mui/material/MenuItem', () => ({
+  default: ({ children, onClick }) => (
     <div data-test="menu-item" onClick={onClick}>
       {children}
     </div>

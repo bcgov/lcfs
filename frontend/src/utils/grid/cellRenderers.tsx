@@ -26,7 +26,7 @@ import {
   useState
 } from 'react'
 import colors from '@/themes/base/colors'
-import { ArrowDropDown } from '@mui/icons-material'
+import ArrowDropDown from '@mui/icons-material/ArrowDropDown'
 import { getCode } from 'country-list'
 
 // Loose typing because these renderers are consumed by AG Grid and many

@@ -5,7 +5,7 @@ import {
   OrgTypeRenderer,
   YesNoTextRenderer
 } from '@/utils/grid/cellRenderers'
-import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useOrganizationListStatuses } from '@/hooks/useOrganizations'
 import { useOrganizationTypes } from '@/hooks/useOrganization'
 import { getOrgTypeDisplayLabel } from '@/utils/organizationTypes'

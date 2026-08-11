@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Box
-} from '@mui/material'
-import { ExpandMore } from '@mui/icons-material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import Box from '@mui/material/Box'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import Grid2 from '@mui/material/Grid2'
 
 import BCAlert, { FloatingAlert } from '@/components/BCAlert'
@@ -54,7 +52,10 @@ const getApiError = (err, fallback) => {
     return data.errors[0].message
   }
   if (typeof data.detail === 'string' && data.detail) return data.detail
-  if (typeof data.message === 'string' && data.message !== 'Validation failed') {
+  if (
+    typeof data.message === 'string' &&
+    data.message !== 'Validation failed'
+  ) {
     return data.message
   }
   return err?.message || fallback

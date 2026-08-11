@@ -10,7 +10,7 @@ import {
   faPencil,
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
-import { TransferSummary } from './components'
+import { TransferSummary } from './components/TransferSummary'
 
 const outlineBase = {
   variant: 'outlined',

@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { BulkActionButtons } from '../components/BulkActionButtons'
 
@@ -17,9 +17,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 const TestWrapper = ({ children }) => (
-  <ThemeProvider theme={theme}>
-    {children}
-  </ThemeProvider>
+  <ThemeProvider theme={theme}>{children}</ThemeProvider>
 )
 
 describe('BulkActionButtons', () => {
@@ -65,9 +63,11 @@ describe('BulkActionButtons', () => {
       </TestWrapper>
     )
 
-    const submitButton = screen.getByRole('button', { name: /Submit Selected \(2\)/ })
+    const submitButton = screen.getByRole('button', {
+      name: /Submit Selected \(2\)/
+    })
     expect(submitButton).toBeInTheDocument()
-    
+
     fireEvent.click(submitButton)
     expect(mockOnSubmitClick).toHaveBeenCalledOnce()
   })
@@ -91,9 +91,11 @@ describe('BulkActionButtons', () => {
       </TestWrapper>
     )
 
-    const decommissionButton = screen.getByRole('button', { name: /Set to Decommissioned \(2\)/ })
+    const decommissionButton = screen.getByRole('button', {
+      name: /Set to Decommissioned \(2\)/
+    })
     expect(decommissionButton).toBeInTheDocument()
-    
+
     fireEvent.click(decommissionButton)
     expect(mockOnDecommissionClick).toHaveBeenCalledOnce()
   })
@@ -116,8 +118,12 @@ describe('BulkActionButtons', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByRole('button', { name: /Submit Selected \(1\)/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Set to Decommissioned \(1\)/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Submit Selected \(1\)/ })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Set to Decommissioned \(1\)/ })
+    ).toBeInTheDocument()
   })
 
   it('counts only eligible items for submit action', () => {
@@ -142,7 +148,9 @@ describe('BulkActionButtons', () => {
     )
 
     // Should only count Draft and Updated statuses
-    expect(screen.getByRole('button', { name: /Submit Selected \(2\)/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Submit Selected \(2\)/ })
+    ).toBeInTheDocument()
   })
 
   it('counts only validated items for decommission action', () => {
@@ -167,6 +175,8 @@ describe('BulkActionButtons', () => {
     )
 
     // Should only count Validated statuses
-    expect(screen.getByRole('button', { name: /Set to Decommissioned \(3\)/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Set to Decommissioned \(3\)/ })
+    ).toBeInTheDocument()
   })
 })

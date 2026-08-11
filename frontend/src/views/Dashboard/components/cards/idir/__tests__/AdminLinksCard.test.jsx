@@ -59,13 +59,15 @@ vi.mock('@/components/BCTypography', () => ({
   )
 }))
 
-vi.mock('@mui/material', () => ({
-  List: ({ component, sx, children }) => (
+vi.mock('@mui/material/List', () => ({
+  default: ({ component, sx, children }) => (
     <div data-test="mui-list" data-component={component} style={sx}>
       {children}
     </div>
-  ),
-  ListItemButton: ({ component, alignItems, onClick, children }) => (
+  )
+}))
+vi.mock('@mui/material/ListItemButton', () => ({
+  default: ({ component, alignItems, onClick, children }) => (
     <button
       data-test="mui-list-item-button"
       data-component={component}

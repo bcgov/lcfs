@@ -2,14 +2,12 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useGetComplianceReportReviewSummary } from '@/hooks/useComplianceReports'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Chip,
-  Divider,
-  Stack
-} from '@mui/material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import Chip from '@mui/material/Chip'
+import Divider from '@mui/material/Divider'
+import Stack from '@mui/material/Stack'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import { useEffect, useMemo, useState } from 'react'

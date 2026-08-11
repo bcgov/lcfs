@@ -5,7 +5,9 @@ import { FILTER_KEYS } from '@/constants/common'
 import { ROUTES } from '@/routes/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useComplianceReportCounts } from '@/hooks/useDashboard'
-import { List, ListItemButton, Stack } from '@mui/material'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import Stack from '@mui/material/Stack'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -40,7 +42,10 @@ export const ComplianceReportCard = () => {
         ]
       }
     }
-    sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, JSON.stringify(filter))
+    sessionStorage.setItem(
+      FILTER_KEYS.COMPLIANCE_REPORT_GRID,
+      JSON.stringify(filter)
+    )
     navigate(ROUTES.REPORTS.LIST)
   }
 

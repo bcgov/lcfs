@@ -1,10 +1,8 @@
 // @ts-nocheck
 import type { ColDef } from '@ag-grid-community/core'
 import type { SummaryColumn } from '@/types/schema'
-import {
-  BCDateFloatingFilter,
-  BCSelectFloatingFilter
-} from '@/components/BCDataGrid/components'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { SUMMARY } from '@/constants/common'
 import {
   ReportsStatusRenderer,
@@ -16,7 +14,7 @@ import {
   useGetAvailableAnalysts
 } from '@/hooks/useComplianceReports'
 import { AssignedAnalystCell } from './AssignedAnalystCell'
-import { Tooltip } from '@mui/material'
+import Tooltip from '@mui/material/Tooltip'
 import WarningIcon from '@mui/icons-material/Warning'
 import { Link, useLocation } from 'react-router-dom'
 

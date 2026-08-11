@@ -1,4 +1,5 @@
-import { AddCircleOutlineRounded, CheckBox } from '@mui/icons-material'
+import AddCircleOutlineRounded from '@mui/icons-material/AddCircleOutlineRounded'
+import CheckBox from '@mui/icons-material/CheckBox'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFilterCircleXmark } from '@fortawesome/free-solid-svg-icons'
 
@@ -42,7 +43,9 @@ class ButtonActionFactory {
       (e) => e.status === 'Draft' || e.status === 'Updated'
     )
     const ids = draftOrUpdated.map((e) => e.charging_equipment_id)
-    const allSelected = ids.length > 0 && ids.every((id) => this.context.selectedRows.includes(id))
+    const allSelected =
+      ids.length > 0 &&
+      ids.every((id) => this.context.selectedRows.includes(id))
 
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
@@ -50,14 +53,19 @@ class ButtonActionFactory {
       label: this.context.t('chargingEquipment:selectAllDraftUpdated'),
       icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
       disabled: ids.length === 0,
-      handler: () => this.context.handleToggleSelectByStatus(['Draft', 'Updated'])
+      handler: () =>
+        this.context.handleToggleSelectByStatus(['Draft', 'Updated'])
     })
   }
 
   selectAllValidated() {
-    const validated = this.context.equipmentList.filter((e) => e.status === 'Validated')
+    const validated = this.context.equipmentList.filter(
+      (e) => e.status === 'Validated'
+    )
     const ids = validated.map((e) => e.charging_equipment_id)
-    const allSelected = ids.length > 0 && ids.every((id) => this.context.selectedRows.includes(id))
+    const allSelected =
+      ids.length > 0 &&
+      ids.every((id) => this.context.selectedRows.includes(id))
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'select-all-validated-btn',
@@ -74,7 +82,8 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
       id: 'submit-selected-btn',
       label: this.context.t('chargingEquipment:submitSelected'),
-      disabled: this.context.selectedRows.length === 0 || !this.context.canSubmit,
+      disabled:
+        this.context.selectedRows.length === 0 || !this.context.canSubmit,
       handler: () => this.context.setShowSubmitModal(true)
     })
   }
@@ -84,7 +93,8 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.ERROR_OUTLINED,
       id: 'decommission-btn',
       label: this.context.t('chargingEquipment:setToDecommissioned'),
-      disabled: this.context.selectedRows.length === 0 || !this.context.canDecommission,
+      disabled:
+        this.context.selectedRows.length === 0 || !this.context.canDecommission,
       handler: () => this.context.setShowDecommissionModal(true)
     })
   }
@@ -94,7 +104,9 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
       id: 'clear-filters-btn',
       label: this.context.t('chargingEquipment:clearFilters'),
-      icon: <FontAwesomeIcon icon={faFilterCircleXmark} className="small-icon" />,
+      icon: (
+        <FontAwesomeIcon icon={faFilterCircleXmark} className="small-icon" />
+      ),
       handler: this.context.handleClearFilters
     })
   }
@@ -137,5 +149,3 @@ export const buildFseButtonContext = ({
   handleNewFSE,
   handleClearFilters
 })
-
-

@@ -9,17 +9,15 @@ import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import {
-  ClickAwayListener,
-  FormControl,
-  FormControlLabel,
-  Paper,
-  Popper,
-  Radio,
-  RadioGroup,
-  IconButton
-} from '@mui/material'
-import { Close } from '@mui/icons-material'
+import ClickAwayListener from '@mui/material/ClickAwayListener'
+import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Paper from '@mui/material/Paper'
+import Popper from '@mui/material/Popper'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import IconButton from '@mui/material/IconButton'
+import Close from '@mui/icons-material/Close'
 import { useUpdateUser } from '@/hooks/useUser'
 import { roles } from '@/constants/roles'
 import { idirRoleOptions } from '@/views/Users/AddEditUser/_schema'
@@ -208,9 +206,7 @@ const RoleSwitcherComponent = ({
     setAreOptionsVisible((prev) => !prev)
   }
 
-  const handleTitleKeyDown = (
-    event: ReactKeyboardEvent<HTMLDivElement>
-  ) => {
+  const handleTitleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       toggleOptionsVisibility()

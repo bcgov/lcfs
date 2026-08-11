@@ -45,15 +45,25 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@/components/Loading', () => ({
-  default: ({ message }) => (
-    <div data-test="loading">{message}</div>
-  )
+  default: ({ message }) => <div data-test="loading">{message}</div>
 }))
 
-vi.mock('@mui/material', () => ({
-  Stack: ({ children, ...props }) => <div data-test="stack" {...props}>{children}</div>,
-  List: ({ children, ...props }) => <div data-test="list" {...props}>{children}</div>,
-  ListItemButton: ({ children, onClick, ...props }) => (
+vi.mock('@mui/material/Stack', () => ({
+  default: ({ children, ...props }) => (
+    <div data-test="stack" {...props}>
+      {children}
+    </div>
+  )
+}))
+vi.mock('@mui/material/List', () => ({
+  default: ({ children, ...props }) => (
+    <div data-test="list" {...props}>
+      {children}
+    </div>
+  )
+}))
+vi.mock('@mui/material/ListItemButton', () => ({
+  default: ({ children, onClick, ...props }) => (
     <button data-test="list-item-button" onClick={onClick} {...props}>
       {children}
     </button>
@@ -82,11 +92,11 @@ describe('TransactionsCard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Setup default mocks
     useTranslation.mockReturnValue({ t: mockT })
     useNavigate.mockReturnValue(mockNavigate)
-    
+
     // Setup translation mock responses
     mockT.mockImplementation((key) => {
       const translations = {
@@ -94,8 +104,10 @@ describe('TransactionsCard', () => {
         'dashboard:transactions.loadingMessage': 'Loading transactions...',
         'dashboard:transactions.thereAre': 'There are',
         'dashboard:transactions.transfersInProgress': '5 transfers in progress',
-        'dashboard:transactions.initiativeAgreementsInProgress': '3 initiative agreements in progress',
-        'dashboard:transactions.administrativeAdjustmentsInProgress': '2 administrative adjustments in progress',
+        'dashboard:transactions.initiativeAgreementsInProgress':
+          '3 initiative agreements in progress',
+        'dashboard:transactions.administrativeAdjustmentsInProgress':
+          '2 administrative adjustments in progress',
         'dashboard:transactions.viewAllTransactions': 'View all transactions'
       }
       return translations[key] || key
@@ -120,7 +132,9 @@ describe('TransactionsCard', () => {
 
       expect(screen.getByText('Loading transactions...')).toBeInTheDocument()
       expect(screen.getByTestId('loading')).toBeInTheDocument()
-      expect(mockT).toHaveBeenCalledWith('dashboard:transactions.loadingMessage')
+      expect(mockT).toHaveBeenCalledWith(
+        'dashboard:transactions.loadingMessage'
+      )
     })
 
     it('should render loading component with correct widget card structure', () => {
@@ -162,8 +176,12 @@ describe('TransactionsCard', () => {
       render(<TransactionsCard />)
 
       expect(screen.getByText('5 transfers in progress')).toBeInTheDocument()
-      expect(screen.getByText('3 initiative agreements in progress')).toBeInTheDocument()
-      expect(screen.getByText('2 administrative adjustments in progress')).toBeInTheDocument()
+      expect(
+        screen.getByText('3 initiative agreements in progress')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('2 administrative adjustments in progress')
+      ).toBeInTheDocument()
       expect(screen.getByText('View all transactions')).toBeInTheDocument()
     })
 
@@ -171,9 +189,10 @@ describe('TransactionsCard', () => {
       render(<TransactionsCard />)
 
       const typographyElements = screen.getAllByTestId('bc-typography')
-      const countElements = typographyElements.filter(el => 
-        el.getAttribute('data-variant') === 'h3' && 
-        el.textContent.match(/^\d+$/)
+      const countElements = typographyElements.filter(
+        (el) =>
+          el.getAttribute('data-variant') === 'h3' &&
+          el.textContent.match(/^\d+$/)
       )
 
       expect(countElements).toHaveLength(3) // transfers, initiative agreements, admin adjustments
@@ -205,8 +224,8 @@ describe('TransactionsCard', () => {
       render(<TransactionsCard />)
 
       const typographyElements = screen.getAllByTestId('bc-typography')
-      const countElements = typographyElements.filter(el => 
-        el.getAttribute('data-variant') === 'h3'
+      const countElements = typographyElements.filter(
+        (el) => el.getAttribute('data-variant') === 'h3'
       )
 
       // Only the item with count 0 should have a count displayed
@@ -307,7 +326,9 @@ describe('TransactionsCard', () => {
       const viewAllButton = screen.getAllByTestId('list-item-button')[3]
       fireEvent.click(viewAllButton)
 
-      expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('transactions-grid-filter')
+      expect(sessionStorageMock.removeItem).toHaveBeenCalledWith(
+        'transactions-grid-filter'
+      )
       expect(mockNavigate).toHaveBeenCalledWith('/transactions')
     })
   })
@@ -329,8 +350,9 @@ describe('TransactionsCard', () => {
     it('should handle typography link clicks for transfers', () => {
       render(<TransactionsCard />)
 
-      const typographyLinks = screen.getAllByTestId('bc-typography')
-        .filter(el => el.getAttribute('data-color') === 'link')
+      const typographyLinks = screen
+        .getAllByTestId('bc-typography')
+        .filter((el) => el.getAttribute('data-color') === 'link')
 
       fireEvent.click(typographyLinks[0])
 
@@ -341,13 +363,16 @@ describe('TransactionsCard', () => {
     it('should handle typography link clicks for view all', () => {
       render(<TransactionsCard />)
 
-      const typographyLinks = screen.getAllByTestId('bc-typography')
-        .filter(el => el.getAttribute('data-color') === 'link')
+      const typographyLinks = screen
+        .getAllByTestId('bc-typography')
+        .filter((el) => el.getAttribute('data-color') === 'link')
 
       const viewAllLink = typographyLinks[3] // Last link should be view all
       fireEvent.click(viewAllLink)
 
-      expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('transactions-grid-filter')
+      expect(sessionStorageMock.removeItem).toHaveBeenCalledWith(
+        'transactions-grid-filter'
+      )
       expect(mockNavigate).toHaveBeenCalledWith('/transactions')
     })
   })
@@ -365,10 +390,18 @@ describe('TransactionsCard', () => {
 
       expect(mockT).toHaveBeenCalledWith('dashboard:transactions.title')
       expect(mockT).toHaveBeenCalledWith('dashboard:transactions.thereAre')
-      expect(mockT).toHaveBeenCalledWith('dashboard:transactions.transfersInProgress')
-      expect(mockT).toHaveBeenCalledWith('dashboard:transactions.initiativeAgreementsInProgress')
-      expect(mockT).toHaveBeenCalledWith('dashboard:transactions.administrativeAdjustmentsInProgress')
-      expect(mockT).toHaveBeenCalledWith('dashboard:transactions.viewAllTransactions')
+      expect(mockT).toHaveBeenCalledWith(
+        'dashboard:transactions.transfersInProgress'
+      )
+      expect(mockT).toHaveBeenCalledWith(
+        'dashboard:transactions.initiativeAgreementsInProgress'
+      )
+      expect(mockT).toHaveBeenCalledWith(
+        'dashboard:transactions.administrativeAdjustmentsInProgress'
+      )
+      expect(mockT).toHaveBeenCalledWith(
+        'dashboard:transactions.viewAllTransactions'
+      )
     })
   })
 
@@ -428,22 +461,24 @@ describe('TransactionsCard', () => {
       render(<TransactionsCard />)
 
       const typographyElements = screen.getAllByTestId('bc-typography')
-      
+
       // Check for "There are" text
-      const thereAreElement = typographyElements.find(el => 
-        el.textContent === 'There are' && el.getAttribute('data-variant') === 'body2'
+      const thereAreElement = typographyElements.find(
+        (el) =>
+          el.textContent === 'There are' &&
+          el.getAttribute('data-variant') === 'body2'
       )
       expect(thereAreElement).toBeInTheDocument()
 
       // Check for count displays
-      const countElements = typographyElements.filter(el => 
-        el.getAttribute('data-variant') === 'h3'
+      const countElements = typographyElements.filter(
+        (el) => el.getAttribute('data-variant') === 'h3'
       )
       expect(countElements.length).toBeGreaterThan(0)
 
       // Check for link elements
-      const linkElements = typographyElements.filter(el => 
-        el.getAttribute('data-color') === 'link'
+      const linkElements = typographyElements.filter(
+        (el) => el.getAttribute('data-color') === 'link'
       )
       expect(linkElements).toHaveLength(4) // One for each transaction type
     })

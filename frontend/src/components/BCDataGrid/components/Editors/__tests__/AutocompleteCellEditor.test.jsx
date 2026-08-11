@@ -7,8 +7,8 @@ import { createRef } from 'react'
 import { AutocompleteCellEditor } from '../AutocompleteCellEditor'
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Autocomplete: vi.fn(
+vi.mock('@mui/material/Autocomplete', () => ({
+  default: vi.fn(
     ({
       children,
       onChange,
@@ -62,15 +62,15 @@ vi.mock('@mui/material', () => ({
           {renderInput && renderInput({ inputProps: {} })}
           {renderOption && renderOption({}, 'option', { selected: false })}
           {renderTags && renderTags(['tag1', 'tag2'], () => ({ index: 0 }))}
-        <button
-          data-test="autocomplete-input-change"
-          onClick={(event) => {
-            event.stopPropagation()
-            const customValue =
-              event.currentTarget.getAttribute('data-value') || 'typed input'
-            if (onInputChange) {
-              onInputChange({}, customValue, 'input')
-            }
+          <button
+            data-test="autocomplete-input-change"
+            onClick={(event) => {
+              event.stopPropagation()
+              const customValue =
+                event.currentTarget.getAttribute('data-value') || 'typed input'
+              if (onInputChange) {
+                onInputChange({}, customValue, 'input')
+              }
             }}
           >
             change input
@@ -79,34 +79,48 @@ vi.mock('@mui/material', () => ({
         </div>
       )
     }
-  ),
-  TextField: vi.fn(({ onBlur, inputRef, ...props }) => (
+  )
+}))
+vi.mock('@mui/material/TextField', () => ({
+  default: vi.fn(({ onBlur, inputRef, ...props }) => (
     <input data-test="textfield" ref={inputRef} onBlur={onBlur} {...props} />
-  )),
-  Checkbox: vi.fn((props) => (
+  ))
+}))
+vi.mock('@mui/material/Checkbox', () => ({
+  default: vi.fn((props) => (
     <input type="checkbox" data-test="checkbox" {...props} />
-  )),
-  Box: vi.fn(({ children, ...props }) => (
+  ))
+}))
+vi.mock('@mui/material/Box', () => ({
+  default: vi.fn(({ children, ...props }) => (
     <div data-test="box" {...props}>
       {children}
     </div>
-  )),
-  Chip: vi.fn(({ label, ...props }) => (
+  ))
+}))
+vi.mock('@mui/material/Chip', () => ({
+  default: vi.fn(({ label, ...props }) => (
     <span data-test="chip" {...props}>
       {label}
     </span>
-  )),
-  Stack: vi.fn(({ children, ...props }) => (
+  ))
+}))
+vi.mock('@mui/material/Stack', () => ({
+  default: vi.fn(({ children, ...props }) => (
     <div data-test="stack" {...props}>
       {children}
     </div>
-  )),
-  Divider: vi.fn((props) => <hr data-test="divider" {...props} />)
+  ))
+}))
+vi.mock('@mui/material/Divider', () => ({
+  default: vi.fn((props) => <hr data-test="divider" {...props} />)
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  CheckBox: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>),
-  CheckBoxOutlineBlank: vi.fn(() => (
+vi.mock('@mui/icons-material/CheckBox', () => ({
+  default: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>)
+}))
+vi.mock('@mui/icons-material/CheckBoxOutlineBlank', () => ({
+  default: vi.fn(() => (
     <span data-test="checkbox-outline-icon">CheckBoxOutlineBlank</span>
   ))
 }))

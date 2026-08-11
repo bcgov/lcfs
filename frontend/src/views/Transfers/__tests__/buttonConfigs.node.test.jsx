@@ -38,7 +38,7 @@ vi.mock('@fortawesome/free-solid-svg-icons', () => ({
   faTrash: 'faTrash'
 }))
 
-vi.mock('../components', () => ({
+vi.mock('../components/TransferSummary', () => ({
   TransferSummary: vi.fn(() => 'TransferSummary')
 }))
 

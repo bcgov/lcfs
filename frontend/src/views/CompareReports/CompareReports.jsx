@@ -6,7 +6,9 @@ import {
   renewableFuelColumns
 } from '@/views/CompareReports/_schema'
 import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
-import { Icon, MenuItem, Select } from '@mui/material'
+import Icon from '@mui/material/Icon'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
 import Box from '@mui/material/Box'
 import Loading from '@/components/Loading'
 import CompareTable from '@/views/CompareReports/components/CompareTable'
@@ -117,10 +119,8 @@ export const CompareReports = () => {
       const line9Value = getFuelValue(summary, 9, fuelKey)
       const line3Number = Number(line3Value)
       const line9Number = Number(line9Value)
-      const line3HasContent =
-        Number.isFinite(line3Number) && line3Number !== 0
-      const line9HasContent =
-        Number.isFinite(line9Number) && line9Number !== 0
+      const line3HasContent = Number.isFinite(line3Number) && line3Number !== 0
+      const line9HasContent = Number.isFinite(line9Number) && line9Number !== 0
       return line3HasContent || line9HasContent
     }
 
@@ -204,7 +204,8 @@ export const CompareReports = () => {
         )
         if (matchingRow) {
           row.report2 = matchingRow.value
-          row.delta = row.report2 !== null ? row.report2 - (row.report1 ?? 0) : null
+          row.delta =
+            row.report2 !== null ? row.report2 - (row.report1 ?? 0) : null
         } else {
           row.report2 = null
           row.delta = null
@@ -366,11 +367,7 @@ export const CompareReports = () => {
       </Controls>
       <CompareTable
         title={t('report:renewableFuelTargetSummary')}
-        columns={renewableFuelColumns(
-          t,
-          report1Label,
-          report2Label
-        )}
+        columns={renewableFuelColumns(t, report1Label, report2Label)}
         data={renewableSummary}
         useParenthesis
         enableFuelControls

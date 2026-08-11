@@ -1,6 +1,10 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import { FormControl, InputLabel, MenuItem, Select, Stack } from '@mui/material'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
+import Stack from '@mui/material/Stack'
 import { useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type {

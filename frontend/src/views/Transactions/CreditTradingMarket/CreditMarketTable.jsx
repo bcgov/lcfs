@@ -7,7 +7,7 @@ import React, {
   forwardRef,
   useImperativeHandle
 } from 'react'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useTranslation } from 'react-i18next'
@@ -24,23 +24,19 @@ const initialPaginationOptions = {
 
 export const CreditMarketTable = forwardRef(
   (
-    {
-      onRowSelect,
-      selectedOrgId = null,
-      gridRef: externalGridRef
-    } = {},
+    { onRowSelect, selectedOrgId = null, gridRef: externalGridRef } = {},
     ref
   ) => {
-  const { t } = useTranslation(['common', 'creditMarket'])
-  const { data: currentUser } = useCurrentUser()
-  const internalGridRef = useRef()
-  const gridRef = externalGridRef ?? internalGridRef
+    const { t } = useTranslation(['common', 'creditMarket'])
+    const { data: currentUser } = useCurrentUser()
+    const internalGridRef = useRef()
+    const gridRef = externalGridRef ?? internalGridRef
 
-  const [paginationOptions, setPaginationOptions] = useState(
-    initialPaginationOptions
-  )
+    const [paginationOptions, setPaginationOptions] = useState(
+      initialPaginationOptions
+    )
 
-  // Fetch real credit market listings
+    // Fetch real credit market listings
     const {
       data: creditMarketData,
       isLoading,
@@ -49,104 +45,104 @@ export const CreditMarketTable = forwardRef(
       error
     } = useCreditMarketListings()
 
-  // Transform and sort data - show current user's organization at top
-  const sortedData = useCallback(() => {
-    if (!creditMarketData) return []
+    // Transform and sort data - show current user's organization at top
+    const sortedData = useCallback(() => {
+      if (!creditMarketData) return []
 
-    const userOrgId = currentUser?.organization?.organizationId
+      const userOrgId = currentUser?.organization?.organizationId
 
-    // Transform API data to match frontend schema (no longer exclude current user's org)
-    const transformedData = creditMarketData.map((org) => ({
-      id: org.organizationId,
-      organizationName: org.organizationName,
-      creditsToSell: org.creditsToSell,
-      displayInCreditMarket: org.displayInCreditMarket,
-      isSeller: org.creditMarketIsSeller,
-      isBuyer: org.creditMarketIsBuyer,
-      contactPerson: org.creditMarketContactName,
-      email: org.creditMarketContactEmail,
-      phone: org.creditMarketContactPhone
-    }))
+      // Transform API data to match frontend schema (no longer exclude current user's org)
+      const transformedData = creditMarketData.map((org) => ({
+        id: org.organizationId,
+        organizationName: org.organizationName,
+        creditsToSell: org.creditsToSell,
+        displayInCreditMarket: org.displayInCreditMarket,
+        isSeller: org.creditMarketIsSeller,
+        isBuyer: org.creditMarketIsBuyer,
+        contactPerson: org.creditMarketContactName,
+        email: org.creditMarketContactEmail,
+        phone: org.creditMarketContactPhone
+      }))
 
-    // Sort with current user's organization at top, then alphabetically
-    transformedData.sort((a, b) => {
-      // If user has an organization, put it at the top
-      if (userOrgId) {
-        if (a.id === userOrgId) return -1 // a is user's org, put it first
-        if (b.id === userOrgId) return 1 // b is user's org, put it first
-      }
-      // Otherwise, sort alphabetically
-      return a.organizationName.localeCompare(b.organizationName)
-    })
+      // Sort with current user's organization at top, then alphabetically
+      transformedData.sort((a, b) => {
+        // If user has an organization, put it at the top
+        if (userOrgId) {
+          if (a.id === userOrgId) return -1 // a is user's org, put it first
+          if (b.id === userOrgId) return 1 // b is user's org, put it first
+        }
+        // Otherwise, sort alphabetically
+        return a.organizationName.localeCompare(b.organizationName)
+      })
 
-    return transformedData
-  }, [creditMarketData, currentUser?.organization?.organizationId])
+      return transformedData
+    }, [creditMarketData, currentUser?.organization?.organizationId])
 
-  const getRowId = useCallback((params) => {
-    return `credit-market-${params.data.id}`
-  }, [])
+    const getRowId = useCallback((params) => {
+      return `credit-market-${params.data.id}`
+    }, [])
 
-  const selectionGridOptions = useMemo(
-    () =>
-      onRowSelect
-        ? {
-            rowSelection: 'single',
-            suppressRowClickSelection: false,
-            rowMultiSelectWithClick: false
+    const selectionGridOptions = useMemo(
+      () =>
+        onRowSelect
+          ? {
+              rowSelection: 'single',
+              suppressRowClickSelection: false,
+              rowMultiSelectWithClick: false
+            }
+          : undefined,
+      [onRowSelect]
+    )
+
+    const handleRowClick = useCallback(
+      (params) => {
+        if (!onRowSelect) return
+        const clickedId = params?.data?.id
+        if (!clickedId) return
+
+        if (selectedOrgId === clickedId) {
+          if (params.api?.deselectAll) {
+            params.api.deselectAll()
           }
-        : undefined,
-    [onRowSelect]
-  )
+          onRowSelect(null)
+          return
+        }
 
-  const handleRowClick = useCallback(
-    (params) => {
-      if (!onRowSelect) return
-      const clickedId = params?.data?.id
-      if (!clickedId) return
-
-      if (selectedOrgId === clickedId) {
         if (params.api?.deselectAll) {
           params.api.deselectAll()
         }
-        onRowSelect(null)
-        return
-      }
+        if (params.node?.setSelected) {
+          params.node.setSelected(true)
+        }
+        onRowSelect({
+          organizationId: clickedId,
+          organizationName: params.data.organizationName
+        })
+      },
+      [onRowSelect, selectedOrgId]
+    )
 
-      if (params.api?.deselectAll) {
-        params.api.deselectAll()
+    useEffect(() => {
+      if (!selectedOrgId && gridRef.current?.api?.deselectAll) {
+        gridRef.current.api.deselectAll()
       }
-      if (params.node?.setSelected) {
-        params.node.setSelected(true)
-      }
-      onRowSelect({
-        organizationId: clickedId,
-        organizationName: params.data.organizationName
-      })
-    },
-    [onRowSelect, selectedOrgId]
-  )
+    }, [selectedOrgId])
 
-  useEffect(() => {
-    if (!selectedOrgId && gridRef.current?.api?.deselectAll) {
-      gridRef.current.api.deselectAll()
-    }
-  }, [selectedOrgId])
-
-  // Build query data structure for BCGridViewer
+    // Build query data structure for BCGridViewer
     const queryData = {
       data: {
-      creditMarketListings: sortedData(),
-      pagination: {
-        page: paginationOptions.page,
-        size: paginationOptions.size,
-        total: sortedData().length,
-        totalPages: Math.ceil(sortedData().length / paginationOptions.size)
-      }
-    },
-    isLoading,
-    isError,
-    error
-  }
+        creditMarketListings: sortedData(),
+        pagination: {
+          page: paginationOptions.page,
+          size: paginationOptions.size,
+          total: sortedData().length,
+          totalPages: Math.ceil(sortedData().length / paginationOptions.size)
+        }
+      },
+      isLoading,
+      isError,
+      error
+    }
 
     useImperativeHandle(
       ref,

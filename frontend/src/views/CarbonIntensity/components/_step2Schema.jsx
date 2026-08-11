@@ -1,9 +1,7 @@
-import {
-  ActionsRenderer,
-  AutocompleteCellEditor,
-  DateEditor,
-  RequiredHeader
-} from '@/components/BCDataGrid/components'
+import { ActionsRenderer } from '@/components/BCDataGrid/components/Renderers/ActionsRenderer'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { DateEditor } from '@/components/BCDataGrid/components/Editors/DateEditor'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import colors from '@/themes/base/colors'
@@ -497,7 +495,8 @@ export const ciApplicationPathwaySummaryColDefs = ({
     {
       field: 'feedstockTransportMode',
       headerName: i18n.t('carbonIntensity:step2.feedstockTransportMode'),
-      valueGetter: ({ data }) => normalizeTransportModes(data?.feedstockTransportMode),
+      valueGetter: ({ data }) =>
+        normalizeTransportModes(data?.feedstockTransportMode),
       cellRenderer: (params) => {
         const val = params.value
         if (Array.isArray(val) && val.length > 0) {
@@ -520,7 +519,8 @@ export const ciApplicationPathwaySummaryColDefs = ({
     {
       field: 'finishedFuelTransportMode',
       headerName: i18n.t('carbonIntensity:step2.finishedFuelTransportMode'),
-      valueGetter: ({ data }) => normalizeTransportModes(data?.finishedFuelTransportMode),
+      valueGetter: ({ data }) =>
+        normalizeTransportModes(data?.finishedFuelTransportMode),
       cellRenderer: (params) => {
         const val = params.value
         if (Array.isArray(val) && val.length > 0) {
@@ -614,7 +614,8 @@ export const validatePathwayRow = (row, applicationTypes) => {
   ) {
     errors.push('feedstockTransportDistance')
   }
-  if (!row.finishedFuelTransportMode?.length) errors.push('finishedFuelTransportMode')
+  if (!row.finishedFuelTransportMode?.length)
+    errors.push('finishedFuelTransportMode')
   if (
     row.finishedFuelTransportDistance === null ||
     row.finishedFuelTransportDistance === undefined ||
@@ -684,9 +685,13 @@ export const apiToRow = (pathway) => ({
   fuelTypeId: pathway.fuelTypeId,
   feedstock: pathway.feedstock,
   feedstockRegion: pathway.feedstockRegion,
-  feedstockTransportMode: normalizeTransportModes(pathway.feedstockTransportMode),
+  feedstockTransportMode: normalizeTransportModes(
+    pathway.feedstockTransportMode
+  ),
   feedstockTransportDistance: pathway.feedstockTransportDistance,
   coproducts: pathway.coproducts,
-  finishedFuelTransportMode: normalizeTransportModes(pathway.finishedFuelTransportMode),
+  finishedFuelTransportMode: normalizeTransportModes(
+    pathway.finishedFuelTransportMode
+  ),
   finishedFuelTransportDistance: pathway.finishedFuelTransportDistance
 })

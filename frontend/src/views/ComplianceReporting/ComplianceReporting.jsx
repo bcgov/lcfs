@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
-import { AppBar, Box, Tab, Tabs } from '@mui/material'
+import AppBar from '@mui/material/AppBar'
+import Box from '@mui/material/Box'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
@@ -28,7 +31,7 @@ export const ComplianceReporting = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { hasRoles, hasAnyRole } = useCurrentUser()
-  
+
   const [searchParams, setSearchParams] = useSearchParams()
   const currentTab = searchParams.get('tab') || 'reports'
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
@@ -57,18 +60,23 @@ export const ComplianceReporting = () => {
   ]
 
   // Filter tabs based on user roles
-  const availableTabs = tabs.filter(tab => 
-    hasAnyRole(...tab.roles) && !tab.disabled
+  const availableTabs = tabs.filter(
+    (tab) => hasAnyRole(...tab.roles) && !tab.disabled
   )
 
-  const currentTabIndex = availableTabs.findIndex(tab => tab.id === currentTab)
+  const currentTabIndex = availableTabs.findIndex(
+    (tab) => tab.id === currentTab
+  )
   const validTabIndex = currentTabIndex >= 0 ? currentTabIndex : 0
 
   // Ensure URL has tab parameter
   useEffect(() => {
     const currentTabParam = searchParams.get('tab')
-    
-    if (!currentTabParam || !availableTabs.find(tab => tab.id === currentTabParam)) {
+
+    if (
+      !currentTabParam ||
+      !availableTabs.find((tab) => tab.id === currentTabParam)
+    ) {
       const defaultTab = availableTabs[0]?.id || 'reports'
       const newSearchParams = new URLSearchParams(searchParams)
       newSearchParams.set('tab', defaultTab)
@@ -104,8 +112,11 @@ export const ComplianceReporting = () => {
       <BCTypography variant="h4" gutterBottom>
         {t('reports:title')}
       </BCTypography>
-      
-      <AppBar position="static" sx={{ bgcolor: 'transparent', boxShadow: 'none' }}>
+
+      <AppBar
+        position="static"
+        sx={{ bgcolor: 'transparent', boxShadow: 'none' }}
+      >
         <Tabs
           value={validTabIndex}
           onChange={handleChangeTab}

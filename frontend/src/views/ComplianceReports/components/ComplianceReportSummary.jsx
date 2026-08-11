@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Stack,
-  FormControlLabel,
-  Checkbox,
-  Box
-} from '@mui/material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import Stack from '@mui/material/Stack'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
+import Box from '@mui/material/Box'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
 import SummaryTable from './SummaryTable'
@@ -30,7 +28,7 @@ import { roles } from '@/constants/roles'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports.jsx'
 import { TogglePanel } from '@/components/TogglePanel.jsx'
-import { ExpandMore } from '@mui/icons-material'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import { SUMMARY } from '@/constants/common'
 
 /**
@@ -46,7 +44,8 @@ const shouldHideRenewableSummary = (renewableFuelTargetSummary) => {
 
   if (!line3 || !line9) return false
 
-  const isZeroOrNull = (value) => value === null || value === undefined || value === 0
+  const isZeroOrNull = (value) =>
+    value === null || value === undefined || value === 0
 
   const line3AllZero =
     isZeroOrNull(line3.gasoline) &&
@@ -304,11 +303,7 @@ const ComplianceReportSummary = ({
                   summaryData?.renewableFuelTargetSummary
                 ) ? (
                   <Box sx={{ mb: 3 }}>
-                    <BCTypography
-                      variant="h6"
-                      color="primary"
-                      sx={{ mb: 1 }}
-                    >
+                    <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
                       {t('report:renewableFuelTargetSummary')}
                     </BCTypography>
                     <BCTypography
@@ -349,9 +344,7 @@ const ComplianceReportSummary = ({
                     lines6And8Locked={summaryData?.lines6And8Locked}
                     savingCellKey={savingCellKey}
                     tableType="renewable"
-                    exemptedLines={
-                      isRenewableFuelExempted ? [4, 11] : []
-                    }
+                    exemptedLines={isRenewableFuelExempted ? [4, 11] : []}
                   />
                 )}
                 <SummaryTable
@@ -361,9 +354,7 @@ const ComplianceReportSummary = ({
                   data={lowCarbonDisplayData}
                   width={'80.65%'}
                   compliancePeriodYear={compliancePeriodYear}
-                  exemptedLines={
-                    isLowCarbonFuelExempted ? [18, 20, 21] : []
-                  }
+                  exemptedLines={isLowCarbonFuelExempted ? [18, 20, 21] : []}
                 />
                 <SummaryTable
                   data-test="non-compliance-summary"

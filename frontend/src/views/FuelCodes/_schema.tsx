@@ -13,12 +13,13 @@ import {
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import {
-  BCDateFloatingFilter,
-  BCSelectFloatingFilter
-} from '@/components/BCDataGrid/components'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
-import { FUEL_CODE_STATUSES, getAllFuelCodeStatuses } from '@/constants/statuses'
+import {
+  FUEL_CODE_STATUSES,
+  getAllFuelCodeStatuses
+} from '@/constants/statuses'
 
 const FuelCodeStatusBadge = (props) => {
   const statusArr = getAllFuelCodeStatuses()

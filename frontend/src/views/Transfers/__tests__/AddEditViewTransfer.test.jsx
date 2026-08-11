@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 
 // Mock all external dependencies
@@ -20,7 +20,9 @@ vi.mock('react-hook-form', () => ({
     watch: () => null,
     handleSubmit: () => () => {}
   }),
-  FormProvider: ({ children }) => <div data-test="form-provider">{children}</div>
+  FormProvider: ({ children }) => (
+    <div data-test="form-provider">{children}</div>
+  )
 }))
 
 vi.mock('react-router-dom', async () => {
@@ -93,25 +95,43 @@ vi.mock('@/routes/routes', () => ({
 
 // Mock child components
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-typography" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-typography" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCAlert', () => ({
   default: React.forwardRef(({ children, ...props }, ref) => (
-    <div data-test="bc-alert" ref={ref} {...props}>{children}</div>
+    <div data-test="bc-alert" ref={ref} {...props}>
+      {children}
+    </div>
   ))
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, ...props }) => <button data-test="bc-button" {...props}>{children}</button>
+  default: ({ children, ...props }) => (
+    <button data-test="bc-button" {...props}>
+      {children}
+    </button>
+  )
 }))
 
 vi.mock('@/components/BCModal', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-modal" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-modal" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -125,13 +145,19 @@ vi.mock('@/components/Role', () => ({
 vi.mock('@/views/Transfers/components', () => ({
   AgreementDate: () => <div data-test="agreement-date">AgreementDate</div>,
   Comments: () => <div data-test="comments">Comments</div>,
-  TransferDetails: () => <div data-test="transfer-details">TransferDetails</div>,
-  TransferGraphic: () => <div data-test="transfer-graphic">TransferGraphic</div>,
+  TransferDetails: () => (
+    <div data-test="transfer-details">TransferDetails</div>
+  ),
+  TransferGraphic: () => (
+    <div data-test="transfer-graphic">TransferGraphic</div>
+  ),
   TransferView: () => <div data-test="transfer-view">TransferView</div>
 }))
 
 vi.mock('../components/CategoryCheckbox', () => ({
-  CategoryCheckbox: () => <div data-test="category-checkbox">CategoryCheckbox</div>
+  CategoryCheckbox: () => (
+    <div data-test="category-checkbox">CategoryCheckbox</div>
+  )
 }))
 
 vi.mock('../components/Recommendation', () => ({
@@ -155,7 +181,12 @@ vi.mock('../buttonConfigs', () => ({
 }))
 
 import { AddEditViewTransfer } from '../AddEditViewTransfer'
-import { useLocation, useMatches, useNavigate, useParams } from 'react-router-dom'
+import {
+  useLocation,
+  useMatches,
+  useNavigate,
+  useParams
+} from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useTransfer, useCreateUpdateTransfer } from '@/hooks/useTransfer'
@@ -167,7 +198,7 @@ const renderComponent = () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } }
   })
-  
+
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -186,14 +217,14 @@ describe('AddEditViewTransfer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Default safe mocks
     useNavigate.mockReturnValue(mockNavigate)
     useLocation.mockReturnValue({ state: null })
     useMatches.mockReturnValue([{ handle: { mode: 'view' } }])
     useParams.mockReturnValue({ transferId: null })
     useQueryClient.mockReturnValue(mockQueryClient)
-    
+
     useCurrentUser.mockReturnValue({
       data: {
         organization: { organizationId: 1 },
@@ -203,21 +234,21 @@ describe('AddEditViewTransfer', () => {
       hasRoles: vi.fn().mockReturnValue(false),
       hasAnyRole: vi.fn().mockReturnValue(false)
     })
-    
+
     useRegExtOrgs.mockReturnValue({ data: [] })
-    
+
     useTransfer.mockReturnValue({
       data: null,
       isLoading: false,
       isFetched: false,
       isLoadingError: false
     })
-    
+
     useCreateUpdateTransfer.mockReturnValue({
       mutate: mockMutate,
       isPending: false
     })
-    
+
     mockQueryClient.getQueryState.mockReturnValue({ status: 'success' })
     buttonClusterConfigFn.mockReturnValue({ New: [] })
   })
@@ -230,7 +261,7 @@ describe('AddEditViewTransfer', () => {
       isFetched: false,
       isLoadingError: false
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('loading')).toBeInTheDocument()
     expect(screen.getByText('transfer:loadingText')).toBeInTheDocument()
@@ -239,7 +270,7 @@ describe('AddEditViewTransfer', () => {
   it('renders loading state when query is pending', () => {
     useParams.mockReturnValue({ transferId: '123' })
     mockQueryClient.getQueryState.mockReturnValue({ status: 'pending' })
-    
+
     renderComponent()
     expect(screen.getByTestId('loading')).toBeInTheDocument()
   })
@@ -249,7 +280,7 @@ describe('AddEditViewTransfer', () => {
       mutate: mockMutate,
       isPending: true
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('loading')).toBeInTheDocument()
     expect(screen.getByText('transfer:processingText')).toBeInTheDocument()
@@ -265,14 +296,14 @@ describe('AddEditViewTransfer', () => {
       hasRoles: vi.fn().mockReturnValue(true),
       hasAnyRole: vi.fn().mockReturnValue(false)
     })
-    
+
     renderComponent()
     expect(screen.getByText('transfer:newTransfer')).toBeInTheDocument()
   })
 
   it('renders view mode with transfer data', () => {
     useParams.mockReturnValue({ transferId: '123' })
-    
+
     renderComponent()
     expect(screen.getByTestId('transfer-view')).toBeInTheDocument()
   })
@@ -287,7 +318,7 @@ describe('AddEditViewTransfer', () => {
       isFetched: true,
       isLoadingError: false
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('stepper')).toBeInTheDocument()
   })
@@ -309,7 +340,7 @@ describe('AddEditViewTransfer', () => {
       isFetched: true,
       isLoadingError: false
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('recommendation')).toBeInTheDocument()
   })
@@ -347,7 +378,7 @@ describe('AddEditViewTransfer', () => {
       hasRoles: vi.fn().mockReturnValue(false),
       hasAnyRole: vi.fn().mockReturnValue(false)
     })
-    
+
     renderComponent()
     expect(screen.queryByTestId('transfer-graphic')).not.toBeInTheDocument()
   })
@@ -361,7 +392,7 @@ describe('AddEditViewTransfer', () => {
       hasRoles: vi.fn().mockReturnValue(false),
       hasAnyRole: vi.fn().mockReturnValue(false)
     })
-    
+
     useTransfer.mockReturnValue({
       data: {
         transferHistory: [
@@ -373,7 +404,7 @@ describe('AddEditViewTransfer', () => {
       isFetched: true,
       isLoadingError: false
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('stepper')).toBeInTheDocument()
   })
@@ -390,7 +421,7 @@ describe('AddEditViewTransfer', () => {
       isFetched: true,
       isLoadingError: false
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('stepper')).toBeInTheDocument()
   })

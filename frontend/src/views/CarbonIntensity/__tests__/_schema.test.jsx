@@ -12,10 +12,19 @@ vi.mock('@/hooks/useCIApplication', () => ({
   useGetCIApplicationAnalysts: () => ({ data: [] })
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  BCDateFloatingFilter: () => null,
-  BCSelectFloatingFilter: () => null
-}))
+vi.mock(
+  '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter',
+  () => ({
+    BCDateFloatingFilter: () => null
+  })
+)
+
+vi.mock(
+  '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter',
+  () => ({
+    BCSelectFloatingFilter: () => null
+  })
+)
 
 const t = (key) => key
 

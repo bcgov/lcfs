@@ -11,7 +11,9 @@ import {
   faSquareCheck
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box, Grid, Stack } from '@mui/material'
+import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid'
+import Stack from '@mui/material/Stack'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Outlet,
@@ -247,7 +249,8 @@ export const ChargingEquipment = () => {
     error,
     refetch
   } = equipmentQuery
-  const { mutateAsync: downloadChargingEquipment } = useDownloadChargingEquipment()
+  const { mutateAsync: downloadChargingEquipment } =
+    useDownloadChargingEquipment()
 
   const {
     submitEquipment,
@@ -663,7 +666,6 @@ export const ChargingEquipment = () => {
               ) : (
                 <Box />
               )}
-
             </Box>
 
             <BCBox sx={{ width: '100%' }}>

@@ -17,17 +17,15 @@ import { useCreateUpdateTransfer, useTransfer } from '@/hooks/useTransfer'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  Box,
-  Divider,
-  Stack,
-  Step,
-  StepLabel,
-  Stepper,
-  Tooltip,
-  useMediaQuery,
-  useTheme
-} from '@mui/material'
+import Box from '@mui/material/Box'
+import Divider from '@mui/material/Divider'
+import Stack from '@mui/material/Stack'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
+import Stepper from '@mui/material/Stepper'
+import Tooltip from '@mui/material/Tooltip'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import useTheme from '@mui/material/styles/useTheme'
 import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'

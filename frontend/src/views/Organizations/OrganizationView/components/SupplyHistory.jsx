@@ -1,17 +1,15 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react'
-import {
-  Grid,
-  FormControl,
-  Select,
-  MenuItem,
-  Card,
-  CardContent,
-  Stack,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
-} from '@mui/material'
-import { ExpandMore } from '@mui/icons-material'
+import Grid from '@mui/material/Grid'
+import FormControl from '@mui/material/FormControl'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Stack from '@mui/material/Stack'
+import Accordion from '@mui/material/Accordion'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import ReactECharts from 'echarts-for-react'
 
 import BCBox from '@/components/BCBox'
@@ -421,10 +419,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
         page: 1
       }))
       navigate(
-        ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(
-          ':orgID',
-          String(id)
-        )
+        ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(':orgID', String(id))
       )
     },
     [navigate]

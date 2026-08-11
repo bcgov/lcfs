@@ -8,7 +8,7 @@ import {
 import { defaultInitialPagination } from '@/constants/schedules'
 import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
 import colors from '@/themes/base/colors'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
@@ -18,7 +18,9 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
   const { complianceReportId, compliancePeriod } = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
-  const { data: optionsData, isLoading: optionsLoading } = useFuelSupplyOptions({ compliancePeriod })
+  const { data: optionsData, isLoading: optionsLoading } = useFuelSupplyOptions(
+    { compliancePeriod }
+  )
   const { t } = useTranslation(['common', 'fuelSupply', 'report'])
 
   // State for pagination - one per changelog item

@@ -1,6 +1,13 @@
 import BCTypography from '@/components/BCTypography'
-import { Cancel, Delete, Edit, Queue, Replay } from '@mui/icons-material'
-import { Box, IconButton, Stack, Tooltip } from '@mui/material'
+import Cancel from '@mui/icons-material/Cancel'
+import Delete from '@mui/icons-material/Delete'
+import Edit from '@mui/icons-material/Edit'
+import Queue from '@mui/icons-material/Queue'
+import Replay from '@mui/icons-material/Replay'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
+import Tooltip from '@mui/material/Tooltip'
 import type { ReactNode } from 'react'
 
 export interface ActionsRendererProps {
@@ -17,7 +24,10 @@ export interface ActionsRendererProps {
 export const ActionsRenderer = (props: ActionsRendererProps) => {
   const isCurrentRowEditing = props.api
     .getEditingCells()
-    .some((cell: { rowIndex: number | null }) => cell.rowIndex === props.node.rowIndex)
+    .some(
+      (cell: { rowIndex: number | null }) =>
+        cell.rowIndex === props.node.rowIndex
+    )
 
   return (
     <Stack direction="row" spacing={0.1} m={0} mt={0.2}>

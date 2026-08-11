@@ -15,15 +15,14 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNotificationsCount } from '@/hooks/useNotifications'
 import { roles } from '@/constants/roles'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
-import {
-  Badge,
-  IconButton,
-  Divider,
-  CircularProgress,
-  Tooltip,
-  Fab
-} from '@mui/material'
-import { Notifications, Logout } from '@mui/icons-material'
+import Badge from '@mui/material/Badge'
+import IconButton from '@mui/material/IconButton'
+import Divider from '@mui/material/Divider'
+import CircularProgress from '@mui/material/CircularProgress'
+import Tooltip from '@mui/material/Tooltip'
+import Fab from '@mui/material/Fab'
+import Notifications from '@mui/icons-material/Notifications'
+import Logout from '@mui/icons-material/Logout'
 import { NavLink } from 'react-router-dom'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { RoleSwitcher } from './RoleSwitcher'

@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { Typography } from '@mui/material'
+import Typography from '@mui/material/Typography'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 

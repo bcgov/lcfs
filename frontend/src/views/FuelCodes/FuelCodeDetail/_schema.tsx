@@ -2,10 +2,8 @@
 import type { ColDef } from '@ag-grid-community/core'
 import { FuelCodeStatusRenderer } from '@/utils/grid/cellRenderers'
 import { dateFormatter } from '@/utils/formatters'
-import {
-  BCDateFloatingFilter,
-  BCSelectFloatingFilter
-} from '@/components/BCDataGrid/components'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useFuelCodeStatuses } from '@/hooks/useFuelCode'
 
 export const iterationColDefs = (t: (key: string) => string): ColDef[] => [

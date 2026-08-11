@@ -21,8 +21,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Box: ({ children, ...props }) => (
+vi.mock('@mui/material/Box', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="box" data-props={JSON.stringify(props)}>
       {children}
     </div>
@@ -33,8 +33,8 @@ vi.mock('@mui/material', () => ({
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
   default: ({ children, style, gutterBottom, ...props }) => (
-    <div 
-      data-test="bc-typography" 
+    <div
+      data-test="bc-typography"
       data-style={JSON.stringify(style)}
       data-gutter-bottom={gutterBottom}
       data-props={JSON.stringify(props)}
@@ -47,7 +47,7 @@ vi.mock('@/components/BCTypography', () => ({
 // Mock FontAwesome
 vi.mock('@fortawesome/react-fontawesome', () => ({
   FontAwesomeIcon: ({ icon, style, ...props }) => (
-    <span 
+    <span
       data-test="font-awesome-icon"
       data-icon={JSON.stringify(icon)}
       data-style={JSON.stringify(style)}
@@ -70,12 +70,11 @@ describe('WebsiteCard', () => {
     expect(screen.getByTestId('box')).toBeInTheDocument()
   })
 
-
   it('renders Box container with correct props', () => {
     render(<WebsiteCard />)
     const box = screen.getByTestId('box')
     const props = JSON.parse(box.getAttribute('data-props'))
-    
+
     expect(props.p).toBe(2)
     expect(props.paddingTop).toBe(4)
     expect(props.paddingBottom).toBe(4)
@@ -90,7 +89,7 @@ describe('WebsiteCard', () => {
     render(<WebsiteCard />)
     const typographies = screen.getAllByTestId('bc-typography')
     const titleTypography = typographies[0]
-    
+
     const style = JSON.parse(titleTypography.getAttribute('data-style'))
     expect(style.fontSize).toBe('18px')
     expect(style.color).toBe('#003366')
@@ -103,7 +102,7 @@ describe('WebsiteCard', () => {
     render(<WebsiteCard />)
     const typographies = screen.getAllByTestId('bc-typography')
     const contentTypography = typographies[1]
-    
+
     const style = JSON.parse(contentTypography.getAttribute('data-style'))
     expect(style.fontSize).toBe('16px')
     expect(style.color).toBe('#003366')
@@ -113,7 +112,9 @@ describe('WebsiteCard', () => {
   it('calls translation function for title', () => {
     render(<WebsiteCard />)
     expect(mockT).toHaveBeenCalledWith('dashboard:website.title')
-    expect(screen.getByText('Low Carbon Fuel Standard Information')).toBeInTheDocument()
+    expect(
+      screen.getByText('Low Carbon Fuel Standard Information')
+    ).toBeInTheDocument()
   })
 
   it('calls translation function for link text', () => {
@@ -136,7 +137,7 @@ describe('WebsiteCard', () => {
   it('renders external link with correct attributes', () => {
     render(<WebsiteCard />)
     const link = screen.getByRole('link')
-    
+
     expect(link).toHaveAttribute('href', 'http://gov.bc.ca/lowcarbonfuels')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
@@ -146,10 +147,10 @@ describe('WebsiteCard', () => {
   it('renders FontAwesome icon with correct props', () => {
     render(<WebsiteCard />)
     const icon = screen.getByTestId('font-awesome-icon')
-    
+
     const iconProp = JSON.parse(icon.getAttribute('data-icon'))
     expect(iconProp.iconName).toBe('share-from-square')
-    
+
     const style = JSON.parse(icon.getAttribute('data-style'))
     expect(style.marginLeft).toBe('6px')
     expect(style.color).toBe('#547D59')
@@ -157,19 +158,19 @@ describe('WebsiteCard', () => {
 
   it('has correct component structure', () => {
     render(<WebsiteCard />)
-    
+
     // Box container
     const box = screen.getByTestId('box')
     expect(box).toBeInTheDocument()
-    
+
     // Two typography components
     const typographies = screen.getAllByTestId('bc-typography')
     expect(typographies).toHaveLength(2)
-    
+
     // One link
     const link = screen.getByRole('link')
     expect(link).toBeInTheDocument()
-    
+
     // One icon
     const icon = screen.getByTestId('font-awesome-icon')
     expect(icon).toBeInTheDocument()

@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { TransactionHistory } from '../TransactionHistory'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 
 // Mock all external dependencies
@@ -38,11 +38,19 @@ vi.mock('dayjs/plugin/localizedFormat', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-typography" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-typography" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 const renderComponent = (props = {}) => {
@@ -84,15 +92,17 @@ describe('TransactionHistory Component', () => {
   // Test main rendering with different status types
   describe('Transaction history rendering', () => {
     it('renders transaction history with adminAdjustmentStatus', () => {
-      const mockHistory = [{
-        createDate: '2023-05-01',
-        adminAdjustmentStatus: { status: 'Approved' },
-        initiativeAgreementStatus: null,
-        userProfile: { firstName: 'John', lastName: 'Doe' }
-      }]
-      
+      const mockHistory = [
+        {
+          createDate: '2023-05-01',
+          adminAdjustmentStatus: { status: 'Approved' },
+          initiativeAgreementStatus: null,
+          userProfile: { firstName: 'John', lastName: 'Doe' }
+        }
+      ]
+
       renderComponent({ transactionHistory: mockHistory })
-      
+
       expect(screen.getByText('Transaction History')).toBeInTheDocument()
       expect(screen.getByText('Approved')).toBeInTheDocument()
       expect(screen.getByText('Formatted: 2023-05-01')).toBeInTheDocument()
@@ -101,29 +111,33 @@ describe('TransactionHistory Component', () => {
     })
 
     it('renders transaction history with initiativeAgreementStatus when adminAdjustmentStatus is null', () => {
-      const mockHistory = [{
-        createDate: '2023-05-02',
-        adminAdjustmentStatus: null,
-        initiativeAgreementStatus: { status: 'Recommended' },
-        userProfile: { firstName: 'Jane', lastName: 'Smith' }
-      }]
-      
+      const mockHistory = [
+        {
+          createDate: '2023-05-02',
+          adminAdjustmentStatus: null,
+          initiativeAgreementStatus: { status: 'Recommended' },
+          userProfile: { firstName: 'Jane', lastName: 'Smith' }
+        }
+      ]
+
       renderComponent({ transactionHistory: mockHistory })
-      
+
       expect(screen.getByText('Recommended')).toBeInTheDocument()
       expect(screen.getByText('Jane Smith')).toBeInTheDocument()
     })
 
     it('renders fallback status when both status objects are null', () => {
-      const mockHistory = [{
-        createDate: '2023-05-03',
-        adminAdjustmentStatus: null,
-        initiativeAgreementStatus: null,
-        userProfile: { firstName: 'Alice', lastName: 'Johnson' }
-      }]
-      
+      const mockHistory = [
+        {
+          createDate: '2023-05-03',
+          adminAdjustmentStatus: null,
+          initiativeAgreementStatus: null,
+          userProfile: { firstName: 'Alice', lastName: 'Johnson' }
+        }
+      ]
+
       renderComponent({ transactionHistory: mockHistory })
-      
+
       expect(screen.getByText('Status not found')).toBeInTheDocument()
       expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
     })
@@ -132,42 +146,48 @@ describe('TransactionHistory Component', () => {
   // Test displayName vs firstName/lastName branches
   describe('User name display logic', () => {
     it('renders displayName when present', () => {
-      const mockHistory = [{
-        createDate: '2023-05-01',
-        adminAdjustmentStatus: { status: 'Draft' },
-        displayName: 'Custom Display Name',
-        userProfile: { firstName: 'John', lastName: 'Doe' }
-      }]
-      
+      const mockHistory = [
+        {
+          createDate: '2023-05-01',
+          adminAdjustmentStatus: { status: 'Draft' },
+          displayName: 'Custom Display Name',
+          userProfile: { firstName: 'John', lastName: 'Doe' }
+        }
+      ]
+
       renderComponent({ transactionHistory: mockHistory })
-      
+
       expect(screen.getByText('Custom Display Name')).toBeInTheDocument()
       expect(screen.queryByText('John Doe')).not.toBeInTheDocument()
     })
 
     it('renders firstName lastName when displayName is absent', () => {
-      const mockHistory = [{
-        createDate: '2023-05-01',
-        adminAdjustmentStatus: { status: 'Draft' },
-        displayName: null,
-        userProfile: { firstName: 'John', lastName: 'Doe' }
-      }]
-      
+      const mockHistory = [
+        {
+          createDate: '2023-05-01',
+          adminAdjustmentStatus: { status: 'Draft' },
+          displayName: null,
+          userProfile: { firstName: 'John', lastName: 'Doe' }
+        }
+      ]
+
       renderComponent({ transactionHistory: mockHistory })
-      
+
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.queryByText('Custom Display Name')).not.toBeInTheDocument()
     })
 
     it('renders firstName lastName when displayName is undefined', () => {
-      const mockHistory = [{
-        createDate: '2023-05-01',
-        adminAdjustmentStatus: { status: 'Draft' },
-        userProfile: { firstName: 'John', lastName: 'Doe' }
-      }]
-      
+      const mockHistory = [
+        {
+          createDate: '2023-05-01',
+          adminAdjustmentStatus: { status: 'Draft' },
+          userProfile: { firstName: 'John', lastName: 'Doe' }
+        }
+      ]
+
       renderComponent({ transactionHistory: mockHistory })
-      
+
       expect(screen.getByText('John Doe')).toBeInTheDocument()
     })
   })
@@ -187,9 +207,9 @@ describe('TransactionHistory Component', () => {
           userProfile: { firstName: 'Jane', lastName: 'Smith' }
         }
       ]
-      
+
       renderComponent({ transactionHistory: mockHistory })
-      
+
       expect(screen.getByText('Approved')).toBeInTheDocument()
       expect(screen.getByText('Recommended')).toBeInTheDocument()
       expect(screen.getByText('John Doe')).toBeInTheDocument()
@@ -200,28 +220,32 @@ describe('TransactionHistory Component', () => {
   // Test component structure
   describe('Component structure', () => {
     it('renders correct HTML structure with list elements', () => {
-      const mockHistory = [{
-        createDate: '2023-05-01',
-        adminAdjustmentStatus: { status: 'Approved' },
-        userProfile: { firstName: 'John', lastName: 'Doe' }
-      }]
-      
+      const mockHistory = [
+        {
+          createDate: '2023-05-01',
+          adminAdjustmentStatus: { status: 'Approved' },
+          userProfile: { firstName: 'John', lastName: 'Doe' }
+        }
+      ]
+
       renderComponent({ transactionHistory: mockHistory })
-      
+
       const listElements = screen.getAllByRole('listitem')
       expect(listElements).toHaveLength(1)
       expect(screen.getByRole('list')).toBeInTheDocument()
     })
 
     it('applies correct styling and structure', () => {
-      const mockHistory = [{
-        createDate: '2023-05-01',
-        adminAdjustmentStatus: { status: 'Approved' },
-        userProfile: { firstName: 'John', lastName: 'Doe' }
-      }]
-      
+      const mockHistory = [
+        {
+          createDate: '2023-05-01',
+          adminAdjustmentStatus: { status: 'Approved' },
+          userProfile: { firstName: 'John', lastName: 'Doe' }
+        }
+      ]
+
       renderComponent({ transactionHistory: mockHistory })
-      
+
       expect(screen.getByText('Transaction History')).toBeInTheDocument()
       expect(screen.getAllByText('on').length).toBeGreaterThan(0)
       expect(screen.getAllByText('by').length).toBeGreaterThan(0)

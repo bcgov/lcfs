@@ -145,7 +145,7 @@ vi.mock('@/components/Loading', () => ({
   default: (props) => <div data-testid="loading">{props.message}</div>
 }))
 
-vi.mock('@/components/BCForm/index.js', () => ({
+vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
   AddressAutocomplete: React.forwardRef((props, ref) => (
     <input
       ref={ref}
@@ -172,18 +172,22 @@ vi.mock('../ReferenceCompareBox', () => ({
 }))
 
 // Material UI simple mocks
-vi.mock('@mui/material', () => ({
-  Box: ({ children, component = 'div', flexWrap, ...props }) => {
+vi.mock('@mui/material/Box', () => ({
+  default: ({ children, component = 'div', flexWrap, ...props }) => {
     const domProps = { ...props }
     if (flexWrap) domProps.style = { ...domProps.style, flexWrap }
     return React.createElement(component, domProps, children)
-  },
-  Paper: ({ children, ...props }) => (
+  }
+}))
+vi.mock('@mui/material/Paper', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="addEditOrgContainer" {...props}>
       {children}
     </div>
-  ),
-  Grid: ({
+  )
+}))
+vi.mock('@mui/material/Grid', () => ({
+  default: ({
     children,
     container,
     item,
@@ -202,8 +206,10 @@ vi.mock('@mui/material', () => ({
   }) => {
     // Filter out Grid-specific props that shouldn't be passed to DOM
     return <div {...props}>{children}</div>
-  },
-  TextField: React.forwardRef(
+  }
+}))
+vi.mock('@mui/material/TextField', () => ({
+  default: React.forwardRef(
     (
       {
         id,
@@ -238,24 +244,29 @@ vi.mock('@mui/material', () => ({
         {error && <span>{helperText}</span>}
       </div>
     )
-  ),
-  FormControl: ({
-    children,
-    fullWidth,
-    variant,
-    component,
-    margin,
-    ...props
-  }) => <div {...props}>{children}</div>,
-  FormControlLabel: ({ control, label, ...props }) => (
+  )
+}))
+vi.mock('@mui/material/FormControl', () => ({
+  default: ({ children, fullWidth, variant, component, margin, ...props }) => (
+    <div {...props}>{children}</div>
+  )
+}))
+vi.mock('@mui/material/FormControlLabel', () => ({
+  default: ({ control, label, ...props }) => (
     <div {...props}>
       {control}
       <span>{label}</span>
     </div>
-  ),
-  FormLabel: ({ children, ...props }) => <div {...props}>{children}</div>,
-  InputLabel: ({ children, ...props }) => <label {...props}>{children}</label>,
-  RadioGroup: ({
+  )
+}))
+vi.mock('@mui/material/FormLabel', () => ({
+  default: ({ children, ...props }) => <div {...props}>{children}</div>
+}))
+vi.mock('@mui/material/InputLabel', () => ({
+  default: ({ children, ...props }) => <label {...props}>{children}</label>
+}))
+vi.mock('@mui/material/RadioGroup', () => ({
+  default: ({
     children,
     row,
     defaultValue,
@@ -263,8 +274,10 @@ vi.mock('@mui/material', () => ({
     onChange,
     name,
     ...props
-  }) => <div {...props}>{children}</div>,
-  Radio: React.forwardRef((props, ref) => (
+  }) => <div {...props}>{children}</div>
+}))
+vi.mock('@mui/material/Radio', () => ({
+  default: React.forwardRef((props, ref) => (
     <input
       ref={ref}
       type="radio"
@@ -273,8 +286,10 @@ vi.mock('@mui/material', () => ({
       data-test={props['data-test'] || `radio-${props.value}`}
       {...props}
     />
-  )),
-  Checkbox: (props) => (
+  ))
+}))
+vi.mock('@mui/material/Checkbox', () => ({
+  default: (props) => (
     <input
       type="checkbox"
       checked={props.checked || false}

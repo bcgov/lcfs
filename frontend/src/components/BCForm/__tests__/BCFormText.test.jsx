@@ -5,8 +5,10 @@ import { describe, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useForm, FormProvider } from 'react-hook-form'
-import { BCFormText } from '../BCFormText'
+import { BCFormText } from '@/components/BCForm/BCFormText'
 import { test as fixtureTest } from '@/tests/utils/fixtures'
+
+vi.unmock('@/components/BCForm/BCFormText')
 
 const test = (name, callback) =>
   fixtureTest(name, ({ render: fixtureRender, theme }) =>

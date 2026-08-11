@@ -26,15 +26,39 @@ vi.mock('@/hooks/useChargingSite', () => ({
   useChargingSiteStatuses: vi.fn()
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  AsyncSuggestionEditor: vi.fn(),
-  AutocompleteCellEditor: vi.fn(),
-  BCSelectFloatingFilter: vi.fn(),
-  RequiredHeader: vi.fn(),
-  TextCellEditor: vi.fn(),
-  ActionsRenderer: vi.fn(),
-  ValidationRenderer2: vi.fn()
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor',
+  () => ({
+    AsyncSuggestionEditor: vi.fn()
+  })
+)
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor',
+  () => ({
+    AutocompleteCellEditor: vi.fn()
+  })
+)
+vi.mock(
+  '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter',
+  () => ({
+    BCSelectFloatingFilter: vi.fn()
+  })
+)
+vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
+  RequiredHeader: vi.fn()
 }))
+vi.mock('@/components/BCDataGrid/components/Editors/TextCellEditor', () => ({
+  TextCellEditor: vi.fn()
+}))
+vi.mock('@/components/BCDataGrid/components/Renderers/ActionsRenderer', () => ({
+  ActionsRenderer: vi.fn()
+}))
+vi.mock(
+  '@/components/BCDataGrid/components/Renderers/ValidationRenderer2',
+  () => ({
+    ValidationRenderer2: vi.fn()
+  })
+)
 
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,

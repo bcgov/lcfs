@@ -11,7 +11,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from '@mui/material/styles'
 import theme from '@/themes'
 import { CreditCalculator } from '../CreditCalculator'
-import { 
+import {
   useCalculateComplianceUnits,
   useGetCompliancePeriodList,
   useGetFuelTypeList,
@@ -31,7 +31,10 @@ const mockT = vi.fn((key, options) => {
       ec: 'Energy content',
       ed: 'Energy density'
     },
-    'report:fuelRequirementOptions': ['All fuel requirements', 'Low carbon fuel requirement only'],
+    'report:fuelRequirementOptions': [
+      'All fuel requirements',
+      'Low carbon fuel requirement only'
+    ],
     'report:calcTitle': 'Compliance unit calculator',
     'report:complianceYear': 'Compliance Year',
     'report:selectFuelType': 'Select Fuel Type',
@@ -40,8 +43,10 @@ const mockT = vi.fn((key, options) => {
     'report:customCiOption': 'Custom CI',
     'report:fuelCodeLabel': 'Fuel code',
     'report:qtySuppliedLabel': 'Quantity supplied',
-    'report:formulaBefore2024': 'Compliance units = (TCI * EER - RCI) * EC / 1,000,000',
-    'report:formulaAfter2024': 'Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000',
+    'report:formulaBefore2024':
+      'Compliance units = (TCI * EER - RCI) * EC / 1,000,000',
+    'report:formulaAfter2024':
+      'Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000',
     'report:formulaECDefinition': 'EC = Quantity * Energy density',
     'report:generatedLabel': 'Credits Generated',
     'report:changeInUnits': 'Change in Units'
@@ -63,8 +68,7 @@ vi.mock('@/hooks/useCalculator', () => ({
   useCalculateQuantityFromComplianceUnits: vi.fn()
 }))
 
-vi.mock('@/components/BCForm', async () => {
-  const actual = await vi.importActual('@/components/BCForm')
+vi.mock('@/components/BCForm/BCFormRadio', () => {
   const MockRadio = ({ name, label, options = [], disabled }) => {
     const { control, getValues } = useFormContext()
 
@@ -123,10 +127,7 @@ vi.mock('@/components/BCForm', async () => {
     )
   }
 
-  return {
-    ...actual,
-    BCFormRadio: MockRadio
-  }
+  return { BCFormRadio: MockRadio }
 })
 
 vi.mock('@/utils/clipboard', () => ({
@@ -175,9 +176,7 @@ const TestWrapper = ({ children, formProps = {} }) => {
   return (
     <BrowserRouter>
       <ThemeProvider theme={theme}>
-        <FormProvider {...methods}>
-          {children}
-        </FormProvider>
+        <FormProvider {...methods}>{children}</FormProvider>
       </ThemeProvider>
     </BrowserRouter>
   )
@@ -223,31 +222,31 @@ describe('CreditCalculator', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Default mock implementations
-    vi.mocked(useGetCompliancePeriodList).mockReturnValue({ 
-      data: mockCompliancePeriods, 
-      isLoading: false 
+    vi.mocked(useGetCompliancePeriodList).mockReturnValue({
+      data: mockCompliancePeriods,
+      isLoading: false
     })
-    vi.mocked(useGetFuelTypeList).mockReturnValue({ 
-      data: mockFuelTypeData, 
-      isLoading: false 
+    vi.mocked(useGetFuelTypeList).mockReturnValue({
+      data: mockFuelTypeData,
+      isLoading: false
     })
-    vi.mocked(useGetFuelTypeOptions).mockReturnValue({ 
-      data: mockFuelOptions, 
-      isLoading: false 
+    vi.mocked(useGetFuelTypeOptions).mockReturnValue({
+      data: mockFuelOptions,
+      isLoading: false
     })
-    vi.mocked(useCalculateComplianceUnits).mockReturnValue({ 
-      data: { 
-        data: { 
-          complianceUnits: 500, 
-          tci: 85, 
-          eer: 1.0, 
-          rci: 75, 
-          uci: 5, 
-          energyContent: 1000000, 
-          energyDensity: 35.5 
-        } 
+    vi.mocked(useCalculateComplianceUnits).mockReturnValue({
+      data: {
+        data: {
+          complianceUnits: 500,
+          tci: 85,
+          eer: 1.0,
+          rci: 75,
+          uci: 5,
+          energyContent: 1000000,
+          energyDensity: 35.5
+        }
       },
       refetch: vi.fn()
     })
@@ -259,7 +258,7 @@ describe('CreditCalculator', () => {
       },
       refetch: vi.fn()
     })
-    
+
     vi.mocked(copyToClipboard).mockResolvedValue(true)
   })
 
@@ -270,22 +269,22 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
 
     it('displays loading state when compliance periods are loading', () => {
-      vi.mocked(useGetCompliancePeriodList).mockReturnValue({ 
-        data: null, 
-        isLoading: true 
+      vi.mocked(useGetCompliancePeriodList).mockReturnValue({
+        data: null,
+        isLoading: true
       })
-      
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       expect(screen.getByTestId('loading')).toBeInTheDocument()
     })
 
@@ -295,7 +294,7 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       expect(screen.getByText('Compliance Year')).toBeInTheDocument()
       expect(screen.getByText('Select Fuel Type')).toBeInTheDocument()
       expect(screen.getByText('End Use')).toBeInTheDocument()
@@ -310,7 +309,7 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       // Test that key form elements are present (tests renderError indirectly)
       expect(screen.getByText('Compliance Year')).toBeInTheDocument()
       expect(screen.getByText('Select Fuel Type')).toBeInTheDocument()
@@ -326,85 +325,88 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       const clearButton = screen.getByText('Clear')
       fireEvent.click(clearButton)
-      
+
       // Form should be reset - test by checking default state
       expect(clearButton).toBeInTheDocument()
     })
 
     it('handles copy button click successfully', async () => {
       vi.mocked(copyToClipboard).mockResolvedValue(true)
-      
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       const copyButton = screen.getByText('Copy')
       fireEvent.click(copyButton)
-      
+
       await waitFor(() => {
         expect(vi.mocked(copyToClipboard)).toHaveBeenCalled()
         expect(screen.getByText('Copied!')).toBeInTheDocument()
       })
     })
-    
+
     it('handles copy button click failure', async () => {
       vi.mocked(copyToClipboard).mockResolvedValue(false)
-      
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       const copyButton = screen.getByText('Copy')
       fireEvent.click(copyButton)
-      
+
       await waitFor(() => {
         expect(vi.mocked(copyToClipboard)).toHaveBeenCalled()
         // Should still show Copy text on failure
         expect(screen.getByText('Copy')).toBeInTheDocument()
       })
     })
-    
+
     it('handles copy button exception', async () => {
       vi.mocked(copyToClipboard).mockRejectedValue(new Error('Copy failed'))
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       const copyButton = screen.getByText('Copy')
       fireEvent.click(copyButton)
-      
+
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to copy text: ', expect.any(Error))
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Failed to copy text: ',
+          expect.any(Error)
+        )
       })
-      
+
       consoleSpy.mockRestore()
     })
   })
 
   describe('Data Calculations', () => {
     it('handles empty compliance periods data', () => {
-      vi.mocked(useGetCompliancePeriodList).mockReturnValue({ 
-        data: null, 
-        isLoading: false 
+      vi.mocked(useGetCompliancePeriodList).mockReturnValue({
+        data: null,
+        isLoading: false
       })
-      
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       // Test that component renders without crashing when no data
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
@@ -417,31 +419,31 @@ describe('CreditCalculator', () => {
           { description: '2023' }
         ]
       }
-      
-      vi.mocked(useGetCompliancePeriodList).mockReturnValue({ 
-        data: mockData, 
-        isLoading: false 
+
+      vi.mocked(useGetCompliancePeriodList).mockReturnValue({
+        data: mockData,
+        isLoading: false
       })
-      
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       // Test that periods data is handled
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
 
     it('handles fallback values when no calculated data', () => {
       vi.mocked(useCalculateComplianceUnits).mockReturnValue({ data: null })
-      
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       // Test that component renders without crashing when no calculated data
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
@@ -458,17 +460,17 @@ describe('CreditCalculator', () => {
           energyDensity: 35.5
         }
       }
-      
-      vi.mocked(useCalculateComplianceUnits).mockReturnValue({ 
-        data: mockCalculatedData 
+
+      vi.mocked(useCalculateComplianceUnits).mockReturnValue({
+        data: mockCalculatedData
       })
-      
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       await waitFor(() => {
         expect(
           screen.getByText(
@@ -481,19 +483,19 @@ describe('CreditCalculator', () => {
 
   describe('Conditional Rendering', () => {
     it('displays loading state for fuel types', () => {
-    vi.mocked(useGetFuelTypeList).mockReturnValue({ 
-      data: null, 
-      isLoading: true 
-    })
-      
+      vi.mocked(useGetFuelTypeList).mockReturnValue({
+        data: null,
+        isLoading: true
+      })
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
-    expect(screen.getByTestId('loading')).toBeInTheDocument()
-  })
+
+      expect(screen.getByTestId('loading')).toBeInTheDocument()
+    })
 
     it('displays quantity input with correct unit', () => {
       render(
@@ -501,7 +503,7 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       expect(screen.getByTestId('quantity-unit')).toHaveTextContent('L')
     })
   })
@@ -513,20 +515,20 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       await waitFor(() => {
         expect(screen.getByText('Transportation')).toBeInTheDocument()
         expect(screen.getByText('Heating')).toBeInTheDocument()
       })
     })
-    
+
     it('disables provision dropdown based on compliance year and selections', () => {
       // Test provision dropdown disabled for compliance year >= 2024 with no end use
-      vi.mocked(useGetCompliancePeriodList).mockReturnValue({ 
-        data: { data: [{ description: '2024' }] }, 
-        isLoading: false 
+      vi.mocked(useGetCompliancePeriodList).mockReturnValue({
+        data: { data: [{ description: '2024' }] },
+        isLoading: false
       })
-      
+
       const TestWrapperWithYear = () => {
         const methods = useForm({
           defaultValues: {
@@ -545,13 +547,13 @@ describe('CreditCalculator', () => {
           </BrowserRouter>
         )
       }
-      
+
       render(<TestWrapperWithYear />)
-      
+
       // Should render the component
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
-    
+
     it('disables fuel code dropdown based on provision selection', () => {
       const TestWrapperWithProvision = () => {
         const methods = useForm({
@@ -570,12 +572,12 @@ describe('CreditCalculator', () => {
           </BrowserRouter>
         )
       }
-      
+
       render(<TestWrapperWithProvision />)
-      
+
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
-    
+
     it('enables fuel code dropdown for fuel code provisions', () => {
       const TestWrapperWithFuelCode = () => {
         const methods = useForm({
@@ -594,9 +596,9 @@ describe('CreditCalculator', () => {
           </BrowserRouter>
         )
       }
-      
+
       render(<TestWrapperWithFuelCode />)
-      
+
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
   })
@@ -624,9 +626,7 @@ describe('CreditCalculator', () => {
       )
 
       await waitFor(() => {
-        expect(
-          screen.getByDisplayValue('75 gCO₂e/MJ')
-        ).toBeInTheDocument()
+        expect(screen.getByDisplayValue('75 gCO₂e/MJ')).toBeInTheDocument()
       })
     })
 
@@ -653,9 +653,9 @@ describe('CreditCalculator', () => {
       const endUseOption = await screen.findByTestId('Transportation')
       await clickAndVerify(endUseOption)
 
-      const customOptionRadio = (
-        await screen.findAllByText('Custom CI')
-      ).find((element) => element.getAttribute('role') === 'radio')
+      const customOptionRadio = (await screen.findAllByText('Custom CI')).find(
+        (element) => element.getAttribute('role') === 'radio'
+      )
 
       expect(customOptionRadio).toBeDefined()
       await clickAndVerify(customOptionRadio)
@@ -668,188 +668,198 @@ describe('CreditCalculator', () => {
       })
     })
   })
-  
+
   describe('User Interactions', () => {
     it('handles fuel type selection click', async () => {
       // Mock with fuel category selected to show fuel types
-      vi.mocked(useGetFuelTypeList).mockReturnValue({ 
-        data: mockFuelTypeData, 
-        isLoading: false 
+      vi.mocked(useGetFuelTypeList).mockReturnValue({
+        data: mockFuelTypeData,
+        isLoading: false
       })
-      
+
       render(
-        <TestWrapper formProps={{
-          defaultValues: {
-            complianceYear: '2023',
-            fuelRequirement: 'All fuel requirements',
-            fuelCategory: 'Gasoline', // Set fuel category to show fuel types
-            fuelType: '',
-            fuelCode: '',
-            provisionOfTheAct: '',
-            quantity: DEFAULT_QUANTITY,
-            endUseType: ''
-          }
-        }}>
+        <TestWrapper
+          formProps={{
+            defaultValues: {
+              complianceYear: '2023',
+              fuelRequirement: 'All fuel requirements',
+              fuelCategory: 'Gasoline', // Set fuel category to show fuel types
+              fuelType: '',
+              fuelCode: '',
+              provisionOfTheAct: '',
+              quantity: DEFAULT_QUANTITY,
+              endUseType: ''
+            }
+          }}
+        >
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       // Wait for fuel types to be rendered
       await waitFor(() => {
         expect(screen.getByTestId('Gasoline')).toBeInTheDocument()
       })
-      
+
       const gasolineOption = screen.getByTestId('Gasoline')
       fireEvent.click(gasolineOption)
-      
+
       expect(gasolineOption).toHaveAttribute('aria-checked', 'true')
     })
-    
+
     it('handles fuel type selection keyboard events (Enter)', async () => {
       // Mock with fuel category selected to show fuel types
-      vi.mocked(useGetFuelTypeList).mockReturnValue({ 
-        data: mockFuelTypeData, 
-        isLoading: false 
+      vi.mocked(useGetFuelTypeList).mockReturnValue({
+        data: mockFuelTypeData,
+        isLoading: false
       })
-      
+
       render(
-        <TestWrapper formProps={{
-          defaultValues: {
-            complianceYear: '2023',
-            fuelRequirement: 'All fuel requirements',
-            fuelCategory: 'Gasoline', // Set fuel category to show fuel types
-            fuelType: '',
-            fuelCode: '',
-            provisionOfTheAct: '',
-            quantity: DEFAULT_QUANTITY,
-            endUseType: ''
-          }
-        }}>
+        <TestWrapper
+          formProps={{
+            defaultValues: {
+              complianceYear: '2023',
+              fuelRequirement: 'All fuel requirements',
+              fuelCategory: 'Gasoline', // Set fuel category to show fuel types
+              fuelType: '',
+              fuelCode: '',
+              provisionOfTheAct: '',
+              quantity: DEFAULT_QUANTITY,
+              endUseType: ''
+            }
+          }}
+        >
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       // Wait for fuel types to be rendered
       await waitFor(() => {
         expect(screen.getByTestId('Gasoline')).toBeInTheDocument()
       })
-      
+
       const gasolineOption = screen.getByTestId('Gasoline')
       fireEvent.keyDown(gasolineOption, { key: 'Enter' })
-      
+
       expect(gasolineOption).toHaveAttribute('aria-checked', 'true')
     })
-    
+
     it('handles fuel type selection keyboard events (Space)', async () => {
       // Mock with fuel category selected to show fuel types
-      vi.mocked(useGetFuelTypeList).mockReturnValue({ 
-        data: mockFuelTypeData, 
-        isLoading: false 
+      vi.mocked(useGetFuelTypeList).mockReturnValue({
+        data: mockFuelTypeData,
+        isLoading: false
       })
-      
+
       render(
-        <TestWrapper formProps={{
-          defaultValues: {
-            complianceYear: '2023',
-            fuelRequirement: 'All fuel requirements',
-            fuelCategory: 'Gasoline', // Set fuel category to show fuel types
-            fuelType: '',
-            fuelCode: '',
-            provisionOfTheAct: '',
-            quantity: DEFAULT_QUANTITY,
-            endUseType: ''
-          }
-        }}>
+        <TestWrapper
+          formProps={{
+            defaultValues: {
+              complianceYear: '2023',
+              fuelRequirement: 'All fuel requirements',
+              fuelCategory: 'Gasoline', // Set fuel category to show fuel types
+              fuelType: '',
+              fuelCode: '',
+              provisionOfTheAct: '',
+              quantity: DEFAULT_QUANTITY,
+              endUseType: ''
+            }
+          }}
+        >
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       // Wait for fuel types to be rendered
       await waitFor(() => {
         expect(screen.getByTestId('Gasoline')).toBeInTheDocument()
       })
-      
+
       const gasolineOption = screen.getByTestId('Gasoline')
       fireEvent.keyDown(gasolineOption, { key: ' ' })
-      
+
       expect(gasolineOption).toHaveAttribute('aria-checked', 'true')
     })
-    
+
     it('handles end use selection click', async () => {
       // Mock the fuel options to show end uses
-      vi.mocked(useGetFuelTypeOptions).mockReturnValue({ 
-        data: mockFuelOptions, 
-        isLoading: false 
+      vi.mocked(useGetFuelTypeOptions).mockReturnValue({
+        data: mockFuelOptions,
+        isLoading: false
       })
-      
+
       render(
-        <TestWrapper formProps={{
-          defaultValues: {
-            complianceYear: '2023',
-            fuelRequirement: 'All fuel requirements',
-            fuelCategory: 'Gasoline',
-            fuelType: 'Gasoline', // Set fuel type to show end uses
-            fuelCode: '',
-            provisionOfTheAct: '',
-            quantity: DEFAULT_QUANTITY,
-            endUseType: ''
-          }
-        }}>
+        <TestWrapper
+          formProps={{
+            defaultValues: {
+              complianceYear: '2023',
+              fuelRequirement: 'All fuel requirements',
+              fuelCategory: 'Gasoline',
+              fuelType: 'Gasoline', // Set fuel type to show end uses
+              fuelCode: '',
+              provisionOfTheAct: '',
+              quantity: DEFAULT_QUANTITY,
+              endUseType: ''
+            }
+          }}
+        >
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       // Wait for end uses to be rendered
       await waitFor(() => {
         expect(screen.getByTestId('Transportation')).toBeInTheDocument()
       })
-      
+
       const transportationOption = screen.getByTestId('Transportation')
       fireEvent.click(transportationOption)
-      
+
       await waitFor(() => {
         expect(transportationOption).toHaveAttribute('aria-checked', 'true')
       })
     })
-    
+
     it('handles end use selection keyboard events', async () => {
       // Mock the fuel options to show end uses
-      vi.mocked(useGetFuelTypeOptions).mockReturnValue({ 
-        data: mockFuelOptions, 
-        isLoading: false 
+      vi.mocked(useGetFuelTypeOptions).mockReturnValue({
+        data: mockFuelOptions,
+        isLoading: false
       })
-      
+
       render(
-        <TestWrapper formProps={{
-          defaultValues: {
-            complianceYear: '2023',
-            fuelRequirement: 'All fuel requirements',
-            fuelCategory: 'Gasoline',
-            fuelType: 'Gasoline', // Set fuel type to show end uses
-            fuelCode: '',
-            provisionOfTheAct: '',
-            quantity: DEFAULT_QUANTITY,
-            endUseType: ''
-          }
-        }}>
+        <TestWrapper
+          formProps={{
+            defaultValues: {
+              complianceYear: '2023',
+              fuelRequirement: 'All fuel requirements',
+              fuelCategory: 'Gasoline',
+              fuelType: 'Gasoline', // Set fuel type to show end uses
+              fuelCode: '',
+              provisionOfTheAct: '',
+              quantity: DEFAULT_QUANTITY,
+              endUseType: ''
+            }
+          }}
+        >
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       // Wait for end uses to be rendered
       await waitFor(() => {
         expect(screen.getByTestId('Transportation')).toBeInTheDocument()
       })
-      
+
       const transportationOption = screen.getByTestId('Transportation')
       fireEvent.keyDown(transportationOption, { key: 'Enter' })
-      
+
       await waitFor(() => {
         expect(transportationOption).toHaveAttribute('aria-checked', 'true')
       })
     })
   })
-  
+
   describe('Business Logic', () => {
     it('filters fuel categories based on compliance year before 2024', () => {
       const TestWrapperBefore2024 = () => {
@@ -866,13 +876,13 @@ describe('CreditCalculator', () => {
           </BrowserRouter>
         )
       }
-      
+
       render(<TestWrapperBefore2024 />)
-      
+
       // Should not show Jet fuel option before 2024
       expect(screen.queryByDisplayValue('Jet fuel')).not.toBeInTheDocument()
     })
-    
+
     it('includes all fuel categories for compliance year 2024+', () => {
       const TestWrapper2024 = () => {
         const methods = useForm({
@@ -888,12 +898,12 @@ describe('CreditCalculator', () => {
           </BrowserRouter>
         )
       }
-      
+
       render(<TestWrapper2024 />)
-      
+
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
-    
+
     it('displays the post-2024 formula when applicable', () => {
       const TestWrapperAfter2024 = () => {
         const methods = useForm({
@@ -918,7 +928,7 @@ describe('CreditCalculator', () => {
         )
       ).toBeInTheDocument()
     })
-    
+
     it('handles different compliance year scenarios', () => {
       // Test that component renders correctly with different compliance years
       render(
@@ -926,12 +936,12 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
       expect(screen.getByText('Compliance Year')).toBeInTheDocument()
     })
   })
-  
+
   describe('Default Values and Data Processing', () => {
     it('calculates default compliance period correctly for dates before March 31', () => {
       // Mock date to February (before March 31)
@@ -939,18 +949,18 @@ describe('CreditCalculator', () => {
       vi.spyOn(global, 'Date').mockImplementation(function () {
         return mockDate
       })
-      
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
-      
+
       vi.restoreAllMocks()
     })
-    
+
     it('handles empty fuel requirement options array', () => {
       // This test verifies the component renders without errors when fuel requirement options are empty
       // The existing mock already handles this case correctly
@@ -959,10 +969,10 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
-    
+
     it('handles different data states', () => {
       // Test that component handles various data states without crashing
       render(
@@ -970,22 +980,22 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
-    
+
     it('displays copy success state temporarily', async () => {
       vi.mocked(copyToClipboard).mockResolvedValue(true)
-      
+
       render(
         <TestWrapper>
           <CreditCalculator />
         </TestWrapper>
       )
-      
+
       const copyButton = screen.getByText('Copy')
       fireEvent.click(copyButton)
-      
+
       await waitFor(() => {
         expect(screen.getByText('Copied!')).toBeInTheDocument()
       })

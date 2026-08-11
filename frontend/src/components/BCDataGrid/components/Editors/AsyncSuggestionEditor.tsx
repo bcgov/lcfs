@@ -1,7 +1,10 @@
 // @ts-nocheck
 import BCBox from '@/components/BCBox'
 import { useApiService } from '@/services/useApiService'
-import { Autocomplete, Box, Grid, TextField } from '@mui/material'
+import Autocomplete from '@mui/material/Autocomplete'
+import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid'
+import TextField from '@mui/material/TextField'
 import { useQuery } from '@tanstack/react-query'
 import match from 'autosuggest-highlight/match'
 import parse from 'autosuggest-highlight/parse'
@@ -15,7 +18,10 @@ export interface AsyncSuggestionEditorProps {
   enabled?: boolean
   minWords?: number
   queryKey?: string
-  queryFn: (params: { client: any; queryKey: readonly unknown[] }) => Promise<any[]>
+  queryFn: (params: {
+    client: any
+    queryKey: readonly unknown[]
+  }) => Promise<any[]>
   debounceValue?: number
   onKeyDownCapture?: (event: KeyboardEvent) => void
   api?: any

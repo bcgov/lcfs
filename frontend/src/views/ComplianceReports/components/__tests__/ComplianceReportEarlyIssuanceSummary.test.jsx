@@ -26,21 +26,25 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Accordion: ({ children }) => <div data-test="accordion">{children}</div>,
-  AccordionSummary: ({ children, expandIcon }) => (
+vi.mock('@mui/material/Accordion', () => ({
+  default: ({ children }) => <div data-test="accordion">{children}</div>
+}))
+
+vi.mock('@mui/material/AccordionSummary', () => ({
+  default: ({ children, expandIcon }) => (
     <div data-test="accordion-summary">
       {children}
       {expandIcon && <span data-test="expand-icon">{expandIcon}</span>}
     </div>
-  ),
-  AccordionDetails: ({ children }) => (
-    <div data-test="accordion-details">{children}</div>
   )
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  ExpandMore: (props) => <div data-test="expand-more-icon">ExpandMore</div>
+vi.mock('@mui/material/AccordionDetails', () => ({
+  default: ({ children }) => <div data-test="accordion-details">{children}</div>
+}))
+
+vi.mock('@mui/icons-material/ExpandMore', () => ({
+  default: (props) => <div data-test="expand-more-icon">ExpandMore</div>
 }))
 
 describe('ComplianceReportEarlyIssuanceSummary', () => {

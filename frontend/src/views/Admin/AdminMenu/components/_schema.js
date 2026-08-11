@@ -10,10 +10,8 @@ import {
   StatusRenderer
 } from '@/utils/grid/cellRenderers'
 import { useRoleList } from '@/hooks/useRole'
-import {
-  BCSelectFloatingFilter,
-  BCDateFloatingFilter
-} from '@/components/BCDataGrid/components/index'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { RoleSelectFloatingFilter } from './RoleSelectFloatingFilter'
 import {
   COMPLIANCE_REPORT_STATUSES,

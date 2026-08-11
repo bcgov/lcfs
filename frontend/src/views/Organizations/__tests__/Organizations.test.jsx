@@ -163,8 +163,8 @@ vi.mock('@/components/BCTypography', () => ({
   default: ({ children }) => <span data-test="bc-typography">{children}</span>
 }))
 
-vi.mock('@mui/material', () => ({
-  Stack: ({ children, direction, spacing, useFlexGap, flexWrap }) => (
+vi.mock('@mui/material/Stack', () => ({
+  default: ({ children, direction, spacing, useFlexGap, flexWrap }) => (
     <div
       data-test="mui-stack"
       style={{
@@ -176,15 +176,6 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </div>
-  ),
-  TextField: ({ value, onChange, label, disabled }) => (
-    <input
-      data-test="mui-textfield"
-      value={value}
-      onChange={(e) => onChange && onChange(e)}
-      placeholder={label}
-      disabled={disabled}
-    />
   )
 }))
 

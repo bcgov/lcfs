@@ -12,15 +12,36 @@ vi.mock('@/i18n', () => ({
   t: (key) => key
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  AsyncSuggestionEditor: () => null,
-  AutocompleteCellEditor: () => null,
-  DateEditor: () => null,
-  NumberEditor: () => null,
-  RequiredHeader: () => null,
-  TextCellEditor: () => null,
-  ValidationRenderer2: () => null
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor',
+  () => ({
+    AsyncSuggestionEditor: () => null
+  })
+)
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor',
+  () => ({
+    AutocompleteCellEditor: () => null
+  })
+)
+vi.mock('@/components/BCDataGrid/components/Editors/DateEditor', () => ({
+  DateEditor: () => null
 }))
+vi.mock('@/components/BCDataGrid/components/Editors/NumberEditor', () => ({
+  NumberEditor: () => null
+}))
+vi.mock('@/components/BCDataGrid/components/Editors/TextCellEditor', () => ({
+  TextCellEditor: () => null
+}))
+vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
+  RequiredHeader: () => null
+}))
+vi.mock(
+  '@/components/BCDataGrid/components/Renderers/ValidationRenderer2',
+  () => ({
+    ValidationRenderer2: () => null
+  })
+)
 
 describe('FinalSupplyEquipment _schema', () => {
   const t = (key) => key
