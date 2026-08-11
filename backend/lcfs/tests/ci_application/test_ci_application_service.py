@@ -1185,6 +1185,26 @@ async def test_update_step3_succeeds_when_documents_missing(service, repo, mock_
     assert isinstance(result, CIApplicationSchema)
 
 
+@pytest.mark.anyio
+async def test_update_step3_closes_documentation_request(service, repo, mock_user):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.document_upload_enabled = True
+    ci.document_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
+    ci.document_changes_requested_by = "idir_user"
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    payload = CIApplicationStep3Schema(supporting_document_other="Extra notes")
+    result = await service.update_step3(ci, payload, mock_user)
+
+    assert ci.document_upload_enabled is False
+    assert ci.document_changes_requested_at is None
+    assert ci.document_changes_requested_by is None
+    assert isinstance(result, CIApplicationSchema)
+
+
 # ---------------------------------------------------------------------------
 # Step 4 — Sign & submit
 # ---------------------------------------------------------------------------
@@ -1795,6 +1815,42 @@ async def test_request_documentation_enables_upload_for_workflow_roles(
 
 
 @pytest.mark.anyio
+async def test_request_documentation_clears_previous_government_review(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = "High"
+    ci.priority_score = 511
+    ci.verification_1_user_id = 22
+    ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
+    ci.verification_2_user_id = 33
+    ci.verification_2_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
+    ci.verification_2_risk_assessment = "Medium"
+    ci.verification_2_priority_score = 426
+    ci.recommendation_user_id = 44
+    ci.recommendation_date = datetime(2026, 5, 21, tzinfo=timezone.utc)
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.request_documentation(ci, mock_user)
+
+    assert ci.preliminary_risk_assessment is None
+    assert ci.priority_score is None
+    assert ci.verification_1_user_id is None
+    assert ci.verification_1_date is None
+    assert ci.verification_2_user_id is None
+    assert ci.verification_2_date is None
+    assert ci.verification_2_risk_assessment is None
+    assert ci.verification_2_priority_score is None
+    assert ci.recommendation_user_id is None
+    assert ci.recommendation_date is None
+    assert ci.document_upload_enabled is True
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
 async def test_request_documentation_requires_workflow_role(service, repo, mock_user):
     ci = _ci_application(status=_status("Submitted", 2))
 
@@ -1811,6 +1867,18 @@ async def test_request_documentation_requires_submitted_status(
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _ci_application(status=_status("Draft", 1))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.request_documentation(ci, mock_user)
+
+    assert exc.value.status_code == 400
+    repo.update.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_request_documentation_rejects_completed_status(service, repo, mock_user):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Completed", 4))
 
     with pytest.raises(HTTPException) as exc:
         await service.request_documentation(ci, mock_user)
@@ -1896,7 +1964,7 @@ async def test_step5_decision_can_return_recommended_to_submitted(
 
 
 @pytest.mark.anyio
-async def test_request_pathway_changes_keeps_submitted_and_verification_work(
+async def test_request_pathway_changes_clears_previous_government_review(
     service, repo, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
@@ -1921,11 +1989,16 @@ async def test_request_pathway_changes_keeps_submitted_and_verification_work(
     assert ci.status_id == 2
     assert ci.ci_application_status.status == "Submitted"
     assert ci.assigned_analyst_id == 12
-    assert ci.preliminary_risk_assessment == "High"
-    assert ci.priority_score == 511
-    assert ci.verification_1_user_id == 22
-    assert ci.verification_2_user_id == 33
-    assert ci.recommendation_user_id == 44
+    assert ci.preliminary_risk_assessment is None
+    assert ci.priority_score is None
+    assert ci.verification_1_user_id is None
+    assert ci.verification_1_date is None
+    assert ci.verification_2_user_id is None
+    assert ci.verification_2_date is None
+    assert ci.verification_2_risk_assessment is None
+    assert ci.verification_2_priority_score is None
+    assert ci.recommendation_user_id is None
+    assert ci.recommendation_date is None
     assert ci.pathway_changes_requested_at is not None
     assert ci.pathway_changes_requested_by == "ci_applicant_user"
     assert ci.pathway_supplemental_edit_enabled is True
@@ -1944,6 +2017,20 @@ async def test_request_pathway_changes_rejects_non_workflow_role(
         await service.request_pathway_changes(ci, mock_user)
 
     assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_request_pathway_changes_rejects_completed_status(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Completed", 4))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.request_pathway_changes(ci, mock_user)
+
+    assert exc.value.status_code == 400
+    repo.update.assert_not_called()
 
 
 @pytest.mark.anyio
@@ -2046,8 +2133,8 @@ async def test_step5_decision_reactivates_withdrawn_and_preserves_work(
     assert ci.assigned_analyst_id == 12
     assert ci.verification_1_user_id == 22
     assert ci.verification_1_date == datetime(2026, 5, 19, tzinfo=timezone.utc)
-    assert ci.recommendation_user_id == 44
-    assert ci.recommendation_date == datetime(2026, 5, 21, tzinfo=timezone.utc)
+    assert ci.recommendation_user_id is None
+    assert ci.recommendation_date is None
     assert isinstance(result, CIApplicationSchema)
 
 
