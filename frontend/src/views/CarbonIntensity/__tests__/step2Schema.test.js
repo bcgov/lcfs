@@ -18,6 +18,7 @@ const validRow = {
   pathwayId: null,
   applicationTypeId: 1,
   fuelCodeTypeId: 1,
+  designData: false,
   operatingDataFrom: '2025-01-01',
   operatingDataTo: '2025-12-31',
   fuelCodeId: null,
@@ -66,8 +67,9 @@ describe('validatePathwayRow', () => {
       APPLICATION_TYPES
     )
     expect(errs).toContain('fuelCodeTypeId')
-    expect(errs).toContain('operatingDataFrom')
-    expect(errs).toContain('operatingDataTo')
+    expect(errs).toContain('designData')
+    expect(errs).not.toContain('operatingDataFrom')
+    expect(errs).not.toContain('operatingDataTo')
     expect(errs).toContain('proposedCi')
     expect(errs).toContain('fuelTypeId')
     expect(errs).toContain('feedstock')
@@ -99,6 +101,34 @@ describe('validatePathwayRow', () => {
       'operatingDataTo'
     )
   })
+
+  it('does not require operating dates for design data rows', () => {
+    expect(
+      validatePathwayRow(
+        {
+          ...validRow,
+          designData: true,
+          operatingDataFrom: '',
+          operatingDataTo: ''
+        },
+        APPLICATION_TYPES
+      )
+    ).toEqual([])
+  })
+
+  it('requires operating dates for operational data rows', () => {
+    const errs = validatePathwayRow(
+      {
+        ...validRow,
+        designData: false,
+        operatingDataFrom: '',
+        operatingDataTo: ''
+      },
+      APPLICATION_TYPES
+    )
+    expect(errs).toContain('operatingDataFrom')
+    expect(errs).toContain('operatingDataTo')
+  })
 })
 
 describe('rowToApiPayload', () => {
@@ -111,6 +141,7 @@ describe('rowToApiPayload', () => {
       coproducts: '   '
     })
     expect(payload.proposedCi).toBe(5.61)
+    expect(payload.designData).toBe(false)
     expect(payload.feedstockTransportDistance).toBe(100)
     expect(payload.finishedFuelTransportDistance).toBe(200)
     expect(payload.coproducts).toBeNull()
@@ -133,6 +164,7 @@ describe('apiToRow', () => {
       pathwayId: 7,
       applicationTypeId: 2,
       fuelCodeTypeId: 1,
+      designData: true,
       operatingDataFrom: '2025-01-01',
       operatingDataTo: '2025-12-31',
       fuelCodeId: 42,
@@ -147,8 +179,20 @@ describe('apiToRow', () => {
       finishedFuelTransportDistance: 75
     })
     expect(row.pathwayId).toBe(7)
+    expect(row.designData).toBe(true)
     expect(row.proposedCi).toBe(23.23)
     expect(row.id).toBe('pathway-7')
+  })
+})
+
+describe('buildPathwayColDefs — design data column', () => {
+  it('places Design data immediately after Proposed fuel code type', () => {
+    const cols = buildPathwayColDefs({
+      optionsData: {},
+      canEdit: true
+    })
+    const fuelCodeTypeIndex = cols.findIndex((c) => c.field === 'fuelCodeTypeId')
+    expect(cols[fuelCodeTypeIndex + 1].field).toBe('designData')
   })
 })
 

@@ -60,6 +60,7 @@ const formatBytes = (bytes) => {
 const PATHWAY_CHANGELOG_FIELD_MAP = {
   application_type_id: 'applicationTypeId',
   fuel_code_type_id: 'fuelCodeTypeId',
+  design_data: 'designData',
   operating_data_from: 'operatingDataFrom',
   operating_data_to: 'operatingDataTo',
   fuel_code_id: 'fuelCodeId',
@@ -79,6 +80,7 @@ const toPathwayChangelogRow = (snapshot = {}) => ({
   pathwayGroupUuid: snapshot.pathway_group_uuid,
   applicationTypeId: snapshot.application_type_id,
   fuelCodeTypeId: snapshot.fuel_code_type_id,
+  designData: snapshot.design_data,
   operatingDataFrom: snapshot.operating_data_from,
   operatingDataTo: snapshot.operating_data_to,
   fuelCodeId: snapshot.fuel_code_id,
@@ -108,6 +110,7 @@ const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
   pathwayGroupUuid: pathway.groupUuid || pathway.group_uuid,
   applicationTypeId: pathway.applicationTypeId || pathway.application_type_id,
   fuelCodeTypeId: pathway.fuelCodeTypeId || pathway.fuel_code_type_id,
+  designData: pathway.designData ?? pathway.design_data,
   operatingDataFrom: pathway.operatingDataFrom || pathway.operating_data_from,
   operatingDataTo: pathway.operatingDataTo || pathway.operating_data_to,
   fuelCodeId: pathway.fuelCodeId || pathway.fuel_code_id,

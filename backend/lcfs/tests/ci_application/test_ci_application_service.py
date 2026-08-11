@@ -681,6 +681,7 @@ def _new_pathway_input(**overrides):
     base = dict(
         application_type_id=1,
         fuel_code_type_id=1,
+        design_data=False,
         operating_data_from=date(2025, 1, 1),
         operating_data_to=date(2025, 12, 31),
         fuel_code_id=None,
@@ -704,11 +705,33 @@ def test_pathway_input_allows_negative_proposed_ci():
     assert payload.proposed_ci == Decimal("-5.61")
 
 
+def test_pathway_input_allows_design_data_without_operating_dates():
+    payload = _new_pathway_input(
+        design_data=True,
+        operating_data_from=None,
+        operating_data_to=None,
+    )
+
+    assert payload.design_data is True
+    assert payload.operating_data_from is None
+    assert payload.operating_data_to is None
+
+
+def test_pathway_input_requires_operating_dates_for_operational_data():
+    with pytest.raises(RequestValidationError):
+        _new_pathway_input(
+            design_data=False,
+            operating_data_from=None,
+            operating_data_to=None,
+        )
+
+
 def _existing_pathway(**overrides):
     base = dict(
         pathway_id=1,
         application_type_id=1,
         fuel_code_type_id=1,
+        design_data=False,
         operating_data_from=date(2025, 1, 1),
         operating_data_to=date(2025, 12, 31),
         fuel_code_id=None,
@@ -1318,6 +1341,7 @@ def _generation_pathway():
         application_type=_pathway_app_type(),
         fuel_code_type_id=1,
         fuel_code_type=_pathway_fc_type(),
+        design_data=False,
         operating_data_from=date(2026, 1, 1),
         fuel_code_id=None,
         fuel_code=None,

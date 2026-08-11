@@ -94,6 +94,7 @@ CI_STEP3_REQUIRE_DOCUMENTS = False
 PATHWAY_LOG_FIELDS = [
     "application_type_id",
     "fuel_code_type_id",
+    "design_data",
     "operating_data_from",
     "operating_data_to",
     "fuel_code_id",
@@ -176,6 +177,7 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
             if pathway.fuel_code_type
             else None
         ),
+        design_data=pathway.design_data,
         operating_data_from=pathway.operating_data_from,
         operating_data_to=pathway.operating_data_to,
         fuel_code_id=pathway.fuel_code_id,
@@ -1740,6 +1742,7 @@ class CIApplicationServices:
             pathway = Pathway(
                 application_type_id=row.application_type_id,
                 fuel_code_type_id=row.fuel_code_type_id,
+                design_data=row.design_data,
                 operating_data_from=row.operating_data_from,
                 operating_data_to=row.operating_data_to,
                 fuel_code_id=row.fuel_code_id,
@@ -1781,6 +1784,7 @@ class CIApplicationServices:
                 pathway = Pathway(
                     application_type_id=previous.application_type_id,
                     fuel_code_type_id=previous.fuel_code_type_id,
+                    design_data=previous.design_data,
                     operating_data_from=previous.operating_data_from,
                     operating_data_to=previous.operating_data_to,
                     fuel_code_id=previous.fuel_code_id,
