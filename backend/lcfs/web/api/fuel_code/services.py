@@ -122,6 +122,18 @@ class FuelCodeServices:
         return merged[:10]
 
     @service_handler
+    async def search_former_company(self, former_company):
+        former_company_names, org_names = await asyncio.gather(
+            self.repo.get_distinct_former_company_names(former_company),
+            self.repo.get_organization_names_like(former_company),
+        )
+        seen = set(n.lower() for n in org_names)
+        merged = list(org_names) + [
+            n for n in former_company_names if n.lower() not in seen
+        ]
+        return merged[:10]
+
+    @service_handler
     async def search_contact_name(self, company, contact_name):
         return await self.repo.get_contact_names_by_company(company, contact_name)
 

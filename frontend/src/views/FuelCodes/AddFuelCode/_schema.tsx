@@ -21,8 +21,7 @@ const CO_PROCESSED_OPTIONS = ['No', 'Yes - DHT', 'Yes - FCC']
 const getFieldOptions = (optionsData?: OptionsData) => ({
   feedstock: optionsData?.fieldOptions?.feedstock || [],
   feedstockLocation: optionsData?.fieldOptions?.feedstockLocation || [],
-  feedstockMisc: optionsData?.fieldOptions?.feedstockMisc || [],
-  formerCompany: optionsData?.fieldOptions?.formerCompany || []
+  feedstockMisc: optionsData?.fieldOptions?.feedstockMisc || []
 })
 
 const cellErrorStyle = (params) => {
@@ -699,18 +698,21 @@ export const fuelCodeColDefs = (
       field: 'formerCompany',
       editable: canEdit,
       headerName: i18n.t('fuelCode:fuelCodeColLabels.formerCompany'),
-      cellEditor: AutocompleteCellEditor,
+      cellEditor: AsyncSuggestionEditor,
+      cellEditorParams: (params) => ({
+        queryKey: 'former-company-search',
+        queryFn: async ({ queryKey, client }) => {
+          let path = apiRoutes.fuelCodeSearch
+          path += `formerCompany=${encodeURIComponent(queryKey[1])}`
+          const response = await client.get(path)
+          return response.data
+        },
+        title: 'formerCompany',
+        api: params.api
+      }),
       suppressKeyboardEvent,
       cellDataType: 'text',
       cellRenderer: createCellRenderer('formerCompany'),
-      cellEditorParams: {
-        noLabel: true,
-        options: fieldOptions.formerCompany,
-        multiple: false,
-        disableCloseOnSelect: false,
-        freeSolo: true,
-        openOnFocus: true
-      },
       minWidth: 300
     },
     {

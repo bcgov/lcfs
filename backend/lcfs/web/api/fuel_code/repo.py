@@ -954,6 +954,20 @@ class FuelCodeRepository:
         return (await self.db.execute(query)).scalars().all()
 
     @repo_handler
+    async def get_distinct_former_company_names(self, former_company: str) -> List[str]:
+        query = (
+            select(distinct(FuelCode.former_company))
+            .where(
+                func.lower(FuelCode.former_company).like(
+                    func.lower(former_company + "%")
+                )
+            )
+            .order_by(FuelCode.former_company)
+            .limit(10)
+        )
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
     async def get_contact_names_by_company(
         self, company: str, contact_name: str
     ) -> List[str]:

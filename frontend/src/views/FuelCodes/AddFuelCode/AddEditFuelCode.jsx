@@ -472,7 +472,9 @@ const AddEditFuelCodeBase = () => {
   )
 
   const handleSaveSuccess = useCallback(async () => {
-    await refetch()
+    if (fuelCodeID) {
+      await refetch()
+    }
     updateState({ isInEditMode: false, modalData: null })
     navigate(ROUTES.FUEL_CODES.LIST, {
       state: {
@@ -483,7 +485,7 @@ const AddEditFuelCodeBase = () => {
         severity: 'success'
       }
     })
-  }, [refetch, t, navigate, updateState])
+  }, [refetch, fuelCodeID, t, navigate, updateState])
 
   const handleDeleteFuelCode = useCallback(
     async (fuelCodeId, params) => {
@@ -864,7 +866,9 @@ const AddEditFuelCodeBase = () => {
           setButtonOperationState(true, 'return')
           // Set original status before changing to draft if not already set
           if (originalStatus === null && existingFuelCode) {
-            updateState({ originalStatus: existingFuelCode.fuelCodeStatus.status })
+            updateState({
+              originalStatus: existingFuelCode.fuelCodeStatus.status
+            })
           }
 
           await fuelCodeMutation.mutateAsync({

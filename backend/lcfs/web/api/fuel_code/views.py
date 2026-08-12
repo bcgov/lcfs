@@ -84,6 +84,11 @@ async def search_table_options_strings(
     company: Optional[str] = Query(
         None, alias="company", description="Company for filtering options"
     ),
+    former_company: Optional[str] = Query(
+        None,
+        alias="formerCompany",
+        description="Former company for filtering options",
+    ),
     contact_name: Optional[str] = Query(
         None, alias="contactName", description="Contact name for filtering options"
     ),
@@ -141,6 +146,9 @@ async def search_table_options_strings(
             )
             return await service.search_contact_name(company, contact_name)
         return await service.search_company(company)
+    elif former_company:
+        logger.info("Searching former company", former_company=former_company)
+        return await service.search_former_company(former_company)
     elif fp_city or fp_province or fp_country:
         logger.info("Searching fuel production facility location")
         return await service.search_fp_facility_location(
