@@ -523,6 +523,11 @@ class CIApplicationVerification2Schema(BaseSchema):
     priority_score: Optional[StrictInt] = Field(default=None, ge=1, le=999)
 
 
+class CIApplicationRiskAssessmentDraftSchema(BaseSchema):
+    preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
+    priority_score: Optional[StrictInt] = None
+
+
 # ---------------------------------------------------------------------------
 # Step 3 — Documents & GHGenius modelling
 # ---------------------------------------------------------------------------

@@ -30,6 +30,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationStep3Schema,
     CIApplicationStep4DraftSchema,
     CIApplicationStep4Schema,
+    CIApplicationRiskAssessmentDraftSchema,
     CIApplicationUserSchema,
     CIApplicationVerification1Schema,
     CIApplicationVerification2Schema,
@@ -448,6 +449,30 @@ async def assign_analyst_to_ci_application(
     return await service.assign_analyst_to_application(
         ci, data.assigned_analyst_id, request.user
     )
+
+
+@router.put(
+    "/{ci_application_id}/risk-assessment",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def update_ci_application_risk_assessment(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationRiskAssessmentDraftSchema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    ci = await validate.validate_access(ci_application_id)
+    return await service.update_risk_assessment_draft(ci, data, request.user)
 
 
 @router.post(

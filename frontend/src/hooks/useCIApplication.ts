@@ -355,6 +355,31 @@ export const useAssignCIApplicationAnalyst = (
   })
 }
 
+export const useUpdateCIApplicationRiskAssessment = (
+  ciApplicationId: number | string | undefined | null
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: any) => {
+      return (
+        await client.put(
+          apiRoutes.updateCIApplicationRiskAssessment.replace(
+            ':ciApplicationId',
+            String(ciApplicationId ?? '')
+          ),
+          payload
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+      updateCIApplicationListCaches(queryClient, data)
+    }
+  })
+}
+
 export const useCompleteCIApplicationVerification1 = (
   ciApplicationId: number | string | undefined | null
 ) => {

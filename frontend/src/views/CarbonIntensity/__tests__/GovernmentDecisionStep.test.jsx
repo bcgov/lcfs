@@ -52,6 +52,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
   useRecordCIDecision: vi.fn(() => ({
     mutateAsync: mockRecordDecision,
     isPending: false
+  })),
+  useUpdateCIApplicationRiskAssessment: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false
   }))
 }))
 

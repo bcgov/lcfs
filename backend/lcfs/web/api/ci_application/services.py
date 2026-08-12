@@ -42,6 +42,7 @@ from lcfs.web.api.ci_application.schema import (
     AssignedAnalystSchema,
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
+    CIApplicationRiskAssessmentDraftSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationStatusEnum,
@@ -1366,6 +1367,38 @@ class CIApplicationServices:
             await self._validate_analyst_eligibility(assigned_analyst_id)
 
         ci_application.assigned_analyst_id = assigned_analyst_id
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
+
+    @service_handler
+    async def update_risk_assessment_draft(
+        self,
+        ci_application: CIApplication,
+        data: CIApplicationRiskAssessmentDraftSchema,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        self._require_submitted_workflow(ci_application)
+
+        risk_value = (
+            data.preliminary_risk_assessment.value
+            if data.preliminary_risk_assessment is not None
+            else None
+        )
+        editing_verification_2 = bool(
+            ci_application.verification_1_date
+            and not ci_application.verification_2_date
+        )
+        if editing_verification_2:
+            ci_application.verification_2_risk_assessment = risk_value
+            ci_application.verification_2_priority_score = data.priority_score
+        else:
+            ci_application.preliminary_risk_assessment = risk_value
+            ci_application.priority_score = data.priority_score
+
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
