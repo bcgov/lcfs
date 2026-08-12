@@ -50,6 +50,11 @@
       "complianceReports": {
         "title": "Compliance & supplemental reports",
         "directorAssessment": "Director assessment"
+      },
+      "ciApplications": {
+        "title": "CI applications",
+        "governmentAction": "Changes requested or comments from government",
+        "fuelCodeApproved": "Fuel codes approved"
       }
     }
   },
