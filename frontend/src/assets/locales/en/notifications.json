@@ -151,7 +151,12 @@
     "organization": "Organization"
   },
   "noNotificationsFound": "No notification messages found.",
+  "noRecentNotifications": "No recent notifications.",
   "noNotificationsSelectedText": "No messages selected.",
+  "markAllAsRead": "Mark all as read",
+  "markNotificationAsRead": "Mark notification as read",
+  "latestNotifications": "Latest notifications",
+  "viewAllNotifications": "View all notifications",
   "deleteSuccessText": "Successfully deleted selected message(s).",
   "deleteErrorText": "An error occurred while deleting the selected message(s).",
   "markAsReadSuccessText": "Successfully updated message(s) as read.",
