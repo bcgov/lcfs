@@ -1333,8 +1333,8 @@ def _draft_ci_with_pathways():
     return ci
 
 
-def _generation_pathway():
-    return SimpleNamespace(
+def _generation_pathway(**overrides):
+    base = dict(
         pathway_id=1,
         ci_application_id=10,
         application_type_id=1,
@@ -1357,6 +1357,8 @@ def _generation_pathway():
         finished_fuel_transport_mode="Rail",
         finished_fuel_transport_distance=200,
     )
+    base.update(overrides)
+    return SimpleNamespace(**base)
 
 
 def _submitted_ci_for_generation(risk="Medium"):
@@ -1443,6 +1445,54 @@ async def test_update_generated_fuel_code_clearing_required_date_raises_validati
     assert exc.value.errors["errors"][0]["fields"] == ["applicationDate"]
     # The cleared value never reached the database.
     repo.update.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_uses_fuel_code_duration_for_design_data_expiry(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    ci.proposed_fuel_code_effective_date = date(2027, 1, 1)
+    ci.pathways = [
+        _generation_pathway(
+            design_data=True,
+            operating_data_from=None,
+            operating_data_to=None,
+            fuel_code_type=_pathway_fc_type(2, "3-year"),
+        )
+    ]
+    _stub_generation_dependencies(service, repo, ci)
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    created_fuel_code = ci.generated_fuel_code_associations[0].fuel_code
+    assert created_fuel_code.effective_date == date(2027, 1, 1)
+    assert created_fuel_code.expiration_date == date(2029, 12, 31)
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_defaults_effective_date_to_application_date(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    ci.proposed_fuel_code_effective_date = None
+    ci.pathways = [
+        _generation_pathway(
+            design_data=True,
+            operating_data_from=None,
+            operating_data_to=None,
+            fuel_code_type=_pathway_fc_type(1, "1-year provisional"),
+        )
+    ]
+    _stub_generation_dependencies(service, repo, ci)
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    created_fuel_code = ci.generated_fuel_code_associations[0].fuel_code
+    assert created_fuel_code.effective_date == date(2026, 5, 1)
+    assert created_fuel_code.expiration_date == date(2027, 4, 30)
 
 
 @pytest.mark.anyio

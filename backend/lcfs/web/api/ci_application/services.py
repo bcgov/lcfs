@@ -7,8 +7,9 @@ decision (with the comments thread).
 """
 
 import json
+import re
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -448,6 +449,31 @@ def _validate_generated_fuel_code_row_values(row: Dict[str, Any]) -> Dict[str, A
     row["validation_errors"] = validation_errors or None
     row["validation_msg"] = _generated_validation_message(validation_errors)
     return row
+
+
+def _add_years(value: date, years: int) -> date:
+    try:
+        return value.replace(year=value.year + years)
+    except ValueError:
+        return value.replace(month=2, day=28, year=value.year + years)
+
+
+def _pathway_fuel_code_duration_years(pathway: Pathway) -> int:
+    fuel_code_type = getattr(getattr(pathway, "fuel_code_type", None), "type", "")
+    match = re.search(r"(\d+)\s*-\s*year", fuel_code_type or "", re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return 1
+
+
+def _generated_fuel_code_expiration_date(
+    pathway: Pathway,
+    effective_date: date,
+) -> date:
+    if getattr(pathway, "operating_data_to", None):
+        return pathway.operating_data_to
+    duration_years = _pathway_fuel_code_duration_years(pathway)
+    return _add_years(effective_date, duration_years) - timedelta(days=1)
 
 
 def _to_generated_fuel_code_schema(row: Dict[str, Any]) -> CIGeneratedFuelCodeSchema:
@@ -891,6 +917,9 @@ class CIApplicationServices:
             if ci_application.signature_date_time
             else date.today()
         )
+        effective_date = (
+            ci_application.proposed_fuel_code_effective_date or application_date
+        )
         reserved_suffixes_by_prefix: Dict[str, set[str]] = {}
 
         associations: List[CIApplicationFuelCodeAssociation] = []
@@ -931,8 +960,10 @@ class CIApplicationServices:
                 contact_email=getattr(ci_application.organization, "email", None),
                 application_date=application_date,
                 approval_date=None,
-                effective_date=ci_application.proposed_fuel_code_effective_date,
-                expiration_date=pathway.operating_data_to,
+                effective_date=effective_date,
+                expiration_date=_generated_fuel_code_expiration_date(
+                    pathway, effective_date
+                ),
                 fuel_type_id=pathway.fuel_type_id,
                 feedstock=pathway.feedstock,
                 feedstock_location=pathway.feedstock_region,
