@@ -118,16 +118,21 @@ async def test_get_distinct_years_filters_nulls(
 # ---------------------------------------------------------------------------
 # Integration tests — real test database + materialized view (#4714)
 # ---------------------------------------------------------------------------
-from datetime import datetime, timezone
+import uuid
+from datetime import datetime
 
 from sqlalchemy import select, text
 
-from lcfs.db.models.transaction.Transaction import (
-    Transaction,
-    TransactionActionEnum,
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
 )
+from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
 from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
+from lcfs.web.api.credit_ledger.services import compliance_year_envelope
 
 
 async def _transfer_status_id(dbsession, status_enum) -> int:
@@ -156,72 +161,232 @@ def _transfer(transfer_id, status_id, effective_date, quantity=100):
     )
 
 
+async def _envelope_rows(repo, *, compliance_period, first_assessed_year=None):
+    """Call get_period_rows with the envelope the service would compute."""
+    start, end = compliance_year_envelope(compliance_period, first_assessed_year)
+    return await repo.get_period_rows(
+        organization_id=1,
+        compliance_period=compliance_period,
+        envelope_start=start,
+        envelope_end=end,
+    )
+
+
 @pytest.mark.anyio
-async def test_get_period_rows_pending_transfer_falls_back_to_effective_year(
-    dbsession, add_models
-):
-    """Regression (#4714): pending transfers carry compliance_period 'N/A' in
-    mv_transaction_aggregate until recorded, so the period query must fall back
-    to the transaction's effective-date year — otherwise the 'show pending'
-    toggle can never surface them."""
+async def test_get_period_rows_uses_april_to_march_envelope(dbsession, add_models):
+    """
+    A compliance year runs April 1 – March 31 (#4832), so a transfer dated in
+    January–March belongs to the *previous* compliance year, and one dated in
+    April starts the next.
+    """
     recorded_id = await _transfer_status_id(dbsession, TransferStatusEnum.Recorded)
-    submitted_id = await _transfer_status_id(dbsession, TransferStatusEnum.Submitted)
 
     await add_models(
         [
-            _transfer(770001, recorded_id, datetime(2024, 6, 1)),
-            _transfer(770002, submitted_id, datetime(2024, 11, 1)),
+            _transfer(770101, recorded_id, datetime(2024, 6, 1)),  # mid-2024
+            _transfer(770102, recorded_id, datetime(2025, 2, 15)),  # Jan–Mar tail
+            _transfer(770103, recorded_id, datetime(2025, 5, 10)),  # next envelope
         ]
     )
-    # Refresh runs inside the test transaction, so it sees the flushed rows
-    # and is rolled back with everything else afterwards.
     await dbsession.execute(text("REFRESH MATERIALIZED VIEW mv_transaction_aggregate"))
 
     repo = CreditLedgerRepository(db=dbsession)
-    rows_2024 = await repo.get_period_rows(organization_id=1, compliance_period=2024)
-    by_id = {row.transaction_id: row for row, _version in rows_2024}
 
-    # Recorded transfer attributed via its compliance_period column.
-    assert 770001 in by_id and by_id[770001].status == "Recorded"
-    # Pending transfer surfaced via the effective-date-year fallback.
-    assert 770002 in by_id and by_id[770002].status == "Submitted"
+    ids_2024 = {
+        r.transaction_id for r, _v in await _envelope_rows(repo, compliance_period=2024)
+    }
+    assert 770101 in ids_2024
+    # The Feb 2025 transfer closes out compliance year 2024, not 2025.
+    assert 770102 in ids_2024
+    assert 770103 not in ids_2024
 
-    # The fallback respects the year: neither row belongs to 2023.
-    rows_2023 = await repo.get_period_rows(organization_id=1, compliance_period=2023)
-    ids_2023 = {row.transaction_id for row, _version in rows_2023}
-    assert 770001 not in ids_2023 and 770002 not in ids_2023
+    ids_2025 = {
+        r.transaction_id for r, _v in await _envelope_rows(repo, compliance_period=2025)
+    }
+    assert 770103 in ids_2025
+    assert 770101 not in ids_2025 and 770102 not in ids_2025
 
 
 @pytest.mark.anyio
-async def test_get_period_assessed_balance_is_not_floored(dbsession, add_models):
-    """The assessed-balance helper must return raw (possibly negative) values
-    so deficits can be displayed — unlike calculate_available_balance_for_period,
-    which floors at zero. Uses a 1990 period so seeded present-day transactions
-    (create_date = now) fall outside the March 31, 1991 cut-off."""
+async def test_get_period_rows_first_year_envelope_opens_in_january(
+    dbsession, add_models
+):
+    """
+    The first compliance year with an assessed report also picks up January –
+    March of that year (#4832): no earlier envelope exists to hold them.
+    """
+    recorded_id = await _transfer_status_id(dbsession, TransferStatusEnum.Recorded)
+    await add_models([_transfer(770201, recorded_id, datetime(2024, 2, 20))])
+    await dbsession.execute(text("REFRESH MATERIALIZED VIEW mv_transaction_aggregate"))
+
+    repo = CreditLedgerRepository(db=dbsession)
+
+    # Standard envelope starts April 1, so a February transfer is excluded...
+    ids_standard = {
+        r.transaction_id for r, _v in await _envelope_rows(repo, compliance_period=2024)
+    }
+    assert 770201 not in ids_standard
+
+    # ...but is included when 2024 is the organization's first assessed year.
+    ids_first = {
+        r.transaction_id
+        for r, _v in await _envelope_rows(
+            repo, compliance_period=2024, first_assessed_year=2024
+        )
+    }
+    assert 770201 in ids_first
+
+
+@pytest.mark.anyio
+async def test_get_period_rows_includes_pending_transfer_by_date(dbsession, add_models):
+    """
+    Pending transfers carry compliance_period 'N/A' in mv_transaction_aggregate
+    until recorded. The date-based envelope picks them up without the special
+    case the calendar-year query needed (#4714, #4832).
+    """
+    submitted_id = await _transfer_status_id(dbsession, TransferStatusEnum.Submitted)
+    await add_models([_transfer(770301, submitted_id, datetime(2024, 11, 1))])
+    await dbsession.execute(text("REFRESH MATERIALIZED VIEW mv_transaction_aggregate"))
+
+    repo = CreditLedgerRepository(db=dbsession)
+    by_id = {
+        r.transaction_id: r
+        for r, _v in await _envelope_rows(repo, compliance_period=2024)
+    }
+    assert 770301 in by_id and by_id[770301].status == "Submitted"
+
+
+@pytest.mark.anyio
+async def test_get_assessed_line_22_uses_latest_assessed_version(dbsession, add_models):
+    """
+    The assessed balance is Line 22 of the highest assessed version for the
+    year — a later supplemental supersedes the original (#4831).
+    """
+    period_id = (
+        await dbsession.execute(
+            select(CompliancePeriod.compliance_period_id).where(
+                CompliancePeriod.description == "2024"
+            )
+        )
+    ).scalar_one()
+    assessed_id = (
+        await dbsession.execute(
+            select(ComplianceReportStatus.compliance_report_status_id).where(
+                ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed
+            )
+        )
+    ).scalar_one()
+    draft_id = (
+        await dbsession.execute(
+            select(ComplianceReportStatus.compliance_report_status_id).where(
+                ComplianceReportStatus.status == ComplianceReportStatusEnum.Draft
+            )
+        )
+    ).scalar_one()
+
+    group = str(uuid.uuid4())
     await add_models(
         [
-            Transaction(
-                compliance_units=-200,
-                organization_id=2,
-                transaction_action=TransactionActionEnum.Adjustment,
-                create_date=datetime(1990, 6, 1, tzinfo=timezone.utc),
-                effective_status=True,
-            )
+            ComplianceReport(
+                compliance_report_id=880001,
+                compliance_period_id=period_id,
+                organization_id=1,
+                current_status_id=assessed_id,
+                compliance_report_group_uuid=group,
+                version=0,
+            ),
+            ComplianceReport(
+                compliance_report_id=880002,
+                compliance_period_id=period_id,
+                organization_id=1,
+                current_status_id=assessed_id,
+                compliance_report_group_uuid=group,
+                version=1,
+            ),
+            # A newer draft must never be used as the source.
+            ComplianceReport(
+                compliance_report_id=880003,
+                compliance_period_id=period_id,
+                organization_id=1,
+                current_status_id=draft_id,
+                compliance_report_group_uuid=group,
+                version=2,
+            ),
+        ]
+    )
+    await add_models(
+        [
+            ComplianceReportSummary(
+                compliance_report_id=880001,
+                line_22_compliance_units_issued=1000,
+            ),
+            ComplianceReportSummary(
+                compliance_report_id=880002,
+                line_22_compliance_units_issued=1750,
+            ),
+            ComplianceReportSummary(
+                compliance_report_id=880003,
+                line_22_compliance_units_issued=9999,
+            ),
         ]
     )
 
     repo = CreditLedgerRepository(db=dbsession)
-    # Negative comes back negative (no max(…, 0) floor).
     assert (
-        await repo.get_period_assessed_balance(
-            organization_id=2, compliance_period=1990
-        )
-        == -200
+        await repo.get_assessed_line_22(organization_id=1, compliance_period=2024)
+        == 1750
     )
-    # Cut-off respected: the 1990-06 transaction is after March 31, 1990.
+    # A year with no assessed report has no assessed balance at all.
     assert (
-        await repo.get_period_assessed_balance(
-            organization_id=2, compliance_period=1989
-        )
-        == 0
+        await repo.get_assessed_line_22(organization_id=1, compliance_period=2023)
+        is None
     )
+
+
+@pytest.mark.anyio
+async def test_get_first_assessed_year(dbsession, add_models):
+    """The earliest assessed year drives the widened first envelope (#4832)."""
+    repo = CreditLedgerRepository(db=dbsession)
+    assert await repo.get_first_assessed_year(organization_id=1) is None
+
+    assessed_id = (
+        await dbsession.execute(
+            select(ComplianceReportStatus.compliance_report_status_id).where(
+                ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed
+            )
+        )
+    ).scalar_one()
+    period_ids = {
+        desc: pid
+        for pid, desc in (
+            await dbsession.execute(
+                select(
+                    CompliancePeriod.compliance_period_id,
+                    CompliancePeriod.description,
+                ).where(CompliancePeriod.description.in_(["2023", "2024"]))
+            )
+        ).all()
+    }
+
+    await add_models(
+        [
+            ComplianceReport(
+                compliance_report_id=880101,
+                compliance_period_id=period_ids["2024"],
+                organization_id=1,
+                current_status_id=assessed_id,
+                compliance_report_group_uuid=str(uuid.uuid4()),
+                version=0,
+            ),
+            ComplianceReport(
+                compliance_report_id=880102,
+                compliance_period_id=period_ids["2023"],
+                organization_id=1,
+                current_status_id=assessed_id,
+                compliance_report_group_uuid=str(uuid.uuid4()),
+                version=0,
+            ),
+        ]
+    )
+
+    assert await repo.get_first_assessed_year(organization_id=1) == 2023

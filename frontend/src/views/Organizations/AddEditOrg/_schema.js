@@ -15,17 +15,17 @@ export const createValidationSchema = (
 
   return Yup.object({
     orgLegalName: Yup.string().required(
-      'Legal Name of Organization is required.'
+      'Legal name of organization is required.'
     ),
     orgOperatingName: Yup.string().required(
-      'Operating Name of Organization is required.'
+      'Operating name of organization is required.'
     ),
     orgEmailAddress: Yup.string()
-      .required('Email Address is required.')
-      .email('Please enter a valid Email Address.'),
+      .required('Email address is required.')
+      .email('Please enter a valid email address.'),
     orgPhoneNumber: requiresBCeID
       ? Yup.string()
-          .required('Phone Number is required.')
+          .required('Phone number is required.')
           .matches(
             /^[0-9()+-\s]+$/,
             'Invalid format. Only numbers, spaces, parentheses, plus signs, and hyphens are allowed.'
@@ -41,25 +41,25 @@ export const createValidationSchema = (
           .nullable(),
     orgType: Yup.string().required('Organization type is required.'),
     orgRegForTransfers: Yup.string().required(
-      'Registered For Transfers is required.'
+      'Registered for transfers is required.'
     ),
     orgStreetAddress: requiresBCeID
-      ? Yup.string().required('Street Address / PO Box is required.')
+      ? Yup.string().required('Street address / PO box is required.')
       : Yup.string().nullable(),
     orgCity: requiresBCeID
       ? Yup.string().required('City is required.')
       : Yup.string().nullable(),
     orgPostalCodeZipCode: requiresBCeID
       ? Yup.string()
-          .required('Postal / ZIP Code is required.')
+          .required('Postal / ZIP code is required.')
           .matches(
             /^((\d{5}-\d{4})|(\d{5})|([A-Z]\d[A-Z]\s?\d[A-Z]\d))$/i,
-            'Please enter a valid Postal / ZIP Code.'
+            'Please enter a valid postal / ZIP code.'
           )
       : Yup.string()
           .test(
             'postal-code-format',
-            'Please enter a valid Postal / ZIP Code.',
+            'Please enter a valid postal / ZIP code.',
             (value) =>
               !value ||
               /^((\d{5}-\d{4})|(\d{5})|([A-Z]\d[A-Z]\s?\d[A-Z]\d))$/i.test(

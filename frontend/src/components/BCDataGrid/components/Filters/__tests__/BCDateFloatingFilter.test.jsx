@@ -104,7 +104,7 @@ describe('BCDateFloatingFilter', () => {
     minDate: '2013-01-01',
     maxDate: '2040-01-01',
     initialFilterType: 'any',
-    label: 'Select Date'
+    label: 'Select date'
   }
 
   beforeEach(() => {

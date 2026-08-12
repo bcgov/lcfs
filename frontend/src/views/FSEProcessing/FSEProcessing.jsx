@@ -56,7 +56,7 @@ const fseProcessingColDefs = [
   },
   {
     field: 'allocating_organization_name',
-    headerName: 'Allocating Organization',
+    headerName: 'Allocating organization',
     minWidth: 200,
     filter: true
   },
@@ -80,7 +80,7 @@ const fseProcessingColDefs = [
   },
   {
     field: 'level_of_equipment_name',
-    headerName: 'Level of Equipment',
+    headerName: 'Level of equipment',
     minWidth: 160,
     filter: true
   }
@@ -238,7 +238,9 @@ export const FSEProcessing = () => {
       // Check if all equipment on this site will now be Draft
       let allWillBeDraft = true
       gridRef.current?.api?.forEachNode((node) => {
-        const isDraftTarget = equipmentIds.includes(node.data.charging_equipment_id)
+        const isDraftTarget = equipmentIds.includes(
+          node.data.charging_equipment_id
+        )
         if (!isDraftTarget && node.data.status !== 'Draft') {
           allWillBeDraft = false
         }
@@ -302,7 +304,7 @@ export const FSEProcessing = () => {
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <BCTypography variant="h5" gutterBottom>
-            FSE Processing
+            FSE processing
           </BCTypography>
           <BCAlert severity="error">
             Unable to load equipment data.
@@ -330,7 +332,7 @@ export const FSEProcessing = () => {
             startIcon={<FontAwesomeIcon icon={faArrowLeft} />}
             onClick={handleBack}
           >
-            Back to Charging Sites
+            Back to charging sites
           </BCButton>
           <BCTypography variant="h5" gutterBottom sx={{ margin: 0 }}>
             Charging site/FSE processing
@@ -385,7 +387,7 @@ export const FSEProcessing = () => {
               </Grid>
               <Grid item xs={12} sm={6} md={6}>
                 <BCTypography variant="body2" color="text.secondary">
-                  Site Address:
+                  Site address:
                 </BCTypography>
                 <BCTypography variant="body1">
                   {site?.site_address}, {site?.city}, {site?.postal_code}

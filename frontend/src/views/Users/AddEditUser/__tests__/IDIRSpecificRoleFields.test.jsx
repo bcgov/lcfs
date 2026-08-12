@@ -91,7 +91,7 @@ vi.mock('@mui/material', () => ({
 vi.mock('../_schema', () => ({
   adminRoleOptions: vi.fn(() => [
     { label: 'Administrator', header: 'Administrator', text: 'admin desc', value: 'administrator', dataTestId: 'adminRole1' },
-    { label: 'System Admin', header: 'System Admin', text: 'system admin desc', value: 'system admin', dataTestId: 'adminRole2' }
+    { label: 'System admin', header: 'System admin', text: 'system admin desc', value: 'system admin', dataTestId: 'adminRole2' }
   ]),
   iaRoleOptions: vi.fn(() => [
     { label: 'IA Analyst', header: 'IA Analyst', text: 'ia analyst desc', value: 'ia analyst', dataTestId: 'iaRole1' },

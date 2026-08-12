@@ -10,10 +10,10 @@ All five wizard steps are wired:
 """
 
 import io
-from typing import Optional
+from typing import List, Optional
 
 import structlog
-from fastapi import APIRouter, Body, Depends, Request, status
+from fastapi import APIRouter, Body, Depends, Query, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from lcfs.db.models.user.Role import RoleEnum
@@ -28,6 +28,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
+    CIApplicationStep4DraftSchema,
     CIApplicationStep4Schema,
     CIApplicationUserSchema,
     CIApplicationVerification1Schema,
@@ -73,6 +74,42 @@ async def get_table_options(
         # -1 matches no fuel code, so a supplier with no org sees none.
         organization_id = org.organization_id if org else -1
     return await service.get_table_options(organization_id)
+
+
+@router.get(
+    "/location-search",
+    response_model=List[str],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def search_facility_locations(
+    request: Request,
+    city: Optional[str] = Query(
+        None, description="Facility city for predictive-text suggestions"
+    ),
+    province: Optional[str] = Query(
+        None,
+        description="Facility province/state for predictive-text suggestions",
+    ),
+    country: Optional[str] = Query(
+        None, description="Facility country for predictive-text suggestions"
+    ),
+    service: CIApplicationServices = Depends(),
+) -> List[str]:
+    """Facility location typeahead for Step 1."""
+    if not (city or province or country):
+        raise ValueError(
+            "At least one of city, province, or country must be provided"
+        )
+    logger.info(
+        "Searching CI facility locations",
+        city=city,
+        province=province,
+        country=country,
+    )
+    return await service.search_facility_location(city, province, country)
 
 
 @router.get(
@@ -310,6 +347,29 @@ async def update_ci_application_step3(
 # ---------------------------------------------------------------------------
 # Step 4 — Sign & submit
 # ---------------------------------------------------------------------------
+
+
+@router.put(
+    "/{ci_application_id}/step4",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY])
+async def update_ci_application_step4(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationStep4DraftSchema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    """Step 4 — draft auto-save of the optional consultant block (#4772).
+
+    Step 4 had no save path, so consultant details were lost if the applicant
+    left the draft without submitting. Open to applicants (not just signing
+    authorities) because they fill this block in; submission stays restricted.
+    """
+    ci = await validate.validate_access(ci_application_id)
+    return await service.update_step4_draft(ci, data, request.user)
 
 
 @router.post(

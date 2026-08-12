@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 
@@ -16,7 +16,7 @@ from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import NotificationTypeEnum, PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
     CIApplicationSchema,
     CIApplicationsListSchema,
@@ -193,13 +193,31 @@ def user_repo():
 
 
 @pytest.fixture
+def geocoder():
+    return AsyncMock()
+
+
+@pytest.fixture
 def fuel_repo():
     return AsyncMock()
 
 
 @pytest.fixture
-def service(repo, user_repo, fuel_repo):
-    return CIApplicationServices(repo=repo, user_repo=user_repo, fuel_repo=fuel_repo)
+def notification_service():
+    service = AsyncMock()
+    service.send_notification = AsyncMock()
+    return service
+
+
+@pytest.fixture
+def service(repo, user_repo, fuel_repo, geocoder, notification_service):
+    return CIApplicationServices(
+        repo=repo,
+        user_repo=user_repo,
+        fuel_repo=fuel_repo,
+        geocoder=geocoder,
+        notification_service=notification_service,
+    )
 
 
 @pytest.fixture
@@ -208,6 +226,11 @@ def mock_user():
     user.keycloak_username = "ci_applicant_user"
     user.user_profile_id = 123
     user.role_names = set()
+    return user
+
+
+def _grant_signing_authority(user):
+    user.role_names = {RoleEnum.SIGNING_AUTHORITY}
     return user
 
 
@@ -364,6 +387,78 @@ async def test_get_table_options_returns_lookup_data(service, repo, fuel_repo):
     assert [ft.fuel_type for ft in result.fuel_types] == ["Biodiesel", "Electricity"]
     fuel_repo.get_fuel_types.assert_awaited_once()
     repo.get_fuel_types.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_search_facility_location_formats_geocoder_places(service, geocoder):
+    from lcfs.services.geocoder.client import Address
+
+    geocoder.search_places.return_value = [
+        Address(
+            full_address="Vancouver, British Columbia, Canada",
+            city="Vancouver",
+            province="British Columbia",
+            country="Canada",
+        ),
+        Address(
+            full_address="Vancouver, Washington, United States",
+            city="Vancouver",
+            province="Washington",
+            country="United States",
+        ),
+    ]
+
+    result = await service.search_facility_location(
+        city="Van", province=None, country=None
+    )
+
+    assert result == [
+        "Vancouver, British Columbia, Canada",
+        "Vancouver, Washington, United States",
+    ]
+    geocoder.search_places.assert_awaited_once_with(
+        "Van", place_type="city", max_results=10
+    )
+
+
+@pytest.mark.anyio
+async def test_search_facility_location_by_province(service, geocoder):
+    from lcfs.services.geocoder.client import Address
+
+    geocoder.search_places.return_value = [
+        Address(
+            full_address="Alberta, Canada",
+            province="Alberta",
+            country="Canada",
+        )
+    ]
+
+    result = await service.search_facility_location(
+        city=None, province="Alb", country=None
+    )
+
+    assert result == ["Alberta, Canada"]
+    geocoder.search_places.assert_awaited_once_with(
+        "Alb", place_type="province", max_results=10
+    )
+
+
+@pytest.mark.anyio
+async def test_search_facility_location_by_country(service, geocoder):
+    from lcfs.services.geocoder.client import Address
+
+    geocoder.search_places.return_value = [
+        Address(full_address="Canada", country="Canada")
+    ]
+
+    result = await service.search_facility_location(
+        city=None, province=None, country="Ca"
+    )
+
+    assert result == ["Canada"]
+    geocoder.search_places.assert_awaited_once_with(
+        "Ca", place_type="country", max_results=10
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1090,6 +1185,26 @@ async def test_update_step3_succeeds_when_documents_missing(service, repo, mock_
     assert isinstance(result, CIApplicationSchema)
 
 
+@pytest.mark.anyio
+async def test_update_step3_closes_documentation_request(service, repo, mock_user):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.document_upload_enabled = True
+    ci.document_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
+    ci.document_changes_requested_by = "idir_user"
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    payload = CIApplicationStep3Schema(supporting_document_other="Extra notes")
+    result = await service.update_step3(ci, payload, mock_user)
+
+    assert ci.document_upload_enabled is False
+    assert ci.document_changes_requested_at is None
+    assert ci.document_changes_requested_by is None
+    assert isinstance(result, CIApplicationSchema)
+
+
 # ---------------------------------------------------------------------------
 # Step 4 — Sign & submit
 # ---------------------------------------------------------------------------
@@ -1193,6 +1308,19 @@ def _step4_payload(**overrides):
     )
     base.update(overrides)
     return CIApplicationStep4Schema(**base)
+
+
+def _step4_draft_payload(**overrides):
+    from lcfs.web.api.ci_application.schema import CIApplicationStep4DraftSchema
+
+    base = dict(
+        consultant_consent=False,
+        consultant_name=None,
+        consultant_company=None,
+        consultant_email=None,
+    )
+    base.update(overrides)
+    return CIApplicationStep4DraftSchema(**base)
 
 
 def _draft_ci_with_pathways():
@@ -1314,7 +1442,86 @@ async def test_update_generated_fuel_code_clearing_required_date_raises_validati
 
 
 @pytest.mark.anyio
+async def test_step4_draft_save_persists_consultant_without_submitting(
+    service, repo, mock_user
+):
+    """#4772 — consultant details survive leaving a draft, and the status stays Draft."""
+    ci = _draft_ci_with_pathways()
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+    original_status_id = ci.status_id
+
+    payload = _step4_draft_payload(
+        consultant_consent=True,
+        consultant_name="Sam Anderson",
+        consultant_company="Anderson Fuel Consultants",
+        consultant_email="sam.anderson@afc.ar",
+    )
+
+    result = await service.update_step4_draft(ci, payload, mock_user)
+
+    assert ci.consultant_name == "Sam Anderson"
+    assert ci.consultant_company == "Anderson Fuel Consultants"
+    assert ci.consultant_email == "sam.anderson@afc.ar"
+    # Draft save must not transition status, sign, or write history.
+    assert ci.status_id == original_status_id
+    assert ci.signature_user is None
+    assert ci.signature_date_time is None
+    repo.add_history.assert_not_awaited()
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step4_draft_save_clears_consultant_when_consent_withdrawn(
+    service, repo, mock_user
+):
+    ci = _draft_ci_with_pathways()
+    ci.consultant_name = "Sam Anderson"
+    ci.consultant_company = "Anderson Fuel Consultants"
+    ci.consultant_email = "sam.anderson@afc.ar"
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    await service.update_step4_draft(ci, _step4_draft_payload(), mock_user)
+
+    assert ci.consultant_name is None
+    assert ci.consultant_company is None
+    assert ci.consultant_email is None
+
+
+@pytest.mark.anyio
+async def test_step4_draft_save_accepts_partial_consultant_details(
+    service, repo, mock_user
+):
+    """Auto-save fires on blur mid-entry, so incomplete blocks must not 400."""
+    ci = _draft_ci_with_pathways()
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    payload = _step4_draft_payload(
+        consultant_consent=True,
+        consultant_name="Sam Anderson",
+    )
+
+    await service.update_step4_draft(ci, payload, mock_user)
+
+    assert ci.consultant_name == "Sam Anderson"
+    assert ci.consultant_company is None
+    assert ci.consultant_email is None
+
+
+@pytest.mark.anyio
+async def test_step4_draft_save_rejects_non_draft(service, repo, mock_user):
+    ci = _ci_application(status=_status("Submitted", 2))
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step4_draft(ci, _step4_draft_payload(), mock_user)
+    assert exc.value.status_code == 400
+    repo.update.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_step4_submit_validates_status_must_be_draft(service, repo, mock_user):
+    _grant_signing_authority(mock_user)
     ci = _ci_application(status=_status("Submitted", 2))
     ci.pathways = [object()]
     with pytest.raises(HTTPException) as exc:
@@ -1325,6 +1532,7 @@ async def test_step4_submit_validates_status_must_be_draft(service, repo, mock_u
 
 @pytest.mark.anyio
 async def test_step4_submit_requires_at_least_one_pathway(service, repo, mock_user):
+    _grant_signing_authority(mock_user)
     ci = _ci_application(status=_status("Draft", 1))
     ci.pathways = []
     with pytest.raises(HTTPException) as exc:
@@ -1335,6 +1543,7 @@ async def test_step4_submit_requires_at_least_one_pathway(service, repo, mock_us
 
 @pytest.mark.anyio
 async def test_step4_submit_succeeds_when_documents_missing(service, repo, mock_user):
+    _grant_signing_authority(mock_user)
     # Step 3 upload validation is disabled for the simplified flow (#4669), so
     # submission no longer requires the Technical report / GHGenius uploads.
     ci = _draft_ci_with_pathways()
@@ -1354,6 +1563,7 @@ async def test_step4_submit_succeeds_when_documents_missing(service, repo, mock_
 
 @pytest.mark.anyio
 async def test_step4_submit_succeeds_and_transitions_status(service, repo, mock_user):
+    _grant_signing_authority(mock_user)
     ci = _draft_ci_with_pathways()
     repo.get_document_categories.return_value = [
         "technical_report",
@@ -1379,9 +1589,28 @@ async def test_step4_submit_succeeds_and_transitions_status(service, repo, mock_
 
 
 @pytest.mark.anyio
+async def test_step4_submit_requires_signing_authority_and_does_not_transition(
+    service, repo, mock_user
+):
+    ci = _draft_ci_with_pathways()
+    original_status_id = ci.status_id
+
+    with pytest.raises(HTTPException) as exc:
+        await service.submit_application(ci, _step4_payload(), mock_user)
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert "Signing Authority" in exc.value.detail
+    assert ci.status_id == original_status_id
+    repo.get_status_by_name.assert_not_awaited()
+    repo.update.assert_not_awaited()
+    repo.add_history.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_step4_submit_persists_consultant_when_consented(
     service, repo, mock_user
 ):
+    _grant_signing_authority(mock_user)
     ci = _draft_ci_with_pathways()
     repo.get_document_categories.return_value = [
         "technical_report",
@@ -1409,6 +1638,7 @@ async def test_step4_submit_persists_consultant_when_consented(
 async def test_step4_submit_clears_consultant_when_not_consented(
     service, repo, mock_user
 ):
+    _grant_signing_authority(mock_user)
     ci = _draft_ci_with_pathways()
     ci.consultant_name = "stale"
     ci.consultant_company = "stale"
@@ -1496,7 +1726,7 @@ async def test_step5_decision_rejects_approval_when_not_recommended(
 
 @pytest.mark.anyio
 async def test_recommend_to_director_transitions_status_to_recommended(
-    service, repo, mock_user
+    service, repo, notification_service, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _ci_application(status=_status("Submitted", 2))
@@ -1515,6 +1745,12 @@ async def test_recommend_to_director_transitions_status_to_recommended(
     assert ci.assigned_analyst_id == 12
     assert ci.recommendation_date is not None
     repo.get_status_by_name.assert_awaited_with("Recommended")
+    notification_service.send_notification.assert_awaited_once()
+    request = notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION
+    ]
+    assert request.notification_data.type == "CI Application Recommended"
     assert isinstance(result, CIApplicationSchema)
 
 
@@ -1579,6 +1815,42 @@ async def test_request_documentation_enables_upload_for_workflow_roles(
 
 
 @pytest.mark.anyio
+async def test_request_documentation_clears_previous_government_review(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = "High"
+    ci.priority_score = 511
+    ci.verification_1_user_id = 22
+    ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
+    ci.verification_2_user_id = 33
+    ci.verification_2_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
+    ci.verification_2_risk_assessment = "Medium"
+    ci.verification_2_priority_score = 426
+    ci.recommendation_user_id = 44
+    ci.recommendation_date = datetime(2026, 5, 21, tzinfo=timezone.utc)
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.request_documentation(ci, mock_user)
+
+    assert ci.preliminary_risk_assessment is None
+    assert ci.priority_score is None
+    assert ci.verification_1_user_id is None
+    assert ci.verification_1_date is None
+    assert ci.verification_2_user_id is None
+    assert ci.verification_2_date is None
+    assert ci.verification_2_risk_assessment is None
+    assert ci.verification_2_priority_score is None
+    assert ci.recommendation_user_id is None
+    assert ci.recommendation_date is None
+    assert ci.document_upload_enabled is True
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
 async def test_request_documentation_requires_workflow_role(service, repo, mock_user):
     ci = _ci_application(status=_status("Submitted", 2))
 
@@ -1595,6 +1867,18 @@ async def test_request_documentation_requires_submitted_status(
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _ci_application(status=_status("Draft", 1))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.request_documentation(ci, mock_user)
+
+    assert exc.value.status_code == 400
+    repo.update.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_request_documentation_rejects_completed_status(service, repo, mock_user):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Completed", 4))
 
     with pytest.raises(HTTPException) as exc:
         await service.request_documentation(ci, mock_user)
@@ -1680,7 +1964,7 @@ async def test_step5_decision_can_return_recommended_to_submitted(
 
 
 @pytest.mark.anyio
-async def test_request_pathway_changes_keeps_submitted_and_verification_work(
+async def test_request_pathway_changes_clears_previous_government_review(
     service, repo, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
@@ -1705,11 +1989,16 @@ async def test_request_pathway_changes_keeps_submitted_and_verification_work(
     assert ci.status_id == 2
     assert ci.ci_application_status.status == "Submitted"
     assert ci.assigned_analyst_id == 12
-    assert ci.preliminary_risk_assessment == "High"
-    assert ci.priority_score == 511
-    assert ci.verification_1_user_id == 22
-    assert ci.verification_2_user_id == 33
-    assert ci.recommendation_user_id == 44
+    assert ci.preliminary_risk_assessment is None
+    assert ci.priority_score is None
+    assert ci.verification_1_user_id is None
+    assert ci.verification_1_date is None
+    assert ci.verification_2_user_id is None
+    assert ci.verification_2_date is None
+    assert ci.verification_2_risk_assessment is None
+    assert ci.verification_2_priority_score is None
+    assert ci.recommendation_user_id is None
+    assert ci.recommendation_date is None
     assert ci.pathway_changes_requested_at is not None
     assert ci.pathway_changes_requested_by == "ci_applicant_user"
     assert ci.pathway_supplemental_edit_enabled is True
@@ -1728,6 +2017,20 @@ async def test_request_pathway_changes_rejects_non_workflow_role(
         await service.request_pathway_changes(ci, mock_user)
 
     assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_request_pathway_changes_rejects_completed_status(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Completed", 4))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.request_pathway_changes(ci, mock_user)
+
+    assert exc.value.status_code == 400
+    repo.update.assert_not_called()
 
 
 @pytest.mark.anyio
@@ -1830,8 +2133,8 @@ async def test_step5_decision_reactivates_withdrawn_and_preserves_work(
     assert ci.assigned_analyst_id == 12
     assert ci.verification_1_user_id == 22
     assert ci.verification_1_date == datetime(2026, 5, 19, tzinfo=timezone.utc)
-    assert ci.recommendation_user_id == 44
-    assert ci.recommendation_date == datetime(2026, 5, 21, tzinfo=timezone.utc)
+    assert ci.recommendation_user_id is None
+    assert ci.recommendation_date is None
     assert isinstance(result, CIApplicationSchema)
 
 

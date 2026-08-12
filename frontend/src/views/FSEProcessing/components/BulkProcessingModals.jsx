@@ -32,11 +32,12 @@ export const BulkProcessingModals = ({
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Validate Equipment</DialogTitle>
+        <DialogTitle>Validate equipment</DialogTitle>
         <DialogContent>
           <Box py={2}>
             <BCTypography variant="body1" gutterBottom>
-              Are you sure you want to validate {selectedCount} selected equipment?
+              Are you sure you want to validate {selectedCount} selected
+              equipment?
             </BCTypography>
             <BCTypography variant="body2" color="text.secondary">
               This will change the status from Submitted to Validated for all
@@ -58,10 +59,12 @@ export const BulkProcessingModals = ({
             onClick={onValidateConfirm}
             disabled={isValidating}
             startIcon={
-              isValidating ? <CircularProgress size={16} color="inherit" /> : null
+              isValidating ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : null
             }
           >
-            {isValidating ? 'Validating...' : 'Validate Equipment'}
+            {isValidating ? 'Validating...' : 'Validate equipment'}
           </BCButton>
         </DialogActions>
       </Dialog>
@@ -73,7 +76,7 @@ export const BulkProcessingModals = ({
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Return to Draft</DialogTitle>
+        <DialogTitle>Return to draft</DialogTitle>
         <DialogContent>
           <Box py={2}>
             <BCTypography variant="body1" gutterBottom>
@@ -81,8 +84,8 @@ export const BulkProcessingModals = ({
               to draft status?
             </BCTypography>
             <BCTypography variant="body2" color="text.secondary">
-              This will allow suppliers to make further changes to the equipment.
-              Status will change from Submitted/Validated to Draft.
+              This will allow suppliers to make further changes to the
+              equipment. Status will change from Submitted/Validated to Draft.
             </BCTypography>
           </Box>
         </DialogContent>
@@ -105,7 +108,7 @@ export const BulkProcessingModals = ({
               ) : null
             }
           >
-            {isReturningToDraft ? 'Returning...' : 'Return to Draft'}
+            {isReturningToDraft ? 'Returning...' : 'Return to draft'}
           </BCButton>
         </DialogActions>
       </Dialog>

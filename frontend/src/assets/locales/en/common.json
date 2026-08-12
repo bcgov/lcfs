@@ -17,7 +17,7 @@
   "uploadFile": "Upload file",
   "uploadExcel": "Upload Excel",
   "deselectAll": "Deselect all",
-  "supplier": "Fuel Supplier",
+  "supplier": "Fuel supplier",
   "balance": "Balance",
   "logout": "Logout",
   "roleSwitcher": {
@@ -175,7 +175,7 @@
     "returnToLogin": "Return to login"
   },
   "internalServerError": {
-    "title": "Internal Server Error",
+    "title": "Internal server error",
     "message": "Sorry, something went wrong on our end. We are working to resolve the issue. Please try again later."
   },
   "ClearFilters": "Clear all filters",
@@ -190,10 +190,10 @@
     "import": {
       "btn": "Upload Excel spreadsheet",
       "dialog": {
-        "title": "Upload Excel File - {{mode}}",
+        "title": "Upload Excel file - {{mode}}",
         "header": "Select the Excel template (maximum size 50MB)",
         "selectorText": "Drag and drop your XLSX file here or click to select from your machine to upload.",
-        "uploadStatusStarting": "Starting Import...",
+        "uploadStatusStarting": "Starting import...",
         "uploadStatus": {
           "imported": "Imported:",
           "skipped": "Skipped (blank kWh):",
@@ -205,7 +205,7 @@
           "uploadFailed": "Failed to upload file."
         },
         "completed": {
-          "success": "Completed Importing {{fileName}}",
+          "success": "Completed importing {{fileName}}",
           "failure": "Failed to import"
         },
         "buttons": {

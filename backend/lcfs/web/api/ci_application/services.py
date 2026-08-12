@@ -33,6 +33,8 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.services.geocoder.client import Address, BCGeocoderService
+from lcfs.services.geocoder.dependency import get_geocoder_service_async
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
@@ -47,6 +49,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
+    CIApplicationStep4DraftSchema,
     CIApplicationStep4Schema,
     CIApplicationUserSchema,
     CIGeneratedFuelCodeSchema,
@@ -754,17 +757,32 @@ def _to_list_item(
     )
 
 
+def _format_place_suggestion(place: Address, place_type: str) -> Optional[str]:
+    city = (place.city or "").strip()
+    province = (place.province or "").strip()
+    country = (place.country or "").strip()
+    if place_type == "city" and city:
+        return f"{city}, {province}, {country}"
+    if place_type == "province" and province:
+        return f"{province}, {country}" if country else province
+    if place_type == "country" and country:
+        return country
+    return None
+
+
 class CIApplicationServices:
     def __init__(
         self,
         repo: CIApplicationRepository = Depends(CIApplicationRepository),
         user_repo: UserRepository = Depends(UserRepository),
         fuel_repo: FuelCodeRepository = Depends(FuelCodeRepository),
+        geocoder: BCGeocoderService = Depends(get_geocoder_service_async),
         notification_service: NotificationService = Depends(NotificationService),
     ) -> None:
         self.repo = repo
         self.user_repo = user_repo
         self.fuel_repo = fuel_repo
+        self.geocoder = geocoder
         self.notification_service = notification_service
 
     async def _to_full_schema_with_user(self, ci: CIApplication) -> CIApplicationSchema:
@@ -1198,6 +1216,33 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
 
     @service_handler
+    async def search_facility_location(
+        self,
+        city: Optional[str] = None,
+        province: Optional[str] = None,
+        country: Optional[str] = None,
+    ) -> List[str]:
+        """Facility location typeahead via Nominatim place search."""
+        if city:
+            place_type, query = "city", city
+        elif province:
+            place_type, query = "province", province
+        elif country:
+            place_type, query = "country", country
+        else:
+            return []
+
+        places = await self.geocoder.search_places(
+            query, place_type=place_type, max_results=10
+        )
+        suggestions = []
+        for place in places:
+            label = _format_place_suggestion(place, place_type)
+            if label:
+                suggestions.append(label)
+        return suggestions
+
+    @service_handler
     async def get_table_options(
         self, organization_id: Optional[int] = None
     ) -> CITableOptionsSchema:
@@ -1441,6 +1486,12 @@ class CIApplicationServices:
         await self.repo.add_history(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        await self._send_ci_notification(
+            ci,
+            "analyst_recommendation",
+            "CI Application Recommended",
+            origin_user_profile_id=user.user_profile_id,
+        )
         return await self._to_full_schema_with_user(ci)
 
     def _validate_priority_score(self, priority_score: Optional[int]) -> None:
@@ -1464,6 +1515,18 @@ class CIApplicationServices:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Workflow actions can only be recorded on Submitted applications.",
             )
+
+    def _clear_government_workflow_review(self, ci_application: CIApplication) -> None:
+        ci_application.preliminary_risk_assessment = None
+        ci_application.priority_score = None
+        ci_application.verification_1_user_id = None
+        ci_application.verification_1_date = None
+        ci_application.verification_2_user_id = None
+        ci_application.verification_2_date = None
+        ci_application.verification_2_risk_assessment = None
+        ci_application.verification_2_priority_score = None
+        ci_application.recommendation_user_id = None
+        ci_application.recommendation_date = None
 
     # ------------------------------------------------------------------
     # Step 1 — create / update / delete draft
@@ -1821,6 +1884,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
+        self._clear_government_workflow_review(ci_application)
         ci_application.pathway_supplemental_edit_enabled = True
         ci_application.pathway_changes_requested_at = requested_at
         ci_application.pathway_changes_requested_by = user.keycloak_username
@@ -1859,6 +1923,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
+        self._clear_government_workflow_review(ci_application)
         ci_application.document_upload_enabled = True
         ci_application.document_changes_requested_at = requested_at
         ci_application.document_changes_requested_by = user.keycloak_username
@@ -1916,6 +1981,10 @@ class CIApplicationServices:
                 )
 
         ci_application.supporting_document_other = data.supporting_document_other
+        if getattr(ci_application, "document_upload_enabled", False):
+            ci_application.document_upload_enabled = False
+            ci_application.document_changes_requested_at = None
+            ci_application.document_changes_requested_by = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
@@ -1926,6 +1995,50 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
     # Step 4 — Sign & submit
     # ------------------------------------------------------------------
+
+    @service_handler
+    async def update_step4_draft(
+        self,
+        ci_application: CIApplication,
+        data: CIApplicationStep4DraftSchema,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        """
+        Persist the optional consultant block on a Draft without submitting
+        (#4772).
+
+        Step 4 previously had no save path, so consultant details typed by an
+        applicant were lost whenever they left the draft instead of submitting.
+        The UI now auto-saves each field on blur and calls this.
+
+        Consent mirrors :meth:`submit_application`: when it is withdrawn the
+        stored values are wiped, so a draft never retains consultant details
+        the applicant has un-consented to.
+        """
+        if (
+            ci_application.ci_application_status.status
+            != CIApplicationStatusEnum.Draft.value
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only Draft applications can be edited.",
+            )
+
+        if data.consultant_consent:
+            ci_application.consultant_name = data.consultant_name
+            ci_application.consultant_company = data.consultant_company
+            ci_application.consultant_email = data.consultant_email
+        else:
+            ci_application.consultant_name = None
+            ci_application.consultant_company = None
+            ci_application.consultant_email = None
+
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
 
     @service_handler
     async def submit_application(
@@ -1939,6 +2052,12 @@ class CIApplicationServices:
         and consultant info and validating that prior steps left the
         record in a submittable state.
         """
+        if not user_has_roles(user, [RoleEnum.SIGNING_AUTHORITY]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Signing Authority role is required to submit a CI application.",
+            )
+
         if (
             ci_application.ci_application_status.status
             != CIApplicationStatusEnum.Draft.value
@@ -2131,11 +2250,15 @@ class CIApplicationServices:
             data.status == CIApplicationStatusEnum.Submitted
             and current_status == CIApplicationStatusEnum.Recommended.value
         )
+        is_reactivation = (
+            data.status == CIApplicationStatusEnum.Submitted
+            and current_status == CIApplicationStatusEnum.Withdrawn.value
+        )
         if is_director_approval:
             ci_application.approval_user_id = user.user_profile_id
             ci_application.approval_date = datetime.now(timezone.utc)
             await self._approve_generated_fuel_codes(ci_application)
-        elif is_director_returned:
+        elif is_director_returned or is_reactivation:
             ci_application.recommendation_user_id = None
             ci_application.recommendation_date = None
             ci_application.approval_user_id = None

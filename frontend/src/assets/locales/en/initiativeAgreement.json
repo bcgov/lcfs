@@ -1,9 +1,9 @@
 {
-  "title": "Initiative Agreements",
+  "title": "Initiative agreements",
   "initiativeAgreementsPlaceholder": "This section will provide access to Initiative Agreement functionality. Content and features are currently under development.",
   "initiativeAgreement": "Initiative agreement — ID:",
-  "editInitiativeAgreementID": "Edit Initiative Agreement ID: ",
-  "newInitiativeAgreement": "New Initiative Agreement",
+  "editInitiativeAgreementID": "Edit initiative agreement ID: ",
+  "newInitiativeAgreement": "New initiative agreement",
   "actionMsgs": {
     "createdText": "Draft initiative agreement successfully created.",
     "updatedText": "Draft initiative agreement successfully updated.",
@@ -16,5 +16,5 @@
   "deleteConfirmText": "Are you sure you want to delete this initiative agreement?",
   "recommendConfirmText": "Are you sure you want to recommend this initiative agreement?",
   "approveConfirmText": "Are you sure you want to approve this initiative agreement?",
-  "loadingText": "Loading Initiative Agreement"
+  "loadingText": "Loading initiative agreement"
 }

@@ -146,10 +146,9 @@ export const CreditLedgerLegacy = ({ organizationId }) => {
   const handleDownload = useCallback(
     () =>
       downloadLedger({
-        orgId: orgID,
-        complianceYear: selectedPeriod || undefined
+        orgId: orgID
       }),
-    [downloadLedger, orgID, selectedPeriod]
+    [downloadLedger, orgID]
   )
 
   // Column defs
