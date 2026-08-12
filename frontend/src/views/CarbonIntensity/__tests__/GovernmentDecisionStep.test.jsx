@@ -947,14 +947,20 @@ describe('GovernmentDecisionStep', () => {
       verification2PriorityScore: 77
     }
 
-    it('shows the Verification 2 risk assessment and priority score as text', () => {
+    test('shows the Verification 2 risk assessment and priority score as text', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.analyst }]
       render(
         <GovernmentDecisionStep
           ciApplication={verifiedCi}
           isGovernment={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       const summary = screen.getByTestId('ci-verification-summary')
@@ -970,7 +976,13 @@ describe('GovernmentDecisionStep', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('keeps the values visible once fuel codes are generated', () => {
+    test('keeps the values visible once fuel codes are generated', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.analyst }]
       render(
         <GovernmentDecisionStep
@@ -980,7 +992,7 @@ describe('GovernmentDecisionStep', () => {
           }}
           isGovernment={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(
@@ -988,7 +1000,13 @@ describe('GovernmentDecisionStep', () => {
       ).toHaveTextContent('77')
     })
 
-    it('keeps the values visible after recommendation and approval', () => {
+    test('keeps the values visible after recommendation and approval', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.director }]
       const { rerender } = render(
         <GovernmentDecisionStep
@@ -999,7 +1017,7 @@ describe('GovernmentDecisionStep', () => {
           }}
           isGovernment={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(
@@ -1024,7 +1042,13 @@ describe('GovernmentDecisionStep', () => {
       ).toHaveTextContent('High')
     })
 
-    it('falls back to the Verification 1 values for low risk applications', () => {
+    test('falls back to the Verification 1 values for low risk applications', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.analyst }]
       render(
         <GovernmentDecisionStep
@@ -1036,7 +1060,7 @@ describe('GovernmentDecisionStep', () => {
           }}
           isGovernment={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       const summary = screen.getByTestId('ci-verification-summary')
@@ -1049,7 +1073,13 @@ describe('GovernmentDecisionStep', () => {
       ).toHaveTextContent('12')
     })
 
-    it('labels a Medium risk assessment as Moderate', () => {
+    test('labels a Medium risk assessment as Moderate', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.analyst }]
       render(
         <GovernmentDecisionStep
@@ -1059,7 +1089,7 @@ describe('GovernmentDecisionStep', () => {
           }}
           isGovernment={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(
@@ -1067,14 +1097,20 @@ describe('GovernmentDecisionStep', () => {
       ).toHaveTextContent('Moderate')
     })
 
-    it('is visible to read-only IDIR users', () => {
+    test('is visible to read-only IDIR users', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.government }]
       render(
         <GovernmentDecisionStep
           ciApplication={verifiedCi}
           isGovernment={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(
@@ -1082,14 +1118,20 @@ describe('GovernmentDecisionStep', () => {
       ).toHaveTextContent('77')
     })
 
-    it('is hidden from BCeID users', () => {
+    test('is hidden from BCeID users', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.ci_applicant }]
       render(
         <GovernmentDecisionStep
           ciApplication={verifiedCi}
           isGovernment={false}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(
@@ -1097,7 +1139,13 @@ describe('GovernmentDecisionStep', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('is hidden while a verification panel is still editable', () => {
+    test('is hidden while a verification panel is still editable', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.analyst }]
       render(
         <GovernmentDecisionStep
@@ -1109,7 +1157,7 @@ describe('GovernmentDecisionStep', () => {
           }}
           isGovernment={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(
@@ -1118,11 +1166,17 @@ describe('GovernmentDecisionStep', () => {
       expect(screen.getByTestId('ci-priority-score-input')).toBeInTheDocument()
     })
 
-    it('is hidden before any verification is complete', () => {
+    test('is hidden before any verification is complete', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.analyst }]
       render(
         <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(
@@ -1130,14 +1184,20 @@ describe('GovernmentDecisionStep', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('renders the values as a description list for assistive technology', () => {
+    test('renders the values as a description list for assistive technology', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.analyst }]
       render(
         <GovernmentDecisionStep
           ciApplication={verifiedCi}
           isGovernment={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       const value = screen.getByTestId('ci-verification-summary-priority-score')
