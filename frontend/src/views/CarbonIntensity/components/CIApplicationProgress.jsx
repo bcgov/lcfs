@@ -50,8 +50,12 @@ const daysSince = (date) => {
 
 const getSupplierRequestDate = (ciApplication) =>
   ciApplication?.supplierRequestDate ||
-  ciApplication?.documentChangesRequestedAt ||
-  ciApplication?.pathwayChangesRequestedAt
+  (ciApplication?.documentUploadEnabled
+    ? ciApplication?.documentChangesRequestedAt
+    : null) ||
+  (ciApplication?.pathwaySupplementalEditEnabled
+    ? ciApplication?.pathwayChangesRequestedAt
+    : null)
 
 const riskLabel = (risk) => (risk === 'Medium' ? 'Moderate' : risk)
 
