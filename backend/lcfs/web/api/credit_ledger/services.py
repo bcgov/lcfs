@@ -1,4 +1,5 @@
 import io
+from collections import defaultdict
 from datetime import datetime, timezone, date, time
 from math import ceil
 from typing import Optional, List
@@ -446,7 +447,7 @@ class CreditLedgerService:
         if export_format not in ["xls", "xlsx", "csv"]:
             raise ValueError("Export format not supported")
 
-        # organization dashboard exports full-ledger.
+        # Organization dashboard exports full ledger history in one workbook.
         conditions: List[any] = [CreditLedgerView.organization_id == organization_id]
 
         sort_orders = [SortOrder(field="update_date", direction="desc")]
@@ -458,7 +459,7 @@ class CreditLedgerService:
             sort_orders=sort_orders,
         )
 
-        sheet_rows = []
+        rows_by_year = defaultdict(list)
         for row in rows:
             ledger_view, version = row
 
@@ -476,7 +477,8 @@ class CreditLedgerService:
                     [" " + c if c.isupper() else c for c in transaction_type]
                 ).strip()
 
-            sheet_rows.append(
+            compliance_year = str(ledger_view.compliance_period or "Unknown")
+            rows_by_year[compliance_year].append(
                 [
                     str(ledger_view.compliance_period),
                     int(ledger_view.available_balance or 0),
@@ -487,12 +489,39 @@ class CreditLedgerService:
             )
 
         builder = SpreadsheetBuilder(file_format=export_format)
-        builder.add_sheet(
-            sheet_name=LCFS_Constants.CREDIT_LEDGER_EXPORT_SHEETNAME,
-            columns=LCFS_Constants.CREDIT_LEDGER_EXPORT_COLUMNS,
-            rows=sheet_rows,
-            styles={"bold_headers": True},
-        )
+        if export_format == "csv":
+            combined_rows = []
+            for year in sorted(
+                rows_by_year.keys(),
+                key=lambda value: (0, -int(value)) if value.isdigit() else (1, value),
+            ):
+                combined_rows.extend(rows_by_year[year])
+
+            builder.add_sheet(
+                sheet_name=LCFS_Constants.CREDIT_LEDGER_EXPORT_SHEETNAME,
+                columns=LCFS_Constants.CREDIT_LEDGER_EXPORT_COLUMNS,
+                rows=combined_rows,
+                styles={"bold_headers": True},
+            )
+        else:
+            for position, year in enumerate(
+                sorted(
+                    rows_by_year.keys(),
+                    key=lambda value: (
+                        0,
+                        -int(value),
+                    )
+                    if value.isdigit()
+                    else (1, value),
+                )
+            ):
+                builder.add_sheet(
+                    sheet_name=year[:31],
+                    columns=LCFS_Constants.CREDIT_LEDGER_EXPORT_COLUMNS,
+                    rows=rows_by_year[year],
+                    styles={"bold_headers": True},
+                    position=position,
+                )
         file_content: bytes = builder.build_spreadsheet()
 
         date_stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
