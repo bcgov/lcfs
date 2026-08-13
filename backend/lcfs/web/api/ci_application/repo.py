@@ -25,6 +25,8 @@ from lcfs.db.models.ci_application import (
     CIApplicationStatus,
     Pathway,
     PathwayApplicationType,
+    PathwayFeedstockTransportMode,
+    PathwayFinishedFuelTransportMode,
     PathwayFuelCodeType,
 )
 from lcfs.db.models.ci_application.CIApplication import (
@@ -268,6 +270,12 @@ class CIApplicationRepository:
                 selectinload(CIApplication.pathways)
                 .selectinload(Pathway.fuel_code)
                 .selectinload(FuelCode.fuel_type),
+                selectinload(CIApplication.pathways)
+                .selectinload(Pathway.feedstock_transport_modes)
+                .selectinload(PathwayFeedstockTransportMode.transport_mode),
+                selectinload(CIApplication.pathways)
+                .selectinload(Pathway.finished_fuel_transport_modes)
+                .selectinload(PathwayFinishedFuelTransportMode.transport_mode),
                 selectinload(
                     CIApplication.generated_fuel_code_associations
                 ).selectinload(CIApplicationFuelCodeAssociation.pathway),
@@ -373,6 +381,12 @@ class CIApplicationRepository:
                 selectinload(Pathway.fuel_type),
                 selectinload(Pathway.fuel_code).selectinload(FuelCode.fuel_code_prefix),
                 selectinload(Pathway.fuel_code).selectinload(FuelCode.fuel_type),
+                selectinload(Pathway.feedstock_transport_modes).selectinload(
+                    PathwayFeedstockTransportMode.transport_mode
+                ),
+                selectinload(Pathway.finished_fuel_transport_modes).selectinload(
+                    PathwayFinishedFuelTransportMode.transport_mode
+                ),
             )
             .where(Pathway.ci_application_id == ci_application_id)
             .order_by(Pathway.pathway_id)
@@ -439,7 +453,7 @@ class CIApplicationRepository:
                 if cond is not None:
                     conditions.append(cond)
                 continue
-            
+
             nested_builder = _NESTED_FILTER_BUILDERS.get(f.field)
             if nested_builder is not None:
                 cond = nested_builder(f)
