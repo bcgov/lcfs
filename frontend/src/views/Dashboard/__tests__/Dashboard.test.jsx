@@ -19,7 +19,9 @@ vi.mock('@/components/Role', () => ({
 // Mock nested components
 vi.mock('../components/cards', () => ({
   GovernmentNotificationsCard: () => (
-    <div data-test="government-notifications-card">Government Notifications Card</div>
+    <div data-test="government-notifications-card">
+      Government Notifications Card
+    </div>
   ),
   AdminLinksCard: () => (
     <div data-test="admin-links-card">Admin Links Card</div>
@@ -64,8 +66,10 @@ vi.mock('../components/cards/idir/OrganizationsSummaryCard', () => ({
   )
 }))
 
-vi.mock('../components/cards/idir/FuelCodeCard', () => ({
-  FuelCodeCard: () => <div data-test="fuel-code-card">Fuel Code Card</div>
+vi.mock('../components/cards/idir/CIApplicationCard', () => ({
+  CIApplicationCard: () => (
+    <div data-test="ci-application-card">CI Application Card</div>
+  )
 }))
 
 vi.mock('../components/cards/idir/ComplianceReportCard', () => ({
@@ -112,17 +116,17 @@ describe('Dashboard Component', () => {
     const { container } = render(<Dashboard />, { wrapper })
     const gridItems = container.querySelectorAll('.MuiGrid-item')
     expect(gridItems).toHaveLength(3)
-    
+
     // Left section
     expect(gridItems[0]).toHaveClass('MuiGrid-grid-xs-12')
     expect(gridItems[0]).toHaveClass('MuiGrid-grid-sm-6')
     expect(gridItems[0]).toHaveClass('MuiGrid-grid-md-5')
     expect(gridItems[0]).toHaveClass('MuiGrid-grid-lg-3')
-    
+
     // Central section
     expect(gridItems[1]).toHaveClass('MuiGrid-grid-xs-12')
     expect(gridItems[1]).toHaveClass('MuiGrid-grid-lg-6')
-    
+
     // Right section
     expect(gridItems[2]).toHaveClass('MuiGrid-grid-xs-12')
     expect(gridItems[2]).toHaveClass('MuiGrid-grid-sm-6')
@@ -138,7 +142,7 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('Organizations Summary Card')).toBeInTheDocument()
     expect(screen.getByText('Transactions Card')).toBeInTheDocument()
     expect(screen.getByText('Compliance Report Card')).toBeInTheDocument()
-    expect(screen.getByText('Fuel Code Card')).toBeInTheDocument()
+    expect(screen.getByText('CI Application Card')).toBeInTheDocument()
     expect(screen.getByText('User Settings Card')).toBeInTheDocument()
   })
 
@@ -154,9 +158,7 @@ describe('Dashboard Component', () => {
 
     // Non-gov role related components
     expect(screen.getByTestId('role-Transfer')).toBeInTheDocument()
-    expect(
-      screen.getAllByTestId(nonGovRolesTestId)
-    ).not.toHaveLength(0)
+    expect(screen.getAllByTestId(nonGovRolesTestId)).not.toHaveLength(0)
     expect(screen.getByText('Org Balance Card')).toBeInTheDocument()
     expect(screen.getByText('Feedback Card')).toBeInTheDocument()
     expect(screen.getByText('Website Card')).toBeInTheDocument()
@@ -190,9 +192,7 @@ describe('Dashboard Component', () => {
     render(<Dashboard />, { wrapper })
 
     // Test nonGovRoles components - using getAllByTestId since there are multiple instances
-    expect(
-      screen.getAllByTestId(nonGovRolesTestId)
-    ).toHaveLength(3)
+    expect(screen.getAllByTestId(nonGovRolesTestId)).toHaveLength(3)
     expect(screen.getByText('Org Balance Card')).toBeInTheDocument()
     expect(screen.getByText('Feedback Card')).toBeInTheDocument()
     expect(screen.getByText('Website Card')).toBeInTheDocument()
@@ -224,7 +224,7 @@ describe('Dashboard Component', () => {
     // Test admin role in right section - using more flexible approach
     expect(screen.getByText('Admin Links Card')).toBeInTheDocument()
     expect(screen.getByText('User Settings Card')).toBeInTheDocument()
-    
+
     expect(screen.getAllByTestId(govRolesTestId).length).toBeGreaterThan(0)
   })
 
@@ -248,15 +248,21 @@ describe('Dashboard Component', () => {
   it('renders nested Role components in Central Section for government users', () => {
     useCurrentUser.mockReturnValue({
       data: {
-        roles: [{ name: 'Government' }, { name: 'Analyst' }, { name: 'Compliance Manager' }]
+        roles: [
+          { name: 'Government' },
+          { name: 'Analyst' },
+          { name: 'Compliance Manager' }
+        ]
       }
     })
 
     render(<Dashboard />, { wrapper })
 
     expect(screen.getAllByTestId(govRolesTestId).length).toBeGreaterThan(0)
-    
-    expect(screen.getByTestId('role-Analyst-Compliance Manager')).toBeInTheDocument()
+
+    expect(
+      screen.getByTestId('role-Analyst-Compliance Manager')
+    ).toBeInTheDocument()
     expect(screen.getByTestId('role-Analyst')).toBeInTheDocument()
   })
 
@@ -278,11 +284,11 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('Organizations Summary Card')).toBeInTheDocument()
     expect(screen.getByText('Transactions Card')).toBeInTheDocument()
     expect(screen.getByText('Compliance Report Card')).toBeInTheDocument()
-    expect(screen.getByText('Fuel Code Card')).toBeInTheDocument()
-    
+    expect(screen.getByText('CI Application Card')).toBeInTheDocument()
+
     // Director card
     expect(screen.getByText('Director Review Card')).toBeInTheDocument()
-    
+
     // Admin and settings cards
     expect(screen.getByText('Admin Links Card')).toBeInTheDocument()
     expect(screen.getByText('User Settings Card')).toBeInTheDocument()

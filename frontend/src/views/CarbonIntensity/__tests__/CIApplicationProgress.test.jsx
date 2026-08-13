@@ -213,6 +213,29 @@ describe('CIApplicationProgress', () => {
     expect(steps.map((step) => step.key)).toContain('target')
   })
 
+  it('shows waiting with applicant only while supplier-return requests are active', () => {
+    const activeSteps = buildCIWorkflowSteps({
+      status: { status: 'Submitted' },
+      signatureDateTime: '2026-05-01T12:00:00Z',
+      documentUploadEnabled: true,
+      documentChangesRequestedAt: '2026-05-17T09:00:00Z',
+      proposedFuelCodeEffectiveDate: '2026-06-01'
+    })
+    const closedSteps = buildCIWorkflowSteps({
+      status: { status: 'Completed' },
+      signatureDateTime: '2026-05-01T12:00:00Z',
+      documentUploadEnabled: false,
+      documentChangesRequestedAt: '2026-05-17T09:00:00Z',
+      pathwaySupplementalEditEnabled: false,
+      pathwayChangesRequestedAt: '2026-05-18T09:00:00Z',
+      approvalDate: '2026-05-20T09:00:00Z'
+    })
+
+    expect(activeSteps.map((step) => step.key)).toContain('withSupplier')
+    expect(closedSteps.map((step) => step.key)).not.toContain('withSupplier')
+    expect(closedSteps.map((step) => step.key)).toContain('approved')
+  })
+
   it('hides verification workflow steps for external users until approval', () => {
     mockHasAnyRole = vi.fn(() => false)
     const steps = buildCIWorkflowSteps(

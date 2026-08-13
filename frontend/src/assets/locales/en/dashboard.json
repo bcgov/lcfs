@@ -26,11 +26,11 @@
     "viewAllTransactions": "View all transactions",
     "loadingMessage": "Loading transactions card..."
   },
-  "fuelCodes": {
-    "title": "Fuel codes",
+  "ciApplications": {
+    "title": "CI Applications",
     "thereAre": "There are:",
-    "fcInProgress": "Fuel code(s) in progress",
-    "loadingMessage": "Loading fuel codes card..."
+    "inProgress": "CI Application(s) in progress",
+    "loadingMessage": "Loading CI applications card..."
   },
   "orgFuelCodes": {
     "title": "Fuel codes",
