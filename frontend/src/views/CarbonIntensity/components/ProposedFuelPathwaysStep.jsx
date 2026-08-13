@@ -30,10 +30,8 @@ const createEmptyRow = () => ({
   feedstock: '',
   feedstockRegion: '',
   feedstockTransportMode: [],
-  feedstockTransportDistance: null,
   coproducts: '',
-  finishedFuelTransportMode: [],
-  finishedFuelTransportDistance: null
+  finishedFuelTransportMode: []
 })
 
 export const ProposedFuelPathwaysStep = ({
@@ -72,6 +70,10 @@ export const ProposedFuelPathwaysStep = ({
   const columnDefs = useMemo(
     () => buildPathwayColDefs({ optionsData, canEdit }),
     [optionsData, canEdit]
+  )
+  const popupParent = useMemo(
+    () => (typeof document === 'undefined' ? undefined : document.body),
+    []
   )
 
   const onCellValueChanged = useCallback(
@@ -221,6 +223,7 @@ export const ProposedFuelPathwaysStep = ({
         rowData={rowData}
         onCellValueChanged={onCellValueChanged}
         onAction={onAction}
+        popupParent={popupParent}
         showAddRowsButton={canEdit}
         context={{ errors }}
         showMandatoryColumns={canEdit}
