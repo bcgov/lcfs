@@ -72,7 +72,7 @@ async def test_ci_application_counts_success_for_analyst(
         response = await client.get("/api/dashboard/ci-application-counts")
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json() == {"in_progress": 17}
+        assert response.json() == {"inProgress": 17}
 
 
 @pytest.mark.anyio
