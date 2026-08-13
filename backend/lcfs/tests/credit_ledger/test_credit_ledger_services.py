@@ -118,6 +118,59 @@ async def test_export_transactions_generates_stream(credit_ledger_service, mock_
 
 
 @pytest.mark.anyio
+async def test_export_transactions_creates_one_excel_sheet_per_year(
+    credit_ledger_service, mock_repo
+):
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        mock_repo.get_rows_paginated.return_value = (
+            [
+                (
+                    SimpleNamespace(
+                        transaction_type="Transfer",
+                        compliance_period="2024",
+                        organization_id=1,
+                        compliance_units=10,
+                        available_balance=25,
+                        update_date=datetime(2025, 1, 1),
+                    ),
+                    None,
+                ),
+                (
+                    SimpleNamespace(
+                        transaction_type="AdminAdjustment",
+                        compliance_period="2023",
+                        organization_id=1,
+                        compliance_units=5,
+                        available_balance=15,
+                        update_date=datetime(2024, 1, 1),
+                    ),
+                    None,
+                ),
+            ],
+            2,
+        )
+
+        resp = await credit_ledger_service.export_transactions(
+            organization_id=1, export_format="xlsx"
+        )
+
+        assert isinstance(resp, StreamingResponse)
+        assert resp.media_type == (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        assert mock_add_sheet.call_count == 2
+        assert [call.kwargs["sheet_name"] for call in mock_add_sheet.call_args_list] == [
+            "2024",
+            "2023",
+        ]
+
+
+@pytest.mark.anyio
 async def test_get_organization_years_success(credit_ledger_service, mock_repo):
     """Test getting organization years returns years from repo."""
     expected_years = ["2024", "2023", "2022"]
