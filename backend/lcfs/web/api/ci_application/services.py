@@ -1689,6 +1689,18 @@ class CIApplicationServices:
                 detail="Workflow actions can only be recorded on Submitted applications.",
             )
 
+    def _clear_government_workflow_review(self, ci_application: CIApplication) -> None:
+        ci_application.preliminary_risk_assessment = None
+        ci_application.priority_score = None
+        ci_application.verification_1_user_id = None
+        ci_application.verification_1_date = None
+        ci_application.verification_2_user_id = None
+        ci_application.verification_2_date = None
+        ci_application.verification_2_risk_assessment = None
+        ci_application.verification_2_priority_score = None
+        ci_application.recommendation_user_id = None
+        ci_application.recommendation_date = None
+
     # ------------------------------------------------------------------
     # Step 1 — create / update / delete draft
     # ------------------------------------------------------------------
@@ -2062,6 +2074,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
+        self._clear_government_workflow_review(ci_application)
         ci_application.pathway_supplemental_edit_enabled = True
         ci_application.pathway_changes_requested_at = requested_at
         ci_application.pathway_changes_requested_by = user.keycloak_username
@@ -2100,6 +2113,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
+        self._clear_government_workflow_review(ci_application)
         ci_application.document_upload_enabled = True
         ci_application.document_changes_requested_at = requested_at
         ci_application.document_changes_requested_by = user.keycloak_username
@@ -2157,6 +2171,10 @@ class CIApplicationServices:
                 )
 
         ci_application.supporting_document_other = data.supporting_document_other
+        if getattr(ci_application, "document_upload_enabled", False):
+            ci_application.document_upload_enabled = False
+            ci_application.document_changes_requested_at = None
+            ci_application.document_changes_requested_by = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
@@ -2422,11 +2440,15 @@ class CIApplicationServices:
             data.status == CIApplicationStatusEnum.Submitted
             and current_status == CIApplicationStatusEnum.Recommended.value
         )
+        is_reactivation = (
+            data.status == CIApplicationStatusEnum.Submitted
+            and current_status == CIApplicationStatusEnum.Withdrawn.value
+        )
         if is_director_approval:
             ci_application.approval_user_id = user.user_profile_id
             ci_application.approval_date = datetime.now(timezone.utc)
             await self._approve_generated_fuel_codes(ci_application)
-        elif is_director_returned:
+        elif is_director_returned or is_reactivation:
             ci_application.recommendation_user_id = None
             ci_application.recommendation_date = None
             ci_application.approval_user_id = None
