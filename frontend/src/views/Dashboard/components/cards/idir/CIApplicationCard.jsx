@@ -22,7 +22,7 @@ const CountDisplay = ({ count }) => (
   </BCTypography>
 )
 
-export const FuelCodeCard = () => {
+export const CIApplicationCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
   const { data: counts, isLoading } = useCIApplicationCounts()
@@ -101,4 +101,3 @@ export const FuelCodeCard = () => {
     />
   )
 }
-

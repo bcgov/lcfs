@@ -3,7 +3,9 @@ import { useApiService } from '@/services/useApiService'
 import { useQuery } from '@tanstack/react-query'
 import type { QueryOptions } from './types'
 
-export const useDirectorReviewCounts = (options: QueryOptions<unknown> = {}) => {
+export const useDirectorReviewCounts = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const path = apiRoutes.directorReviewCounts
 
@@ -31,7 +33,9 @@ export const useTransactionCounts = (options: QueryOptions<unknown> = {}) => {
   })
 }
 
-export const useOrgTransactionCounts = (options: QueryOptions<unknown> = {}) => {
+export const useOrgTransactionCounts = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const path = apiRoutes.OrgTransactionCounts
 
@@ -45,7 +49,9 @@ export const useOrgTransactionCounts = (options: QueryOptions<unknown> = {}) => 
   })
 }
 
-export const useOrgComplianceReportCounts = (options: QueryOptions<unknown> = {}) => {
+export const useOrgComplianceReportCounts = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const path = apiRoutes.OrgComplianceReportCounts
 
@@ -71,19 +77,6 @@ export const useComplianceReportCounts = () => {
     }
   })
 }
-export const useFuelCodeCounts = () => {
-  const client = useApiService()
-  const path = apiRoutes.fuelCodeCounts
-
-  return useQuery({
-    queryKey: ['fuel-code-counts'],
-    queryFn: async () => {
-      const response = await client.get(path)
-      return response.data
-    }
-  })
-}
-
 export const useOrgFuelCodeCounts = (options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
   const path = apiRoutes.orgFuelCodeCounts

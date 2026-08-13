@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { FuelCodeCard } from '../FuelCodeCard'
+import { CIApplicationCard } from '../CIApplicationCard'
 import { useCIApplicationCounts } from '@/hooks/useDashboard'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useNavigate } from 'react-router-dom'
@@ -32,7 +32,7 @@ vi.mock('@/components/Loading', () => ({
   default: ({ message }) => <div data-testid="loading">{message}</div>
 }))
 
-describe('FuelCodeCard Component', () => {
+describe('CIApplicationCard Component', () => {
   const mockNavigate = vi.fn()
 
   beforeEach(() => {
@@ -57,7 +57,7 @@ describe('FuelCodeCard Component', () => {
       isLoading: true
     })
 
-    render(<FuelCodeCard />, { wrapper })
+    render(<CIApplicationCard />, { wrapper })
 
     const loadingElement = screen.getByText(/Loading.*card/, { exact: false })
     expect(loadingElement).toBeInTheDocument()
@@ -69,7 +69,7 @@ describe('FuelCodeCard Component', () => {
       isLoading: false
     })
 
-    render(<FuelCodeCard />, { wrapper })
+    render(<CIApplicationCard />, { wrapper })
 
     expect(screen.getByText('CI Applications')).toBeInTheDocument()
     expect(screen.getByText('17')).toBeInTheDocument()
@@ -85,7 +85,7 @@ describe('FuelCodeCard Component', () => {
       isLoading: false
     })
 
-    render(<FuelCodeCard />, { wrapper })
+    render(<CIApplicationCard />, { wrapper })
 
     // Find and click the link
     const link = screen.getByText(/CI Application\(s\) in progress/)
@@ -116,9 +116,8 @@ describe('FuelCodeCard Component', () => {
       isLoading: false
     })
 
-    render(<FuelCodeCard />, { wrapper })
+    render(<CIApplicationCard />, { wrapper })
 
     expect(screen.getByText('0')).toBeInTheDocument()
   })
 })
-
