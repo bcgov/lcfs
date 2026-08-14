@@ -219,6 +219,10 @@ export const OrganizationAddress = ({
       label: t('org:phoneNbrLabel')
     },
     {
+      name: 'contactName',
+      label: t('org:contactNameLabel')
+    },
+    {
       name: 'email',
       label: t('org:emailAddrLabel')
     },
@@ -261,6 +265,12 @@ export const OrganizationAddress = ({
     ...textFormFields.slice(0, -1),
     ...addressFormFields,
     textFormFields.at(-1)
+  ]
+  const optionalDisplayFields = [
+    {
+      name: 'contactName',
+      label: t('org:contactNameLabel')
+    }
   ]
   const headOffice = textFormFields.at(-1)
 

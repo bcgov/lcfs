@@ -104,6 +104,7 @@ describe('OrganizationAddress', () => {
       operatingName: 'ACME',
       phone: '250-123-4567',
       email: 'info@acme.com',
+      contactName: 'Jane Contact',
       serviceAddress: '123 Main St.',
       recordsAddress: '456 BC St.',
       headOfficeAddress: '789 HQ St.'
@@ -154,6 +155,22 @@ describe('OrganizationAddress', () => {
       expect(screen.getByText(snapshotData.operatingName)).toBeInTheDocument()
       expect(screen.getByText('org:phoneNbrLabel:')).toBeInTheDocument()
       expect(screen.getByText(snapshotData.phone)).toBeInTheDocument()
+      expect(screen.getByText('org:contactNameLabel:')).toBeInTheDocument()
+      expect(screen.getByText(snapshotData.contactName)).toBeInTheDocument()
+    })
+
+    it('does not render contact name when it is blank', () => {
+      render(
+        <OrganizationAddress
+          {...defaultProps}
+          snapshotData={{ ...snapshotData, contactName: '' }}
+        />,
+        { wrapper }
+      )
+
+      expect(
+        screen.queryByText('org:contactNameLabel:')
+      ).not.toBeInTheDocument()
     })
 
     it('renders the form in editing mode', () => {
@@ -171,6 +188,7 @@ describe('OrganizationAddress', () => {
         screen.getByLabelText(/org:operatingNameLabel/i)
       ).toBeInTheDocument()
       expect(screen.getByLabelText(/org:phoneNbrLabel/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/org:contactNameLabel/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/org:emailAddrLabel/i)).toBeInTheDocument()
 
       // Check save and cancel buttons
