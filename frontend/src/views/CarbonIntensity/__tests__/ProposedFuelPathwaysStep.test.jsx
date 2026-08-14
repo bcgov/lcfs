@@ -130,11 +130,9 @@ describe('ProposedFuelPathwaysStep', () => {
           fuelTypeId: 1,
           feedstock: 'Canola',
           feedstockRegion: 'Saskatchewan',
-          feedstockTransportMode: 'Truck',
-          feedstockTransportDistance: 100,
+          feedstockTransportMode: [{ transportMode: 'Truck', distance: 100 }],
           coproducts: null,
-          finishedFuelTransportMode: 'Rail',
-          finishedFuelTransportDistance: 200
+          finishedFuelTransportMode: [{ transportMode: 'Rail', distance: 200 }]
         }
       ],
       pathwayDescription: 'Uses CCS'
@@ -178,11 +176,9 @@ describe('ProposedFuelPathwaysStep', () => {
           fuelTypeId: 1,
           feedstock: 'Corn',
           feedstockRegion: 'Ontario',
-          feedstockTransportMode: 'Truck',
-          feedstockTransportDistance: 50,
+          feedstockTransportMode: [{ transportMode: 'Truck', distance: 50 }],
           coproducts: null,
-          finishedFuelTransportMode: 'Rail',
-          finishedFuelTransportDistance: 75
+          finishedFuelTransportMode: [{ transportMode: 'Rail', distance: 75 }]
         }
       ]
     }

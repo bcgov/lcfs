@@ -39,9 +39,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     standard_errors = []
     for error in errors:
         loc = error.get("loc", ())
-        # Use the last path segment as the field name; "body" is the request
-        # body wrapper — treat that as a form-level (root) error.
-        field = loc[-1] if loc else "__root__"
+        # Use the request payload field, not Pydantic's internal union branch
+        # marker (for example ``str`` in ``field.0.str``).
+        payload_loc = [part for part in loc if part != "body"]
+        field = next(
+            (part for part in payload_loc if isinstance(part, str)),
+            "__root__",
+        )
         if field == "body":
             field = "__root__"
         msg = error.get("msg", "")

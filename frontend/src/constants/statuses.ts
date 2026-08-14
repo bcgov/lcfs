@@ -84,6 +84,17 @@ export function getAllFuelCodeStatuses(): FuelCodeStatus[] {
   return Object.values(FUEL_CODE_STATUSES)
 }
 
+export const CI_APPLICATION_STATUSES = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  RECOMMENDED: 'Recommended',
+  COMPLETED: 'Completed',
+  WITHDRAWN: 'Withdrawn'
+} as const
+
+export type CIApplicationStatus =
+  (typeof CI_APPLICATION_STATUSES)[keyof typeof CI_APPLICATION_STATUSES]
+
 export const TRANSACTION_TYPES = {
   TRANSFER: 'Transfer',
   INITIATIVE_AGREEMENT: 'InitiativeAgreement',

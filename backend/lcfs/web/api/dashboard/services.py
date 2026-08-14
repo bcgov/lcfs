@@ -10,6 +10,7 @@ from lcfs.web.api.dashboard.schema import (
     ComplianceReportCountsSchema,
     FuelCodeCountsSchema,
     OrgFuelCodeCountsSchema,
+    CIApplicationCountsSchema,
 )
 
 logger = structlog.get_logger(__name__)
@@ -84,3 +85,9 @@ class DashboardServices:
             draft=counts.get("draft", 0),
             submitted=counts.get("submitted", 0),
         )
+
+    @service_handler
+    async def get_ci_application_counts(self) -> CIApplicationCountsSchema:
+        counts = await self.repo.get_ci_application_counts()
+
+        return CIApplicationCountsSchema(in_progress=counts.get("in_progress", 0))

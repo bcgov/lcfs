@@ -110,6 +110,26 @@ async def test_get_status_by_name_missing(repo, mock_db):
     assert await repo.get_status_by_name("Nope") is None
 
 
+@pytest.mark.anyio
+async def test_get_in_progress_counts_returns_submitted_and_recommended(repo, mock_db):
+    result = MagicMock()
+    result.all.return_value = [("Submitted", 5), ("Recommended", 3)]
+    mock_db.execute.return_value = result
+
+    counts = await repo.get_in_progress_counts()
+    assert counts == {"submitted": 5, "recommended": 3}
+
+
+@pytest.mark.anyio
+async def test_get_in_progress_counts_defaults_missing_statuses_to_zero(repo, mock_db):
+    result = MagicMock()
+    result.all.return_value = [("Submitted", 2)]
+    mock_db.execute.return_value = result
+
+    counts = await repo.get_in_progress_counts()
+    assert counts == {"submitted": 2, "recommended": 0}
+
+
 # ---------------------------------------------------------------------------
 # CRUD
 # ---------------------------------------------------------------------------

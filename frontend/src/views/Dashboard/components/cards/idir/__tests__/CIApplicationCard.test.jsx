@@ -1,13 +1,13 @@
 import React from 'react'
 import { screen, fireEvent } from '@testing-library/react'
 import { vi, describe, expect, beforeEach } from 'vitest'
-import { FuelCodeCard } from '../FuelCodeCard'
-import { useFuelCodeCounts } from '@/hooks/useDashboard'
+import { CIApplicationCard } from '../CIApplicationCard'
+import { useCIApplicationCounts } from '@/hooks/useDashboard'
 import { test } from '@/tests/utils/fixtures'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
-import { FUEL_CODE_STATUSES } from '@/constants/statuses'
+import { CI_APPLICATION_STATUSES } from '@/constants/statuses'
 
 // Mock dependencies
 vi.mock('@/hooks/useDashboard')
@@ -32,7 +32,7 @@ vi.mock('@/components/Loading', () => ({
   default: ({ message }) => <div data-testid="loading">{message}</div>
 }))
 
-describe('FuelCodeCard Component', () => {
+describe('CIApplicationCard Component', () => {
   const mockNavigate = vi.fn()
 
   beforeEach(() => {
@@ -52,71 +52,76 @@ describe('FuelCodeCard Component', () => {
   })
 
   test('renders loading state correctly', ({ render, query, theme, i18n }) => {
-    useFuelCodeCounts.mockReturnValue({
+    useCIApplicationCounts.mockReturnValue({
       data: null,
       isLoading: true
     })
 
-    render(<FuelCodeCard />, [query, theme, i18n])
+    render(<CIApplicationCard />, [query, theme, i18n])
 
     const loadingElement = screen.getByText(/Loading.*card/, { exact: false })
     expect(loadingElement).toBeInTheDocument()
   })
 
   test('renders with counts data', ({ render, query, theme, i18n }) => {
-    useFuelCodeCounts.mockReturnValue({
-      data: { draftFuelCodes: 3 },
+    useCIApplicationCounts.mockReturnValue({
+      data: { inProgress: 17 },
       isLoading: false
     })
 
-    render(<FuelCodeCard />, [query, theme, i18n])
+    render(<CIApplicationCard />, [query, theme, i18n])
 
-    expect(screen.getByText('Fuel codes')).toBeInTheDocument()
-    expect(screen.getByText('3')).toBeInTheDocument()
+    expect(screen.getByText('CI Applications')).toBeInTheDocument()
+    expect(screen.getByText('17')).toBeInTheDocument()
     expect(screen.getByText(/There are/)).toBeInTheDocument()
-    expect(screen.getByText(/Fuel code\(s\) in progress/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/CI Application\(s\) in progress/)
+    ).toBeInTheDocument()
   })
 
-  test('navigates to fuel codes page on link click with correct filter', ({
+  test('navigates to CI applications page on link click with correct filter', ({
     render,
     query,
     theme,
     i18n
   }) => {
-    useFuelCodeCounts.mockReturnValue({
-      data: { draftFuelCodes: 3 },
+    useCIApplicationCounts.mockReturnValue({
+      data: { inProgress: 17 },
       isLoading: false
     })
 
-    render(<FuelCodeCard />, [query, theme, i18n])
+    render(<CIApplicationCard />, [query, theme, i18n])
 
     // Find and click the link
-    const link = screen.getByText(/Fuel code\(s\) in progress/)
+    const link = screen.getByText(/CI Application\(s\) in progress/)
     fireEvent.click(link)
 
     // Check that sessionStorage was updated with the correct filter
     const expectedFilter = {
       status: {
-        filterType: 'text',
-        type: 'equals',
-        filter: FUEL_CODE_STATUSES.DRAFT
+        filterType: 'set',
+        type: 'set',
+        filter: [
+          CI_APPLICATION_STATUSES.SUBMITTED,
+          CI_APPLICATION_STATUSES.RECOMMENDED
+        ]
       }
     }
 
     expect(window.sessionStorage.setItem).toHaveBeenCalledWith(
-      FILTER_KEYS.FUEL_CODES_GRID,
+      FILTER_KEYS.CI_APPLICATIONS_GRID,
       JSON.stringify(expectedFilter)
     )
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.LIST)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.LIST)
   })
 
   test('handles zero counts correctly', ({ render, query, theme, i18n }) => {
-    useFuelCodeCounts.mockReturnValue({
-      data: { draftFuelCodes: 0 },
+    useCIApplicationCounts.mockReturnValue({
+      data: { inProgress: 0 },
       isLoading: false
     })
 
-    render(<FuelCodeCard />, [query, theme, i18n])
+    render(<CIApplicationCard />, [query, theme, i18n])
 
     expect(screen.getByText('0')).toBeInTheDocument()
   })

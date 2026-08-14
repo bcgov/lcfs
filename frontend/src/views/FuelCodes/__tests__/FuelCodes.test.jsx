@@ -2,6 +2,7 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 import { fireEvent, screen, waitFor, act } from '@testing-library/react'
 import { FuelCodes } from '@/views/FuelCodes'
+import { formatTransportModeDistances } from '@/views/FuelCodes/_schema'
 import { roles } from '@/constants/roles'
 import { test } from '@/tests/utils/fixtures'
 import { ROUTES } from '@/routes/routes'
@@ -695,5 +696,42 @@ describe('FuelCodes Component Tests', () => {
         screen.getByText('Download fuel codes information')
       ).toBeInTheDocument()
     })
+  })
+})
+
+describe('formatTransportModeDistances', () => {
+  it('keeps existing string transport mode arrays unchanged', () => {
+    expect(formatTransportModeDistances(['Truck', 'Rail'], '')).toEqual([
+      'Truck',
+      'Rail'
+    ])
+  })
+
+  it('formats camelCase relation transport modes with distances', () => {
+    expect(
+      formatTransportModeDistances(
+        [
+          {
+            feedstockFuelTransportMode: { transportMode: 'Truck' },
+            distance: 125
+          }
+        ],
+        'feedstockFuelTransportMode'
+      )
+    ).toEqual(['Truck (125 km)'])
+  })
+
+  it('formats snake_case relation transport modes with distances', () => {
+    expect(
+      formatTransportModeDistances(
+        [
+          {
+            finished_fuel_transport_mode: { transport_mode: 'Rail' },
+            distance: 320
+          }
+        ],
+        'finishedFuelTransportMode'
+      )
+    ).toEqual(['Rail (320 km)'])
   })
 })

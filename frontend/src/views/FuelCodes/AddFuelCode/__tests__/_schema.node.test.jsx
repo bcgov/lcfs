@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fuelCodeColDefs } from '../_schema'
+import {
+  fuelCodeColDefs,
+  normalizeTransportModeDistances,
+  normalizeTransportModeDistancesForSave
+} from '../_schema'
 
 // Mock dependencies
 vi.mock('react-i18next', () => ({
@@ -35,6 +39,12 @@ vi.mock('@/components/BCDataGrid/components/Editors/NumberEditor', () => ({
 vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
   RequiredHeader: () => null
 }))
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/TransportModeDistanceCellEditor',
+  () => ({
+    TransportModeDistanceCellEditor: () => null
+  })
+)
 
 vi.mock('@/utils/grid/eventHandlers', () => ({
   suppressKeyboardEvent: vi.fn()
@@ -496,5 +506,32 @@ describe('fuelCodeColDefs', () => {
 
       expect(countryColumn.tooltipValueGetter(params)).toBe('')
     })
+  })
+})
+
+describe('normalizeTransportModeDistances', () => {
+  it('flattens nested transport mode option objects before save', () => {
+    expect(
+      normalizeTransportModeDistances([
+        { transportMode: { transportMode: 'Truck' }, distance: 125 },
+        {
+          feedstockFuelTransportMode: { transportMode: 'Rail' },
+          distance: 320
+        },
+        'Ship'
+      ])
+    ).toEqual([
+      { transportMode: 'Truck', distance: 125 },
+      { transportMode: 'Rail', distance: 320 },
+      { transportMode: 'Ship', distance: '' }
+    ])
+  })
+
+  it('uses backend transport_mode keys for save payloads', () => {
+    expect(
+      normalizeTransportModeDistancesForSave([
+        { transportMode: { transportMode: 'Truck' }, distance: 125 }
+      ])
+    ).toEqual([{ transport_mode: 'Truck', distance: 125 }])
   })
 })

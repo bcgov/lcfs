@@ -256,6 +256,7 @@ export const apiRoutes = {
   complianceReportCounts: '/dashboard/compliance-report-counts',
   fuelCodeCounts: '/dashboard/fuel-code-counts',
   orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
+  ciApplicationCounts: '/dashboard/ci-application-counts',
 
   // credit market
   creditMarketOverview: '/credit-market/overview',

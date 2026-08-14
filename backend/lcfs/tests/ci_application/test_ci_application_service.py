@@ -32,6 +32,9 @@ from lcfs.web.api.ci_application.schema import (
 from lcfs.web.api.ci_application.services import (
     CIApplicationServices,
     _pathway_change_logs_from_versions,
+    _pathway_input_snapshot,
+    _pathway_snapshot,
+    _transport_mode_details_from_any,
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -677,6 +680,22 @@ def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF", organization_id=1
     )
 
 
+def _transport_mode_obj(ident, name):
+    return SimpleNamespace(transport_mode_id=ident, transport_mode=name)
+
+
+def _transport_mode_link(name, distance, ident=1):
+    return SimpleNamespace(
+        transport_mode_id=ident,
+        transport_mode=_transport_mode_obj(ident, name),
+        distance=distance,
+    )
+
+
+def _transport_mode_selection(name, distance):
+    return {"transportMode": name, "distance": distance}
+
+
 def _new_pathway_input(**overrides):
     base = dict(
         application_type_id=1,
@@ -688,11 +707,9 @@ def _new_pathway_input(**overrides):
         fuel_type_id=1,
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode=["Truck"],
-        feedstock_transport_distance=100,
+        feedstock_transport_mode=[_transport_mode_selection("Truck", 100)],
         coproducts=None,
-        finished_fuel_transport_mode=["Rail"],
-        finished_fuel_transport_distance=200,
+        finished_fuel_transport_mode=[_transport_mode_selection("Rail", 200)],
     )
     base.update(overrides)
     return PathwayInputSchema(**base)
@@ -702,6 +719,50 @@ def test_pathway_input_allows_negative_proposed_ci():
     payload = _new_pathway_input(proposed_ci=-5.61)
 
     assert payload.proposed_ci == Decimal("-5.61")
+
+
+def test_pathway_input_requires_mode_level_distances():
+    with pytest.raises(ValidationError):
+        _new_pathway_input(feedstock_transport_mode=["Truck"])
+
+
+def test_pathway_snapshots_do_not_write_removed_transport_mode_scalars():
+    row = _new_pathway_input(
+        feedstock_transport_mode=[_transport_mode_selection("Truck", 100)],
+        finished_fuel_transport_mode=[_transport_mode_selection("Rail", 200)],
+    )
+    pathway = _existing_pathway(
+        feedstock_transport_modes=[_transport_mode_link("Truck", 100, 1)],
+        finished_fuel_transport_modes=[_transport_mode_link("Rail", 200, 2)],
+    )
+
+    before = _pathway_snapshot(pathway)
+    after = _pathway_input_snapshot(row, pathway)
+
+    assert "feedstock_transport_mode" not in before
+    assert "finished_fuel_transport_mode" not in before
+    assert "feedstock_transport_mode" not in after
+    assert "finished_fuel_transport_mode" not in after
+    assert before["feedstock_transport_mode_details"] == [
+        {"transportMode": "Truck", "distance": 100}
+    ]
+    assert after["finished_fuel_transport_mode_details"] == [
+        {"transportMode": "Rail", "distance": 200}
+    ]
+
+
+def test_transport_mode_details_from_any_preserves_mixed_null_distances():
+    details = _transport_mode_details_from_any(
+        [
+            _transport_mode_selection("Truck", 100),
+            _transport_mode_selection("Rail", None),
+        ]
+    )
+
+    assert details == [
+        {"transportMode": "Truck", "distance": 100},
+        {"transportMode": "Rail", "distance": None},
+    ]
 
 
 def _existing_pathway(**overrides):
@@ -716,11 +777,9 @@ def _existing_pathway(**overrides):
         fuel_type_id=1,
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode="Truck",
-        feedstock_transport_distance=100,
+        feedstock_transport_modes=[_transport_mode_link("Truck", 100, 1)],
         coproducts=None,
-        finished_fuel_transport_mode="Rail",
-        finished_fuel_transport_distance=200,
+        finished_fuel_transport_modes=[_transport_mode_link("Rail", 200, 2)],
         group_uuid="pathway-group-1",
         version=0,
         action_type=ActionTypeEnum.CREATE,
@@ -742,6 +801,10 @@ def _stub_step2_lookups(repo, *, with_fuel_code=False):
     repo.get_fuel_codes_by_ids.return_value = (
         [_fuel_code_obj()] if with_fuel_code else []
     )
+    repo.get_transport_modes.return_value = [
+        _transport_mode_obj(1, "Truck"),
+        _transport_mode_obj(2, "Rail"),
+    ]
 
 
 def test_pathway_change_logs_from_versions_returns_empty_when_no_supplemental_edit():
@@ -990,7 +1053,7 @@ async def test_update_step2_records_pathway_versions_for_change_log(
             _new_pathway_input(
                 pathway_id=1,
                 feedstock="Camelina",
-                feedstock_transport_distance=125,
+                feedstock_transport_mode=[_transport_mode_selection("Truck", 125)],
             ),
             _new_pathway_input(feedstock="Tallow"),
         ],
@@ -1014,7 +1077,7 @@ async def test_update_step2_records_pathway_versions_for_change_log(
     assert update_row.update_date >= before_update
     assert update_row.update_user == mock_user.keycloak_username
     assert update_row.feedstock == "Camelina"
-    assert update_row.feedstock_transport_distance == 125
+    assert update_row.feedstock_transport_modes[0].distance == 125
 
     create_row = version_rows[1]
     assert create_row.action_type == ActionTypeEnum.CREATE
@@ -1347,11 +1410,9 @@ def _generation_pathway():
         fuel_type=_fuel_type_obj(),
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode="Truck",
-        feedstock_transport_distance=100,
+        feedstock_transport_modes=[_transport_mode_link("Truck", 100, 1)],
         coproducts=None,
-        finished_fuel_transport_mode="Rail",
-        finished_fuel_transport_distance=200,
+        finished_fuel_transport_modes=[_transport_mode_link("Rail", 200, 2)],
     )
 
 
@@ -1439,6 +1500,32 @@ async def test_update_generated_fuel_code_clearing_required_date_raises_validati
     assert exc.value.errors["errors"][0]["fields"] == ["applicationDate"]
     # The cleared value never reached the database.
     repo.update.assert_not_awaited()
+
+
+def test_sync_generated_fuel_code_transport_modes_preserves_null_distance(service):
+    existing_links = [
+        SimpleNamespace(transport_mode_id=1, distance=100),
+        SimpleNamespace(transport_mode_id=2, distance=200),
+    ]
+    transport_modes = [
+        _transport_mode_obj(1, "Truck"),
+        _transport_mode_obj(2, "Rail"),
+    ]
+
+    service._sync_fuel_code_transport_mode_links(
+        existing_links,
+        [
+            _transport_mode_selection("Truck", 125),
+            _transport_mode_selection("Rail", None),
+        ],
+        transport_modes,
+        SimpleNamespace,
+    )
+
+    by_id = {link.transport_mode_id: link for link in existing_links}
+    assert set(by_id) == {1, 2}
+    assert by_id[1].distance == 125
+    assert by_id[2].distance is None
 
 
 @pytest.mark.anyio

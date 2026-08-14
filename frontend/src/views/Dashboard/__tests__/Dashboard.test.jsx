@@ -66,8 +66,10 @@ vi.mock('../components/cards/idir/OrganizationsSummaryCard', () => ({
   )
 }))
 
-vi.mock('../components/cards/idir/FuelCodeCard', () => ({
-  FuelCodeCard: () => <div data-test="fuel-code-card">Fuel Code Card</div>
+vi.mock('../components/cards/idir/CIApplicationCard', () => ({
+  CIApplicationCard: () => (
+    <div data-test="ci-application-card">CI Application Card</div>
+  )
 }))
 
 vi.mock('../components/cards/idir/ComplianceReportCard', () => ({
@@ -152,7 +154,7 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('Organizations Summary Card')).toBeInTheDocument()
     expect(screen.getByText('Transactions Card')).toBeInTheDocument()
     expect(screen.getByText('Compliance Report Card')).toBeInTheDocument()
-    expect(screen.getByText('Fuel Code Card')).toBeInTheDocument()
+    expect(screen.getByText('CI Application Card')).toBeInTheDocument()
     expect(screen.getByText('User Settings Card')).toBeInTheDocument()
   })
 
@@ -326,7 +328,7 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('Organizations Summary Card')).toBeInTheDocument()
     expect(screen.getByText('Transactions Card')).toBeInTheDocument()
     expect(screen.getByText('Compliance Report Card')).toBeInTheDocument()
-    expect(screen.getByText('Fuel Code Card')).toBeInTheDocument()
+    expect(screen.getByText('CI Application Card')).toBeInTheDocument()
 
     // Director card
     expect(screen.getByText('Director Review Card')).toBeInTheDocument()
