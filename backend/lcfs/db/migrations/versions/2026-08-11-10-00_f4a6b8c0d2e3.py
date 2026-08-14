@@ -1,7 +1,7 @@
 """Add design data flag to CI pathways.
 
 Revision ID: f4a6b8c0d2e3
-Revises: 9b5d3c7e1f0a
+Revises: f9a0b1c2d3e5
 Create Date: 2026-08-11 10:00:00.000000
 """
 
@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "f4a6b8c0d2e3"
-down_revision = "9b5d3c7e1f0a"
+down_revision = "f9a0b1c2d3e5"
 branch_labels = None
 depends_on = None
 
