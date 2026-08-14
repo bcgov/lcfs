@@ -219,12 +219,12 @@ export const OrganizationAddress = ({
       label: t('org:phoneNbrLabel')
     },
     {
-      name: 'contactName',
-      label: t('org:contactNameLabel')
-    },
-    {
       name: 'email',
       label: t('org:emailAddrLabel')
+    },
+    {
+      name: 'contactName',
+      label: t('org:contactNameLabel')
     },
     {
       name: 'headOfficeAddress',
@@ -266,12 +266,6 @@ export const OrganizationAddress = ({
     ...addressFormFields,
     textFormFields.at(-1)
   ]
-  const optionalDisplayFields = [
-    {
-      name: 'contactName',
-      label: t('org:contactNameLabel')
-    }
-  ]
   const headOffice = textFormFields.at(-1)
 
   // Helper to show either the value or 'Required' in read-only mode
@@ -299,19 +293,26 @@ export const OrganizationAddress = ({
               }
             }}
           >
-            {allFormFields.map(({ name, label }) => (
-              <ListItem key={name} sx={{ display: 'flex' }}>
-                <strong>{label}:</strong>{' '}
-                <span>
-                  {displayAddressValue(snapshotData[name]) ||
-                    (requiredFields.includes(name) && (
-                      <BCTypography variant="body4" color="error">
-                        Required
-                      </BCTypography>
-                    ))}
-                </span>
-              </ListItem>
-            ))}
+            {allFormFields.map(({ name, label }) => {
+              const value = displayAddressValue(snapshotData[name])
+              if (name === 'contactName' && !value) {
+                return null
+              }
+
+              return (
+                <ListItem key={name} sx={{ display: 'flex' }}>
+                  <strong>{label}:</strong>{' '}
+                  <span>
+                    {value ||
+                      (requiredFields.includes(name) && (
+                        <BCTypography variant="body4" color="error">
+                          Required
+                        </BCTypography>
+                      ))}
+                  </span>
+                </ListItem>
+              )
+            })}
           </List>
           {isGovernmentUser && snapshotData?.isEdited && (
             <BCButton
