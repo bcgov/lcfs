@@ -3,6 +3,7 @@ import { configure } from '@testing-library/react'
 import { vi } from 'vitest'
 import { config } from './public/config/config'
 import React from 'react'
+import './src/tests/i18nSetup.js'
 
 configure({ testIdAttribute: 'data-test' })
 
