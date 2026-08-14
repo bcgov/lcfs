@@ -322,19 +322,6 @@ class PathwayInputSchema(BaseSchema):
                 "msg": "Operating data end date must be on or after the start date.",
                 "type": "value_error",
             }])
-            
-    @model_validator(mode="after")
-    def _validate_row(self):
-        if self.operating_data_to < self.operating_data_from:
-            raise RequestValidationError(
-                [
-                    {
-                        "loc": ("operatingDataTo",),
-                        "msg": "Operating data end date must be on or after the start date.",
-                        "type": "value_error",
-                    }
-                ]
-            )
         return self
 
 
