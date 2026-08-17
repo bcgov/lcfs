@@ -4,10 +4,16 @@ import enum
 
 
 class InitiativeAgreementStatusEnum(enum.Enum):
+    # Award-era workflow statuses (outgoing transaction flow)
     Draft = "Draft"  # Draft created by analyst
     Recommended = "Recommended"  # Recommended by analyst
     Approved = "Approved"  # Approved by director
     Deleted = "Deleted"  # Deleted by analyst
+    # Agreement management statuses (#4804); appended to the existing
+    # postgres enum by migration — do not reorder members
+    Underway = "Underway"  # Agreement in progress
+    Completed = "Completed"  # Agreement fulfilled
+    Terminated = "Terminated"  # Agreement ended early
 
 
 class InitiativeAgreementStatus(BaseModel, Auditable, DisplayOrder):
