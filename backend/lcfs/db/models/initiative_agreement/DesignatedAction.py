@@ -118,6 +118,9 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
         "DesignatedActionStatus", back_populates="designated_actions"
     )
     assigned_analyst = relationship("UserProfile", foreign_keys=[assigned_analyst_id])
+    evidence_requirements = relationship(
+        "EvidenceRequirement", back_populates="designated_action"
+    )
     designated_action_internal_comments = relationship(
         "DesignatedActionInternalComment", back_populates="designated_action"
     )
