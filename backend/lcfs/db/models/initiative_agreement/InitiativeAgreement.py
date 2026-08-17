@@ -112,13 +112,10 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
         nullable=False,
         server_default="Initiative Agreement",
         comment=(
-            "Kind of agreement: current Initiative Agreement or migrated "
-            "legacy P3A."
+            "Kind of agreement: current Initiative Agreement or migrated " "legacy P3A."
         ),
     )
-    title = Column(
-        String(500), nullable=True, comment="Project title of the agreement"
-    )
+    title = Column(String(500), nullable=True, comment="Project title of the agreement")
     project_description = Column(
         Text, nullable=True, comment="Agreement brief / project summary"
     )
@@ -128,17 +125,13 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     contact_email = Column(
         String(255), nullable=True, comment="Agreement contact email"
     )
-    contact_phone = Column(
-        String(50), nullable=True, comment="Agreement contact phone"
-    )
+    contact_phone = Column(String(50), nullable=True, comment="Agreement contact phone")
     entry_date = Column(
         Date,
         nullable=True,
         comment="Date the agreement was entered into the tracker",
     )
-    agreement_start_date = Column(
-        Date, nullable=True, comment="Agreement start date"
-    )
+    agreement_start_date = Column(Date, nullable=True, comment="Agreement start date")
     agreement_end_date = Column(Date, nullable=True, comment="Agreement end date")
     total_credits_allocated = Column(
         BigInteger,

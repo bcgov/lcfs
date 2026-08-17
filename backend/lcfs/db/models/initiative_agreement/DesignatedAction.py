@@ -61,13 +61,10 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
         Integer,
         nullable=False,
         comment=(
-            "Action number within the agreement; displayed as "
-            "DA{n}-IA{agreement id}"
+            "Action number within the agreement; displayed as " "DA{n}-IA{agreement id}"
         ),
     )
-    name = Column(
-        String(500), nullable=False, comment="Designated action name/title"
-    )
+    name = Column(String(500), nullable=False, comment="Designated action name/title")
     description = Column(
         Text,
         nullable=True,

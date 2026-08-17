@@ -6,9 +6,7 @@ from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 
 class EvidenceSubmissionStatus(BaseModel, Auditable, DisplayOrder):
     __tablename__ = "evidence_submission_status"
-    __table_args__ = {
-        "comment": "Lookup table for evidence submission review statuses"
-    }
+    __table_args__ = {"comment": "Lookup table for evidence submission review statuses"}
 
     evidence_submission_status_id = Column(
         Integer,
@@ -19,9 +17,7 @@ class EvidenceSubmissionStatus(BaseModel, Auditable, DisplayOrder):
     status = Column(
         String(100),
         nullable=False,
-        comment=(
-            "Status value (e.g. Submitted, Under review, Accepted, Rejected)"
-        ),
+        comment=("Status value (e.g. Submitted, Under review, Accepted, Rejected)"),
     )
     description = Column(
         String(500),

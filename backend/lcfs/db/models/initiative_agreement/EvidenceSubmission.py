@@ -91,6 +91,4 @@ class EvidenceSubmission(BaseModel, Auditable):
     current_status = relationship(
         "EvidenceSubmissionStatus", back_populates="evidence_submissions"
     )
-    submitted_by_user = relationship(
-        "UserProfile", foreign_keys=[submitted_by_user_id]
-    )
+    submitted_by_user = relationship("UserProfile", foreign_keys=[submitted_by_user_id])
