@@ -121,6 +121,9 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
     evidence_requirements = relationship(
         "EvidenceRequirement", back_populates="designated_action"
     )
+    evidence_submissions = relationship(
+        "EvidenceSubmission", back_populates="designated_action"
+    )
     designated_action_internal_comments = relationship(
         "DesignatedActionInternalComment", back_populates="designated_action"
     )
