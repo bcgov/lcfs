@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException
 from io import UnsupportedOperation
 import os
+import re
 import uuid
 
 from lcfs.utils.constants import ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES
@@ -46,6 +47,36 @@ from botocore.exceptions import ClientError
 BUCKET_NAME = settings.s3_bucket
 MAX_FILE_SIZE_MB = 50
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+
+DOCUMENT_RENAME_ENABLED_PARENT_TYPES = {"ci_application"}
+
+_INVALID_DISPLAY_NAME_CHARS_RE = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+MAX_DISPLAY_NAME_LENGTH = 255
+
+
+def _normalize_display_name(requested_name: str, original_file_name: str) -> str:
+    """Validate a requested display name and force the original file extension."""
+    requested_name = (requested_name or "").strip()
+    if not requested_name:
+        raise HTTPException(status_code=400, detail="Display name cannot be empty.")
+    if len(requested_name) > MAX_DISPLAY_NAME_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Display name must be {MAX_DISPLAY_NAME_LENGTH} characters or fewer.",
+        )
+    if _INVALID_DISPLAY_NAME_CHARS_RE.search(requested_name):
+        raise HTTPException(
+            status_code=400,
+            detail='Display name contains invalid characters (\\ / : * ? " < > |).',
+        )
+
+    _, original_ext = os.path.splitext(original_file_name)
+    requested_base, requested_ext = os.path.splitext(requested_name)
+    base = (requested_base if requested_ext else requested_name).strip()
+    if not base:
+        raise HTTPException(status_code=400, detail="Display name cannot be empty.")
+
+    return f"{base}{original_ext}"
 
 
 class DocumentService:
@@ -367,6 +398,42 @@ class DocumentService:
         return comment
 
     @repo_handler
+    async def rename_file(
+        self,
+        document_id: int,
+        parent_id: int,
+        parent_type: str,
+        display_name: str,
+    ):
+        if parent_type not in DOCUMENT_RENAME_ENABLED_PARENT_TYPES:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Renaming documents is not enabled for '{parent_type}'.",
+            )
+
+        document = await self.db.get_one(Document, document_id)
+        if not document:
+            raise Exception("Document not found")
+
+        new_display_name = _normalize_display_name(display_name, document.file_name)
+
+        siblings = await self.get_by_id_and_type(parent_id, parent_type)
+        for sibling in siblings:
+            if sibling.document_id == document_id:
+                continue
+            existing_name = sibling.display_name or sibling.file_name
+            if existing_name.lower() == new_display_name.lower():
+                raise HTTPException(
+                    status_code=400,
+                    detail="A file with this name already exists.",
+                )
+
+        document.display_name = new_display_name
+        await self.db.flush()
+        await self.db.refresh(document)
+        return document
+
+    @repo_handler
     async def generate_presigned_url(self, document_id: int):
         document = await self.db.get_one(Document, document_id)
 
@@ -542,9 +609,20 @@ class DocumentService:
         document = await self.db.get_one(Document, document_id)
 
         if not document:
-            raise Exception("Document not found")
+            raise HTTPException(status_code=404, detail="Document not found")
 
-        response = self.s3_client.get_object(Bucket=BUCKET_NAME, Key=document.file_key)
+        try:
+            response = self.s3_client.get_object(
+                Bucket=BUCKET_NAME, Key=document.file_key
+            )
+        except ClientError as exc:
+            error_code = exc.response.get("Error", {}).get("Code")
+            if error_code in ("NoSuchKey", "404"):
+                raise HTTPException(
+                    status_code=404,
+                    detail="The file for this document could not be found in storage.",
+                )
+            raise
         return response, document
 
     async def copy_documents(self, copy_from_id: int, copy_to_id: int):

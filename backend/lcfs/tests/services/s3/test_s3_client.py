@@ -546,10 +546,26 @@ async def test_get_object_document_not_found(document_service, db_mock):
     db_mock.get_one.return_value = None
 
     # Execute and Assert
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(HTTPException) as exc_info:
         await document_service.get_object(1)
 
-    assert "DatabaseException" in str(exc_info.typename)
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_get_object_missing_from_storage(
+    document_service, document_mock, db_mock
+):
+    db_mock.get_one.return_value = document_mock
+    document_service.s3_client.get_object.side_effect = ClientError(
+        {"Error": {"Code": "NoSuchKey", "Message": "not found"}}, "GetObject"
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await document_service.get_object(1)
+
+    assert exc_info.value.status_code == 404
+    assert "storage" in exc_info.value.detail
 
 
 @pytest.mark.anyio
@@ -573,3 +589,102 @@ async def test_copy_documents(document_service, db_mock):
     # Assert
     # We expect at least two calls (once for select, and at least once for insert)
     assert db_mock.execute.call_count >= 2
+
+
+@pytest.mark.anyio
+async def test_rename_file_success_ci_application(
+    document_service, document_mock, db_mock
+):
+    # Setup: file_name "test.pdf"; siblings list has no name clash.
+    db_mock.get_one.return_value = document_mock
+    document_service.get_by_id_and_type = AsyncMock(return_value=[])
+
+    # Execute
+    document = await document_service.rename_file(
+        1, 5, "ci_application", "My Renamed Report"
+    )
+
+    # Assert: extension is preserved, original file_name untouched.
+    assert document.display_name == "My Renamed Report.pdf"
+    assert document.file_name == "test.pdf"
+    db_mock.flush.assert_called_once()
+    db_mock.refresh.assert_called_once_with(document_mock)
+
+
+@pytest.mark.anyio
+async def test_rename_file_strips_mismatched_extension(
+    document_service, document_mock, db_mock
+):
+    db_mock.get_one.return_value = document_mock
+    document_service.get_by_id_and_type = AsyncMock(return_value=[])
+
+    document = await document_service.rename_file(
+        1, 5, "ci_application", "My Report.docx"
+    )
+
+    # The original .pdf extension always wins over anything the user types.
+    assert document.display_name == "My Report.pdf"
+
+
+@pytest.mark.anyio
+async def test_rename_file_disabled_for_parent_type(document_service, db_mock):
+    with pytest.raises(HTTPException) as exc_info:
+        await document_service.rename_file(1, 5, "compliance_report", "New Name")
+
+    assert exc_info.value.status_code == 403
+    db_mock.get_one.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_rename_file_rejects_invalid_characters(
+    document_service, document_mock, db_mock
+):
+    db_mock.get_one.return_value = document_mock
+    document_service.get_by_id_and_type = AsyncMock(return_value=[])
+
+    with pytest.raises(HTTPException) as exc_info:
+        await document_service.rename_file(1, 5, "ci_application", "bad/name*.pdf")
+
+    assert exc_info.value.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_rename_file_rejects_empty_name(
+    document_service, document_mock, db_mock
+):
+    db_mock.get_one.return_value = document_mock
+    document_service.get_by_id_and_type = AsyncMock(return_value=[])
+
+    with pytest.raises(HTTPException) as exc_info:
+        await document_service.rename_file(1, 5, "ci_application", "   ")
+
+    assert exc_info.value.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_rename_file_rejects_duplicate_display_name(
+    document_service, document_mock, db_mock
+):
+    sibling = MagicMock(spec=Document)
+    sibling.document_id = 2
+    sibling.file_name = "other.pdf"
+    sibling.display_name = "Existing Name.pdf"
+
+    db_mock.get_one.return_value = document_mock
+    document_service.get_by_id_and_type = AsyncMock(return_value=[sibling])
+
+    with pytest.raises(HTTPException) as exc_info:
+        await document_service.rename_file(
+            1, 5, "ci_application", "existing name.pdf"
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "already exists" in exc_info.value.detail
+
+
+@pytest.mark.anyio
+async def test_rename_file_document_not_found(document_service, db_mock):
+    db_mock.get_one.return_value = None
+
+    with pytest.raises(Exception):
+        await document_service.rename_file(1, 5, "ci_application", "New Name")
