@@ -1,4 +1,7 @@
-import { InitiativeAgreements } from '@/views/InitiativeAgreements'
+import {
+  InitiativeAgreementDetail,
+  InitiativeAgreements
+} from '@/views/InitiativeAgreements'
 import ROUTES from '../routes'
 import { AppRouteObject } from '../types'
 
@@ -9,6 +12,14 @@ export const initiativeAgreementRoutes: AppRouteObject[] = [
     handle: {
       title: 'Initiative agreements',
       crumb: () => 'Initiative agreements'
+    }
+  },
+  {
+    path: ROUTES.INITIATIVE_AGREEMENTS.VIEW,
+    element: <InitiativeAgreementDetail />,
+    handle: {
+      title: 'Initiative agreement',
+      crumb: () => 'Initiative agreement'
     }
   }
 ]
