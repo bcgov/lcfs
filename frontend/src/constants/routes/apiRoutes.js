@@ -96,6 +96,7 @@ export const apiRoutes = {
   updateCIApplicationStep1: '/ci-applications/:ciApplicationId/step1',
   updateCIApplicationStep2: '/ci-applications/:ciApplicationId/step2',
   updateCIApplicationStep3: '/ci-applications/:ciApplicationId/step3',
+  updateCIApplicationStep4: '/ci-applications/:ciApplicationId/step4',
   submitCIApplication: '/ci-applications/:ciApplicationId/submit',
   ciApplicationDecision: '/ci-applications/:ciApplicationId/decision',
   ciApplicationAnalysts: '/ci-applications/analysts',
@@ -255,6 +256,7 @@ export const apiRoutes = {
   complianceReportCounts: '/dashboard/compliance-report-counts',
   fuelCodeCounts: '/dashboard/fuel-code-counts',
   orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
+  ciApplicationCounts: '/dashboard/ci-application-counts',
 
   // credit market
   creditMarketOverview: '/credit-market/overview',

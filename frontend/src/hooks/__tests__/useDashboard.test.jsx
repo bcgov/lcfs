@@ -6,7 +6,7 @@ import {
   useOrgTransactionCounts,
   useTransactionCounts,
   useComplianceReportCounts,
-  useFuelCodeCounts
+  useCIApplicationCounts
 } from '@/hooks/useDashboard'
 import { useApiService } from '@/services/useApiService'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -195,7 +195,7 @@ describe('useComplianceReportCounts', () => {
   })
 })
 
-describe('useFuelCodeCounts', () => {
+describe('useCIApplicationCounts', () => {
   const mockGet = vi.fn()
 
   beforeEach(() => {
@@ -203,25 +203,25 @@ describe('useFuelCodeCounts', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('fetches fuel code counts successfully', async () => {
+  it('fetches CI application counts successfully', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { draftFuelCodes: 8 }
+      data: { inProgress: 17 }
     })
 
-    const { result } = renderHook(() => useFuelCodeCounts(), {
+    const { result } = renderHook(() => useCIApplicationCounts(), {
       wrapper
     })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(result.current.data).toEqual({ draftFuelCodes: 8 })
-    expect(mockGet).toHaveBeenCalledWith('/dashboard/fuel-code-counts')
+    expect(result.current.data).toEqual({ inProgress: 17 })
+    expect(mockGet).toHaveBeenCalledWith('/dashboard/ci-application-counts')
   })
 
   it('handles errors correctly', async () => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
-    const { result } = renderHook(() => useFuelCodeCounts(), {
+    const { result } = renderHook(() => useCIApplicationCounts(), {
       wrapper
     })
 

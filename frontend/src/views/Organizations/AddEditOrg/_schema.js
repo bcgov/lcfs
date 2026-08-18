@@ -20,6 +20,7 @@ export const createValidationSchema = (
     orgOperatingName: Yup.string().required(
       'Operating name of organization is required.'
     ),
+    orgContactName: Yup.string().nullable(),
     orgEmailAddress: Yup.string()
       .required('Email address is required.')
       .email('Please enter a valid email address.'),

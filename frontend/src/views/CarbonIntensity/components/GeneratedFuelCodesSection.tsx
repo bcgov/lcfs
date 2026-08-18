@@ -9,8 +9,10 @@ import { useFuelCodeOptions } from '@/hooks/useFuelCode'
 import { useUpdateCIApplicationGeneratedFuelCode } from '@/hooks/useCIApplication'
 import {
   defaultColDef,
-  fuelCodeColDefs
+  fuelCodeColDefs,
+  normalizeTransportModeDistancesForSave
 } from '@/views/FuelCodes/AddFuelCode/_schema'
+import type { OptionsData } from '@/types/schema'
 
 type GeneratedFuelCodesSectionProps = {
   ciApplication: any
@@ -37,13 +39,16 @@ const getValidationFields = (row: any) =>
   )
 
 const toErrorMap = (rows: any[]) =>
-  rows.reduce((acc, row) => {
-    const rowErrors = getValidationFields(row)
-    if (row?.id && rowErrors.length) {
-      acc[row.id] = rowErrors
-    }
-    return acc
-  }, {} as Record<string, string[]>)
+  rows.reduce(
+    (acc, row) => {
+      const rowErrors = getValidationFields(row)
+      if (row?.id && rowErrors.length) {
+        acc[row.id] = rowErrors
+      }
+      return acc
+    },
+    {} as Record<string, string[]>
+  )
 
 const toUpdatePayload = (row: any) => {
   const {
@@ -56,11 +61,30 @@ const toUpdatePayload = (row: any) => {
     validationStatus,
     ...rest
   } = row
-  return rest
+  return {
+    ...rest,
+    feedstockFuelTransportMode: normalizeTransportModeDistancesForSave(
+      rest.feedstockFuelTransportMode
+    ),
+    finishedFuelTransportMode: normalizeTransportModeDistancesForSave(
+      rest.finishedFuelTransportMode
+    )
+  }
 }
 
 const replaceRow = (rows: any[], nextRow: any) =>
   rows.map((row) => (row.id === nextRow.id ? nextRow : row))
+
+const formatFastApiDetail = (detail: any) => {
+  if (!Array.isArray(detail)) return detail
+  return detail
+    .map((item) => {
+      const loc = Array.isArray(item?.loc) ? item.loc.join('.') : item?.loc
+      return [loc, item?.msg].filter(Boolean).join(': ')
+    })
+    .filter(Boolean)
+    .join('; ')
+}
 
 const getErrorMessage = (error: any, fallback: string) => {
   if (error?.response?.data?.errors?.[0]) {
@@ -68,7 +92,11 @@ const getErrorMessage = (error: any, fallback: string) => {
     const fieldText = fields?.length === 1 ? `${fields[0]} ` : ''
     return `Unable to save row: ${fieldText}${message}`
   }
-  return error?.response?.data?.detail || error?.message || fallback
+  return (
+    formatFastApiDetail(error?.response?.data?.detail) ||
+    error?.message ||
+    fallback
+  )
 }
 
 const getErrorFields = (error: any) =>
@@ -99,7 +127,7 @@ export const GeneratedFuelCodesSection = ({
 
   const columnDefs = useMemo(() => {
     const baseDefs = fuelCodeColDefs(
-      fuelCodeOptions,
+      fuelCodeOptions as OptionsData | undefined,
       errors,
       false,
       !readOnly,
@@ -134,6 +162,11 @@ export const GeneratedFuelCodesSection = ({
     ]
   }, [errors, fuelCodeOptions, isUpdating, pendingUpdates, readOnly])
 
+  const popupParent = useMemo(
+    () => (typeof document === 'undefined' ? undefined : document.body),
+    []
+  )
+
   const gridOptions = useMemo(
     () => ({
       suppressClickEdit: isUpdating,
@@ -166,7 +199,7 @@ export const GeneratedFuelCodesSection = ({
   }, [])
 
   const updateRowWithValidation = useCallback(
-    async (params: any, updatedData: any) => {
+    async (updatedData: any) => {
       const rowId = updatedData.id
 
       setPendingUpdates((prev) => new Set([...prev, rowId]))
@@ -193,7 +226,9 @@ export const GeneratedFuelCodesSection = ({
         })
         return nextRow
       } catch (error: any) {
-        const fallback = t('carbonIntensity:step5.generatedFuelCodeRowSaveError')
+        const fallback = t(
+          'carbonIntensity:step5.generatedFuelCodeRowSaveError'
+        )
         const errorMessage = getErrorMessage(error, fallback)
         const errorFields = getErrorFields(error)
         setErrors((prev) => ({
@@ -241,7 +276,7 @@ export const GeneratedFuelCodesSection = ({
         severity: 'pending'
       })
 
-      const finalRow = await updateRowWithValidation(params, pendingRow)
+      const finalRow = await updateRowWithValidation(pendingRow)
       params.node.updateData(finalRow)
       setRowData((prev) => replaceRow(prev, finalRow))
     },
@@ -268,6 +303,7 @@ export const GeneratedFuelCodesSection = ({
         onCellEditingStopped={onCellEditingStopped}
         showAddRowsButton={false}
         showMandatoryColumns={!readOnly}
+        popupParent={popupParent}
         context={{ errors }}
         getRowStyle={getRowStyle}
         getRowId={(params: any) => params.data.id}

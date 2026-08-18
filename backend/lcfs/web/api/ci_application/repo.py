@@ -25,6 +25,8 @@ from lcfs.db.models.ci_application import (
     CIApplicationStatus,
     Pathway,
     PathwayApplicationType,
+    PathwayFeedstockTransportMode,
+    PathwayFinishedFuelTransportMode,
     PathwayFuelCodeType,
 )
 from lcfs.db.models.ci_application.CIApplication import (
@@ -148,6 +150,32 @@ class CIApplicationRepository:
         return result.scalars().all()
 
     @repo_handler
+    async def get_in_progress_counts(self) -> Dict[str, int]:
+        """
+        Counts CI applications awaiting government action by status.
+        """
+        query = (
+            select(
+                CIApplicationStatus.status,
+                func.count(CIApplication.ci_application_id),
+            )
+            .select_from(CIApplication)
+            .join(
+                CIApplicationStatus,
+                CIApplication.status_id
+                == CIApplicationStatus.ci_application_status_id,
+            )
+            .where(CIApplicationStatus.status.in_(["Submitted", "Recommended"]))
+            .group_by(CIApplicationStatus.status)
+        )
+        result = await self.db.execute(query)
+        counts = {row[0]: row[1] for row in result.all()}
+        return {
+            "submitted": counts.get("Submitted", 0),
+            "recommended": counts.get("Recommended", 0),
+        }
+
+    @repo_handler
     async def get_status_by_name(self, status: str) -> Optional[CIApplicationStatus]:
         result = await self.db.execute(
             select(CIApplicationStatus).where(CIApplicationStatus.status == status)
@@ -268,6 +296,12 @@ class CIApplicationRepository:
                 selectinload(CIApplication.pathways)
                 .selectinload(Pathway.fuel_code)
                 .selectinload(FuelCode.fuel_type),
+                selectinload(CIApplication.pathways)
+                .selectinload(Pathway.feedstock_transport_modes)
+                .selectinload(PathwayFeedstockTransportMode.transport_mode),
+                selectinload(CIApplication.pathways)
+                .selectinload(Pathway.finished_fuel_transport_modes)
+                .selectinload(PathwayFinishedFuelTransportMode.transport_mode),
                 selectinload(
                     CIApplication.generated_fuel_code_associations
                 ).selectinload(CIApplicationFuelCodeAssociation.pathway),
@@ -373,6 +407,12 @@ class CIApplicationRepository:
                 selectinload(Pathway.fuel_type),
                 selectinload(Pathway.fuel_code).selectinload(FuelCode.fuel_code_prefix),
                 selectinload(Pathway.fuel_code).selectinload(FuelCode.fuel_type),
+                selectinload(Pathway.feedstock_transport_modes).selectinload(
+                    PathwayFeedstockTransportMode.transport_mode
+                ),
+                selectinload(Pathway.finished_fuel_transport_modes).selectinload(
+                    PathwayFinishedFuelTransportMode.transport_mode
+                ),
             )
             .where(Pathway.ci_application_id == ci_application_id)
             .order_by(Pathway.pathway_id)
@@ -439,7 +479,7 @@ class CIApplicationRepository:
                 if cond is not None:
                     conditions.append(cond)
                 continue
-            
+
             nested_builder = _NESTED_FILTER_BUILDERS.get(f.field)
             if nested_builder is not None:
                 cond = nested_builder(f)

@@ -48,8 +48,12 @@ let mockCurrentUser = {
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
     ...mockCurrentUser,
-    hasRoles: vi.fn(() => false),
-    hasAnyRole: vi.fn(() => false)
+    hasRoles: vi.fn((...names) =>
+      names.every((name) => mockUserRoles.some((role) => role.name === name))
+    ),
+    hasAnyRole: vi.fn((...names) =>
+      names.some((name) => mockUserRoles.some((role) => role.name === name))
+    )
   })
 }))
 
@@ -98,6 +102,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
   })),
+  useUpdateCIApplicationStep4: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
+    isPending: false
+  })),
   useSubmitCIApplication: vi.fn(() => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
@@ -129,7 +137,12 @@ vi.mock('@/views/CarbonIntensity/components/DocumentsModellingStep', () => ({
 }))
 
 vi.mock('@/views/CarbonIntensity/components/SignAndSubmitStep', () => ({
-  SignAndSubmitStep: () => <div data-test="step4-stub" />
+  SignAndSubmitStep: ({ hasSigningAuthority }) => (
+    <div
+      data-test="step4-stub"
+      data-has-signing-authority={String(hasSigningAuthority)}
+    />
+  )
 }))
 
 vi.mock('@/views/CarbonIntensity/components/GovernmentDecisionStep', () => ({
@@ -270,6 +283,53 @@ describe('EditViewCIApplication', () => {
     render(<EditViewCIApplication />, { wrapper })
     await waitFor(() => {
       expect(screen.getByText(/Status: Draft/)).toBeInTheDocument()
+    })
+  })
+
+  it('passes no Signing Authority access into Step 4 for CI Applicant only users', async () => {
+    mockParams = { ciApplicationId: '10' }
+    mockUserRoles = [{ name: roles.ci_applicant }]
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Draft' }
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('step4-stub')).toHaveAttribute(
+        'data-has-signing-authority',
+        'false'
+      )
+    })
+  })
+
+  it('passes Signing Authority access into Step 4 when the user has the role', async () => {
+    mockParams = { ciApplicationId: '10' }
+    mockUserRoles = [
+      { name: roles.ci_applicant },
+      { name: roles.signing_authority }
+    ]
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Draft' }
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('step4-stub')).toHaveAttribute(
+        'data-has-signing-authority',
+        'true'
+      )
     })
   })
 
