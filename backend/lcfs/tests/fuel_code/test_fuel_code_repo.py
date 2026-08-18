@@ -24,6 +24,13 @@ from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.exception.exceptions import DatabaseException
 
 
+class MockWindowRow:
+    def __init__(self, **values):
+        self._mapping = values
+        for key, value in values.items():
+            setattr(self, key, value)
+
+
 @pytest.fixture
 def mock_db():
     """Fixture for mocking the database session."""
@@ -413,20 +420,27 @@ async def test_get_expected_use_type_by_name(fuel_code_repo, mock_db):
 @pytest.mark.anyio
 async def test_get_fuel_codes_paginated(fuel_code_repo, mock_db):
     # Window function returns Row objects with a _wf_total attribute.
-    fc = MagicMock()
-    fc._wf_total = 1
-    fc.fuel_code_id = 1
-    fc.fuel_suffix = "101.0"
-    mock_result = MagicMock()
-    mock_result.all.return_value = [fc]
-    mock_db.execute.return_value = mock_result
+    fc = MockWindowRow(_wf_total=1, fuel_code_id=1, fuel_suffix="101.0")
+    page_result = MagicMock()
+    page_result.all.return_value = [fc]
+    feedstock_result = MagicMock()
+    feedstock_result.all.return_value = [(1, "Truck", 125)]
+    finished_result = MagicMock()
+    finished_result.all.return_value = [(1, "Rail", 320)]
+    mock_db.execute.side_effect = [page_result, feedstock_result, finished_result]
 
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
     result, count = await fuel_code_repo.get_fuel_codes_paginated(pagination)
     assert len(result) == 1
-    assert result[0] == fc
+    assert result[0]["fuel_code_id"] == 1
+    assert result[0]["feedstock_fuel_transport_modes"] == [
+        {"transport_mode": "Truck", "distance": 125}
+    ]
+    assert result[0]["finished_fuel_transport_modes"] == [
+        {"transport_mode": "Rail", "distance": 320}
+    ]
     assert count == 1
-    assert mock_db.execute.call_count == 1
+    assert mock_db.execute.call_count == 3
 
 
 def _make_paginate_mock():
@@ -496,11 +510,14 @@ async def test_get_fuel_codes_paginated_compliance_period_end_is_march_31(
 async def test_get_fuel_codes_paginated_filters_by_organization_id(
     fuel_code_repo, mock_db
 ):
-    fc = MagicMock()
-    fc._wf_total = 1
-    mock_result = MagicMock()
-    mock_result.all.return_value = [fc]
-    mock_db.execute.return_value = mock_result
+    fc = MockWindowRow(_wf_total=1, fuel_code_id=1, fuel_suffix="101.0")
+    page_result = MagicMock()
+    page_result.all.return_value = [fc]
+    feedstock_result = MagicMock()
+    feedstock_result.all.return_value = []
+    finished_result = MagicMock()
+    finished_result.all.return_value = []
+    mock_db.execute.side_effect = [page_result, feedstock_result, finished_result]
 
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
     result, count = await fuel_code_repo.get_fuel_codes_paginated(
@@ -508,7 +525,7 @@ async def test_get_fuel_codes_paginated_filters_by_organization_id(
     )
     assert len(result) == 1
     assert count == 1
-    assert mock_db.execute.call_count == 1
+    assert mock_db.execute.call_count == 3
 
     # The organization_id filter appears inside the windowed subquery SQL
     stmt_sql = str(mock_db.execute.call_args_list[0].args[0])

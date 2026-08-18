@@ -50,7 +50,9 @@ class OrganizationSnapshotService:
         for address, address_type in addresses_to_try:
             if address:
                 try:
-                    result = await self.geocoder.forward_geocode(address, use_fallback=True)
+                    result = await self.geocoder.forward_geocode(
+                        address, use_fallback=True
+                    )
                     if result.success and result.address:
                         logger.info(
                             f"Geocoded {address_type} successfully",
@@ -182,6 +184,7 @@ class OrganizationSnapshotService:
             operating_name=organization.operating_name or organization.name,
             email=organization.email,
             phone=organization.phone,
+            contact_name=organization.contact_name,
             head_office_address=head_office_address,
             records_address=records_address,
             service_address=service_address,
@@ -217,6 +220,7 @@ class OrganizationSnapshotService:
         snapshot.operating_name = request_data.operating_name
         snapshot.email = request_data.email
         snapshot.phone = request_data.phone
+        snapshot.contact_name = request_data.contact_name
         snapshot.head_office_address = request_data.head_office_address
         snapshot.records_address = request_data.records_address
         snapshot.service_address = request_data.service_address
@@ -224,10 +228,12 @@ class OrganizationSnapshotService:
 
         # Re-geocode if address changed or coordinates are missing
         if address_changed or snapshot.latitude is None or snapshot.longitude is None:
-            snapshot.latitude, snapshot.longitude = await self._geocode_snapshot_address(
-                request_data.records_address,
-                request_data.service_address,
-                request_data.head_office_address,
+            snapshot.latitude, snapshot.longitude = (
+                await self._geocode_snapshot_address(
+                    request_data.records_address,
+                    request_data.service_address,
+                    request_data.head_office_address,
+                )
             )
 
         updated_snapshot = await self.repo.save_snapshot(snapshot)
