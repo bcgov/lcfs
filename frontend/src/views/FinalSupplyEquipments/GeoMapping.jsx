@@ -24,6 +24,7 @@ import { ExcelStyledTable } from './components/TableComponent'
 import {
   fixLeafletIcons,
   transformApiData,
+  getCoordinateKey,
   groupLocationsByCoordinates,
   findOverlappingPeriods
 } from './components/utils'
@@ -191,25 +192,22 @@ const GeoMapping = ({ complianceReportId, data }) => {
   useEffect(() => {
     if (locations.length > 0 && geofencingStatus === 'idle') {
       setGeofencingStatus('loading')
-      const uniqueLocations = Object.values(groupedLocations).map(
-        (group) => group[0]
+      // One check per map position, keyed by coordinate rather than by
+      // equipment id so results can never be attributed to the wrong pin
+      // (#4852).
+      const uniqueLocations = Object.entries(groupedLocations).map(
+        ([coordKey, group]) => ({
+          id: coordKey,
+          lat: group[0].lat,
+          lng: group[0].lng
+        })
       )
 
       batchProcessGeofencing(uniqueLocations)
         .then((results) => {
-          const expandedResults = {}
-
-          Object.entries(groupedLocations).forEach(([coordKey, locGroup]) => {
-            const firstLocId = locGroup[0].id
-            const isInBC = results[firstLocId]
-            locGroup.forEach((loc) => {
-              expandedResults[loc.id] = isInBC
-            })
-          })
-
-          setGeofencingResults(expandedResults)
+          setGeofencingResults(results)
           setGeofencingStatus('completed')
-          console.log('Geofencing results:', expandedResults)
+          console.log('Geofencing results:', results)
         })
         .catch((error) => {
           console.error('Error during geofencing:', error)
@@ -234,7 +232,7 @@ const GeoMapping = ({ complianceReportId, data }) => {
         const overlappingPeriods = findOverlappingPeriods(loc, locations)
         overlaps[loc.uniqueId] = overlappingPeriods
 
-        const isInBC = geofencingResults[loc.id]
+        const isInBC = geofencingResults[getCoordinateKey(loc)]
         const hasOverlap = overlappingPeriods.length > 0
 
         if (hasOverlap) {
@@ -259,7 +257,7 @@ const GeoMapping = ({ complianceReportId, data }) => {
   // Generate the popup content for a location group
   const generatePopupContent = (coordKey, locGroup) => {
     const firstLoc = locGroup[0]
-    const isInBC = geofencingResults[firstLoc.id] || false
+    const isInBC = geofencingResults[coordKey] || false
 
     // Get unique supply units at this location
     const uniqueSupplyUnits = {}
