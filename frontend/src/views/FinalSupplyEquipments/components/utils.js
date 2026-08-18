@@ -100,12 +100,24 @@ export const transformApiData = (data) => {
   })
 }
 
+/**
+ * Key identifying the map position a location sits at. Geofencing is a
+ * property of the coordinates, not of the equipment, so this is also the key
+ * geofencing results are stored under — keying them by equipment id let one
+ * FSE inherit another's verdict when the same id appeared at two positions
+ * (#4852).
+ * @param {{lat: number, lng: number}} location
+ * @returns {string} Coordinate key
+ */
+export const getCoordinateKey = (location) =>
+  `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`
+
 // Group locations by their coordinates
 export const groupLocationsByCoordinates = (locations) => {
   const grouped = {}
 
   locations.forEach((location) => {
-    const key = `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`
+    const key = getCoordinateKey(location)
 
     if (!grouped[key]) {
       grouped[key] = []
