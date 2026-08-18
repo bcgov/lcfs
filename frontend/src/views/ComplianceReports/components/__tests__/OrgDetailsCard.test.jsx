@@ -50,12 +50,15 @@ describe('OrgDetailsCard', () => {
         orgName="Test Organization"
         orgAddress={mockOrgAddress}
         orgAttorneyAddress={mockAttorneyAddress}
+        contactName="Jane Contact"
       />,
       { wrapper }
     )
 
     expect(screen.getByText('report:orgDetails')).toBeInTheDocument()
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
+    expect(screen.getByText('org:contactNameLabel:')).toBeInTheDocument()
+    expect(screen.getByText('Jane Contact')).toBeInTheDocument()
 
     expect(screen.getByText('report:serviceAddrLabel:')).toBeInTheDocument()
     expect(
@@ -66,6 +69,19 @@ describe('OrgDetailsCard', () => {
     expect(
       screen.getByText('456 Second Ave., Vancouver, BC, V2C 3D4')
     ).toBeInTheDocument()
+  })
+
+  it('does not render contact name when not provided', () => {
+    render(
+      <OrgDetailsCard
+        orgName="Test Organization"
+        orgAddress={mockOrgAddress}
+        orgAttorneyAddress={mockAttorneyAddress}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.queryByText('org:contactNameLabel:')).not.toBeInTheDocument()
   })
 
   it('renders contact message if not a government user', () => {
@@ -122,9 +138,11 @@ describe('OrgDetailsCard', () => {
     )
 
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
-    expect(screen.getByText('123 Main St., Victoria, BC, V1A 2B3')).toBeInTheDocument()
+    expect(
+      screen.getByText('123 Main St., Victoria, BC, V1A 2B3')
+    ).toBeInTheDocument()
     expect(screen.getByText('report:bcAddrLabel:')).toBeInTheDocument()
-    
+
     expect(constructAddress).toHaveBeenCalledTimes(1)
     expect(constructAddress).toHaveBeenCalledWith(mockOrgAddress)
   })
@@ -140,9 +158,11 @@ describe('OrgDetailsCard', () => {
     )
 
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
-    expect(screen.getByText('456 Second Ave., Vancouver, BC, V2C 3D4')).toBeInTheDocument()
+    expect(
+      screen.getByText('456 Second Ave., Vancouver, BC, V2C 3D4')
+    ).toBeInTheDocument()
     expect(screen.getByText('report:serviceAddrLabel:')).toBeInTheDocument()
-    
+
     expect(constructAddress).toHaveBeenCalledTimes(1)
     expect(constructAddress).toHaveBeenCalledWith(mockAttorneyAddress)
   })
@@ -178,7 +198,9 @@ describe('OrgDetailsCard', () => {
     expect(screen.getByText('report:orgDetails')).toBeInTheDocument()
     expect(screen.getByText('report:serviceAddrLabel:')).toBeInTheDocument()
     expect(screen.getByText('report:bcAddrLabel:')).toBeInTheDocument()
-    expect(screen.getByText('report:contactForAddrChange', { exact: false })).toBeInTheDocument()
+    expect(
+      screen.getByText('report:contactForAddrChange', { exact: false })
+    ).toBeInTheDocument()
   })
 
   it('handles undefined addresses properly', () => {

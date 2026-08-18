@@ -25,6 +25,7 @@ const mockHandleSubmit = vi.fn((fn) => (event) => {
     orgOperatingName: 'Test Operating',
     orgEmailAddress: 'test@example.com',
     orgPhoneNumber: '604-555-1234',
+    orgContactName: 'Jane Contact',
     orgStreetAddress: '123 Test St',
     orgCity: 'Test City',
     orgPostalCodeZipCode: 'V6B3K9',
@@ -387,6 +388,7 @@ describe('AddEditOrgForm Component', () => {
       expect(screen.getByTestId('orgOperatingName')).toBeInTheDocument()
       expect(screen.getByTestId('orgEmailAddress')).toBeInTheDocument()
       expect(screen.getByTestId('orgPhoneNumber')).toBeInTheDocument()
+      expect(screen.getByTestId('orgContactName')).toBeInTheDocument()
       expect(screen.getByTestId('orgEDRMSRecord')).toBeInTheDocument()
     })
 

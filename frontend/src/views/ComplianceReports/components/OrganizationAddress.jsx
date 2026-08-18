@@ -223,6 +223,10 @@ export const OrganizationAddress = ({
       label: t('org:emailAddrLabel')
     },
     {
+      name: 'contactName',
+      label: t('org:contactNameLabel')
+    },
+    {
       name: 'headOfficeAddress',
       label: isEditing
         ? t('report:hoAddrLabelEdit')
@@ -289,19 +293,26 @@ export const OrganizationAddress = ({
               }
             }}
           >
-            {allFormFields.map(({ name, label }) => (
-              <ListItem key={name} sx={{ display: 'flex' }}>
-                <strong>{label}:</strong>{' '}
-                <span>
-                  {displayAddressValue(snapshotData[name]) ||
-                    (requiredFields.includes(name) && (
-                      <BCTypography variant="body4" color="error">
-                        Required
-                      </BCTypography>
-                    ))}
-                </span>
-              </ListItem>
-            ))}
+            {allFormFields.map(({ name, label }) => {
+              const value = displayAddressValue(snapshotData[name])
+              if (name === 'contactName' && !value) {
+                return null
+              }
+
+              return (
+                <ListItem key={name} sx={{ display: 'flex' }}>
+                  <strong>{label}:</strong>{' '}
+                  <span>
+                    {value ||
+                      (requiredFields.includes(name) && (
+                        <BCTypography variant="body4" color="error">
+                          Required
+                        </BCTypography>
+                      ))}
+                  </span>
+                </ListItem>
+              )
+            })}
           </List>
           {isGovernmentUser && snapshotData?.isEdited && (
             <BCButton
