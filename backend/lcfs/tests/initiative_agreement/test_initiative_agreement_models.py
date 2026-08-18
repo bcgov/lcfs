@@ -153,6 +153,7 @@ async def test_designated_action_defaults_and_versioning(dbsession):
     assert action.credit_allocation == 1850
     assert action.determination is None
     assert action.assigned_analyst_id is None
+    assert action.transaction_id is None
 
 
 @pytest.mark.anyio

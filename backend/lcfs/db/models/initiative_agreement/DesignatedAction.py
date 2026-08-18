@@ -107,6 +107,17 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
         index=True,
         comment="IDIR analyst assigned to this designated action",
     )
+    transaction_id = Column(
+        Integer,
+        ForeignKey("transaction.transaction_id"),
+        nullable=True,
+        index=True,
+        comment=(
+            "Ledger transaction created when credits were issued for this "
+            "action; set by consolidation of legacy award records and by "
+            "future issuance on director approval"
+        ),
+    )
 
     initiative_agreement = relationship(
         "InitiativeAgreement", back_populates="designated_actions"
@@ -115,6 +126,7 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
         "DesignatedActionStatus", back_populates="designated_actions"
     )
     assigned_analyst = relationship("UserProfile", foreign_keys=[assigned_analyst_id])
+    transaction = relationship("Transaction")
     evidence_requirements = relationship(
         "EvidenceRequirement", back_populates="designated_action"
     )

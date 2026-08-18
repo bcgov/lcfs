@@ -428,6 +428,16 @@ def upgrade() -> None:
             nullable=True,
             comment="IDIR analyst assigned to this designated action",
         ),
+        sa.Column(
+            "transaction_id",
+            sa.Integer(),
+            nullable=True,
+            comment=(
+                "Ledger transaction created when credits were issued for this "
+                "action; set by consolidation of legacy award records and by "
+                "future issuance on director approval"
+            ),
+        ),
         *_versioning_columns(),
         *_audit_columns(),
         sa.ForeignKeyConstraint(
@@ -444,6 +454,11 @@ def upgrade() -> None:
             ["assigned_analyst_id"],
             ["user_profile.user_profile_id"],
             name=op.f("fk_designated_action_assigned_analyst_id_user_profile"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["transaction_id"],
+            ["transaction.transaction_id"],
+            name=op.f("fk_designated_action_transaction_id"),
         ),
         sa.UniqueConstraint(
             "initiative_agreement_id",
@@ -471,6 +486,11 @@ def upgrade() -> None:
         op.f("ix_designated_action_assigned_analyst_id"),
         "designated_action",
         ["assigned_analyst_id"],
+    )
+    op.create_index(
+        op.f("ix_designated_action_transaction_id"),
+        "designated_action",
+        ["transaction_id"],
     )
     op.create_index(
         "ix_designated_action_group_uuid", "designated_action", ["group_uuid"]
@@ -762,6 +782,10 @@ def downgrade() -> None:
     op.drop_table("evidence_requirement")
 
     op.drop_index("ix_designated_action_group_uuid", table_name="designated_action")
+    op.drop_index(
+        op.f("ix_designated_action_transaction_id"),
+        table_name="designated_action",
+    )
     op.drop_index(
         op.f("ix_designated_action_assigned_analyst_id"),
         table_name="designated_action",
