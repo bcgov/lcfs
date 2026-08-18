@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Body, Depends, Request, status
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementCreateSchema,
+    InitiativeAgreementProfileSchema,
     InitiativeAgreementSchema,
+    InitiativeAgreementsListSchema,
     InitiativeAgreementUpdateSchema,
 )
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
@@ -10,6 +13,37 @@ from lcfs.web.core.decorators import view_handler
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
+
+
+@router.post(
+    "/list",
+    response_model=InitiativeAgreementsListSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.IA_PROPONENT])
+async def get_initiative_agreements(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Paginated list of initiative agreements for the agreement-management grid."""
+    return await service.get_initiative_agreements_paginated(pagination)
+
+
+@router.get(
+    "/{initiative_agreement_id}/profile",
+    response_model=InitiativeAgreementProfileSchema,
+)
+@view_handler(["*"])
+async def get_initiative_agreement_profile(
+    request: Request,
+    initiative_agreement_id: int,
+    service: InitiativeAgreementServices = Depends(),
+    validate: InitiativeAgreementValidation = Depends(),
+):
+    """Agreement profile with designated actions for the detail page."""
+    await validate.validate_organization_access(initiative_agreement_id)
+    return await service.get_initiative_agreement_profile(initiative_agreement_id)
 
 
 @router.get("/{initiative_agreement_id}", response_model=InitiativeAgreementSchema)

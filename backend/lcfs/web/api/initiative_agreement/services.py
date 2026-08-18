@@ -1,4 +1,5 @@
 import json
+import math
 from lcfs.web.api.notification.schema import (
     INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER,
     NotificationMessageSchema,
@@ -13,10 +14,18 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    PaginationResponseSchema,
+    validate_pagination,
+)
 from lcfs.web.api.initiative_agreement.schema import (
     CreateInitiativeAgreementHistorySchema,
     InitiativeAgreementCreateSchema,
+    InitiativeAgreementListItemSchema,
+    InitiativeAgreementProfileSchema,
     InitiativeAgreementSchema,
+    InitiativeAgreementsListSchema,
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -60,6 +69,84 @@ class InitiativeAgreementServices:
             initiative_agreement_id
         )
         return InitiativeAgreementSchema.from_orm(initiative_agreement)
+
+    @staticmethod
+    def _list_item_kwargs(agreement: InitiativeAgreement) -> dict:
+        """Shared field mapping for list items and the profile response."""
+        return dict(
+            initiative_agreement_id=agreement.initiative_agreement_id,
+            ia_code=agreement.ia_code,
+            agreement_type=agreement.agreement_type,
+            title=agreement.title,
+            contact_name=agreement.contact_name,
+            entry_date=agreement.entry_date,
+            agreement_start_date=agreement.agreement_start_date,
+            agreement_end_date=agreement.agreement_end_date,
+            total_credits_allocated=agreement.total_credits_allocated,
+            total_credits_issued=agreement.total_credits_issued,
+            update_date=agreement.update_date,
+            current_status=agreement.current_status,
+            organization=agreement.to_organization,
+        )
+
+    @service_handler
+    async def get_initiative_agreements_paginated(
+        self, pagination: PaginationRequestSchema
+    ) -> InitiativeAgreementsListSchema:
+        """
+        Paginated agreements list for the agreement-management grid.
+        Government users see all agreements; other users are scoped to
+        their own organization.
+        """
+        pagination = validate_pagination(pagination)
+        organization_id = None
+        user = self.request.user if self.request else None
+        if user is not None and not user_has_roles(user, [RoleEnum.GOVERNMENT]):
+            organization_id = (
+                user.organization.organization_id if user.organization else -1
+            )
+        agreements, total_count = await self.repo.get_initiative_agreements_paginated(
+            pagination, organization_id
+        )
+        return InitiativeAgreementsListSchema(
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=(
+                    math.ceil(total_count / pagination.size) if pagination.size else 0
+                ),
+            ),
+            initiative_agreements=[
+                InitiativeAgreementListItemSchema(**self._list_item_kwargs(agreement))
+                for agreement in agreements
+            ],
+        )
+
+    @service_handler
+    async def get_initiative_agreement_profile(
+        self, initiative_agreement_id: int
+    ) -> InitiativeAgreementProfileSchema:
+        """Agreement profile with its designated actions for the detail page."""
+        agreement = await self.repo.get_initiative_agreement_profile(
+            initiative_agreement_id
+        )
+        if not agreement:
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+        designated_actions = sorted(
+            agreement.designated_actions,
+            key=lambda action: (action.action_number, action.version),
+        )
+        return InitiativeAgreementProfileSchema(
+            **self._list_item_kwargs(agreement),
+            project_description=agreement.project_description,
+            contact_email=agreement.contact_email,
+            contact_phone=agreement.contact_phone,
+            create_date=agreement.create_date,
+            designated_actions=designated_actions,
+        )
 
     @service_handler
     async def update_initiative_agreement(
@@ -217,7 +304,9 @@ class InitiativeAgreementServices:
 
         # Set effective date to today if the analyst left it blank
         if initiative_agreement.transaction_effective_date is None:
-            initiative_agreement.transaction_effective_date = datetime.now(timezone.utc).date()
+            initiative_agreement.transaction_effective_date = datetime.now(
+                timezone.utc
+            ).date()
 
         await self.repo.refresh_initiative_agreement(initiative_agreement)
 

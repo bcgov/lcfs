@@ -1,10 +1,11 @@
 from fastapi import Depends
 from datetime import datetime, timezone
-from typing import Optional
-from sqlalchemy import select, and_
+from typing import List, Optional, Tuple
+from sqlalchemy import String, and_, asc, cast, desc, func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.db.models.initiative_agreement.DesignatedAction import DesignatedAction
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatus,
@@ -12,10 +13,81 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
 from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import (
     InitiativeAgreementHistory,
 )
-from lcfs.web.api.initiative_agreement.schema import CreateInitiativeAgreementHistorySchema
+from lcfs.db.models.organization.Organization import Organization
+from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.initiative_agreement.schema import (
+    CreateInitiativeAgreementHistorySchema,
+)
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
+
+# Grid field names (snake_cased by PaginationRequestSchema) -> filter/sort columns
+LIST_FIELD_COLUMNS = {
+    "status": InitiativeAgreementStatus.status,
+    "current_status.status": InitiativeAgreementStatus.status,
+    "organization": Organization.name,
+    "organization.name": Organization.name,
+    "ia_code": InitiativeAgreement.ia_code,
+    "agreement_type": InitiativeAgreement.agreement_type,
+    "title": InitiativeAgreement.title,
+    "contact_name": InitiativeAgreement.contact_name,
+    "entry_date": InitiativeAgreement.entry_date,
+    "agreement_start_date": InitiativeAgreement.agreement_start_date,
+    "agreement_end_date": InitiativeAgreement.agreement_end_date,
+    "update_date": InitiativeAgreement.update_date,
+    "create_date": InitiativeAgreement.create_date,
+    "total_credits_allocated": InitiativeAgreement.total_credits_allocated,
+    "total_credits_issued": InitiativeAgreement.total_credits_issued,
+}
+# Enum-backed columns are compared as text
+_TEXT_CAST_FIELDS = {"status", "current_status.status", "agreement_type"}
+_DATE_FIELDS = {
+    "entry_date",
+    "agreement_start_date",
+    "agreement_end_date",
+    "update_date",
+    "create_date",
+}
+
+
+def _build_list_filter(filter_model):
+    """Translate one AG-Grid filter model into a SQLAlchemy condition."""
+    column = LIST_FIELD_COLUMNS.get(filter_model.field)
+    if column is None:
+        return None
+    if filter_model.field in _TEXT_CAST_FIELDS:
+        column = cast(column, String)
+
+    if filter_model.filter_type == "date" or filter_model.field in _DATE_FIELDS:
+        if filter_model.type == "inRange":
+            return and_(
+                column >= filter_model.date_from, column <= filter_model.date_to
+            )
+        value = filter_model.date_from or filter_model.filter
+        if value is None:
+            return None
+        if filter_model.type == "equals":
+            return column == value
+        if filter_model.type == "lessThan":
+            return column < value
+        if filter_model.type == "greaterThan":
+            return column > value
+        return None
+
+    value = filter_model.filter
+    if value is None:
+        return None
+    if filter_model.type == "contains":
+        return column.ilike(f"%{value}%")
+    if filter_model.type == "startsWith":
+        return column.ilike(f"{value}%")
+    if filter_model.type == "endsWith":
+        return column.ilike(f"%{value}")
+    if filter_model.type in ("equals", "notEqual"):
+        condition = column == value
+        return ~condition if filter_model.type == "notEqual" else condition
+    return None
 
 
 class InitiativeAgreementRepository:
@@ -106,7 +178,7 @@ class InitiativeAgreementRepository:
             initiative_agreement_id=history.initiative_agreement_id,
             initiative_agreement_status_id=history.initiative_agreement_status_id,
             user_profile_id=history.user_profile_id,
-            display_name=history.display_name
+            display_name=history.display_name,
         )
         self.db.add(new_history_record)
         await self.db.flush()
@@ -156,3 +228,82 @@ class InitiativeAgreementRepository:
         await self.db.flush()
         await self.db.refresh(initiative_agreement)
         return initiative_agreement
+
+    @repo_handler
+    async def get_initiative_agreements_paginated(
+        self,
+        pagination: PaginationRequestSchema,
+        organization_id: Optional[int] = None,
+    ) -> Tuple[List[InitiativeAgreement], int]:
+        """
+        Paginated, filterable agreements query for the agreement-management
+        grid. When organization_id is provided the result is scoped to that
+        organization (non-government callers).
+        """
+        query = (
+            select(InitiativeAgreement)
+            .join(InitiativeAgreement.current_status)
+            .join(InitiativeAgreement.to_organization)
+        )
+        if organization_id is not None:
+            query = query.where(
+                InitiativeAgreement.to_organization_id == organization_id
+            )
+        for filter_model in pagination.filters:
+            condition = _build_list_filter(filter_model)
+            if condition is not None:
+                query = query.where(condition)
+
+        order_by_clauses = []
+        for order in pagination.sort_orders:
+            column = LIST_FIELD_COLUMNS.get(order.field)
+            if column is None:
+                continue
+            order_by_clauses.append(
+                desc(column) if order.direction == "desc" else asc(column)
+            )
+        if not order_by_clauses:
+            order_by_clauses = [desc(InitiativeAgreement.update_date)]
+
+        count_query = select(func.count()).select_from(
+            query.with_only_columns(
+                InitiativeAgreement.initiative_agreement_id
+            ).subquery()
+        )
+        total_count = (await self.db.execute(count_query)).scalar_one()
+
+        offset = (pagination.page - 1) * pagination.size
+        result = await self.db.execute(
+            query.options(
+                selectinload(InitiativeAgreement.current_status),
+                selectinload(InitiativeAgreement.to_organization),
+            )
+            .order_by(*order_by_clauses)
+            .offset(offset)
+            .limit(pagination.size)
+        )
+        return result.scalars().all(), total_count
+
+    @repo_handler
+    async def get_initiative_agreement_profile(
+        self, initiative_agreement_id: int
+    ) -> Optional[InitiativeAgreement]:
+        """Agreement with organization, status and designated actions loaded."""
+        query = (
+            select(InitiativeAgreement)
+            .options(
+                selectinload(InitiativeAgreement.to_organization),
+                selectinload(InitiativeAgreement.current_status),
+                selectinload(InitiativeAgreement.designated_actions).selectinload(
+                    DesignatedAction.current_status
+                ),
+                selectinload(InitiativeAgreement.designated_actions).selectinload(
+                    DesignatedAction.assigned_analyst
+                ),
+            )
+            .where(
+                InitiativeAgreement.initiative_agreement_id == initiative_agreement_id
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalars().first()

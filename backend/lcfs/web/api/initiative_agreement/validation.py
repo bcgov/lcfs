@@ -9,6 +9,7 @@ from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementSchema,
     InitiativeAgreementCreateSchema,
 )
+from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.role.schema import user_has_roles
 
@@ -18,9 +19,11 @@ class InitiativeAgreementValidation:
         self,
         request: Request = None,
         service: InitiativeAgreementServices = Depends(InitiativeAgreementServices),
+        repo: InitiativeAgreementRepository = Depends(InitiativeAgreementRepository),
     ) -> None:
         self.request = request
         self.service = service
+        self.repo = repo
 
     async def validate_initiative_agreement_create(
         self, request, initiative_agreement: InitiativeAgreementCreateSchema
@@ -46,7 +49,10 @@ class InitiativeAgreementValidation:
             )
 
     async def validate_organization_access(self, initiative_agreement_id: int):
-        initiative_agreement = await self.service.get_initiative_agreement(
+        # Fetch via the repository (not the legacy response schema): agreement
+        # management records may have no award-era compliance_units, which the
+        # legacy schema rejects.
+        initiative_agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
         if not initiative_agreement:
