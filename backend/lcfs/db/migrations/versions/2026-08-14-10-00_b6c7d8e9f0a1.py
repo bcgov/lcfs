@@ -1,7 +1,7 @@
 """Add contact name to organizations
 
 Revision ID: b6c7d8e9f0a1
-Revises: f9a0b1c2d3e5
+Revises: f4a6b8c0d2e3
 Create Date: 2026-08-14 10:00:00.000000
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 
 
 revision = "b6c7d8e9f0a1"
-down_revision = "f9a0b1c2d3e5"
+down_revision = "f4a6b8c0d2e3"
 branch_labels = None
 depends_on = None
 
