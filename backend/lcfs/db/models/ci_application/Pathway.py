@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Numeric
+from sqlalchemy import Boolean, Column, Integer, String, Date, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, Versioning
@@ -36,16 +36,23 @@ class Pathway(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Duration type of the proposed fuel code (1-year provisional or 3-year)",
     )
+    design_data = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="Whether the pathway is based on design data instead of operational data",
+    )
 
     # ---------- Operating data collection window ----------
     operating_data_from = Column(
         Date,
-        nullable=False,
+        nullable=True,
         comment="Start date of the operating data collection period",
     )
     operating_data_to = Column(
         Date,
-        nullable=False,
+        nullable=True,
         comment="End date of the operating data collection period",
     )
 
