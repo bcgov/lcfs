@@ -17,6 +17,8 @@
   "recommendConfirmText": "Are you sure you want to recommend this initiative agreement?",
   "approveConfirmText": "Are you sure you want to approve this initiative agreement?",
   "loadingText": "Loading initiative agreement",
+  "noAgreementsFound": "No initiative agreements found",
+  "loadFailMsg": "Failed to load initiative agreements.",
   "tabs": {
     "initiativeAgreements": "Initiative agreements",
     "creditLedger": "Credit Ledger"

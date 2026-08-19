@@ -18,51 +18,53 @@ describe('useInitiativeAgreements hooks', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet, post: mockPost })
   })
 
-  it('list hook stays disabled until the agreement-management API lands', () => {
-    const { result } = renderHook(() => useGetInitiativeAgreements(), {
-      wrapper
-    })
-    expect(result.current.fetchStatus).toBe('idle')
-    expect(mockPost).not.toHaveBeenCalled()
-  })
-
-  it('list hook POSTs the pagination body when enabled', async () => {
+  it('list hook POSTs the default pagination body', async () => {
     const data = { initiativeAgreements: [], pagination: { total: 0 } }
     mockPost.mockResolvedValue({ data })
 
-    const { result } = renderHook(
-      () => useGetInitiativeAgreements({ page: 2, size: 25 }, { enabled: true }),
-      { wrapper }
-    )
+    const { result } = renderHook(() => useGetInitiativeAgreements(), {
+      wrapper
+    })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toEqual(data)
     expect(mockPost).toHaveBeenCalledWith('/initiative-agreements/list', {
-      page: 2,
-      size: 25,
+      page: 1,
+      size: 10,
       sortOrders: [],
       filters: []
     })
   })
 
-  it('detail hook stays disabled by default', () => {
-    const { result } = renderHook(() => useGetInitiativeAgreement(5), {
-      wrapper
-    })
-    expect(result.current.fetchStatus).toBe('idle')
-    expect(mockGet).not.toHaveBeenCalled()
-  })
-
-  it('detail hook GETs the agreement by id when enabled', async () => {
-    const data = { initiativeAgreementId: 5 }
-    mockGet.mockResolvedValue({ data })
+  it('list hook passes pagination options through', async () => {
+    const data = { initiativeAgreements: [], pagination: { total: 0 } }
+    mockPost.mockResolvedValue({ data })
+    const sortOrders = [{ field: 'updateDate', direction: 'desc' }]
 
     const { result } = renderHook(
-      () => useGetInitiativeAgreement(5, { enabled: true }),
+      () => useGetInitiativeAgreements({ page: 2, size: 25, sortOrders }),
       { wrapper }
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(mockGet).toHaveBeenCalledWith('/initiative-agreements/5')
+    expect(mockPost).toHaveBeenCalledWith('/initiative-agreements/list', {
+      page: 2,
+      size: 25,
+      sortOrders,
+      filters: []
+    })
+  })
+
+  it('detail hook GETs the agreement profile by id', async () => {
+    const data = { initiativeAgreementId: 5, designatedActions: [] }
+    mockGet.mockResolvedValue({ data })
+
+    const { result } = renderHook(() => useGetInitiativeAgreement(5), {
+      wrapper
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toEqual(data)
+    expect(mockGet).toHaveBeenCalledWith('/initiative-agreements/5/profile')
   })
 })

@@ -7,10 +7,6 @@ import type { PaginationParams, QueryOptions } from './types'
 // The legacy singular useInitiativeAgreement.ts serves the outgoing
 // credit-award transaction flow and is retired at the transaction-flow
 // cutover.
-//
-// Both hooks default to enabled: false until the agreement-management
-// endpoints land with the backend API phase; pass { enabled: true } (or
-// remove the defaults) once they exist.
 
 const QUERY_KEYS = {
   list: (pagination: any) => ['initiative-agreements', pagination],
@@ -23,7 +19,6 @@ export const useGetInitiativeAgreements = (
 ) => {
   const client = useApiService()
   return useQuery({
-    enabled: false,
     queryKey: QUERY_KEYS.list({ page, size, sortOrders, filters }),
     queryFn: async () =>
       (
@@ -45,7 +40,6 @@ export const useGetInitiativeAgreement = (
 ) => {
   const client = useApiService()
   return useQuery({
-    enabled: false,
     queryKey: QUERY_KEYS.detail(initiativeAgreementId),
     queryFn: async () =>
       (
