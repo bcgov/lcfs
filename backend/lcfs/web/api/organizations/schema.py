@@ -135,6 +135,7 @@ class OrganizationBase(BaseSchema):
     operating_name: str
     email: Optional[str] = None
     phone: Optional[str] = None
+    contact_name: Optional[str] = None
     has_early_issuance: bool
     edrms_record: Optional[str] = None
     total_balance: Optional[int] = None
@@ -167,6 +168,7 @@ class OrganizationCreateSchema(BaseSchema):
     operating_name: str
     email: Optional[str] = None
     phone: Optional[str] = None
+    contact_name: Optional[str] = None
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     organization_status_id: int
@@ -189,6 +191,7 @@ class NonBCeIDOrganizationCreateSchema(BaseSchema):
     operating_name: str
     email: Optional[str] = None
     phone: Optional[str] = None
+    contact_name: Optional[str] = None
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     organization_status_id: int
@@ -214,6 +217,7 @@ class OrganizationUpdateSchema(BaseSchema):
     operating_name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    contact_name: Optional[str] = None
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     organization_status_id: Optional[int] = None
@@ -236,6 +240,7 @@ class NonBCeIDOrganizationUpdateSchema(BaseSchema):
     operating_name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    contact_name: Optional[str] = None
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     organization_status_id: Optional[int] = None
@@ -262,6 +267,7 @@ class OrganizationResponseSchema(BaseSchema):
     operating_name: str
     email: Optional[str] = None
     phone: Optional[str] = None
+    contact_name: Optional[str] = None
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     total_balance: Optional[int] = None

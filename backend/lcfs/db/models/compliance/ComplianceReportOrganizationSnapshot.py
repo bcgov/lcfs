@@ -27,6 +27,9 @@ class ComplianceReportOrganizationSnapshot(BaseModel, Auditable):
     )
     email = Column(String(255), nullable=True, comment="Organization's email address")
     phone = Column(String(50), nullable=True, comment="Organization's phone number")
+    contact_name = Column(
+        String(500), nullable=True, comment="Organization's contact name"
+    )
     head_office_address = Column(
         String(500), nullable=True, comment="Organization's address in BC"
     )
@@ -34,13 +37,19 @@ class ComplianceReportOrganizationSnapshot(BaseModel, Auditable):
         String(500), nullable=True, comment="Organization's address for Postal Service"
     )
     records_address = Column(
-        String(500), nullable=True, comment="Organization's address in BC where records are maintained."
+        String(500),
+        nullable=True,
+        comment="Organization's address in BC where records are maintained.",
     )
     latitude = Column(
-        Float, nullable=True, comment="Latitude coordinate for mapping (priority: records_address > service_address > head_office_address)"
+        Float,
+        nullable=True,
+        comment="Latitude coordinate for mapping (priority: records_address > service_address > head_office_address)",
     )
     longitude = Column(
-        Float, nullable=True, comment="Longitude coordinate for mapping (priority: records_address > service_address > head_office_address)"
+        Float,
+        nullable=True,
+        comment="Longitude coordinate for mapping (priority: records_address > service_address > head_office_address)",
     )
 
     is_edited = Column(

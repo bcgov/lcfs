@@ -83,6 +83,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       orgOperatingName: '',
       orgEmailAddress: '',
       orgPhoneNumber: '',
+      orgContactName: '',
       orgType: '1',
       orgRegForTransfers: '',
       orgStreetAddress: '',
@@ -168,6 +169,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         orgOperatingName: data.operatingName,
         orgEmailAddress: data.email,
         orgPhoneNumber: data.phone,
+        orgContactName: data.contactName || '',
         orgEDRMSRecord: data.edrmsRecord,
         recordsAddress: data.recordsAddress || '',
         hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
@@ -301,6 +303,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       operatingName: data.orgOperatingName,
       email: data.orgEmailAddress,
       phone: data.orgPhoneNumber,
+      contactName: data.orgContactName?.trim() || null,
       edrmsRecord: data.orgEDRMSRecord,
       recordsAddress: data.recordsAddress || '',
       hasEarlyIssuance: data.hasEarlyIssuance === 'yes',
@@ -613,6 +616,20 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                     error={!!errors.orgPhoneNumber}
                     helperText={errors.orgPhoneNumber?.message}
                     {...register('orgPhoneNumber')}
+                  />
+                </Box>
+                <Box mb={2}>
+                  <InputLabel htmlFor="orgContactName" sx={{ pb: 1 }}>
+                    {t('org:contactNameLabel')}:
+                  </InputLabel>
+                  <TextField
+                    id="orgContactName"
+                    data-test="orgContactName"
+                    variant="outlined"
+                    fullWidth
+                    error={!!errors.orgContactName}
+                    helperText={errors.orgContactName?.message}
+                    {...register('orgContactName')}
                   />
                 </Box>
               </Box>

@@ -23,6 +23,7 @@ const createEmptyRow = () => ({
   pathwayId: null,
   applicationTypeId: null,
   fuelCodeTypeId: null,
+  designData: null,
   operatingDataFrom: '',
   operatingDataTo: '',
   fuelCodeId: null,
@@ -150,10 +151,18 @@ export const ProposedFuelPathwaysStep = ({
 
     const newErrors = {}
     let hasDateOrderIssue = false
+    let hasOperationalDateRangeIssue = false
     rows.forEach((row) => {
       const fieldErrors = validatePathwayRow(row, applicationTypes)
       if (fieldErrors.length) {
         newErrors[row.id] = fieldErrors
+        if (
+          row.designData === false &&
+          (fieldErrors.includes('operatingDataFrom') ||
+            fieldErrors.includes('operatingDataTo'))
+        ) {
+          hasOperationalDateRangeIssue = true
+        }
         if (
           row.operatingDataFrom &&
           row.operatingDataTo &&
@@ -182,6 +191,10 @@ export const ProposedFuelPathwaysStep = ({
       let message
       if (hasDateOrderIssue) {
         message = t('carbonIntensity:step2.validation.dateOrder')
+      } else if (hasOperationalDateRangeIssue) {
+        message = t(
+          'carbonIntensity:step2.validation.operatingDateRangeRequired'
+        )
       } else if (missingFields.size <= 3 && errorRowCount === 1) {
         const labels = fieldLabels([...missingFields], t)
         message = t('carbonIntensity:step2.validation.missingSpecificFields', {

@@ -285,6 +285,99 @@ class TestBCGeocoderService:
             )  # NYC
             assert is_in_bc is False
 
+    # #4852 — valid BC coordinates were reported as outside BC whenever the
+    # province came back in a spelling other than "British Columbia", or when
+    # the lookup resolved no province at all.
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "province",
+        ["BC", "bc", "B.C.", "CA-BC", "British Columbia", "Colombie-Britannique"],
+    )
+    async def test_check_bc_boundary_accepts_province_spellings(
+        self, geocoder_service, province
+    ):
+        """Every spelling a provider may return for BC counts as in BC."""
+        with patch.object(
+            geocoder_service, "reverse_geocode", new_callable=AsyncMock
+        ) as mock_reverse:
+            mock_reverse.return_value = GeocodingResult(
+                success=True,
+                address=Address(full_address="Somewhere, BC", province=province),
+            )
+
+            assert await geocoder_service.check_bc_boundary(49.2827, -123.1207) is True
+
+    @pytest.mark.anyio
+    async def test_check_bc_boundary_falls_back_when_province_missing(
+        self, geocoder_service
+    ):
+        """A successful lookup carrying no province must not mean 'outside BC'."""
+        with patch.object(
+            geocoder_service, "reverse_geocode", new_callable=AsyncMock
+        ) as mock_reverse:
+            mock_reverse.return_value = GeocodingResult(
+                success=True,
+                address=Address(full_address="", province=None),
+            )
+
+            # Vancouver — inside the bounding box.
+            assert await geocoder_service.check_bc_boundary(49.2827, -123.1207) is True
+            # NYC — outside it.
+            assert await geocoder_service.check_bc_boundary(40.7128, -74.0060) is False
+
+    @pytest.mark.anyio
+    async def test_check_bc_boundary_trusts_a_resolved_other_province(
+        self, geocoder_service
+    ):
+        """A resolved non-BC province wins over the bounding box."""
+        with patch.object(
+            geocoder_service, "reverse_geocode", new_callable=AsyncMock
+        ) as mock_reverse:
+            mock_reverse.return_value = GeocodingResult(
+                success=True,
+                address=Address(full_address="Calgary, AB", province="Alberta"),
+            )
+
+            # Calgary sits inside the rough BC bounding box but is in Alberta.
+            assert await geocoder_service.check_bc_boundary(51.0447, -114.0719) is False
+
+    @pytest.mark.anyio
+    async def test_nominatim_reverse_geocode_treats_error_body_as_failure(
+        self, geocoder_service
+    ):
+        """Nominatim answers unresolvable coordinates with HTTP 200 + an error."""
+        with patch.object(
+            geocoder_service, "_make_request", new_callable=AsyncMock
+        ) as mock_request:
+            mock_request.return_value = {"error": "Unable to geocode"}
+
+            result = await geocoder_service._nominatim_reverse_geocode(
+                49.2827, -123.1207
+            )
+
+            assert result.success is False
+            assert result.address is None
+
+    @pytest.mark.anyio
+    async def test_nominatim_reverse_geocode_reads_iso_subdivision_code(
+        self, geocoder_service
+    ):
+        """Fall back to the ISO subdivision code when `state` is absent."""
+        with patch.object(
+            geocoder_service, "_make_request", new_callable=AsyncMock
+        ) as mock_request:
+            mock_request.return_value = {
+                "display_name": "Somewhere, Canada",
+                "address": {"ISO3166-2-lvl4": "CA-BC", "country": "Canada"},
+            }
+
+            result = await geocoder_service._nominatim_reverse_geocode(
+                49.2827, -123.1207
+            )
+
+            assert result.success is True
+            assert result.address.province == "CA-BC"
+
     @pytest.mark.anyio
     async def test_autocomplete_address(self, geocoder_service):
         """Test address autocomplete functionality."""

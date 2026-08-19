@@ -56,12 +56,15 @@ describe('OrgDetailsCard', () => {
         orgName="Test Organization"
         orgAddress={mockOrgAddress}
         orgAttorneyAddress={mockAttorneyAddress}
+        contactName="Jane Contact"
       />,
       [query, theme, localization, router]
     )
 
     expect(screen.getByText('report:orgDetails')).toBeInTheDocument()
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
+    expect(screen.getByText('org:contactNameLabel:')).toBeInTheDocument()
+    expect(screen.getByText('Jane Contact')).toBeInTheDocument()
 
     expect(screen.getByText('report:serviceAddrLabel:')).toBeInTheDocument()
     expect(
@@ -72,6 +75,25 @@ describe('OrgDetailsCard', () => {
     expect(
       screen.getByText('456 Second Ave., Vancouver, BC, V2C 3D4')
     ).toBeInTheDocument()
+  })
+
+  test('does not render contact name when not provided', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(
+      <OrgDetailsCard
+        orgName="Test Organization"
+        orgAddress={mockOrgAddress}
+        orgAttorneyAddress={mockAttorneyAddress}
+      />,
+      [query, theme, localization, router]
+    )
+
+    expect(screen.queryByText('org:contactNameLabel:')).not.toBeInTheDocument()
   })
 
   test('renders contact message if not a government user', ({

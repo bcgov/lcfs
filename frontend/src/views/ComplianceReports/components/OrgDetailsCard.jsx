@@ -8,9 +8,10 @@ export const OrgDetailsCard = ({
   orgName,
   orgAddress,
   orgAttorneyAddress,
+  contactName,
   isGovernmentUser = false
 }) => {
-  const { t } = useTranslation(['report'])
+  const { t } = useTranslation(['report', 'org'])
   return (
     <BCWidgetCard
       component="div"
@@ -21,6 +22,14 @@ export const OrgDetailsCard = ({
           <BCTypography variant="h6" color="primary">
             {orgName}
           </BCTypography>
+          {contactName && (
+            <div>
+              <BCTypography variant="body4">
+                {t('org:contactNameLabel')}:
+              </BCTypography>{' '}
+              <BCTypography variant="body4">{contactName}</BCTypography>
+            </div>
+          )}
           <div>
             <BCTypography variant="body4">
               {t('report:serviceAddrLabel')}:

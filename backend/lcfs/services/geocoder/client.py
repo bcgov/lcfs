@@ -302,6 +302,36 @@ class BCGeocoderService:
         
         return results
 
+    @staticmethod
+    def _is_bc_province(province: Optional[str]) -> bool:
+        """
+        Whether a province value from a geocoding provider denotes BC.
+
+        Providers spell the province several ways: Nominatim returns
+        "British Columbia" (or the French "Colombie-Britannique") in
+        ``address.state``, the BC Geocoder returns the "BC" province code, and
+        the ISO subdivision code is "CA-BC". Matching only the long English
+        form reported valid BC coordinates as out of province (#4852).
+        """
+        normalized = (province or "").strip().lower().replace(".", "")
+        if not normalized:
+            return False
+
+        return normalized in {
+            "bc",
+            "b c",
+            "ca-bc",
+            "british columbia",
+            "colombie-britannique",
+            "colombie britannique",
+        }
+
+    @staticmethod
+    def _within_bc_bounding_box(latitude: float, longitude: float) -> bool:
+        """Rough BC extent, used when no province could be resolved."""
+        # BC approximate boundaries: 48°N to 60°N, 114°W to 139°W
+        return 48.0 <= latitude <= 60.0 and -139.0 <= longitude <= -114.0
+
     async def check_bc_boundary(
         self,
         latitude: float,
@@ -309,25 +339,28 @@ class BCGeocoderService:
     ) -> bool:
         """
         Check if coordinates are within BC boundaries.
-        
+
         Args:
             latitude: Latitude coordinate
             longitude: Longitude coordinate
-            
+
         Returns:
             True if coordinates are within BC, False otherwise
         """
         # First try reverse geocoding to get precise location
         result = await self.reverse_geocode(latitude, longitude)
-        
-        if result.success and result.address:
-            province = result.address.province or ""
-            return "british columbia" in province.lower()
-        
+
+        province = result.address.province if result.success and result.address else None
+
+        # Only trust the lookup when it actually resolved a province. A
+        # successful call that carries no province tells us nothing about the
+        # location, so fall through to the bounding box rather than reporting
+        # the coordinates as out of province (#4852).
+        if province:
+            return self._is_bc_province(province)
+
         # Fallback to rough boundary check
-        # BC approximate boundaries: 48°N to 60°N, 114°W to 139°W
-        return (48.0 <= latitude <= 60.0 and 
-                -139.0 <= longitude <= -114.0)
+        return self._within_bc_bounding_box(latitude, longitude)
 
     async def autocomplete_address(
         self,
@@ -724,19 +757,41 @@ class BCGeocoderService:
                 success=False,
                 error="No results from Nominatim reverse geocoding"
             )
-        
-        addr_details = response.get("address", {})
+
+        # Nominatim answers unresolvable coordinates with HTTP 200 and a body of
+        # {"error": "Unable to geocode"}. That payload is truthy, so it used to
+        # become a "successful" result holding an empty address (#4852).
+        if response.get("error"):
+            return GeocodingResult(
+                success=False,
+                error=f"Nominatim reverse geocoding failed: {response['error']}"
+            )
+
+        addr_details = response.get("address") or {}
+        if not addr_details:
+            return GeocodingResult(
+                success=False,
+                error="Nominatim reverse geocoding returned no address details"
+            )
+
         address = Address(
             full_address=response.get("display_name", ""),
             latitude=latitude,
             longitude=longitude,
             street_address=addr_details.get("road"),
             city=addr_details.get("city") or addr_details.get("town") or addr_details.get("village"),
-            province=addr_details.get("state") or addr_details.get("province"),
+            # Nominatim usually reports the province in `state`, but some
+            # responses carry only `region` or the ISO subdivision code.
+            province=(
+                addr_details.get("state")
+                or addr_details.get("province")
+                or addr_details.get("region")
+                or addr_details.get("ISO3166-2-lvl4")
+            ),
             country=addr_details.get("country"),
             postal_code=addr_details.get("postcode")
         )
-        
+
         return GeocodingResult(
             success=True,
             address=address,

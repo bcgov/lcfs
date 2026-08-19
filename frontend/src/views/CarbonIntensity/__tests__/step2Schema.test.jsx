@@ -18,6 +18,7 @@ const validRow = {
   pathwayId: null,
   applicationTypeId: 1,
   fuelCodeTypeId: 1,
+  designData: false,
   operatingDataFrom: '2025-01-01',
   operatingDataTo: '2025-12-31',
   fuelCodeId: null,
@@ -51,7 +52,10 @@ describe('validatePathwayRow', () => {
 
   it('allows negative proposed CI values', () => {
     expect(
-      validatePathwayRow({ ...validRow, proposedCi: -5.61 }, APPLICATION_TYPES)
+      validatePathwayRow(
+        { ...validRow, proposedCi: -5.61 },
+        APPLICATION_TYPES
+      )
     ).toEqual([])
   })
 
@@ -61,8 +65,9 @@ describe('validatePathwayRow', () => {
       APPLICATION_TYPES
     )
     expect(errs).toContain('fuelCodeTypeId')
-    expect(errs).toContain('operatingDataFrom')
-    expect(errs).toContain('operatingDataTo')
+    expect(errs).toContain('designData')
+    expect(errs).not.toContain('operatingDataFrom')
+    expect(errs).not.toContain('operatingDataTo')
     expect(errs).toContain('proposedCi')
     expect(errs).toContain('fuelTypeId')
     expect(errs).toContain('feedstock')
@@ -95,27 +100,32 @@ describe('validatePathwayRow', () => {
     )
   })
 
-  it('distinguishes a selected transport mode with missing distance', () => {
+  it('does not require operating dates for design data rows', () => {
+    expect(
+      validatePathwayRow(
+        {
+          ...validRow,
+          designData: true,
+          operatingDataFrom: '',
+          operatingDataTo: ''
+        },
+        APPLICATION_TYPES
+      )
+    ).toEqual([])
+  })
+
+  it('requires operating dates for operational data rows', () => {
     const errs = validatePathwayRow(
       {
         ...validRow,
-        feedstockTransportMode: [{ transportMode: 'Truck', distance: null }]
+        designData: false,
+        operatingDataFrom: '',
+        operatingDataTo: ''
       },
       APPLICATION_TYPES
     )
-
-    expect(errs).toContain('feedstockTransportMode')
-    expect(errs).toContain('feedstockTransportModeDistance')
-  })
-
-  it('does not add distance-specific errors when no transport mode is selected', () => {
-    const errs = validatePathwayRow(
-      { ...validRow, feedstockTransportMode: [] },
-      APPLICATION_TYPES
-    )
-
-    expect(errs).toContain('feedstockTransportMode')
-    expect(errs).not.toContain('feedstockTransportModeDistance')
+    expect(errs).toContain('operatingDataFrom')
+    expect(errs).toContain('operatingDataTo')
   })
 })
 
@@ -124,14 +134,17 @@ describe('rowToApiPayload', () => {
     const payload = rowToApiPayload({
       ...validRow,
       proposedCi: '5.61',
+      feedstockTransportMode: [{ transportMode: 'Truck', distance: '100' }],
+      finishedFuelTransportMode: [{ transportMode: 'Rail', distance: '200' }],
       coproducts: '   '
     })
     expect(payload.proposedCi).toBe(5.61)
+    expect(payload.designData).toBe(false)
     expect(payload.feedstockTransportMode).toEqual([
-      { transportMode: 'Truck', distance: 100 }
+      { transportMode: 'Truck', distance: '100' }
     ])
     expect(payload.finishedFuelTransportMode).toEqual([
-      { transportMode: 'Rail', distance: 200 }
+      { transportMode: 'Rail', distance: '200' }
     ])
     expect(payload.coproducts).toBeNull()
   })
@@ -153,6 +166,7 @@ describe('apiToRow', () => {
       pathwayId: 7,
       applicationTypeId: 2,
       fuelCodeTypeId: 1,
+      designData: true,
       operatingDataFrom: '2025-01-01',
       operatingDataTo: '2025-12-31',
       fuelCodeId: 42,
@@ -160,13 +174,27 @@ describe('apiToRow', () => {
       fuelTypeId: 1,
       feedstock: 'Corn',
       feedstockRegion: 'Ontario',
-      feedstockTransportMode: [{ transportMode: 'Truck', distance: 50 }],
+      feedstockTransportMode: 'Truck',
+      feedstockTransportDistance: 50,
       coproducts: null,
-      finishedFuelTransportMode: [{ transportMode: 'Rail', distance: 75 }]
+      finishedFuelTransportMode: 'Rail',
+      finishedFuelTransportDistance: 75
     })
     expect(row.pathwayId).toBe(7)
+    expect(row.designData).toBe(true)
     expect(row.proposedCi).toBe(23.23)
     expect(row.id).toBe('pathway-7')
+  })
+})
+
+describe('buildPathwayColDefs — design data column', () => {
+  it('places Design data immediately after Proposed fuel code type', () => {
+    const cols = buildPathwayColDefs({
+      optionsData: {},
+      canEdit: true
+    })
+    const fuelCodeTypeIndex = cols.findIndex((c) => c.field === 'fuelCodeTypeId')
+    expect(cols[fuelCodeTypeIndex + 1].field).toBe('designData')
   })
 })
 
@@ -212,9 +240,7 @@ describe('buildPathwayColDefs — Renewal CI carry-over prevention', () => {
     optionsData: { pathwayApplicationTypes: APPLICATION_TYPES, fuelCodes },
     canEdit: true
   })
-  const applicationTypeCol = colDefs.find(
-    (c) => c.field === 'applicationTypeId'
-  )
+  const applicationTypeCol = colDefs.find((c) => c.field === 'applicationTypeId')
   const fuelCodeCol = colDefs.find((c) => c.field === 'fuelCodeId')
 
   it('blanks proposedCi when the applicant selects Renewal', () => {

@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
-import { screen, waitFor, act } from '@testing-library/react'
+import { fireEvent, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import * as OrganizationSnapshotHooks from '@/hooks/useOrganizationSnapshot.js'
 import {
@@ -104,6 +104,7 @@ describe('OrganizationAddress', () => {
       operatingName: 'ACME',
       phone: '250-123-4567',
       email: 'info@acme.com',
+      contactName: 'Jane Contact',
       serviceAddress: '123 Main St.',
       recordsAddress: '456 BC St.',
       headOfficeAddress: '789 HQ St.'
@@ -165,6 +166,34 @@ describe('OrganizationAddress', () => {
       expect(screen.getByText(snapshotData.operatingName)).toBeInTheDocument()
       expect(screen.getByText('org:phoneNbrLabel:')).toBeInTheDocument()
       expect(screen.getByText(snapshotData.phone)).toBeInTheDocument()
+      expect(screen.getByText('org:contactNameLabel:')).toBeInTheDocument()
+      expect(screen.getByText(snapshotData.contactName)).toBeInTheDocument()
+      expect(
+        screen
+          .getByText('org:emailAddrLabel:')
+          .compareDocumentPosition(screen.getByText('org:contactNameLabel:')) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+    })
+
+    test('does not render contact name when it is blank', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(
+        <OrganizationAddress
+          {...defaultProps}
+          snapshotData={{ ...snapshotData, contactName: '' }}
+        />,
+        [query, theme, localization, router]
+      )
+
+      expect(
+        screen.queryByText('org:contactNameLabel:')
+      ).not.toBeInTheDocument()
     })
 
     test('renders the form in editing mode', ({
@@ -191,7 +220,15 @@ describe('OrganizationAddress', () => {
         screen.getByLabelText(/org:operatingNameLabel/i)
       ).toBeInTheDocument()
       expect(screen.getByLabelText(/org:phoneNbrLabel/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/org:contactNameLabel/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/org:emailAddrLabel/i)).toBeInTheDocument()
+      expect(
+        screen
+          .getByLabelText(/org:emailAddrLabel/i)
+          .compareDocumentPosition(
+            screen.getByLabelText(/org:contactNameLabel/i)
+          ) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
 
       // Check save and cancel buttons
       expect(screen.getByText('saveBtn')).toBeInTheDocument()
@@ -331,6 +368,29 @@ describe('OrganizationAddress', () => {
       // The component should have validation schema defined
       // This test ensures the validation is setup correctly
       expect(mockHandleSubmit).toHaveBeenCalled()
+    })
+
+    test('submits contact name when saving edits', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
+
+      fireEvent.submit(document.querySelector('form'))
+
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contactName: snapshotData.contactName
+        })
+      )
     })
   })
 
