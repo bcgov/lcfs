@@ -55,6 +55,7 @@
     "action": "Action",
     "applicationType": "Application type",
     "proposedFuelCodeType": "Proposed fuel code type",
+    "designData": "Design data",
     "operatingDataFrom": "Operating data collection from",
     "operatingDataTo": "Operating data collection to",
     "fuelCodeIteration": "Fuel code iteration",
@@ -74,6 +75,7 @@
       "atLeastOneRow": "At least one pathway is required.",
       "fixSpecificFields": "{{count}} pathway row(s) have missing or invalid values. Please complete: {{fields}}.",
       "missingSpecificFields": "Required field(s) missing: {{fields}}. Complete the highlighted cell(s) before saving.",
+      "operatingDateRangeRequired": "Operating data collection date range is required when design data is No.",
       "incompleteRows": "{{count}} pathway row(s) have missing required fields — complete all cells highlighted in red before saving.",
       "dateOrder": "Operating data collection end date must be on or after the start date. Please fix the dates and try again."
     }
