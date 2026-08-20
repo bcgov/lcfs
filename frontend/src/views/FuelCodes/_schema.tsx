@@ -18,7 +18,10 @@ import {
   BCSelectFloatingFilter
 } from '@/components/BCDataGrid/components'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
-import { FUEL_CODE_STATUSES, getAllFuelCodeStatuses } from '@/constants/statuses'
+import {
+  FUEL_CODE_STATUSES,
+  getAllFuelCodeStatuses
+} from '@/constants/statuses'
 
 const FuelCodeStatusBadge = (props) => {
   const statusArr = getAllFuelCodeStatuses()
@@ -54,6 +57,54 @@ const getCoProcessedOptions = () => ({
   isError: false,
   error: null
 })
+
+const getTransportModeName = (item, relationKey) => {
+  if (!item) return ''
+  if (typeof item === 'string' || typeof item === 'number') {
+    return item.toString()
+  }
+  const snakeRelationKey = relationKey.replace(
+    /[A-Z]/g,
+    (letter) => `_${letter.toLowerCase()}`
+  )
+  return (
+    item.transportMode ||
+    item.transport_mode ||
+    item[relationKey]?.transportMode ||
+    item[relationKey]?.transport_mode ||
+    item[snakeRelationKey]?.transportMode ||
+    item[snakeRelationKey]?.transport_mode ||
+    ''
+  )
+}
+
+export const formatTransportModeDistances = (value, relationKey) => {
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === 'string' && value.trim()
+      ? value.split(',').map((item) => item.trim())
+      : []
+
+  return values
+    .map((item) => {
+      const mode = getTransportModeName(item, relationKey)
+      if (!mode) return null
+      const distance =
+        typeof item === 'object' && item !== null ? item.distance : null
+      return distance === null || distance === undefined || distance === ''
+        ? mode
+        : `${mode} (${distance} km)`
+    })
+    .filter(Boolean)
+}
+
+const TransportModeCellRenderer = (props) => (
+  <CommonArrayRenderer
+    {...props}
+    value={formatTransportModeDistances(props.value, props.relationKey)}
+    disableLink={props.disableLink}
+  />
+)
 
 export const fuelCodeColDefs = (
   t: (key: string) => string,
@@ -236,8 +287,9 @@ export const fuelCodeColDefs = (
     },
     minWidth: 335,
     cellRenderer: (props) => (
-      <CommonArrayRenderer
+      <TransportModeCellRenderer
         {...props}
+        relationKey="feedstockFuelTransportMode"
         disableLink={props.data?.status !== FUEL_CODE_STATUSES.DRAFT}
       />
     )
@@ -259,8 +311,9 @@ export const fuelCodeColDefs = (
       suppressFilterButton: true
     },
     cellRenderer: (props) => (
-      <CommonArrayRenderer
+      <TransportModeCellRenderer
         {...props}
+        relationKey="finishedFuelTransportMode"
         disableLink={props.data?.status !== FUEL_CODE_STATUSES.DRAFT}
       />
     )
@@ -435,7 +488,11 @@ export const myFuelCodeColDefs = (t): ColDef[] => [
     },
     minWidth: 335,
     cellRenderer: (props) => (
-      <CommonArrayRenderer {...props} disableLink={true} />
+      <TransportModeCellRenderer
+        {...props}
+        relationKey="feedstockFuelTransportMode"
+        disableLink={true}
+      />
     )
   },
   {
@@ -455,7 +512,11 @@ export const myFuelCodeColDefs = (t): ColDef[] => [
     },
     minWidth: 335,
     cellRenderer: (props) => (
-      <CommonArrayRenderer {...props} disableLink={true} />
+      <TransportModeCellRenderer
+        {...props}
+        relationKey="finishedFuelTransportMode"
+        disableLink={true}
+      />
     )
   },
   {

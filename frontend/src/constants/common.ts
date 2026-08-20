@@ -78,7 +78,8 @@ export const HELP_GUIDE_URL =
 export const FILTER_KEYS = {
   COMPLIANCE_REPORT_GRID: 'compliance-reports-grid-filter',
   TRANSACTIONS_GRID: 'transactions-grid-filter',
-  FUEL_CODES_GRID: 'fuel-codes-grid-filter'
+  FUEL_CODES_GRID: 'fuel-codes-grid-filter',
+  CI_APPLICATIONS_GRID: 'ci-applications-grid-filter'
 } as const
 
 export const MAX_FILE_SIZE_BYTES = 52428800 // 50MB
@@ -140,7 +141,9 @@ export const getCurrentEarlyIssuanceYear = (): string =>
 export const DEFAULT_CI_FUEL_CODE =
   'Default carbon intensity - section 19 (b) (ii)'
 
-export const isLegacyCompliancePeriod = (compliancePeriod: number | string): boolean => {
+export const isLegacyCompliancePeriod = (
+  compliancePeriod: number | string
+): boolean => {
   // If it's already a number, use it directly
   if (typeof compliancePeriod === 'number') {
     return compliancePeriod < LEGISLATION_TRANSITION_YEAR

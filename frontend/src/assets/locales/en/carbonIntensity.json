@@ -55,6 +55,7 @@
     "action": "Action",
     "applicationType": "Application type",
     "proposedFuelCodeType": "Proposed fuel code type",
+    "designData": "Design data",
     "operatingDataFrom": "Operating data collection from",
     "operatingDataTo": "Operating data collection to",
     "fuelCodeIteration": "Fuel code iteration",
@@ -64,19 +65,27 @@
     "feedstock": "Feedstock",
     "feedstockRegion": "Feedstock region",
     "feedstockTransportMode": "Feedstock transport mode",
-    "feedstockTransportDistance": "Feedstock transport distance (km)",
+    "feedstockTransportModeDistance": "Feedstock transport mode distance",
     "coproducts": "Co-products",
     "finishedFuelTransportMode": "Finished fuel transport mode",
-    "finishedFuelTransportDistance": "Finished fuel transport distance (km)",
+    "finishedFuelTransportModeDistance": "Finished fuel transport mode distance",
     "descriptionLabel": "Description of distinctive or unique characteristics of the fuel pathway(s) included in this application",
     "descriptionHelp": "e.g. use of carbon capture and sequestration (CCS), novel energy sources for fuel production, upgrades made to facility (for fuel code renewal applications), etc.",
     "validation": {
       "atLeastOneRow": "At least one pathway is required.",
       "fixSpecificFields": "{{count}} pathway row(s) have missing or invalid values. Please complete: {{fields}}.",
       "missingSpecificFields": "Required field(s) missing: {{fields}}. Complete the highlighted cell(s) before saving.",
+      "operatingDateRangeRequired": "Operating data collection date range is required when design data is No.",
       "incompleteRows": "{{count}} pathway row(s) have missing required fields — complete all cells highlighted in red before saving.",
       "dateOrder": "Operating data collection end date must be on or after the start date. Please fix the dates and try again."
     }
+  },
+  "transportModeDistance": {
+    "title": "Select transport modes and enter distance (km)",
+    "description": "Add a distance for each selected transport mode.",
+    "selectMode": "Select {{mode}}",
+    "distanceLabel": "{{mode}} distance in kilometers",
+    "placeholder": "Enter"
   },
   "step3": {
     "title": "Documents & GHGenius template",

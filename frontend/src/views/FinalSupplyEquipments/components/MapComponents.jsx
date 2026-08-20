@@ -67,16 +67,17 @@ export const MapBoundsHandler = ({ groupedLocations }) => {
 // Legend component for react-leaflet
 export const MapLegend = ({ geofencingStatus }) => {
   const legendItems = [
-    // Conditionally include the loading state item
-    ...(geofencingStatus === 'loading'
-      ? [
-          {
-            src: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
-            alt: 'Grey marker',
-            text: 'Checking location...'
-          }
-        ]
-      : []),
+    // The grey pin means "no verdict yet" while geofencing runs and "never
+    // resolved" once it finishes — it is no longer reused for out-of-province
+    // locations, so it needs a label in both states (#4852).
+    {
+      src: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
+      alt: 'Grey marker',
+      text:
+        geofencingStatus === 'loading'
+          ? 'Checking location...'
+          : 'Location could not be verified'
+    },
     // Always include these items
     {
       src: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
@@ -136,15 +137,21 @@ export const MapMarkers = ({
         let icon = markerIcons.grey // Default to loading icon
 
         if (geofencingStatus === 'completed') {
-          const isInBC = geofencingResults[firstLoc.id]
+          const isInBC = geofencingResults[coordKey]
 
           const hasAnyOverlaps = locGroup.some(
             (loc) =>
               overlapMap[loc.uniqueId] && overlapMap[loc.uniqueId].length > 0
           )
 
-          if (!isInBC) {
+          // Only an explicit `false` means out of province. A missing result
+          // means the location was never resolved, and painting those red
+          // reported valid BC sites as outside BC (#4852) — leave them grey,
+          // matching the "Checking location..." legend entry.
+          if (isInBC === false) {
             icon = markerIcons.red
+          } else if (isInBC === undefined) {
+            icon = markerIcons.grey
           } else if (hasAnyOverlaps) {
             icon = markerIcons.orange
           } else {
