@@ -20,6 +20,7 @@ from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.exception.exceptions import DatabaseException
 
@@ -404,6 +405,42 @@ async def test_get_fuel_code_bulletin_rows_archived_is_inverse_of_current(
     assert "NOT (" in stmt_sql
     assert "effective_date <" in stmt_sql
     assert "expiration_date >" in stmt_sql
+
+
+def test_get_fuel_code_bulletin_pagination_params_accepts_fuel_code_filter(
+    fuel_code_repo,
+):
+    pagination = PaginationRequestSchema.model_validate(
+        {
+            "page": 1,
+            "size": 25,
+            "filters": [
+                {
+                    "field": "fuelCode",
+                    "filterType": "text",
+                    "type": "contains",
+                    "filter": "BCLCF",
+                }
+            ],
+            "sortOrders": [],
+        }
+    )
+
+    conditions, sort_orders = fuel_code_repo.get_fuel_code_bulletin_pagination_params(
+        pagination
+    )
+
+    assert sort_orders == []
+    assert len(conditions) == 1
+    compiled_condition = str(
+        conditions[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "concat" in compiled_condition
+    assert "fuel_suffix" in compiled_condition
+    assert "LIKE" in compiled_condition
+    assert "%bclcf%" in compiled_condition
 
 
 @pytest.mark.anyio
