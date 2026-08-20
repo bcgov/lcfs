@@ -18,6 +18,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import { GlobalStyles } from '@mui/system'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
+import DOMPurify from 'dompurify'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCButton from '@/components/BCButton'
@@ -30,14 +31,6 @@ import {
 } from '@/hooks/useGovernmentNotification'
 import { roles } from '@/constants/roles'
 import { useSnackbar } from 'notistack'
-
-// Map notification types to card titles
-const NOTIFICATION_TITLE_MAP = {
-  Alert: 'Alert notification',
-  Outage: 'Outage notification',
-  Deadline: 'Deadline notification',
-  General: 'General notification'
-}
 
 // Map notification types to pill background colors (lighter, pastel)
 const NOTIFICATION_PILL_COLORS = {
@@ -65,6 +58,22 @@ const getTextContent = (html) => {
   return doc.body.textContent || ''
 }
 
+const sanitizeNotificationHtml = (html) => {
+  if (!html) return ''
+  const clean = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a'],
+    ALLOWED_ATTR: ['href'],
+    ALLOWED_URI_REGEXP: /^(?:https?:)/i,
+    ALLOW_DATA_ATTR: false
+  })
+  const doc = new DOMParser().parseFromString(clean, 'text/html')
+  doc.querySelectorAll('a[href]').forEach((anchor) => {
+    anchor.setAttribute('target', '_blank')
+    anchor.setAttribute('rel', 'noopener noreferrer')
+  })
+  return doc.body.innerHTML
+}
+
 const GovernmentNotificationsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const { enqueueSnackbar } = useSnackbar()
@@ -74,7 +83,7 @@ const GovernmentNotificationsCard = () => {
   const { data: notification, isLoading } = useCurrentGovernmentNotification()
   const updateMutation = useUpdateGovernmentNotification({
     onSuccess: (data) => {
-      enqueueSnackbar('Government notification updated successfully', {
+      enqueueSnackbar(t('dashboard:governmentNotifications.updateSuccess'), {
         variant: 'success'
       })
       // Exit edit mode after the notification is successfully saved
@@ -83,7 +92,7 @@ const GovernmentNotificationsCard = () => {
     onError: (error) => {
       enqueueSnackbar(
         error?.response?.data?.message ||
-          'Failed to update government notification',
+          t('dashboard:governmentNotifications.updateError'),
         { variant: 'error' }
       )
     }
@@ -91,7 +100,7 @@ const GovernmentNotificationsCard = () => {
 
   const deleteMutation = useDeleteGovernmentNotification({
     onSuccess: () => {
-      enqueueSnackbar('Government notification deleted successfully', {
+      enqueueSnackbar(t('dashboard:governmentNotifications.deleteSuccess'), {
         variant: 'success'
       })
       setShowDeleteDialog(false)
@@ -99,7 +108,7 @@ const GovernmentNotificationsCard = () => {
     onError: (error) => {
       enqueueSnackbar(
         error?.response?.data?.message ||
-          'Failed to delete government notification',
+          t('dashboard:governmentNotifications.deleteError'),
         { variant: 'error' }
       )
     }
@@ -190,8 +199,12 @@ const GovernmentNotificationsCard = () => {
     const type = isEditing
       ? formData.notification_type
       : notification?.notificationType
-    return NOTIFICATION_TITLE_MAP[type] || 'General notification'
-  }, [notification?.notificationType, isEditing, formData.notification_type])
+    return (
+      t(`dashboard:governmentNotifications.titles.${type}`, {
+        defaultValue: ''
+      }) || t('dashboard:governmentNotifications.titles.General')
+    )
+  }, [notification?.notificationType, isEditing, formData.notification_type, t])
 
   const headerStyles = useMemo(() => {
     const type = isEditing
@@ -224,8 +237,12 @@ const GovernmentNotificationsCard = () => {
       <BCWidgetCard
         component="div"
         data-test={CARD_TEST_ID}
-        title="General notification"
-        content={<Loading message="Loading notification..." />}
+        title={t('dashboard:governmentNotifications.titles.General')}
+        content={
+          <Loading
+            message={t('dashboard:governmentNotifications.loadingMessage')}
+          />
+        }
       />
     )
   }
@@ -321,7 +338,7 @@ const GovernmentNotificationsCard = () => {
           {/* Title */}
           <Box>
             <BCTypography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>
-              Title *
+              {t('dashboard:governmentNotifications.titleLabel')}
             </BCTypography>
             <TextField
               fullWidth
@@ -332,29 +349,16 @@ const GovernmentNotificationsCard = () => {
                 handleFormChange('notification_title', e.target.value)
               }
               inputProps={{ maxLength: 200 }}
-              placeholder="Enter notification title"
-            />
-          </Box>
-
-          {/* URL */}
-          <Box>
-            <BCTypography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>
-              URL
-            </BCTypography>
-            <TextField
-              fullWidth
-              size="small"
-              value={formData.link_url}
-              onChange={(e) => handleFormChange('link_url', e.target.value)}
-              inputProps={{ maxLength: 500 }}
-              placeholder="Optional link URL"
+              placeholder={t(
+                'dashboard:governmentNotifications.titlePlaceholder'
+              )}
             />
           </Box>
 
           {/* Message */}
           <Box>
             <BCTypography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-              Message *
+              {t('dashboard:governmentNotifications.messageLabel')}
             </BCTypography>
             <ReactQuill
               value={formData.notification_text}
@@ -363,14 +367,17 @@ const GovernmentNotificationsCard = () => {
               modules={{
                 toolbar: [
                   ['bold', 'italic'],
-                  [{ list: 'bullet' }, { list: 'ordered' }]
+                  [{ list: 'bullet' }, { list: 'ordered' }],
+                  ['link']
                 ],
                 keyboard: {
                   bindings: { tab: false }
                 }
               }}
-              formats={['bold', 'italic', 'list', 'bullet']}
-              placeholder="Enter notification message"
+              formats={['bold', 'italic', 'list', 'bullet', 'link']}
+              placeholder={t(
+                'dashboard:governmentNotifications.messagePlaceholder'
+              )}
             />
           </Box>
 
@@ -382,7 +389,7 @@ const GovernmentNotificationsCard = () => {
               color="primary"
               onClick={handleCancel}
             >
-              Cancel
+              {t('dashboard:governmentNotifications.cancel')}
             </BCButton>
             <BCButton
               size="small"
@@ -396,7 +403,7 @@ const GovernmentNotificationsCard = () => {
               }
               isLoading={updateMutation.isPending}
             >
-              Save
+              {t('dashboard:governmentNotifications.post')}
             </BCButton>
           </Box>
         </Stack>
@@ -413,14 +420,16 @@ const GovernmentNotificationsCard = () => {
             color="text.secondary"
             textAlign="center"
           >
-            No government notification has been created yet.
+            {t('dashboard:governmentNotifications.emptyMessage')}
           </BCTypography>
         </Box>
       )
     }
 
     // Safely access notification properties with defaults (using camelCase from API)
-    const notificationTitle = notification.notificationTitle || 'Notification'
+    const notificationTitle =
+      notification.notificationTitle ||
+      t('dashboard:governmentNotifications.defaultTitle')
     const notificationText = notification.notificationText || ''
     const linkUrl = notification.linkUrl || ''
 
@@ -433,9 +442,15 @@ const GovernmentNotificationsCard = () => {
       <Box p={2} sx={{ position: 'relative' }}>
         {/* Delete button in top-right corner */}
         {canEdit && (
-          <Tooltip title="Delete notification">
+          <Tooltip
+            title={t(
+              'dashboard:governmentNotifications.deleteNotificationTooltip'
+            )}
+          >
             <IconButton
-              aria-label="delete notification"
+              aria-label={t(
+                'dashboard:governmentNotifications.deleteNotificationTooltip'
+              )}
               onClick={handleDeleteClick}
               size="small"
               sx={{
@@ -487,7 +502,9 @@ const GovernmentNotificationsCard = () => {
 
         {/* Notification text */}
         <Box
-          dangerouslySetInnerHTML={{ __html: truncatedText }}
+          dangerouslySetInnerHTML={{
+            __html: sanitizeNotificationHtml(truncatedText)
+          }}
           sx={{
             fontSize: '1rem',
             '& p': { margin: 0, fontSize: '1rem' },
@@ -513,7 +530,9 @@ const GovernmentNotificationsCard = () => {
             onClick={() => setExpanded(!expanded)}
             sx={{ mt: 1, textTransform: 'none' }}
           >
-            {expanded ? 'Less' : 'More'}
+            {expanded
+              ? t('dashboard:governmentNotifications.less')
+              : t('dashboard:governmentNotifications.more')}
           </Button>
         )}
       </Box>
@@ -532,7 +551,7 @@ const GovernmentNotificationsCard = () => {
           canEdit && !isEditing
             ? {
                 id: 'edit-government-notification',
-                text: 'Edit',
+                text: t('dashboard:governmentNotifications.edit'),
                 onClick: handleEditClick
               }
             : undefined
@@ -557,7 +576,7 @@ const GovernmentNotificationsCard = () => {
             py: 2
           }}
         >
-          Government notification
+          {t('dashboard:governmentNotifications.confirmDialog.title')}
         </DialogTitle>
         <DialogContent sx={{ pt: 3, pb: 2, mt: 2, ml: 4, mr: 4 }}>
           <BCTypography
@@ -569,11 +588,10 @@ const GovernmentNotificationsCard = () => {
               textAlign: 'center'
             }}
           >
-            Notification emails go out to all BCeID and IDIR users!
+            {t('dashboard:governmentNotifications.confirmDialog.warning')}
           </BCTypography>
           <BCTypography variant="body1">
-            Would you like to save your notification post with or without
-            triggering an email notification?
+            {t('dashboard:governmentNotifications.confirmDialog.message')}
           </BCTypography>
         </DialogContent>
         <Divider />
@@ -582,20 +600,22 @@ const GovernmentNotificationsCard = () => {
             size="small"
             variant="contained"
             color="primary"
-            onClick={handleSaveWithEmail}
+            onClick={handleSaveWithoutEmail}
             disabled={updateMutation.isPending}
             isLoading={updateMutation.isPending}
           >
-            Save and send email
+            {t(
+              'dashboard:governmentNotifications.confirmDialog.postWithoutEmail'
+            )}
           </BCButton>
           <BCButton
             size="small"
             variant="outlined"
             color="primary"
-            onClick={handleSaveWithoutEmail}
+            onClick={handleSaveWithEmail}
             disabled={updateMutation.isPending}
           >
-            Save without email sent
+            {t('dashboard:governmentNotifications.confirmDialog.postWithEmail')}
           </BCButton>
           <BCButton
             size="small"
@@ -604,7 +624,7 @@ const GovernmentNotificationsCard = () => {
             onClick={handleCancelConfirm}
             disabled={updateMutation.isPending}
           >
-            Cancel
+            {t('dashboard:governmentNotifications.cancel')}
           </BCButton>
         </DialogActions>
       </Dialog>
@@ -623,12 +643,11 @@ const GovernmentNotificationsCard = () => {
             py: 2
           }}
         >
-          Delete notification
+          {t('dashboard:governmentNotifications.deleteDialog.title')}
         </DialogTitle>
         <DialogContent sx={{ pt: 3, pb: 2, mt: 2 }}>
           <BCTypography variant="body1">
-            Are you sure you want to delete this government notification? This
-            action cannot be undone.
+            {t('dashboard:governmentNotifications.deleteDialog.message')}
           </BCTypography>
         </DialogContent>
         <Divider />
@@ -641,7 +660,7 @@ const GovernmentNotificationsCard = () => {
             disabled={deleteMutation.isPending}
             isLoading={deleteMutation.isPending}
           >
-            Delete
+            {t('dashboard:governmentNotifications.deleteDialog.confirm')}
           </BCButton>
           <BCButton
             size="small"
@@ -650,7 +669,7 @@ const GovernmentNotificationsCard = () => {
             onClick={handleCancelDelete}
             disabled={deleteMutation.isPending}
           >
-            Cancel
+            {t('dashboard:governmentNotifications.cancel')}
           </BCButton>
         </DialogActions>
       </Dialog>

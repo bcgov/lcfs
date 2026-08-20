@@ -29,6 +29,7 @@ class OrganizationSnapshotSchema(BaseSchema):
     operating_name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    contact_name: Optional[str] = None
     head_office_address: Optional[str] = None
     records_address: Optional[str] = None
     service_address: Optional[str] = None

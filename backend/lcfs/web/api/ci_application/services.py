@@ -7,8 +7,9 @@ decision (with the comments thread).
 """
 
 import json
+import re
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -22,6 +23,8 @@ from lcfs.db.models.ci_application import (
     CIApplication,
     CIApplicationFuelCodeAssociation,
     Pathway,
+    PathwayFeedstockTransportMode,
+    PathwayFinishedFuelTransportMode,
 )
 from lcfs.db.models.ci_application.CIApplication import (
     CI_DOC_CATEGORY_GHGENIUS_MODEL,
@@ -94,6 +97,7 @@ CI_STEP3_REQUIRE_DOCUMENTS = False
 PATHWAY_LOG_FIELDS = [
     "application_type_id",
     "fuel_code_type_id",
+    "design_data",
     "operating_data_from",
     "operating_data_to",
     "fuel_code_id",
@@ -101,11 +105,9 @@ PATHWAY_LOG_FIELDS = [
     "fuel_type_id",
     "feedstock",
     "feedstock_region",
-    "feedstock_transport_mode",
-    "feedstock_transport_distance",
+    "feedstock_transport_mode_details",
     "coproducts",
-    "finished_fuel_transport_mode",
-    "finished_fuel_transport_distance",
+    "finished_fuel_transport_mode_details",
 ]
 
 logger = structlog.get_logger(__name__)
@@ -176,6 +178,7 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
             if pathway.fuel_code_type
             else None
         ),
+        design_data=pathway.design_data,
         operating_data_from=pathway.operating_data_from,
         operating_data_to=pathway.operating_data_to,
         fuel_code_id=pathway.fuel_code_id,
@@ -191,19 +194,13 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
         ),
         feedstock=pathway.feedstock,
         feedstock_region=pathway.feedstock_region,
-        feedstock_transport_mode=(
-            pathway.feedstock_transport_mode.split(",")
-            if pathway.feedstock_transport_mode
-            else []
+        feedstock_transport_mode=_transport_mode_details_from_links(
+            pathway.feedstock_transport_modes
         ),
-        feedstock_transport_distance=pathway.feedstock_transport_distance,
         coproducts=pathway.coproducts,
-        finished_fuel_transport_mode=(
-            pathway.finished_fuel_transport_mode.split(",")
-            if pathway.finished_fuel_transport_mode
-            else []
+        finished_fuel_transport_mode=_transport_mode_details_from_links(
+            pathway.finished_fuel_transport_modes
         ),
-        finished_fuel_transport_distance=pathway.finished_fuel_transport_distance,
     )
 
 
@@ -215,13 +212,105 @@ def _json_value(value: Any) -> Any:
     return value
 
 
+def _transport_mode_name(value: Any) -> Optional[str]:
+    if value in (None, ""):
+        return None
+    if isinstance(value, str):
+        return value.strip() or None
+    if isinstance(value, dict):
+        return value.get("transportMode") or value.get("transport_mode")
+    return getattr(value, "transport_mode", None) or getattr(
+        value, "transportMode", None
+    )
+
+
+def _transport_mode_distance(value: Any) -> Optional[int]:
+    if isinstance(value, dict):
+        distance = value.get("distance")
+    else:
+        distance = getattr(value, "distance", None)
+    if distance in (None, ""):
+        return None
+    return int(distance)
+
+
+def _transport_mode_names_from_selection(value: Any) -> List[str]:
+    values = value if isinstance(value, list) else [value]
+    names = []
+    for item in values or []:
+        name = _transport_mode_name(item)
+        if name:
+            names.append(name)
+    return list(dict.fromkeys(names))
+
+
+def _transport_mode_details_from_any(value: Any) -> List[Dict[str, Any]]:
+    if isinstance(value, list):
+        details = _transport_mode_details_from_selection(value)
+        if details:
+            return details
+        return [
+            {"transportMode": name, "distance": None}
+            for name in _transport_mode_names_from_selection(value)
+        ]
+    name = _transport_mode_name(value)
+    return [{"transportMode": name, "distance": None}] if name else []
+
+
+def _transport_mode_details_from_selection(
+    value: Any,
+) -> List[Dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    details = []
+    for item in value:
+        name = _transport_mode_name(item)
+        distance = _transport_mode_distance(item)
+        if name:
+            details.append({"transportMode": name, "distance": distance})
+    return details
+
+
+def _transport_mode_details_from_links(links: Any) -> List[Dict[str, Any]]:
+    details = []
+    for link in links or []:
+        transport_mode = getattr(link, "transport_mode", None)
+        mode_name = getattr(transport_mode, "transport_mode", None)
+        if mode_name:
+            details.append(
+                {
+                    "transportMode": mode_name,
+                    "distance": getattr(link, "distance", None),
+                }
+            )
+    return details
+
+
+def _transport_mode_names_from_links(links: Any) -> List[str]:
+    return [
+        detail["transportMode"]
+        for detail in _transport_mode_details_from_links(links)
+        if detail.get("transportMode")
+    ]
+
+
 def _pathway_snapshot(pathway: Pathway) -> Dict[str, Any]:
     snapshot = {
         "pathway_id": getattr(pathway, "pathway_id", None),
         "pathway_group_uuid": getattr(pathway, "group_uuid", None),
     }
     for field in PATHWAY_LOG_FIELDS:
-        snapshot[field] = _json_value(getattr(pathway, field, None))
+        if field == "feedstock_transport_mode_details":
+            value = _transport_mode_details_from_links(
+                pathway.feedstock_transport_modes
+            )
+        elif field == "finished_fuel_transport_mode_details":
+            value = _transport_mode_details_from_links(
+                pathway.finished_fuel_transport_modes
+            )
+        else:
+            value = getattr(pathway, field, None)
+        snapshot[field] = _json_value(value)
     return snapshot
 
 
@@ -235,11 +324,15 @@ def _pathway_input_snapshot(
         "pathway_group_uuid": pathway_group_uuid
         or getattr(pathway, "group_uuid", None),
     }
-    _transport_fields = {"feedstock_transport_mode", "finished_fuel_transport_mode"}
     for field in PATHWAY_LOG_FIELDS:
-        value = getattr(row, field, None)
-        if field in _transport_fields and isinstance(value, list):
-            value = ",".join(value)
+        if field == "feedstock_transport_mode_details":
+            value = _transport_mode_details_from_selection(row.feedstock_transport_mode)
+        elif field == "finished_fuel_transport_mode_details":
+            value = _transport_mode_details_from_selection(
+                row.finished_fuel_transport_mode
+            )
+        else:
+            value = getattr(row, field, None)
         snapshot[field] = _json_value(value)
     return snapshot
 
@@ -274,7 +367,9 @@ def _pathway_changed_by(pathway: Pathway) -> Optional[str]:
     action_type = _action_type_value(getattr(pathway, "action_type", "CREATE"))
     if action_type == ActionTypeEnum.CREATE.value:
         return getattr(pathway, "create_user", None)
-    return getattr(pathway, "update_user", None) or getattr(pathway, "create_user", None)
+    return getattr(pathway, "update_user", None) or getattr(
+        pathway, "create_user", None
+    )
 
 
 def _sorted_pathways(pathways: List[Pathway]) -> List[Pathway]:
@@ -406,6 +501,8 @@ def _validate_generated_fuel_code_row_values(row: Dict[str, Any]) -> Dict[str, A
         ("fuel_type_id", "fuelTypeId"),
         ("feedstock", "feedstock"),
         ("feedstock_location", "feedstockLocation"),
+        ("feedstock_fuel_transport_mode", "feedstockFuelTransportMode"),
+        ("finished_fuel_transport_mode", "finishedFuelTransportMode"),
         ("fuel_production_facility_city", "fuelProductionFacilityCity"),
         (
             "fuel_production_facility_province_state",
@@ -425,6 +522,18 @@ def _validate_generated_fuel_code_row_values(row: Dict[str, Any]) -> Dict[str, A
         "facility_nameplate_capacity_unit"
     ):
         validation_errors["facilityNameplateCapacityUnit"] = "Required."
+    for internal_key, frontend_key in (
+        ("feedstock_fuel_transport_mode", "feedstockFuelTransportMode"),
+        ("finished_fuel_transport_mode", "finishedFuelTransportMode"),
+    ):
+        modes = row.get(internal_key) or []
+        if any(
+            isinstance(mode, dict)
+            and mode.get("transportMode")
+            and mode.get("distance") in (None, "")
+            for mode in modes
+        ):
+            validation_errors[frontend_key] = "Distance is required."
 
     application_date = row.get("application_date")
     approval_date = row.get("approval_date")
@@ -448,6 +557,31 @@ def _validate_generated_fuel_code_row_values(row: Dict[str, Any]) -> Dict[str, A
     return row
 
 
+def _add_years(value: date, years: int) -> date:
+    try:
+        return value.replace(year=value.year + years)
+    except ValueError:
+        return value.replace(month=2, day=28, year=value.year + years)
+
+
+def _pathway_fuel_code_duration_years(pathway: Pathway) -> int:
+    fuel_code_type = getattr(getattr(pathway, "fuel_code_type", None), "type", "")
+    match = re.search(r"(\d+)\s*-\s*year", fuel_code_type or "", re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return 1
+
+
+def _generated_fuel_code_expiration_date(
+    pathway: Pathway,
+    effective_date: date,
+) -> date:
+    if getattr(pathway, "operating_data_to", None):
+        return pathway.operating_data_to
+    duration_years = _pathway_fuel_code_duration_years(pathway)
+    return _add_years(effective_date, duration_years) - timedelta(days=1)
+
+
 def _to_generated_fuel_code_schema(row: Dict[str, Any]) -> CIGeneratedFuelCodeSchema:
     return CIGeneratedFuelCodeSchema.model_validate(row or {})
 
@@ -461,6 +595,22 @@ def _transport_mode_names(
         if transport_mode and getattr(transport_mode, "transport_mode", None):
             names.append(transport_mode.transport_mode)
     return names
+
+
+def _transport_mode_details(
+    transport_modes: List[Any], relationship_name: str
+) -> List[Dict[str, Any]]:
+    details = []
+    for item in transport_modes or []:
+        transport_mode = getattr(item, relationship_name, None)
+        if transport_mode and getattr(transport_mode, "transport_mode", None):
+            details.append(
+                {
+                    "transportMode": transport_mode.transport_mode,
+                    "distance": getattr(item, "distance", None),
+                }
+            )
+    return details
 
 
 def _generated_fuel_code_row_from_association(
@@ -515,11 +665,11 @@ def _generated_fuel_code_row_from_association(
         ),
         former_company=fuel_code.former_company,
         notes=fuel_code.notes,
-        feedstock_fuel_transport_mode=_transport_mode_names(
+        feedstock_fuel_transport_mode=_transport_mode_details(
             fuel_code.feedstock_fuel_transport_modes,
             "feedstock_fuel_transport_mode",
         ),
-        finished_fuel_transport_mode=_transport_mode_names(
+        finished_fuel_transport_mode=_transport_mode_details(
             fuel_code.finished_fuel_transport_modes,
             "finished_fuel_transport_mode",
         ),
@@ -564,7 +714,8 @@ def _to_full_schema(
             h.ci_application_snapshot
             for h in history_records
             if isinstance(getattr(h, "ci_application_snapshot", None), dict)
-            and h.ci_application_snapshot.get("event") == "supplemental_pathways_updated"
+            and h.ci_application_snapshot.get("event")
+            == "supplemental_pathways_updated"
         ),
         key=lambda e: e.get("changed_at") or "",
     )
@@ -614,7 +765,9 @@ def _to_full_schema(
             and history.ci_application_snapshot.get("event")
             in {"pathway_changes_requested", "supplemental_pathways_updated"}
         ],
-        pathway_change_logs=_pathway_change_logs_from_versions(all_pathways, original_group_uuids),
+        pathway_change_logs=_pathway_change_logs_from_versions(
+            all_pathways, original_group_uuids
+        ),
         generated_fuel_codes=[
             _to_generated_fuel_code_schema(row)
             for row in (
@@ -889,6 +1042,9 @@ class CIApplicationServices:
             if ci_application.signature_date_time
             else date.today()
         )
+        effective_date = (
+            ci_application.proposed_fuel_code_effective_date or application_date
+        )
         reserved_suffixes_by_prefix: Dict[str, set[str]] = {}
 
         associations: List[CIApplicationFuelCodeAssociation] = []
@@ -929,8 +1085,10 @@ class CIApplicationServices:
                 contact_email=getattr(ci_application.organization, "email", None),
                 application_date=application_date,
                 approval_date=None,
-                effective_date=ci_application.proposed_fuel_code_effective_date,
-                expiration_date=pathway.operating_data_to,
+                effective_date=effective_date,
+                expiration_date=_generated_fuel_code_expiration_date(
+                    pathway, effective_date
+                ),
                 fuel_type_id=pathway.fuel_type_id,
                 feedstock=pathway.feedstock,
                 feedstock_location=pathway.feedstock_region,
@@ -944,14 +1102,18 @@ class CIApplicationServices:
             )
             draft_fuel_code.feedstock_fuel_transport_modes = (
                 self._fuel_code_transport_mode_links(
-                    pathway.feedstock_transport_mode,
+                    _transport_mode_details_from_links(
+                        pathway.feedstock_transport_modes
+                    ),
                     transport_modes,
                     FeedstockFuelTransportMode,
                 )
             )
             draft_fuel_code.finished_fuel_transport_modes = (
                 self._fuel_code_transport_mode_links(
-                    pathway.finished_fuel_transport_mode,
+                    _transport_mode_details_from_links(
+                        pathway.finished_fuel_transport_modes
+                    ),
                     transport_modes,
                     FinishedFuelTransportMode,
                 )
@@ -1104,17 +1266,49 @@ class CIApplicationServices:
     ) -> List[Any]:
         if selected_modes in (None, "", []):
             return []
-        mode_names = self._unique_transport_mode_names(selected_modes)
         links = []
-        for mode_name in mode_names:
+        for mode in _transport_mode_details_from_any(selected_modes):
             matching_transport_mode = next(
-                (mode for mode in transport_modes if mode.transport_mode == mode_name),
+                (
+                    transport_mode
+                    for transport_mode in transport_modes
+                    if transport_mode.transport_mode == mode["transportMode"]
+                ),
                 None,
             )
             if matching_transport_mode:
                 links.append(
                     link_model(
-                        transport_mode_id=matching_transport_mode.transport_mode_id
+                        transport_mode_id=matching_transport_mode.transport_mode_id,
+                        distance=mode["distance"],
+                    )
+                )
+        return links
+
+    def _pathway_transport_mode_links(
+        self,
+        selected_modes: Optional[Any],
+        transport_modes: List[Any],
+        link_model: Any,
+    ) -> List[Any]:
+        details = _transport_mode_details_from_selection(selected_modes)
+        links = []
+        for detail in details:
+            if detail["distance"] is None:
+                continue
+            matching_transport_mode = next(
+                (
+                    mode
+                    for mode in transport_modes
+                    if mode.transport_mode == detail["transportMode"]
+                ),
+                None,
+            )
+            if matching_transport_mode:
+                links.append(
+                    link_model(
+                        transport_mode_id=matching_transport_mode.transport_mode_id,
+                        distance=detail["distance"],
                     )
                 )
         return links
@@ -1126,12 +1320,14 @@ class CIApplicationServices:
         transport_modes: List[Any],
         link_model: Any,
     ) -> None:
-        desired_ids = {
-            mode.transport_mode_id
-            for mode_name in self._unique_transport_mode_names(selected_modes)
+        selected_details = _transport_mode_details_from_any(selected_modes)
+        desired_by_id = {
+            mode.transport_mode_id: detail.get("distance")
+            for detail in selected_details
             for mode in transport_modes
-            if mode.transport_mode == mode_name
+            if mode.transport_mode == detail["transportMode"]
         }
+        desired_ids = set(desired_by_id)
         existing_by_id = {
             link.transport_mode_id: link
             for link in existing_links
@@ -1142,18 +1338,28 @@ class CIApplicationServices:
             link for link in existing_links if link.transport_mode_id in desired_ids
         ]
 
+        for transport_mode_id in desired_ids & set(existing_by_id):
+            existing_by_id[transport_mode_id].distance = desired_by_id[
+                transport_mode_id
+            ]
+
         for transport_mode_id in desired_ids - set(existing_by_id):
-            existing_links.append(link_model(transport_mode_id=transport_mode_id))
+            existing_links.append(
+                link_model(
+                    transport_mode_id=transport_mode_id,
+                    distance=desired_by_id[transport_mode_id],
+                )
+            )
 
     def _unique_transport_mode_names(self, selected_modes: Optional[Any]) -> List[str]:
         if selected_modes in (None, "", []):
             return []
         if isinstance(selected_modes, list):
-            mode_names = selected_modes
+            mode_names = _transport_mode_names_from_selection(selected_modes)
         elif isinstance(selected_modes, str):
             mode_names = [m.strip() for m in selected_modes.split(",") if m.strip()]
         else:
-            mode_names = [selected_modes]
+            mode_names = _transport_mode_names_from_selection(selected_modes)
         return list(dict.fromkeys(mode_name for mode_name in mode_names if mode_name))
 
     async def _get_fuel_code_prefix_map(self) -> Dict[str, Any]:
@@ -1743,6 +1949,7 @@ class CIApplicationServices:
         supplemental_changed_at = (
             datetime.now(timezone.utc) if is_supplemental_edit else None
         )
+        transport_modes = await self.repo.get_transport_modes()
 
         new_rows: List[Pathway] = []
         for row in data.pathways:
@@ -1752,6 +1959,7 @@ class CIApplicationServices:
             pathway = Pathway(
                 application_type_id=row.application_type_id,
                 fuel_code_type_id=row.fuel_code_type_id,
+                design_data=row.design_data,
                 operating_data_from=row.operating_data_from,
                 operating_data_to=row.operating_data_to,
                 fuel_code_id=row.fuel_code_id,
@@ -1759,11 +1967,7 @@ class CIApplicationServices:
                 fuel_type_id=row.fuel_type_id,
                 feedstock=row.feedstock,
                 feedstock_region=row.feedstock_region,
-                feedstock_transport_mode=",".join(row.feedstock_transport_mode),
-                feedstock_transport_distance=row.feedstock_transport_distance,
                 coproducts=row.coproducts,
-                finished_fuel_transport_mode=",".join(row.finished_fuel_transport_mode),
-                finished_fuel_transport_distance=row.finished_fuel_transport_distance,
                 group_uuid=previous.group_uuid if previous else str(uuid.uuid4()),
                 version=((previous.version or 0) + 1) if previous else 0,
                 action_type=(
@@ -1775,6 +1979,16 @@ class CIApplicationServices:
                     else user.keycloak_username
                 ),
                 update_user=user.keycloak_username,
+            )
+            pathway.feedstock_transport_modes = self._pathway_transport_mode_links(
+                row.feedstock_transport_mode,
+                transport_modes,
+                PathwayFeedstockTransportMode,
+            )
+            pathway.finished_fuel_transport_modes = self._pathway_transport_mode_links(
+                row.finished_fuel_transport_mode,
+                transport_modes,
+                PathwayFinishedFuelTransportMode,
             )
             if supplemental_changed_at:
                 pathway.update_date = supplemental_changed_at
@@ -1793,6 +2007,7 @@ class CIApplicationServices:
                 pathway = Pathway(
                     application_type_id=previous.application_type_id,
                     fuel_code_type_id=previous.fuel_code_type_id,
+                    design_data=previous.design_data,
                     operating_data_from=previous.operating_data_from,
                     operating_data_to=previous.operating_data_to,
                     fuel_code_id=previous.fuel_code_id,
@@ -1800,11 +2015,7 @@ class CIApplicationServices:
                     fuel_type_id=previous.fuel_type_id,
                     feedstock=previous.feedstock,
                     feedstock_region=previous.feedstock_region,
-                    feedstock_transport_mode=previous.feedstock_transport_mode,
-                    feedstock_transport_distance=previous.feedstock_transport_distance,
                     coproducts=previous.coproducts,
-                    finished_fuel_transport_mode=previous.finished_fuel_transport_mode,
-                    finished_fuel_transport_distance=previous.finished_fuel_transport_distance,
                     group_uuid=previous.group_uuid,
                     version=(previous.version or 0) + 1,
                     action_type=ActionTypeEnum.DELETE,
@@ -1815,6 +2026,20 @@ class CIApplicationServices:
                     ),
                     update_user=user.keycloak_username,
                 )
+                pathway.feedstock_transport_modes = [
+                    PathwayFeedstockTransportMode(
+                        transport_mode_id=link.transport_mode_id,
+                        distance=link.distance,
+                    )
+                    for link in previous.feedstock_transport_modes or []
+                ]
+                pathway.finished_fuel_transport_modes = [
+                    PathwayFinishedFuelTransportMode(
+                        transport_mode_id=link.transport_mode_id,
+                        distance=link.distance,
+                    )
+                    for link in previous.finished_fuel_transport_modes or []
+                ]
                 if supplemental_changed_at:
                     pathway.update_date = supplemental_changed_at
                 if getattr(previous, "create_date", None):
