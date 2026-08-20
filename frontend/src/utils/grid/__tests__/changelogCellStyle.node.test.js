@@ -51,6 +51,16 @@ describe('changelogCellStyle', () => {
     }
     expect(changelogCellStyle(params, 'foo')).toBeUndefined()
   })
+
+  it('returns undefined for UPDATE when diff is missing', () => {
+    const params = { data: { actionType: 'UPDATE' } }
+    expect(changelogCellStyle(params, 'foo')).toBeUndefined()
+  })
+
+  it('returns undefined for CREATE at the cell level', () => {
+    const params = { data: { actionType: 'CREATE', diff: ['foo'] } }
+    expect(changelogCellStyle(params, 'foo')).toBeUndefined()
+  })
 })
 
 describe('changelogRowStyle', () => {
@@ -76,5 +86,27 @@ describe('changelogRowStyle', () => {
   it('returns empty object when not supplemental', () => {
     const style = changelogRowStyle(makeParams('CREATE'), false)
     expect(style).toEqual({})
+  })
+
+  it('returns empty object when the row is not a new supplemental entry', () => {
+    const params = {
+      data: { actionType: 'CREATE', isNewSupplementalEntry: false }
+    }
+    expect(changelogRowStyle(params, true)).toEqual({})
+  })
+
+  it('returns empty object for UPDATE/DELETE without isNewSupplementalEntry', () => {
+    expect(changelogRowStyle({ data: { actionType: 'UPDATE' } }, true)).toEqual(
+      {}
+    )
+    expect(changelogRowStyle({ data: { actionType: 'DELETE' } }, true)).toEqual(
+      {}
+    )
+  })
+
+  it('returns empty object for other action types', () => {
+    expect(changelogRowStyle({ data: { actionType: 'NONE' } }, true)).toEqual(
+      {}
+    )
   })
 })
