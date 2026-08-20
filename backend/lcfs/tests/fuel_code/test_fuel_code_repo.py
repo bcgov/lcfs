@@ -443,6 +443,41 @@ def test_get_fuel_code_bulletin_pagination_params_accepts_fuel_code_filter(
     assert "%bclcf%" in compiled_condition
 
 
+def test_get_fuel_code_bulletin_pagination_params_filters_effective_date_as_date(
+    fuel_code_repo,
+):
+    pagination = PaginationRequestSchema.model_validate(
+        {
+            "page": 1,
+            "size": 25,
+            "filters": [
+                {
+                    "field": "effectiveDate",
+                    "filterType": "date",
+                    "type": "equals",
+                    "dateFrom": "2025-12-31",
+                }
+            ],
+            "sortOrders": [],
+        }
+    )
+
+    conditions, sort_orders = fuel_code_repo.get_fuel_code_bulletin_pagination_params(
+        pagination
+    )
+
+    assert sort_orders == []
+    assert len(conditions) == 1
+    compiled_condition = str(
+        conditions[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "CAST" in compiled_condition
+    assert "effective_date AS DATE" in compiled_condition
+    assert "date('2025-12-31')" in compiled_condition
+
+
 @pytest.mark.anyio
 async def test_get_expected_use_type_by_name(fuel_code_repo, mock_db):
     eut = ExpectedUseType(expected_use_type_id=2, name="Heating")
