@@ -1,4 +1,5 @@
 import pytest
+from fastapi import HTTPException
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import date, datetime, timedelta
 from types import SimpleNamespace
@@ -10,7 +11,7 @@ from lcfs.web.api.transfer.schema import (
     TransferCreateSchema,
 )
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
-from lcfs.db.models.transfer.TransferStatus import TransferStatus
+from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
 from lcfs.db.models.organization.Organization import Organization
 
 
@@ -290,6 +291,115 @@ async def test_update_category_success(transfer_service, mock_transfer_repo):
     assert result.transfer_id == transfer_id
     assert isinstance(result, Transfer)
     mock_transfer_repo.get_transfer_by_id.assert_called_once_with(transfer_id)
+
+
+def _category_update_transfer(status):
+    transfer = Transfer(
+        transfer_id=1,
+        from_organization_id=1,
+        to_organization_id=2,
+        agreement_date=date.today(),
+        quantity=1,
+        price_per_unit=1.0,
+        current_status=TransferStatus(transfer_status_id=1, status=status),
+    )
+    transfer.transfer_comments = []
+    return transfer
+
+
+def _category_update_user(role):
+    user = MagicMock(spec=UserProfile)
+    user.role_names = [role]
+    return user
+
+
+@pytest.mark.anyio
+async def test_analyst_can_update_category_on_submitted_transfer(
+    transfer_service, mock_transfer_repo
+):
+    transfer = _category_update_transfer(TransferStatusEnum.Submitted)
+    new_category = MagicMock()
+    new_category.category = "B"
+    mock_transfer_repo.get_transfer_by_id.return_value = transfer
+    mock_transfer_repo.get_transfer_category_by_name.return_value = new_category
+
+    result = await transfer_service.update_category(
+        transfer.transfer_id,
+        "B",
+        user=_category_update_user(RoleEnum.ANALYST),
+        enforce_category_permissions=True,
+    )
+
+    assert result.transfer_category is new_category
+    mock_transfer_repo.update_transfer.assert_awaited_once_with(transfer)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "status",
+    [TransferStatusEnum.Recommended, TransferStatusEnum.Recorded],
+)
+async def test_analyst_cannot_update_category_after_recommendation(
+    transfer_service, mock_transfer_repo, status
+):
+    transfer = _category_update_transfer(status)
+    mock_transfer_repo.get_transfer_by_id.return_value = transfer
+    mock_transfer_repo.get_transfer_category_by_name.return_value = MagicMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await transfer_service.update_category(
+            transfer.transfer_id,
+            "B",
+            user=_category_update_user(RoleEnum.ANALYST),
+            enforce_category_permissions=True,
+        )
+
+    assert exc_info.value.status_code == 400
+    mock_transfer_repo.update_transfer.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_director_recorded_category_permission_is_unchanged(
+    transfer_service, mock_transfer_repo, mock_director
+):
+    transfer = _category_update_transfer(TransferStatusEnum.Recorded)
+    new_category = MagicMock()
+    new_category.category = "B"
+    mock_transfer_repo.get_transfer_by_id.return_value = transfer
+    mock_transfer_repo.get_transfer_category_by_name.return_value = new_category
+
+    result = await transfer_service.update_category(
+        transfer.transfer_id,
+        "B",
+        user=mock_director,
+        enforce_category_permissions=True,
+    )
+
+    assert result.transfer_category is new_category
+    mock_transfer_repo.update_transfer.assert_awaited_once_with(transfer)
+
+
+@pytest.mark.anyio
+async def test_director_still_cannot_update_category_before_recording(
+    transfer_service, mock_transfer_repo, mock_director
+):
+    transfer = _category_update_transfer(TransferStatusEnum.Submitted)
+    mock_transfer_repo.get_transfer_by_id.return_value = transfer
+    mock_transfer_repo.get_transfer_category_by_name.return_value = MagicMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await transfer_service.update_category(
+            transfer.transfer_id,
+            "B",
+            user=mock_director,
+            enforce_category_permissions=True,
+        )
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == (
+        "Credit category overrides are only allowed for recorded transfers."
+    )
+    mock_transfer_repo.update_transfer.assert_not_awaited()
 
 
 @pytest.mark.anyio
@@ -574,6 +684,4 @@ async def test_director_can_recommend_transfer(
         # Verify the transfer was updated
         assert result == mock_transfer
         mock_transfer_repo.update_transfer.assert_called_once()
-
-
 
