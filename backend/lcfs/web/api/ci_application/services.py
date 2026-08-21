@@ -1588,6 +1588,7 @@ class CIApplicationServices:
         user: UserProfile,
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
+        self._require_editable_risk_assessment_draft(ci_application)
 
         risk_value = (
             data.preliminary_risk_assessment.value
@@ -1743,6 +1744,29 @@ class CIApplicationServices:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Priority score is required and must be a whole number from 1 to 999.",
+            )
+
+    def _require_editable_risk_assessment_draft(
+        self, ci_application: CIApplication
+    ) -> None:
+        """Autosave is only valid while a verification panel is still open.
+
+        Status stays Submitted after Verification 1/2, so a status-only check
+        would let a later PUT overwrite the completed verification record.
+        """
+        if getattr(ci_application, "verification_2_date", None):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Risk assessment cannot be changed after verification is complete.",
+            )
+        if getattr(
+            ci_application, "verification_1_date", None
+        ) and not _requires_verification_2(
+            getattr(ci_application, "preliminary_risk_assessment", None)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Risk assessment cannot be changed after verification is complete.",
             )
 
     def _require_submitted_workflow(self, ci_application: CIApplication) -> None:
