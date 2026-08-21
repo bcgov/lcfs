@@ -137,6 +137,10 @@ async def test_complete_verification_2_allowed_for_medium_and_high(
     ci.preliminary_risk_assessment = risk
     ci.priority_score = 10
     ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+    ci.assigned_analyst_id = 44
+    ci.assigned_analyst = SimpleNamespace(
+        user_profile_id=44, first_name="Alex", last_name="Analyst"
+    )
     repo.update.side_effect = lambda obj: obj
     repo.get_by_id.return_value = ci
 
@@ -148,6 +152,11 @@ async def test_complete_verification_2_allowed_for_medium_and_high(
     assert ci.verification_2_date is not None
     assert ci.verification_2_risk_assessment == risk
     assert ci.verification_2_priority_score == 25
+    assert ci.assigned_analyst_id is None
+    snapshot = repo.add_history.await_args.kwargs["snapshot"]
+    assert snapshot["event"] == "analyst_unassigned"
+    assert snapshot["previous_analyst"]["full_name"] == "Alex Analyst"
+    assert snapshot["new_analyst"] is None
 
 
 @pytest.mark.anyio
@@ -551,6 +560,153 @@ async def test_assign_analyst_rejects_withdrawn_application(service, repo, mock_
     repo.update.assert_not_awaited()
 
 
+def _analyst(user_profile_id: int, first_name: str, last_name: str):
+    return SimpleNamespace(
+        user_profile_id=user_profile_id,
+        first_name=first_name,
+        last_name=last_name,
+        organization_id=None,
+        is_active=True,
+        user_roles=[SimpleNamespace(role=SimpleNamespace(name=RoleEnum.ANALYST))],
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("previous", "new", "expected_event"),
+    [
+        (None, _analyst(12, "Alex", "Analyst"), "analyst_assigned"),
+        (
+            _analyst(12, "Alex", "Analyst"),
+            _analyst(13, "Sam", "Reviewer"),
+            "analyst_reassigned",
+        ),
+        (_analyst(12, "Alex", "Analyst"), None, "analyst_unassigned"),
+    ],
+)
+async def test_assign_analyst_records_assignment_history(
+    service, repo, mock_user, previous, new, expected_event
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = previous.user_profile_id if previous else None
+    ci.assigned_analyst = previous
+    ci.history_records = []
+    mock_user.first_name = "Casey"
+    mock_user.last_name = "Reviewer"
+    mock_user.role_names = {RoleEnum.GOVERNMENT}
+    if new:
+        repo.get_user_by_id.return_value = new
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    result = await service.assign_analyst_to_application(
+        ci, new.user_profile_id if new else None, mock_user
+    )
+
+    assert isinstance(result, CIApplicationSchema)
+    snapshot = repo.add_history.await_args.kwargs["snapshot"]
+    assert snapshot["event"] == expected_event
+    assert snapshot["changed_by"] == "Casey Reviewer"
+    assert snapshot["changed_at"]
+    assert snapshot["previous_analyst"] == (
+        None
+        if previous is None
+        else {
+            "user_profile_id": previous.user_profile_id,
+            "first_name": previous.first_name,
+            "last_name": previous.last_name,
+            "initials": "AA",
+            "full_name": "Alex Analyst",
+        }
+    )
+    assert snapshot["new_analyst"] == (
+        None
+        if new is None
+        else {
+            "user_profile_id": new.user_profile_id,
+            "first_name": new.first_name,
+            "last_name": new.last_name,
+            "initials": "AA" if new.user_profile_id == 12 else "SR",
+            "full_name": (
+                "Alex Analyst" if new.user_profile_id == 12 else "Sam Reviewer"
+            ),
+        }
+    )
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_noop_does_not_create_history(service, repo, mock_user):
+    analyst = _analyst(12, "Alex", "Analyst")
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = analyst.user_profile_id
+    ci.assigned_analyst = analyst
+
+    await service.assign_analyst_to_application(ci, analyst.user_profile_id, mock_user)
+
+    repo.update.assert_not_awaited()
+    repo.add_history.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_rejects_inactive_idir_analyst(
+    service, repo, mock_user
+):
+    inactive_analyst = _analyst(12, "Alex", "Analyst")
+    inactive_analyst.is_active = False
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = None
+    ci.assigned_analyst = None
+    repo.get_user_by_id.return_value = inactive_analyst
+
+    with pytest.raises(HTTPException) as exc:
+        await service.assign_analyst_to_application(ci, 12, mock_user)
+
+    assert exc.value.status_code == 400
+    repo.update.assert_not_awaited()
+    repo.add_history.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_assignment_history_is_only_serialized_for_idir_users(service, repo):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.history_records = [
+        SimpleNamespace(
+            ci_application_snapshot={
+                "event": "analyst_reassigned",
+                "previous_analyst": {
+                    "user_profile_id": 12,
+                    "first_name": "Alex",
+                    "last_name": "Analyst",
+                    "initials": "AA",
+                    "full_name": "Alex Analyst",
+                },
+                "new_analyst": {
+                    "user_profile_id": 13,
+                    "first_name": "Sam",
+                    "last_name": "Reviewer",
+                    "initials": "SR",
+                    "full_name": "Sam Reviewer",
+                },
+                "changed_at": "2026-08-19T18:45:00+00:00",
+                "changed_by": "Casey Reviewer",
+            }
+        )
+    ]
+    repo.get_by_id.return_value = ci
+    idir_user = SimpleNamespace(role_names={RoleEnum.GOVERNMENT})
+    supplier_user = SimpleNamespace(role_names={RoleEnum.CI_APPLICANT})
+
+    idir_result = await service.get_ci_application(10, idir_user)
+    supplier_result = await service.get_ci_application(10, supplier_user)
+
+    assert len(idir_result.assignment_history) == 1
+    assert (
+        idir_result.assignment_history[0].previous_analyst.full_name == "Alex Analyst"
+    )
+    assert idir_result.assignment_history[0].new_analyst.full_name == "Sam Reviewer"
+    assert supplier_result.assignment_history is None
+
+
 # ---------------------------------------------------------------------------
 # Create draft
 # ---------------------------------------------------------------------------
@@ -741,6 +897,8 @@ def test_pathway_input_requires_operating_dates_for_operational_data():
             operating_data_from=None,
             operating_data_to=None,
         )
+
+
 def test_pathway_input_requires_mode_level_distances():
     with pytest.raises(ValidationError):
         _new_pathway_input(feedstock_transport_mode=["Truck"])
