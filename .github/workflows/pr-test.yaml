@@ -3,7 +3,9 @@ name: Testing pipeline
 on:
   pull_request:
     branches:
-      - "*"
+      # "**" also matches base branches containing a slash. With "*" a pull
+      # request targeting e.g. feat/some-branch runs no checks at all.
+      - "**"
 
 permissions:
   contents: read
@@ -13,6 +15,58 @@ permissions:
   issues: write
 
 jobs:
+  alembic-heads:
+    name: "Alembic Single Head"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: |
+            backend/lcfs/db/migrations/versions
+
+      - name: Assert the migration chain has exactly one head
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          versions = pathlib.Path("backend/lcfs/db/migrations/versions")
+          revisions, parents = {}, set()
+          for path in versions.glob("*.py"):
+              source = path.read_text()
+              revision = re.search(r'^revision\s*=\s*["\']([^"\']+)', source, re.M)
+              down = re.search(r'^down_revision\s*=\s*["\']([^"\']+)', source, re.M)
+              if revision:
+                  revisions[revision.group(1)] = path.name
+              if down:
+                  parents.add(down.group(1))
+
+          heads = sorted(set(revisions) - parents)
+          print(f"{len(revisions)} migrations, {len(heads)} head(s)")
+          for head in heads:
+              print(f"  head: {head} ({revisions[head]})")
+
+          if len(heads) != 1:
+              print(
+                  "\nThe migration chain must have exactly one head. Re-point "
+                  "your migration's down_revision at the current head of the "
+                  "base branch. A forked chain fails 'alembic upgrade head', "
+                  "which runs on container start.",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          missing = sorted(parent for parent in parents if parent not in revisions)
+          if missing:
+              print(
+                  f"\ndown_revision refers to unknown revisions: {missing}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+          PY
+
   backend-setup:
     name: "Backend Setup"
     runs-on: ubuntu-latest
