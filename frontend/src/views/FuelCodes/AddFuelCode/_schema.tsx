@@ -767,6 +767,8 @@ export const fuelCodeColDefs = (
           const response = await client.get(path)
           return response.data
         },
+        optionLabel: 'label',
+        valueKey: 'value',
         title: 'formerCompany',
         api: params.api
       }),

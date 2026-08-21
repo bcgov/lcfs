@@ -28,6 +28,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodesSchema,
     PaginationResponseSchema,
     SearchFuelCodeList,
+    CompanySearchOptionSchema,
     TableOptionsSchema,
     FuelCodeSchema,
     FuelCodeStatusSchema,
@@ -75,7 +76,9 @@ async def get_table_options(
 
 @router.get(
     "/search",
-    response_model=Union[SearchFuelCodeList, List[str]],
+    response_model=Union[
+        SearchFuelCodeList, List[str], List[CompanySearchOptionSchema]
+    ],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT])
@@ -177,9 +180,7 @@ async def get_fuel_codes(
     )
 
 
-@router.post(
-    "/my-list", response_model=FuelCodesSchema, status_code=status.HTTP_200_OK
-)
+@router.post("/my-list", response_model=FuelCodesSchema, status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.CI_APPLICANT])
 async def get_my_fuel_codes(
     request: Request,
@@ -200,9 +201,7 @@ async def get_my_fuel_codes(
             fuel_codes=[],
         )
 
-    return await service.search_fuel_codes(
-        pagination, organization_id=organization_id
-    )
+    return await service.search_fuel_codes(pagination, organization_id=organization_id)
 
 
 @router.post(
@@ -320,7 +319,11 @@ async def get_transport_modes(
     return await service.get_transport_modes()
 
 
-@router.get("/{fuel_code_id}/group", response_model=FuelCodeGroupDetailSchema, status_code=status.HTTP_200_OK)
+@router.get(
+    "/{fuel_code_id}/group",
+    response_model=FuelCodeGroupDetailSchema,
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_fuel_code_group_detail(
     request: Request,

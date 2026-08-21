@@ -320,9 +320,7 @@ class FuelCodeRepository:
         return formatted_rows, (total or 0)
 
     @repo_handler
-    async def get_fuel_code_group_detail(
-        self, fuel_code_id: int
-    ) -> tuple:
+    async def get_fuel_code_group_detail(self, fuel_code_id: int) -> tuple:
         """
         Returns all iterations (same prefix + base suffix) for a fuel code group,
         the full details of the latest iteration, and volume-over-time data.
@@ -338,13 +336,10 @@ class FuelCodeRepository:
         prefix_id = source_fc.prefix_id
 
         # Find all fuel code IDs in this group (same prefix + base number in suffix)
-        group_id_subquery = (
-            select(FuelCode.fuel_code_id)
-            .where(
-                and_(
-                    FuelCode.prefix_id == prefix_id,
-                    FuelCode.fuel_suffix.like(f"{base_suffix}.%"),
-                )
+        group_id_subquery = select(FuelCode.fuel_code_id).where(
+            and_(
+                FuelCode.prefix_id == prefix_id,
+                FuelCode.fuel_suffix.like(f"{base_suffix}.%"),
             )
         )
 
@@ -1025,13 +1020,25 @@ class FuelCodeRepository:
         return (await self.db.execute(query)).scalars().all()
 
     @repo_handler
+    async def get_organizations_like(self, prefix: str) -> List[tuple]:
+        """Return registered orgs starting with prefix (id + name)."""
+        query = (
+            select(Organization.organization_id, Organization.name)
+            .where(func.lower(Organization.name).like(func.lower(prefix + "%")))
+            .order_by(Organization.name)
+            .limit(10)
+        )
+        return (await self.db.execute(query)).all()
+
+    @repo_handler
     async def get_distinct_former_company_names(self, former_company: str) -> List[str]:
         query = (
             select(distinct(FuelCode.former_company))
             .where(
+                FuelCode.former_company.isnot(None),
                 func.lower(FuelCode.former_company).like(
                     func.lower(former_company + "%")
-                )
+                ),
             )
             .order_by(FuelCode.former_company)
             .limit(10)
@@ -1238,7 +1245,8 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
-        query = text("""
+        query = text(
+            """
             WITH parsed_codes AS (
                 SELECT SPLIT_PART(fc.fuel_suffix, '.', 1)::INTEGER AS base_code
                 FROM fuel_code fc
@@ -1272,14 +1280,16 @@ class FuelCodeRepository:
             )
             SELECT LPAD(next_base_code::TEXT, 3, '0') || '.0' AS next_fuel_code
             FROM next_code;
-            """)
+            """
+        )
         result = (await self.db.execute(query, {"prefix": prefix})).scalar_one_or_none()
         return self.format_decimal(result)
 
     async def get_next_available_sub_version_fuel_code_by_prefix(
         self, input_version: str, prefix_id: int
     ) -> str:
-        query = text("""
+        query = text(
+            """
             WITH split_versions AS (
                 SELECT
                     fuel_suffix,
@@ -1312,7 +1322,8 @@ class FuelCodeRepository:
                 COALESCE((SELECT sub_version FROM missing_sub_versions)::VARCHAR,
                         (SELECT COALESCE(MAX(sub_version), -1) + 1 FROM sub_versions)::VARCHAR)
                 AS next_available_version
-            """)
+            """
+        )
         result = (
             await self.db.execute(
                 query, {"input_version": int(input_version), "prefix_id": prefix_id}

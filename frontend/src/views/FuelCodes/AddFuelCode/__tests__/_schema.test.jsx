@@ -100,6 +100,12 @@ describe('fuelCodeColDefs', () => {
     expect(formerCompanyCol.cellEditorParams({ api: {} }).queryKey).toBe(
       'former-company-search'
     )
+    expect(formerCompanyCol.cellEditorParams({ api: {} }).optionLabel).toBe(
+      'label'
+    )
+    expect(formerCompanyCol.cellEditorParams({ api: {} }).valueKey).toBe(
+      'value'
+    )
     expect(
       loadingColumnDefs
         .find((col) => col.field === 'prefix')
