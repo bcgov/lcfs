@@ -120,6 +120,15 @@ class DesignatedActionSchema(BaseSchema):
         from_attributes = True
 
 
+class InitiativeAgreementLifecycleStatusSchema(BaseSchema):
+    initiative_agreement_lifecycle_status_id: int
+    status: str
+    description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class InitiativeAgreementListItemSchema(BaseSchema):
     initiative_agreement_id: int
     ia_code: Optional[str] = None
@@ -132,7 +141,7 @@ class InitiativeAgreementListItemSchema(BaseSchema):
     total_credits_allocated: int
     total_credits_issued: int
     update_date: datetime
-    current_status: InitiativeAgreementStatusSchema
+    lifecycle_status: Optional[InitiativeAgreementLifecycleStatusSchema] = None
     organization: OrganizationSchema
 
     class Config:

@@ -1,12 +1,19 @@
 from fastapi import Depends
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
-from sqlalchemy import String, and_, asc, cast, desc, func, select
+from sqlalchemy import and_, asc, desc, func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from lcfs.db.base import ActionTypeEnum
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.models.initiative_agreement.DesignatedAction import DesignatedAction
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    RECORD_KIND_AGREEMENT,
+)
+from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleStatus import (
+    InitiativeAgreementLifecycleStatus,
+)
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatus,
 )
@@ -24,8 +31,8 @@ from lcfs.web.core.decorators import repo_handler
 
 # Grid field names (snake_cased by PaginationRequestSchema) -> filter/sort columns
 LIST_FIELD_COLUMNS = {
-    "status": InitiativeAgreementStatus.status,
-    "current_status.status": InitiativeAgreementStatus.status,
+    "status": InitiativeAgreementLifecycleStatus.status,
+    "lifecycle_status.status": InitiativeAgreementLifecycleStatus.status,
     "organization": Organization.name,
     "organization.name": Organization.name,
     "ia_code": InitiativeAgreement.ia_code,
@@ -40,8 +47,6 @@ LIST_FIELD_COLUMNS = {
     "total_credits_allocated": InitiativeAgreement.total_credits_allocated,
     "total_credits_issued": InitiativeAgreement.total_credits_issued,
 }
-# Enum-backed columns are compared as text
-_TEXT_CAST_FIELDS = {"status", "current_status.status", "agreement_type"}
 _DATE_FIELDS = {
     "entry_date",
     "agreement_start_date",
@@ -56,8 +61,6 @@ def _build_list_filter(filter_model):
     column = LIST_FIELD_COLUMNS.get(filter_model.field)
     if column is None:
         return None
-    if filter_model.field in _TEXT_CAST_FIELDS:
-        column = cast(column, String)
 
     if filter_model.filter_type == "date" or filter_model.field in _DATE_FIELDS:
         if filter_model.type == "inRange":
@@ -242,8 +245,14 @@ class InitiativeAgreementRepository:
         """
         query = (
             select(InitiativeAgreement)
-            .join(InitiativeAgreement.current_status)
-            .join(InitiativeAgreement.to_organization)
+            # Outer join: agreement records carry a lifecycle status, not the
+            # credit-award status, and it is nullable until one is set.
+            .outerjoin(InitiativeAgreement.lifecycle_status).join(
+                InitiativeAgreement.to_organization
+            )
+            # Excludes the legacy one-row-per-credit-award records that share
+            # this table until the transaction-flow cutover.
+            .where(InitiativeAgreement.record_kind == RECORD_KIND_AGREEMENT)
         )
         if organization_id is not None:
             query = query.where(
@@ -275,7 +284,7 @@ class InitiativeAgreementRepository:
         offset = (pagination.page - 1) * pagination.size
         result = await self.db.execute(
             query.options(
-                selectinload(InitiativeAgreement.current_status),
+                selectinload(InitiativeAgreement.lifecycle_status),
                 selectinload(InitiativeAgreement.to_organization),
             )
             .order_by(*order_by_clauses)
@@ -293,7 +302,7 @@ class InitiativeAgreementRepository:
             select(InitiativeAgreement)
             .options(
                 selectinload(InitiativeAgreement.to_organization),
-                selectinload(InitiativeAgreement.current_status),
+                selectinload(InitiativeAgreement.lifecycle_status),
                 selectinload(InitiativeAgreement.designated_actions).selectinload(
                     DesignatedAction.current_status
                 ),
@@ -307,3 +316,55 @@ class InitiativeAgreementRepository:
         )
         result = await self.db.execute(query)
         return result.scalars().first()
+
+    @repo_handler
+    async def get_current_designated_actions(
+        self, initiative_agreement_id: int
+    ) -> List[DesignatedAction]:
+        """
+        The current version of each designated action.
+
+        Change orders append a row sharing group_uuid with a higher version,
+        so selecting every row would show one action once per amendment.
+        Mirrors the charging_site latest-version-per-group pattern.
+        """
+        latest = (
+            select(
+                DesignatedAction.group_uuid,
+                func.max(DesignatedAction.version).label("max_version"),
+            )
+            .where(DesignatedAction.initiative_agreement_id == initiative_agreement_id)
+            .group_by(DesignatedAction.group_uuid)
+            .subquery()
+        )
+        query = (
+            select(DesignatedAction)
+            .join(
+                latest,
+                and_(
+                    DesignatedAction.group_uuid == latest.c.group_uuid,
+                    DesignatedAction.version == latest.c.max_version,
+                ),
+            )
+            .options(
+                selectinload(DesignatedAction.current_status),
+                selectinload(DesignatedAction.assigned_analyst),
+            )
+            .where(
+                DesignatedAction.initiative_agreement_id == initiative_agreement_id,
+                DesignatedAction.action_type != ActionTypeEnum.DELETE,
+            )
+            .order_by(asc(DesignatedAction.action_number))
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_lifecycle_statuses(self) -> List[InitiativeAgreementLifecycleStatus]:
+        """Lifecycle statuses for the agreement grid's status filter."""
+        result = await self.db.execute(
+            select(InitiativeAgreementLifecycleStatus).order_by(
+                asc(InitiativeAgreementLifecycleStatus.display_order)
+            )
+        )
+        return result.scalars().all()

@@ -42,6 +42,9 @@ from lcfs.web.api.internal_comment.schema import (
 
 logger = structlog.get_logger(__name__)
 
+# Upper bound on grid page size; the frontend asks for 25.
+MAX_PAGE_SIZE = 200
+
 
 class InitiativeAgreementServices:
     def __init__(
@@ -85,7 +88,7 @@ class InitiativeAgreementServices:
             total_credits_allocated=agreement.total_credits_allocated,
             total_credits_issued=agreement.total_credits_issued,
             update_date=agreement.update_date,
-            current_status=agreement.current_status,
+            lifecycle_status=agreement.lifecycle_status,
             organization=agreement.to_organization,
         )
 
@@ -99,6 +102,7 @@ class InitiativeAgreementServices:
         their own organization.
         """
         pagination = validate_pagination(pagination)
+        pagination.size = min(pagination.size, MAX_PAGE_SIZE)
         organization_id = None
         user = self.request.user if self.request else None
         if user is not None and not user_has_roles(user, [RoleEnum.GOVERNMENT]):
@@ -124,6 +128,11 @@ class InitiativeAgreementServices:
         )
 
     @service_handler
+    async def get_lifecycle_statuses(self):
+        """Lifecycle statuses for the agreement grid's status filter."""
+        return await self.repo.get_lifecycle_statuses()
+
+    @service_handler
     async def get_initiative_agreement_profile(
         self, initiative_agreement_id: int
     ) -> InitiativeAgreementProfileSchema:
@@ -135,9 +144,11 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
-        designated_actions = sorted(
-            agreement.designated_actions,
-            key=lambda action: (action.action_number, action.version),
+        # Current version of each action only: a change order appends a row
+        # sharing group_uuid, so the raw relationship shows amended actions
+        # once per version.
+        designated_actions = await self.repo.get_current_designated_actions(
+            initiative_agreement_id
         )
         return InitiativeAgreementProfileSchema(
             **self._list_item_kwargs(agreement),

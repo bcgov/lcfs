@@ -1,8 +1,11 @@
+from typing import List
+
 from fastapi import APIRouter, Body, Depends, Request, status
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementCreateSchema,
+    InitiativeAgreementLifecycleStatusSchema,
     InitiativeAgreementProfileSchema,
     InitiativeAgreementSchema,
     InitiativeAgreementsListSchema,
@@ -12,6 +15,16 @@ from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementVali
 from lcfs.web.core.decorators import view_handler
 from lcfs.db.models.user.Role import RoleEnum
 
+# Agreement-management endpoints are scoped to the Initiative Agreement roles.
+# RoleEnum.GOVERNMENT would admit every IDIR user of any role; IA_PROPONENT is
+# not redundant beside it, because BCeID proponents need their own agreements.
+IA_MODULE_ROLES = [
+    RoleEnum.IA_ANALYST,
+    RoleEnum.IA_MANAGER,
+    RoleEnum.DIRECTOR,
+    RoleEnum.IA_PROPONENT,
+]
+
 router = APIRouter()
 
 
@@ -20,7 +33,7 @@ router = APIRouter()
     response_model=InitiativeAgreementsListSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.IA_PROPONENT])
+@view_handler(IA_MODULE_ROLES)
 async def get_initiative_agreements(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
@@ -31,10 +44,24 @@ async def get_initiative_agreements(
 
 
 @router.get(
+    "/statuses",
+    response_model=List[InitiativeAgreementLifecycleStatusSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_MODULE_ROLES)
+async def get_initiative_agreement_statuses(
+    request: Request,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Lifecycle statuses for the agreement grid's status filter."""
+    return await service.get_lifecycle_statuses()
+
+
+@router.get(
     "/{initiative_agreement_id}/profile",
     response_model=InitiativeAgreementProfileSchema,
 )
-@view_handler(["*"])
+@view_handler(IA_MODULE_ROLES)
 async def get_initiative_agreement_profile(
     request: Request,
     initiative_agreement_id: int,

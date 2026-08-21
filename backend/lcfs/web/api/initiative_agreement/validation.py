@@ -58,7 +58,16 @@ class InitiativeAgreementValidation:
         if not initiative_agreement:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Transaction not found.",
+                detail="Initiative agreement not found.",
+            )
+
+        # to_organization is nullable on this table, and dereferencing it
+        # unguarded turned a data gap into a 500 on every route that validates
+        # an agreement, including the document endpoints.
+        if initiative_agreement.to_organization is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Initiative agreement not found.",
             )
 
         organization_id = initiative_agreement.to_organization.organization_id
@@ -74,5 +83,5 @@ class InitiativeAgreementValidation:
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="User does not have access to this transaction.",
+                detail="User does not have access to this initiative agreement.",
             )
