@@ -89,23 +89,24 @@ class InternalCommentService:
     async def _send_ci_comment_notification(
         self,
         ci_application_id: int,
+        event_key: str,
+        notification_type: str,
         origin_user_profile_id: Optional[int],
+        related_organization_id: Optional[int] = None,
     ) -> None:
-        """Send an applicant-activity notification when a BCeID user posts a comment."""
-        notification_types = CI_APPLICATION_NOTIFICATION_MAPPER.get(
-            "applicant_activity", []
-        )
+        """Send CI application notifications for public comments."""
+        notification_types = CI_APPLICATION_NOTIFICATION_MAPPER.get(event_key, [])
         if not notification_types:
             return
         message_data = {
             "id": ci_application_id,
             "service": "ciApplication",
-            "type": "CI Application Comment Received",
+            "type": notification_type,
         }
         notification_data = NotificationMessageSchema(
-            type="CI Application Comment Received",
+            type=notification_type,
             message=json.dumps(message_data),
-            related_organization_id=None,
+            related_organization_id=related_organization_id,
             origin_user_profile_id=origin_user_profile_id,
             related_transaction_id=str(ci_application_id),
         )
@@ -240,9 +241,25 @@ class InternalCommentService:
         ):
             await self._send_ci_comment_notification(
                 data.entity_id,
+                "applicant_activity",
+                "CI Application Comment Received",
                 self.request.user.user_profile_id
                 if hasattr(self.request.user, "user_profile_id")
                 else None,
+            )
+        elif (
+            is_government_user
+            and data.entity_type == EntityTypeEnum.CI_APPLICATION
+            and data.visibility == CommentVisibilityEnum.PUBLIC
+        ):
+            await self._send_ci_comment_notification(
+                data.entity_id,
+                "government_action",
+                "CI Application Comment Received",
+                self.request.user.user_profile_id
+                if hasattr(self.request.user, "user_profile_id")
+                else None,
+                related_organization_id=created_comment.organization_id,
             )
 
         return InternalCommentResponseSchema.from_orm(created_comment)

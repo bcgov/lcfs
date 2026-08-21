@@ -43,6 +43,7 @@ from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
 from lcfs.web.api.ci_application.schema import (
     AssignedAnalystSchema,
+    CIApplicationAssignmentHistorySchema,
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
     CIApplicationSchema,
@@ -703,6 +704,7 @@ def _user_has_any_role(user: UserProfile, role_names: List[RoleEnum]) -> bool:
 def _to_full_schema(
     ci: CIApplication,
     signature_user_display_name: Optional[str] = None,
+    include_assignment_history: bool = False,
 ) -> CIApplicationSchema:
     all_pathways = list(getattr(ci, "pathways", None) or [])
 
@@ -793,6 +795,11 @@ def _to_full_schema(
         assigned_analyst=CIApplicationUserSchema.model_validate(
             getattr(ci, "assigned_analyst", None)
         ),
+        assignment_history=(
+            _assignment_history_from_records(history_records)
+            if include_assignment_history
+            else None
+        ),
         verification_1_user=CIApplicationUserSchema.model_validate(
             getattr(ci, "verification_1_user", None)
         ),
@@ -824,6 +831,69 @@ def _initials(first: Optional[str], last: Optional[str]) -> Optional[str]:
     if not first_part and not last_part:
         return None
     return f"{first_part[:1]}{last_part[:1]}".upper()
+
+
+ASSIGNMENT_HISTORY_EVENTS = {
+    "analyst_assigned",
+    "analyst_reassigned",
+    "analyst_unassigned",
+}
+
+
+def _assignment_user_from_snapshot(
+    value: Optional[dict],
+) -> Optional[CIApplicationUserSchema]:
+    if not isinstance(value, dict) or value.get("user_profile_id") is None:
+        return None
+    return CIApplicationUserSchema(**value)
+
+
+def _assignment_history_from_records(
+    history_records: List,
+) -> List[CIApplicationAssignmentHistorySchema]:
+    events = []
+    for history in history_records:
+        snapshot = getattr(history, "ci_application_snapshot", None)
+        if (
+            not isinstance(snapshot, dict)
+            or snapshot.get("event") not in ASSIGNMENT_HISTORY_EVENTS
+        ):
+            continue
+        changed_at = snapshot.get("changed_at") or getattr(history, "create_date", None)
+        if not changed_at:
+            continue
+        events.append(
+            CIApplicationAssignmentHistorySchema(
+                event=snapshot["event"],
+                previous_analyst=_assignment_user_from_snapshot(
+                    snapshot.get("previous_analyst")
+                ),
+                new_analyst=_assignment_user_from_snapshot(snapshot.get("new_analyst")),
+                changed_at=changed_at,
+                changed_by=snapshot.get("changed_by"),
+            )
+        )
+    return sorted(events, key=lambda event: event.changed_at, reverse=True)
+
+
+def _assignment_user_snapshot(user) -> Optional[dict]:
+    if user is None:
+        return None
+    return CIApplicationUserSchema.model_validate(user).model_dump(mode="json")
+
+
+def _assignment_event_name(
+    previous_analyst_id: Optional[int], new_analyst_id: Optional[int]
+) -> str:
+    if previous_analyst_id is None:
+        return "analyst_assigned"
+    if new_analyst_id is None:
+        return "analyst_unassigned"
+    return "analyst_reassigned"
+
+
+def _is_idir_user(user: Optional[UserProfile]) -> bool:
+    return bool(user and RoleEnum.GOVERNMENT in (getattr(user, "role_names", []) or []))
 
 
 def _to_assigned_analyst(user) -> Optional[AssignedAnalystSchema]:
@@ -938,7 +1008,9 @@ class CIApplicationServices:
         self.geocoder = geocoder
         self.notification_service = notification_service
 
-    async def _to_full_schema_with_user(self, ci: CIApplication) -> CIApplicationSchema:
+    async def _to_full_schema_with_user(
+        self, ci: CIApplication, requesting_user: Optional[UserProfile] = None
+    ) -> CIApplicationSchema:
         """Serialize a CI application, resolving the signing-authority's
         Keycloak username to a human display name via the user profile.
         """
@@ -947,7 +1019,53 @@ class CIApplicationServices:
             display_name = await self.user_repo.get_full_name(ci.signature_user)
             if display_name:
                 display_name = display_name.strip() or None
-        return _to_full_schema(ci, signature_user_display_name=display_name)
+        return _to_full_schema(
+            ci,
+            signature_user_display_name=display_name,
+            include_assignment_history=_is_idir_user(requesting_user),
+        )
+
+    async def _get_assignment_user(
+        self, ci_application: CIApplication, analyst_id: Optional[int]
+    ) -> Optional[UserProfile]:
+        if analyst_id is None:
+            return None
+        assigned_analyst = getattr(ci_application, "assigned_analyst", None)
+        if (
+            assigned_analyst is not None
+            and getattr(assigned_analyst, "user_profile_id", None) == analyst_id
+        ):
+            return assigned_analyst
+        return await self.repo.get_user_by_id(analyst_id)
+
+    def _assignment_history_snapshot(
+        self,
+        previous_analyst_id: Optional[int],
+        previous_analyst,
+        new_analyst_id: Optional[int],
+        new_analyst,
+        user: UserProfile,
+        changed_at: datetime,
+    ) -> dict:
+        name_parts = [
+            part.strip()
+            for part in (
+                getattr(user, "first_name", None),
+                getattr(user, "last_name", None),
+            )
+            if isinstance(part, str) and part.strip()
+        ]
+        username = getattr(user, "keycloak_username", None)
+        changed_by = " ".join(name_parts) or (
+            username if isinstance(username, str) else "Unknown user"
+        )
+        return {
+            "event": _assignment_event_name(previous_analyst_id, new_analyst_id),
+            "previous_analyst": _assignment_user_snapshot(previous_analyst),
+            "new_analyst": _assignment_user_snapshot(new_analyst),
+            "changed_at": changed_at.isoformat(),
+            "changed_by": changed_by,
+        }
 
     async def _send_ci_notification(
         self,
@@ -956,7 +1074,7 @@ class CIApplicationServices:
         notification_type: str,
         origin_user_profile_id: Optional[int] = None,
     ) -> None:
-        """Send a CI application notification to subscribed government users."""
+        """Send a CI application notification to subscribed users."""
         notification_types = CI_APPLICATION_NOTIFICATION_MAPPER.get(event_key, [])
         if not notification_types:
             return
@@ -973,7 +1091,7 @@ class CIApplicationServices:
         notification_data = NotificationMessageSchema(
             type=notification_type,
             message=json.dumps(message_data),
-            related_organization_id=None,
+            related_organization_id=ci_application.organization_id,
             origin_user_profile_id=origin_user_profile_id,
             related_transaction_id=str(ci_application.ci_application_id),
         )
@@ -1138,7 +1256,7 @@ class CIApplicationServices:
         await self.repo.add_history(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def update_generated_fuel_code(
@@ -1528,24 +1646,35 @@ class CIApplicationServices:
         )
 
     @service_handler
-    async def get_ci_application(self, ci_application_id: int) -> CIApplicationSchema:
+    async def get_ci_application(
+        self,
+        ci_application_id: int,
+        requesting_user: Optional[UserProfile] = None,
+    ) -> CIApplicationSchema:
         ci = await self.repo.get_by_id(ci_application_id)
         if not ci:
             raise DataNotFoundException("CI application not found.")
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, requesting_user)
 
-    async def _validate_analyst_eligibility(self, assigned_analyst_id: int) -> None:
+    async def _validate_analyst_eligibility(
+        self, assigned_analyst_id: int
+    ) -> UserProfile:
         assigned_analyst = await self.repo.get_user_by_id(assigned_analyst_id)
         if not assigned_analyst:
             raise DataNotFoundException("Assigned analyst not found.")
 
         role_names = [user_role.role.name for user_role in assigned_analyst.user_roles]
         is_idir_user = assigned_analyst.organization_id is None
-        if RoleEnum.ANALYST not in role_names or not is_idir_user:
+        if (
+            RoleEnum.ANALYST not in role_names
+            or not is_idir_user
+            or not assigned_analyst.is_active
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Assigned user must be an active IDIR analyst.",
             )
+        return assigned_analyst
 
     @service_handler
     async def get_available_analysts(self) -> List[CIApplicationUserSchema]:
@@ -1568,16 +1697,36 @@ class CIApplicationServices:
                 detail="Workflow actions cannot be recorded on Withdrawn applications.",
             )
 
+        previous_analyst_id = getattr(ci_application, "assigned_analyst_id", None)
+        if previous_analyst_id == assigned_analyst_id:
+            return await self._to_full_schema_with_user(ci_application, user)
+
+        previous_analyst = await self._get_assignment_user(
+            ci_application, previous_analyst_id
+        )
+        new_analyst = None
         if assigned_analyst_id:
-            await self._validate_analyst_eligibility(assigned_analyst_id)
+            new_analyst = await self._validate_analyst_eligibility(assigned_analyst_id)
 
         ci_application.assigned_analyst_id = assigned_analyst_id
+        ci_application.assigned_analyst = new_analyst
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
+        await self.repo.add_history(
+            ci_application,
+            snapshot=self._assignment_history_snapshot(
+                previous_analyst_id,
+                previous_analyst,
+                assigned_analyst_id,
+                new_analyst,
+                user,
+                datetime.now(timezone.utc),
+            ),
+        )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def complete_verification_1(
@@ -1589,18 +1738,37 @@ class CIApplicationServices:
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
         self._validate_priority_score(priority_score)
+        previous_analyst_id = getattr(ci_application, "assigned_analyst_id", None)
+        previous_analyst = await self._get_assignment_user(
+            ci_application, previous_analyst_id
+        )
         ci_application.preliminary_risk_assessment = risk_assessment.value
         ci_application.priority_score = priority_score
         ci_application.verification_1_user_id = user.user_profile_id
         ci_application.verification_1_date = datetime.now(timezone.utc)
         ci_application.assigned_analyst_id = None
+        ci_application.assigned_analyst = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
-        await self.repo.add_history(ci_application)
+        await self.repo.add_history(
+            ci_application,
+            snapshot=(
+                self._assignment_history_snapshot(
+                    previous_analyst_id,
+                    previous_analyst,
+                    None,
+                    None,
+                    user,
+                    datetime.now(timezone.utc),
+                )
+                if previous_analyst_id is not None
+                else None
+            ),
+        )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def complete_verification_2(
@@ -1626,6 +1794,11 @@ class CIApplicationServices:
                 detail="Verification 1 must be completed first.",
             )
 
+        previous_analyst_id = getattr(ci_application, "assigned_analyst_id", None)
+        previous_analyst = await self._get_assignment_user(
+            ci_application, previous_analyst_id
+        )
+
         ci_application.verification_2_risk_assessment = (
             risk_assessment.value
             if risk_assessment is not None
@@ -1639,13 +1812,28 @@ class CIApplicationServices:
         ci_application.verification_2_user_id = user.user_profile_id
         ci_application.verification_2_date = datetime.now(timezone.utc)
         ci_application.assigned_analyst_id = None
+        ci_application.assigned_analyst = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
-        await self.repo.add_history(ci_application)
+        await self.repo.add_history(
+            ci_application,
+            snapshot=(
+                self._assignment_history_snapshot(
+                    previous_analyst_id,
+                    previous_analyst,
+                    None,
+                    None,
+                    user,
+                    datetime.now(timezone.utc),
+                )
+                if previous_analyst_id is not None
+                else None
+            ),
+        )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def recommend_to_director(
@@ -1698,7 +1886,7 @@ class CIApplicationServices:
             "CI Application Recommended",
             origin_user_profile_id=user.user_profile_id,
         )
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     def _validate_priority_score(self, priority_score: Optional[int]) -> None:
         if (
@@ -1773,7 +1961,7 @@ class CIApplicationServices:
         await self.repo.add_history(ci)
         # Reload with all relationships needed for the response.
         ci = await self.repo.get_by_id(ci.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def update_step1(
@@ -1798,7 +1986,7 @@ class CIApplicationServices:
 
         ci_application = await self.repo.update(ci_application)
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def delete_draft(self, ci_application: CIApplication) -> None:
@@ -2090,7 +2278,7 @@ class CIApplicationServices:
                 "CI Application Additional Information Provided",
                 origin_user_profile_id=user.user_profile_id,
             )
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def request_pathway_changes(
@@ -2126,7 +2314,13 @@ class CIApplicationServices:
         )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        await self._send_ci_notification(
+            ci,
+            "government_action",
+            "CI Application Changes Requested",
+            origin_user_profile_id=user.user_profile_id,
+        )
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def request_documentation(
@@ -2165,7 +2359,13 @@ class CIApplicationServices:
         )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        await self._send_ci_notification(
+            ci,
+            "government_action",
+            "CI Application Changes Requested",
+            origin_user_profile_id=user.user_profile_id,
+        )
+        return await self._to_full_schema_with_user(ci, user)
 
     # ------------------------------------------------------------------
     # Step 3 — Documents & GHGenius modelling
@@ -2215,7 +2415,7 @@ class CIApplicationServices:
         await self.repo.update(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     # ------------------------------------------------------------------
     # Step 4 — Sign & submit
@@ -2263,7 +2463,7 @@ class CIApplicationServices:
         await self.repo.update(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def submit_application(
@@ -2357,7 +2557,7 @@ class CIApplicationServices:
             "CI Application Submitted",
             origin_user_profile_id=user.user_profile_id,
         )
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     # ------------------------------------------------------------------
     # Step 5 — Government decision & comments
@@ -2507,6 +2707,12 @@ class CIApplicationServices:
                 "CI Application Director Approved",
                 origin_user_profile_id=user.user_profile_id,
             )
+            await self._send_ci_notification(
+                ci,
+                "fuel_code_approved",
+                "CI Application Fuel Codes Approved",
+                origin_user_profile_id=user.user_profile_id,
+            )
         elif is_director_returned:
             await self._send_ci_notification(
                 ci,
@@ -2514,4 +2720,4 @@ class CIApplicationServices:
                 "CI Application Director Returned",
                 origin_user_profile_id=user.user_profile_id,
             )
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
