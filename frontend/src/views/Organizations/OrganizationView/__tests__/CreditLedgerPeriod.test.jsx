@@ -24,7 +24,10 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-vi.mock('@/utils/formatters', () => ({
+// Only dateFormatter is stubbed (identity, so raw ISO strings stay assertable);
+// formatTransactionId is kept real so the id prefixes are exercised for real.
+vi.mock('@/utils/formatters', async (importOriginal) => ({
+  ...(await importOriginal()),
   dateFormatter: ({ value }) => value
 }))
 
@@ -163,6 +166,21 @@ describe('CreditLedgerPeriod (compliance-period ledger #4714)', () => {
     expect(balances[1]).toHaveTextContent('-1,500')
   })
 
+  // Regression: every non-ComplianceReport type used to fall back to the "CT"
+  // transfer prefix, so initiative agreements and admin adjustments displayed
+  // a correct number under the wrong prefix.
+  it('prefixes transaction ids by type in both the list and totals views', () => {
+    renderComponent({ organizationId: 999 })
+    expect(screen.getByText('IA43')).toBeInTheDocument()
+    expect(screen.getByText('CT444')).toBeInTheDocument()
+    expect(screen.queryByText('CT43')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('toggle-show-totals'))
+    expect(screen.getByText('IA43')).toBeInTheDocument()
+    expect(screen.getByText('CT444')).toBeInTheDocument()
+    expect(screen.queryByText('CT43')).not.toBeInTheDocument()
+  })
+
   it('switches to grouped totals view with per-type and grand totals', () => {
     renderComponent({ organizationId: 999 })
     expect(screen.queryByTestId('ledger-grand-total')).not.toBeInTheDocument()
@@ -185,6 +203,24 @@ describe('CreditLedgerPeriod (compliance-period ledger #4714)', () => {
     )
   })
 
+  it('downloads the full ledger regardless of the period on screen', () => {
+    const download = vi.fn()
+    mockDownload.mockReturnValue(download)
+    renderComponent({ organizationId: 999 })
+
+    fireEvent.click(screen.getByTestId('download-credit-ledger'))
+    expect(download).toHaveBeenLastCalledWith({
+      orgId: 999
+    })
+
+    fireEvent.click(screen.getByTestId('toggle-show-pending'))
+    fireEvent.click(screen.getByTestId('ledger-prev-period'))
+    fireEvent.click(screen.getByTestId('download-credit-ledger'))
+    expect(download).toHaveBeenLastCalledWith({
+      orgId: 999
+    })
+  })
+
   it('renders the assessed-balance section for previous and current year', () => {
     renderComponent({ organizationId: 999 })
     const section = screen.getByTestId('ledger-assessed-balance')
@@ -193,6 +229,36 @@ describe('CreditLedgerPeriod (compliance-period ledger #4714)', () => {
     )
     expect(within(section).getByTestId('assessed-current')).toHaveTextContent(
       '1,850'
+    )
+  })
+
+  it('leaves an assessed balance blank when the year has no assessed report', () => {
+    // #4831: absent is not zero — a year with no assessed report has no
+    // assessed balance, and showing 0 would read as a real end-of-year balance.
+    mockPeriod.mockReturnValue({
+      data: {
+        ...PERIOD_PAYLOAD,
+        assessedBalance: {
+          previousYear: 2023,
+          previousBalance: 1000,
+          currentYear: 2024,
+          currentBalance: null
+        }
+      },
+      isLoading: false,
+      isError: false
+    })
+    renderComponent({ organizationId: 999 })
+    const section = screen.getByTestId('ledger-assessed-balance')
+    expect(within(section).getByTestId('assessed-current')).toHaveTextContent(
+      ''
+    )
+    expect(
+      within(section).getByTestId('assessed-current')
+    ).not.toHaveTextContent('0')
+    // The year that does have an assessed report still shows its value.
+    expect(within(section).getByTestId('assessed-previous')).toHaveTextContent(
+      '1,000'
     )
   })
 

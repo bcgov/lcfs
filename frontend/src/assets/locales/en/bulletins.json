@@ -26,11 +26,11 @@
     "downloadError": "Failed to download fuel code bulletin."
   },
   "columns": {
-    "fuelCode": "Fuel Code",
+    "fuelCode": "Fuel code",
     "fuel": "Fuel",
     "company": "Company",
-    "carbonIntensity": "Carbon Intensity (gCO₂e/MJ)",
-    "effectiveDate": "Effective Date",
-    "expiryDate": "Expiry Date"
+    "carbonIntensity": "Carbon intensity (gCO₂e/MJ)",
+    "effectiveDate": "Effective date",
+    "expiryDate": "Expiry date"
   }
 }

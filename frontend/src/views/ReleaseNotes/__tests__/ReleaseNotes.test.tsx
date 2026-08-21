@@ -8,7 +8,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
-        'releaseNotes:pageTitle': 'Release Notes',
+        'releaseNotes:pageTitle': 'Release notes',
         'releaseNotes:pageSubtitle':
           'Track new features, improvements, and fixes.',
         'releaseNotes:loadError': 'Unable to load release notes.',
@@ -31,9 +31,9 @@ vi.mock('react-i18next', () => ({
         'releaseNotes:resetConfirm': 'Reset',
         'common:cancel': 'Cancel',
         'releaseNotes:categories.features': 'Features',
-        'releaseNotes:categories.fixes': 'Bug Fixes',
+        'releaseNotes:categories.fixes': 'Bug fixes',
         'releaseNotes:categories.security': 'Security',
-        'releaseNotes:categories.breaking': 'Breaking Changes',
+        'releaseNotes:categories.breaking': 'Breaking changes',
         'releaseNotes:categories.dependencies': 'Dependencies',
         'releaseNotes:categories.other': 'Other'
       }
@@ -119,7 +119,7 @@ describe('ReleaseNotes', () => {
   it('renders the page title and subtitle', async () => {
     render(<ReleaseNotes />, { wrapper })
 
-    expect(screen.getByText('Release Notes')).toBeInTheDocument()
+    expect(screen.getByText('Release notes')).toBeInTheDocument()
     expect(
       screen.getByText('Track new features, improvements, and fixes.')
     ).toBeInTheDocument()

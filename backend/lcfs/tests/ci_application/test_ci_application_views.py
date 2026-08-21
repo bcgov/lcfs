@@ -150,6 +150,79 @@ async def test_table_options_success(
 
 
 # ---------------------------------------------------------------------------
+# /location-search
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_location_search_by_city(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.CI_APPLICANT)
+    with patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.search_facility_location"
+    ) as mock:
+        mock.return_value = ["Vancouver, BC, Canada"]
+        response = await client.get(
+            "/api/ci-applications/location-search", params={"city": "Van"}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == ["Vancouver, BC, Canada"]
+        mock.assert_awaited_once_with("Van", None, None)
+
+
+@pytest.mark.anyio
+async def test_location_search_by_province(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.SIGNING_AUTHORITY)
+    with patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.search_facility_location"
+    ) as mock:
+        mock.return_value = ["BC, Canada"]
+        response = await client.get(
+            "/api/ci-applications/location-search", params={"province": "BC"}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == ["BC, Canada"]
+        mock.assert_awaited_once_with(None, "BC", None)
+
+
+@pytest.mark.anyio
+async def test_location_search_by_country(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.GOVERNMENT)
+    with patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.search_facility_location"
+    ) as mock:
+        mock.return_value = ["Canada"]
+        response = await client.get(
+            "/api/ci-applications/location-search", params={"country": "Can"}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == ["Canada"]
+        mock.assert_awaited_once_with(None, None, "Can")
+
+
+@pytest.mark.anyio
+async def test_location_search_requires_a_filter(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.CI_APPLICANT)
+    response = await client.get("/api/ci-applications/location-search")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
 # POST /list
 # ---------------------------------------------------------------------------
 
@@ -368,6 +441,71 @@ def _step4_payload(consultant_consent: bool = False):
             }
         )
     return payload
+
+
+@pytest.mark.anyio
+async def test_step4_draft_endpoint_allows_ci_applicant(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    """#4772 — applicants fill the consultant block, so unlike /submit this is
+    open to CI_APPLICANT and not just signing authorities."""
+    set_user_role(RoleEnum.CI_APPLICANT)
+    with patch(
+        "lcfs.web.api.ci_application.validation.CIApplicationValidation.validate_access",
+        new=AsyncMock(return_value=None),
+    ), patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.update_step4_draft"
+    ) as svc:
+        svc.return_value = _ci_full_schema(10)
+        response = await client.put(
+            "/api/ci-applications/10/step4",
+            json={
+                "consultantConsent": True,
+                "consultantName": "Sam Anderson",
+                "consultantCompany": "Anderson Fuel Consultants",
+                "consultantEmail": "sam.anderson@afc.ar",
+            },
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["ciApplicationId"] == 10
+
+
+@pytest.mark.anyio
+async def test_step4_draft_endpoint_accepts_partial_details(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    """Auto-save fires on blur while the block is half-filled; a partial payload
+    (including a half-typed email) must not be rejected."""
+    set_user_role(RoleEnum.CI_APPLICANT)
+    with patch(
+        "lcfs.web.api.ci_application.validation.CIApplicationValidation.validate_access",
+        new=AsyncMock(return_value=None),
+    ), patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.update_step4_draft"
+    ) as svc:
+        svc.return_value = _ci_full_schema(10)
+        response = await client.put(
+            "/api/ci-applications/10/step4",
+            json={"consultantConsent": True, "consultantEmail": "sam.anderson@"},
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.anyio
+async def test_step4_draft_endpoint_forbidden_for_government(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.ANALYST)
+    response = await client.put(
+        "/api/ci-applications/10/step4", json={"consultantConsent": False}
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.anyio

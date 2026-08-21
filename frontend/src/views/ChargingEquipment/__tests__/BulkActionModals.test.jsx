@@ -8,14 +8,14 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key, options) => {
       const translations = {
-        'chargingEquipment:submitConfirmTitle': 'Submit Confirmation',
+        'chargingEquipment:submitConfirmTitle': 'Submit confirmation',
         'chargingEquipment:submitConfirmMessage': `This will set ${options?.count || 0} selected FSE to Submitted status.`,
         'chargingEquipment:submitConfirmWarning': 'No more edits will be possible.',
         'chargingEquipment:submitSelected': 'Submit Selected',
-        'chargingEquipment:decommissionConfirmTitle': 'Decommission Confirmation',
+        'chargingEquipment:decommissionConfirmTitle': 'Decommission confirmation',
         'chargingEquipment:decommissionConfirmMessage': `This will set ${options?.count || 0} selected FSE to Decommissioned status.`,
         'chargingEquipment:decommissionConfirmWarning': 'They will no longer be available in future compliance reports.',
-        'chargingEquipment:setToDecommissioned': 'Set to Decommissioned',
+        'chargingEquipment:setToDecommissioned': 'Set to decommissioned',
         'common:cancel': 'Cancel'
       }
       return translations[key] || key
@@ -91,7 +91,7 @@ describe('BulkActionModals', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByTestId('modal-title')).toHaveTextContent('Submit Confirmation')
+    expect(screen.getByTestId('modal-title')).toHaveTextContent('Submit confirmation')
     expect(screen.getByText(/This will set 3 selected FSE to Submitted status/)).toBeInTheDocument()
     expect(screen.getByText('No more edits will be possible.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
@@ -115,11 +115,11 @@ describe('BulkActionModals', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByTestId('modal-title')).toHaveTextContent('Decommission Confirmation')
+    expect(screen.getByTestId('modal-title')).toHaveTextContent('Decommission confirmation')
     expect(screen.getByText(/This will set 2 selected FSE to Decommissioned status/)).toBeInTheDocument()
     expect(screen.getByText('They will no longer be available in future compliance reports.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Set to Decommissioned' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Set to decommissioned' })).toBeInTheDocument()
   })
 
   it('handles submit modal actions', () => {
@@ -170,7 +170,7 @@ describe('BulkActionModals', () => {
     expect(mockOnDecommissionCancel).toHaveBeenCalledOnce()
 
     // Test confirm action
-    fireEvent.click(screen.getByRole('button', { name: 'Set to Decommissioned' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Set to decommissioned' }))
     expect(mockOnDecommissionConfirm).toHaveBeenCalledOnce()
   })
 
@@ -216,7 +216,7 @@ describe('BulkActionModals', () => {
     )
 
     const cancelButton = screen.getByRole('button', { name: 'Cancel' })
-    const decommissionButton = screen.getByRole('button', { name: 'Set to Decommissioned' })
+    const decommissionButton = screen.getByRole('button', { name: 'Set to decommissioned' })
 
     expect(cancelButton).toBeDisabled()
     expect(decommissionButton).toBeDisabled()
@@ -266,6 +266,6 @@ describe('BulkActionModals', () => {
     
     // Should have buttons for both actions
     expect(screen.getByRole('button', { name: 'Submit Selected' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Set to Decommissioned' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Set to decommissioned' })).toBeInTheDocument()
   })
 })

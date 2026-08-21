@@ -18,14 +18,14 @@ export const useStackedBarOption = (data, theme) => {
     },
     series: [
       {
-        name: 'Auto Renewable',
+        name: 'Auto renewable',
         type: 'bar',
         stack: 'total',
         emphasis: { focus: 'series' },
         data: data.map((item) => item.autoRenewable)
       },
       {
-        name: 'Auto Low Carbon',
+        name: 'Auto low carbon',
         type: 'bar',
         stack: 'total',
         emphasis: { focus: 'series' },
@@ -44,7 +44,7 @@ export const usePenaltyMixOption = (totals, theme) => {
     legend: { orient: 'horizontal', bottom: 0 },
     series: [
       {
-        name: 'Penalty Mix',
+        name: 'Penalty mix',
         type: 'pie',
         radius: ['45%', '70%'],
         avoidLabelOverlap: true,
@@ -54,8 +54,8 @@ export const usePenaltyMixOption = (totals, theme) => {
         },
         label: { show: true, formatter: '{b}: {d}%' },
         data: [
-          { value: totals.autoRenewable, name: 'Auto Renewable' },
-          { value: totals.autoLowCarbon, name: 'Auto Low Carbon' },
+          { value: totals.autoRenewable, name: 'Auto renewable' },
+          { value: totals.autoLowCarbon, name: 'Auto low carbon' },
           { value: totals.discretionary, name: 'Discretionary' }
         ]
       }
@@ -100,4 +100,3 @@ export const useSparklineOption = (
     ]
   }
 }
-

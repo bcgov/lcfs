@@ -342,18 +342,12 @@ describe('GovernmentNotificationsCard', () => {
         screen.getByPlaceholderText('Enter notification title')
       ).toBeInTheDocument()
       expect(
-        screen.getByPlaceholderText('Optional link URL')
-      ).toBeInTheDocument()
-      expect(
         screen.getByPlaceholderText('Enter notification message')
       ).toBeInTheDocument()
 
       // Should populate with existing data
       expect(
         screen.getByDisplayValue('Existing Notification')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByDisplayValue('https://example.com')
       ).toBeInTheDocument()
     })
 
@@ -418,17 +412,14 @@ describe('GovernmentNotificationsCard', () => {
       await user.click(editButton)
 
       const titleInput = screen.getByPlaceholderText('Enter notification title')
-      const urlInput = screen.getByPlaceholderText('Optional link URL')
       const messageInput = screen.getByPlaceholderText(
         'Enter notification message'
       )
 
       await user.type(titleInput, 'New Title')
-      await user.type(urlInput, 'https://test.com')
       await user.type(messageInput, 'New message content')
 
       expect(titleInput).toHaveValue('New Title')
-      expect(urlInput).toHaveValue('https://test.com')
       expect(messageInput).toHaveValue('New message content')
     })
 
@@ -445,7 +436,7 @@ describe('GovernmentNotificationsCard', () => {
       const editButton = screen.getByRole('button', { name: /edit/i })
       await user.click(editButton)
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       expect(saveButton).toBeDisabled()
     })
 
@@ -465,7 +456,7 @@ describe('GovernmentNotificationsCard', () => {
       const titleInput = screen.getByPlaceholderText('Enter notification title')
       await user.type(titleInput, 'Test Title')
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       expect(saveButton).toBeDisabled()
     })
 
@@ -490,7 +481,7 @@ describe('GovernmentNotificationsCard', () => {
       await user.type(titleInput, 'Test Title')
       await user.type(messageInput, 'Test message')
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       expect(saveButton).not.toBeDisabled()
     })
 
@@ -528,7 +519,7 @@ describe('GovernmentNotificationsCard', () => {
     })
   })
 
-  describe('Save Confirmation Dialog', () => {
+  describe('Post Confirmation Dialog', () => {
     beforeEach(() => {
       mockHasRoles.mockReturnValue(true)
     })
@@ -553,7 +544,7 @@ describe('GovernmentNotificationsCard', () => {
       await user.type(titleInput, 'Test Title')
       await user.type(messageInput, 'Test message')
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       await user.click(saveButton)
 
       // Confirmation dialog should be visible
@@ -565,14 +556,14 @@ describe('GovernmentNotificationsCard', () => {
         )
       ).toBeInTheDocument()
       expect(
-        screen.getByRole('button', { name: 'Save and send email' })
+        screen.getByRole('button', { name: 'Post and send email' })
       ).toBeInTheDocument()
       expect(
-        screen.getByRole('button', { name: 'Save without email sent' })
+        screen.getByRole('button', { name: 'Post without email sent' })
       ).toBeInTheDocument()
     })
 
-    it('should call mutate with form data when "Save and send email" is clicked', async () => {
+    it('should call mutate with form data when "Post and send email" is clicked', async () => {
       const user = userEvent.setup()
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
@@ -593,11 +584,11 @@ describe('GovernmentNotificationsCard', () => {
         'Test message'
       )
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       await user.click(saveButton)
 
       const saveWithEmailButton = screen.getByRole('button', {
-        name: 'Save and send email'
+        name: 'Post and send email'
       })
       await user.click(saveWithEmailButton)
 
@@ -610,7 +601,7 @@ describe('GovernmentNotificationsCard', () => {
       })
     })
 
-    it('should call mutate with form data when "Save without email sent" is clicked', async () => {
+    it('should call mutate with form data when "Post without email sent" is clicked', async () => {
       const user = userEvent.setup()
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
@@ -631,11 +622,11 @@ describe('GovernmentNotificationsCard', () => {
         'Test message'
       )
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       await user.click(saveButton)
 
       const saveWithoutEmailButton = screen.getByRole('button', {
-        name: 'Save without email sent'
+        name: 'Post without email sent'
       })
       await user.click(saveWithoutEmailButton)
 
@@ -669,7 +660,7 @@ describe('GovernmentNotificationsCard', () => {
         'Test message'
       )
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       await user.click(saveButton)
 
       expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -727,11 +718,11 @@ describe('GovernmentNotificationsCard', () => {
         'Test'
       )
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       await user.click(saveButton)
 
       const saveWithoutEmailButton = screen.getByRole('button', {
-        name: 'Save without email sent'
+        name: 'Post without email sent'
       })
       await user.click(saveWithoutEmailButton)
 
@@ -779,11 +770,11 @@ describe('GovernmentNotificationsCard', () => {
         'Test'
       )
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       await user.click(saveButton)
 
       const saveWithoutEmailButton = screen.getByRole('button', {
-        name: 'Save without email sent'
+        name: 'Post without email sent'
       })
       await user.click(saveWithoutEmailButton)
 
@@ -836,11 +827,11 @@ describe('GovernmentNotificationsCard', () => {
         'Test'
       )
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       await user.click(saveButton)
 
       const saveWithoutEmailButton = screen.getByRole('button', {
-        name: 'Save without email sent'
+        name: 'Post without email sent'
       })
       await user.click(saveWithoutEmailButton)
 
@@ -890,11 +881,11 @@ describe('GovernmentNotificationsCard', () => {
         'Test'
       )
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Post' })
       await user.click(saveButton)
 
       const saveWithoutEmailButton = screen.getByRole('button', {
-        name: 'Save without email sent'
+        name: 'Post without email sent'
       })
       await user.click(saveWithoutEmailButton)
 
@@ -1001,11 +992,11 @@ describe('GovernmentNotificationsCard', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
       expect(screen.getByText('Delete notification')).toBeInTheDocument()
       expect(
-        screen.getByText(/Are you sure you want to delete this government notification/i)
+        screen.getByText(
+          /Are you sure you want to delete this government notification/i
+        )
       ).toBeInTheDocument()
-      expect(
-        screen.getByRole('button', { name: 'Delete' })
-      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
     })
 
     it('should call delete mutation when delete is confirmed', async () => {
@@ -1054,7 +1045,9 @@ describe('GovernmentNotificationsCard', () => {
 
       // Find the Cancel button inside the dialog
       const dialog = screen.getByRole('dialog')
-      const cancelButton = within(dialog).getByRole('button', { name: 'Cancel' })
+      const cancelButton = within(dialog).getByRole('button', {
+        name: 'Cancel'
+      })
       await user.click(cancelButton)
 
       await waitFor(() => {

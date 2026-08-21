@@ -38,6 +38,8 @@ export const apiRoutes = {
   creditLedgerPeriod: '/credit-ledger/organization/:orgID/period/:year',
   creditLedgerYears: '/credit-ledger/organization/:orgID/years',
   exportCreditLedger: '/credit-ledger/organization/:orgID/export',
+  exportCreditLedgerPeriod:
+    '/credit-ledger/organization/:orgID/period/:year/export',
 
   // organizations
   organizationSearch: '/organizations/search?',
@@ -87,12 +89,14 @@ export const apiRoutes = {
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',
+  ciApplicationLocationSearch: '/ci-applications/location-search?',
   getCIApplications: '/ci-applications/list',
   getCIApplication: '/ci-applications/:ciApplicationId',
   createCIApplication: '/ci-applications',
   updateCIApplicationStep1: '/ci-applications/:ciApplicationId/step1',
   updateCIApplicationStep2: '/ci-applications/:ciApplicationId/step2',
   updateCIApplicationStep3: '/ci-applications/:ciApplicationId/step3',
+  updateCIApplicationStep4: '/ci-applications/:ciApplicationId/step4',
   submitCIApplication: '/ci-applications/:ciApplicationId/submit',
   ciApplicationDecision: '/ci-applications/:ciApplicationId/decision',
   ciApplicationAnalysts: '/ci-applications/analysts',
@@ -252,6 +256,7 @@ export const apiRoutes = {
   complianceReportCounts: '/dashboard/compliance-report-counts',
   fuelCodeCounts: '/dashboard/fuel-code-counts',
   orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
+  ciApplicationCounts: '/dashboard/ci-application-counts',
 
   // credit market
   creditMarketOverview: '/credit-market/overview',

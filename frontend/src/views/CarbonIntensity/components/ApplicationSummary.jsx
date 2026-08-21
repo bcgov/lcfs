@@ -21,6 +21,7 @@ import colors from '@/themes/base/colors'
 import {
   ciApplicationPathwayChangelogColDefs,
   ciApplicationPathwaySummaryColDefs,
+  normalizeTransportModeDistances,
   normalizeTransportModes
 } from '@/views/CarbonIntensity/components/_step2Schema'
 import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
@@ -60,6 +61,7 @@ const formatBytes = (bytes) => {
 const PATHWAY_CHANGELOG_FIELD_MAP = {
   application_type_id: 'applicationTypeId',
   fuel_code_type_id: 'fuelCodeTypeId',
+  design_data: 'designData',
   operating_data_from: 'operatingDataFrom',
   operating_data_to: 'operatingDataTo',
   fuel_code_id: 'fuelCodeId',
@@ -68,10 +70,10 @@ const PATHWAY_CHANGELOG_FIELD_MAP = {
   feedstock: 'feedstock',
   feedstock_region: 'feedstockRegion',
   feedstock_transport_mode: 'feedstockTransportMode',
-  feedstock_transport_distance: 'feedstockTransportDistance',
+  feedstock_transport_mode_details: 'feedstockTransportMode',
   coproducts: 'coproducts',
   finished_fuel_transport_mode: 'finishedFuelTransportMode',
-  finished_fuel_transport_distance: 'finishedFuelTransportDistance'
+  finished_fuel_transport_mode_details: 'finishedFuelTransportMode'
 }
 
 const toPathwayChangelogRow = (snapshot = {}) => ({
@@ -79,6 +81,7 @@ const toPathwayChangelogRow = (snapshot = {}) => ({
   pathwayGroupUuid: snapshot.pathway_group_uuid,
   applicationTypeId: snapshot.application_type_id,
   fuelCodeTypeId: snapshot.fuel_code_type_id,
+  designData: snapshot.design_data,
   operatingDataFrom: snapshot.operating_data_from,
   operatingDataTo: snapshot.operating_data_to,
   fuelCodeId: snapshot.fuel_code_id,
@@ -89,11 +92,13 @@ const toPathwayChangelogRow = (snapshot = {}) => ({
   fuelTypeId: snapshot.fuel_type_id,
   feedstock: snapshot.feedstock,
   feedstockRegion: snapshot.feedstock_region,
-  feedstockTransportMode: normalizeTransportModes(snapshot.feedstock_transport_mode),
-  feedstockTransportDistance: snapshot.feedstock_transport_distance,
+  feedstockTransportMode:
+    snapshot.feedstock_transport_mode_details ||
+    normalizeTransportModes(snapshot.feedstock_transport_mode),
   coproducts: snapshot.coproducts,
-  finishedFuelTransportMode: normalizeTransportModes(snapshot.finished_fuel_transport_mode),
-  finishedFuelTransportDistance: snapshot.finished_fuel_transport_distance
+  finishedFuelTransportMode:
+    snapshot.finished_fuel_transport_mode_details ||
+    normalizeTransportModes(snapshot.finished_fuel_transport_mode)
 })
 
 const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
@@ -108,6 +113,7 @@ const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
   pathwayGroupUuid: pathway.groupUuid || pathway.group_uuid,
   applicationTypeId: pathway.applicationTypeId || pathway.application_type_id,
   fuelCodeTypeId: pathway.fuelCodeTypeId || pathway.fuel_code_type_id,
+  designData: pathway.designData ?? pathway.design_data,
   operatingDataFrom: pathway.operatingDataFrom || pathway.operating_data_from,
   operatingDataTo: pathway.operatingDataTo || pathway.operating_data_to,
   fuelCodeId: pathway.fuelCodeId || pathway.fuel_code_id,
@@ -120,18 +126,13 @@ const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
   fuelTypeId: pathway.fuelTypeId || pathway.fuel_type_id,
   feedstock: pathway.feedstock,
   feedstockRegion: pathway.feedstockRegion || pathway.feedstock_region,
-  feedstockTransportMode: normalizeTransportModes(
+  feedstockTransportMode: normalizeTransportModeDistances(
     pathway.feedstockTransportMode ?? pathway.feedstock_transport_mode
   ),
-  feedstockTransportDistance:
-    pathway.feedstockTransportDistance || pathway.feedstock_transport_distance,
   coproducts: pathway.coproducts,
-  finishedFuelTransportMode: normalizeTransportModes(
+  finishedFuelTransportMode: normalizeTransportModeDistances(
     pathway.finishedFuelTransportMode ?? pathway.finished_fuel_transport_mode
   ),
-  finishedFuelTransportDistance:
-    pathway.finishedFuelTransportDistance ||
-    pathway.finished_fuel_transport_distance,
   actionType: '',
   updated: false,
   diff: []
@@ -505,19 +506,21 @@ export const ApplicationSummary = ({
           {org.email && (
             <BCTypography variant="body2">{org.email}</BCTypography>
           )}
-          <BCTypography
-            variant="body2"
-            sx={{ mt: 1, fontStyle: 'italic' }}
-            data-test="ci-summary-org-info-confirmation"
-          >
-            "{t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
-            <a
-              href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+          {organizationAddress && (
+            <BCTypography
+              variant="body2"
+              sx={{ mt: 1 }}
+              data-test="ci-summary-org-info-confirmation"
             >
-              {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
-            </a>
-            "
-          </BCTypography>
+              {t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
+              <a
+                href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+              >
+                {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
+              </a>
+              .
+            </BCTypography>
+          )}
         </Grid>
         <Grid item xs={12} md={6}>
           <Stack spacing={0.5}>

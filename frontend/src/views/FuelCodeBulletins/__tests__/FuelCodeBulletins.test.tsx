@@ -51,12 +51,12 @@ vi.mock('react-i18next', () => ({
         'common.downloadBtn': 'Download Excel',
         'common.downloadingBtn': 'Downloading Excel',
         'common.downloadError': 'Failed to download fuel code bulletin.',
-        'columns.fuelCode': 'Fuel Code',
+        'columns.fuelCode': 'Fuel code',
         'columns.fuel': 'Fuel',
         'columns.company': 'Company',
-        'columns.carbonIntensity': 'Carbon Intensity (gCO2e/MJ)',
-        'columns.effectiveDate': 'Effective Date',
-        'columns.expiryDate': 'Expiry Date'
+        'columns.carbonIntensity': 'Carbon intensity (gCO2e/MJ)',
+        'columns.effectiveDate': 'Effective date',
+        'columns.expiryDate': 'Expiry date'
       }
       if (key === 'current.description') {
         return `Current description after ${options?.cutoffLabel}`

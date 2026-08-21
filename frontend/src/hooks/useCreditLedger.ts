@@ -84,14 +84,35 @@ export const usePeriodCreditLedger = (
 
 export const useDownloadCreditLedger = (apiOpts: any) => {
   const api = useApiService(apiOpts)
-  return ({ orgId, complianceYear, format = 'xlsx' }: any) =>
+  return ({ orgId, format = 'xlsx' }: any) =>
     api.download({
       url: apiRoutes.exportCreditLedger.replace(':orgID', String(orgId ?? '')),
       method: 'get',
       params: {
-        ...(complianceYear && { compliance_year: complianceYear }),
         format
       }
+    })
+}
+
+/**
+ * Downloads one compliance-period ledger. Separate from useDownloadCreditLedger
+ * because it hits the period endpoint, which exports the same April–March
+ * envelope the screen shows; the other is for the legacy all-time grid.
+ */
+export const useDownloadPeriodCreditLedger = (apiOpts?: any) => {
+  const api = useApiService(apiOpts)
+  return ({
+    orgId,
+    complianceYear,
+    includePending = false,
+    format = 'xlsx'
+  }: any) =>
+    api.download({
+      url: apiRoutes.exportCreditLedgerPeriod
+        .replace(':orgID', String(orgId ?? ''))
+        .replace(':year', String(complianceYear ?? '')),
+      method: 'get',
+      params: { include_pending: includePending, format }
     })
 }
 

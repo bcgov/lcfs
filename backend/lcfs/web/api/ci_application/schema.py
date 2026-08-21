@@ -128,6 +128,20 @@ class PathwayFuelCodeTypeSchema(BaseSchema):
     description: Optional[str] = None
 
 
+class TransportModeDistanceSchema(BaseSchema):
+    transport_mode: str
+    distance: int = Field(..., ge=0)
+
+
+class NullableTransportModeDistanceSchema(BaseSchema):
+    transport_mode: str
+    distance: Optional[int] = Field(default=None, ge=0)
+
+
+TransportModeSelection = Union[str, TransportModeDistanceSchema]
+NullableTransportModeSelection = Union[str, NullableTransportModeDistanceSchema]
+
+
 class FuelTypeOptionSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
@@ -212,33 +226,41 @@ class CIApplicationStep1Schema(BaseSchema):
         for camel, snake, label in string_fields:
             val = _get(camel, snake)
             if val is None or (isinstance(val, str) and not val.strip()):
-                errors.append({
-                    "loc": (camel,),
-                    "msg": f"{label} is required.",
-                    "type": "value_error",
-                })
+                errors.append(
+                    {
+                        "loc": (camel,),
+                        "msg": f"{label} is required.",
+                        "type": "value_error",
+                    }
+                )
 
         capacity = _get("facilityNameplateCapacity", "facility_nameplate_capacity")
         if capacity is None or capacity == "":
-            errors.append({
-                "loc": ("facilityNameplateCapacity",),
-                "msg": "Facility nameplate capacity is required.",
-                "type": "value_error",
-            })
+            errors.append(
+                {
+                    "loc": ("facilityNameplateCapacity",),
+                    "msg": "Facility nameplate capacity is required.",
+                    "type": "value_error",
+                }
+            )
         elif isinstance(capacity, (int, float)) and capacity <= 0:
-            errors.append({
-                "loc": ("facilityNameplateCapacity",),
-                "msg": "Facility nameplate capacity must be greater than zero.",
-                "type": "value_error",
-            })
+            errors.append(
+                {
+                    "loc": ("facilityNameplateCapacity",),
+                    "msg": "Facility nameplate capacity must be greater than zero.",
+                    "type": "value_error",
+                }
+            )
 
         unit = _get("facilityNameplateCapacityUnit", "facility_nameplate_capacity_unit")
         if not unit:
-            errors.append({
-                "loc": ("facilityNameplateCapacityUnit",),
-                "msg": "Unit of measure is required.",
-                "type": "value_error",
-            })
+            errors.append(
+                {
+                    "loc": ("facilityNameplateCapacityUnit",),
+                    "msg": "Unit of measure is required.",
+                    "type": "value_error",
+                }
+            )
 
         if errors:
             raise RequestValidationError(errors)
@@ -264,22 +286,37 @@ class PathwayInputSchema(BaseSchema):
     pathway_id: Optional[int] = None
     application_type_id: int
     fuel_code_type_id: int
-    operating_data_from: date
-    operating_data_to: date
+    design_data: bool
+    operating_data_from: Optional[date] = None
+    operating_data_to: Optional[date] = None
     fuel_code_id: Optional[int] = None
     proposed_ci: Decimal
     fuel_type_id: int
     feedstock: str = Field(..., max_length=500)
     feedstock_region: str = Field(..., max_length=500)
-    feedstock_transport_mode: List[str] = Field(..., min_length=1)
-    feedstock_transport_distance: int = Field(..., ge=0)
+    feedstock_transport_mode: List[TransportModeDistanceSchema] = Field(
+        ..., min_length=1
+    )
     coproducts: Optional[str] = Field(default=None, max_length=1000)
-    finished_fuel_transport_mode: List[str] = Field(..., min_length=1)
-    finished_fuel_transport_distance: int = Field(..., ge=0)
+    finished_fuel_transport_mode: List[TransportModeDistanceSchema] = Field(
+        ..., min_length=1
+    )
 
     @model_validator(mode="after")
     def _validate_dates(self):
-        if self.operating_data_to < self.operating_data_from:
+        if not self.design_data and (
+            self.operating_data_from is None or self.operating_data_to is None
+        ):
+            raise RequestValidationError([{
+                "loc": ("operatingDataFrom",),
+                "msg": "Operating data collection date range is required when design data is No.",
+                "type": "value_error",
+            }])
+        if (
+            self.operating_data_from
+            and self.operating_data_to
+            and self.operating_data_to < self.operating_data_from
+        ):
             raise RequestValidationError([{
                 "loc": ("operatingDataTo",),
                 "msg": "Operating data end date must be on or after the start date.",
@@ -314,8 +351,9 @@ class PathwaySchema(BaseSchema):
     application_type: Optional[PathwayApplicationTypeSchema] = None
     fuel_code_type_id: int
     fuel_code_type: Optional[PathwayFuelCodeTypeSchema] = None
-    operating_data_from: date
-    operating_data_to: date
+    design_data: bool
+    operating_data_from: Optional[date] = None
+    operating_data_to: Optional[date] = None
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeOptionSchema] = None
     proposed_ci: Decimal
@@ -323,11 +361,9 @@ class PathwaySchema(BaseSchema):
     fuel_type: Optional[FuelTypeOptionSchema] = None
     feedstock: str
     feedstock_region: str
-    feedstock_transport_mode: List[str]
-    feedstock_transport_distance: int
+    feedstock_transport_mode: List[TransportModeSelection]
     coproducts: Optional[str] = None
-    finished_fuel_transport_mode: List[str]
-    finished_fuel_transport_distance: int
+    finished_fuel_transport_mode: List[TransportModeSelection]
 
 
 class PathwayChangeLogSchema(BaseSchema):
@@ -374,8 +410,12 @@ class CIGeneratedFuelCodeSchema(BaseSchema):
     ] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
-    feedstock_fuel_transport_mode: List[str] = Field(default_factory=list)
-    finished_fuel_transport_mode: List[str] = Field(default_factory=list)
+    feedstock_fuel_transport_mode: List[NullableTransportModeSelection] = Field(
+        default_factory=list
+    )
+    finished_fuel_transport_mode: List[NullableTransportModeSelection] = Field(
+        default_factory=list
+    )
     is_valid: bool = False
     validation_msg: Optional[str] = None
     validation_errors: Optional[Dict[str, str]] = None
@@ -408,8 +448,8 @@ class CIGeneratedFuelCodeUpdateSchema(BaseSchema):
     ] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
-    feedstock_fuel_transport_mode: Optional[List[str]] = None
-    finished_fuel_transport_mode: Optional[List[str]] = None
+    feedstock_fuel_transport_mode: Optional[List[NullableTransportModeSelection]] = None
+    finished_fuel_transport_mode: Optional[List[NullableTransportModeSelection]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -564,26 +604,53 @@ class CIApplicationStep4Schema(BaseSchema):
         if self.consultant_consent:
             consultant_errors = []
             if not self.consultant_name:
-                consultant_errors.append({
-                    "loc": ("consultantName",),
-                    "msg": "Consultant name is required when consenting to consultant communication.",
-                    "type": "value_error",
-                })
+                consultant_errors.append(
+                    {
+                        "loc": ("consultantName",),
+                        "msg": "Consultant name is required when consenting to consultant communication.",
+                        "type": "value_error",
+                    }
+                )
             if not self.consultant_company:
-                consultant_errors.append({
-                    "loc": ("consultantCompany",),
-                    "msg": "Consultant company is required when consenting to consultant communication.",
-                    "type": "value_error",
-                })
+                consultant_errors.append(
+                    {
+                        "loc": ("consultantCompany",),
+                        "msg": "Consultant company is required when consenting to consultant communication.",
+                        "type": "value_error",
+                    }
+                )
             if not self.consultant_email:
-                consultant_errors.append({
-                    "loc": ("consultantEmail",),
-                    "msg": "Consultant email is required when consenting to consultant communication.",
-                    "type": "value_error",
-                })
+                consultant_errors.append(
+                    {
+                        "loc": ("consultantEmail",),
+                        "msg": "Consultant email is required when consenting to consultant communication.",
+                        "type": "value_error",
+                    }
+                )
             if consultant_errors:
                 raise RequestValidationError(consultant_errors)
         return self
+
+
+class CIApplicationStep4DraftSchema(BaseSchema):
+    """
+    Payload for ``PUT /ci-applications/{id}/step4`` — draft auto-save (#4772).
+
+    Deliberately laxer than :class:`CIApplicationStep4Schema`: the declarations
+    are absent and the consultant fields are all optional, because the UI
+    auto-saves each field on blur while the applicant is still filling the
+    block in. ``consultant_email`` is a plain string rather than ``EmailStr``
+    for the same reason — a half-typed address must not 422 an auto-save.
+
+    Submission remains the enforcement point: ``CIApplicationStep4Schema``
+    still requires the declarations and a complete, valid consultant block
+    whenever consent is given.
+    """
+
+    consultant_consent: bool = False
+    consultant_name: Optional[str] = Field(default=None, max_length=500)
+    consultant_company: Optional[str] = Field(default=None, max_length=500)
+    consultant_email: Optional[str] = Field(default=None, max_length=500)
 
 
 # ---------------------------------------------------------------------------

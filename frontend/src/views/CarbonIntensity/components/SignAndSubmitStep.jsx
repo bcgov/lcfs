@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Box,
@@ -8,11 +8,13 @@ import {
   FormHelperText,
   InputLabel,
   Stack,
-  TextField
+  TextField,
+  Tooltip
 } from '@mui/material'
 
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
+import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -23,14 +25,20 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
  * info auto-filled from the current user, and an optional consultant
  * block. The `Submit application` button performs final validation and
  * delegates the actual mutation to the parent through `onSave`.
+ *
+ * The consultant fields auto-save on blur through `onAutoSave` (#4772).
+ * Step 4 had no save path at all, so details typed here were lost whenever
+ * the applicant left the draft instead of submitting.
  */
 export const SignAndSubmitStep = ({
   ciApplication,
   currentUser,
   onSave,
+  onAutoSave,
   onDelete,
   isSaving = false,
-  readOnly = false
+  readOnly = false,
+  hasSigningAuthority = true
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
 
@@ -54,13 +62,92 @@ export const SignAndSubmitStep = ({
   )
 
   const [errors, setErrors] = useState({})
+  const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = useState(false)
+  const [pendingPayload, setPendingPayload] = useState(null)
 
-  // Re-seed when the parent reloads the application
+  // Last values known to be persisted, so a blur that changed nothing does not
+  // fire a redundant request (and a redundant toast).
+  const savedRef = useRef({
+    consent: consultantConsent,
+    name: consultantName,
+    company: consultantCompany,
+    email: consultantEmail
+  })
+
+  const ciApplicationId = ciApplication?.ciApplicationId
+
+  // Re-seed when a *different* application loads. Keyed on the id rather than
+  // the object: an auto-save response is a new object, and re-seeding on that
+  // would overwrite whichever field the applicant is currently typing in.
   useEffect(() => {
-    setConsultantName(ciApplication?.consultantName || '')
-    setConsultantCompany(ciApplication?.consultantCompany || '')
-    setConsultantEmail(ciApplication?.consultantEmail || '')
-  }, [ciApplication])
+    const name = ciApplication?.consultantName || ''
+    const company = ciApplication?.consultantCompany || ''
+    const email = ciApplication?.consultantEmail || ''
+    // Derive consent from stored values, otherwise reopening a draft renders
+    // the box unticked and hides the applicant's own saved details.
+    const consent = !!(name || company || email)
+    setConsultantName(name)
+    setConsultantCompany(company)
+    setConsultantEmail(email)
+    setConsultantConsent(consent)
+    savedRef.current = { consent, name, company, email }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ciApplicationId])
+
+  /**
+   * Persist the consultant block if it differs from what is already stored.
+   * No-ops before Step 1 has created the draft, and while read-only.
+   */
+  const autoSave = useCallback(
+    (next) => {
+      if (readOnly || !ciApplicationId || !onAutoSave) return
+      const prev = savedRef.current
+      if (
+        prev.consent === next.consent &&
+        prev.name === next.name &&
+        prev.company === next.company &&
+        prev.email === next.email
+      ) {
+        return
+      }
+      savedRef.current = next
+      onAutoSave({
+        consultantConsent: next.consent,
+        consultantName: next.consent ? next.name.trim() || null : null,
+        consultantCompany: next.consent ? next.company.trim() || null : null,
+        consultantEmail: next.consent ? next.email.trim() || null : null
+      })
+    },
+    [readOnly, ciApplicationId, onAutoSave]
+  )
+
+  const handleConsultantBlur = useCallback(() => {
+    autoSave({
+      consent: consultantConsent,
+      name: consultantName,
+      company: consultantCompany,
+      email: consultantEmail
+    })
+  }, [
+    autoSave,
+    consultantConsent,
+    consultantName,
+    consultantCompany,
+    consultantEmail
+  ])
+
+  const handleConsentChange = useCallback(
+    (checked) => {
+      setConsultantConsent(checked)
+      // Withdrawing consent clears the stored values immediately, matching
+      // what submission already does server-side. Ticking the box has nothing
+      // to persist yet, so it waits for the first field blur.
+      if (!checked) {
+        autoSave({ consent: false, name: '', company: '', email: '' })
+      }
+    },
+    [autoSave]
+  )
 
   const signingAuthority = useMemo(() => {
     if (!currentUser) return { name: '', title: '', email: '' }
@@ -71,7 +158,23 @@ export const SignAndSubmitStep = ({
     }
   }, [currentUser])
 
+  const declarationsDisabled = readOnly || !hasSigningAuthority
+  const declarationTooltip = !hasSigningAuthority
+    ? t('carbonIntensity:step4.declarations.signingAuthorityRequired')
+    : ''
+  const buildSubmitPayload = () => ({
+    declarationInformationTrue: decl1,
+    declarationResponse8Weeks: decl2,
+    declarationSection206: decl3,
+    consultantConsent,
+    consultantName: consultantConsent ? consultantName.trim() : null,
+    consultantCompany: consultantConsent ? consultantCompany.trim() : null,
+    consultantEmail: consultantConsent ? consultantEmail.trim() : null
+  })
+
   const handleSubmit = () => {
+    if (!hasSigningAuthority) return
+
     const newErrors = {}
     if (!(decl1 && decl2 && decl3)) {
       newErrors.declarations = t(
@@ -104,15 +207,21 @@ export const SignAndSubmitStep = ({
       return
     }
     setErrors({})
-    onSave?.({
-      declarationInformationTrue: decl1,
-      declarationResponse8Weeks: decl2,
-      declarationSection206: decl3,
-      consultantConsent,
-      consultantName: consultantConsent ? consultantName.trim() : null,
-      consultantCompany: consultantConsent ? consultantCompany.trim() : null,
-      consultantEmail: consultantConsent ? consultantEmail.trim() : null
-    })
+
+    // Confirm before the irreversible submit (#4773).
+    setPendingPayload(buildSubmitPayload())
+    setIsSubmitConfirmOpen(true)
+  }
+
+  const closeSubmitConfirm = () => {
+    setIsSubmitConfirmOpen(false)
+    setPendingPayload(null)
+  }
+
+  const confirmSubmit = () => {
+    const payload = pendingPayload
+    closeSubmitConfirm()
+    if (payload) onSave?.(payload)
   }
 
   return (
@@ -131,13 +240,17 @@ export const SignAndSubmitStep = ({
             <FormControlLabel
               sx={{ alignItems: 'flex-start', m: 0 }}
               control={
-                <Checkbox
-                  checked={decl1}
-                  onChange={(e) => setDecl1(e.target.checked)}
-                  disabled={readOnly}
-                  sx={{ pt: 0, pb: 0 }}
-                  inputProps={{ 'data-test': 'ci-step4-decl-1' }}
-                />
+                <Tooltip title={declarationTooltip} arrow>
+                  <span data-test="ci-step4-decl-1-tooltip">
+                    <Checkbox
+                      checked={decl1}
+                      onChange={(e) => setDecl1(e.target.checked)}
+                      disabled={declarationsDisabled}
+                      sx={{ pt: 0, pb: 0 }}
+                      inputProps={{ 'data-test': 'ci-step4-decl-1' }}
+                    />
+                  </span>
+                </Tooltip>
               }
               label={
                 <BCTypography variant="body2" component="span">
@@ -155,13 +268,17 @@ export const SignAndSubmitStep = ({
             <FormControlLabel
               sx={{ alignItems: 'flex-start', m: 0 }}
               control={
-                <Checkbox
-                  checked={decl2}
-                  onChange={(e) => setDecl2(e.target.checked)}
-                  disabled={readOnly}
-                  sx={{ pt: 0, pb: 0 }}
-                  inputProps={{ 'data-test': 'ci-step4-decl-2' }}
-                />
+                <Tooltip title={declarationTooltip} arrow>
+                  <span data-test="ci-step4-decl-2-tooltip">
+                    <Checkbox
+                      checked={decl2}
+                      onChange={(e) => setDecl2(e.target.checked)}
+                      disabled={declarationsDisabled}
+                      sx={{ pt: 0, pb: 0 }}
+                      inputProps={{ 'data-test': 'ci-step4-decl-2' }}
+                    />
+                  </span>
+                </Tooltip>
               }
               label={
                 <BCTypography variant="body2" component="span">
@@ -179,13 +296,17 @@ export const SignAndSubmitStep = ({
             <FormControlLabel
               sx={{ alignItems: 'flex-start', m: 0 }}
               control={
-                <Checkbox
-                  checked={decl3}
-                  onChange={(e) => setDecl3(e.target.checked)}
-                  disabled={readOnly}
-                  sx={{ pt: 0, pb: 0 }}
-                  inputProps={{ 'data-test': 'ci-step4-decl-3' }}
-                />
+                <Tooltip title={declarationTooltip} arrow>
+                  <span data-test="ci-step4-decl-3-tooltip">
+                    <Checkbox
+                      checked={decl3}
+                      onChange={(e) => setDecl3(e.target.checked)}
+                      disabled={declarationsDisabled}
+                      sx={{ pt: 0, pb: 0 }}
+                      inputProps={{ 'data-test': 'ci-step4-decl-3' }}
+                    />
+                  </span>
+                </Tooltip>
               }
               label={
                 <BCTypography variant="body2" component="span">
@@ -239,7 +360,7 @@ export const SignAndSubmitStep = ({
           control={
             <Checkbox
               checked={consultantConsent}
-              onChange={(e) => setConsultantConsent(e.target.checked)}
+              onChange={(e) => handleConsentChange(e.target.checked)}
               disabled={readOnly}
               inputProps={{ 'data-test': 'ci-step4-consultant-consent' }}
             />
@@ -268,6 +389,7 @@ export const SignAndSubmitStep = ({
                     }))
                   }
                 }}
+                onBlur={handleConsultantBlur}
                 disabled={readOnly}
                 fullWidth
                 variant="outlined"
@@ -292,6 +414,7 @@ export const SignAndSubmitStep = ({
                     }))
                   }
                 }}
+                onBlur={handleConsultantBlur}
                 disabled={readOnly}
                 fullWidth
                 variant="outlined"
@@ -316,6 +439,7 @@ export const SignAndSubmitStep = ({
                     }))
                   }
                 }}
+                onBlur={handleConsultantBlur}
                 disabled={readOnly}
                 fullWidth
                 variant="outlined"
@@ -341,7 +465,12 @@ export const SignAndSubmitStep = ({
           variant="contained"
           color="primary"
           onClick={handleSubmit}
-          disabled={readOnly || isSaving || !(decl1 && decl2 && decl3)}
+          disabled={
+            readOnly ||
+            isSaving ||
+            !hasSigningAuthority ||
+            !(decl1 && decl2 && decl3)
+          }
           data-test="ci-step4-submit-btn"
         >
           {t('carbonIntensity:step4.submit')}
@@ -359,6 +488,18 @@ export const SignAndSubmitStep = ({
           </BCButton>
         )}
       </Stack>
+
+      <BCModal
+        open={isSubmitConfirmOpen}
+        onClose={closeSubmitConfirm}
+        data={{
+          title: t('common:confirmation'),
+          primaryButtonText: t('carbonIntensity:step4.submit'),
+          primaryButtonAction: confirmSubmit,
+          secondaryButtonText: t('common:cancelBtn'),
+          content: t('carbonIntensity:step4.submitConfirmText')
+        }}
+      />
     </Box>
   )
 }
