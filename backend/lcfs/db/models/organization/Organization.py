@@ -58,6 +58,9 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     operating_name = Column(String(500), comment="Organization's Operating name")
     email = Column(String(255), comment="Organization's email address")
     phone = Column(String(50), comment="Organization's phone number")
+    contact_name = Column(
+        String(500), nullable=True, comment="Organization's contact name"
+    )
     edrms_record = Column(String(100), comment="Organization's EDRMS record number")
     total_balance = Column(
         BigInteger,

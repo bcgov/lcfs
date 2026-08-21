@@ -292,7 +292,7 @@ describe('MapComponents', () => {
     })
 
     it('uses red icon when not in BC', () => {
-      const geofencingResults = { 'loc1': false }
+      const geofencingResults = { 'coord1': false }
 
       render(
         <MapMarkers
@@ -313,7 +313,7 @@ describe('MapComponents', () => {
     })
 
     it('uses orange icon when has overlaps in BC', () => {
-      const geofencingResults = { 'loc1': true }
+      const geofencingResults = { 'coord1': true }
       const overlapMap = { 'unique1': ['overlap1'] }
 
       render(
@@ -335,7 +335,7 @@ describe('MapComponents', () => {
     })
 
     it('uses default icon when in BC with no overlaps', () => {
-      const geofencingResults = { 'loc1': true }
+      const geofencingResults = { 'coord1': true }
       const overlapMap = { 'unique1': [] }
 
       render(
@@ -351,6 +351,49 @@ describe('MapComponents', () => {
       expect(Marker).toHaveBeenCalledWith(
         expect.objectContaining({
           icon: markerIcons.default
+        }),
+        expect.any(Object)
+      )
+    })
+
+    // #4852 — an unresolved location shared the red "Outside of BC" pin with
+    // genuine out-of-province results, so valid BC sites were shown as
+    // outside BC. Only an explicit false may turn the pin red.
+    it('uses grey icon when the location has no geofencing result', () => {
+      render(
+        <MapMarkers
+          groupedLocations={mockGroupedLocations}
+          geofencingStatus="completed"
+          geofencingResults={{}}
+          overlapMap={{}}
+          generatePopupContent={mockGeneratePopupContent}
+        />
+      )
+
+      expect(Marker).toHaveBeenCalledWith(
+        expect.objectContaining({
+          icon: markerIcons.grey
+        }),
+        expect.any(Object)
+      )
+    })
+
+    // #4852 — results are keyed by coordinates, not by equipment id, so one
+    // FSE can no longer inherit another's verdict.
+    it('ignores a result keyed by equipment id', () => {
+      render(
+        <MapMarkers
+          groupedLocations={mockGroupedLocations}
+          geofencingStatus="completed"
+          geofencingResults={{ 'loc1': false }}
+          overlapMap={{}}
+          generatePopupContent={mockGeneratePopupContent}
+        />
+      )
+
+      expect(Marker).toHaveBeenCalledWith(
+        expect.objectContaining({
+          icon: markerIcons.grey
         }),
         expect.any(Object)
       )

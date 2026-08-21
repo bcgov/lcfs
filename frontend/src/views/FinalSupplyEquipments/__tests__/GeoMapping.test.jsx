@@ -44,6 +44,9 @@ vi.mock('../components/TableComponent', () => ({
 vi.mock('../components/utils', () => ({
   fixLeafletIcons: vi.fn(),
   transformApiData: vi.fn((data) => data?.finalSupplyEquipments || []),
+  getCoordinateKey: vi.fn(
+    (location) => `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`
+  ),
   groupLocationsByCoordinates: vi.fn((data) => ({ '0,0': data })),
   findOverlappingPeriods: vi.fn(() => [])
 }))
