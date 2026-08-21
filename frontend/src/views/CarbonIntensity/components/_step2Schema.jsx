@@ -123,6 +123,20 @@ const renderNumberPlaceholder = (params) =>
     <BCTypography variant="body4">Enter number</BCTypography>
   )
 
+const yesNoOptions = ['Yes', 'No']
+
+const boolToYesNo = (value) => {
+  if (value === true) return 'Yes'
+  if (value === false) return 'No'
+  return ''
+}
+
+const yesNoToBool = (value) => {
+  if (value === 'Yes') return true
+  if (value === 'No') return false
+  return null
+}
+
 const cellErrorStyle = (params) => {
   const rowErrors = params.context?.errors?.[params.data?.id]
   if (rowErrors?.includes(params.colDef.field)) {
@@ -261,9 +275,35 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       minWidth: 225
     },
     {
+      field: 'designData',
+      headerName: i18n.t('carbonIntensity:step2.designData'),
+      headerComponent: canEdit ? RequiredHeader : undefined,
+      editable: canEdit,
+      cellEditor: AutocompleteCellEditor,
+      cellEditorParams: {
+        options: yesNoOptions,
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      },
+      suppressKeyboardEvent,
+      cellRenderer: (params) =>
+        params.value || (
+          <BCTypography variant="body4">Select</BCTypography>
+        ),
+      valueGetter: (params) => boolToYesNo(params.data?.designData),
+      valueSetter: (params) => {
+        const value = yesNoToBool(params.newValue)
+        if (value === null) return false
+        params.data.designData = value
+        return true
+      },
+      minWidth: 150
+    },
+    {
       field: 'operatingDataFrom',
       headerName: i18n.t('carbonIntensity:step2.operatingDataFrom'),
-      headerComponent: canEdit ? RequiredHeader : undefined,
       editable: canEdit,
       cellEditor: DateEditor,
       suppressKeyboardEvent,
@@ -277,7 +317,6 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
     {
       field: 'operatingDataTo',
       headerName: i18n.t('carbonIntensity:step2.operatingDataTo'),
-      headerComponent: canEdit ? RequiredHeader : undefined,
       editable: canEdit,
       cellEditor: DateEditor,
       suppressKeyboardEvent,
@@ -514,6 +553,12 @@ export const ciApplicationPathwaySummaryColDefs = ({
       minWidth: 220
     },
     {
+      field: 'designData',
+      headerName: i18n.t('carbonIntensity:step2.designData'),
+      valueGetter: ({ data }) => boolToYesNo(data?.designData),
+      minWidth: 140
+    },
+    {
       field: 'operatingDataFrom',
       headerName: i18n.t('carbonIntensity:step2.operatingDataFrom'),
       valueGetter: ({ data }) =>
@@ -630,8 +675,13 @@ export const validatePathwayRow = (row, applicationTypes) => {
   const errors = []
   if (!row.applicationTypeId) errors.push('applicationTypeId')
   if (!row.fuelCodeTypeId) errors.push('fuelCodeTypeId')
-  if (!row.operatingDataFrom) errors.push('operatingDataFrom')
-  if (!row.operatingDataTo) errors.push('operatingDataTo')
+  if (row.designData !== true && row.designData !== false) {
+    errors.push('designData')
+  }
+  if (row.designData === false) {
+    if (!row.operatingDataFrom) errors.push('operatingDataFrom')
+    if (!row.operatingDataTo) errors.push('operatingDataTo')
+  }
   if (
     row.operatingDataFrom &&
     row.operatingDataTo &&
@@ -673,6 +723,7 @@ export const validatePathwayRow = (row, applicationTypes) => {
 const FIELD_LABEL_KEYS = {
   applicationTypeId: 'carbonIntensity:step2.applicationType',
   fuelCodeTypeId: 'carbonIntensity:step2.proposedFuelCodeType',
+  designData: 'carbonIntensity:step2.designData',
   operatingDataFrom: 'carbonIntensity:step2.operatingDataFrom',
   operatingDataTo: 'carbonIntensity:step2.operatingDataTo',
   fuelCodeId: 'carbonIntensity:step2.fuelCodeIteration',
@@ -699,8 +750,9 @@ export const rowToApiPayload = (row) => ({
   pathwayId: row.pathwayId ?? null,
   applicationTypeId: Number(row.applicationTypeId),
   fuelCodeTypeId: Number(row.fuelCodeTypeId),
-  operatingDataFrom: row.operatingDataFrom,
-  operatingDataTo: row.operatingDataTo,
+  designData: row.designData,
+  operatingDataFrom: row.operatingDataFrom || null,
+  operatingDataTo: row.operatingDataTo || null,
   fuelCodeId: row.fuelCodeId ? Number(row.fuelCodeId) : null,
   proposedCi: Number(row.proposedCi),
   fuelTypeId: Number(row.fuelTypeId),
@@ -718,8 +770,9 @@ export const apiToRow = (pathway) => ({
   pathwayId: pathway.pathwayId,
   applicationTypeId: pathway.applicationTypeId,
   fuelCodeTypeId: pathway.fuelCodeTypeId,
-  operatingDataFrom: pathway.operatingDataFrom,
-  operatingDataTo: pathway.operatingDataTo,
+  designData: pathway.designData,
+  operatingDataFrom: pathway.operatingDataFrom || '',
+  operatingDataTo: pathway.operatingDataTo || '',
   fuelCodeId: pathway.fuelCodeId,
   proposedCi: pathway.proposedCi != null ? Number(pathway.proposedCi) : null,
   fuelTypeId: pathway.fuelTypeId,
