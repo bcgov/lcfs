@@ -116,6 +116,20 @@ export const CommentLog = ({ organizationId }) => {
           '.comment-content ul, .comment-content ol': {
             paddingLeft: '1.5rem',
             margin: '0.25rem 0'
+          },
+          'mark.comment-search-highlight': {
+            backgroundColor: '#ffec99',
+            color: '#1a1a1a',
+            borderRadius: '2px',
+            padding: '0 0.1em',
+            WebkitBoxDecorationBreak: 'clone',
+            boxDecorationBreak: 'clone'
+          },
+          '@media (forced-colors: active)': {
+            'mark.comment-search-highlight': {
+              outline: '2px solid Highlight',
+              outlineOffset: '1px'
+            }
           }
         }}
       />
@@ -202,6 +216,7 @@ export const CommentLog = ({ organizationId }) => {
                             index={groupIdx}
                             showInternalBadge={isGovernment}
                             isGovernmentUser={isGovernment}
+                            searchQuery={filters.search}
                             onEdit={(commentId, comment, visibility) =>
                               editMutation.mutate({
                                 commentId,

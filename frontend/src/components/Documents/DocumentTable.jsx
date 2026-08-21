@@ -13,11 +13,13 @@ import { useTranslation } from 'react-i18next'
 import { styled } from '@mui/system'
 import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
+import BCModal from '@/components/BCModal'
 import prettyBytes from 'pretty-bytes'
 import colors from '@/themes/base/colors'
 import {
   useDeleteDocument,
   useDocuments,
+  useUpdateDocument,
   useUploadDocument,
   useDownloadDocument
 } from '@/hooks/useDocuments'
@@ -25,9 +27,12 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { timezoneFormatter } from '@/utils/formatters'
 import {
   MAX_FILE_SIZE_BYTES,
-  COMPLIANCE_REPORT_FILE_TYPES
+  COMPLIANCE_REPORT_FILE_TYPES,
+  isDocumentRenameEnabled
 } from '@/constants/common'
 import { validateFile } from '@/utils/fileValidation'
+import { getDocumentDisplayName } from '@/utils/documents'
+import RenameableFileName from '@/components/Documents/RenameableFileName'
 
 const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   width: '100%',
@@ -49,7 +54,7 @@ const FileTable = styled(Box)(({ theme }) => ({
   maxWidth: '100%',
   display: 'grid',
   gridTemplateColumns:
-    'minmax(150px, 1fr) 220px minmax(80px, 120px) minmax(100px, 140px) minmax(50px, 80px)',
+    'minmax(260px, 2fr) 200px minmax(80px, 110px) minmax(90px, 120px) minmax(50px, 70px)',
   gridColumnGap: '8px',
   overflow: 'hidden'
 }))
@@ -67,6 +72,7 @@ function DocumentTable({ parentType, parentID }) {
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
   const [errorMessage, setErrorMessage] = useState(null)
+  const [documentPendingDelete, setDocumentPendingDelete] = useState(null)
   const { data: currentUser, hasRoles } = useCurrentUser()
 
   const { data: loadedFiles } = useDocuments(parentType, parentID)
@@ -78,7 +84,12 @@ function DocumentTable({ parentType, parentID }) {
 
   const { mutate: uploadFile } = useUploadDocument(parentType, parentID)
   const { mutate: deleteFile } = useDeleteDocument(parentType, parentID)
+  const { mutateAsync: updateDocument } = useUpdateDocument(
+    parentType,
+    parentID
+  )
   const viewDocument = useDownloadDocument(parentType, parentID)
+  const renameEnabled = isDocumentRenameEnabled(parentType)
 
   const handleDrag = (e) => {
     e.preventDefault()
@@ -224,6 +235,28 @@ function DocumentTable({ parentType, parentID }) {
     }
   }
 
+  const handleRenameFile = async (documentId, newDisplayName) => {
+    await updateDocument({
+      documentID: documentId,
+      data: { displayName: newDisplayName }
+    })
+  }
+
+  const handleDeleteClick = (file) => {
+    setDocumentPendingDelete(file)
+  }
+
+  const handleCancelDelete = () => {
+    setDocumentPendingDelete(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!documentPendingDelete) return
+
+    await handleDeleteFile(documentPendingDelete.documentId)
+    setDocumentPendingDelete(null)
+  }
+
   return (
     <Box
       sx={{
@@ -293,125 +326,167 @@ function DocumentTable({ parentType, parentID }) {
         </TableCell>
         <TableCell></TableCell>
 
-        {files.map((file, i) => (
-          <div style={{ display: 'contents' }} key={file.documentId}>
-            <TableCell>
-              {!file.oversize && !file.error && (
-                <BCTypography
-                  variant="subtitle2"
-                  color="link"
-                  onClick={() => {
-                    viewDocument(file.documentId)
-                  }}
-                  sx={{
-                    '&:hover': { cursor: 'pointer' },
-                    textDecoration: 'underline',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    maxWidth: '100%'
-                  }}
-                  title={file.fileName}
-                >
-                  {file.fileName}
-                </BCTypography>
-              )}
-              {file.oversize && (
-                <BCTypography
-                  variant="subtitle2"
-                  sx={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    maxWidth: '100%'
-                  }}
-                  title={`${file.fileName} (File is over 50MB)`}
-                >
-                  {file.fileName} (File is over 50MB)
-                </BCTypography>
-              )}
-              {file.error && (
-                <BCTypography
-                  variant="subtitle2"
-                  color="error"
-                  sx={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    maxWidth: '100%'
-                  }}
-                  title={`${file.fileName} (Unsupported file type)`}
-                >
-                  {file.fileName} (Unsupported file type)
-                </BCTypography>
-              )}
-            </TableCell>
-            <TableCell>
-              <BCTypography
-                variant="body2"
-                sx={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  maxWidth: '100%'
-                }}
-                title={`${timezoneFormatter({ value: file.createDate })}${
-                  file.createUser && !hasRoles('Supplier')
-                    ? ` - ${file.createUser}`
-                    : ''
-                }`}
-              >
-                {timezoneFormatter({ value: file.createDate })}
-                {file.createUser && !hasRoles('Supplier')
-                  ? ` - ${file.createUser}`
-                  : ''}
-              </BCTypography>
-            </TableCell>
-            <TableCell>
-              {(file.oversize || file.error) && (
-                <Icon style={{ color: colors.error.main }}>close</Icon>
-              )}
-              {prettyBytes(file.fileSize)}
-            </TableCell>
-            <TableCell style={{ justifyContent: 'center' }}>
-              {!file.scanning &&
-                !file.virus &&
-                !file.oversize &&
-                !file.error && (
-                  <Icon style={{ color: colors.success.main }}>check</Icon>
-                )}
-              {file.scanning && <CircularProgress size={22} />}
-              {(file.virus || file.error) && (
-                <Icon style={{ color: colors.error.main }}>close</Icon>
-              )}
-            </TableCell>
-            <TableCell>
-              <Tooltip title={t('common:deleteBtn')}>
-                <div>
-                  {!file.deleting &&
-                    !file.virus &&
-                    !file.scanning &&
-                    !file.oversize &&
-                    !file.error &&
-                    file.createUser === currentUser?.keycloakUsername && (
-                      <IconButton
+        {files.map((file, i) => {
+          const displayName = getDocumentDisplayName(file)
+          const canRename =
+            renameEnabled &&
+            !file.deleting &&
+            !file.scanning &&
+            !file.virus &&
+            !file.oversize &&
+            !file.error &&
+            file.createUser === currentUser?.keycloakUsername
+
+          return (
+            <div style={{ display: 'contents' }} key={file.documentId}>
+              <TableCell>
+                {!file.oversize && !file.error && (
+                  <RenameableFileName
+                    displayName={displayName}
+                    canRename={canRename}
+                    onRename={(newName) =>
+                      handleRenameFile(file.documentId, newName)
+                    }
+                    renderName={(name) => (
+                      <BCTypography
+                        variant="subtitle2"
+                        color="link"
                         onClick={() => {
-                          handleDeleteFile(file.documentId)
+                          viewDocument(file.documentId, name)
                         }}
-                        aria-label="delete row"
-                        data-test="delete-button"
-                        color="error"
+                        sx={{
+                          '&:hover': { cursor: 'pointer' },
+                          textDecoration: 'underline',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '100%'
+                        }}
+                        title={name}
                       >
-                        <Delete style={{ pointerEvents: 'none' }} />
-                      </IconButton>
+                        {name}
+                      </BCTypography>
                     )}
-                  {file.deleting && <CircularProgress size={22} />}
-                </div>
-              </Tooltip>
-            </TableCell>
-          </div>
-        ))}
+                  />
+                )}
+                {file.oversize && (
+                  <BCTypography
+                    variant="subtitle2"
+                    sx={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '100%'
+                    }}
+                    title={`${file.fileName} (File is over 50MB)`}
+                  >
+                    {file.fileName} (File is over 50MB)
+                  </BCTypography>
+                )}
+                {file.error && (
+                  <BCTypography
+                    variant="subtitle2"
+                    color="error"
+                    sx={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '100%'
+                    }}
+                    title={`${file.fileName} (Unsupported file type)`}
+                  >
+                    {file.fileName} (Unsupported file type)
+                  </BCTypography>
+                )}
+              </TableCell>
+              <TableCell>
+                <BCTypography
+                  variant="body2"
+                  sx={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: '100%'
+                  }}
+                  title={`${timezoneFormatter({ value: file.createDate })}${
+                    file.createUser && !hasRoles('Supplier')
+                      ? ` - ${file.createUser}`
+                      : ''
+                  }`}
+                >
+                  {timezoneFormatter({ value: file.createDate })}
+                  {file.createUser && !hasRoles('Supplier')
+                    ? ` - ${file.createUser}`
+                    : ''}
+                </BCTypography>
+              </TableCell>
+              <TableCell>
+                {(file.oversize || file.error) && (
+                  <Icon style={{ color: colors.error.main }}>close</Icon>
+                )}
+                {prettyBytes(file.fileSize)}
+              </TableCell>
+              <TableCell style={{ justifyContent: 'center' }}>
+                {!file.scanning &&
+                  !file.virus &&
+                  !file.oversize &&
+                  !file.error && (
+                    <Icon style={{ color: colors.success.main }}>check</Icon>
+                  )}
+                {file.scanning && <CircularProgress size={22} />}
+                {(file.virus || file.error) && (
+                  <Icon style={{ color: colors.error.main }}>close</Icon>
+                )}
+              </TableCell>
+              <TableCell>
+                <Tooltip title={t('common:deleteBtn')}>
+                  <div>
+                    {!file.deleting &&
+                      !file.virus &&
+                      !file.scanning &&
+                      !file.oversize &&
+                      !file.error &&
+                      file.createUser === currentUser?.keycloakUsername && (
+                        <IconButton
+                          onClick={() => {
+                            handleDeleteClick(file)
+                          }}
+                          aria-label="delete row"
+                          data-test="delete-button"
+                          color="error"
+                        >
+                          <Delete style={{ pointerEvents: 'none' }} />
+                        </IconButton>
+                      )}
+                    {file.deleting && <CircularProgress size={22} />}
+                  </div>
+                </Tooltip>
+              </TableCell>
+            </div>
+          )
+        })}
       </FileTable>
+      {documentPendingDelete && (
+        <BCModal
+          open={!!documentPendingDelete}
+          onClose={handleCancelDelete}
+          data={{
+            title: t('report:deleteDocumentConfirmTitle'),
+            content: (
+              <BCTypography variant="body2">
+                {t('report:deleteDocumentConfirmText', {
+                  fileName: getDocumentDisplayName(documentPendingDelete)
+                })}
+              </BCTypography>
+            ),
+            primaryButtonText: t('common:deleteBtn'),
+            primaryButtonAction: handleConfirmDelete,
+            primaryButtonColor: 'error',
+            secondaryButtonText: t('common:cancelBtn'),
+            secondaryButtonAction: handleCancelDelete
+          }}
+        />
+      )}
     </Box>
   )
 }

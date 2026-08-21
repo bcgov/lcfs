@@ -16,9 +16,15 @@ import {
   timezoneFormatter,
   convertObjectKeys,
   formatTransactionId,
-  parseTransactionIdNumber
+  parseTransactionIdNumber,
+  formatNumberWithDecimals,
+  formatDateWithTimezoneAbbr
 } from '@/utils/formatters'
 import { roles } from '@/constants/roles'
+import dayjs from 'dayjs'
+import localizedFormat from 'dayjs/plugin/localizedFormat'
+
+dayjs.extend(localizedFormat)
 
 describe('numberFormatter', () => {
   it('should format integers correctly', () => {
@@ -107,6 +113,11 @@ describe('numberFormatter', () => {
       )
     })
   })
+
+  it('should honour a custom maxDecimals value', () => {
+    expect(numberFormatter(1.23456, false, 2)).toEqual('1.23')
+    expect(numberFormatter({ value: -1.239 }, true, 2)).toEqual('(1.24)')
+  })
 })
 
 describe('currencyFormatter', () => {
@@ -185,6 +196,15 @@ describe('decimalFormatter', () => {
   it('should return original value if null', () => {
     expect(decimalFormatter({ value: null })).toEqual(null)
   })
+
+  it('should format a raw number without a params object', () => {
+    expect(decimalFormatter(1234)).toEqual('1,234.00')
+  })
+
+  it('should return undefined when the value is undefined', () => {
+    expect(decimalFormatter({ value: undefined })).toEqual(undefined)
+    expect(decimalFormatter(undefined)).toEqual(undefined)
+  })
 })
 
 describe('dateFormatter', () => {
@@ -200,6 +220,11 @@ describe('dateFormatter', () => {
 
   it('should return empty string if value is null', () => {
     expect(dateFormatter({ value: null })).toEqual('')
+  })
+
+  it('should return empty string for null or undefined params', () => {
+    expect(dateFormatter(null)).toEqual('')
+    expect(dateFormatter(undefined)).toEqual('')
   })
 })
 
@@ -267,6 +292,12 @@ describe('convertObjectKeys', () => {
     const expected = [{ camel_case_key: 'value' }]
     expect(convertObjectKeys(input)).toEqual(expected)
   })
+
+  it('should return primitives and null unchanged', () => {
+    expect(convertObjectKeys(null)).toEqual(null)
+    expect(convertObjectKeys('already-a-string')).toEqual('already-a-string')
+    expect(convertObjectKeys(42)).toEqual(42)
+  })
 })
 
 describe('calculateTotalValue', () => {
@@ -279,6 +310,10 @@ describe('calculateTotalValue', () => {
     expect(calculateTotalValue('abc', '5')).toEqual(0)
     expect(calculateTotalValue('10', 'xyz')).toEqual(0)
   })
+
+  it('should accept numeric inputs', () => {
+    expect(calculateTotalValue(3, 2.5)).toEqual(7.5)
+  })
 })
 
 describe('isNumeric', () => {
@@ -290,6 +325,12 @@ describe('isNumeric', () => {
   it('should return false for non-numeric strings', () => {
     expect(isNumeric('abc')).toEqual(false)
     expect(isNumeric('123abc')).toEqual(false)
+  })
+
+  it('should return false for non-string values', () => {
+    expect(isNumeric(123)).toEqual(false)
+    expect(isNumeric(null)).toEqual(false)
+    expect(isNumeric(undefined)).toEqual(false)
   })
 })
 
@@ -364,6 +405,10 @@ describe('spacesFormatter', () => {
   it('should return original value if null', () => {
     expect(spacesFormatter({ value: null })).toEqual(null)
   })
+
+  it('should return undefined when value is undefined', () => {
+    expect(spacesFormatter({ value: undefined })).toEqual(undefined)
+  })
 })
 
 describe('cleanEmptyStringValues', () => {
@@ -371,6 +416,12 @@ describe('cleanEmptyStringValues', () => {
     const input = { key1: 'value', key2: '', key3: null }
     const expected = { key1: 'value' }
     expect(cleanEmptyStringValues(input)).toEqual(expected)
+  })
+
+  it('should keep zero and false values', () => {
+    expect(
+      cleanEmptyStringValues({ amount: 0, flag: false, name: '' })
+    ).toEqual({ amount: 0, flag: false })
   })
 })
 
@@ -384,6 +435,15 @@ describe('formatNumberWithCommas', () => {
   it('should return 0 for null or undefined values', () => {
     expect(formatNumberWithCommas({ value: null })).toEqual(0)
   })
+
+  it('should format integers without adding a decimal part', () => {
+    expect(formatNumberWithCommas({ value: 1234567 })).toEqual('1,234,567')
+  })
+
+  it('should return 0 for empty string or zero', () => {
+    expect(formatNumberWithCommas({ value: '' })).toEqual(0)
+    expect(formatNumberWithCommas({ value: 0 })).toEqual(0)
+  })
 })
 
 describe('formatNumberWithoutCommas', () => {
@@ -393,6 +453,14 @@ describe('formatNumberWithoutCommas', () => {
 
   it('should return undefined for invalid numbers', () => {
     expect(formatNumberWithoutCommas('abc')).toEqual(undefined)
+  })
+
+  it('should parse integers without a decimal part', () => {
+    expect(formatNumberWithoutCommas('1,234,567')).toEqual(1234567)
+  })
+
+  it('should return undefined when the decimal part is invalid', () => {
+    expect(formatNumberWithoutCommas('1,234.ab')).toEqual(undefined)
   })
 })
 
@@ -460,5 +528,48 @@ describe('parseTransactionIdNumber', () => {
       (a, b) => parseTransactionIdNumber(a) - parseTransactionIdNumber(b)
     )
     expect(sorted).toEqual(['CT9', 'AA70', 'IA100'])
+  })
+})
+
+describe('formatNumberWithDecimals', () => {
+  it('should format numbers with two decimal places by default', () => {
+    expect(formatNumberWithDecimals({ value: 1234.5 })).toEqual('1,234.50')
+    expect(formatNumberWithDecimals({ value: '7890' })).toEqual('7,890.00')
+  })
+
+  it('should honour a custom decimal count', () => {
+    expect(formatNumberWithDecimals({ value: 1234.56 }, 0)).toEqual('1,235')
+    expect(formatNumberWithDecimals({ value: 1234.56 }, 1)).toEqual('1,234.6')
+  })
+
+  it('should return an empty string for empty or non-finite values', () => {
+    expect(formatNumberWithDecimals({ value: null })).toEqual('')
+    expect(formatNumberWithDecimals({ value: undefined })).toEqual('')
+    expect(formatNumberWithDecimals({ value: '' })).toEqual('')
+    expect(formatNumberWithDecimals({ value: 'abc' })).toEqual('')
+    expect(formatNumberWithDecimals({ value: Infinity })).toEqual('')
+  })
+
+  it('should format zero', () => {
+    expect(formatNumberWithDecimals({ value: 0 })).toEqual('0.00')
+  })
+})
+
+describe('formatDateWithTimezoneAbbr', () => {
+  it('should include a localized date/time and a timezone abbreviation', () => {
+    const input = '2024-06-15T18:30:00.000Z'
+    const result = formatDateWithTimezoneAbbr(input)
+    expect(result).toContain(dayjs(input).format('LLL'))
+    expect(result.length).toBeGreaterThan(dayjs(input).format('LLL').length)
+  })
+
+  it('should accept Date objects and numeric timestamps', () => {
+    const date = new Date('2024-01-15T20:00:00.000Z')
+    expect(formatDateWithTimezoneAbbr(date)).toContain(
+      dayjs(date).format('LLL')
+    )
+    expect(formatDateWithTimezoneAbbr(date.getTime())).toContain(
+      dayjs(date).format('LLL')
+    )
   })
 })

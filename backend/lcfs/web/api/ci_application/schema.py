@@ -116,6 +116,14 @@ class CIApplicationUserSchema(BaseSchema):
         )
 
 
+class CIApplicationAssignmentHistorySchema(BaseSchema):
+    event: str
+    previous_analyst: Optional[CIApplicationUserSchema] = None
+    new_analyst: Optional[CIApplicationUserSchema] = None
+    changed_at: datetime
+    changed_by: Optional[str] = None
+
+
 class PathwayApplicationTypeSchema(BaseSchema):
     pathway_application_type_id: int
     type: str
@@ -286,8 +294,9 @@ class PathwayInputSchema(BaseSchema):
     pathway_id: Optional[int] = None
     application_type_id: int
     fuel_code_type_id: int
-    operating_data_from: date
-    operating_data_to: date
+    design_data: bool
+    operating_data_from: Optional[date] = None
+    operating_data_to: Optional[date] = None
     fuel_code_id: Optional[int] = None
     proposed_ci: Decimal
     fuel_type_id: int
@@ -302,17 +311,25 @@ class PathwayInputSchema(BaseSchema):
     )
 
     @model_validator(mode="after")
-    def _validate_row(self):
-        if self.operating_data_to < self.operating_data_from:
-            raise RequestValidationError(
-                [
-                    {
-                        "loc": ("operatingDataTo",),
-                        "msg": "Operating data end date must be on or after the start date.",
-                        "type": "value_error",
-                    }
-                ]
-            )
+    def _validate_dates(self):
+        if not self.design_data and (
+            self.operating_data_from is None or self.operating_data_to is None
+        ):
+            raise RequestValidationError([{
+                "loc": ("operatingDataFrom",),
+                "msg": "Operating data collection date range is required when design data is No.",
+                "type": "value_error",
+            }])
+        if (
+            self.operating_data_from
+            and self.operating_data_to
+            and self.operating_data_to < self.operating_data_from
+        ):
+            raise RequestValidationError([{
+                "loc": ("operatingDataTo",),
+                "msg": "Operating data end date must be on or after the start date.",
+                "type": "value_error",
+            }])
         return self
 
 
@@ -342,8 +359,9 @@ class PathwaySchema(BaseSchema):
     application_type: Optional[PathwayApplicationTypeSchema] = None
     fuel_code_type_id: int
     fuel_code_type: Optional[PathwayFuelCodeTypeSchema] = None
-    operating_data_from: date
-    operating_data_to: date
+    design_data: bool
+    operating_data_from: Optional[date] = None
+    operating_data_to: Optional[date] = None
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeOptionSchema] = None
     proposed_ci: Decimal
@@ -522,6 +540,7 @@ class CIApplicationSchema(BaseSchema):
     preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
     priority_score: Optional[int] = None
     assigned_analyst: Optional[CIApplicationUserSchema] = None
+    assignment_history: Optional[List[CIApplicationAssignmentHistorySchema]] = None
     verification_1_user: Optional[CIApplicationUserSchema] = None
     verification_1_date: Optional[datetime] = None
     verification_2_user: Optional[CIApplicationUserSchema] = None
@@ -549,6 +568,11 @@ class CIApplicationVerification1Schema(BaseSchema):
 
 
 class CIApplicationVerification2Schema(BaseSchema):
+    preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
+    priority_score: Optional[StrictInt] = Field(default=None, ge=1, le=999)
+
+
+class CIApplicationRiskAssessmentDraftSchema(BaseSchema):
     preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
     priority_score: Optional[StrictInt] = Field(default=None, ge=1, le=999)
 

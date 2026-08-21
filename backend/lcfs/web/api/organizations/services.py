@@ -210,6 +210,7 @@ class OrganizationsService:
             operating_name=organization_data.operating_name,
             email=organization_data.email,
             phone=organization_data.phone,
+            contact_name=organization_data.contact_name,
             edrms_record=organization_data.edrms_record,
             organization_status_id=organization_data.organization_status_id,
             organization_type_id=organization_data.organization_type_id,

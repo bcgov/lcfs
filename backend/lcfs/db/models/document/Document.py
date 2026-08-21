@@ -39,6 +39,7 @@ class Document(BaseModel, Auditable):
     file_name = Column(String, nullable=False)
     file_size = Column(Integer, nullable=False)
     mime_type = Column(String, nullable=False)
+    display_name = Column(String, nullable=True)
 
     compliance_reports = relationship(
         "ComplianceReport",

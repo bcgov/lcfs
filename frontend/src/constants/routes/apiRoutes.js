@@ -105,6 +105,8 @@ export const apiRoutes = {
   ciApplicationDecision: '/ci-applications/:ciApplicationId/decision',
   ciApplicationAnalysts: '/ci-applications/analysts',
   assignCIApplicationAnalyst: '/ci-applications/:ciApplicationId/assign',
+  updateCIApplicationRiskAssessment:
+    '/ci-applications/:ciApplicationId/risk-assessment',
   completeCIApplicationVerification1:
     '/ci-applications/:ciApplicationId/verification-1',
   completeCIApplicationVerification2:
