@@ -110,6 +110,8 @@
     "ghgeniusRequired": "GHGenius model upload is required.",
     "saveAndProceed": "Save & proceed",
     "saveSuccess": "Documents saved.",
+    "deleteDocumentConfirmTitle": "Delete document?",
+    "deleteDocumentConfirmText": "Are you sure you want to delete {{fileName}}?",
     "errors": {
       "tooLarge": "File exceeds the 50 MB limit.",
       "unsupportedType": "Unsupported file type. Allowed: PDF, Word, Excel, CSV, plain text, PNG, JPEG.",
@@ -227,6 +229,14 @@
     "facilityCapacity": "Facility nameplate capacity:",
     "proposedEffectiveDate": "Proposed fuel code effective date:",
     "previousFuelCodeExpiryDate": "Previous fuel code expiry date:",
+    "assignmentHistoryHeader": "Analyst assignment history",
+    "assignmentChanged": "Changed analyst assignment",
+    "assignmentEvents": {
+      "analyst_assigned": "Assigned analyst",
+      "analyst_reassigned": "Reassigned analyst",
+      "analyst_unassigned": "Removed analyst assignment"
+    },
+    "unassigned": "Unassigned",
     "signingAuthorityHeader": "Signing authority declaration",
     "signedLabel": "Signed:",
     "signingAuthorityLabel": "Signing authority:",
