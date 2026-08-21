@@ -110,6 +110,8 @@
     "ghgeniusRequired": "GHGenius model upload is required.",
     "saveAndProceed": "Save & proceed",
     "saveSuccess": "Documents saved.",
+    "deleteDocumentConfirmTitle": "Delete document?",
+    "deleteDocumentConfirmText": "Are you sure you want to delete {{fileName}}?",
     "errors": {
       "tooLarge": "File exceeds the 50 MB limit.",
       "unsupportedType": "Unsupported file type. Allowed: PDF, Word, Excel, CSV, plain text, PNG, JPEG.",
