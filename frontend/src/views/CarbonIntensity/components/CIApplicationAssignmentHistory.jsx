@@ -11,11 +11,14 @@ export const CIApplicationAssignmentHistory = ({ assignmentHistory }) => {
   const { t } = useTranslation(['carbonIntensity'])
   const unassignedLabel = t('carbonIntensity:summary.unassigned')
 
+  const fallbackEvent = t('carbonIntensity:summary.assignmentChanged')
   const formatAssignmentHistoryEntry = (entry) => ({
-    event: t(
-      `carbonIntensity:summary.assignmentEvents.${entry.event}`,
-      t('carbonIntensity:summary.assignmentChanged')
-    ),
+    event: entry.event
+      ? t(
+          `carbonIntensity:summary.assignmentEvents.${entry.event}`,
+          fallbackEvent
+        )
+      : fallbackEvent,
     previousName: analystName(entry.previousAnalyst, unassignedLabel),
     newName: analystName(entry.newAnalyst, unassignedLabel),
     changedAt: formatDateWithTimezoneAbbr(entry.changedAt),
@@ -48,7 +51,9 @@ export const CIApplicationAssignmentHistory = ({ assignmentHistory }) => {
                     <strong>{line.previousName}</strong>
                     {` to `}
                     <strong>{line.newName}</strong>
-                    {` on ${line.changedAt} by `}
+                    {` on `}
+                    {line.changedAt}
+                    {` by `}
                     <strong>{line.changedBy}</strong>
                   </BCTypography>
                 </li>

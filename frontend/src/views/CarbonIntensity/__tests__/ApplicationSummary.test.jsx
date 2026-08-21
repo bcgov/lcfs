@@ -86,12 +86,14 @@ describe('ApplicationSummary', () => {
           ...baseApplication,
           assignmentHistory: [
             {
+              event: 'analyst_reassigned',
               changedAt: '2026-08-19T18:45:00Z',
               changedBy: 'Casey Reviewer',
               previousAnalyst: { fullName: 'Alex Analyst' },
               newAnalyst: { fullName: 'Sam Analyst' }
             },
             {
+              event: 'analyst_assigned',
               changedAt: '2026-08-18T17:30:00Z',
               changedBy: 'Casey Reviewer',
               previousAnalyst: null,
