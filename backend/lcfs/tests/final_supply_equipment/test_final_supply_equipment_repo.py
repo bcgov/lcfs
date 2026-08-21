@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy import select, literal
@@ -37,6 +38,25 @@ class FakeResult:
 
     def scalar(self):
         return self._result[0] if self._result else None
+
+
+class FakeSyncCandidate:
+    def __init__(
+        self,
+        association,
+        charging_equipment_group_uuid,
+        latest_charging_equipment_id,
+        latest_charging_equipment_version,
+    ):
+        self._association = association
+        self.charging_equipment_group_uuid = charging_equipment_group_uuid
+        self.latest_charging_equipment_id = latest_charging_equipment_id
+        self.latest_charging_equipment_version = latest_charging_equipment_version
+
+    def __getitem__(self, index):
+        if index == 0:
+            return self._association
+        raise IndexError(index)
 
 
 # Fixture for a fake database session.
@@ -80,6 +100,54 @@ def test_latest_equipment_versions_subquery_ranks_by_group_uuid(repo):
 
     assert "PARTITION BY charging_equipment.group_uuid" in compiled
     assert "charging_equipment.version DESC" in compiled
+
+
+def test_fse_pref_view_matches_reporting_rows_by_equipment_group_uuid():
+    sql = (
+        Path(__file__).resolve().parents[3] / "lcfs/db/sql/views/metabase.sql"
+    ).read_text()
+
+    assert "v.compliance_report_group_uuid,\n                    ce.group_uuid" in sql
+    assert "mr.charging_equipment_group_uuid = fr.charging_equipment_group_uuid" in sql
+    assert "fr.charging_equipment_id,\n    fr.serial_number" in sql
+    assert (
+        "mr.charging_equipment_id = fr.charging_equipment_id\n"
+        "   AND mr.charging_equipment_version = fr.charging_equipment_version"
+        not in sql
+    )
+
+
+@pytest.mark.anyio
+async def test_sync_reporting_associations_preserves_inactive_selection(repo, fake_db):
+    association = MagicMock()
+    association.charging_equipment_compliance_id = 10
+    association.compliance_report_id = 20
+    association.organization_id = 30
+    association.is_active = False
+
+    sync_result = MagicMock()
+    sync_result.all.return_value = [
+        FakeSyncCandidate(
+            association,
+            charging_equipment_group_uuid="equipment-group",
+            latest_charging_equipment_id=101,
+            latest_charging_equipment_version=3,
+        )
+    ]
+    existing_result = MagicMock()
+    existing_result.scalars.return_value.first.return_value = None
+    update_result = MagicMock()
+    fake_db.execute.side_effect = [sync_result, existing_result, update_result]
+
+    result = await repo.sync_reporting_associations_to_latest_equipment(
+        "report-group", 30
+    )
+
+    assert result == 1
+    assert association.charging_equipment_id == 101
+    assert association.charging_equipment_version == 3
+    assert association.is_active is False
+    fake_db.flush.assert_called_once()
 
 
 @pytest.mark.anyio

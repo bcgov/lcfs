@@ -18,6 +18,7 @@ from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import NotificationTypeEnum, PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
+    CIApplicationRiskAssessmentDraftSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationStatusEnum,
@@ -45,7 +46,11 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 
 @pytest.mark.parametrize(
     "schema",
-    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+    [
+        CIApplicationVerification1Schema,
+        CIApplicationVerification2Schema,
+        CIApplicationRiskAssessmentDraftSchema,
+    ],
 )
 def test_verification_priority_score_requires_whole_number_1_to_999(schema):
     payload = {"priorityScore": 120}
@@ -59,7 +64,11 @@ def test_verification_priority_score_requires_whole_number_1_to_999(schema):
 
 @pytest.mark.parametrize(
     "schema",
-    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+    [
+        CIApplicationVerification1Schema,
+        CIApplicationVerification2Schema,
+        CIApplicationRiskAssessmentDraftSchema,
+    ],
 )
 @pytest.mark.parametrize("payload", [{}, {"priorityScore": None}])
 def test_verification_priority_score_schema_allows_null_when_not_completing_status(
@@ -80,7 +89,11 @@ def test_verification_priority_score_schema_allows_null_when_not_completing_stat
 )
 @pytest.mark.parametrize(
     "schema",
-    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+    [
+        CIApplicationVerification1Schema,
+        CIApplicationVerification2Schema,
+        CIApplicationRiskAssessmentDraftSchema,
+    ],
 )
 def test_verification_priority_score_rejects_decimal_and_out_of_range(
     schema, priority_score
@@ -190,6 +203,107 @@ async def test_complete_verification_2_requires_verification_1_for_medium(
 
     assert exc.value.status_code == 400
     assert "Verification 1 must be completed first" in exc.value.detail
+
+
+def _risk_assessment_draft_payload(**overrides):
+    data = dict(
+        preliminary_risk_assessment=CIRiskAssessmentEnum.Low,
+        priority_score=42,
+    )
+    data.update(overrides)
+    return CIApplicationRiskAssessmentDraftSchema(**data)
+
+
+@pytest.mark.anyio
+async def test_update_risk_assessment_draft_writes_verification_1_fields(
+    service, repo, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    result = await service.update_risk_assessment_draft(
+        ci, _risk_assessment_draft_payload(), mock_user
+    )
+
+    assert ci.preliminary_risk_assessment == CIRiskAssessmentEnum.Low.value
+    assert ci.priority_score == 42
+    assert ci.verification_2_risk_assessment is None
+    assert ci.verification_2_priority_score is None
+    repo.add_history.assert_not_awaited()
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_update_risk_assessment_draft_writes_verification_2_fields(
+    service, repo, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.Medium.value
+    ci.priority_score = 10
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    await service.update_risk_assessment_draft(
+        ci,
+        _risk_assessment_draft_payload(
+            preliminary_risk_assessment=CIRiskAssessmentEnum.High,
+            priority_score=88,
+        ),
+        mock_user,
+    )
+
+    assert ci.preliminary_risk_assessment == CIRiskAssessmentEnum.Medium.value
+    assert ci.priority_score == 10
+    assert ci.verification_2_risk_assessment == CIRiskAssessmentEnum.High.value
+    assert ci.verification_2_priority_score == 88
+    repo.add_history.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_update_risk_assessment_draft_rejects_after_verification_2(
+    service, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.High.value
+    ci.priority_score = 10
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+    ci.verification_2_date = datetime(2026, 5, 3, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_risk_assessment_draft(
+            ci, _risk_assessment_draft_payload(), mock_user
+        )
+
+    assert exc.value.status_code == 400
+    assert "after verification is complete" in exc.value.detail
+    assert ci.preliminary_risk_assessment == CIRiskAssessmentEnum.High.value
+    assert ci.priority_score == 10
+
+
+@pytest.mark.anyio
+async def test_update_risk_assessment_draft_rejects_after_verification_1_when_v2_not_required(
+    service, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.Low.value
+    ci.priority_score = 10
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_risk_assessment_draft(
+            ci,
+            _risk_assessment_draft_payload(
+                preliminary_risk_assessment=CIRiskAssessmentEnum.Medium,
+                priority_score=99,
+            ),
+            mock_user,
+        )
+
+    assert exc.value.status_code == 400
+    assert ci.preliminary_risk_assessment == CIRiskAssessmentEnum.Low.value
+    assert ci.priority_score == 10
 
 
 @pytest.fixture
@@ -309,6 +423,13 @@ def _ci_application(
         group_uuid="abc",
         version=0,
         action_type=ActionTypeEnum.CREATE,
+        preliminary_risk_assessment=None,
+        priority_score=None,
+        verification_1_date=None,
+        verification_2_date=None,
+        verification_2_risk_assessment=None,
+        verification_2_priority_score=None,
+        recommendation_date=None,
     )
 
 
