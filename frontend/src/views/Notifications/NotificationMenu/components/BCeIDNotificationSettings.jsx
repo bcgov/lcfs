@@ -1,8 +1,11 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { roles } from '@/constants/roles'
 import NotificationSettingsForm from './NotificationSettingsForm'
 
 const BCeIDNotificationSettings = () => {
   const { data: currentUser } = useCurrentUser()
+  const userRoles = currentUser?.roles?.map((role) => role.name) || []
+  const isCIApplicant = userRoles.includes(roles.ci_applicant)
 
   // Categories for BCeID users
   const categories = {
@@ -31,7 +34,16 @@ const BCeIDNotificationSettings = () => {
       title: 'bceid.categories.complianceReports.title',
       BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT:
         'bceid.categories.complianceReports.directorAssessment'
-    }
+    },
+    ...(isCIApplicant && {
+      'bceid.categories.ciApplications': {
+        title: 'bceid.categories.ciApplications.title',
+        BCEID__CI_APPLICATION__GOVERNMENT_ACTION:
+          'bceid.categories.ciApplications.governmentAction',
+        BCEID__CI_APPLICATION__FUEL_CODE_APPROVED:
+          'bceid.categories.ciApplications.fuelCodeApproved'
+      }
+    })
   }
 
   return (

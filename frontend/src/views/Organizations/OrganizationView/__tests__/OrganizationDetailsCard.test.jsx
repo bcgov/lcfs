@@ -34,6 +34,8 @@ const baseOrg = {
   operatingName: 'Operating Inc',
   phone: '1234567890',
   email: 'test@test.com',
+  contactName: 'Jane Contact',
+  edrmsRecord: 'EDRMS-123',
   orgStatus: { status: 'Registered' },
   orgAddress: {},
   orgAttorneyAddress: {},
@@ -112,7 +114,9 @@ describe('OrganizationDetailsCard', () => {
     expect(screen.getByText('Legal Inc')).toBeInTheDocument()
     expect(screen.getByText('Operating Inc')).toBeInTheDocument()
     expect(screen.getByText('(123) 456-7890')).toBeInTheDocument()
+    expect(screen.getByText('Jane Contact')).toBeInTheDocument()
     expect(screen.getByText('test@test.com')).toBeInTheDocument()
+    expect(screen.getByText('EDRMS-123')).toBeInTheDocument()
   })
 
   it('renders edit button only for administrators', () => {
@@ -233,8 +237,8 @@ describe('OrganizationDetailsCard', () => {
 
   it('shows credit trading disabled', () => {
     useOrganization.mockReturnValue({
-      data: { 
-        ...baseOrg, 
+      data: {
+        ...baseOrg,
         orgStatus: { status: 'Registered' },
         creditTradingEnabled: false
       },

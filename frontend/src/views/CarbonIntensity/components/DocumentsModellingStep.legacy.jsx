@@ -34,6 +34,7 @@ import {
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
+import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import {
   COMPLIANCE_REPORT_FILE_TYPES,
@@ -85,6 +86,7 @@ export const DocumentsModellingStepLegacy = ({
     ciApplication?.supportingDocumentOther || ''
   )
   const [uploadError, setUploadError] = useState(null)
+  const [documentPendingDelete, setDocumentPendingDelete] = useState(null)
 
   const { data: documents = [], isLoading: isLoadingDocs } = useDocuments(
     PARENT_TYPE,
@@ -141,6 +143,21 @@ export const DocumentsModellingStepLegacy = ({
           t('carbonIntensity:step3.errors.deleteFailed')
       )
     }
+  }
+
+  const handleDeleteClick = (document) => {
+    setDocumentPendingDelete(document)
+  }
+
+  const handleCancelDelete = () => {
+    setDocumentPendingDelete(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!documentPendingDelete) return
+
+    await handleDelete(documentPendingDelete.documentId)
+    setDocumentPendingDelete(null)
   }
 
   const canProceed = hasTechnicalReport && hasGHGeniusModel && !readOnly
@@ -232,7 +249,7 @@ export const DocumentsModellingStepLegacy = ({
                     <IconButton
                       aria-label="delete document"
                       size="small"
-                      onClick={() => handleDelete(doc.documentId)}
+                      onClick={() => handleDeleteClick(doc)}
                       disabled={isDeletingDoc}
                       data-test="ci-step3-delete-doc"
                     >
@@ -412,6 +429,28 @@ export const DocumentsModellingStepLegacy = ({
             </BCButton>
           )}
         </Stack>
+      )}
+
+      {documentPendingDelete && (
+        <BCModal
+          open={!!documentPendingDelete}
+          onClose={handleCancelDelete}
+          data={{
+            title: t('carbonIntensity:step3.deleteDocumentConfirmTitle'),
+            content: (
+              <BCTypography variant="body2">
+                {t('carbonIntensity:step3.deleteDocumentConfirmText', {
+                  fileName: documentPendingDelete.fileName
+                })}
+              </BCTypography>
+            ),
+            primaryButtonText: t('common:deleteBtn'),
+            primaryButtonAction: handleConfirmDelete,
+            primaryButtonColor: 'error',
+            secondaryButtonText: t('common:cancelBtn'),
+            secondaryButtonAction: handleCancelDelete
+          }}
+        />
       )}
     </Box>
   )

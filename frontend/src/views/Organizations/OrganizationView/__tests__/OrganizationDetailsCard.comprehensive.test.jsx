@@ -426,7 +426,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.getByText(/Compliance Unit Balance/)).toBeInTheDocument()
+    expect(screen.getByText(/Compliance unit balance/)).toBeInTheDocument()
     expect(screen.getByText('200 (25)')).toBeInTheDocument()
   })
 

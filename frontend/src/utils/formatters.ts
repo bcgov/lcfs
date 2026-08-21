@@ -4,9 +4,7 @@ import dayjs from 'dayjs'
 type ValueParam = { value?: unknown } | number | string | null | undefined
 type FormatterParam = ValueParam | Record<string, unknown>
 
-const hasValue = (
-  obj: unknown
-): obj is { value: unknown } =>
+const hasValue = (obj: unknown): obj is { value: unknown } =>
   typeof obj === 'object' &&
   obj !== null &&
   Object.prototype.hasOwnProperty.call(obj, 'value')
@@ -22,7 +20,8 @@ export const numberFormatter = (
 ): string => {
   if (
     params == null ||
-    (typeof params === 'object' && (params as { value?: unknown }).value == null)
+    (typeof params === 'object' &&
+      (params as { value?: unknown }).value == null)
   )
     return ''
 
@@ -122,9 +121,7 @@ export const dateToLongString = (
 /**
  * Formats a phone number to (123) 456-7890 format.
  */
-export const phoneNumberFormatter = (params: {
-  value?: unknown
-}): string => {
+export const phoneNumberFormatter = (params: { value?: unknown }): string => {
   const phoneNumber = params?.value?.toString().replace(/\D/g, '') || ''
   if (!phoneNumber) {
     return ''
@@ -244,6 +241,43 @@ export const spacesFormatter = (params: {
 }
 
 /**
+ * User-facing ID prefix for each transaction type. The number that follows is
+ * the type's own id (transfer_id, initiative_agreement_id, ...), not a shared
+ * sequence, so the prefix is what makes the id unambiguous.
+ *
+ * StandaloneTransaction ("Legacy Transaction") is deliberately absent — those
+ * rows carry a raw transaction table id with no user-facing prefix.
+ */
+export const TRANSACTION_ID_PREFIXES: Record<string, string> = {
+  Transfer: 'CT',
+  AdminAdjustment: 'AA',
+  InitiativeAgreement: 'IA',
+  ComplianceReport: 'CR',
+  AggregatorIssuance: 'AG'
+}
+
+/**
+ * Formats a transaction id for display, e.g. ('InitiativeAgreement', 3113) -> 'IA3113'.
+ */
+export const formatTransactionId = (
+  transactionType: string | null | undefined,
+  transactionId: string | number | null | undefined
+): string =>
+  `${TRANSACTION_ID_PREFIXES[transactionType ?? ''] ?? ''}${transactionId ?? ''}`
+
+/**
+ * Extracts the numeric part of a display transaction id, e.g. 'IA3113' -> 3113.
+ * Strips a prefix of any length (or none at all, for legacy transactions), so
+ * sorting stays numeric rather than lexical. Unparseable ids sort as 0.
+ */
+export const parseTransactionIdNumber = (
+  displayId: string | number | null | undefined
+): number => {
+  const parsed = parseInt(String(displayId ?? '').replace(/^\D+/, ''), 10)
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+/**
  * Removes entries with empty string values from an object.
  */
 export const cleanEmptyStringValues = <T extends Record<string, unknown>>(
@@ -267,7 +301,9 @@ export const formatNumberWithCommas = ({
   if (!value) return 0
   const [integerPart, decimalPart] = value.toString().split('.')
 
-  let number = new Intl.NumberFormat('en-CA').format(integerPart as unknown as number)
+  let number = new Intl.NumberFormat('en-CA').format(
+    integerPart as unknown as number
+  )
 
   if (decimalPart !== undefined) {
     number = number + '.' + decimalPart

@@ -110,11 +110,14 @@ class TransactionRepository:
                 ),
             )
 
-            # Conditions for non-transfer transactions, only "Approved" for suppliers
+            # Conditions for non-transfer transactions, only settled ones for
+            # suppliers. "Recorded" covers legacy (standalone) transactions and
+            # aggregator issuances, which are settled on arrival and would
+            # otherwise be missing from a supplier's view entirely (#4809).
             non_transfer_condition = and_(
                 TransactionView.transaction_type != "Transfer",
                 TransactionView.to_organization_id == organization_id,
-                TransactionView.status.in_(["Approved", "Assessed"]),
+                TransactionView.status.in_(["Approved", "Assessed", "Recorded"]),
             )
 
             # Combine conditions since an organization can be both transferor and transferee, or neither for non-"Transfer" transactions

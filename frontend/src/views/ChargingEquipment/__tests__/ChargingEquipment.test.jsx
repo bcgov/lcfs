@@ -60,7 +60,7 @@ vi.mock('react-i18next', () => ({
         'chargingEquipment:selectAllDraftUpdated': 'Select All Draft/Updated',
         'chargingEquipment:selectAllValidated': 'Select All Validated',
         'chargingEquipment:submitSelected': 'Submit selected',
-        'chargingEquipment:setToDecommissioned': 'Set to Decommissioned',
+        'chargingEquipment:setToDecommissioned': 'Set to decommissioned',
         'chargingEquipment:errorLoadingEquipment': 'Error loading equipment',
         'common:cancel': 'Cancel'
       }
@@ -209,7 +209,7 @@ vi.mock('../components/BulkActionButtons', () => ({
           data-test="decommission-selected-btn"
           onClick={onDecommissionClick}
         >
-          Set to Decommissioned (
+          Set to decommissioned (
           {selectedRows.filter((r) => r.status === 'Validated').length})
         </button>
       )}
@@ -483,7 +483,7 @@ describe('ChargingEquipment', () => {
         screen.getByRole('button', { name: /Submit selected/i })
       ).toBeInTheDocument()
       expect(
-        screen.getByRole('button', { name: /Set to Decommissioned/i })
+        screen.getByRole('button', { name: /Set to decommissioned/i })
       ).toBeInTheDocument()
     })
   })
@@ -546,7 +546,7 @@ describe('ChargingEquipment', () => {
     // Click decommission button
     await waitFor(() => {
       const decommissionButton = screen.getByRole('button', {
-        name: /Set to Decommissioned/i
+        name: /Set to decommissioned/i
       })
       fireEvent.click(decommissionButton)
     })
@@ -820,7 +820,7 @@ describe('ChargingEquipment', () => {
       expect(screen.queryByText(/Select All Draft/)).not.toBeInTheDocument()
       expect(screen.queryByText(/Submit selected/)).not.toBeInTheDocument()
       expect(
-        screen.queryByText(/Set to Decommissioned/)
+        screen.queryByText(/Set to decommissioned/)
       ).not.toBeInTheDocument()
     })
   })

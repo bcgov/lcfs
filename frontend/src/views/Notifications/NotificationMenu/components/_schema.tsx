@@ -84,6 +84,12 @@ export const routesMapping = (
     ? ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW
     : ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.ORG_VIEW,
   ComplianceReport: ROUTES.REPORTS.VIEW,
+  ciApplication: ROUTES.CI_APPLICATIONS.EDIT,
+  'CI Application': ROUTES.CI_APPLICATIONS.EDIT,
+  'CI Application Recommended': ROUTES.CI_APPLICATIONS.EDIT,
+  'CI Application Director Approved': ROUTES.CI_APPLICATIONS.EDIT,
+  'CI Application Director Returned': ROUTES.CI_APPLICATIONS.EDIT,
+  'CI Application Submitted': ROUTES.CI_APPLICATIONS.EDIT,
   'Fuel Code': ROUTES.FUEL_CODES.EDIT,
   'Fuel Code Status Update': ROUTES.FUEL_CODES.EDIT,
   'Fuel Code Recommended': ROUTES.FUEL_CODES.EDIT,
