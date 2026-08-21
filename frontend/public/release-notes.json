@@ -5,7 +5,7 @@
     "date": "2026-08-21",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.8",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.7...v1.3.8",
-    "summary": "This release includes 11 new features, 10 bug fixes, 8 dependency updates and 14 other changes. Highlights: Update analyst notifications for CI applications; CI application notifications IDIR director; Refine commenting feature - 4793, 4794, 4795; Add CI application location autocomplete.",
+    "summary": "This release includes 13 new features, 13 bug fixes, 8 dependency updates and 14 other changes. Highlights: Update analyst notifications for CI applications; CI application notifications IDIR director; Refine commenting feature - 4793, 4794, 4795; Add CI application location autocomplete.",
     "sections": {
       "features": [
         "Update analyst notifications for CI applications - 4759",
@@ -18,7 +18,9 @@
         "Enhance notification publishing workflow - 4853",
         "LCFS - Add a new Contact name field",
         "LCFS – Add Design Data Yes/No selection to pathways",
-        "Highlight Comment Log Search Terms - 4877"
+        "Highlight Comment Log Search Terms - 4877",
+        "LCFS - BCeID CI applicant notifications",
+        "Record analyst assignment history - 4817"
       ],
       "fixes": [
         "LCFS - Date picker in operating date field exits after year selection",
@@ -30,7 +32,10 @@
         "Credit ledger assessed balances and compliance year envelopes (#4831, #4832)",
         "LCFS - CI Application form submit button",
         "Auto-save Step 4 consultant details on a draft CI application (#4772)",
-        "LCFS – Withdraw and reactivate should display accurate action buttons"
+        "LCFS – Withdraw and reactivate should display accurate action buttons",
+        "Approved Current/Archived Carbon Intensities Table Fuel Code Filter Returns Network Error",
+        "Uploaded document delete action does not show confirmation prompt",
+        "Restore pathway changes confirmation and include legacy transactions in the Excel export - 4829 4809"
       ],
       "security": [],
       "breaking": [],
