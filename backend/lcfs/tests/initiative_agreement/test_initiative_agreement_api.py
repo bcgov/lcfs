@@ -339,3 +339,152 @@ async def test_page_size_is_capped(
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["pagination"]["size"] == 200
+
+
+async def _seed_comment(dbsession, agreement, author, text, visibility, minutes_ago):
+    from datetime import datetime, timedelta, timezone
+
+    from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
+        InitiativeAgreementInternalComment,
+    )
+    from lcfs.db.models.comment.InternalComment import InternalComment
+
+    comment = InternalComment(
+        comment=f"<p>{text}</p>",
+        comment_search_text=text,
+        visibility=visibility,
+        create_user=author.keycloak_username,
+        create_date=datetime.now(timezone.utc) - timedelta(minutes=minutes_ago),
+    )
+    dbsession.add(comment)
+    await dbsession.flush()
+    dbsession.add(
+        InitiativeAgreementInternalComment(
+            initiative_agreement_id=agreement.initiative_agreement_id,
+            internal_comment_id=comment.internal_comment_id,
+        )
+    )
+    await dbsession.flush()
+    return comment
+
+
+async def _any_user(dbsession):
+    from lcfs.db.models.user.UserProfile import UserProfile
+
+    result = await dbsession.execute(
+        select(UserProfile).where(UserProfile.first_name.is_not(None)).limit(1)
+    )
+    return result.scalars().first()
+
+
+@pytest.mark.anyio
+async def test_last_comment_is_the_newest_one(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org1, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org1, "IA-26LC1")
+    author = await _any_user(dbsession)
+    await _seed_comment(dbsession, agreement, author, "older note", "Internal", 60)
+    await _seed_comment(dbsession, agreement, author, "newest note", "Internal", 1)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for("get_initiative_agreements")
+    response = await client.post(url, json=PAGINATION_BODY)
+
+    row = next(
+        r for r in response.json()["initiativeAgreements"] if r["iaCode"] == "IA-26LC1"
+    )
+    assert row["lastComment"]["comment"] == "newest note"
+    assert row["lastComment"]["fullName"] == (
+        f"{author.first_name} {author.last_name}".strip()
+    )
+
+
+@pytest.mark.anyio
+async def test_last_comment_is_null_without_comments(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org1, _ = await _two_org_ids(dbsession)
+    await _seed_agreement(dbsession, org1, "IA-26LC2")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for("get_initiative_agreements")
+    response = await client.post(url, json=PAGINATION_BODY)
+
+    row = next(
+        r for r in response.json()["initiativeAgreements"] if r["iaCode"] == "IA-26LC2"
+    )
+    assert row["lastComment"] is None
+
+
+@pytest.mark.anyio
+async def test_proponent_gets_the_newest_public_comment_not_the_internal_one(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """
+    The newest comment overall is internal. A BCeID caller must receive the
+    newest comment they may see, and never the internal text.
+    """
+    agreement = await _seed_agreement(dbsession, 1, "IA-26LC3")
+    author = await _any_user(dbsession)
+    await _seed_comment(dbsession, agreement, author, "public note", "Public", 30)
+    await _seed_comment(
+        dbsession, agreement, author, "secret internal note", "Internal", 1
+    )
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
+
+    url = fastapi_app.url_path_for("get_initiative_agreements")
+    response = await client.post(url, json=PAGINATION_BODY)
+
+    body = response.text
+    row = next(
+        r for r in response.json()["initiativeAgreements"] if r["iaCode"] == "IA-26LC3"
+    )
+    assert row["lastComment"]["comment"] == "public note"
+    assert "secret internal note" not in body
+
+
+@pytest.mark.anyio
+async def test_proponent_gets_no_last_comment_when_all_are_internal(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _seed_agreement(dbsession, 1, "IA-26LC4")
+    author = await _any_user(dbsession)
+    await _seed_comment(
+        dbsession, agreement, author, "internal only note", "Internal", 5
+    )
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
+
+    url = fastapi_app.url_path_for("get_initiative_agreements")
+    response = await client.post(url, json=PAGINATION_BODY)
+
+    row = next(
+        r for r in response.json()["initiativeAgreements"] if r["iaCode"] == "IA-26LC4"
+    )
+    assert row["lastComment"] is None
+    assert "internal only note" not in response.text
+
+
+@pytest.mark.anyio
+async def test_last_comment_is_plain_text(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The grid renders this in a tooltip; it should carry no markup."""
+    org1, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org1, "IA-26LC5")
+    author = await _any_user(dbsession)
+    comment = await _seed_comment(
+        dbsession, agreement, author, "plain words", "Internal", 2
+    )
+    comment.comment_search_text = None
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for("get_initiative_agreements")
+    response = await client.post(url, json=PAGINATION_BODY)
+
+    row = next(
+        r for r in response.json()["initiativeAgreements"] if r["iaCode"] == "IA-26LC5"
+    )
+    assert row["lastComment"]["comment"] == "plain words"
+    assert "<p>" not in row["lastComment"]["comment"]

@@ -1,6 +1,6 @@
 from fastapi import Depends
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 from sqlalchemy import and_, asc, desc, func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,8 +20,14 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
 from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import (
     InitiativeAgreementHistory,
 )
+from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
+    InitiativeAgreementInternalComment,
+)
+from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.internal_comment.schema import CommentVisibilityEnum
 from lcfs.web.api.initiative_agreement.schema import (
     CreateInitiativeAgreementHistorySchema,
 )
@@ -358,6 +364,86 @@ class InitiativeAgreementRepository:
         )
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def get_latest_comments_by_agreement_ids(
+        self,
+        initiative_agreement_ids: Sequence[int],
+        include_internal: bool,
+    ) -> Dict[int, Tuple[InternalComment, str]]:
+        """
+        The newest comment visible to the caller, per agreement.
+
+        One query for the whole page rather than one per row.
+
+        ``include_internal`` is false for non-government callers, and the
+        visibility filter is applied *before* ranking on purpose: filtering
+        afterwards would return nothing for an agreement whose newest comment
+        is internal, rather than the newest comment that caller may actually
+        see.
+        """
+        if not initiative_agreement_ids:
+            return {}
+
+        ranked = (
+            select(
+                InitiativeAgreementInternalComment.initiative_agreement_id.label(
+                    "initiative_agreement_id"
+                ),
+                InternalComment.internal_comment_id.label("internal_comment_id"),
+                func.row_number()
+                .over(
+                    partition_by=(
+                        InitiativeAgreementInternalComment.initiative_agreement_id
+                    ),
+                    order_by=desc(InternalComment.create_date),
+                )
+                .label("rn"),
+            )
+            .join(
+                InternalComment,
+                InternalComment.internal_comment_id
+                == InitiativeAgreementInternalComment.internal_comment_id,
+            )
+            .where(
+                InitiativeAgreementInternalComment.initiative_agreement_id.in_(
+                    list(initiative_agreement_ids)
+                )
+            )
+        )
+        if not include_internal:
+            ranked = ranked.where(
+                InternalComment.visibility == CommentVisibilityEnum.PUBLIC.value
+            )
+
+        ranked_subq = ranked.subquery()
+
+        stmt = (
+            select(
+                ranked_subq.c.initiative_agreement_id,
+                InternalComment,
+                UserProfile.first_name,
+                UserProfile.last_name,
+            )
+            .join(
+                InternalComment,
+                InternalComment.internal_comment_id
+                == ranked_subq.c.internal_comment_id,
+            )
+            .join(
+                UserProfile,
+                UserProfile.keycloak_username == InternalComment.create_user,
+                isouter=True,
+            )
+            .where(ranked_subq.c.rn == 1)
+        )
+        result = await self.db.execute(stmt)
+
+        latest: Dict[int, Tuple[InternalComment, str]] = {}
+        for agreement_id, comment, first_name, last_name in result.all():
+            full_name = " ".join(p for p in (first_name, last_name) if p).strip()
+            latest[agreement_id] = (comment, full_name)
+        return latest
 
     @repo_handler
     async def get_lifecycle_statuses(self) -> List[InitiativeAgreementLifecycleStatus]:

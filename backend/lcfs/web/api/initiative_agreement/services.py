@@ -1,5 +1,6 @@
 import json
 import math
+from typing import Optional
 from lcfs.web.api.notification.schema import (
     INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER,
     NotificationMessageSchema,
@@ -19,8 +20,10 @@ from lcfs.web.api.base import (
     PaginationResponseSchema,
     validate_pagination,
 )
+from lcfs.web.api.internal_comment.services import sanitize_comment_text
 from lcfs.web.api.initiative_agreement.schema import (
     CreateInitiativeAgreementHistorySchema,
+    LastCommentSchema,
     InitiativeAgreementCreateSchema,
     InitiativeAgreementListItemSchema,
     InitiativeAgreementProfileSchema,
@@ -74,6 +77,23 @@ class InitiativeAgreementServices:
         return InitiativeAgreementSchema.from_orm(initiative_agreement)
 
     @staticmethod
+    def _last_comment_payload(latest, agreement_id) -> Optional[LastCommentSchema]:
+        entry = latest.get(agreement_id)
+        if not entry:
+            return None
+        comment, full_name = entry
+        if not full_name:
+            return None
+        # comment_search_text is the sanitized plain text the search index
+        # already stores; fall back to stripping the rich text.
+        text = comment.comment_search_text or sanitize_comment_text(comment.comment)
+        return LastCommentSchema(
+            full_name=full_name,
+            comment=text,
+            create_date=comment.create_date,
+        )
+
+    @staticmethod
     def _list_item_kwargs(agreement: InitiativeAgreement) -> dict:
         """Shared field mapping for list items and the profile response."""
         return dict(
@@ -112,6 +132,11 @@ class InitiativeAgreementServices:
         agreements, total_count = await self.repo.get_initiative_agreements_paginated(
             pagination, organization_id
         )
+        # Non-government callers never receive internal comment text.
+        latest_comments = await self.repo.get_latest_comments_by_agreement_ids(
+            [a.initiative_agreement_id for a in agreements],
+            include_internal=organization_id is None,
+        )
         return InitiativeAgreementsListSchema(
             pagination=PaginationResponseSchema(
                 total=total_count,
@@ -122,7 +147,12 @@ class InitiativeAgreementServices:
                 ),
             ),
             initiative_agreements=[
-                InitiativeAgreementListItemSchema(**self._list_item_kwargs(agreement))
+                InitiativeAgreementListItemSchema(
+                    **self._list_item_kwargs(agreement),
+                    last_comment=self._last_comment_payload(
+                        latest_comments, agreement.initiative_agreement_id
+                    ),
+                )
                 for agreement in agreements
             ],
         )

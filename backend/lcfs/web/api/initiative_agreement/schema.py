@@ -129,6 +129,22 @@ class InitiativeAgreementLifecycleStatusSchema(BaseSchema):
         from_attributes = True
 
 
+class LastCommentSchema(BaseSchema):
+    """
+    Newest comment visible to the caller, for the grid's avatar column.
+
+    ``comment`` is plain text, not the stored rich text: it is rendered as a
+    tooltip, and the grid has no need for markup.
+    """
+
+    full_name: str
+    comment: str
+    create_date: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class InitiativeAgreementListItemSchema(BaseSchema):
     initiative_agreement_id: int
     ia_code: Optional[str] = None
@@ -143,6 +159,7 @@ class InitiativeAgreementListItemSchema(BaseSchema):
     update_date: datetime
     lifecycle_status: Optional[InitiativeAgreementLifecycleStatusSchema] = None
     organization: OrganizationSchema
+    last_comment: Optional[LastCommentSchema] = None
 
     class Config:
         from_attributes = True
