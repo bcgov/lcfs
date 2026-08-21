@@ -36,3 +36,7 @@ class FuelCodeCountsSchema(BaseSchema):
 class OrgFuelCodeCountsSchema(BaseSchema):
     draft: int = Field(default=0)
     submitted: int = Field(default=0)
+
+
+class CIApplicationCountsSchema(BaseSchema):
+    in_progress: int = Field(default=0)

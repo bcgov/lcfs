@@ -48,8 +48,8 @@ export const OverlapSummary = ({ overlapStats }) => {
     >
       <BCTypography variant="subtitle1" fontWeight="bold" gutterBottom>
         {overlapStats.overlapping > 0
-          ? 'Period Overlaps Detected'
-          : 'No Period Overlaps'}
+          ? 'Period overlaps detected'
+          : 'No period overlaps'}
       </BCTypography>
 
       <div
@@ -60,19 +60,19 @@ export const OverlapSummary = ({ overlapStats }) => {
         }}
       >
         <BCTypography variant="body2">
-          <strong>Total Supply Units:</strong> {overlapStats.total}
+          <strong>Total supply units:</strong> {overlapStats.total}
         </BCTypography>
         <BCTypography variant="body2">
-          <strong>Units with Overlaps:</strong> {overlapStats.overlapping}
+          <strong>Units with overlaps:</strong> {overlapStats.overlapping}
         </BCTypography>
         <BCTypography variant="body2">
-          <strong>Units without Overlaps:</strong> {overlapStats.nonOverlapping}
+          <strong>Units without overlaps:</strong> {overlapStats.nonOverlapping}
         </BCTypography>
         <BCTypography variant="body2">
-          <strong>BC Units with Overlaps:</strong> {overlapStats.bcOverlapping}
+          <strong>BC units with overlaps:</strong> {overlapStats.bcOverlapping}
         </BCTypography>
         <BCTypography variant="body2">
-          <strong>Outside BC with Overlaps:</strong>{' '}
+          <strong>Outside BC with overlaps:</strong>{' '}
           {overlapStats.nonBcOverlapping}
         </BCTypography>
       </div>
@@ -107,7 +107,7 @@ export const ErrorState = ({ error, refetch, resetGeofencing }) => (
       }}
       sx={{ mb: 2 }}
     >
-      Refresh Map Data
+      Refresh map data
     </BCButton>
   </div>
 )
@@ -137,7 +137,7 @@ export const NoDataState = ({ refetch, resetGeofencing }) => (
       }}
       sx={{ mb: 2 }}
     >
-      Refresh Map Data
+      Refresh map data
     </BCButton>
   </div>
 )

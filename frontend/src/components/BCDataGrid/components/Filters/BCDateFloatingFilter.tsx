@@ -18,14 +18,28 @@ export interface BCDateFloatingFilterProps {
   label?: string
 }
 
+const parseDateOnly = (value) => {
+  if (value instanceof Date) return value
+  if (typeof value !== 'string') return null
+
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly
+    return new Date(Number(year), Number(month) - 1, Number(day))
+  }
+
+  const parsed = new Date(value)
+  return isValid(parsed) ? parsed : null
+}
+
 export const BCDateFloatingFilter = ({
   model,
   onModelChange,
   disabled = false,
   minDate = '2013-01-01',
   maxDate = '2040-01-01',
-  initialFilterType = 'any',
-  label = 'Select Date'
+  initialFilterType = 'equals',
+  label = 'Select date'
 }: BCDateFloatingFilterProps) => {
   const [selectedDate, setSelectedDate] = useState(null)
   const [open, setOpen] = useState(false)
@@ -73,7 +87,7 @@ export const BCDateFloatingFilter = ({
     }
 
     if (model?.dateFrom) {
-      const date = new Date(model.dateFrom)
+      const date = parseDateOnly(model.dateFrom)
       setSelectedDate(isValid(date) ? date : null)
     }
   }, [model])
@@ -96,25 +110,28 @@ export const BCDateFloatingFilter = ({
     >
       <DatePicker
         id="date-picker"
-        aria-label="Date Picker"
+        aria-label="Date picker"
         aria-describedby="date-picker-description"
         sx={{
           border: 'none',
           borderBottom: '4px solid #495057'
         }}
         value={selectedDate}
-        minDate={new Date(minDate)}
-        maxDate={new Date(maxDate)}
+        minDate={parseDateOnly(minDate)}
+        maxDate={parseDateOnly(maxDate)}
         onChange={handleChange}
         open={open}
         onOpen={handleOpen}
         onClose={handleClose}
         disabled={disabled}
         format="yyyy-MM-dd"
+        openTo="day"
+        views={['year', 'month', 'day']}
         slotProps={{
           textField: {
             size: 'small',
             label,
+            onKeyDown: (event) => event.stopPropagation(),
             InputProps: {
               startAdornment: (
                 <InputAdornment position="start">

@@ -22,15 +22,15 @@
     "q2Quantity": "Q2 (Apr-Jun)",
     "q3Quantity": "Q3 (Jul-Sep)",
     "q4Quantity": "Q4 (Oct-Dec)",
-    "totalQuantity": "Total Quantity",
+    "totalQuantity": "Total quantity",
     "units": "Units",
-    "agreementType": "Agreement Type",
-    "allocationAgreement": "Allocation Agreement",
-    "complianceReportId": "Compliance Report ID",
-    "allocationAgreementId": "Allocation Agreement ID",
+    "agreementType": "Agreement type",
+    "allocationAgreement": "Allocation agreement",
+    "complianceReportId": "Compliance report ID",
+    "allocationAgreementId": "Allocation agreement ID",
     "fuelTypeOther": "Fuel type other",
-    "provisionOfTheAct": "Determining Carbon Intensity",
-    "energyDensity": "Energy Density"
+    "provisionOfTheAct": "Determining carbon intensity",
+    "energyDensity": "Energy density"
   },
   "scheduleUpdated": "Allocation agreements schedule updated successfully"
 }

@@ -6,7 +6,12 @@ import type { PaginationParams, QueryOptions } from './types'
 const QUERY_KEYS = {
   options: ['ci-application-options'],
   list: (pagination: any) => ['ci-applications', pagination],
-  detail: (id: any) => ['ci-application', String(id)]
+  detail: (id: any) => ['ci-application', String(id)],
+  locationSearch: (params: {
+    city?: string
+    province?: string
+    country?: string
+  }) => ['ci-facility-location-search', params]
 }
 
 const updateCIApplicationListCaches = (
@@ -63,6 +68,41 @@ export const useCIApplicationStatuses = (
     ...result,
     data: (result.data as any)?.statuses ?? []
   }
+}
+
+export type CIFacilityLocationSearchParams = {
+  city?: string
+  province?: string
+  country?: string
+}
+
+/** CI Step 1 facility location typeahead. */
+export const useCIFacilityLocationSearch = (
+  params: CIFacilityLocationSearchParams,
+  options: QueryOptions<string[]> = {}
+) => {
+  const client = useApiService()
+  const { city, province, country } = params
+  const searchTerm = city || province || country || ''
+
+  return useQuery({
+    queryKey: QUERY_KEYS.locationSearch({ city, province, country }),
+    queryFn: async () => {
+      const query = new URLSearchParams()
+      if (city) query.set('city', city)
+      else if (province) query.set('province', province)
+      else if (country) query.set('country', country)
+      const response = await client.get(
+        `${apiRoutes.ciApplicationLocationSearch}${query.toString()}`
+      )
+      return (response.data ?? []) as string[]
+    },
+    enabled: searchTerm.length >= 1,
+    staleTime: 30 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
+    ...options
+  })
 }
 
 export const useGetCIApplications = (
@@ -184,6 +224,35 @@ export const useUpdateCIApplicationStep3 = (
       return (
         await client.put(
           apiRoutes.updateCIApplicationStep3.replace(
+            ':ciApplicationId',
+            String(ciApplicationId ?? '')
+          ),
+          payload
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+/**
+ * Draft auto-save for the Step 4 consultant block (#4772). Distinct from
+ * `useSubmitCIApplication`: this persists without transitioning the status,
+ * so applicants no longer lose consultant details by leaving a draft.
+ */
+export const useUpdateCIApplicationStep4 = (
+  ciApplicationId: number | string | undefined | null
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: any) => {
+      return (
+        await client.put(
+          apiRoutes.updateCIApplicationStep4.replace(
             ':ciApplicationId',
             String(ciApplicationId ?? '')
           ),

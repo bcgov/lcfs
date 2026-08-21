@@ -7,8 +7,9 @@ decision (with the comments thread).
 """
 
 import json
+import re
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -22,6 +23,8 @@ from lcfs.db.models.ci_application import (
     CIApplication,
     CIApplicationFuelCodeAssociation,
     Pathway,
+    PathwayFeedstockTransportMode,
+    PathwayFinishedFuelTransportMode,
 )
 from lcfs.db.models.ci_application.CIApplication import (
     CI_DOC_CATEGORY_GHGENIUS_MODEL,
@@ -33,11 +36,14 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.services.geocoder.client import Address, BCGeocoderService
+from lcfs.services.geocoder.dependency import get_geocoder_service_async
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
 from lcfs.web.api.ci_application.schema import (
     AssignedAnalystSchema,
+    CIApplicationAssignmentHistorySchema,
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
     CIApplicationSchema,
@@ -47,6 +53,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
+    CIApplicationStep4DraftSchema,
     CIApplicationStep4Schema,
     CIApplicationUserSchema,
     CIGeneratedFuelCodeSchema,
@@ -91,6 +98,7 @@ CI_STEP3_REQUIRE_DOCUMENTS = False
 PATHWAY_LOG_FIELDS = [
     "application_type_id",
     "fuel_code_type_id",
+    "design_data",
     "operating_data_from",
     "operating_data_to",
     "fuel_code_id",
@@ -98,11 +106,9 @@ PATHWAY_LOG_FIELDS = [
     "fuel_type_id",
     "feedstock",
     "feedstock_region",
-    "feedstock_transport_mode",
-    "feedstock_transport_distance",
+    "feedstock_transport_mode_details",
     "coproducts",
-    "finished_fuel_transport_mode",
-    "finished_fuel_transport_distance",
+    "finished_fuel_transport_mode_details",
 ]
 
 logger = structlog.get_logger(__name__)
@@ -173,6 +179,7 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
             if pathway.fuel_code_type
             else None
         ),
+        design_data=pathway.design_data,
         operating_data_from=pathway.operating_data_from,
         operating_data_to=pathway.operating_data_to,
         fuel_code_id=pathway.fuel_code_id,
@@ -188,19 +195,13 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
         ),
         feedstock=pathway.feedstock,
         feedstock_region=pathway.feedstock_region,
-        feedstock_transport_mode=(
-            pathway.feedstock_transport_mode.split(",")
-            if pathway.feedstock_transport_mode
-            else []
+        feedstock_transport_mode=_transport_mode_details_from_links(
+            pathway.feedstock_transport_modes
         ),
-        feedstock_transport_distance=pathway.feedstock_transport_distance,
         coproducts=pathway.coproducts,
-        finished_fuel_transport_mode=(
-            pathway.finished_fuel_transport_mode.split(",")
-            if pathway.finished_fuel_transport_mode
-            else []
+        finished_fuel_transport_mode=_transport_mode_details_from_links(
+            pathway.finished_fuel_transport_modes
         ),
-        finished_fuel_transport_distance=pathway.finished_fuel_transport_distance,
     )
 
 
@@ -212,13 +213,105 @@ def _json_value(value: Any) -> Any:
     return value
 
 
+def _transport_mode_name(value: Any) -> Optional[str]:
+    if value in (None, ""):
+        return None
+    if isinstance(value, str):
+        return value.strip() or None
+    if isinstance(value, dict):
+        return value.get("transportMode") or value.get("transport_mode")
+    return getattr(value, "transport_mode", None) or getattr(
+        value, "transportMode", None
+    )
+
+
+def _transport_mode_distance(value: Any) -> Optional[int]:
+    if isinstance(value, dict):
+        distance = value.get("distance")
+    else:
+        distance = getattr(value, "distance", None)
+    if distance in (None, ""):
+        return None
+    return int(distance)
+
+
+def _transport_mode_names_from_selection(value: Any) -> List[str]:
+    values = value if isinstance(value, list) else [value]
+    names = []
+    for item in values or []:
+        name = _transport_mode_name(item)
+        if name:
+            names.append(name)
+    return list(dict.fromkeys(names))
+
+
+def _transport_mode_details_from_any(value: Any) -> List[Dict[str, Any]]:
+    if isinstance(value, list):
+        details = _transport_mode_details_from_selection(value)
+        if details:
+            return details
+        return [
+            {"transportMode": name, "distance": None}
+            for name in _transport_mode_names_from_selection(value)
+        ]
+    name = _transport_mode_name(value)
+    return [{"transportMode": name, "distance": None}] if name else []
+
+
+def _transport_mode_details_from_selection(
+    value: Any,
+) -> List[Dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    details = []
+    for item in value:
+        name = _transport_mode_name(item)
+        distance = _transport_mode_distance(item)
+        if name:
+            details.append({"transportMode": name, "distance": distance})
+    return details
+
+
+def _transport_mode_details_from_links(links: Any) -> List[Dict[str, Any]]:
+    details = []
+    for link in links or []:
+        transport_mode = getattr(link, "transport_mode", None)
+        mode_name = getattr(transport_mode, "transport_mode", None)
+        if mode_name:
+            details.append(
+                {
+                    "transportMode": mode_name,
+                    "distance": getattr(link, "distance", None),
+                }
+            )
+    return details
+
+
+def _transport_mode_names_from_links(links: Any) -> List[str]:
+    return [
+        detail["transportMode"]
+        for detail in _transport_mode_details_from_links(links)
+        if detail.get("transportMode")
+    ]
+
+
 def _pathway_snapshot(pathway: Pathway) -> Dict[str, Any]:
     snapshot = {
         "pathway_id": getattr(pathway, "pathway_id", None),
         "pathway_group_uuid": getattr(pathway, "group_uuid", None),
     }
     for field in PATHWAY_LOG_FIELDS:
-        snapshot[field] = _json_value(getattr(pathway, field, None))
+        if field == "feedstock_transport_mode_details":
+            value = _transport_mode_details_from_links(
+                pathway.feedstock_transport_modes
+            )
+        elif field == "finished_fuel_transport_mode_details":
+            value = _transport_mode_details_from_links(
+                pathway.finished_fuel_transport_modes
+            )
+        else:
+            value = getattr(pathway, field, None)
+        snapshot[field] = _json_value(value)
     return snapshot
 
 
@@ -232,11 +325,15 @@ def _pathway_input_snapshot(
         "pathway_group_uuid": pathway_group_uuid
         or getattr(pathway, "group_uuid", None),
     }
-    _transport_fields = {"feedstock_transport_mode", "finished_fuel_transport_mode"}
     for field in PATHWAY_LOG_FIELDS:
-        value = getattr(row, field, None)
-        if field in _transport_fields and isinstance(value, list):
-            value = ",".join(value)
+        if field == "feedstock_transport_mode_details":
+            value = _transport_mode_details_from_selection(row.feedstock_transport_mode)
+        elif field == "finished_fuel_transport_mode_details":
+            value = _transport_mode_details_from_selection(
+                row.finished_fuel_transport_mode
+            )
+        else:
+            value = getattr(row, field, None)
         snapshot[field] = _json_value(value)
     return snapshot
 
@@ -271,7 +368,9 @@ def _pathway_changed_by(pathway: Pathway) -> Optional[str]:
     action_type = _action_type_value(getattr(pathway, "action_type", "CREATE"))
     if action_type == ActionTypeEnum.CREATE.value:
         return getattr(pathway, "create_user", None)
-    return getattr(pathway, "update_user", None) or getattr(pathway, "create_user", None)
+    return getattr(pathway, "update_user", None) or getattr(
+        pathway, "create_user", None
+    )
 
 
 def _sorted_pathways(pathways: List[Pathway]) -> List[Pathway]:
@@ -403,6 +502,8 @@ def _validate_generated_fuel_code_row_values(row: Dict[str, Any]) -> Dict[str, A
         ("fuel_type_id", "fuelTypeId"),
         ("feedstock", "feedstock"),
         ("feedstock_location", "feedstockLocation"),
+        ("feedstock_fuel_transport_mode", "feedstockFuelTransportMode"),
+        ("finished_fuel_transport_mode", "finishedFuelTransportMode"),
         ("fuel_production_facility_city", "fuelProductionFacilityCity"),
         (
             "fuel_production_facility_province_state",
@@ -422,6 +523,18 @@ def _validate_generated_fuel_code_row_values(row: Dict[str, Any]) -> Dict[str, A
         "facility_nameplate_capacity_unit"
     ):
         validation_errors["facilityNameplateCapacityUnit"] = "Required."
+    for internal_key, frontend_key in (
+        ("feedstock_fuel_transport_mode", "feedstockFuelTransportMode"),
+        ("finished_fuel_transport_mode", "finishedFuelTransportMode"),
+    ):
+        modes = row.get(internal_key) or []
+        if any(
+            isinstance(mode, dict)
+            and mode.get("transportMode")
+            and mode.get("distance") in (None, "")
+            for mode in modes
+        ):
+            validation_errors[frontend_key] = "Distance is required."
 
     application_date = row.get("application_date")
     approval_date = row.get("approval_date")
@@ -445,6 +558,31 @@ def _validate_generated_fuel_code_row_values(row: Dict[str, Any]) -> Dict[str, A
     return row
 
 
+def _add_years(value: date, years: int) -> date:
+    try:
+        return value.replace(year=value.year + years)
+    except ValueError:
+        return value.replace(month=2, day=28, year=value.year + years)
+
+
+def _pathway_fuel_code_duration_years(pathway: Pathway) -> int:
+    fuel_code_type = getattr(getattr(pathway, "fuel_code_type", None), "type", "")
+    match = re.search(r"(\d+)\s*-\s*year", fuel_code_type or "", re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return 1
+
+
+def _generated_fuel_code_expiration_date(
+    pathway: Pathway,
+    effective_date: date,
+) -> date:
+    if getattr(pathway, "operating_data_to", None):
+        return pathway.operating_data_to
+    duration_years = _pathway_fuel_code_duration_years(pathway)
+    return _add_years(effective_date, duration_years) - timedelta(days=1)
+
+
 def _to_generated_fuel_code_schema(row: Dict[str, Any]) -> CIGeneratedFuelCodeSchema:
     return CIGeneratedFuelCodeSchema.model_validate(row or {})
 
@@ -458,6 +596,22 @@ def _transport_mode_names(
         if transport_mode and getattr(transport_mode, "transport_mode", None):
             names.append(transport_mode.transport_mode)
     return names
+
+
+def _transport_mode_details(
+    transport_modes: List[Any], relationship_name: str
+) -> List[Dict[str, Any]]:
+    details = []
+    for item in transport_modes or []:
+        transport_mode = getattr(item, relationship_name, None)
+        if transport_mode and getattr(transport_mode, "transport_mode", None):
+            details.append(
+                {
+                    "transportMode": transport_mode.transport_mode,
+                    "distance": getattr(item, "distance", None),
+                }
+            )
+    return details
 
 
 def _generated_fuel_code_row_from_association(
@@ -512,11 +666,11 @@ def _generated_fuel_code_row_from_association(
         ),
         former_company=fuel_code.former_company,
         notes=fuel_code.notes,
-        feedstock_fuel_transport_mode=_transport_mode_names(
+        feedstock_fuel_transport_mode=_transport_mode_details(
             fuel_code.feedstock_fuel_transport_modes,
             "feedstock_fuel_transport_mode",
         ),
-        finished_fuel_transport_mode=_transport_mode_names(
+        finished_fuel_transport_mode=_transport_mode_details(
             fuel_code.finished_fuel_transport_modes,
             "finished_fuel_transport_mode",
         ),
@@ -550,6 +704,7 @@ def _user_has_any_role(user: UserProfile, role_names: List[RoleEnum]) -> bool:
 def _to_full_schema(
     ci: CIApplication,
     signature_user_display_name: Optional[str] = None,
+    include_assignment_history: bool = False,
 ) -> CIApplicationSchema:
     all_pathways = list(getattr(ci, "pathways", None) or [])
 
@@ -561,7 +716,8 @@ def _to_full_schema(
             h.ci_application_snapshot
             for h in history_records
             if isinstance(getattr(h, "ci_application_snapshot", None), dict)
-            and h.ci_application_snapshot.get("event") == "supplemental_pathways_updated"
+            and h.ci_application_snapshot.get("event")
+            == "supplemental_pathways_updated"
         ),
         key=lambda e: e.get("changed_at") or "",
     )
@@ -611,7 +767,9 @@ def _to_full_schema(
             and history.ci_application_snapshot.get("event")
             in {"pathway_changes_requested", "supplemental_pathways_updated"}
         ],
-        pathway_change_logs=_pathway_change_logs_from_versions(all_pathways, original_group_uuids),
+        pathway_change_logs=_pathway_change_logs_from_versions(
+            all_pathways, original_group_uuids
+        ),
         generated_fuel_codes=[
             _to_generated_fuel_code_schema(row)
             for row in (
@@ -636,6 +794,11 @@ def _to_full_schema(
         priority_score=getattr(ci, "priority_score", None),
         assigned_analyst=CIApplicationUserSchema.model_validate(
             getattr(ci, "assigned_analyst", None)
+        ),
+        assignment_history=(
+            _assignment_history_from_records(history_records)
+            if include_assignment_history
+            else None
         ),
         verification_1_user=CIApplicationUserSchema.model_validate(
             getattr(ci, "verification_1_user", None)
@@ -668,6 +831,69 @@ def _initials(first: Optional[str], last: Optional[str]) -> Optional[str]:
     if not first_part and not last_part:
         return None
     return f"{first_part[:1]}{last_part[:1]}".upper()
+
+
+ASSIGNMENT_HISTORY_EVENTS = {
+    "analyst_assigned",
+    "analyst_reassigned",
+    "analyst_unassigned",
+}
+
+
+def _assignment_user_from_snapshot(
+    value: Optional[dict],
+) -> Optional[CIApplicationUserSchema]:
+    if not isinstance(value, dict) or value.get("user_profile_id") is None:
+        return None
+    return CIApplicationUserSchema(**value)
+
+
+def _assignment_history_from_records(
+    history_records: List,
+) -> List[CIApplicationAssignmentHistorySchema]:
+    events = []
+    for history in history_records:
+        snapshot = getattr(history, "ci_application_snapshot", None)
+        if (
+            not isinstance(snapshot, dict)
+            or snapshot.get("event") not in ASSIGNMENT_HISTORY_EVENTS
+        ):
+            continue
+        changed_at = snapshot.get("changed_at") or getattr(history, "create_date", None)
+        if not changed_at:
+            continue
+        events.append(
+            CIApplicationAssignmentHistorySchema(
+                event=snapshot["event"],
+                previous_analyst=_assignment_user_from_snapshot(
+                    snapshot.get("previous_analyst")
+                ),
+                new_analyst=_assignment_user_from_snapshot(snapshot.get("new_analyst")),
+                changed_at=changed_at,
+                changed_by=snapshot.get("changed_by"),
+            )
+        )
+    return sorted(events, key=lambda event: event.changed_at, reverse=True)
+
+
+def _assignment_user_snapshot(user) -> Optional[dict]:
+    if user is None:
+        return None
+    return CIApplicationUserSchema.model_validate(user).model_dump(mode="json")
+
+
+def _assignment_event_name(
+    previous_analyst_id: Optional[int], new_analyst_id: Optional[int]
+) -> str:
+    if previous_analyst_id is None:
+        return "analyst_assigned"
+    if new_analyst_id is None:
+        return "analyst_unassigned"
+    return "analyst_reassigned"
+
+
+def _is_idir_user(user: Optional[UserProfile]) -> bool:
+    return bool(user and RoleEnum.GOVERNMENT in (getattr(user, "role_names", []) or []))
 
 
 def _to_assigned_analyst(user) -> Optional[AssignedAnalystSchema]:
@@ -754,20 +980,37 @@ def _to_list_item(
     )
 
 
+def _format_place_suggestion(place: Address, place_type: str) -> Optional[str]:
+    city = (place.city or "").strip()
+    province = (place.province or "").strip()
+    country = (place.country or "").strip()
+    if place_type == "city" and city:
+        return f"{city}, {province}, {country}"
+    if place_type == "province" and province:
+        return f"{province}, {country}" if country else province
+    if place_type == "country" and country:
+        return country
+    return None
+
+
 class CIApplicationServices:
     def __init__(
         self,
         repo: CIApplicationRepository = Depends(CIApplicationRepository),
         user_repo: UserRepository = Depends(UserRepository),
         fuel_repo: FuelCodeRepository = Depends(FuelCodeRepository),
+        geocoder: BCGeocoderService = Depends(get_geocoder_service_async),
         notification_service: NotificationService = Depends(NotificationService),
     ) -> None:
         self.repo = repo
         self.user_repo = user_repo
         self.fuel_repo = fuel_repo
+        self.geocoder = geocoder
         self.notification_service = notification_service
 
-    async def _to_full_schema_with_user(self, ci: CIApplication) -> CIApplicationSchema:
+    async def _to_full_schema_with_user(
+        self, ci: CIApplication, requesting_user: Optional[UserProfile] = None
+    ) -> CIApplicationSchema:
         """Serialize a CI application, resolving the signing-authority's
         Keycloak username to a human display name via the user profile.
         """
@@ -776,7 +1019,53 @@ class CIApplicationServices:
             display_name = await self.user_repo.get_full_name(ci.signature_user)
             if display_name:
                 display_name = display_name.strip() or None
-        return _to_full_schema(ci, signature_user_display_name=display_name)
+        return _to_full_schema(
+            ci,
+            signature_user_display_name=display_name,
+            include_assignment_history=_is_idir_user(requesting_user),
+        )
+
+    async def _get_assignment_user(
+        self, ci_application: CIApplication, analyst_id: Optional[int]
+    ) -> Optional[UserProfile]:
+        if analyst_id is None:
+            return None
+        assigned_analyst = getattr(ci_application, "assigned_analyst", None)
+        if (
+            assigned_analyst is not None
+            and getattr(assigned_analyst, "user_profile_id", None) == analyst_id
+        ):
+            return assigned_analyst
+        return await self.repo.get_user_by_id(analyst_id)
+
+    def _assignment_history_snapshot(
+        self,
+        previous_analyst_id: Optional[int],
+        previous_analyst,
+        new_analyst_id: Optional[int],
+        new_analyst,
+        user: UserProfile,
+        changed_at: datetime,
+    ) -> dict:
+        name_parts = [
+            part.strip()
+            for part in (
+                getattr(user, "first_name", None),
+                getattr(user, "last_name", None),
+            )
+            if isinstance(part, str) and part.strip()
+        ]
+        username = getattr(user, "keycloak_username", None)
+        changed_by = " ".join(name_parts) or (
+            username if isinstance(username, str) else "Unknown user"
+        )
+        return {
+            "event": _assignment_event_name(previous_analyst_id, new_analyst_id),
+            "previous_analyst": _assignment_user_snapshot(previous_analyst),
+            "new_analyst": _assignment_user_snapshot(new_analyst),
+            "changed_at": changed_at.isoformat(),
+            "changed_by": changed_by,
+        }
 
     async def _send_ci_notification(
         self,
@@ -785,7 +1074,7 @@ class CIApplicationServices:
         notification_type: str,
         origin_user_profile_id: Optional[int] = None,
     ) -> None:
-        """Send a CI application notification to subscribed government users."""
+        """Send a CI application notification to subscribed users."""
         notification_types = CI_APPLICATION_NOTIFICATION_MAPPER.get(event_key, [])
         if not notification_types:
             return
@@ -802,7 +1091,7 @@ class CIApplicationServices:
         notification_data = NotificationMessageSchema(
             type=notification_type,
             message=json.dumps(message_data),
-            related_organization_id=None,
+            related_organization_id=ci_application.organization_id,
             origin_user_profile_id=origin_user_profile_id,
             related_transaction_id=str(ci_application.ci_application_id),
         )
@@ -871,6 +1160,9 @@ class CIApplicationServices:
             if ci_application.signature_date_time
             else date.today()
         )
+        effective_date = (
+            ci_application.proposed_fuel_code_effective_date or application_date
+        )
         reserved_suffixes_by_prefix: Dict[str, set[str]] = {}
 
         associations: List[CIApplicationFuelCodeAssociation] = []
@@ -911,8 +1203,10 @@ class CIApplicationServices:
                 contact_email=getattr(ci_application.organization, "email", None),
                 application_date=application_date,
                 approval_date=None,
-                effective_date=ci_application.proposed_fuel_code_effective_date,
-                expiration_date=pathway.operating_data_to,
+                effective_date=effective_date,
+                expiration_date=_generated_fuel_code_expiration_date(
+                    pathway, effective_date
+                ),
                 fuel_type_id=pathway.fuel_type_id,
                 feedstock=pathway.feedstock,
                 feedstock_location=pathway.feedstock_region,
@@ -926,14 +1220,18 @@ class CIApplicationServices:
             )
             draft_fuel_code.feedstock_fuel_transport_modes = (
                 self._fuel_code_transport_mode_links(
-                    pathway.feedstock_transport_mode,
+                    _transport_mode_details_from_links(
+                        pathway.feedstock_transport_modes
+                    ),
                     transport_modes,
                     FeedstockFuelTransportMode,
                 )
             )
             draft_fuel_code.finished_fuel_transport_modes = (
                 self._fuel_code_transport_mode_links(
-                    pathway.finished_fuel_transport_mode,
+                    _transport_mode_details_from_links(
+                        pathway.finished_fuel_transport_modes
+                    ),
                     transport_modes,
                     FinishedFuelTransportMode,
                 )
@@ -958,7 +1256,7 @@ class CIApplicationServices:
         await self.repo.add_history(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def update_generated_fuel_code(
@@ -1086,17 +1384,49 @@ class CIApplicationServices:
     ) -> List[Any]:
         if selected_modes in (None, "", []):
             return []
-        mode_names = self._unique_transport_mode_names(selected_modes)
         links = []
-        for mode_name in mode_names:
+        for mode in _transport_mode_details_from_any(selected_modes):
             matching_transport_mode = next(
-                (mode for mode in transport_modes if mode.transport_mode == mode_name),
+                (
+                    transport_mode
+                    for transport_mode in transport_modes
+                    if transport_mode.transport_mode == mode["transportMode"]
+                ),
                 None,
             )
             if matching_transport_mode:
                 links.append(
                     link_model(
-                        transport_mode_id=matching_transport_mode.transport_mode_id
+                        transport_mode_id=matching_transport_mode.transport_mode_id,
+                        distance=mode["distance"],
+                    )
+                )
+        return links
+
+    def _pathway_transport_mode_links(
+        self,
+        selected_modes: Optional[Any],
+        transport_modes: List[Any],
+        link_model: Any,
+    ) -> List[Any]:
+        details = _transport_mode_details_from_selection(selected_modes)
+        links = []
+        for detail in details:
+            if detail["distance"] is None:
+                continue
+            matching_transport_mode = next(
+                (
+                    mode
+                    for mode in transport_modes
+                    if mode.transport_mode == detail["transportMode"]
+                ),
+                None,
+            )
+            if matching_transport_mode:
+                links.append(
+                    link_model(
+                        transport_mode_id=matching_transport_mode.transport_mode_id,
+                        distance=detail["distance"],
                     )
                 )
         return links
@@ -1108,12 +1438,14 @@ class CIApplicationServices:
         transport_modes: List[Any],
         link_model: Any,
     ) -> None:
-        desired_ids = {
-            mode.transport_mode_id
-            for mode_name in self._unique_transport_mode_names(selected_modes)
+        selected_details = _transport_mode_details_from_any(selected_modes)
+        desired_by_id = {
+            mode.transport_mode_id: detail.get("distance")
+            for detail in selected_details
             for mode in transport_modes
-            if mode.transport_mode == mode_name
+            if mode.transport_mode == detail["transportMode"]
         }
+        desired_ids = set(desired_by_id)
         existing_by_id = {
             link.transport_mode_id: link
             for link in existing_links
@@ -1124,18 +1456,28 @@ class CIApplicationServices:
             link for link in existing_links if link.transport_mode_id in desired_ids
         ]
 
+        for transport_mode_id in desired_ids & set(existing_by_id):
+            existing_by_id[transport_mode_id].distance = desired_by_id[
+                transport_mode_id
+            ]
+
         for transport_mode_id in desired_ids - set(existing_by_id):
-            existing_links.append(link_model(transport_mode_id=transport_mode_id))
+            existing_links.append(
+                link_model(
+                    transport_mode_id=transport_mode_id,
+                    distance=desired_by_id[transport_mode_id],
+                )
+            )
 
     def _unique_transport_mode_names(self, selected_modes: Optional[Any]) -> List[str]:
         if selected_modes in (None, "", []):
             return []
         if isinstance(selected_modes, list):
-            mode_names = selected_modes
+            mode_names = _transport_mode_names_from_selection(selected_modes)
         elif isinstance(selected_modes, str):
             mode_names = [m.strip() for m in selected_modes.split(",") if m.strip()]
         else:
-            mode_names = [selected_modes]
+            mode_names = _transport_mode_names_from_selection(selected_modes)
         return list(dict.fromkeys(mode_name for mode_name in mode_names if mode_name))
 
     async def _get_fuel_code_prefix_map(self) -> Dict[str, Any]:
@@ -1196,6 +1538,33 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
     # Reference data
     # ------------------------------------------------------------------
+
+    @service_handler
+    async def search_facility_location(
+        self,
+        city: Optional[str] = None,
+        province: Optional[str] = None,
+        country: Optional[str] = None,
+    ) -> List[str]:
+        """Facility location typeahead via Nominatim place search."""
+        if city:
+            place_type, query = "city", city
+        elif province:
+            place_type, query = "province", province
+        elif country:
+            place_type, query = "country", country
+        else:
+            return []
+
+        places = await self.geocoder.search_places(
+            query, place_type=place_type, max_results=10
+        )
+        suggestions = []
+        for place in places:
+            label = _format_place_suggestion(place, place_type)
+            if label:
+                suggestions.append(label)
+        return suggestions
 
     @service_handler
     async def get_table_options(
@@ -1277,24 +1646,35 @@ class CIApplicationServices:
         )
 
     @service_handler
-    async def get_ci_application(self, ci_application_id: int) -> CIApplicationSchema:
+    async def get_ci_application(
+        self,
+        ci_application_id: int,
+        requesting_user: Optional[UserProfile] = None,
+    ) -> CIApplicationSchema:
         ci = await self.repo.get_by_id(ci_application_id)
         if not ci:
             raise DataNotFoundException("CI application not found.")
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, requesting_user)
 
-    async def _validate_analyst_eligibility(self, assigned_analyst_id: int) -> None:
+    async def _validate_analyst_eligibility(
+        self, assigned_analyst_id: int
+    ) -> UserProfile:
         assigned_analyst = await self.repo.get_user_by_id(assigned_analyst_id)
         if not assigned_analyst:
             raise DataNotFoundException("Assigned analyst not found.")
 
         role_names = [user_role.role.name for user_role in assigned_analyst.user_roles]
         is_idir_user = assigned_analyst.organization_id is None
-        if RoleEnum.ANALYST not in role_names or not is_idir_user:
+        if (
+            RoleEnum.ANALYST not in role_names
+            or not is_idir_user
+            or not assigned_analyst.is_active
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Assigned user must be an active IDIR analyst.",
             )
+        return assigned_analyst
 
     @service_handler
     async def get_available_analysts(self) -> List[CIApplicationUserSchema]:
@@ -1317,16 +1697,36 @@ class CIApplicationServices:
                 detail="Workflow actions cannot be recorded on Withdrawn applications.",
             )
 
+        previous_analyst_id = getattr(ci_application, "assigned_analyst_id", None)
+        if previous_analyst_id == assigned_analyst_id:
+            return await self._to_full_schema_with_user(ci_application, user)
+
+        previous_analyst = await self._get_assignment_user(
+            ci_application, previous_analyst_id
+        )
+        new_analyst = None
         if assigned_analyst_id:
-            await self._validate_analyst_eligibility(assigned_analyst_id)
+            new_analyst = await self._validate_analyst_eligibility(assigned_analyst_id)
 
         ci_application.assigned_analyst_id = assigned_analyst_id
+        ci_application.assigned_analyst = new_analyst
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
+        await self.repo.add_history(
+            ci_application,
+            snapshot=self._assignment_history_snapshot(
+                previous_analyst_id,
+                previous_analyst,
+                assigned_analyst_id,
+                new_analyst,
+                user,
+                datetime.now(timezone.utc),
+            ),
+        )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def complete_verification_1(
@@ -1338,18 +1738,37 @@ class CIApplicationServices:
     ) -> CIApplicationSchema:
         self._require_submitted_workflow(ci_application)
         self._validate_priority_score(priority_score)
+        previous_analyst_id = getattr(ci_application, "assigned_analyst_id", None)
+        previous_analyst = await self._get_assignment_user(
+            ci_application, previous_analyst_id
+        )
         ci_application.preliminary_risk_assessment = risk_assessment.value
         ci_application.priority_score = priority_score
         ci_application.verification_1_user_id = user.user_profile_id
         ci_application.verification_1_date = datetime.now(timezone.utc)
         ci_application.assigned_analyst_id = None
+        ci_application.assigned_analyst = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
-        await self.repo.add_history(ci_application)
+        await self.repo.add_history(
+            ci_application,
+            snapshot=(
+                self._assignment_history_snapshot(
+                    previous_analyst_id,
+                    previous_analyst,
+                    None,
+                    None,
+                    user,
+                    datetime.now(timezone.utc),
+                )
+                if previous_analyst_id is not None
+                else None
+            ),
+        )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def complete_verification_2(
@@ -1375,6 +1794,11 @@ class CIApplicationServices:
                 detail="Verification 1 must be completed first.",
             )
 
+        previous_analyst_id = getattr(ci_application, "assigned_analyst_id", None)
+        previous_analyst = await self._get_assignment_user(
+            ci_application, previous_analyst_id
+        )
+
         ci_application.verification_2_risk_assessment = (
             risk_assessment.value
             if risk_assessment is not None
@@ -1388,13 +1812,28 @@ class CIApplicationServices:
         ci_application.verification_2_user_id = user.user_profile_id
         ci_application.verification_2_date = datetime.now(timezone.utc)
         ci_application.assigned_analyst_id = None
+        ci_application.assigned_analyst = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
-        await self.repo.add_history(ci_application)
+        await self.repo.add_history(
+            ci_application,
+            snapshot=(
+                self._assignment_history_snapshot(
+                    previous_analyst_id,
+                    previous_analyst,
+                    None,
+                    None,
+                    user,
+                    datetime.now(timezone.utc),
+                )
+                if previous_analyst_id is not None
+                else None
+            ),
+        )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def recommend_to_director(
@@ -1441,7 +1880,13 @@ class CIApplicationServices:
         await self.repo.add_history(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        await self._send_ci_notification(
+            ci,
+            "analyst_recommendation",
+            "CI Application Recommended",
+            origin_user_profile_id=user.user_profile_id,
+        )
+        return await self._to_full_schema_with_user(ci, user)
 
     def _validate_priority_score(self, priority_score: Optional[int]) -> None:
         if (
@@ -1464,6 +1909,18 @@ class CIApplicationServices:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Workflow actions can only be recorded on Submitted applications.",
             )
+
+    def _clear_government_workflow_review(self, ci_application: CIApplication) -> None:
+        ci_application.preliminary_risk_assessment = None
+        ci_application.priority_score = None
+        ci_application.verification_1_user_id = None
+        ci_application.verification_1_date = None
+        ci_application.verification_2_user_id = None
+        ci_application.verification_2_date = None
+        ci_application.verification_2_risk_assessment = None
+        ci_application.verification_2_priority_score = None
+        ci_application.recommendation_user_id = None
+        ci_application.recommendation_date = None
 
     # ------------------------------------------------------------------
     # Step 1 — create / update / delete draft
@@ -1504,7 +1961,7 @@ class CIApplicationServices:
         await self.repo.add_history(ci)
         # Reload with all relationships needed for the response.
         ci = await self.repo.get_by_id(ci.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def update_step1(
@@ -1529,7 +1986,7 @@ class CIApplicationServices:
 
         ci_application = await self.repo.update(ci_application)
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def delete_draft(self, ci_application: CIApplication) -> None:
@@ -1680,6 +2137,7 @@ class CIApplicationServices:
         supplemental_changed_at = (
             datetime.now(timezone.utc) if is_supplemental_edit else None
         )
+        transport_modes = await self.repo.get_transport_modes()
 
         new_rows: List[Pathway] = []
         for row in data.pathways:
@@ -1689,6 +2147,7 @@ class CIApplicationServices:
             pathway = Pathway(
                 application_type_id=row.application_type_id,
                 fuel_code_type_id=row.fuel_code_type_id,
+                design_data=row.design_data,
                 operating_data_from=row.operating_data_from,
                 operating_data_to=row.operating_data_to,
                 fuel_code_id=row.fuel_code_id,
@@ -1696,11 +2155,7 @@ class CIApplicationServices:
                 fuel_type_id=row.fuel_type_id,
                 feedstock=row.feedstock,
                 feedstock_region=row.feedstock_region,
-                feedstock_transport_mode=",".join(row.feedstock_transport_mode),
-                feedstock_transport_distance=row.feedstock_transport_distance,
                 coproducts=row.coproducts,
-                finished_fuel_transport_mode=",".join(row.finished_fuel_transport_mode),
-                finished_fuel_transport_distance=row.finished_fuel_transport_distance,
                 group_uuid=previous.group_uuid if previous else str(uuid.uuid4()),
                 version=((previous.version or 0) + 1) if previous else 0,
                 action_type=(
@@ -1712,6 +2167,16 @@ class CIApplicationServices:
                     else user.keycloak_username
                 ),
                 update_user=user.keycloak_username,
+            )
+            pathway.feedstock_transport_modes = self._pathway_transport_mode_links(
+                row.feedstock_transport_mode,
+                transport_modes,
+                PathwayFeedstockTransportMode,
+            )
+            pathway.finished_fuel_transport_modes = self._pathway_transport_mode_links(
+                row.finished_fuel_transport_mode,
+                transport_modes,
+                PathwayFinishedFuelTransportMode,
             )
             if supplemental_changed_at:
                 pathway.update_date = supplemental_changed_at
@@ -1730,6 +2195,7 @@ class CIApplicationServices:
                 pathway = Pathway(
                     application_type_id=previous.application_type_id,
                     fuel_code_type_id=previous.fuel_code_type_id,
+                    design_data=previous.design_data,
                     operating_data_from=previous.operating_data_from,
                     operating_data_to=previous.operating_data_to,
                     fuel_code_id=previous.fuel_code_id,
@@ -1737,11 +2203,7 @@ class CIApplicationServices:
                     fuel_type_id=previous.fuel_type_id,
                     feedstock=previous.feedstock,
                     feedstock_region=previous.feedstock_region,
-                    feedstock_transport_mode=previous.feedstock_transport_mode,
-                    feedstock_transport_distance=previous.feedstock_transport_distance,
                     coproducts=previous.coproducts,
-                    finished_fuel_transport_mode=previous.finished_fuel_transport_mode,
-                    finished_fuel_transport_distance=previous.finished_fuel_transport_distance,
                     group_uuid=previous.group_uuid,
                     version=(previous.version or 0) + 1,
                     action_type=ActionTypeEnum.DELETE,
@@ -1752,6 +2214,20 @@ class CIApplicationServices:
                     ),
                     update_user=user.keycloak_username,
                 )
+                pathway.feedstock_transport_modes = [
+                    PathwayFeedstockTransportMode(
+                        transport_mode_id=link.transport_mode_id,
+                        distance=link.distance,
+                    )
+                    for link in previous.feedstock_transport_modes or []
+                ]
+                pathway.finished_fuel_transport_modes = [
+                    PathwayFinishedFuelTransportMode(
+                        transport_mode_id=link.transport_mode_id,
+                        distance=link.distance,
+                    )
+                    for link in previous.finished_fuel_transport_modes or []
+                ]
                 if supplemental_changed_at:
                     pathway.update_date = supplemental_changed_at
                 if getattr(previous, "create_date", None):
@@ -1802,7 +2278,7 @@ class CIApplicationServices:
                 "CI Application Additional Information Provided",
                 origin_user_profile_id=user.user_profile_id,
             )
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def request_pathway_changes(
@@ -1821,6 +2297,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
+        self._clear_government_workflow_review(ci_application)
         ci_application.pathway_supplemental_edit_enabled = True
         ci_application.pathway_changes_requested_at = requested_at
         ci_application.pathway_changes_requested_by = user.keycloak_username
@@ -1837,7 +2314,13 @@ class CIApplicationServices:
         )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        await self._send_ci_notification(
+            ci,
+            "government_action",
+            "CI Application Changes Requested",
+            origin_user_profile_id=user.user_profile_id,
+        )
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def request_documentation(
@@ -1859,6 +2342,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
+        self._clear_government_workflow_review(ci_application)
         ci_application.document_upload_enabled = True
         ci_application.document_changes_requested_at = requested_at
         ci_application.document_changes_requested_by = user.keycloak_username
@@ -1875,7 +2359,13 @@ class CIApplicationServices:
         )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        await self._send_ci_notification(
+            ci,
+            "government_action",
+            "CI Application Changes Requested",
+            origin_user_profile_id=user.user_profile_id,
+        )
+        return await self._to_full_schema_with_user(ci, user)
 
     # ------------------------------------------------------------------
     # Step 3 — Documents & GHGenius modelling
@@ -1916,16 +2406,64 @@ class CIApplicationServices:
                 )
 
         ci_application.supporting_document_other = data.supporting_document_other
+        if getattr(ci_application, "document_upload_enabled", False):
+            ci_application.document_upload_enabled = False
+            ci_application.document_changes_requested_at = None
+            ci_application.document_changes_requested_by = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     # ------------------------------------------------------------------
     # Step 4 — Sign & submit
     # ------------------------------------------------------------------
+
+    @service_handler
+    async def update_step4_draft(
+        self,
+        ci_application: CIApplication,
+        data: CIApplicationStep4DraftSchema,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        """
+        Persist the optional consultant block on a Draft without submitting
+        (#4772).
+
+        Step 4 previously had no save path, so consultant details typed by an
+        applicant were lost whenever they left the draft instead of submitting.
+        The UI now auto-saves each field on blur and calls this.
+
+        Consent mirrors :meth:`submit_application`: when it is withdrawn the
+        stored values are wiped, so a draft never retains consultant details
+        the applicant has un-consented to.
+        """
+        if (
+            ci_application.ci_application_status.status
+            != CIApplicationStatusEnum.Draft.value
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only Draft applications can be edited.",
+            )
+
+        if data.consultant_consent:
+            ci_application.consultant_name = data.consultant_name
+            ci_application.consultant_company = data.consultant_company
+            ci_application.consultant_email = data.consultant_email
+        else:
+            ci_application.consultant_name = None
+            ci_application.consultant_company = None
+            ci_application.consultant_email = None
+
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def submit_application(
@@ -1939,6 +2477,12 @@ class CIApplicationServices:
         and consultant info and validating that prior steps left the
         record in a submittable state.
         """
+        if not user_has_roles(user, [RoleEnum.SIGNING_AUTHORITY]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Signing Authority role is required to submit a CI application.",
+            )
+
         if (
             ci_application.ci_application_status.status
             != CIApplicationStatusEnum.Draft.value
@@ -2013,7 +2557,7 @@ class CIApplicationServices:
             "CI Application Submitted",
             origin_user_profile_id=user.user_profile_id,
         )
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     # ------------------------------------------------------------------
     # Step 5 — Government decision & comments
@@ -2131,11 +2675,15 @@ class CIApplicationServices:
             data.status == CIApplicationStatusEnum.Submitted
             and current_status == CIApplicationStatusEnum.Recommended.value
         )
+        is_reactivation = (
+            data.status == CIApplicationStatusEnum.Submitted
+            and current_status == CIApplicationStatusEnum.Withdrawn.value
+        )
         if is_director_approval:
             ci_application.approval_user_id = user.user_profile_id
             ci_application.approval_date = datetime.now(timezone.utc)
             await self._approve_generated_fuel_codes(ci_application)
-        elif is_director_returned:
+        elif is_director_returned or is_reactivation:
             ci_application.recommendation_user_id = None
             ci_application.recommendation_date = None
             ci_application.approval_user_id = None
@@ -2159,6 +2707,12 @@ class CIApplicationServices:
                 "CI Application Director Approved",
                 origin_user_profile_id=user.user_profile_id,
             )
+            await self._send_ci_notification(
+                ci,
+                "fuel_code_approved",
+                "CI Application Fuel Codes Approved",
+                origin_user_profile_id=user.user_profile_id,
+            )
         elif is_director_returned:
             await self._send_ci_notification(
                 ci,
@@ -2166,4 +2720,4 @@ class CIApplicationServices:
                 "CI Application Director Returned",
                 origin_user_profile_id=user.user_profile_id,
             )
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)

@@ -2,7 +2,8 @@ import {
   ActionsRenderer,
   AutocompleteCellEditor,
   DateEditor,
-  RequiredHeader
+  RequiredHeader,
+  TransportModeDistanceCellEditor
 } from '@/components/BCDataGrid/components'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
@@ -15,7 +16,17 @@ const APPLICATION_TYPE_RENEWAL = 'Renewal'
 
 export const normalizeTransportModes = (value) => {
   if (!value && value !== 0) return []
-  if (Array.isArray(value)) return value.filter(Boolean)
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (!item) return ''
+        if (typeof item === 'object') {
+          return item.transportMode || ''
+        }
+        return item
+      })
+      .filter(Boolean)
+  }
   if (typeof value === 'string' && value.trim()) {
     return value
       .split(',')
@@ -24,6 +35,72 @@ export const normalizeTransportModes = (value) => {
   }
   return []
 }
+
+export const normalizeTransportModeDistances = (
+  value,
+  fallbackDistance = null
+) =>
+  normalizeTransportModes(value).map((transportMode) => {
+    const source = Array.isArray(value)
+      ? value.find((item) => {
+          if (!item || typeof item !== 'object') return item === transportMode
+          return item.transportMode === transportMode
+        })
+      : null
+    return {
+      transportMode,
+      distance:
+        source && typeof source === 'object'
+          ? (source.distance ?? fallbackDistance)
+          : fallbackDistance
+    }
+  })
+
+const hasSelectedTransportModes = (value) =>
+  normalizeTransportModeDistances(value).length > 0
+
+const hasMissingTransportModeDistance = (value) => {
+  const modes = normalizeTransportModeDistances(value)
+  return (
+    modes.length > 0 &&
+    modes.some(
+      ({ distance }) =>
+        distance === null ||
+        distance === undefined ||
+        distance === '' ||
+        Number.isNaN(Number(distance)) ||
+        Number(distance) < 0
+    )
+  )
+}
+
+const renderTransportModeDistances = (value) => {
+  const modes = normalizeTransportModeDistances(value)
+  if (modes.length > 0) {
+    return modes.map(({ transportMode, distance }) => {
+      if (distance === null || distance === undefined || distance === '') {
+        return transportMode
+      }
+      return `${transportMode} (${distance} km)`
+    })
+  }
+  return []
+}
+
+const hasModeLevelDistances = (value) =>
+  Array.isArray(value) &&
+  value.some(
+    (item) =>
+      item &&
+      typeof item === 'object' &&
+      item.distance !== null &&
+      item.distance !== undefined
+  )
+
+const transportModePayloadValue = (value) =>
+  hasModeLevelDistances(value)
+    ? normalizeTransportModeDistances(value)
+    : normalizeTransportModes(value)
 
 export const isRenewalRow = (data, applicationTypes) => {
   if (!data?.applicationTypeId) return false
@@ -46,12 +123,49 @@ const renderNumberPlaceholder = (params) =>
     <BCTypography variant="body4">Enter number</BCTypography>
   )
 
+const yesNoOptions = ['Yes', 'No']
+
+const boolToYesNo = (value) => {
+  if (value === true) return 'Yes'
+  if (value === false) return 'No'
+  return ''
+}
+
+const yesNoToBool = (value) => {
+  if (value === 'Yes') return true
+  if (value === 'No') return false
+  return null
+}
+
 const cellErrorStyle = (params) => {
   const rowErrors = params.context?.errors?.[params.data?.id]
   if (rowErrors?.includes(params.colDef.field)) {
     return { borderColor: 'red' }
   }
   return { borderColor: 'unset' }
+}
+
+const transportModeCellRenderer = (params) => {
+  const values = renderTransportModeDistances(params.value)
+  if (values.length > 0) {
+    return <CommonArrayRenderer {...params} value={values} disableLink />
+  }
+  return <BCTypography variant="body4">Select</BCTypography>
+}
+
+const transportModeSummaryRenderer = (params) => {
+  const values = renderTransportModeDistances(params.value)
+  if (values.length > 0) {
+    return <CommonArrayRenderer {...params} value={values} disableLink />
+  }
+  return ''
+}
+
+const createTransportModeValueSetter = () => (params) => {
+  params.data[params.colDef.field] = normalizeTransportModeDistances(
+    params.newValue
+  )
+  return true
 }
 
 /**
@@ -161,9 +275,35 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       minWidth: 225
     },
     {
+      field: 'designData',
+      headerName: i18n.t('carbonIntensity:step2.designData'),
+      headerComponent: canEdit ? RequiredHeader : undefined,
+      editable: canEdit,
+      cellEditor: AutocompleteCellEditor,
+      cellEditorParams: {
+        options: yesNoOptions,
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      },
+      suppressKeyboardEvent,
+      cellRenderer: (params) =>
+        params.value || (
+          <BCTypography variant="body4">Select</BCTypography>
+        ),
+      valueGetter: (params) => boolToYesNo(params.data?.designData),
+      valueSetter: (params) => {
+        const value = yesNoToBool(params.newValue)
+        if (value === null) return false
+        params.data.designData = value
+        return true
+      },
+      minWidth: 150
+    },
+    {
       field: 'operatingDataFrom',
       headerName: i18n.t('carbonIntensity:step2.operatingDataFrom'),
-      headerComponent: canEdit ? RequiredHeader : undefined,
       editable: canEdit,
       cellEditor: DateEditor,
       suppressKeyboardEvent,
@@ -177,7 +317,6 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
     {
       field: 'operatingDataTo',
       headerName: i18n.t('carbonIntensity:step2.operatingDataTo'),
-      headerComponent: canEdit ? RequiredHeader : undefined,
       editable: canEdit,
       cellEditor: DateEditor,
       suppressKeyboardEvent,
@@ -320,34 +459,16 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       headerName: i18n.t('carbonIntensity:step2.feedstockTransportMode'),
       headerComponent: canEdit ? RequiredHeader : undefined,
       editable: canEdit,
-      cellEditor: AutocompleteCellEditor,
+      cellEditor: TransportModeDistanceCellEditor,
+      cellEditorPopup: true,
+      cellEditorPopupPosition: 'under',
       cellEditorParams: {
-        options: transportModes,
-        multiple: true,
-        disableCloseOnSelect: true,
-        freeSolo: false,
-        openOnFocus: true
+        options: transportModes
       },
       suppressKeyboardEvent,
-      cellRenderer: (params) => {
-        const val = params.value
-        if (Array.isArray(val) && val.length > 0) {
-          return <CommonArrayRenderer {...params} disableLink />
-        }
-        return <BCTypography variant="body4">Select</BCTypography>
-      },
-      minWidth: 240
-    },
-    {
-      field: 'feedstockTransportDistance',
-      headerName: i18n.t('carbonIntensity:step2.feedstockTransportDistance'),
-      headerComponent: canEdit ? RequiredHeader : undefined,
-      editable: canEdit,
-      cellEditor: 'agNumberCellEditor',
-      cellEditorParams: { precision: 0, min: 0, showStepperButtons: false },
-      type: 'numericColumn',
-      cellRenderer: renderNumberPlaceholder,
-      minWidth: 275
+      cellRenderer: transportModeCellRenderer,
+      valueSetter: createTransportModeValueSetter(),
+      minWidth: 320
     },
     {
       field: 'coproducts',
@@ -362,34 +483,16 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       headerName: i18n.t('carbonIntensity:step2.finishedFuelTransportMode'),
       headerComponent: canEdit ? RequiredHeader : undefined,
       editable: canEdit,
-      cellEditor: AutocompleteCellEditor,
+      cellEditor: TransportModeDistanceCellEditor,
+      cellEditorPopup: true,
+      cellEditorPopupPosition: 'under',
       cellEditorParams: {
-        options: transportModes,
-        multiple: true,
-        disableCloseOnSelect: true,
-        freeSolo: false,
-        openOnFocus: true
+        options: transportModes
       },
       suppressKeyboardEvent,
-      cellRenderer: (params) => {
-        const val = params.value
-        if (Array.isArray(val) && val.length > 0) {
-          return <CommonArrayRenderer {...params} disableLink />
-        }
-        return <BCTypography variant="body4">Select</BCTypography>
-      },
-      minWidth: 260
-    },
-    {
-      field: 'finishedFuelTransportDistance',
-      headerName: i18n.t('carbonIntensity:step2.finishedFuelTransportDistance'),
-      headerComponent: canEdit ? RequiredHeader : undefined,
-      editable: canEdit,
-      cellEditor: 'agNumberCellEditor',
-      cellEditorParams: { precision: 0, min: 0, showStepperButtons: false },
-      type: 'numericColumn',
-      cellRenderer: renderNumberPlaceholder,
-      minWidth: 300
+      cellRenderer: transportModeCellRenderer,
+      valueSetter: createTransportModeValueSetter(),
+      minWidth: 340
     }
   ].map((colDef) => ({
     cellStyle: cellErrorStyle,
@@ -450,6 +553,12 @@ export const ciApplicationPathwaySummaryColDefs = ({
       minWidth: 220
     },
     {
+      field: 'designData',
+      headerName: i18n.t('carbonIntensity:step2.designData'),
+      valueGetter: ({ data }) => boolToYesNo(data?.designData),
+      minWidth: 140
+    },
+    {
       field: 'operatingDataFrom',
       headerName: i18n.t('carbonIntensity:step2.operatingDataFrom'),
       valueGetter: ({ data }) =>
@@ -497,20 +606,10 @@ export const ciApplicationPathwaySummaryColDefs = ({
     {
       field: 'feedstockTransportMode',
       headerName: i18n.t('carbonIntensity:step2.feedstockTransportMode'),
-      valueGetter: ({ data }) => normalizeTransportModes(data?.feedstockTransportMode),
-      cellRenderer: (params) => {
-        const val = params.value
-        if (Array.isArray(val) && val.length > 0) {
-          return <CommonArrayRenderer {...params} disableLink />
-        }
-        return ''
-      },
-      minWidth: 240
-    },
-    {
-      field: 'feedstockTransportDistance',
-      headerName: i18n.t('carbonIntensity:step2.feedstockTransportDistance'),
-      minWidth: 240
+      valueGetter: ({ data }) =>
+        normalizeTransportModeDistances(data?.feedstockTransportMode),
+      cellRenderer: transportModeSummaryRenderer,
+      minWidth: 320
     },
     {
       field: 'coproducts',
@@ -520,20 +619,10 @@ export const ciApplicationPathwaySummaryColDefs = ({
     {
       field: 'finishedFuelTransportMode',
       headerName: i18n.t('carbonIntensity:step2.finishedFuelTransportMode'),
-      valueGetter: ({ data }) => normalizeTransportModes(data?.finishedFuelTransportMode),
-      cellRenderer: (params) => {
-        const val = params.value
-        if (Array.isArray(val) && val.length > 0) {
-          return <CommonArrayRenderer {...params} disableLink />
-        }
-        return ''
-      },
-      minWidth: 260
-    },
-    {
-      field: 'finishedFuelTransportDistance',
-      headerName: i18n.t('carbonIntensity:step2.finishedFuelTransportDistance'),
-      minWidth: 260
+      valueGetter: ({ data }) =>
+        normalizeTransportModeDistances(data?.finishedFuelTransportMode),
+      cellRenderer: transportModeSummaryRenderer,
+      minWidth: 340
     }
   ]
 }
@@ -586,8 +675,13 @@ export const validatePathwayRow = (row, applicationTypes) => {
   const errors = []
   if (!row.applicationTypeId) errors.push('applicationTypeId')
   if (!row.fuelCodeTypeId) errors.push('fuelCodeTypeId')
-  if (!row.operatingDataFrom) errors.push('operatingDataFrom')
-  if (!row.operatingDataTo) errors.push('operatingDataTo')
+  if (row.designData !== true && row.designData !== false) {
+    errors.push('designData')
+  }
+  if (row.designData === false) {
+    if (!row.operatingDataFrom) errors.push('operatingDataFrom')
+    if (!row.operatingDataTo) errors.push('operatingDataTo')
+  }
   if (
     row.operatingDataFrom &&
     row.operatingDataTo &&
@@ -606,21 +700,18 @@ export const validatePathwayRow = (row, applicationTypes) => {
   if (!row.fuelTypeId) errors.push('fuelTypeId')
   if (!row.feedstock?.toString().trim()) errors.push('feedstock')
   if (!row.feedstockRegion?.toString().trim()) errors.push('feedstockRegion')
-  if (!row.feedstockTransportMode?.length) errors.push('feedstockTransportMode')
-  if (
-    row.feedstockTransportDistance === null ||
-    row.feedstockTransportDistance === undefined ||
-    row.feedstockTransportDistance === ''
-  ) {
-    errors.push('feedstockTransportDistance')
+  if (!hasSelectedTransportModes(row.feedstockTransportMode)) {
+    errors.push('feedstockTransportMode')
+  } else if (hasMissingTransportModeDistance(row.feedstockTransportMode)) {
+    errors.push('feedstockTransportMode', 'feedstockTransportModeDistance')
   }
-  if (!row.finishedFuelTransportMode?.length) errors.push('finishedFuelTransportMode')
-  if (
-    row.finishedFuelTransportDistance === null ||
-    row.finishedFuelTransportDistance === undefined ||
-    row.finishedFuelTransportDistance === ''
-  ) {
-    errors.push('finishedFuelTransportDistance')
+  if (!hasSelectedTransportModes(row.finishedFuelTransportMode)) {
+    errors.push('finishedFuelTransportMode')
+  } else if (hasMissingTransportModeDistance(row.finishedFuelTransportMode)) {
+    errors.push(
+      'finishedFuelTransportMode',
+      'finishedFuelTransportModeDistance'
+    )
   }
 
   if (isRenewalRow(row, applicationTypes) && !row.fuelCodeId) {
@@ -632,6 +723,7 @@ export const validatePathwayRow = (row, applicationTypes) => {
 const FIELD_LABEL_KEYS = {
   applicationTypeId: 'carbonIntensity:step2.applicationType',
   fuelCodeTypeId: 'carbonIntensity:step2.proposedFuelCodeType',
+  designData: 'carbonIntensity:step2.designData',
   operatingDataFrom: 'carbonIntensity:step2.operatingDataFrom',
   operatingDataTo: 'carbonIntensity:step2.operatingDataTo',
   fuelCodeId: 'carbonIntensity:step2.fuelCodeIteration',
@@ -640,11 +732,11 @@ const FIELD_LABEL_KEYS = {
   feedstock: 'carbonIntensity:step2.feedstock',
   feedstockRegion: 'carbonIntensity:step2.feedstockRegion',
   feedstockTransportMode: 'carbonIntensity:step2.feedstockTransportMode',
-  feedstockTransportDistance:
-    'carbonIntensity:step2.feedstockTransportDistance',
+  feedstockTransportModeDistance:
+    'carbonIntensity:step2.feedstockTransportModeDistance',
   finishedFuelTransportMode: 'carbonIntensity:step2.finishedFuelTransportMode',
-  finishedFuelTransportDistance:
-    'carbonIntensity:step2.finishedFuelTransportDistance'
+  finishedFuelTransportModeDistance:
+    'carbonIntensity:step2.finishedFuelTransportModeDistance'
 }
 
 export const fieldLabels = (fields, t) =>
@@ -658,18 +750,19 @@ export const rowToApiPayload = (row) => ({
   pathwayId: row.pathwayId ?? null,
   applicationTypeId: Number(row.applicationTypeId),
   fuelCodeTypeId: Number(row.fuelCodeTypeId),
-  operatingDataFrom: row.operatingDataFrom,
-  operatingDataTo: row.operatingDataTo,
+  designData: row.designData,
+  operatingDataFrom: row.operatingDataFrom || null,
+  operatingDataTo: row.operatingDataTo || null,
   fuelCodeId: row.fuelCodeId ? Number(row.fuelCodeId) : null,
   proposedCi: Number(row.proposedCi),
   fuelTypeId: Number(row.fuelTypeId),
   feedstock: row.feedstock?.toString().trim() ?? '',
   feedstockRegion: row.feedstockRegion?.toString().trim() ?? '',
-  feedstockTransportMode: row.feedstockTransportMode,
-  feedstockTransportDistance: Number(row.feedstockTransportDistance),
+  feedstockTransportMode: transportModePayloadValue(row.feedstockTransportMode),
   coproducts: row.coproducts?.toString().trim() || null,
-  finishedFuelTransportMode: row.finishedFuelTransportMode,
-  finishedFuelTransportDistance: Number(row.finishedFuelTransportDistance)
+  finishedFuelTransportMode: transportModePayloadValue(
+    row.finishedFuelTransportMode
+  )
 })
 
 export const apiToRow = (pathway) => ({
@@ -677,16 +770,21 @@ export const apiToRow = (pathway) => ({
   pathwayId: pathway.pathwayId,
   applicationTypeId: pathway.applicationTypeId,
   fuelCodeTypeId: pathway.fuelCodeTypeId,
-  operatingDataFrom: pathway.operatingDataFrom,
-  operatingDataTo: pathway.operatingDataTo,
+  designData: pathway.designData,
+  operatingDataFrom: pathway.operatingDataFrom || '',
+  operatingDataTo: pathway.operatingDataTo || '',
   fuelCodeId: pathway.fuelCodeId,
   proposedCi: pathway.proposedCi != null ? Number(pathway.proposedCi) : null,
   fuelTypeId: pathway.fuelTypeId,
   feedstock: pathway.feedstock,
   feedstockRegion: pathway.feedstockRegion,
-  feedstockTransportMode: normalizeTransportModes(pathway.feedstockTransportMode),
-  feedstockTransportDistance: pathway.feedstockTransportDistance,
+  feedstockTransportMode: hasModeLevelDistances(pathway.feedstockTransportMode)
+    ? normalizeTransportModeDistances(pathway.feedstockTransportMode)
+    : normalizeTransportModes(pathway.feedstockTransportMode),
   coproducts: pathway.coproducts,
-  finishedFuelTransportMode: normalizeTransportModes(pathway.finishedFuelTransportMode),
-  finishedFuelTransportDistance: pathway.finishedFuelTransportDistance
+  finishedFuelTransportMode: hasModeLevelDistances(
+    pathway.finishedFuelTransportMode
+  )
+    ? normalizeTransportModeDistances(pathway.finishedFuelTransportMode)
+    : normalizeTransportModes(pathway.finishedFuelTransportMode)
 })

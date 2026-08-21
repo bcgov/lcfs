@@ -180,6 +180,9 @@ FUEL_CODE_STATUS_NOTIFICATION_MAPPER = {
 }
 
 CI_APPLICATION_NOTIFICATION_MAPPER = {
+    "analyst_recommendation": [
+        NotificationTypeEnum.IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION,
+    ],
     "director_approval": [
         NotificationTypeEnum.IDIR_ANALYST__CI_APPLICATION__DIRECTOR_APPROVAL,
     ],
@@ -188,5 +191,11 @@ CI_APPLICATION_NOTIFICATION_MAPPER = {
     ],
     "applicant_activity": [
         NotificationTypeEnum.IDIR_ANALYST__CI_APPLICATION__APPLICANT_ACTIVITY,
+    ],
+    "government_action": [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION,
+    ],
+    "fuel_code_approved": [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__FUEL_CODE_APPROVED,
     ],
 }

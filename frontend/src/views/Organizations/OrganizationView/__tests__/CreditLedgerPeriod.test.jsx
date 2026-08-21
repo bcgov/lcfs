@@ -203,6 +203,24 @@ describe('CreditLedgerPeriod (compliance-period ledger #4714)', () => {
     )
   })
 
+  it('downloads the full ledger regardless of the period on screen', () => {
+    const download = vi.fn()
+    mockDownload.mockReturnValue(download)
+    renderComponent({ organizationId: 999 })
+
+    fireEvent.click(screen.getByTestId('download-credit-ledger'))
+    expect(download).toHaveBeenLastCalledWith({
+      orgId: 999
+    })
+
+    fireEvent.click(screen.getByTestId('toggle-show-pending'))
+    fireEvent.click(screen.getByTestId('ledger-prev-period'))
+    fireEvent.click(screen.getByTestId('download-credit-ledger'))
+    expect(download).toHaveBeenLastCalledWith({
+      orgId: 999
+    })
+  })
+
   it('renders the assessed-balance section for previous and current year', () => {
     renderComponent({ organizationId: 999 })
     const section = screen.getByTestId('ledger-assessed-balance')
@@ -211,6 +229,36 @@ describe('CreditLedgerPeriod (compliance-period ledger #4714)', () => {
     )
     expect(within(section).getByTestId('assessed-current')).toHaveTextContent(
       '1,850'
+    )
+  })
+
+  it('leaves an assessed balance blank when the year has no assessed report', () => {
+    // #4831: absent is not zero — a year with no assessed report has no
+    // assessed balance, and showing 0 would read as a real end-of-year balance.
+    mockPeriod.mockReturnValue({
+      data: {
+        ...PERIOD_PAYLOAD,
+        assessedBalance: {
+          previousYear: 2023,
+          previousBalance: 1000,
+          currentYear: 2024,
+          currentBalance: null
+        }
+      },
+      isLoading: false,
+      isError: false
+    })
+    renderComponent({ organizationId: 999 })
+    const section = screen.getByTestId('ledger-assessed-balance')
+    expect(within(section).getByTestId('assessed-current')).toHaveTextContent(
+      ''
+    )
+    expect(
+      within(section).getByTestId('assessed-current')
+    ).not.toHaveTextContent('0')
+    // The year that does have an assessed report still shows its value.
+    expect(within(section).getByTestId('assessed-previous')).toHaveTextContent(
+      '1,000'
     )
   })
 

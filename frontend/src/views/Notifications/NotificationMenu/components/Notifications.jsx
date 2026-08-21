@@ -167,6 +167,7 @@ export const Notifications = () => {
             .replace(':transferId', id)
             .replace(':compliancePeriod', compliancePeriod)
             .replace(':complianceReportId', id)
+            .replace(':ciApplicationId', id)
             .replace(':fuelCodeID', id)
         )
         handleMutation(markAsReadMutation, {

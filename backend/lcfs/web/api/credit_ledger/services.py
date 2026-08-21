@@ -1,4 +1,5 @@
 import io
+from collections import defaultdict
 from datetime import datetime, timezone, date, time
 from math import ceil
 from typing import Optional, List
@@ -81,6 +82,78 @@ def _effective_date(row):
         or row.recorded_date
         or row.approved_date
         or row.create_date
+    )
+
+
+# Display labels and id prefixes, kept in step with the frontend's TYPE_LABELS
+# and TRANSACTION_ID_PREFIXES so an exported ledger reads like the screen.
+# Legacy transactions carry a raw id with no user-facing prefix.
+_TYPE_LABELS = {
+    "Transfer": "Transfer",
+    "InitiativeAgreement": "Initiative Agreement",
+    "AdminAdjustment": "Administrative Adjustment",
+    "ComplianceReport": "Compliance Report",
+    "AggregatorIssuance": "Aggregator Issuance",
+    "StandaloneTransaction": "Legacy Transaction",
+}
+
+_TYPE_ID_PREFIXES = {
+    "Transfer": "CT",
+    "AdminAdjustment": "AA",
+    "InitiativeAgreement": "IA",
+    "ComplianceReport": "CR",
+    "AggregatorIssuance": "AG",
+}
+
+
+def _display_transaction_id(transaction_type: str, transaction_id: int) -> str:
+    return f"{_TYPE_ID_PREFIXES.get(transaction_type, '')}{transaction_id}"
+
+
+def _export_date(value) -> Optional[date]:
+    """
+    Reduce an effective date to a plain date for the spreadsheet.
+
+    openpyxl rejects tz-aware datetimes outright ("Excel does not support
+    datetimes with timezones"), and the aggregate view emits a mix of date,
+    naive and tz-aware values — so writing them through untouched fails the
+    whole export for any organization that happens to have one. The ledger
+    displays a date only, so nothing is lost by dropping the time.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return None
+
+
+def _display_transaction_type(transaction_type: str, description: Optional[str]) -> str:
+    label = _TYPE_LABELS.get(transaction_type, transaction_type)
+    if transaction_type == "ComplianceReport" and description:
+        return f"{label} - {description}"
+    return label
+
+
+def compliance_year_envelope(
+    compliance_period: int, first_assessed_year: Optional[int] = None
+) -> tuple[date, date]:
+    """
+    Date range a compliance year's ledger covers (#4832).
+
+    A compliance year runs April 1 through March 31 of the following year,
+    matching the reporting period rather than the calendar year. The earliest
+    year the organization has an assessed report for opens on January 1
+    instead: there is no earlier envelope to hold that January–March, so
+    without this those transactions would fall out of the ledger entirely.
+    """
+    start_month, start_day = (
+        (1, 1) if compliance_period == first_assessed_year else (4, 1)
+    )
+    return (
+        date(compliance_period, start_month, start_day),
+        date(compliance_period + 1, 3, 31),
     )
 
 
@@ -178,9 +251,17 @@ class CreditLedgerService:
         per-period running balance, totals grouped by transaction type, and the
         previous/current compliance-year assessed balances.
         """
+        first_assessed_year = await self.repo.get_first_assessed_year(
+            organization_id=organization_id,
+        )
+        envelope_start, envelope_end = compliance_year_envelope(
+            compliance_period, first_assessed_year
+        )
         rows = await self.repo.get_period_rows(
             organization_id=organization_id,
             compliance_period=compliance_period,
+            envelope_start=envelope_start,
+            envelope_end=envelope_end,
         )
 
         # 1. Keep only rows whose status is completed (always) or, when
@@ -253,13 +334,15 @@ class CreditLedgerService:
         total_units_in = sum(t.units_in for t in totals_by_type)
         total_units_out = sum(t.units_out for t in totals_by_type)
 
-        # 5. Assessed balances carried between compliance years (raw, so a
-        #    deficit surfaces as a negative value).
-        current_balance = await self.repo.get_period_assessed_balance(
+        # 5. Assessed balances, taken straight from Line 22 of the most recent
+        #    assessed report for each year (#4831). A year with no assessed
+        #    report has no assessed balance — None, not zero, so the UI leaves
+        #    it blank rather than implying the org ended the year at nil.
+        current_balance = await self.repo.get_assessed_line_22(
             organization_id=organization_id,
             compliance_period=compliance_period,
         )
-        previous_balance = await self.repo.get_period_assessed_balance(
+        previous_balance = await self.repo.get_assessed_line_22(
             organization_id=organization_id,
             compliance_period=compliance_period - 1,
         )
@@ -282,6 +365,64 @@ class CreditLedgerService:
         )
 
     @service_handler
+    async def export_period_ledger(
+        self,
+        *,
+        organization_id: int,
+        compliance_year: int,
+        include_pending: bool = False,
+        export_format: str = "xlsx",
+    ) -> StreamingResponse:
+        """
+        Excel/CSV export of one compliance-period ledger (#4832).
+
+        Built from ``get_period_ledger`` rather than querying separately, so the
+        download is exactly what the screen shows — same April–March envelope,
+        same rows, same running balance. Anything that changes the ledger changes
+        the export with it.
+        """
+        if export_format not in ["xls", "xlsx", "csv"]:
+            raise ValueError("Export format not supported")
+
+        ledger = await self.get_period_ledger(
+            organization_id=organization_id,
+            compliance_period=compliance_year,
+            include_pending=include_pending,
+        )
+
+        sheet_rows = [
+            [
+                _display_transaction_id(txn.transaction_type, txn.transaction_id),
+                _export_date(txn.effective_date),
+                _display_transaction_type(txn.transaction_type, txn.description),
+                txn.units_in,
+                txn.units_out,
+                txn.running_balance,
+            ]
+            for txn in ledger.transactions
+        ]
+
+        builder = SpreadsheetBuilder(file_format=export_format)
+        builder.add_sheet(
+            sheet_name=LCFS_Constants.CREDIT_LEDGER_EXPORT_SHEETNAME,
+            columns=LCFS_Constants.CREDIT_LEDGER_PERIOD_EXPORT_COLUMNS,
+            rows=sheet_rows,
+            styles={"bold_headers": True},
+        )
+        file_content: bytes = builder.build_spreadsheet()
+
+        filename = (
+            f"{LCFS_Constants.CREDIT_LEDGER_EXPORT_FILENAME}"
+            f"-org{organization_id}-{compliance_year}.{export_format}"
+        )
+
+        return StreamingResponse(
+            io.BytesIO(file_content),
+            media_type=FILE_MEDIA_TYPE[export_format.upper()].value,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    @service_handler
     async def get_organization_years(
         self,
         *,
@@ -298,7 +439,6 @@ class CreditLedgerService:
         self,
         *,
         organization_id: int,
-        compliance_year: Optional[int],
         export_format: str = "xlsx",
     ) -> StreamingResponse:
         """
@@ -307,11 +447,8 @@ class CreditLedgerService:
         if export_format not in ["xls", "xlsx", "csv"]:
             raise ValueError("Export format not supported")
 
+        # Organization dashboard exports full ledger history in one workbook.
         conditions: List[any] = [CreditLedgerView.organization_id == organization_id]
-        if compliance_year:
-            conditions.append(
-                CreditLedgerView.compliance_period == str(compliance_year)
-            )
 
         sort_orders = [SortOrder(field="update_date", direction="desc")]
 
@@ -322,7 +459,7 @@ class CreditLedgerService:
             sort_orders=sort_orders,
         )
 
-        sheet_rows = []
+        rows_by_year = defaultdict(list)
         for row in rows:
             ledger_view, version = row
 
@@ -340,9 +477,10 @@ class CreditLedgerService:
                     [" " + c if c.isupper() else c for c in transaction_type]
                 ).strip()
 
-            sheet_rows.append(
+            compliance_year = str(ledger_view.compliance_period or "Unknown")
+            rows_by_year[compliance_year].append(
                 [
-                    int(ledger_view.compliance_period),
+                    str(ledger_view.compliance_period),
                     int(ledger_view.available_balance or 0),
                     int(ledger_view.compliance_units or 0),
                     transaction_type,
@@ -351,12 +489,39 @@ class CreditLedgerService:
             )
 
         builder = SpreadsheetBuilder(file_format=export_format)
-        builder.add_sheet(
-            sheet_name=LCFS_Constants.CREDIT_LEDGER_EXPORT_SHEETNAME,
-            columns=LCFS_Constants.CREDIT_LEDGER_EXPORT_COLUMNS,
-            rows=sheet_rows,
-            styles={"bold_headers": True},
-        )
+        if export_format == "csv":
+            combined_rows = []
+            for year in sorted(
+                rows_by_year.keys(),
+                key=lambda value: (0, -int(value)) if value.isdigit() else (1, value),
+            ):
+                combined_rows.extend(rows_by_year[year])
+
+            builder.add_sheet(
+                sheet_name=LCFS_Constants.CREDIT_LEDGER_EXPORT_SHEETNAME,
+                columns=LCFS_Constants.CREDIT_LEDGER_EXPORT_COLUMNS,
+                rows=combined_rows,
+                styles={"bold_headers": True},
+            )
+        else:
+            for position, year in enumerate(
+                sorted(
+                    rows_by_year.keys(),
+                    key=lambda value: (
+                        0,
+                        -int(value),
+                    )
+                    if value.isdigit()
+                    else (1, value),
+                )
+            ):
+                builder.add_sheet(
+                    sheet_name=year[:31],
+                    columns=LCFS_Constants.CREDIT_LEDGER_EXPORT_COLUMNS,
+                    rows=rows_by_year[year],
+                    styles={"bold_headers": True},
+                    position=position,
+                )
         file_content: bytes = builder.build_spreadsheet()
 
         date_stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")

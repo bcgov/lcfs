@@ -4,6 +4,7 @@ import {
   useCreditLedger,
   usePeriodCreditLedger,
   useDownloadCreditLedger,
+  useDownloadPeriodCreditLedger,
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
 import { useApiService } from '@/services/useApiService'
@@ -319,7 +320,6 @@ describe('useDownloadCreditLedger', () => {
 
     downloadFn({
       orgId: '123',
-      complianceYear: '2024',
       format: 'xlsx'
     })
 
@@ -327,7 +327,6 @@ describe('useDownloadCreditLedger', () => {
       url: expect.stringContaining('123'),
       method: 'get',
       params: {
-        compliance_year: '2024',
         format: 'xlsx'
       }
     })
@@ -337,15 +336,13 @@ describe('useDownloadCreditLedger', () => {
     const downloadFn = useDownloadCreditLedger()
 
     downloadFn({
-      orgId: '123',
-      complianceYear: '2024'
+      orgId: '123'
     })
 
     expect(mockDownload).toHaveBeenCalledWith({
       url: expect.stringContaining('123'),
       method: 'get',
       params: {
-        compliance_year: '2024',
         format: 'xlsx'
       }
     })
@@ -373,7 +370,6 @@ describe('useDownloadCreditLedger', () => {
 
     downloadFn({
       orgId: '123',
-      complianceYear: '2024',
       format: 'csv'
     })
 
@@ -381,8 +377,25 @@ describe('useDownloadCreditLedger', () => {
       url: expect.stringContaining('123'),
       method: 'get',
       params: {
-        compliance_year: '2024',
         format: 'csv'
+      }
+    })
+  })
+
+  it('should ignore compliance year so filtered dashboards download the full ledger', () => {
+    const downloadFn = useDownloadCreditLedger()
+
+    downloadFn({
+      orgId: '123',
+      complianceYear: '2024',
+      format: 'xlsx'
+    })
+
+    expect(mockDownload).toHaveBeenCalledWith({
+      url: expect.stringContaining('123'),
+      method: 'get',
+      params: {
+        format: 'xlsx'
       }
     })
   })
@@ -407,7 +420,6 @@ describe('useDownloadCreditLedger', () => {
       url: expect.stringContaining('/credit-ledger/organization//'),
       method: 'get',
       params: {
-        compliance_year: '2024',
         format: 'xlsx'
       }
     })
@@ -497,6 +509,42 @@ describe('useCreditLedgerYears', () => {
 
     await waitFor(() => {
       expect(result.current.data).toEqual(mockYears)
+    })
+  })
+})
+
+describe('useDownloadPeriodCreditLedger', () => {
+  const mockDownload = vi.fn()
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(useApiService).mockReturnValue({ download: mockDownload })
+  })
+
+  it('hits the period export endpoint for the requested year', () => {
+    // #4832: the period export must go through the period route so the
+    // spreadsheet uses the same April-March envelope as the ledger view.
+    useDownloadPeriodCreditLedger()({ orgId: '123', complianceYear: 2024 })
+
+    expect(mockDownload).toHaveBeenCalledWith({
+      url: '/credit-ledger/organization/123/period/2024/export',
+      method: 'get',
+      params: { include_pending: false, format: 'xlsx' }
+    })
+  })
+
+  it('passes the pending flag and format through', () => {
+    useDownloadPeriodCreditLedger()({
+      orgId: 7,
+      complianceYear: 2023,
+      includePending: true,
+      format: 'csv'
+    })
+
+    expect(mockDownload).toHaveBeenCalledWith({
+      url: '/credit-ledger/organization/7/period/2023/export',
+      method: 'get',
+      params: { include_pending: true, format: 'csv' }
     })
   })
 })

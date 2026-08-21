@@ -85,6 +85,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       orgOperatingName: '',
       orgEmailAddress: '',
       orgPhoneNumber: '',
+      orgContactName: '',
       orgType: '1',
       orgRegForTransfers: '',
       orgStreetAddress: '',
@@ -170,6 +171,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         orgOperatingName: data.operatingName,
         orgEmailAddress: data.email,
         orgPhoneNumber: data.phone,
+        orgContactName: data.contactName || '',
         orgEDRMSRecord: data.edrmsRecord,
         recordsAddress: data.recordsAddress || '',
         hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
@@ -303,6 +305,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       operatingName: data.orgOperatingName,
       email: data.orgEmailAddress,
       phone: data.orgPhoneNumber,
+      contactName: data.orgContactName?.trim() || null,
       edrmsRecord: data.orgEDRMSRecord,
       recordsAddress: data.recordsAddress || '',
       hasEarlyIssuance: data.hasEarlyIssuance === 'yes',
@@ -417,7 +420,10 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         'orgHeadOfficePostalCodeZipCode',
         watch('orgPostalCodeZipCode')
       )
-      setValueAndTriggerValidation('orgHeadOfficeProvince', watch('orgProvince'))
+      setValueAndTriggerValidation(
+        'orgHeadOfficeProvince',
+        watch('orgProvince')
+      )
       setValueAndTriggerValidation('orgHeadOfficeCountry', watch('orgCountry'))
     } else {
       if (watch('orgHeadOfficeStreetAddress') === orgStreetAddress) {
@@ -449,8 +455,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       <Loading
         message={
           isCreateOrgPending
-            ? 'Adding Organization...'
-            : 'Updating Organization...'
+            ? 'Adding organization...'
+            : 'Updating organization...'
         }
       />
     )
@@ -503,7 +509,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               >
                 {organizationSnapshot && !dismissedBoxes.organizationInfo && (
                   <ReferenceCompareBox
-                    title="Organization Details"
+                    title="Organization details"
                     data={[
                       {
                         label: t('org:legalNameLabel'),
@@ -601,7 +607,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                 <Box mb={2}>
                   <InputLabel htmlFor="orgPhoneNumber" sx={{ pb: 1 }}>
                     {t('org:phoneNbrLabel')}
-                    {requiresBCeID ? '' : ' (Optional)'}:
+                    {requiresBCeID ? '' : ' (optional)'}:
                   </InputLabel>
                   <TextField
                     required={requiresBCeID}
@@ -612,6 +618,20 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                     error={!!errors.orgPhoneNumber}
                     helperText={errors.orgPhoneNumber?.message}
                     {...register('orgPhoneNumber')}
+                  />
+                </Box>
+                <Box mb={2}>
+                  <InputLabel htmlFor="orgContactName" sx={{ pb: 1 }}>
+                    {t('org:contactNameLabel')}:
+                  </InputLabel>
+                  <TextField
+                    id="orgContactName"
+                    data-test="orgContactName"
+                    variant="outlined"
+                    fullWidth
+                    error={!!errors.orgContactName}
+                    helperText={errors.orgContactName?.message}
+                    {...register('orgContactName')}
                   />
                 </Box>
               </Box>
@@ -830,7 +850,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               </BCTypography>
               {organizationSnapshot && !dismissedBoxes.serviceAddress && (
                 <ReferenceCompareBox
-                  title="Service Address"
+                  title="Service address"
                   data={[{ value: organizationSnapshot.serviceAddress }]}
                   onDismiss={() => dismissBox('serviceAddress')}
                   isDismissed={dismissedBoxes.serviceAddress}
@@ -844,7 +864,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               >
                 <InputLabel htmlFor="orgStreetAddress" sx={{ pb: 1 }}>
                   {t('org:streetAddrLabel')}
-                  {requiresBCeID ? '' : ' (Optional)'}:
+                  {requiresBCeID ? '' : ' (optional)'}:
                 </InputLabel>
                 <Controller
                   name="orgStreetAddress"
@@ -884,7 +904,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               <Box mb={2}>
                 <InputLabel htmlFor="orgCity" sx={{ pb: 1 }}>
                   {t('org:cityLabel')}
-                  {requiresBCeID ? '' : ' (Optional)'}:
+                  {requiresBCeID ? '' : ' (optional)'}:
                 </InputLabel>
                 <TextField
                   required={requiresBCeID}
@@ -928,7 +948,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               <Box mb={2}>
                 <InputLabel htmlFor="orgPostalCodeZipCode" sx={{ pb: 1 }}>
                   {t('org:poLabel')}
-                  {requiresBCeID ? '' : ' (Optional)'}:
+                  {requiresBCeID ? '' : ' (optional)'}:
                 </InputLabel>
                 <TextField
                   required={requiresBCeID}
@@ -950,7 +970,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                 </BCTypography>
                 {organizationSnapshot && !dismissedBoxes.headOfficeAddress && (
                   <ReferenceCompareBox
-                    title="Head Office Address"
+                    title="Head office address"
                     data={[{ value: organizationSnapshot.headOfficeAddress }]}
                     onDismiss={() => dismissBox('headOfficeAddress')}
                     isDismissed={dismissedBoxes.headOfficeAddress}
@@ -998,7 +1018,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               </BCTypography>
               {organizationSnapshot && !dismissedBoxes.recordsAddress && (
                 <ReferenceCompareBox
-                  title="Records Address"
+                  title="Records address"
                   data={[{ value: organizationSnapshot.recordsAddress }]}
                   onDismiss={() => dismissBox('recordsAddress')}
                   isDismissed={dismissedBoxes.recordsAddress}

@@ -7,8 +7,8 @@
     "inReserve": "In reserve",
     "status": "Status",
     "orgType": "Organization type",
-    "registrationStatus": "Registration Status",
-    "earlyIssuance": "Early Issuance"
+    "registrationStatus": "Registration status",
+    "earlyIssuance": "Early issuance"
   },
   "orgId": "Organization ID",
   "noOrgsFound": "No organizations found",
@@ -24,6 +24,7 @@
   "sameAsLegalNameLabel": "Same as legal name",
   "emailAddrLabel": "Email address",
   "phoneNbrLabel": "Phone number",
+  "contactNameLabel": "Contact name",
   "orgTypeLabel": "Organization type",
   "regTrnLabel": "Registered for transfers",
   "registeredTransferYes": "Yes — A registered organization is able to transfer compliance units.",
@@ -31,6 +32,7 @@
   "earlyIssuanceLabel": "Enable early issuance reporting for {{year}}",
   "earlyIssuanceIndicator": "Early issuance reporting enabled for {{year}}",
   "edrmsLabel": "Organization profile, EDRMS record # (optional)",
+  "edrmsNumberLabel": "EDRMS #",
   "serviceAddrLabel": "Address for service (postal address)",
   "streetAddrLabel": "Street address/PO box",
   "addrOthLabel": "Address other (optional)",
@@ -52,8 +54,8 @@
   "addOrgTitle": "Add organization",
   "editOrgTitle": "Edit organization",
   "toUpdateMsg": " to update address information.",
-  "selectOrgLabel": "Select an Organization",
-  "complianceUnitBalance": "Compliance Unit Balance",
+  "selectOrgLabel": "Select an organization",
+  "complianceUnitBalance": "Compliance unit balance",
   "editBtn": "Edit",
   "orgDetails": "Organization details",
   "creditLedger": "Credit ledger",
@@ -87,15 +89,15 @@
       }
     },
     "supplyHistory": {
-      "title": "Supply History",
+      "title": "Supply history",
       "description": "Year-by-year fuel supply summary aggregated from compliance reports."
     },
     "allocationAgreements": {
-      "title": "Allocation Agreements",
+      "title": "Allocation agreements",
       "description": "Allocator-level year-over-year allocation activity and FSE reporting summary."
     },
     "complianceTracking": {
-      "title": "Compliance Tracking",
+      "title": "Compliance tracking",
       "description": "This section will contain compliance tracking information. Implementation pending."
     }
   },
@@ -161,7 +163,7 @@
     "regenerateExistingLinkAriaLabel": "Regenerate existing link",
     "selectFormAriaLabel": "Select form for link generation"
   },
-  "snapshotTitle": "Organization Information from Compliance Report",
+  "snapshotTitle": "Organization information from compliance report",
   "penaltyLog": {
     "history": "Penalty history",
     "addPenaltyBtn": "Add/Edit discretionary penalties",
@@ -179,7 +181,7 @@
     "metrics": {
       "totalPenalties": "Total penalties",
       "totalAuto": "Total automatic",
-      "totalSubtitle": "Auto Renewable + Auto Low Carbon",
+      "totalSubtitle": "Auto renewable + auto low carbon",
       "autoPenalties": "Automatic penalties",
       "discretionaryPenalty": "Discretionary penalty",
       "totalPenaltiesTrend": "Total penalties trend",
@@ -188,8 +190,8 @@
       "discretionary": "Discretionary",
       "discretionarySubtitle": "Assessed by director",
       "discretionaryPenaltiesTrend": "Discretionary penalties trend",
-      "autoRenewable": "Auto Renewable",
-      "autoLowCarbon": "Auto Low Carbon"
+      "autoRenewable": "Auto renewable",
+      "autoLowCarbon": "Auto low carbon"
     },
     "manageTitle": "Confer discretionary penalty",
     "saveReturn": "Save & return",
@@ -197,7 +199,7 @@
     "analyticsError": "Unable to load penalty analytics data."
   },
   "supplyHistory": {
-    "title": "Supply History",
+    "title": "Supply history",
     "filterByYear": "Filter by year",
     "allYears": "All years",
     "fromYear": "From year",
@@ -207,28 +209,28 @@
     "noDataFound": "No fuel supply data found",
     "columns": {
       "year": "Year",
-      "submissionDate": "Submission Date",
-      "fuelType": "Fuel Type",
-      "fuelCategory": "Fuel Category",
+      "submissionDate": "Submission date",
+      "fuelType": "Fuel type",
+      "fuelCategory": "Fuel category",
       "provision": "Provision of the Act",
-      "fuelCode": "Fuel Code",
+      "fuelCode": "Fuel code",
       "quantity": "Quantity",
       "units": "Units"
     },
     "analytics": {
-      "totalVolume": "Total Volume",
-      "totalFuelTypes": "Fuel Types",
-      "totalReports": "Total Reports",
-      "mostRecentSubmission": "Most Recent Submission",
+      "totalVolume": "Total volume",
+      "totalFuelTypes": "Fuel types",
+      "totalReports": "Total reports",
+      "mostRecentSubmission": "Most recent submission",
       "noData": "No data",
-      "chartsTitle": "Analytics & Visualizations",
+      "chartsTitle": "Analytics & visualizations",
       "dashboardTitle": "Fuel supply YoY dashboard",
       "dashboardDescription": "Supplier-specific trend summary for supply volume, compliance unit impact, efficiency, and positive compliance unit supply share.",
-      "fuelTypeDistribution": "Fuel Type Distribution",
-      "volumeOverTime": "Volume Over Time",
-      "categoryBreakdown": "Fuel Category Breakdown",
-      "provisionDistribution": "Provision Distribution",
-      "topFuelCodes": "Top 10 Fuel Codes by Volume",
+      "fuelTypeDistribution": "Fuel type distribution",
+      "volumeOverTime": "Volume over time",
+      "categoryBreakdown": "Fuel category breakdown",
+      "provisionDistribution": "Provision distribution",
+      "topFuelCodes": "Top 10 fuel codes by volume",
       "quantity": "Quantity",
       "fuelVolumeSupplyTrend": "Fuel volume supply trend",
       "netComplianceUnitVolume": "Net compliance unit volume",
@@ -247,6 +249,7 @@
       "vsPreviousYear": "vs. previous year",
       "volumeChange": "volume change",
       "fuelTypeVolumeTrend": "Volume by fuel type over each compliance period",
+      "fuelTypeVolumeTrendHelp": "Hover a point to see its year-over-year percentage change",
       "renewableSupplyVolumeChange": "Fuel supply volume change: renewable vs non-renewable",
       "renewable": "Renewable",
       "nonRenewable": "Non-renewable",

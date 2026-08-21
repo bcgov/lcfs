@@ -26,11 +26,11 @@
     "viewAllTransactions": "View all transactions",
     "loadingMessage": "Loading transactions card..."
   },
-  "fuelCodes": {
-    "title": "Fuel Codes",
+  "ciApplications": {
+    "title": "CI Applications",
     "thereAre": "There are:",
-    "fcInProgress": "Fuel Code(s) in progress",
-    "loadingMessage": "Loading fuel codes card..."
+    "inProgress": "CI Application(s) in progress",
+    "loadingMessage": "Loading CI applications card..."
   },
   "orgFuelCodes": {
     "title": "Fuel codes",
@@ -45,8 +45,8 @@
   "complianceReports": {
     "title": "Compliance reports",
     "thereAre": "There are:",
-    "crInProgress": "Compliance Report(s) in progress",
-    "loadingMessage": "Loading Compliance Report card..."
+    "crInProgress": "Compliance report(s) in progress",
+    "loadingMessage": "Loading compliance report card..."
   },
   "feedback": {
     "title": "We want to hear from you",
@@ -75,7 +75,7 @@
     "administration": "Administration"
   },
   "orgDetails": {
-    "orgDetailsLabel": "Organization Details",
+    "orgDetailsLabel": "Organization details",
     "orgDetailsLoadingMsg": "Loading organization details...",
     "users": "Users",
     "createNewUsrLabel": "Create new BCeID account",
@@ -100,5 +100,42 @@
     "notifications": "Notifications",
     "configureNotifications": "Configure your notifications",
     "help": "Help"
+  },
+  "governmentNotifications": {
+    "titles": {
+      "Alert": "Alert notification",
+      "Outage": "Outage notification",
+      "Deadline": "Deadline notification",
+      "General": "General notification"
+    },
+    "loadingMessage": "Loading notification...",
+    "emptyMessage": "No government notification has been created yet.",
+    "defaultTitle": "Notification",
+    "deleteNotificationTooltip": "Delete notification",
+    "more": "More",
+    "less": "Less",
+    "edit": "Edit",
+    "titleLabel": "Title *",
+    "titlePlaceholder": "Enter notification title",
+    "messageLabel": "Message *",
+    "messagePlaceholder": "Enter notification message",
+    "cancel": "Cancel",
+    "post": "Post",
+    "updateSuccess": "Government notification updated successfully",
+    "updateError": "Failed to update government notification",
+    "deleteSuccess": "Government notification deleted successfully",
+    "deleteError": "Failed to delete government notification",
+    "confirmDialog": {
+      "title": "Government notification",
+      "warning": "Notification emails go out to all BCeID and IDIR users!",
+      "message": "Would you like to post your notification with or without triggering an email notification?",
+      "postWithoutEmail": "Post without email sent",
+      "postWithEmail": "Post and send email"
+    },
+    "deleteDialog": {
+      "title": "Delete notification",
+      "message": "Are you sure you want to delete this government notification? This action cannot be undone.",
+      "confirm": "Delete"
+    }
   }
 }

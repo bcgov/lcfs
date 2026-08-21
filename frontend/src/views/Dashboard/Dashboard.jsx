@@ -23,7 +23,7 @@ import {
   OrgUserSettingsCard
 } from './components/cards'
 import OrganizationsSummaryCard from './components/cards/idir/OrganizationsSummaryCard'
-import { FuelCodeCard } from './components/cards/idir/FuelCodeCard'
+import { CIApplicationCard } from './components/cards/idir/CIApplicationCard'
 import { ComplianceReportCard } from './components/cards/idir/ComplianceReportCard'
 
 export const Dashboard = () => {
@@ -82,7 +82,7 @@ export const Dashboard = () => {
                 <ComplianceReportCard />
               </Role>
               <Role roles={[roles.analyst]}>
-                <FuelCodeCard />
+                <CIApplicationCard />
               </Role>
             </Role>
 
