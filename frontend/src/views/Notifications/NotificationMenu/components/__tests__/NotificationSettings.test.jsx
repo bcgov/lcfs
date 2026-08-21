@@ -48,12 +48,20 @@ describe('NotificationSettings component', () => {
     currentUserRoles = [roles.supplier]
     render(<NotificationSettings />)
 
-    expect(screen.getByTestId('bceid-settings')).toBeInTheDocument()
+    expect(screen.queryByTestId('bceid-settings')).toBeInTheDocument()
     expect(screen.queryByTestId('director-settings')).not.toBeInTheDocument()
     expect(
       screen.queryByTestId('compliance-manager-settings')
     ).not.toBeInTheDocument()
     expect(screen.queryByTestId('analyst-settings')).not.toBeInTheDocument()
+  })
+
+  it('renders BCeIDNotificationSettings for CI Applicant users', () => {
+    currentUserRoles = [roles.ci_applicant]
+    render(<NotificationSettings />)
+
+    expect(screen.getByTestId('bceid-settings')).toBeInTheDocument()
+    expect(screen.queryByTestId('director-settings')).not.toBeInTheDocument()
   })
 
   it('renders IDIRDirectorNotificationSettings for Director users', () => {

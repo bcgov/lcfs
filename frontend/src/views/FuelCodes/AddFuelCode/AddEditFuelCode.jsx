@@ -13,7 +13,11 @@ import {
   useGetFuelCode
 } from '@/hooks/useFuelCode'
 import withRole from '@/utils/withRole'
-import { defaultColDef, fuelCodeColDefs } from './_schema'
+import {
+  defaultColDef,
+  fuelCodeColDefs,
+  normalizeTransportModeDistancesForSave
+} from './_schema'
 import { useNavigate, useParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCButton from '@/components/BCButton'
@@ -40,13 +44,15 @@ const transformExistingFuelCodeData = (existingFuelCode) => {
     ...existingFuelCode,
     id: existingFuelCode.id || uuid(),
     feedstockFuelTransportMode:
-      existingFuelCode.feedstockFuelTransportModes?.map(
-        (mode) => mode.feedstockFuelTransportMode.transportMode
-      ) || [],
+      existingFuelCode.feedstockFuelTransportModes?.map((mode) => ({
+        transportMode: mode.feedstockFuelTransportMode.transportMode,
+        distance: mode.distance ?? ''
+      })) || [],
     finishedFuelTransportMode:
-      existingFuelCode.finishedFuelTransportModes?.map(
-        (mode) => mode.finishedFuelTransportMode.transportMode
-      ) || []
+      existingFuelCode.finishedFuelTransportModes?.map((mode) => ({
+        transportMode: mode.finishedFuelTransportMode.transportMode,
+        distance: mode.distance ?? ''
+      })) || []
   }
 }
 
@@ -73,6 +79,27 @@ const filterNonNullValues = (data) => {
     }
   }
   return result
+}
+
+const normalizeFuelCodeRowForSave = (row) => ({
+  ...row,
+  feedstockFuelTransportMode: normalizeTransportModeDistancesForSave(
+    row.feedstockFuelTransportMode
+  ),
+  finishedFuelTransportMode: normalizeTransportModeDistancesForSave(
+    row.finishedFuelTransportMode
+  )
+})
+
+const formatFastApiDetail = (detail) => {
+  if (!Array.isArray(detail)) return detail
+  return detail
+    .map((item) => {
+      const loc = Array.isArray(item?.loc) ? item.loc.join('.') : item?.loc
+      return [loc, item?.msg].filter(Boolean).join(': ')
+    })
+    .filter(Boolean)
+    .join('; ')
 }
 
 const AddEditFuelCodeBase = () => {
@@ -330,21 +357,22 @@ const AddEditFuelCodeBase = () => {
           errors: { ...prev.errors, [rowId]: undefined }
         }))
 
+        const saveData = normalizeFuelCodeRowForSave(updatedData)
         const action =
-          updatedData.validationStatus === 'pending'
+          saveData.validationStatus === 'pending'
             ? 'save'
-            : updatedData.fuelCodeId
+            : saveData.fuelCodeId
               ? 'update'
               : 'create'
 
         const result = await fuelCodeMutation.mutateAsync({
           action,
-          data: { ...updatedData, id: rowId },
-          fuelCodeId: updatedData.fuelCodeId
+          data: { ...saveData, id: rowId },
+          fuelCodeId: saveData.fuelCodeId
         })
 
         const finalData = {
-          ...updatedData,
+          ...saveData,
           id: rowId,
           fuelCodeId: result.data.fuelCodeId,
           fuelSuffix: result.data.fuelSuffix,
@@ -371,7 +399,9 @@ const AddEditFuelCodeBase = () => {
           )
           errMsg = `Unable to save row: ${fieldLabels?.length === 1 ? fieldLabels[0] : ''} ${message}`
         } else {
-          errMsg = `Unable to save row: ${error.response?.data?.detail || error.message}`
+          errMsg = `Unable to save row: ${
+            formatFastApiDetail(error.response?.data?.detail) || error.message
+          }`
         }
 
         // Update errors state
@@ -626,13 +656,17 @@ const AddEditFuelCodeBase = () => {
         )?.fuelTypeId,
         fuelSuffix: row.fuelSuffix?.toString(),
         feedstockFuelTransportMode:
-          row.feedstockFuelTransportMode
-            ?.split(',')
-            .map((item) => item.trim()) || [],
+          typeof row.feedstockFuelTransportMode === 'string'
+            ? row.feedstockFuelTransportMode
+                ?.split(',')
+                .map((item) => item.trim()) || []
+            : row.feedstockFuelTransportMode || [],
         finishedFuelTransportMode:
-          row.finishedFuelTransportMode
-            ?.split(',')
-            .map((item) => item.trim()) || [],
+          typeof row.finishedFuelTransportMode === 'string'
+            ? row.finishedFuelTransportMode
+                ?.split(',')
+                .map((item) => item.trim()) || []
+            : row.finishedFuelTransportMode || [],
         modified: true,
         isNewRow: true
       }))
@@ -939,6 +973,10 @@ const AddEditFuelCodeBase = () => {
     const config = fuelCodeButtonConfigFn(buttonContext)
     return config[buttonContext.currentStatus] || []
   }, [buttonContext])
+  const popupParent = useMemo(
+    () => (typeof document === 'undefined' ? undefined : document.body),
+    []
+  )
 
   // Loading states
   if (isLoading || isLoadingExistingCode) {
@@ -988,6 +1026,7 @@ const AddEditFuelCodeBase = () => {
           loading={isUpdating}
           loadingText="Updating data..."
           showMandatoryColumns={isInEditMode}
+          popupParent={popupParent}
         />
 
         <Stack

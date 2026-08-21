@@ -32,6 +32,9 @@ from lcfs.web.api.ci_application.schema import (
 from lcfs.web.api.ci_application.services import (
     CIApplicationServices,
     _pathway_change_logs_from_versions,
+    _pathway_input_snapshot,
+    _pathway_snapshot,
+    _transport_mode_details_from_any,
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -677,10 +680,27 @@ def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF", organization_id=1
     )
 
 
+def _transport_mode_obj(ident, name):
+    return SimpleNamespace(transport_mode_id=ident, transport_mode=name)
+
+
+def _transport_mode_link(name, distance, ident=1):
+    return SimpleNamespace(
+        transport_mode_id=ident,
+        transport_mode=_transport_mode_obj(ident, name),
+        distance=distance,
+    )
+
+
+def _transport_mode_selection(name, distance):
+    return {"transportMode": name, "distance": distance}
+
+
 def _new_pathway_input(**overrides):
     base = dict(
         application_type_id=1,
         fuel_code_type_id=1,
+        design_data=False,
         operating_data_from=date(2025, 1, 1),
         operating_data_to=date(2025, 12, 31),
         fuel_code_id=None,
@@ -688,11 +708,9 @@ def _new_pathway_input(**overrides):
         fuel_type_id=1,
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode=["Truck"],
-        feedstock_transport_distance=100,
+        feedstock_transport_mode=[_transport_mode_selection("Truck", 100)],
         coproducts=None,
-        finished_fuel_transport_mode=["Rail"],
-        finished_fuel_transport_distance=200,
+        finished_fuel_transport_mode=[_transport_mode_selection("Rail", 200)],
     )
     base.update(overrides)
     return PathwayInputSchema(**base)
@@ -704,11 +722,75 @@ def test_pathway_input_allows_negative_proposed_ci():
     assert payload.proposed_ci == Decimal("-5.61")
 
 
+def test_pathway_input_allows_design_data_without_operating_dates():
+    payload = _new_pathway_input(
+        design_data=True,
+        operating_data_from=None,
+        operating_data_to=None,
+    )
+
+    assert payload.design_data is True
+    assert payload.operating_data_from is None
+    assert payload.operating_data_to is None
+
+
+def test_pathway_input_requires_operating_dates_for_operational_data():
+    with pytest.raises(RequestValidationError):
+        _new_pathway_input(
+            design_data=False,
+            operating_data_from=None,
+            operating_data_to=None,
+        )
+def test_pathway_input_requires_mode_level_distances():
+    with pytest.raises(ValidationError):
+        _new_pathway_input(feedstock_transport_mode=["Truck"])
+
+
+def test_pathway_snapshots_do_not_write_removed_transport_mode_scalars():
+    row = _new_pathway_input(
+        feedstock_transport_mode=[_transport_mode_selection("Truck", 100)],
+        finished_fuel_transport_mode=[_transport_mode_selection("Rail", 200)],
+    )
+    pathway = _existing_pathway(
+        feedstock_transport_modes=[_transport_mode_link("Truck", 100, 1)],
+        finished_fuel_transport_modes=[_transport_mode_link("Rail", 200, 2)],
+    )
+
+    before = _pathway_snapshot(pathway)
+    after = _pathway_input_snapshot(row, pathway)
+
+    assert "feedstock_transport_mode" not in before
+    assert "finished_fuel_transport_mode" not in before
+    assert "feedstock_transport_mode" not in after
+    assert "finished_fuel_transport_mode" not in after
+    assert before["feedstock_transport_mode_details"] == [
+        {"transportMode": "Truck", "distance": 100}
+    ]
+    assert after["finished_fuel_transport_mode_details"] == [
+        {"transportMode": "Rail", "distance": 200}
+    ]
+
+
+def test_transport_mode_details_from_any_preserves_mixed_null_distances():
+    details = _transport_mode_details_from_any(
+        [
+            _transport_mode_selection("Truck", 100),
+            _transport_mode_selection("Rail", None),
+        ]
+    )
+
+    assert details == [
+        {"transportMode": "Truck", "distance": 100},
+        {"transportMode": "Rail", "distance": None},
+    ]
+
+
 def _existing_pathway(**overrides):
     base = dict(
         pathway_id=1,
         application_type_id=1,
         fuel_code_type_id=1,
+        design_data=False,
         operating_data_from=date(2025, 1, 1),
         operating_data_to=date(2025, 12, 31),
         fuel_code_id=None,
@@ -716,11 +798,9 @@ def _existing_pathway(**overrides):
         fuel_type_id=1,
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode="Truck",
-        feedstock_transport_distance=100,
+        feedstock_transport_modes=[_transport_mode_link("Truck", 100, 1)],
         coproducts=None,
-        finished_fuel_transport_mode="Rail",
-        finished_fuel_transport_distance=200,
+        finished_fuel_transport_modes=[_transport_mode_link("Rail", 200, 2)],
         group_uuid="pathway-group-1",
         version=0,
         action_type=ActionTypeEnum.CREATE,
@@ -742,6 +822,10 @@ def _stub_step2_lookups(repo, *, with_fuel_code=False):
     repo.get_fuel_codes_by_ids.return_value = (
         [_fuel_code_obj()] if with_fuel_code else []
     )
+    repo.get_transport_modes.return_value = [
+        _transport_mode_obj(1, "Truck"),
+        _transport_mode_obj(2, "Rail"),
+    ]
 
 
 def test_pathway_change_logs_from_versions_returns_empty_when_no_supplemental_edit():
@@ -990,7 +1074,7 @@ async def test_update_step2_records_pathway_versions_for_change_log(
             _new_pathway_input(
                 pathway_id=1,
                 feedstock="Camelina",
-                feedstock_transport_distance=125,
+                feedstock_transport_mode=[_transport_mode_selection("Truck", 125)],
             ),
             _new_pathway_input(feedstock="Tallow"),
         ],
@@ -1014,7 +1098,7 @@ async def test_update_step2_records_pathway_versions_for_change_log(
     assert update_row.update_date >= before_update
     assert update_row.update_user == mock_user.keycloak_username
     assert update_row.feedstock == "Camelina"
-    assert update_row.feedstock_transport_distance == 125
+    assert update_row.feedstock_transport_modes[0].distance == 125
 
     create_row = version_rows[1]
     assert create_row.action_type == ActionTypeEnum.CREATE
@@ -1330,14 +1414,15 @@ def _draft_ci_with_pathways():
     return ci
 
 
-def _generation_pathway():
-    return SimpleNamespace(
+def _generation_pathway(**overrides):
+    base = dict(
         pathway_id=1,
         ci_application_id=10,
         application_type_id=1,
         application_type=_pathway_app_type(),
         fuel_code_type_id=1,
         fuel_code_type=_pathway_fc_type(),
+        design_data=False,
         operating_data_from=date(2026, 1, 1),
         fuel_code_id=None,
         fuel_code=None,
@@ -1347,12 +1432,12 @@ def _generation_pathway():
         fuel_type=_fuel_type_obj(),
         feedstock="Canola",
         feedstock_region="Saskatchewan",
-        feedstock_transport_mode="Truck",
-        feedstock_transport_distance=100,
+        feedstock_transport_modes=[_transport_mode_link("Truck", 100, 1)],
         coproducts=None,
-        finished_fuel_transport_mode="Rail",
-        finished_fuel_transport_distance=200,
+        finished_fuel_transport_modes=[_transport_mode_link("Rail", 200, 2)],
     )
+    base.update(overrides)
+    return SimpleNamespace(**base)
 
 
 def _submitted_ci_for_generation(risk="Medium"):
@@ -1439,6 +1524,80 @@ async def test_update_generated_fuel_code_clearing_required_date_raises_validati
     assert exc.value.errors["errors"][0]["fields"] == ["applicationDate"]
     # The cleared value never reached the database.
     repo.update.assert_not_awaited()
+
+
+def test_sync_generated_fuel_code_transport_modes_preserves_null_distance(service):
+    existing_links = [
+        SimpleNamespace(transport_mode_id=1, distance=100),
+        SimpleNamespace(transport_mode_id=2, distance=200),
+    ]
+    transport_modes = [
+        _transport_mode_obj(1, "Truck"),
+        _transport_mode_obj(2, "Rail"),
+    ]
+
+    service._sync_fuel_code_transport_mode_links(
+        existing_links,
+        [
+            _transport_mode_selection("Truck", 125),
+            _transport_mode_selection("Rail", None),
+        ],
+        transport_modes,
+        SimpleNamespace,
+    )
+
+    by_id = {link.transport_mode_id: link for link in existing_links}
+    assert set(by_id) == {1, 2}
+    assert by_id[1].distance == 125
+    assert by_id[2].distance is None
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_uses_fuel_code_duration_for_design_data_expiry(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    ci.proposed_fuel_code_effective_date = date(2027, 1, 1)
+    ci.pathways = [
+        _generation_pathway(
+            design_data=True,
+            operating_data_from=None,
+            operating_data_to=None,
+            fuel_code_type=_pathway_fc_type(2, "3-year"),
+        )
+    ]
+    _stub_generation_dependencies(service, repo, ci)
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    created_fuel_code = ci.generated_fuel_code_associations[0].fuel_code
+    assert created_fuel_code.effective_date == date(2027, 1, 1)
+    assert created_fuel_code.expiration_date == date(2029, 12, 31)
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_defaults_effective_date_to_application_date(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    ci.proposed_fuel_code_effective_date = None
+    ci.pathways = [
+        _generation_pathway(
+            design_data=True,
+            operating_data_from=None,
+            operating_data_to=None,
+            fuel_code_type=_pathway_fc_type(1, "1-year provisional"),
+        )
+    ]
+    _stub_generation_dependencies(service, repo, ci)
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    created_fuel_code = ci.generated_fuel_code_associations[0].fuel_code
+    assert created_fuel_code.effective_date == date(2026, 5, 1)
+    assert created_fuel_code.expiration_date == date(2027, 4, 30)
 
 
 @pytest.mark.anyio
@@ -1797,7 +1956,7 @@ async def test_recommend_to_director_requires_workflow_role(service, repo, mock_
     [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
 )
 async def test_request_documentation_enables_upload_for_workflow_roles(
-    service, repo, mock_user, role
+    service, repo, notification_service, mock_user, role
 ):
     mock_user.role_names = {role}
     ci = _ci_application(status=_status("Submitted", 2))
@@ -1811,6 +1970,16 @@ async def test_request_documentation_enables_upload_for_workflow_roles(
     assert ci.document_changes_requested_at is not None
     assert ci.document_changes_requested_by == mock_user.keycloak_username
     repo.add_history.assert_awaited_once()
+    notification_service.send_notification.assert_awaited_once()
+    request = notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION
+    ]
+    assert request.notification_data.type == "CI Application Changes Requested"
+    assert request.notification_data.related_organization_id == ci.organization_id
+    assert request.notification_data.related_transaction_id == str(
+        ci.ci_application_id
+    )
     assert isinstance(result, CIApplicationSchema)
 
 
@@ -1936,6 +2105,24 @@ async def test_step5_completed_approves_generated_fuel_codes(service, repo, mock
     assert generated_fuel_code.fuel_status_id == 3
     assert generated_fuel_code.approval_date is not None
     assert generated_fuel_code.action_type == ActionTypeEnum.UPDATE
+    sent_requests = [
+        call.args[0]
+        for call in service.notification_service.send_notification.await_args_list
+    ]
+    fuel_code_approval_request = next(
+        request
+        for request in sent_requests
+        if request.notification_types
+        == [NotificationTypeEnum.BCEID__CI_APPLICATION__FUEL_CODE_APPROVED]
+    )
+    assert (
+        fuel_code_approval_request.notification_data.type
+        == "CI Application Fuel Codes Approved"
+    )
+    assert (
+        fuel_code_approval_request.notification_data.related_organization_id
+        == ci.organization_id
+    )
     assert isinstance(result, CIApplicationSchema)
 
 
@@ -1965,7 +2152,7 @@ async def test_step5_decision_can_return_recommended_to_submitted(
 
 @pytest.mark.anyio
 async def test_request_pathway_changes_clears_previous_government_review(
-    service, repo, mock_user
+    service, repo, notification_service, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _ci_application(status=_status("Submitted", 2))
@@ -2004,6 +2191,16 @@ async def test_request_pathway_changes_clears_previous_government_review(
     assert ci.pathway_supplemental_edit_enabled is True
     snapshot = repo.add_history.await_args.kwargs["snapshot"]
     assert snapshot["event"] == "pathway_changes_requested"
+    notification_service.send_notification.assert_awaited_once()
+    request = notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION
+    ]
+    assert request.notification_data.type == "CI Application Changes Requested"
+    assert request.notification_data.related_organization_id == ci.organization_id
+    assert request.notification_data.related_transaction_id == str(
+        ci.ci_application_id
+    )
     assert isinstance(result, CIApplicationSchema)
 
 

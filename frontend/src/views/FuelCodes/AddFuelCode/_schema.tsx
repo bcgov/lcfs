@@ -7,7 +7,8 @@ import {
   AutocompleteCellEditor,
   DateEditor,
   NumberEditor,
-  RequiredHeader
+  RequiredHeader,
+  TransportModeDistanceCellEditor
 } from '@/components/BCDataGrid/components'
 import { apiRoutes } from '@/constants/routes'
 import i18n from '@/i18n'
@@ -51,6 +52,74 @@ const createCellRenderer = (field, customRenderer = null) => {
   CellRenderer.displayName = `CellRenderer_${field}`
 
   return CellRenderer
+}
+
+const getTransportModeName = (value) => {
+  if (!value) return ''
+  if (typeof value === 'string' || typeof value === 'number') {
+    return value.toString()
+  }
+  return (
+    getTransportModeName(value.transportMode) ||
+    getTransportModeName(value.transport_mode) ||
+    getTransportModeName(value.mode) ||
+    getTransportModeName(value.name) ||
+    getTransportModeName(value.label) ||
+    getTransportModeName(value.value) ||
+    getTransportModeName(value.feedstockFuelTransportMode) ||
+    getTransportModeName(value.feedstock_fuel_transport_mode) ||
+    getTransportModeName(value.finishedFuelTransportMode) ||
+    getTransportModeName(value.finished_fuel_transport_mode)
+  )
+}
+
+export const normalizeTransportModeDistances = (value) => {
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === 'string' && value.trim()
+      ? value.split(',').map((item) => item.trim())
+      : []
+
+  return values
+    .map((item) => {
+      if (!item) return null
+      if (typeof item === 'object') {
+        return {
+          transportMode: getTransportModeName(item),
+          distance: item.distance ?? ''
+        }
+      }
+      return { transportMode: getTransportModeName(item), distance: '' }
+    })
+    .filter((item) => item?.transportMode)
+}
+
+export const normalizeTransportModeDistancesForSave = (value) =>
+  normalizeTransportModeDistances(value).map((item) => ({
+    transport_mode: item.transportMode,
+    distance: item.distance
+  }))
+
+const renderTransportModeDistances = (params) => {
+  const values = normalizeTransportModeDistances(params.value)
+  if (!values.length) return <BCTypography variant="body4">Select</BCTypography>
+  return (
+    <CommonArrayRenderer
+      {...params}
+      value={values.map(({ transportMode, distance }) =>
+        distance === null || distance === undefined || distance === ''
+          ? transportMode
+          : `${transportMode} (${distance} km)`
+      )}
+    />
+  )
+}
+
+const transportModeValueSetter = (params) => {
+  params.data[params.colDef.field] = normalizeTransportModeDistances(
+    params.newValue
+  )
+  return true
 }
 
 export const fuelCodeColDefs = (
@@ -642,15 +711,12 @@ export const fuelCodeColDefs = (
       headerName: i18n.t(
         'fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'
       ),
-      cellEditor: AutocompleteCellEditor,
+      cellEditor: TransportModeDistanceCellEditor,
+      cellEditorPopup: true,
+      cellEditorPopupPosition: 'under',
       cellRenderer: createCellRenderer(
         'feedstockFuelTransportMode',
-        (params) =>
-          params.value && params.value.length > 0 ? (
-            <CommonArrayRenderer {...params} />
-          ) : (
-            <BCTypography variant="body4">Select</BCTypography>
-          )
+        renderTransportModeDistances
       ),
       cellRendererParams: {
         disableLink: true,
@@ -658,12 +724,10 @@ export const fuelCodeColDefs = (
       },
       cellEditorParams: {
         options:
-          optionsData?.transportModes?.map((obj) => obj.transportMode) || [],
-        multiple: true,
-        openOnFocus: true,
-        disableCloseOnSelect: true
+          optionsData?.transportModes?.map((obj) => obj.transportMode) || []
       },
       suppressKeyboardEvent,
+      valueSetter: transportModeValueSetter,
       minWidth: 325
     },
     {
@@ -672,13 +736,11 @@ export const fuelCodeColDefs = (
       headerName: i18n.t(
         'fuelCode:fuelCodeColLabels.finishedFuelTransportMode'
       ),
-      cellEditor: AutocompleteCellEditor,
+      cellEditor: TransportModeDistanceCellEditor,
+      cellEditorPopup: true,
+      cellEditorPopupPosition: 'under',
       cellRenderer: createCellRenderer('finishedFuelTransportMode', (params) =>
-        params.value && params.value.length > 0 ? (
-          <CommonArrayRenderer {...params} />
-        ) : (
-          <BCTypography variant="body4">Select</BCTypography>
-        )
+        renderTransportModeDistances(params)
       ),
       cellRendererParams: {
         disableLink: true,
@@ -686,12 +748,10 @@ export const fuelCodeColDefs = (
       },
       cellEditorParams: {
         options:
-          optionsData?.transportModes?.map((obj) => obj.transportMode) || [],
-        multiple: true,
-        openOnFocus: true,
-        disableCloseOnSelect: true
+          optionsData?.transportModes?.map((obj) => obj.transportMode) || []
       },
       suppressKeyboardEvent,
+      valueSetter: transportModeValueSetter,
       minWidth: 325
     },
     {

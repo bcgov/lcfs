@@ -102,12 +102,22 @@ const IterationCardContent = ({ data, t }) => {
     .join(', ')
 
   const feedstockTransport = data.feedstockFuelTransportModes
-    ?.map((m) => m.feedstockFuelTransportMode?.transportMode)
+    ?.map((m) => {
+      const mode = m.feedstockFuelTransportMode?.transportMode
+      return m.distance === null || m.distance === undefined
+        ? mode
+        : `${mode} (${m.distance} km)`
+    })
     .filter(Boolean)
     .join(', ')
 
   const finishedTransport = data.finishedFuelTransportModes
-    ?.map((m) => m.finishedFuelTransportMode?.transportMode)
+    ?.map((m) => {
+      const mode = m.finishedFuelTransportMode?.transportMode
+      return m.distance === null || m.distance === undefined
+        ? mode
+        : `${mode} (${m.distance} km)`
+    })
     .filter(Boolean)
     .join(', ')
   const notes = data.notes

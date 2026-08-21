@@ -20,8 +20,16 @@ from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.exception.exceptions import DatabaseException
+
+
+class MockWindowRow:
+    def __init__(self, **values):
+        self._mapping = values
+        for key, value in values.items():
+            setattr(self, key, value)
 
 
 @pytest.fixture
@@ -399,6 +407,77 @@ async def test_get_fuel_code_bulletin_rows_archived_is_inverse_of_current(
     assert "expiration_date >" in stmt_sql
 
 
+def test_get_fuel_code_bulletin_pagination_params_accepts_fuel_code_filter(
+    fuel_code_repo,
+):
+    pagination = PaginationRequestSchema.model_validate(
+        {
+            "page": 1,
+            "size": 25,
+            "filters": [
+                {
+                    "field": "fuelCode",
+                    "filterType": "text",
+                    "type": "contains",
+                    "filter": "BCLCF",
+                }
+            ],
+            "sortOrders": [],
+        }
+    )
+
+    conditions, sort_orders = fuel_code_repo.get_fuel_code_bulletin_pagination_params(
+        pagination
+    )
+
+    assert sort_orders == []
+    assert len(conditions) == 1
+    compiled_condition = str(
+        conditions[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "concat" in compiled_condition
+    assert "fuel_suffix" in compiled_condition
+    assert "LIKE" in compiled_condition
+    assert "%bclcf%" in compiled_condition
+
+
+def test_get_fuel_code_bulletin_pagination_params_filters_effective_date_as_date(
+    fuel_code_repo,
+):
+    pagination = PaginationRequestSchema.model_validate(
+        {
+            "page": 1,
+            "size": 25,
+            "filters": [
+                {
+                    "field": "effectiveDate",
+                    "filterType": "date",
+                    "type": "equals",
+                    "dateFrom": "2025-12-31",
+                }
+            ],
+            "sortOrders": [],
+        }
+    )
+
+    conditions, sort_orders = fuel_code_repo.get_fuel_code_bulletin_pagination_params(
+        pagination
+    )
+
+    assert sort_orders == []
+    assert len(conditions) == 1
+    compiled_condition = str(
+        conditions[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "CAST" in compiled_condition
+    assert "effective_date AS DATE" in compiled_condition
+    assert "date('2025-12-31')" in compiled_condition
+
+
 @pytest.mark.anyio
 async def test_get_expected_use_type_by_name(fuel_code_repo, mock_db):
     eut = ExpectedUseType(expected_use_type_id=2, name="Heating")
@@ -413,20 +492,27 @@ async def test_get_expected_use_type_by_name(fuel_code_repo, mock_db):
 @pytest.mark.anyio
 async def test_get_fuel_codes_paginated(fuel_code_repo, mock_db):
     # Window function returns Row objects with a _wf_total attribute.
-    fc = MagicMock()
-    fc._wf_total = 1
-    fc.fuel_code_id = 1
-    fc.fuel_suffix = "101.0"
-    mock_result = MagicMock()
-    mock_result.all.return_value = [fc]
-    mock_db.execute.return_value = mock_result
+    fc = MockWindowRow(_wf_total=1, fuel_code_id=1, fuel_suffix="101.0")
+    page_result = MagicMock()
+    page_result.all.return_value = [fc]
+    feedstock_result = MagicMock()
+    feedstock_result.all.return_value = [(1, "Truck", 125)]
+    finished_result = MagicMock()
+    finished_result.all.return_value = [(1, "Rail", 320)]
+    mock_db.execute.side_effect = [page_result, feedstock_result, finished_result]
 
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
     result, count = await fuel_code_repo.get_fuel_codes_paginated(pagination)
     assert len(result) == 1
-    assert result[0] == fc
+    assert result[0]["fuel_code_id"] == 1
+    assert result[0]["feedstock_fuel_transport_modes"] == [
+        {"transport_mode": "Truck", "distance": 125}
+    ]
+    assert result[0]["finished_fuel_transport_modes"] == [
+        {"transport_mode": "Rail", "distance": 320}
+    ]
     assert count == 1
-    assert mock_db.execute.call_count == 1
+    assert mock_db.execute.call_count == 3
 
 
 def _make_paginate_mock():
@@ -496,11 +582,14 @@ async def test_get_fuel_codes_paginated_compliance_period_end_is_march_31(
 async def test_get_fuel_codes_paginated_filters_by_organization_id(
     fuel_code_repo, mock_db
 ):
-    fc = MagicMock()
-    fc._wf_total = 1
-    mock_result = MagicMock()
-    mock_result.all.return_value = [fc]
-    mock_db.execute.return_value = mock_result
+    fc = MockWindowRow(_wf_total=1, fuel_code_id=1, fuel_suffix="101.0")
+    page_result = MagicMock()
+    page_result.all.return_value = [fc]
+    feedstock_result = MagicMock()
+    feedstock_result.all.return_value = []
+    finished_result = MagicMock()
+    finished_result.all.return_value = []
+    mock_db.execute.side_effect = [page_result, feedstock_result, finished_result]
 
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
     result, count = await fuel_code_repo.get_fuel_codes_paginated(
@@ -508,7 +597,7 @@ async def test_get_fuel_codes_paginated_filters_by_organization_id(
     )
     assert len(result) == 1
     assert count == 1
-    assert mock_db.execute.call_count == 1
+    assert mock_db.execute.call_count == 3
 
     # The organization_id filter appears inside the windowed subquery SQL
     stmt_sql = str(mock_db.execute.call_args_list[0].args[0])

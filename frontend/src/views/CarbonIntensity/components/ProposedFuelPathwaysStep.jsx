@@ -21,6 +21,7 @@ const createEmptyRow = () => ({
   pathwayId: null,
   applicationTypeId: null,
   fuelCodeTypeId: null,
+  designData: null,
   operatingDataFrom: '',
   operatingDataTo: '',
   fuelCodeId: null,
@@ -29,10 +30,8 @@ const createEmptyRow = () => ({
   feedstock: '',
   feedstockRegion: '',
   feedstockTransportMode: [],
-  feedstockTransportDistance: null,
   coproducts: '',
-  finishedFuelTransportMode: [],
-  finishedFuelTransportDistance: null
+  finishedFuelTransportMode: []
 })
 
 export const ProposedFuelPathwaysStep = ({
@@ -71,6 +70,10 @@ export const ProposedFuelPathwaysStep = ({
   const columnDefs = useMemo(
     () => buildPathwayColDefs({ optionsData, canEdit }),
     [optionsData, canEdit]
+  )
+  const popupParent = useMemo(
+    () => (typeof document === 'undefined' ? undefined : document.body),
+    []
   )
 
   const onCellValueChanged = useCallback(
@@ -146,10 +149,18 @@ export const ProposedFuelPathwaysStep = ({
 
     const newErrors = {}
     let hasDateOrderIssue = false
+    let hasOperationalDateRangeIssue = false
     rows.forEach((row) => {
       const fieldErrors = validatePathwayRow(row, applicationTypes)
       if (fieldErrors.length) {
         newErrors[row.id] = fieldErrors
+        if (
+          row.designData === false &&
+          (fieldErrors.includes('operatingDataFrom') ||
+            fieldErrors.includes('operatingDataTo'))
+        ) {
+          hasOperationalDateRangeIssue = true
+        }
         if (
           row.operatingDataFrom &&
           row.operatingDataTo &&
@@ -178,6 +189,10 @@ export const ProposedFuelPathwaysStep = ({
       let message
       if (hasDateOrderIssue) {
         message = t('carbonIntensity:step2.validation.dateOrder')
+      } else if (hasOperationalDateRangeIssue) {
+        message = t(
+          'carbonIntensity:step2.validation.operatingDateRangeRequired'
+        )
       } else if (missingFields.size <= 3 && errorRowCount === 1) {
         const labels = fieldLabels([...missingFields], t)
         message = t('carbonIntensity:step2.validation.missingSpecificFields', {
@@ -208,6 +223,7 @@ export const ProposedFuelPathwaysStep = ({
         rowData={rowData}
         onCellValueChanged={onCellValueChanged}
         onAction={onAction}
+        popupParent={popupParent}
         showAddRowsButton={canEdit}
         context={{ errors }}
         showMandatoryColumns={canEdit}

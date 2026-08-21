@@ -193,6 +193,14 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
           .join(',')
       }
 
+      const sanitizeDateValue = (value) => {
+        if (typeof value !== 'string') {
+          return value
+        }
+        const dateOnly = value.match(/^(\d{4}-\d{2}-\d{2})/)
+        return dateOnly ? dateOnly[1] : value.trim()
+      }
+
       return Object.entries(filterModel).map(([field, filterConfig]) => {
         const baseFilter = { field }
         
@@ -236,6 +244,11 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
           const cleanConfig = { ...filterConfig }
           if (cleanConfig.filter === '' || cleanConfig.filter === null) {
             return null
+          }
+          if (cleanConfig.filterType === 'date') {
+            cleanConfig.type = cleanConfig.type || 'equals'
+            cleanConfig.dateFrom = sanitizeDateValue(cleanConfig.dateFrom)
+            cleanConfig.dateTo = sanitizeDateValue(cleanConfig.dateTo)
           }
           return {
             ...baseFilter,

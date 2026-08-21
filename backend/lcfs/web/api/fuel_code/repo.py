@@ -62,7 +62,11 @@ from lcfs.web.api.base import (
     apply_filter_conditions,
     paginate_with_window_count,
 )
-from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema, FuelCodeBaseSchema
+from lcfs.web.api.fuel_code.schema import (
+    FuelCodeCloneSchema,
+    FuelCodeSchema,
+    FuelCodeBaseSchema,
+)
 from lcfs.web.core.decorators import repo_handler
 from lcfs.utils.constants import LCFS_Constants
 
@@ -76,6 +80,10 @@ class CarbonIntensityResult:
     eer: float
     energy_density: float | None
     uci: float | None
+
+
+def _row_mapping(row: Any) -> dict[str, Any]:
+    return {key: value for key, value in row._mapping.items() if key != "_wf_total"}
 
 
 class FuelCodeRepository:
@@ -110,8 +118,10 @@ class FuelCodeRepository:
 
             filter_option = filter.type
             filter_type = filter.filter_type
-            field = filter_field_map.get(filter.field) or get_field_for_filter(
-                FuelCodeListView, filter.field
+            field = (
+                filter_field_map[filter.field]
+                if filter.field in filter_field_map
+                else get_field_for_filter(FuelCodeListView, filter.field)
             )
             conditions.append(
                 apply_filter_conditions(field, filter_value, filter_option, filter_type)
@@ -817,7 +827,68 @@ class FuelCodeRepository:
         fuel_codes, total_count = await paginate_with_window_count(
             self.db, base_query, offset, limit
         )
+        fuel_codes = await self._with_transport_mode_distances(fuel_codes)
         return fuel_codes, total_count
+
+    async def _with_transport_mode_distances(self, fuel_codes: Sequence[Any]):
+        fuel_code_rows = [_row_mapping(row) for row in fuel_codes]
+        fuel_code_ids = [row["fuel_code_id"] for row in fuel_code_rows]
+        if not fuel_code_ids:
+            return fuel_code_rows
+
+        feedstock_rows = await self.db.execute(
+            select(
+                FeedstockFuelTransportMode.fuel_code_id,
+                TransportMode.transport_mode,
+                FeedstockFuelTransportMode.distance,
+            )
+            .join(
+                TransportMode,
+                FeedstockFuelTransportMode.transport_mode_id
+                == TransportMode.transport_mode_id,
+            )
+            .where(FeedstockFuelTransportMode.fuel_code_id.in_(fuel_code_ids))
+            .order_by(TransportMode.transport_mode)
+        )
+        finished_rows = await self.db.execute(
+            select(
+                FinishedFuelTransportMode.fuel_code_id,
+                TransportMode.transport_mode,
+                FinishedFuelTransportMode.distance,
+            )
+            .join(
+                TransportMode,
+                FinishedFuelTransportMode.transport_mode_id
+                == TransportMode.transport_mode_id,
+            )
+            .where(FinishedFuelTransportMode.fuel_code_id.in_(fuel_code_ids))
+            .order_by(TransportMode.transport_mode)
+        )
+
+        feedstock_by_fuel_code: dict[int, list[dict[str, Any]]] = {}
+        for fuel_code_id, transport_mode, distance in feedstock_rows.all():
+            feedstock_by_fuel_code.setdefault(fuel_code_id, []).append(
+                {"transport_mode": transport_mode, "distance": distance}
+            )
+
+        finished_by_fuel_code: dict[int, list[dict[str, Any]]] = {}
+        for fuel_code_id, transport_mode, distance in finished_rows.all():
+            finished_by_fuel_code.setdefault(fuel_code_id, []).append(
+                {"transport_mode": transport_mode, "distance": distance}
+            )
+
+        for row in fuel_code_rows:
+            fuel_code_id = row["fuel_code_id"]
+            row["feedstock_fuel_transport_modes"] = feedstock_by_fuel_code.get(
+                fuel_code_id,
+                row.get("feedstock_fuel_transport_modes") or [],
+            )
+            row["finished_fuel_transport_modes"] = finished_by_fuel_code.get(
+                fuel_code_id,
+                row.get("finished_fuel_transport_modes") or [],
+            )
+
+        return fuel_code_rows
 
     @repo_handler
     async def get_fuel_code_statuses(self):

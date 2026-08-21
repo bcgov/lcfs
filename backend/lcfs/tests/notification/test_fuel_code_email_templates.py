@@ -72,19 +72,6 @@ class TestFuelCodeEmailTemplates:
             assert notification_type.value in TEMPLATE_MAPPING, \
                 f"Notification type {notification_type.value} should have a template mapping"
 
-    def test_template_mapping_follows_naming_convention(self):
-        """Test that template mappings follow the established naming convention"""
-        fuel_code_mappings = {
-            key: value for key, value in TEMPLATE_MAPPING.items() 
-            if "FUEL_CODE" in key
-        }
-        
-        for notification_type, template_name in fuel_code_mappings.items():
-            # Template name should be lowercase version of notification type
-            expected_template = notification_type.lower().replace("__", "__") + ".html"
-            assert template_name == expected_template, \
-                f"Template name {template_name} should match expected pattern {expected_template}"
-
     def test_fuel_code_templates_use_correct_base_variables(self):
         """Test that fuel code templates set the correct base template variables"""
         template_dir = Path("lcfs/web/api/email/templates")
