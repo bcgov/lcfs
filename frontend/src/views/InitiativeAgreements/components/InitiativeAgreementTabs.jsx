@@ -15,7 +15,10 @@ const tabs = [
     labelKey: 'initiativeAgreement:tabs.initiativeAgreements',
     path: ROUTES.INITIATIVE_AGREEMENTS.LIST,
     disabled: false,
-    isActive: (loc) => loc.pathname === ROUTES.INITIATIVE_AGREEMENTS.LIST
+    // Prefix match so the tab stays selected on the agreement detail
+    // route as well as the index.
+    isActive: (loc) =>
+      loc.pathname.startsWith(ROUTES.INITIATIVE_AGREEMENTS.LIST)
   },
   {
     key: 'creditLedger',
