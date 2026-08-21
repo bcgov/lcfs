@@ -232,7 +232,7 @@ async def get_ci_application(
     validate: CIApplicationValidation = Depends(),
 ) -> CIApplicationSchema:
     await validate.validate_access(ci_application_id)
-    return await service.get_ci_application(ci_application_id)
+    return await service.get_ci_application(ci_application_id, request.user)
 
 
 # ---------------------------------------------------------------------------

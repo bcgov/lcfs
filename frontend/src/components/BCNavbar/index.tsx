@@ -34,17 +34,22 @@ function BCNavbar({
   }
 
   return (
-    <BCBox py={0} className="main-layout-navbar">
+    <BCBox
+      py={0}
+      className="main-layout-navbar"
+      sx={{ position: 'relative', zIndex: (theme: any) => theme.zIndex.modal + 2 }}
+    >
       <PopupState variant="popover" popupId="demo-popup-menu">
         {(popupState: PopupStateType) => (
           <AppBar
-            position="static"
+            position="relative"
             data-test="bc-navbar"
             component="nav"
             sx={{
               border: 'none',
               borderBottom: '5px solid',
-              borderColor: '#dadada'
+              borderColor: '#dadada',
+              zIndex: (theme) => theme.zIndex.modal + 2
             }}
             color="inherit"
             elevation={0}

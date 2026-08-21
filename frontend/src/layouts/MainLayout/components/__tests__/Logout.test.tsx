@@ -24,13 +24,6 @@ vi.mock('@/layouts/MainLayout/components/RoleSwitcher', () => ({
     open ? <div data-test="role-switcher">RoleSwitcher</div> : null
 }))
 
-vi.mock('@/components/BCNavbar/components/DefaultNavbarLink', () => ({
-  __esModule: true,
-  default: ({ icon }: { icon: React.ReactNode }) => (
-    <div data-test="notifications-link">{icon}</div>
-  )
-}))
-
 vi.mock('@/constants/config', async () => {
   const actual = await vi.importActual<typeof import('@/constants/config')>(
     '@/constants/config'
@@ -115,14 +108,14 @@ describe('UserProfileActions (Logout)', () => {
   it('renders a notifications link when loaded', () => {
     setupMocks({ isLoading: false, notificationsCount: 3 })
     render(<UserProfileActions />, { wrapper })
-    expect(screen.getByTestId('notifications-link')).toBeInTheDocument()
+    expect(screen.getByLabelText('Notifications')).toBeInTheDocument()
   })
 
   it('shows a loading spinner instead of notifications when isLoading is true', () => {
     setupMocks({ isLoading: true })
     render(<UserProfileActions />, { wrapper })
     // CircularProgress is rendered when isLoading is true
-    expect(screen.queryByTestId('notifications-link')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Notifications')).not.toBeInTheDocument()
   })
 
   it('does not render role switcher when feature flag is off', () => {

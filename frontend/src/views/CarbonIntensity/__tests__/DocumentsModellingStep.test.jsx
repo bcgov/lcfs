@@ -12,7 +12,14 @@ import { DocumentsModellingStep } from '@/views/CarbonIntensity/components/Docum
 import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({
+    t: (key, options = {}) => {
+      if (key === 'carbonIntensity:step3.deleteDocumentConfirmText') {
+        return `Are you sure you want to delete ${options.fileName}?`
+      }
+      return key
+    }
+  })
 }))
 
 let mockDocs = []
@@ -141,6 +148,71 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     })
     fireEvent.click(screen.getByTestId('ci-step3-download-doc'))
     expect(mockDownloadDoc).toHaveBeenCalledWith(8, 'My Renamed Report.pdf')
+  })
+
+  it('shows a confirmation modal before deleting a document', () => {
+    mockDocs = [
+      {
+        documentId: 7,
+        fileName: 'tech.pdf',
+        fileSize: 100,
+        documentCategory: 'supporting'
+      }
+    ]
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
+      wrapper
+    })
+
+    fireEvent.click(screen.getByTestId('ci-step3-delete-doc'))
+
+    expect(
+      screen.getByText('carbonIntensity:step3.deleteDocumentConfirmTitle')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Are you sure you want to delete tech.pdf?')
+    ).toBeInTheDocument()
+    expect(mockDelete).not.toHaveBeenCalled()
+  })
+
+  it('deletes a document after confirmation', async () => {
+    mockDocs = [
+      {
+        documentId: 7,
+        fileName: 'tech.pdf',
+        fileSize: 100,
+        documentCategory: 'supporting'
+      }
+    ]
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
+      wrapper
+    })
+
+    fireEvent.click(screen.getByTestId('ci-step3-delete-doc'))
+    fireEvent.click(screen.getByText('common:deleteBtn'))
+
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith(7))
+  })
+
+  it('does not delete a document when confirmation is cancelled', () => {
+    mockDocs = [
+      {
+        documentId: 7,
+        fileName: 'tech.pdf',
+        fileSize: 100,
+        documentCategory: 'supporting'
+      }
+    ]
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
+      wrapper
+    })
+
+    fireEvent.click(screen.getByTestId('ci-step3-delete-doc'))
+    fireEvent.click(screen.getByText('common:cancelBtn'))
+
+    expect(mockDelete).not.toHaveBeenCalled()
+    expect(
+      screen.queryByText('carbonIntensity:step3.deleteDocumentConfirmTitle')
+    ).not.toBeInTheDocument()
   })
 
   it('allows Save & proceed with no uploads (required-doc validation disabled)', async () => {

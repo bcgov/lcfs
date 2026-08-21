@@ -238,6 +238,50 @@ async def test_update_user_idir_role_removed_deletes_subscriptions():
 
 
 @pytest.mark.anyio
+async def test_update_user_ci_applicant_role_removed_deletes_subscriptions():
+    fake_user = MagicMock()
+    fake_user.user_profile_id = 51
+    fake_user.organization = MagicMock()
+    fake_user.is_active = True
+    fake_user.is_government = False
+    fake_user.role_names = [RoleEnum.SUPPLIER, RoleEnum.CI_APPLICANT]
+
+    updated_user = MagicMock()
+    updated_user.user_profile_id = 51
+    updated_user.organization = MagicMock()
+    updated_user.is_active = True
+    updated_user.is_government = False
+    updated_user.role_names = [RoleEnum.SUPPLIER]
+
+    fake_repo = MagicMock()
+    fake_repo.get_user_by_id = AsyncMock(return_value=fake_user)
+    fake_repo.update_user = AsyncMock(return_value=updated_user)
+
+    fake_notification_service = MagicMock()
+    fake_notification_service.add_subscriptions_for_notification_types = AsyncMock()
+    fake_notification_service.add_subscriptions_for_user_role = AsyncMock()
+    fake_notification_service.delete_subscriptions_for_user_role = AsyncMock()
+
+    fake_request = MagicMock()
+    fake_request.user = MagicMock()
+    fake_request.user.is_government = True
+
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        service = UserServices()
+        service.repo = fake_repo
+        service.notification_service = fake_notification_service
+        service.request = fake_request
+
+        await service.update_user(MagicMock(), 51)
+
+        fake_notification_service.delete_subscriptions_for_user_role.assert_awaited_once_with(
+            updated_user.user_profile_id, RoleEnum.CI_APPLICANT
+        )
+        fake_notification_service.add_subscriptions_for_notification_types.assert_not_awaited()
+        fake_notification_service.add_subscriptions_for_user_role.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_remove_user_not_safe():
     fake_user = MagicMock()
     fake_user.keycloak_username = "unsafeuser"

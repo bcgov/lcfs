@@ -9,6 +9,7 @@ import {
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
+import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import RenameableFileName from '@/components/Documents/RenameableFileName'
@@ -58,6 +59,7 @@ export const DocumentsModellingStep = ({
   )
   const [uploadError, setUploadError] = useState(null)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [documentPendingDelete, setDocumentPendingDelete] = useState(null)
 
   const { data: documents = [], isLoading: isLoadingDocs } = useDocuments(
     PARENT_TYPE,
@@ -91,6 +93,21 @@ export const DocumentsModellingStep = ({
       documentID: documentId,
       data: { displayName: newDisplayName }
     })
+  }
+
+  const handleDeleteClick = (document) => {
+    setDocumentPendingDelete(document)
+  }
+
+  const handleCancelDelete = () => {
+    setDocumentPendingDelete(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!documentPendingDelete) return
+
+    await handleDelete(documentPendingDelete.documentId)
+    setDocumentPendingDelete(null)
   }
 
   // Required-upload validation is intentionally disabled for the simplified
@@ -190,7 +207,7 @@ export const DocumentsModellingStep = ({
                         <IconButton
                           aria-label="delete document"
                           size="small"
-                          onClick={() => handleDelete(doc.documentId)}
+                          onClick={() => handleDeleteClick(doc)}
                           disabled={isDeletingDoc}
                           data-test="ci-step3-delete-doc"
                         >
@@ -310,6 +327,28 @@ export const DocumentsModellingStep = ({
           close={() => setUploadDialogOpen(false)}
           parentType={PARENT_TYPE}
           parentID={ciApplicationId}
+        />
+      )}
+
+      {documentPendingDelete && (
+        <BCModal
+          open={!!documentPendingDelete}
+          onClose={handleCancelDelete}
+          data={{
+            title: t('carbonIntensity:step3.deleteDocumentConfirmTitle'),
+            content: (
+              <BCTypography variant="body2">
+                {t('carbonIntensity:step3.deleteDocumentConfirmText', {
+                  fileName: getDocumentDisplayName(documentPendingDelete)
+                })}
+              </BCTypography>
+            ),
+            primaryButtonText: t('common:deleteBtn'),
+            primaryButtonAction: handleConfirmDelete,
+            primaryButtonColor: 'error',
+            secondaryButtonText: t('common:cancelBtn'),
+            secondaryButtonAction: handleCancelDelete
+          }}
         />
       )}
     </Box>

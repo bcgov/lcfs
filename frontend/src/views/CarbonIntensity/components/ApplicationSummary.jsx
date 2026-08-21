@@ -25,6 +25,7 @@ import {
   normalizeTransportModes
 } from '@/views/CarbonIntensity/components/_step2Schema'
 import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
+import { CIApplicationAssignmentHistory } from './CIApplicationAssignmentHistory'
 import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
 import { constructAddress } from '@/utils/constructAddress'
 import { exportRowsToXlsx } from './pathwayExport'
@@ -555,6 +556,10 @@ export const ApplicationSummary = ({
       </Grid>
 
       <Divider sx={{ mb: 2 }} />
+
+      <CIApplicationAssignmentHistory
+        assignmentHistory={ciApplication.assignmentHistory}
+      />
 
       {/* Signing authority */}
       <BCTypography

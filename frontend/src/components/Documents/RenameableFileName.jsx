@@ -14,8 +14,8 @@ const splitExtension = (name) => {
 
 const RenameableFileName = ({
   displayName,
-  canRename,
-  disabled,
+  canRename = false,
+  disabled = false,
   onRename,
   renderName
 }) => {
@@ -186,11 +186,6 @@ RenameableFileName.propTypes = {
   disabled: PropTypes.bool,
   onRename: PropTypes.func.isRequired,
   renderName: PropTypes.func.isRequired
-}
-
-RenameableFileName.defaultProps = {
-  canRename: false,
-  disabled: false
 }
 
 export default RenameableFileName

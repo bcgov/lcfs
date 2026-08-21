@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { styled } from '@mui/system'
 import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
+import BCModal from '@/components/BCModal'
 import prettyBytes from 'pretty-bytes'
 import colors from '@/themes/base/colors'
 import {
@@ -71,6 +72,7 @@ function DocumentTable({ parentType, parentID }) {
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
   const [errorMessage, setErrorMessage] = useState(null)
+  const [documentPendingDelete, setDocumentPendingDelete] = useState(null)
   const { data: currentUser, hasRoles } = useCurrentUser()
 
   const { data: loadedFiles } = useDocuments(parentType, parentID)
@@ -238,6 +240,21 @@ function DocumentTable({ parentType, parentID }) {
       documentID: documentId,
       data: { displayName: newDisplayName }
     })
+  }
+
+  const handleDeleteClick = (file) => {
+    setDocumentPendingDelete(file)
+  }
+
+  const handleCancelDelete = () => {
+    setDocumentPendingDelete(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!documentPendingDelete) return
+
+    await handleDeleteFile(documentPendingDelete.documentId)
+    setDocumentPendingDelete(null)
   }
 
   return (
@@ -432,7 +449,7 @@ function DocumentTable({ parentType, parentID }) {
                       file.createUser === currentUser?.keycloakUsername && (
                         <IconButton
                           onClick={() => {
-                            handleDeleteFile(file.documentId)
+                            handleDeleteClick(file)
                           }}
                           aria-label="delete row"
                           data-test="delete-button"
@@ -449,6 +466,27 @@ function DocumentTable({ parentType, parentID }) {
           )
         })}
       </FileTable>
+      {documentPendingDelete && (
+        <BCModal
+          open={!!documentPendingDelete}
+          onClose={handleCancelDelete}
+          data={{
+            title: t('report:deleteDocumentConfirmTitle'),
+            content: (
+              <BCTypography variant="body2">
+                {t('report:deleteDocumentConfirmText', {
+                  fileName: getDocumentDisplayName(documentPendingDelete)
+                })}
+              </BCTypography>
+            ),
+            primaryButtonText: t('common:deleteBtn'),
+            primaryButtonAction: handleConfirmDelete,
+            primaryButtonColor: 'error',
+            secondaryButtonText: t('common:cancelBtn'),
+            secondaryButtonAction: handleCancelDelete
+          }}
+        />
+      )}
     </Box>
   )
 }
