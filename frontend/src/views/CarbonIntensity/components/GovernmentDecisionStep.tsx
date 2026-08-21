@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Box,
@@ -25,7 +25,8 @@ import {
   useRecommendCIApplication,
   useRequestCIApplicationPathwayChanges,
   useRequestCIApplicationDocumentation,
-  useRecordCIDecision
+  useRecordCIDecision,
+  useUpdateCIApplicationRiskAssessment
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
 
@@ -74,6 +75,8 @@ export const GovernmentDecisionStep = ({
   } = useRequestCIApplicationDocumentation(ciApplicationId)
   const { mutateAsync: generateFuelCodes, isPending: isGeneratingFuelCodes } =
     useGenerateCIApplicationFuelCodes(ciApplicationId)
+  const { mutate: saveRiskAssessmentDraft } =
+    useUpdateCIApplicationRiskAssessment(ciApplicationId)
 
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -261,6 +264,36 @@ export const GovernmentDecisionStep = ({
     !showVerification2Panel &&
     !!ciApplication?.verification1Date &&
     (savedRiskAssessment !== null || savedPriorityScore !== null)
+
+  const canEditRiskAssessment =
+    !readOnly && (showVerification1Panel || showVerification2Panel)
+  const isFirstRiskAssessmentRender = useRef(true)
+  useEffect(() => {
+    if (!canEditRiskAssessment) return
+    if (isFirstRiskAssessmentRender.current) {
+      isFirstRiskAssessmentRender.current = false
+      return
+    }
+    const timeoutId = setTimeout(() => {
+      saveRiskAssessmentDraft(
+        {
+          preliminaryRiskAssessment: riskAssessment,
+          priorityScore: isPriorityScoreValid ? priorityScoreNumber : null
+        },
+        {
+          onError: (err: any) => {
+            setError(
+              err?.response?.data?.detail ||
+                err?.message ||
+                'Failed to save risk assessment.'
+            )
+          }
+        }
+      )
+    }, 600)
+    return () => clearTimeout(timeoutId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riskAssessment, priorityScore, canEditRiskAssessment])
 
   const workflowButtonSx = {
     minHeight: 44,
