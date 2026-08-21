@@ -1956,7 +1956,7 @@ async def test_recommend_to_director_requires_workflow_role(service, repo, mock_
     [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
 )
 async def test_request_documentation_enables_upload_for_workflow_roles(
-    service, repo, mock_user, role
+    service, repo, notification_service, mock_user, role
 ):
     mock_user.role_names = {role}
     ci = _ci_application(status=_status("Submitted", 2))
@@ -1970,6 +1970,16 @@ async def test_request_documentation_enables_upload_for_workflow_roles(
     assert ci.document_changes_requested_at is not None
     assert ci.document_changes_requested_by == mock_user.keycloak_username
     repo.add_history.assert_awaited_once()
+    notification_service.send_notification.assert_awaited_once()
+    request = notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION
+    ]
+    assert request.notification_data.type == "CI Application Changes Requested"
+    assert request.notification_data.related_organization_id == ci.organization_id
+    assert request.notification_data.related_transaction_id == str(
+        ci.ci_application_id
+    )
     assert isinstance(result, CIApplicationSchema)
 
 
@@ -2095,6 +2105,24 @@ async def test_step5_completed_approves_generated_fuel_codes(service, repo, mock
     assert generated_fuel_code.fuel_status_id == 3
     assert generated_fuel_code.approval_date is not None
     assert generated_fuel_code.action_type == ActionTypeEnum.UPDATE
+    sent_requests = [
+        call.args[0]
+        for call in service.notification_service.send_notification.await_args_list
+    ]
+    fuel_code_approval_request = next(
+        request
+        for request in sent_requests
+        if request.notification_types
+        == [NotificationTypeEnum.BCEID__CI_APPLICATION__FUEL_CODE_APPROVED]
+    )
+    assert (
+        fuel_code_approval_request.notification_data.type
+        == "CI Application Fuel Codes Approved"
+    )
+    assert (
+        fuel_code_approval_request.notification_data.related_organization_id
+        == ci.organization_id
+    )
     assert isinstance(result, CIApplicationSchema)
 
 
@@ -2124,7 +2152,7 @@ async def test_step5_decision_can_return_recommended_to_submitted(
 
 @pytest.mark.anyio
 async def test_request_pathway_changes_clears_previous_government_review(
-    service, repo, mock_user
+    service, repo, notification_service, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _ci_application(status=_status("Submitted", 2))
@@ -2163,6 +2191,16 @@ async def test_request_pathway_changes_clears_previous_government_review(
     assert ci.pathway_supplemental_edit_enabled is True
     snapshot = repo.add_history.await_args.kwargs["snapshot"]
     assert snapshot["event"] == "pathway_changes_requested"
+    notification_service.send_notification.assert_awaited_once()
+    request = notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION
+    ]
+    assert request.notification_data.type == "CI Application Changes Requested"
+    assert request.notification_data.related_organization_id == ci.organization_id
+    assert request.notification_data.related_transaction_id == str(
+        ci.ci_application_id
+    )
     assert isinstance(result, CIApplicationSchema)
 
 
