@@ -111,6 +111,7 @@ describe('ProposedFuelPathwaysStep', () => {
           pathwayId: 1,
           applicationTypeId: 1,
           fuelCodeTypeId: 1,
+          designData: false,
           operatingDataFrom: '2025-01-01',
           operatingDataTo: '2025-12-31',
           fuelCodeId: null,
@@ -151,6 +152,7 @@ describe('ProposedFuelPathwaysStep', () => {
           pathwayId: 2,
           applicationTypeId: 2,
           fuelCodeTypeId: 1,
+          designData: false,
           operatingDataFrom: '2025-01-01',
           operatingDataTo: '2025-12-31',
           fuelCodeId: null,
@@ -174,5 +176,49 @@ describe('ProposedFuelPathwaysStep', () => {
     )
     fireEvent.click(screen.getByTestId('ci-step2-save-btn'))
     await waitFor(() => expect(onSave).not.toHaveBeenCalled())
+  })
+
+  it('shows the operating date range message when operational dates are missing', async () => {
+    const onSave = vi.fn()
+    const onValidationError = vi.fn()
+    const operationalMissingDates = {
+      ...baseCi,
+      pathways: [
+        {
+          pathwayId: 3,
+          applicationTypeId: 1,
+          fuelCodeTypeId: 1,
+          designData: false,
+          operatingDataFrom: '',
+          operatingDataTo: '',
+          fuelCodeId: null,
+          proposedCi: 5.61,
+          fuelTypeId: 1,
+          feedstock: 'Canola',
+          feedstockRegion: 'Saskatchewan',
+          feedstockTransportMode: 'Truck',
+          feedstockTransportDistance: 100,
+          coproducts: null,
+          finishedFuelTransportMode: 'Rail',
+          finishedFuelTransportDistance: 200
+        }
+      ]
+    }
+    render(
+      <ProposedFuelPathwaysStep
+        ciApplication={operationalMissingDates}
+        optionsData={optionsData}
+        onSave={onSave}
+        onValidationError={onValidationError}
+      />,
+      { wrapper }
+    )
+    fireEvent.click(screen.getByTestId('ci-step2-save-btn'))
+    await waitFor(() => {
+      expect(onSave).not.toHaveBeenCalled()
+      expect(onValidationError).toHaveBeenCalledWith(
+        'carbonIntensity:step2.validation.operatingDateRangeRequired'
+      )
+    })
   })
 })

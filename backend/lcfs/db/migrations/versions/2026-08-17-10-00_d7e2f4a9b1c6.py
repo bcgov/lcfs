@@ -1,32 +1,40 @@
-"""Extend initiative agreement and add designated action / evidence tables.
+"""Add Initiative Agreements module data model.
 
 Phase 1 (additive) of the Initiative Agreements module (#4804 #4805 #4846
-#4806). The legacy credit-award flow is untouched: existing columns, statuses
-and materialized views keep working until the transaction-flow cutover.
+#4806). The legacy credit-award flow is untouched: its columns, its statuses,
+``transaction_status_view`` and the transaction materialized views all keep
+working until the transaction-flow cutover.
 
-  - initiative_agreement            — new agreement-management columns (code,
-                                      type, title, contacts, dates, credit
-                                      totals); award-era columns unchanged
-  - initiative_agreement_type_enum  — adds Underway | Completed | Terminated
-  - designated_action (+ _status)   — Schedule B actions with change-order
-                                      versioning (group_uuid/version)
-  - evidence_requirement            — per-action requirements incl. analyst
-                                      review, active/inactive soft delete
-  - evidence_submission (+ _status) — append-only evidence packages per action
-  - designated_action_internal_comment — internal comment association
+  - initiative_agreement_lifecycle_status  — NEW lookup for agreement
+        lifecycle (Draft | Underway | Completed | Terminated). Deliberately
+        separate from initiative_agreement_status: that table is surfaced by
+        transaction_status_view (an unfiltered SELECT DISTINCT over the status
+        tables) and validated against TransactionStatusEnum, so a lifecycle
+        value there breaks GET /api/transactions/statuses/ for every caller.
+  - initiative_agreement  — agreement-management columns (code, type, title,
+        description, contacts, dates, credit totals), plus record_kind to
+        discriminate agreements from the pre-existing one-row-per-award
+        records, and a nullable lifecycle_status_id.
+  - designated_action (+ _status, + _history) — Schedule B actions with
+        change-order versioning, analyst assignment, recommended credits and
+        an append-only event log.
+  - evidence_requirement  — per-action requirements, amended by is_active.
+  - evidence_submission (+ _status) — append-only evidence packages.
+  - designated_action_internal_comment — internal comment association.
 
 Revision ID: d7e2f4a9b1c6
-Revises: f9a0b1c2d3e5
+Revises: b6c7d8e9f0a1
 Create Date: 2026-08-17 10:00:00.000000
 """
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
+from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
 revision = "d7e2f4a9b1c6"
-down_revision = "f9a0b1c2d3e5"
+down_revision = "b6c7d8e9f0a1"
 branch_labels = None
 depends_on = None
 
@@ -82,6 +90,9 @@ def _versioning_columns():
             "group_uuid",
             sa.String(36),
             nullable=False,
+            # The mixin's Python-side default does not apply to raw SQL
+            # inserts, and the consolidation migration writes raw SQL.
+            server_default=sa.text("gen_random_uuid()::text"),
             comment="UUID that groups all versions of a record series",
         ),
         sa.Column(
@@ -103,29 +114,74 @@ def _versioning_columns():
     ]
 
 
+def _lookup_table(table_name, pk_name, status_example, table_comment):
+    """Create a status lookup table in the house shape (cf. ci_application_status)."""
+    op.create_table(
+        table_name,
+        sa.Column(
+            pk_name,
+            sa.Integer(),
+            primary_key=True,
+            autoincrement=True,
+            comment=f"Unique identifier for the {table_name.replace('_', ' ')}",
+        ),
+        sa.Column(
+            "status",
+            sa.String(100),
+            nullable=False,
+            comment=f"Status value (e.g. {status_example})",
+        ),
+        sa.Column(
+            "description",
+            sa.String(500),
+            nullable=True,
+            comment="Optional description of the status",
+        ),
+        sa.Column(
+            "display_order",
+            sa.Integer(),
+            nullable=True,
+            comment="Relative rank in display sorting order",
+        ),
+        *_audit_columns(),
+        comment=table_comment,
+    )
+
+
 def upgrade() -> None:
     # ------------------------------------------------------------------
-    # initiative_agreement_status: add agreement-management statuses to
-    # the existing enum (values cannot be added inside a transaction)
+    # initiative_agreement_lifecycle_status (lookup)
+    #
+    # NOT added to initiative_agreement_status: every row of that table is
+    # surfaced by transaction_status_view and validated against
+    # TransactionStatusEnum.
     # ------------------------------------------------------------------
-    with op.get_context().autocommit_block():
-        op.execute(
-            "ALTER TYPE initiative_agreement_type_enum ADD VALUE IF NOT EXISTS 'Underway'"
-        )
-        op.execute(
-            "ALTER TYPE initiative_agreement_type_enum ADD VALUE IF NOT EXISTS 'Completed'"
-        )
-        op.execute(
-            "ALTER TYPE initiative_agreement_type_enum ADD VALUE IF NOT EXISTS 'Terminated'"
-        )
+    _lookup_table(
+        "initiative_agreement_lifecycle_status",
+        "initiative_agreement_lifecycle_status_id",
+        "Draft, Underway, Completed, Terminated",
+        (
+            "Lookup for initiative agreement lifecycle statuses. Separate "
+            "from initiative_agreement_status, which feeds "
+            "transaction_status_view and the transaction materialized views."
+        ),
+    )
+
+    op.execute(
+        """
+        INSERT INTO initiative_agreement_lifecycle_status
+            (status, description, display_order, create_user, update_user)
+        VALUES
+            ('Draft',      'Agreement is being prepared and is not yet in effect',      10, 'system', 'system'),
+            ('Underway',   'Agreement is in effect and designated actions are running', 20, 'system', 'system'),
+            ('Completed',  'All designated actions are concluded',                      30, 'system', 'system'),
+            ('Terminated', 'Agreement was ended before completion',                     40, 'system', 'system')
+        """
+    )
 
     # ------------------------------------------------------------------
     # initiative_agreement: agreement management columns (#4804)
     # ------------------------------------------------------------------
-    sa.Enum("Initiative Agreement", "P3A", name="agreement_type_enum").create(
-        op.get_bind()
-    )
-
     op.add_column(
         "initiative_agreement",
         sa.Column(
@@ -142,17 +198,39 @@ def upgrade() -> None:
         "initiative_agreement",
         sa.Column(
             "agreement_type",
-            PgEnum(
-                "Initiative Agreement",
-                "P3A",
-                name="agreement_type_enum",
-                create_type=False,
-            ),
+            sa.String(100),
             nullable=False,
             server_default=sa.text("'Initiative Agreement'"),
             comment=(
-                "Kind of agreement: current Initiative Agreement or migrated "
-                "legacy P3A."
+                "Kind of agreement: 'Initiative Agreement' or migrated legacy "
+                "'P3A'. Validated at the API layer."
+            ),
+        ),
+    )
+    op.add_column(
+        "initiative_agreement",
+        sa.Column(
+            "record_kind",
+            sa.String(50),
+            nullable=False,
+            server_default=sa.text("'legacy_award'"),
+            comment=(
+                "'agreement' for agreement-management records, 'legacy_award' "
+                "for the pre-existing one-row-per-credit-award records that "
+                "share this table until the transaction-flow cutover. "
+                "Agreement grids and APIs filter on 'agreement'."
+            ),
+        ),
+    )
+    op.add_column(
+        "initiative_agreement",
+        sa.Column(
+            "lifecycle_status_id",
+            sa.Integer(),
+            nullable=True,
+            comment=(
+                "Agreement lifecycle status. Nullable: legacy award records "
+                "have no lifecycle."
             ),
         ),
     )
@@ -236,9 +314,9 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("0"),
             comment=(
-                "Total compliance units allocated under the agreement. "
-                "Authoritative value, not derived from designated actions "
-                "(legacy agreements may lack an action breakdown)."
+                "Denormalized cache of the agreement's total allocation; "
+                "reconciles against sum(designated_action.credit_allocation) "
+                "where actions exist. Never read for balance calculations."
             ),
         ),
     )
@@ -250,10 +328,22 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("0"),
             comment=(
-                "Total compliance units issued to date under the agreement. "
-                "Authoritative value, not derived."
+                "Denormalized cache of sum(transaction.compliance_units) over "
+                "this agreement's designated actions; reconciled by test, "
+                "never read for balance. transaction.compliance_units is the "
+                "only authority for issued credits."
             ),
         ),
+    )
+    op.create_foreign_key(
+        op.f(
+            "fk_initiative_agreement_lifecycle_status_id"
+            "_initiative_agreement_lifecycle_status"
+        ),
+        "initiative_agreement",
+        "initiative_agreement_lifecycle_status",
+        ["lifecycle_status_id"],
+        ["initiative_agreement_lifecycle_status_id"],
     )
     op.create_unique_constraint(
         op.f("uq_initiative_agreement_ia_code"), "initiative_agreement", ["ia_code"]
@@ -263,84 +353,100 @@ def upgrade() -> None:
         "initiative_agreement",
         ["current_status_id"],
     )
+    op.create_index(
+        op.f("ix_initiative_agreement_record_kind"),
+        "initiative_agreement",
+        ["record_kind"],
+    )
+    op.create_index(
+        op.f("ix_initiative_agreement_lifecycle_status_id"),
+        "initiative_agreement",
+        ["lifecycle_status_id"],
+    )
+    # One agreement may claim a given ledger transaction at most once. The
+    # pre-existing index on this column is a plain btree.
+    op.create_index(
+        "uq_initiative_agreement_transaction_id",
+        "initiative_agreement",
+        ["transaction_id"],
+        unique=True,
+        postgresql_where=sa.text("transaction_id IS NOT NULL"),
+    )
     op.create_table_comment(
         "initiative_agreement",
         (
             "Initiative agreements (s.15 Low Carbon Fuels Act): parent record "
             "for designated actions and evidence tracking. Also holds legacy "
-            "credit-award fields until the transaction-flow cutover."
+            "credit-award records until the transaction-flow cutover; see "
+            "record_kind."
         ),
         existing_comment=(
             "Goverment to organization compliance units initiative agreement"
         ),
     )
 
-    # ------------------------------------------------------------------
-    # designated_action_status  (lookup)
-    # ------------------------------------------------------------------
-    op.create_table(
-        "designated_action_status",
-        sa.Column(
-            "designated_action_status_id",
-            sa.Integer(),
-            primary_key=True,
-            autoincrement=True,
-            comment="Unique identifier for the designated action status",
-        ),
-        sa.Column(
-            "status",
-            sa.String(100),
-            nullable=False,
-            comment="Status value (e.g. Not started, In progress, Complete)",
-        ),
-        sa.Column(
-            "description",
-            sa.String(500),
-            nullable=True,
-            comment="Optional description of the status",
-        ),
-        sa.Column(
-            "display_order",
-            sa.Integer(),
-            nullable=True,
-            comment="Relative rank in display sorting order",
-        ),
-        *_audit_columns(),
-        comment="Lookup table for designated action completion statuses",
+    # The four pre-existing award statuses have a NULL display_order, so any
+    # ORDER BY display_order sorts them last.
+    op.execute(
+        """
+        UPDATE initiative_agreement_status SET display_order = v.display_order
+        FROM (VALUES
+            ('Draft', 10), ('Recommended', 20), ('Approved', 30), ('Deleted', 40)
+        ) AS v(status, display_order)
+        WHERE initiative_agreement_status.status::text = v.status
+          AND initiative_agreement_status.display_order IS NULL
+        """
     )
 
     # ------------------------------------------------------------------
-    # evidence_submission_status  (lookup)
+    # designated_action_status (lookup)
     # ------------------------------------------------------------------
-    op.create_table(
+    _lookup_table(
+        "designated_action_status",
+        "designated_action_status_id",
+        "Not started, Underway, Approved",
+        "Lookup table for designated action workflow statuses",
+    )
+
+    op.execute(
+        """
+        INSERT INTO designated_action_status
+            (status, description, display_order, create_user, update_user)
+        VALUES
+            ('Not started',             'No evidence has been submitted for this action',       10,  'system', 'system'),
+            ('Submission received',     'Evidence received; awaiting analyst review',           20,  'system', 'system'),
+            ('Underway',                'Analyst review of the evidence is in progress',        30,  'system', 'system'),
+            ('Information requested',   'Additional information has been requested',            40,  'system', 'system'),
+            ('Recommended to manager',  'Analyst has recommended credits to the IA manager',    50,  'system', 'system'),
+            ('Recommended to director', 'Manager has endorsed the recommendation',              60,  'system', 'system'),
+            ('Approved',                'Director approved the action and credits were issued', 70,  'system', 'system'),
+            ('Issued (legacy)',         'Credits were issued before this system existed',       75,  'system', 'system'),
+            ('Returned',                'Returned to the previous reviewer for rework',         80,  'system', 'system'),
+            ('Rejected',                'Rejected; no credits will be issued',                  90,  'system', 'system'),
+            ('Cancelled',               'Designated action was cancelled',                      100, 'system', 'system')
+        """
+    )
+
+    # ------------------------------------------------------------------
+    # evidence_submission_status (lookup)
+    # ------------------------------------------------------------------
+    _lookup_table(
         "evidence_submission_status",
-        sa.Column(
-            "evidence_submission_status_id",
-            sa.Integer(),
-            primary_key=True,
-            autoincrement=True,
-            comment="Unique identifier for the evidence submission status",
-        ),
-        sa.Column(
-            "status",
-            sa.String(100),
-            nullable=False,
-            comment=("Status value (e.g. Submitted, Under review, Accepted, Rejected)"),
-        ),
-        sa.Column(
-            "description",
-            sa.String(500),
-            nullable=True,
-            comment="Optional description of the status",
-        ),
-        sa.Column(
-            "display_order",
-            sa.Integer(),
-            nullable=True,
-            comment="Relative rank in display sorting order",
-        ),
-        *_audit_columns(),
-        comment="Lookup table for evidence submission review statuses",
+        "evidence_submission_status_id",
+        "Submitted, Under review, Accepted, Rejected",
+        "Lookup table for evidence submission review statuses",
+    )
+
+    op.execute(
+        """
+        INSERT INTO evidence_submission_status
+            (status, description, display_order, create_user, update_user)
+        VALUES
+            ('Submitted',    'Evidence has been submitted by the proponent', 10, 'system', 'system'),
+            ('Under review', 'Evidence is being reviewed by an analyst',     20, 'system', 'system'),
+            ('Accepted',     'Evidence has been accepted',                   30, 'system', 'system'),
+            ('Rejected',     'Evidence has been rejected',                   40, 'system', 'system')
+        """
     )
 
     # ------------------------------------------------------------------
@@ -408,18 +514,29 @@ def upgrade() -> None:
             comment="Compliance units allocated to this action ('up to' amount)",
         ),
         sa.Column(
+            "recommended_credits",
+            sa.BigInteger(),
+            nullable=True,
+            comment=(
+                "Compliance units the analyst recommends issuing for this "
+                "action. NULL until a recommendation is made — 0 is itself a "
+                "meaningful recommendation. Bounded by credit_allocation at "
+                "the API layer."
+            ),
+        ),
+        sa.Column(
             "current_status_id",
             sa.Integer(),
             nullable=False,
-            comment="Current completion status",
+            comment="Current workflow status",
         ),
         sa.Column(
             "determination",
             sa.String(100),
             nullable=True,
             comment=(
-                "Determination result (e.g. Compliant, Non-Compliant, Waived); "
-                "validated at the API layer"
+                "Determination result (e.g. Compliant, Non-Compliant, "
+                "Waived); validated at the API layer"
             ),
         ),
         sa.Column(
@@ -495,6 +612,111 @@ def upgrade() -> None:
     op.create_index(
         "ix_designated_action_group_uuid", "designated_action", ["group_uuid"]
     )
+    # Guards a concurrent double-issuance where two approvals both observe
+    # transaction_id IS NULL.
+    op.create_index(
+        "uq_designated_action_transaction_id",
+        "designated_action",
+        ["transaction_id"],
+        unique=True,
+        postgresql_where=sa.text("transaction_id IS NOT NULL"),
+    )
+
+    # ------------------------------------------------------------------
+    # designated_action_history (#4896 change log, #4898 audit history)
+    # ------------------------------------------------------------------
+    op.create_table(
+        "designated_action_history",
+        sa.Column(
+            "designated_action_history_id",
+            sa.Integer(),
+            primary_key=True,
+            autoincrement=True,
+            comment="Unique identifier for the history record",
+        ),
+        sa.Column(
+            "designated_action_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Designated action this event belongs to",
+        ),
+        sa.Column(
+            "designated_action_group_uuid",
+            sa.String(36),
+            nullable=True,
+            comment=(
+                "Denormalized designated_action.group_uuid so history survives "
+                "change-order version rows. Populated by the writer."
+            ),
+        ),
+        sa.Column(
+            "event",
+            sa.String(100),
+            nullable=False,
+            comment=(
+                "What happened, e.g. STATUS_CHANGE, ANALYST_ASSIGNED, "
+                "CREDITS_RECOMMENDED, CREDITS_ISSUED"
+            ),
+        ),
+        sa.Column(
+            "status_id",
+            sa.Integer(),
+            nullable=True,
+            comment=(
+                "Status the action moved into, for STATUS_CHANGE events. "
+                "Nullable so non-status events need no status."
+            ),
+        ),
+        sa.Column(
+            "user_profile_id",
+            sa.Integer(),
+            nullable=True,
+            comment="User who caused the event; NULL for system events",
+        ),
+        sa.Column(
+            "display_name",
+            sa.String(255),
+            nullable=True,
+            comment="Denormalized actor name for display",
+        ),
+        sa.Column(
+            "snapshot",
+            JSONB(),
+            nullable=True,
+            comment="Event-specific payload (e.g. credits recommended, reason)",
+        ),
+        *_audit_columns(),
+        sa.ForeignKeyConstraint(
+            ["designated_action_id"],
+            ["designated_action.designated_action_id"],
+            name=op.f("fk_designated_action_history_designated_action_id"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["status_id"],
+            ["designated_action_status.designated_action_status_id"],
+            name=op.f("fk_designated_action_history_status_id"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_profile_id"],
+            ["user_profile.user_profile_id"],
+            name=op.f("fk_designated_action_history_user_profile_id"),
+        ),
+        comment=(
+            "Append-only history of designated action events: status changes, "
+            "analyst assignment, recommendations, reviews, change orders and "
+            "credit issuance."
+        ),
+    )
+    op.create_index(
+        op.f("ix_designated_action_history_designated_action_id"),
+        "designated_action_history",
+        ["designated_action_id"],
+    )
+    op.create_index(
+        "ix_designated_action_history_group_uuid",
+        "designated_action_history",
+        ["designated_action_group_uuid"],
+    )
 
     # ------------------------------------------------------------------
     # evidence_requirement (#4846)
@@ -527,12 +749,6 @@ def upgrade() -> None:
             comment="Description of the evidence requirement",
         ),
         sa.Column(
-            "analyst_review",
-            sa.Text(),
-            nullable=True,
-            comment="Long-form analyst review findings for this requirement",
-        ),
-        sa.Column(
             "evidence_type",
             sa.String(100),
             nullable=True,
@@ -545,11 +761,10 @@ def upgrade() -> None:
             server_default=sa.text("true"),
             comment=(
                 "Soft-delete flag: inactive requirements are hidden but "
-                "retained. This is the business deactivation flag; Versioning "
-                "action_type records change-order lineage only."
+                "retained. Also the amendment mechanism — a change order "
+                "deactivates the old requirement and inserts a replacement."
             ),
         ),
-        *_versioning_columns(),
         *_audit_columns(),
         sa.ForeignKeyConstraint(
             ["designated_action_id"],
@@ -557,17 +772,13 @@ def upgrade() -> None:
             name=op.f("fk_evidence_requirement_designated_action_id"),
         ),
         comment=(
-            "Evidence requirements a proponent must satisfy for a designated "
-            "action, including analyst review findings."
+            "Evidence requirements a proponent must satisfy for a designated " "action."
         ),
     )
     op.create_index(
         op.f("ix_evidence_requirement_designated_action_id"),
         "evidence_requirement",
         ["designated_action_id"],
-    )
-    op.create_index(
-        "ix_evidence_requirement_group_uuid", "evidence_requirement", ["group_uuid"]
     )
 
     # ------------------------------------------------------------------
@@ -717,41 +928,10 @@ def upgrade() -> None:
     )
 
     # ------------------------------------------------------------------
-    # Seed lookup data
+    # Row-level audit triggers for every new table (function added by
+    # migration e8f1d2c3b4a5; it is idempotent across all public tables).
     # ------------------------------------------------------------------
-    op.execute(
-        """
-        INSERT INTO initiative_agreement_status
-            (status, display_order, create_user, update_user)
-        VALUES
-            ('Underway',   5, 'system', 'system'),
-            ('Completed',  6, 'system', 'system'),
-            ('Terminated', 7, 'system', 'system')
-        """
-    )
-
-    op.execute(
-        """
-        INSERT INTO designated_action_status
-            (status, description, display_order, create_user, update_user)
-        VALUES
-            ('Not started', 'Work on the designated action has not begun',   1, 'system', 'system'),
-            ('In progress', 'The designated action is underway',             2, 'system', 'system'),
-            ('Complete',    'The designated action has been completed',      3, 'system', 'system')
-        """
-    )
-
-    op.execute(
-        """
-        INSERT INTO evidence_submission_status
-            (status, description, display_order, create_user, update_user)
-        VALUES
-            ('Submitted',    'Evidence has been submitted by the proponent',  1, 'system', 'system'),
-            ('Under review', 'Evidence is being reviewed by an analyst',      2, 'system', 'system'),
-            ('Accepted',     'Evidence has been accepted',                    3, 'system', 'system'),
-            ('Rejected',     'Evidence has been rejected',                    4, 'system', 'system')
-        """
-    )
+    op.execute("SELECT ensure_audit_triggers();")
 
 
 def downgrade() -> None:
@@ -770,21 +950,27 @@ def downgrade() -> None:
         table_name="evidence_submission",
     )
     op.drop_table("evidence_submission")
-    op.drop_table("evidence_submission_status")
 
-    op.drop_index(
-        "ix_evidence_requirement_group_uuid", table_name="evidence_requirement"
-    )
     op.drop_index(
         op.f("ix_evidence_requirement_designated_action_id"),
         table_name="evidence_requirement",
     )
     op.drop_table("evidence_requirement")
 
+    op.drop_index(
+        "ix_designated_action_history_group_uuid",
+        table_name="designated_action_history",
+    )
+    op.drop_index(
+        op.f("ix_designated_action_history_designated_action_id"),
+        table_name="designated_action_history",
+    )
+    op.drop_table("designated_action_history")
+
+    op.drop_index("uq_designated_action_transaction_id", table_name="designated_action")
     op.drop_index("ix_designated_action_group_uuid", table_name="designated_action")
     op.drop_index(
-        op.f("ix_designated_action_transaction_id"),
-        table_name="designated_action",
+        op.f("ix_designated_action_transaction_id"), table_name="designated_action"
     )
     op.drop_index(
         op.f("ix_designated_action_assigned_analyst_id"),
@@ -799,11 +985,15 @@ def downgrade() -> None:
         table_name="designated_action",
     )
     op.drop_table("designated_action")
+
+    op.drop_table("evidence_submission_status")
     op.drop_table("designated_action_status")
 
     op.execute(
-        "DELETE FROM initiative_agreement_status "
-        "WHERE status IN ('Underway', 'Completed', 'Terminated')"
+        """
+        UPDATE initiative_agreement_status SET display_order = NULL
+        WHERE status::text IN ('Draft', 'Recommended', 'Approved', 'Deleted')
+        """
     )
 
     op.create_table_comment(
@@ -812,8 +1002,20 @@ def downgrade() -> None:
         existing_comment=(
             "Initiative agreements (s.15 Low Carbon Fuels Act): parent record "
             "for designated actions and evidence tracking. Also holds legacy "
-            "credit-award fields until the transaction-flow cutover."
+            "credit-award records until the transaction-flow cutover; see "
+            "record_kind."
         ),
+    )
+    op.drop_index(
+        "uq_initiative_agreement_transaction_id", table_name="initiative_agreement"
+    )
+    op.drop_index(
+        op.f("ix_initiative_agreement_lifecycle_status_id"),
+        table_name="initiative_agreement",
+    )
+    op.drop_index(
+        op.f("ix_initiative_agreement_record_kind"),
+        table_name="initiative_agreement",
     )
     op.drop_index(
         op.f("ix_initiative_agreement_current_status_id"),
@@ -823,6 +1025,14 @@ def downgrade() -> None:
         op.f("uq_initiative_agreement_ia_code"),
         "initiative_agreement",
         type_="unique",
+    )
+    op.drop_constraint(
+        op.f(
+            "fk_initiative_agreement_lifecycle_status_id"
+            "_initiative_agreement_lifecycle_status"
+        ),
+        "initiative_agreement",
+        type_="foreignkey",
     )
     for column_name in (
         "total_credits_issued",
@@ -835,12 +1045,11 @@ def downgrade() -> None:
         "contact_name",
         "project_description",
         "title",
+        "lifecycle_status_id",
+        "record_kind",
         "agreement_type",
         "ia_code",
     ):
         op.drop_column("initiative_agreement", column_name)
 
-    sa.Enum(name="agreement_type_enum").drop(op.get_bind())
-
-    # PostgreSQL cannot remove enum values in place: 'Underway', 'Completed'
-    # and 'Terminated' remain on initiative_agreement_type_enum.
+    op.drop_table("initiative_agreement_lifecycle_status")

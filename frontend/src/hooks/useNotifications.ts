@@ -45,6 +45,7 @@ export const useMarkNotificationAsRead = (options: ExtMutationOptions<unknown, a
       client.put(apiRoutes.notifications, _ids),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications-count'] })
+      queryClient.invalidateQueries({ queryKey: ['notification-messages'] })
       queryClient.invalidateQueries({ queryKey: ['notifications-messages'] })
     },
     ...options
@@ -59,6 +60,7 @@ export const useDeleteNotificationMessages = (options: ExtMutationOptions<unknow
       client.delete(apiRoutes.notifications, { data: _ids }),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications-count'] })
+      queryClient.invalidateQueries({ queryKey: ['notification-messages'] })
       queryClient.invalidateQueries({ queryKey: ['notifications-messages'] })
     },
     ...options
