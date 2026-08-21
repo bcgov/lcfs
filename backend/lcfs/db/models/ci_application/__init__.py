@@ -4,6 +4,8 @@ from .CIApplicationHistory import CIApplicationHistory
 from .CIApplicationStatus import CIApplicationStatus
 from .Pathway import Pathway
 from .PathwayApplicationType import PathwayApplicationType
+from .PathwayFeedstockTransportMode import PathwayFeedstockTransportMode
+from .PathwayFinishedFuelTransportMode import PathwayFinishedFuelTransportMode
 from .PathwayFuelCodeType import PathwayFuelCodeType
 
 __all__ = [
@@ -14,5 +16,7 @@ __all__ = [
     "CIApplicationStatus",
     "Pathway",
     "PathwayApplicationType",
+    "PathwayFeedstockTransportMode",
+    "PathwayFinishedFuelTransportMode",
     "PathwayFuelCodeType",
 ]

@@ -78,19 +78,19 @@ describe('useApiService', () => {
     request: vi.fn(),
     interceptors: {
       request: {
-        use: vi.fn(),
+        use: vi.fn()
       },
       response: {
-        use: vi.fn(),
-      },
-    },
+        use: vi.fn()
+      }
+    }
   }
 
   let useApiService
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    
+
     // Setup axios mock
     const mockedAxios = vi.mocked(axios)
     mockedAxios.create.mockReturnValue(mockAxiosInstance)
@@ -114,8 +114,8 @@ describe('useApiService', () => {
       setAttribute: vi.fn(),
       click: mockClick,
       parentNode: {
-        removeChild: mockRemoveChild,
-      },
+        removeChild: mockRemoveChild
+      }
     }
     mockCreateElement.mockReturnValue(mockElement)
     mockCreateObjectURL.mockReturnValue('blob:mock-url')
@@ -136,7 +136,7 @@ describe('useApiService', () => {
 
       expect(axios.create).toHaveBeenCalledWith({
         baseURL: 'http://localhost:8000/api',
-        timeout: 90000,
+        timeout: 90000
       })
       expect(result).toBe(mockAxiosInstance)
     })
@@ -149,7 +149,7 @@ describe('useApiService', () => {
 
       expect(axios.create).toHaveBeenCalledWith({
         baseURL: 'http://localhost:8000/api',
-        timeout: 5000,
+        timeout: 5000
       })
       expect(result).toBe(mockAxiosInstance)
     })
@@ -171,13 +171,13 @@ describe('useApiService', () => {
 
       useApiService()
 
-      const requestInterceptor = mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
+      const requestInterceptor =
+        mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
       const config = { headers: {} }
-      
+
       const result = requestInterceptor(config)
 
       expect(result.headers.Authorization).toBe('Bearer mock-token')
-
     })
 
     it('should not add Authorization header when not authenticated', () => {
@@ -187,13 +187,13 @@ describe('useApiService', () => {
 
       useApiService()
 
-      const requestInterceptor = mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
+      const requestInterceptor =
+        mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
       const config = { headers: {} }
-      
+
       const result = requestInterceptor(config)
 
       expect(result.headers.Authorization).toBeUndefined()
-
     })
 
     it('should handle request interceptor errors', async () => {
@@ -201,11 +201,13 @@ describe('useApiService', () => {
 
       useApiService()
 
-      const requestErrorHandler = mockAxiosInstance.interceptors.request.use.mock.calls[0][1]
+      const requestErrorHandler =
+        mockAxiosInstance.interceptors.request.use.mock.calls[0][1]
       const error = new Error('Request error')
-      
-      await expect(() => requestErrorHandler(error)).rejects.toThrow('Request error')
 
+      await expect(() => requestErrorHandler(error)).rejects.toThrow(
+        'Request error'
+      )
     })
 
     it('should block requests when server is in error state', async () => {
@@ -221,11 +223,13 @@ describe('useApiService', () => {
 
       useApiService()
 
-      const requestInterceptor = mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
+      const requestInterceptor =
+        mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
       const config = { headers: {} }
-      
-      await expect(() => requestInterceptor(config)).rejects.toThrow('Blocked: server is in error state')
 
+      await expect(() => requestInterceptor(config)).rejects.toThrow(
+        'Blocked: server is in error state'
+      )
     })
 
     it('should allow requests when server is not in error state', () => {
@@ -244,13 +248,13 @@ describe('useApiService', () => {
 
       useApiService()
 
-      const requestInterceptor = mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
+      const requestInterceptor =
+        mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
       const config = { headers: {} }
-      
+
       const result = requestInterceptor(config)
 
       expect(result.headers.Authorization).toBe('Bearer test-token')
-
     })
   })
 
@@ -260,13 +264,13 @@ describe('useApiService', () => {
 
       useApiService()
 
-      const responseInterceptor = mockAxiosInstance.interceptors.response.use.mock.calls[0][0]
+      const responseInterceptor =
+        mockAxiosInstance.interceptors.response.use.mock.calls[0][0]
       const response = { data: { success: true }, status: 200 }
-      
+
       const result = responseInterceptor(response)
 
       expect(result).toBe(response)
-
     })
 
     describe('Error Handling', () => {
@@ -275,21 +279,19 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 400,
             data: { message: 'Bad Request' }
           }
         }
-        
-        await expect(() => responseErrorHandler(error)).rejects.toThrow()
-        expect(mockConsoleError).toHaveBeenCalledWith(
-          'API Error:',
-          400,
-          { message: 'Bad Request' }
-        )
 
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockConsoleError).toHaveBeenCalledWith('API Error:', 400, {
+          message: 'Bad Request'
+        })
       })
 
       it('should show snackbar error in development environment', async () => {
@@ -297,23 +299,42 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 404,
             data: { message: 'Not Found' }
           }
         }
-        
+
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockEnqueueSnackbar).toHaveBeenCalledWith('404 error', {
+          autoHideDuration: 5000,
+          variant: 'error'
+        })
+      })
+
+      it('should show the API detail in the snackbar when present', async () => {
+        useApiService()
+
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const error = {
+          response: {
+            status: 400,
+            data: { detail: 'Quantity must be positive' }
+          }
+        }
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockEnqueueSnackbar).toHaveBeenCalledWith(
-          '404 error',
+          'Quantity must be positive',
           {
             autoHideDuration: 5000,
             variant: 'error'
           }
         )
-
       })
 
       it('should handle 403 forbidden errors by setting forbidden state', async () => {
@@ -321,19 +342,21 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 403,
             data: { message: 'Forbidden' }
           }
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockSetForbidden).toHaveBeenCalledWith(true)
-        expect(mockConsoleError).toHaveBeenCalledWith('API Error:', 403, { message: 'Forbidden' })
+        expect(mockConsoleError).toHaveBeenCalledWith('API Error:', 403, {
+          message: 'Forbidden'
+        })
         expect(mockEnqueueSnackbar).not.toHaveBeenCalled()
-
       })
 
       it('should handle 500 errors by setting error status', async () => {
@@ -341,19 +364,21 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 500,
             data: { detail: 'Internal Server Error' }
           }
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockSetErrorStatus).toHaveBeenCalledWith(500)
-        expect(mockConsoleError).toHaveBeenCalledWith('API Error:', 500, { detail: 'Internal Server Error' })
+        expect(mockConsoleError).toHaveBeenCalledWith('API Error:', 500, {
+          detail: 'Internal Server Error'
+        })
         expect(mockEnqueueSnackbar).not.toHaveBeenCalled()
-
       })
 
       it('should handle network errors without response', async () => {
@@ -361,16 +386,16 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           message: 'Network Error'
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockConsoleError).not.toHaveBeenCalled()
         expect(mockEnqueueSnackbar).not.toHaveBeenCalled()
         expect(mockSetForbidden).not.toHaveBeenCalled()
-
       })
     })
 
@@ -380,20 +405,20 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 500,
-            data: { 
+            data: {
               detail: 'Internal Server Error',
               reference_number: 'ref-abc-123'
             }
           }
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockAddErrorRef).toHaveBeenCalledWith('ref-abc-123')
-
       })
 
       it('should extract reference number from response header', async () => {
@@ -401,7 +426,8 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 500,
@@ -411,10 +437,9 @@ describe('useApiService', () => {
             }
           }
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockAddErrorRef).toHaveBeenCalledWith('correlation-xyz-789')
-
       })
 
       it('should prefer reference_number from body over header', async () => {
@@ -422,11 +447,12 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 500,
-            data: { 
+            data: {
               detail: 'Internal Server Error',
               reference_number: 'body-ref-123'
             },
@@ -435,10 +461,9 @@ describe('useApiService', () => {
             }
           }
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockAddErrorRef).toHaveBeenCalledWith('body-ref-123')
-
       })
 
       it('should handle missing reference number gracefully', async () => {
@@ -446,17 +471,17 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 500,
             data: { detail: 'Internal Server Error' }
           }
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockAddErrorRef).not.toHaveBeenCalled()
-
       })
 
       it('should extract reference number for 422 validation errors', async () => {
@@ -464,20 +489,20 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 422,
-            data: { 
+            data: {
               message: 'Validation failed',
               reference_number: 'validation-ref-999'
             }
           }
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockAddErrorRef).toHaveBeenCalledWith('validation-ref-999')
-
       })
 
       it('should extract reference number for 403 errors', async () => {
@@ -485,21 +510,21 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 403,
-            data: { 
+            data: {
               message: 'Forbidden',
               reference_number: 'forbidden-ref-111'
             }
           }
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockAddErrorRef).toHaveBeenCalledWith('forbidden-ref-111')
         expect(mockSetForbidden).toHaveBeenCalledWith(true)
-
       })
 
       it('should handle non-string reference numbers', async () => {
@@ -507,20 +532,20 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 500,
-            data: { 
+            data: {
               detail: 'Internal Server Error',
               reference_number: 12345
             }
           }
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockAddErrorRef).not.toHaveBeenCalled()
-
       })
 
       it('should handle non-object response data', async () => {
@@ -528,17 +553,17 @@ describe('useApiService', () => {
 
         useApiService()
 
-        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const responseErrorHandler =
+          mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
         const error = {
           response: {
             status: 500,
             data: 'Internal Server Error'
           }
         }
-        
+
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockAddErrorRef).not.toHaveBeenCalled()
-
       })
     })
   })
@@ -579,7 +604,6 @@ describe('useApiService', () => {
       expect(mockClick).toHaveBeenCalled()
       expect(mockRemoveChild).toHaveBeenCalled()
       expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
-
     })
 
     it('should use default filename when content-disposition is missing', async () => {
@@ -613,7 +637,47 @@ describe('useApiService', () => {
         'download',
         `BC-LCFS-${expectedDate}.compliance`
       )
+    })
 
+    it('should pass through a non-get download method', async () => {
+      mockAxiosInstance.request.mockResolvedValue({
+        data: new Blob(['export']),
+        headers: {}
+      })
+      const apiService = useApiService()
+
+      await apiService.download({
+        url: '/reports/export',
+        method: 'post',
+        data: { year: 2024 }
+      })
+
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
+        url: '/reports/export',
+        method: 'post',
+        params: {},
+        data: { year: 2024 },
+        responseType: 'blob'
+      })
+    })
+
+    it('should fall back to a default filename when content-disposition has no quoted filename', async () => {
+      mockAxiosInstance.request.mockResolvedValue({
+        data: new Blob(['content']),
+        headers: {
+          'content-disposition': 'attachment; filename=unquoted.csv'
+        }
+      })
+      const apiService = useApiService()
+
+      await apiService.download({ url: '/reports/export.csv' })
+
+      const mockElement = mockCreateElement.mock.results[0].value
+      const expectedDate = new Date().toISOString().substring(0, 10)
+      expect(mockElement.setAttribute).toHaveBeenCalledWith(
+        'download',
+        `BC-LCFS-${expectedDate}.export.csv`
+      )
     })
 
     it('should handle download errors', async () => {
@@ -623,14 +687,15 @@ describe('useApiService', () => {
       mockAxiosInstance.request.mockRejectedValue(error)
       const apiService = useApiService()
 
-      await expect(apiService.download({
-        url: '/test-download'
-      })).rejects.toThrow('Download failed')
+      await expect(
+        apiService.download({
+          url: '/test-download'
+        })
+      ).rejects.toThrow('Download failed')
 
       expect(mockConsoleError).not.toHaveBeenCalled()
       expect(mockCreateObjectURL).not.toHaveBeenCalled()
       expect(mockCreateElement).not.toHaveBeenCalled()
-
     })
   })
 
@@ -642,9 +707,8 @@ describe('useApiService', () => {
 
       expect(axios.create).toHaveBeenCalledWith({
         baseURL: 'http://localhost:8000/api',
-        timeout: 90000,
+        timeout: 90000
       })
-
     })
 
     it('should handle null options', () => {
@@ -654,9 +718,8 @@ describe('useApiService', () => {
 
       expect(axios.create).toHaveBeenCalledWith({
         baseURL: 'http://localhost:8000/api',
-        timeout: 90000,
+        timeout: 90000
       })
-
     })
 
     it('should handle undefined token', () => {
@@ -667,13 +730,13 @@ describe('useApiService', () => {
 
       useApiService()
 
-      const requestInterceptor = mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
+      const requestInterceptor =
+        mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
       const config = { headers: {} }
-      
+
       const result = requestInterceptor(config)
 
       expect(result.headers.Authorization).toBe('Bearer undefined')
-
     })
   })
 })

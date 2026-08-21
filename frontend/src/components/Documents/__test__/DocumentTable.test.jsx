@@ -34,9 +34,13 @@ vi.mock('pretty-bytes', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => {
+    t: (key, options = {}) => {
       const translations = {
-        'report:clickDrag': 'Click or drag files here to upload'
+        'report:clickDrag': 'Click or drag files here to upload',
+        'report:deleteDocumentConfirmTitle': 'Delete document?',
+        'report:deleteDocumentConfirmText': `Are you sure you want to delete ${options.fileName}?`,
+        'common:deleteBtn': 'Delete',
+        'common:cancelBtn': 'Cancel'
       }
       return translations[key] || key
     }
@@ -246,7 +250,7 @@ describe('DocumentTable', () => {
     expect(mockUploadMutate).not.toHaveBeenCalled()
   })
 
-  it('should handle file deletion successfully', async () => {
+  it('should show confirmation before file deletion', async () => {
     const mockFiles = [
       {
         documentId: 1,
@@ -268,9 +272,61 @@ describe('DocumentTable', () => {
     const deleteButton = screen.getByTestId('delete-button')
     fireEvent.click(deleteButton)
 
+    expect(screen.getByText('Delete document?')).toBeInTheDocument()
+    expect(mockDeleteMutate).not.toHaveBeenCalled()
+  })
+
+  it('should handle file deletion successfully after confirmation', async () => {
+    const mockFiles = [
+      {
+        documentId: 1,
+        fileName: 'test.pdf',
+        fileSize: 1024000,
+        createDate: '2024-01-01T10:00:00Z',
+        createUser: 'testuser'
+      }
+    ]
+
+    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+
+    render(<DocumentTable {...defaultProps} />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('test.pdf')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByTestId('delete-button'))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
     await waitFor(() => {
       expect(mockDeleteMutate).toHaveBeenCalledWith(1)
     })
+  })
+
+  it('should not delete file when confirmation is cancelled', async () => {
+    const mockFiles = [
+      {
+        documentId: 1,
+        fileName: 'test.pdf',
+        fileSize: 1024000,
+        createDate: '2024-01-01T10:00:00Z',
+        createUser: 'testuser'
+      }
+    ]
+
+    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+
+    render(<DocumentTable {...defaultProps} />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-button')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByTestId('delete-button'))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(mockDeleteMutate).not.toHaveBeenCalled()
+    expect(screen.queryByText('Delete document?')).not.toBeInTheDocument()
   })
 
   it('should handle file download when filename is clicked', async () => {
@@ -552,6 +608,7 @@ describe('DocumentTable', () => {
 
     const deleteButton = screen.getByTestId('delete-button')
     fireEvent.click(deleteButton)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -664,6 +721,7 @@ describe('DocumentTable', () => {
 
     const deleteButton = screen.getByTestId('delete-button')
     fireEvent.click(deleteButton)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
     await waitFor(() => {
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
