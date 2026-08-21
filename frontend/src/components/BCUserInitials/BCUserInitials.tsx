@@ -27,11 +27,12 @@ const BCUserInitials = ({
       .substring(0, 2)
   }
 
+  // Parsed rather than assigned to innerHTML: comment bodies are untrusted,
+  // and an <img onerror> in a detached element still executes.
   const stripHtmlTags = (html: string) => {
     if (!html) return ''
-    const tmp = document.createElement('div')
-    tmp.innerHTML = html
-    return tmp.textContent || tmp.innerText || ''
+    const parsed = new DOMParser().parseFromString(html, 'text/html')
+    return parsed.body.textContent || ''
   }
 
   const cleanTooltipText = stripHtmlTags(tooltipText)
