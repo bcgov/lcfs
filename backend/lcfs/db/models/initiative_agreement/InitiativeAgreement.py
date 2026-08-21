@@ -9,10 +9,24 @@ from sqlalchemy import (
     Table,
     Text,
 )
-from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+
+# Values accepted by initiative_agreement.agreement_type. Held as a plain
+# String column rather than a PG enum: the taxonomy will grow, and a postgres
+# enum cannot drop or reorder a value once shipped. Validated at the API layer,
+# as designated_action.determination already is.
+AGREEMENT_TYPE_INITIATIVE_AGREEMENT = "Initiative Agreement"
+AGREEMENT_TYPE_P3A = "P3A"
+AGREEMENT_TYPES = (AGREEMENT_TYPE_INITIATIVE_AGREEMENT, AGREEMENT_TYPE_P3A)
+
+# Discriminates the agreement-management records from the legacy one-row-per
+# credit-award records that share this table until the transaction-flow
+# cutover. Grids and the agreement API filter on 'agreement'.
+RECORD_KIND_LEGACY_AWARD = "legacy_award"
+RECORD_KIND_AGREEMENT = "agreement"
+RECORD_KINDS = (RECORD_KIND_LEGACY_AWARD, RECORD_KIND_AGREEMENT)
 
 initiative_agreement_document_association = Table(
     "initiative_agreement_document_association",
@@ -29,16 +43,6 @@ initiative_agreement_document_association = Table(
         ForeignKey("document.document_id"),
         primary_key=True,
     ),
-)
-
-# Kind of agreement held in a row of this table. Legacy Part 3 Agreements
-# (P3A) migrated from the pre-LCFS system share the table with current
-# Initiative Agreements. The type is created/dropped by migration.
-agreement_type_enum = ENUM(
-    "Initiative Agreement",
-    "P3A",
-    name="agreement_type_enum",
-    create_type=False,
 )
 
 
@@ -108,11 +112,39 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
         ),
     )
     agreement_type = Column(
-        agreement_type_enum,
+        String(100),
         nullable=False,
-        server_default="Initiative Agreement",
+        server_default=AGREEMENT_TYPE_INITIATIVE_AGREEMENT,
         comment=(
-            "Kind of agreement: current Initiative Agreement or migrated " "legacy P3A."
+            "Kind of agreement: 'Initiative Agreement' or migrated legacy "
+            "'P3A'. Validated at the API layer."
+        ),
+    )
+    record_kind = Column(
+        String(50),
+        nullable=False,
+        server_default=RECORD_KIND_LEGACY_AWARD,
+        index=True,
+        comment=(
+            "'agreement' for agreement-management records, 'legacy_award' for "
+            "the pre-existing one-row-per-credit-award records that share this "
+            "table until the transaction-flow cutover. Agreement grids and "
+            "APIs filter on 'agreement'."
+        ),
+    )
+    lifecycle_status_id = Column(
+        Integer,
+        ForeignKey(
+            "initiative_agreement_lifecycle_status."
+            "initiative_agreement_lifecycle_status_id"
+        ),
+        nullable=True,
+        index=True,
+        comment=(
+            "Agreement lifecycle status. Nullable: legacy award records have "
+            "no lifecycle. Deliberately NOT current_status_id, which is the "
+            "credit-award transaction status feeding transaction_status_view "
+            "and the transaction materialized views."
         ),
     )
     title = Column(String(500), nullable=True, comment="Project title of the agreement")
@@ -138,9 +170,9 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
         nullable=False,
         server_default="0",
         comment=(
-            "Total compliance units allocated under the agreement. "
-            "Authoritative value, not derived from designated actions "
-            "(legacy agreements may lack an action breakdown)."
+            "Denormalized cache of the agreement's total allocation; "
+            "reconciles against sum(designated_action.credit_allocation) "
+            "where actions exist. Never read for balance calculations."
         ),
     )
     total_credits_issued = Column(
@@ -148,8 +180,10 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
         nullable=False,
         server_default="0",
         comment=(
-            "Total compliance units issued to date under the agreement. "
-            "Authoritative value, not derived."
+            "Denormalized cache of sum(transaction.compliance_units) over "
+            "this agreement's designated actions; reconciled by test, never "
+            "read for balance. transaction.compliance_units is the only "
+            "authority for issued credits."
         ),
     )
 
@@ -164,6 +198,9 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
         "InitiativeAgreementHistory", back_populates="initiative_agreement"
     )
     current_status = relationship("InitiativeAgreementStatus")
+    lifecycle_status = relationship(
+        "InitiativeAgreementLifecycleStatus", back_populates="initiative_agreements"
+    )
     initiative_agreement_internal_comments = relationship(
         "InitiativeAgreementInternalComment", back_populates="initiative_agreement"
     )

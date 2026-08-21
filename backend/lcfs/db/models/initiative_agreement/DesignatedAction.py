@@ -8,6 +8,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import relationship
 
@@ -35,6 +36,15 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
             name="uq_designated_action_agreement_number_version",
         ),
         Index("ix_designated_action_group_uuid", "group_uuid"),
+        # One designated action may claim a given ledger transaction at most
+        # once. Guards against a concurrent double-issuance on approval, where
+        # two requests both observe transaction_id IS NULL.
+        Index(
+            "uq_designated_action_transaction_id",
+            "transaction_id",
+            unique=True,
+            postgresql_where=text("transaction_id IS NOT NULL"),
+        ),
         {
             "comment": (
                 "Designated actions defined in Schedule B of an initiative "
@@ -85,6 +95,15 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
         server_default="0",
         comment="Compliance units allocated to this action ('up to' amount)",
     )
+    recommended_credits = Column(
+        BigInteger,
+        nullable=True,
+        comment=(
+            "Compliance units the analyst recommends issuing for this action. "
+            "NULL until a recommendation is made — 0 is itself a meaningful "
+            "recommendation. Bounded by credit_allocation at the API layer."
+        ),
+    )
     current_status_id = Column(
         Integer,
         ForeignKey("designated_action_status.designated_action_status_id"),
@@ -127,6 +146,9 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
     )
     assigned_analyst = relationship("UserProfile", foreign_keys=[assigned_analyst_id])
     transaction = relationship("Transaction")
+    history = relationship(
+        "DesignatedActionHistory", back_populates="designated_action"
+    )
     evidence_requirements = relationship(
         "EvidenceRequirement", back_populates="designated_action"
     )
