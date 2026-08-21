@@ -1074,7 +1074,7 @@ class CIApplicationServices:
         notification_type: str,
         origin_user_profile_id: Optional[int] = None,
     ) -> None:
-        """Send a CI application notification to subscribed government users."""
+        """Send a CI application notification to subscribed users."""
         notification_types = CI_APPLICATION_NOTIFICATION_MAPPER.get(event_key, [])
         if not notification_types:
             return
@@ -1091,7 +1091,7 @@ class CIApplicationServices:
         notification_data = NotificationMessageSchema(
             type=notification_type,
             message=json.dumps(message_data),
-            related_organization_id=None,
+            related_organization_id=ci_application.organization_id,
             origin_user_profile_id=origin_user_profile_id,
             related_transaction_id=str(ci_application.ci_application_id),
         )
@@ -2314,6 +2314,12 @@ class CIApplicationServices:
         )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        await self._send_ci_notification(
+            ci,
+            "government_action",
+            "CI Application Changes Requested",
+            origin_user_profile_id=user.user_profile_id,
+        )
         return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
@@ -2353,6 +2359,12 @@ class CIApplicationServices:
         )
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        await self._send_ci_notification(
+            ci,
+            "government_action",
+            "CI Application Changes Requested",
+            origin_user_profile_id=user.user_profile_id,
+        )
         return await self._to_full_schema_with_user(ci, user)
 
     # ------------------------------------------------------------------
@@ -2693,6 +2705,12 @@ class CIApplicationServices:
                 ci,
                 "director_approval",
                 "CI Application Director Approved",
+                origin_user_profile_id=user.user_profile_id,
+            )
+            await self._send_ci_notification(
+                ci,
+                "fuel_code_approved",
+                "CI Application Fuel Codes Approved",
                 origin_user_profile_id=user.user_profile_id,
             )
         elif is_director_returned:

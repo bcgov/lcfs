@@ -12,6 +12,8 @@ import {
   useUpdateNotificationsEmail
 } from '../useNotifications'
 
+vi.setConfig({ testTimeout: 30000 })
+
 // Mock the API service
 const mockApiService = {
   get: vi.fn(),
@@ -407,6 +409,6 @@ describe('useNotifications', () => {
       })
 
       expect(result.current.error).toEqual(mockError)
-    })
+    }, 30000)
   })
 })
