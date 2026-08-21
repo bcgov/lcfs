@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { vi } from 'vitest'
+import { roles } from '@/constants/roles'
 import BCeIDNotificationSettings from '../BCeIDNotificationSettings'
 
 // Mock the NotificationSettingsForm component
@@ -24,15 +25,11 @@ describe('BCeIDNotificationSettings', () => {
 
   it('renders NotificationSettingsForm with currentUser email', () => {
     mockUseCurrentUser.mockReturnValue({
-      data: { email: 'test@example.com' }
+      data: { email: 'test@example.com', roles: [{ name: roles.supplier }] }
     })
 
     render(<BCeIDNotificationSettings />)
 
-    expect(
-      screen.getByTestId('notification-settings-form-mock')
-    ).toBeInTheDocument()
-    
     expect(mockNotificationSettingsForm).toHaveBeenCalledWith(
       expect.objectContaining({
         showEmailField: true,
@@ -40,6 +37,41 @@ describe('BCeIDNotificationSettings', () => {
         categories: expect.any(Object)
       })
     )
+  })
+
+  it('includes CI application notifications for CI Applicant users', () => {
+    mockUseCurrentUser.mockReturnValue({
+      data: {
+        email: 'test@example.com',
+        roles: [{ name: roles.supplier }, { name: roles.ci_applicant }]
+      }
+    })
+
+    render(<BCeIDNotificationSettings />)
+
+    const passedProps = mockNotificationSettingsForm.mock.calls[0][0]
+    expect(passedProps.categories).toMatchObject({
+      'bceid.categories.ciApplications': {
+        title: 'bceid.categories.ciApplications.title',
+        BCEID__CI_APPLICATION__GOVERNMENT_ACTION:
+          'bceid.categories.ciApplications.governmentAction',
+        BCEID__CI_APPLICATION__FUEL_CODE_APPROVED:
+          'bceid.categories.ciApplications.fuelCodeApproved'
+      }
+    })
+  })
+
+  it('does not include CI application notifications for non-CI Applicant users', () => {
+    mockUseCurrentUser.mockReturnValue({
+      data: { email: 'test@example.com', roles: [{ name: roles.supplier }] }
+    })
+
+    render(<BCeIDNotificationSettings />)
+
+    const passedProps = mockNotificationSettingsForm.mock.calls[0][0]
+    expect(
+      passedProps.categories['bceid.categories.ciApplications']
+    ).toBeUndefined()
   })
 
   it('renders NotificationSettingsForm with undefined email when currentUser has no email', () => {

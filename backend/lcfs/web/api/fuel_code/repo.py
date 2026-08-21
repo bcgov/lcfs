@@ -118,8 +118,10 @@ class FuelCodeRepository:
 
             filter_option = filter.type
             filter_type = filter.filter_type
-            field = filter_field_map.get(filter.field) or get_field_for_filter(
-                FuelCodeListView, filter.field
+            field = (
+                filter_field_map[filter.field]
+                if filter.field in filter_field_map
+                else get_field_for_filter(FuelCodeListView, filter.field)
             )
             conditions.append(
                 apply_filter_conditions(field, filter_value, filter_option, filter_type)

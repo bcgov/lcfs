@@ -82,6 +82,67 @@ vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useUser')
 vi.mock('@/hooks/useOrganization')
 
+// Override the global BCFormText mock so inputs are wired to react-hook-form.
+vi.mock('@/components/BCForm', async () => {
+  const { Controller } = await import('react-hook-form')
+  return {
+    BCFormText: ({ name, control, label, optional, disabled }) => (
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <input
+            id={name}
+            data-test={name}
+            aria-label={label}
+            disabled={disabled}
+            required={!optional}
+            {...field}
+            value={field.value ?? ''}
+          />
+        )}
+      />
+    ),
+    BCFormRadio: ({ name, control, options = [] }) => (
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <div data-test={`${name}-radio-group`}>
+            {options.map((option, index) => (
+              <label key={`${name}-${index}`}>
+                <input
+                  type="radio"
+                  name={name}
+                  value={option.value}
+                  checked={field.value === option.value}
+                  onChange={() => field.onChange(option.value)}
+                  data-test={option.dataTestId || `${name}${index + 1}`}
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        )}
+      />
+    ),
+    BCFormCheckbox: ({ name, options = [] }) => (
+      <div data-test={`${name}-checkbox-group`}>
+        {options.map((option, index) => (
+          <input
+            key={`${name}-${index}`}
+            type="checkbox"
+            data-test={option.dataTestId || `${name}${index + 1}`}
+          />
+        ))}
+      </div>
+    ),
+    BCFormAddressAutocomplete: ({ name, label, disabled, ...props }) => (
+      <input data-test={name} aria-label={label} disabled={disabled} {...props} />
+    )
+  }
+})
+
 // Mock child components to simplify testing focus on parent logic
 // Mock child components to simplify testing focus on parent logic.
 // useWatch inside the mock gives us reactive re-renders when form state changes,
@@ -226,6 +287,35 @@ describe('AddEditUser', () => {
   // Mock handleCancelEdit function for all tests
   const mockHandleCancelEdit = vi.fn()
 
+  // BCFormText does not forward data-test onto the input; fields are identified by id.
+  const fillField = (name, value) => {
+    const input = document.getElementById(name)
+    fireEvent.change(input, { target: { value } })
+  }
+
+  const fillRequiredIdirFields = (overrides = {}) => {
+    const fields = {
+      firstName: 'John',
+      lastName: 'Doe',
+      jobTitle: 'Analyst',
+      userName: 'john.doe',
+      keycloakEmail: 'john@gov.bc.ca',
+      ...overrides
+    }
+    Object.entries(fields).forEach(([name, value]) => fillField(name, value))
+  }
+
+  const fillRequiredBceidFields = (overrides = {}) => {
+    const fields = {
+      firstName: 'Jane',
+      lastName: 'Smith',
+      userName: 'jane.smith',
+      keycloakEmail: 'jane@company.com',
+      ...overrides
+    }
+    Object.entries(fields).forEach(([name, value]) => fillField(name, value))
+  }
+
   // --- Rendering Tests ---
   it('renders loading state for current user', () => {
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
@@ -299,14 +389,13 @@ describe('AddEditUser', () => {
   })
 
   // --- Form Submission Tests ---
-  it.todo('calls createUser when submitting in add mode', async () => {
+  it('calls createUser when submitting in add mode', async () => {
     mockUseParams.mockReturnValue({}) // Add mode (no userID)
 
-    // Mock current user with proper organization data
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' },
-        organizationId: 1, // Add this for the payload
+        organizationId: 1,
         roles: []
       },
       hasRoles: vi.fn((role) => role === roles.government),
@@ -315,7 +404,7 @@ describe('AddEditUser', () => {
 
     render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
 
-    // Submit the form - the mocked useForm will provide valid form data automatically
+    fillRequiredIdirFields()
     fireEvent.click(screen.getByTestId('saveUser'))
 
     await waitFor(() => {
@@ -324,7 +413,7 @@ describe('AddEditUser', () => {
     })
   })
 
-  it.todo('calls createUser for BCeID user with correct required fields', async () => {
+  it('calls createUser for BCeID user with correct required fields', async () => {
     mockUseParams.mockReturnValue({ orgID: 'org123' }) // BCeID context with orgID
 
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
@@ -339,22 +428,8 @@ describe('AddEditUser', () => {
 
     render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
 
-    // Fill out REQUIRED form fields for BCeID using data-testid
     // For BCeID: firstName, lastName, userName, keycloakEmail are required (jobTitle is optional)
-    fireEvent.change(screen.getByTestId('firstName'), {
-      target: { value: 'Jane' }
-    })
-    fireEvent.change(screen.getByTestId('lastName'), {
-      target: { value: 'Smith' }
-    })
-    fireEvent.change(screen.getByTestId('userName'), {
-      target: { value: 'jane.smith' }
-    })
-    fireEvent.change(screen.getByTestId('keycloakEmail'), {
-      target: { value: 'jane@company.com' }
-    })
-
-    // Submit the form
+    fillRequiredBceidFields()
     fireEvent.click(screen.getByTestId('saveUser'))
 
     await waitFor(() => {
@@ -363,7 +438,7 @@ describe('AddEditUser', () => {
     })
   })
 
-  it.todo('calls updateUser when submitting in edit mode', async () => {
+  it('calls updateUser when submitting in edit mode', async () => {
     mockUseParams.mockReturnValue({ userID: 'user123' }) // Edit mode
 
     vi.mocked(userHooks.useUser).mockReturnValue({
@@ -385,7 +460,6 @@ describe('AddEditUser', () => {
       isFetched: true
     })
 
-    // Mock current user with proper organization data
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' },
@@ -398,13 +472,11 @@ describe('AddEditUser', () => {
 
     render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
 
-    // Wait for form to populate with existing data
     await waitFor(() => {
-      expect(screen.getByTestId('firstName')).toHaveValue('John')
-      expect(screen.getByTestId('lastName')).toHaveValue('Doe')
+      expect(document.getElementById('firstName')).toHaveValue('John')
+      expect(document.getElementById('lastName')).toHaveValue('Doe')
     })
 
-    // Submit the form
     fireEvent.click(screen.getByTestId('saveUser'))
 
     await waitFor(() => {
@@ -420,10 +492,9 @@ describe('AddEditUser', () => {
     })
   })
 
-  it.todo('includes correct payload structure for government user', async () => {
+  it('includes correct payload structure for government user', async () => {
     mockUseParams.mockReturnValue({}) // Add mode
 
-    // Mock current user as government user
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' },
@@ -436,24 +507,7 @@ describe('AddEditUser', () => {
 
     render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
 
-    // Fill out required form fields using data-testid
-    fireEvent.change(screen.getByTestId('firstName'), {
-      target: { value: 'John' }
-    })
-    fireEvent.change(screen.getByTestId('lastName'), {
-      target: { value: 'Doe' }
-    })
-    fireEvent.change(screen.getByTestId('jobTitle'), {
-      target: { value: 'Analyst' }
-    })
-    fireEvent.change(screen.getByTestId('userName'), {
-      target: { value: 'john.doe' }
-    })
-    fireEvent.change(screen.getByTestId('keycloakEmail'), {
-      target: { value: 'john@gov.bc.ca' }
-    })
-
-    // Submit the form
+    fillRequiredIdirFields()
     fireEvent.click(screen.getByTestId('saveUser'))
 
     await waitFor(() => {
@@ -470,7 +524,7 @@ describe('AddEditUser', () => {
     })
   })
 
-  it.todo('includes correct payload structure for supplier user', async () => {
+  it('includes correct payload structure for supplier user', async () => {
     mockUseParams.mockReturnValue({ orgID: 'org123' }) // Supplier context
 
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
@@ -485,21 +539,7 @@ describe('AddEditUser', () => {
 
     render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
 
-    // Fill out required form fields for BCeID using data-testid (jobTitle is optional for BCeID)
-    fireEvent.change(screen.getByTestId('firstName'), {
-      target: { value: 'Jane' }
-    })
-    fireEvent.change(screen.getByTestId('lastName'), {
-      target: { value: 'Smith' }
-    })
-    fireEvent.change(screen.getByTestId('userName'), {
-      target: { value: 'jane.smith' }
-    })
-    fireEvent.change(screen.getByTestId('keycloakEmail'), {
-      target: { value: 'jane@company.com' }
-    })
-
-    // Submit the form
+    fillRequiredBceidFields()
     fireEvent.click(screen.getByTestId('saveUser'))
 
     await waitFor(() => {
@@ -530,7 +570,7 @@ describe('AddEditUser', () => {
     })
   })
 
-  it.todo('validates email format correctly', async () => {
+  it('validates email format correctly', async () => {
     mockUseParams.mockReturnValue({}) // Add mode
 
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
@@ -545,27 +585,9 @@ describe('AddEditUser', () => {
 
     render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
 
-    // Fill out required fields with invalid email using data-testid
-    fireEvent.change(screen.getByTestId('firstName'), {
-      target: { value: 'John' }
-    })
-    fireEvent.change(screen.getByTestId('lastName'), {
-      target: { value: 'Doe' }
-    })
-    fireEvent.change(screen.getByTestId('jobTitle'), {
-      target: { value: 'Developer' }
-    })
-    fireEvent.change(screen.getByTestId('userName'), {
-      target: { value: 'john.doe' }
-    })
-    fireEvent.change(screen.getByTestId('keycloakEmail'), {
-      target: { value: 'invalid-email' } // Invalid email format
-    })
-
-    // Submit the form
+    fillRequiredIdirFields({ keycloakEmail: 'invalid-email' })
     fireEvent.click(screen.getByTestId('saveUser'))
 
-    // The mutation should not be called due to validation error
     await waitFor(() => {
       expect(mockCreateUser).not.toHaveBeenCalled()
     })
@@ -984,50 +1006,52 @@ describe('AddEditUser', () => {
     expect(screen.getByTestId('saveUser')).toBeInTheDocument()
   })
 
-  it.todo('handles payload with empty altEmail', async () => {
-    mockUseParams.mockReturnValue({ userID: 'user123' }) // Edit mode
-    
+  it('handles payload with empty altEmail', async () => {
+    // BCeID edit: empty altEmail is sent as null (IDIR copies keycloakEmail instead)
+    mockUseParams.mockReturnValue({ userID: 'user123', orgID: 'org123' })
+
     vi.mocked(userHooks.useUser).mockReturnValue({
       data: {
         userProfileId: 'user123',
-        firstName: 'John',
-        lastName: 'Doe',
-        title: 'Developer',
-        keycloakEmail: 'john@example.com',
-        keycloakUsername: 'john.doe',
-        email: '', // Empty alt email
+        firstName: 'Jane',
+        lastName: 'Smith',
+        title: 'Manager',
+        keycloakEmail: 'jane@company.com',
+        keycloakUsername: 'jane.smith',
+        email: '',
         roles: [],
         isActive: true,
-        isGovernmentUser: true
+        isGovernmentUser: false,
+        organization: { organizationId: 'org123', name: 'Test Company' }
       },
       isLoading: false,
       isFetched: true
     })
-    
+
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' },
         organizationId: 1,
-        roles: []
+        roles: [],
+        isGovernmentUser: true
       },
       hasRoles: vi.fn((role) => role === roles.government),
       isLoading: false
     })
-    
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
-    
+
+    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+
     await waitFor(() => {
-      expect(screen.getByTestId('firstName')).toHaveValue('John')
+      expect(document.getElementById('firstName')).toHaveValue('Jane')
     })
-    
-    // Submit the form
+
     fireEvent.click(screen.getByTestId('saveUser'))
-    
+
     await waitFor(() => {
       expect(mockUpdateUser).toHaveBeenCalledWith({
         userID: 'user123',
         payload: expect.objectContaining({
-          email: null // Empty email should be converted to null
+          email: null
         })
       })
     })
