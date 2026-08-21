@@ -107,6 +107,11 @@ describe('fuelCodeColDefs', () => {
       'value'
     )
     expect(
+      formerCompanyCol.cellEditorParams({ api: {} }).groupBy({
+        source: 'organization'
+      })
+    ).toBe('Organizations')
+    expect(
       loadingColumnDefs
         .find((col) => col.field === 'prefix')
         .valueGetter({ data: { prefixId: 1, prefix: 'BCLCF' } })

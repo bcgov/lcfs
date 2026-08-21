@@ -769,6 +769,12 @@ export const fuelCodeColDefs = (
         },
         optionLabel: 'label',
         valueKey: 'value',
+        groupBy: (option) => {
+          if (!option || typeof option === 'string') return ''
+          return option.source === 'organization'
+            ? 'Organizations'
+            : 'Former companies'
+        },
         title: 'formerCompany',
         api: params.api
       }),
