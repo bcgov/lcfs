@@ -9,6 +9,7 @@ import { ArchivedFuelCodes } from '../components/ArchivedFuelCodes'
 const mockUseFuelCodeBulletins = vi.fn()
 const mockDownloadMutate = vi.fn()
 const mockBCGridViewer = vi.fn()
+const mockHasAnyRole = vi.fn()
 let mockSearch = ''
 
 vi.mock('@/utils/withRole', () => ({
@@ -17,7 +18,7 @@ vi.mock('@/utils/withRole', () => ({
 
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
-    hasAnyRole: () => false,
+    hasAnyRole: (...roles: string[]) => mockHasAnyRole(...roles),
     data: null,
     isLoading: false
   })
@@ -70,7 +71,9 @@ vi.mock('@/hooks/useFuelCode', () => ({
   useFuelCodeBulletins: (...args: any[]) => mockUseFuelCodeBulletins(...args),
   useDownloadFuelCodeBulletins: () => ({
     mutateAsync: mockDownloadMutate
-  })
+  }),
+  useFuelCodeStatuses: vi.fn(),
+  useTransportModes: vi.fn()
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -97,6 +100,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 describe('FuelCodeBulletins UI', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockHasAnyRole.mockReturnValue(false)
     mockSearch = ''
     mockDownloadMutate.mockResolvedValue(undefined)
     mockUseFuelCodeBulletins.mockImplementation((bulletinType) => {
@@ -191,6 +195,59 @@ describe('FuelCodeBulletins UI', () => {
         filters: []
       })
     )
+  })
+
+  it('enables calendar date filters for bulletin date columns', () => {
+    render(<CurrentFuelCodes />, { wrapper })
+
+    const gridProps = mockBCGridViewer.mock.calls[0][0]
+    const effectiveDate = gridProps.columnDefs.find(
+      (col: any) => col.field === 'effectiveDate'
+    )
+    const expiryDate = gridProps.columnDefs.find(
+      (col: any) => col.field === 'expiryDate'
+    )
+
+    expect(effectiveDate.filter).toBe('agDateColumnFilter')
+    expect(effectiveDate.floatingFilterComponent).toBeDefined()
+    expect(effectiveDate.floatingFilterComponentParams).toMatchObject({
+      initialFilterType: 'equals',
+      label: 'YYYY-MM-DD'
+    })
+    expect(effectiveDate.filterParams.defaultOption).toBe('equals')
+
+    expect(expiryDate.filter).toBe('agDateColumnFilter')
+    expect(expiryDate.floatingFilterComponent).toBeDefined()
+    expect(expiryDate.floatingFilterComponentParams).toMatchObject({
+      initialFilterType: 'equals',
+      label: 'YYYY-MM-DD'
+    })
+    expect(expiryDate.filterParams.defaultOption).toBe('equals')
+  })
+
+  it('enables calendar date filters for IDIR bulletin date columns', () => {
+    mockHasAnyRole.mockReturnValue(true)
+
+    render(<CurrentFuelCodes />, { wrapper })
+
+    const gridProps = mockBCGridViewer.mock.calls[0][0]
+    const dateFields = [
+      'applicationDate',
+      'approvalDate',
+      'effectiveDate',
+      'expirationDate'
+    ]
+
+    dateFields.forEach((field) => {
+      const colDef = gridProps.columnDefs.find((col: any) => col.field === field)
+      expect(colDef.filter).toBe('agDateColumnFilter')
+      expect(colDef.floatingFilterComponent).toBeDefined()
+      expect(colDef.floatingFilterComponentParams).toMatchObject({
+        initialFilterType: 'equals',
+        label: 'YYYY-MM-DD'
+      })
+      expect(colDef.filterParams.defaultOption).toBe('equals')
+    })
   })
 
   it('updates pagination options after grid pagination change', async () => {
