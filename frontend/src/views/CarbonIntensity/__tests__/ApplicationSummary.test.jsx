@@ -116,7 +116,9 @@ describe('ApplicationSummary', () => {
     expect(screen.getAllByText('Casey Reviewer')).toHaveLength(2)
     expect(screen.getByRole('list')).toBeVisible()
     expect(screen.getAllByRole('listitem')).toHaveLength(2)
-    expect(screen.getByText('Formatted: 2026-08-19T18:45:00Z')).toBeVisible()
+    expect(
+      screen.getAllByTestId('ci-summary-assignment-history-row')[0]
+    ).toHaveTextContent('Formatted: 2026-08-19T18:45:00Z')
   })
 
   it('does not expose assignment history when it is omitted from the response', () => {
