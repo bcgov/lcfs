@@ -72,6 +72,7 @@ export const apiRoutes = {
   // Agreement-management endpoints (Initiative Agreements module);
   // consumed by hooks/useInitiativeAgreements.ts
   getInitiativeAgreementsList: '/initiative-agreements/list',
+  getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
   getInitiativeAgreement: '/initiative-agreements/:initiativeAgreementId/profile',
 
   // fuel-type

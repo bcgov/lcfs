@@ -10,7 +10,8 @@ import type { PaginationParams, QueryOptions } from './types'
 
 const QUERY_KEYS = {
   list: (pagination: any) => ['initiative-agreements', pagination],
-  detail: (id: any) => ['initiative-agreements', 'detail', String(id)]
+  detail: (id: any) => ['initiative-agreements', 'detail', String(id)],
+  statuses: ['initiative-agreement-statuses']
 }
 
 export const useGetInitiativeAgreements = (
@@ -40,6 +41,7 @@ export const useGetInitiativeAgreement = (
 ) => {
   const client = useApiService()
   return useQuery({
+    enabled: !!initiativeAgreementId,
     queryKey: QUERY_KEYS.detail(initiativeAgreementId),
     queryFn: async () =>
       (
@@ -51,6 +53,21 @@ export const useGetInitiativeAgreement = (
         )
       ).data,
     staleTime: 60 * 1000,
+    ...options
+  })
+}
+
+/** Lifecycle statuses for the index grid's status filter. */
+export const useInitiativeAgreementStatuses = (
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: QUERY_KEYS.statuses,
+    queryFn: async () =>
+      (await client.get(apiRoutes.getInitiativeAgreementStatuses)).data,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     ...options
   })
 }

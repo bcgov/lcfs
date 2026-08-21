@@ -32,7 +32,9 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 const mockUseGetInitiativeAgreements = vi.fn()
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useGetInitiativeAgreements: (...args) =>
-    mockUseGetInitiativeAgreements(...args)
+    mockUseGetInitiativeAgreements(...args),
+  // Consumed by the status column's select filter.
+  useInitiativeAgreementStatuses: () => ({ data: [], isLoading: false })
 }))
 
 const mockBCGridViewer = vi.fn()

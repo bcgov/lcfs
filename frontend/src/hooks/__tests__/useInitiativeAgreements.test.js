@@ -4,7 +4,8 @@ import { useApiService } from '@/services/useApiService'
 import { wrapper } from '@/tests/utils/wrapper'
 import {
   useGetInitiativeAgreement,
-  useGetInitiativeAgreements
+  useGetInitiativeAgreements,
+  useInitiativeAgreementStatuses
 } from '../useInitiativeAgreements'
 
 vi.mock('@/services/useApiService')
@@ -66,5 +67,25 @@ describe('useInitiativeAgreements hooks', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toEqual(data)
     expect(mockGet).toHaveBeenCalledWith('/initiative-agreements/5/profile')
+  })
+
+  it('statuses hook GETs the lifecycle statuses', async () => {
+    const data = [{ status: 'Underway' }]
+    mockGet.mockResolvedValue({ data })
+
+    const { result } = renderHook(() => useInitiativeAgreementStatuses(), {
+      wrapper
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(mockGet).toHaveBeenCalledWith('/initiative-agreements/statuses')
+  })
+
+  it('detail hook does not fire without an id', () => {
+    const { result } = renderHook(() => useGetInitiativeAgreement(undefined), {
+      wrapper
+    })
+    expect(result.current.fetchStatus).toBe('idle')
+    expect(mockGet).not.toHaveBeenCalled()
   })
 })

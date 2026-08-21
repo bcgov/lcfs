@@ -2,7 +2,11 @@
 import type { ColDef } from '@ag-grid-community/core'
 import BCBox from '@/components/BCBox'
 import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
-import { BCDateFloatingFilter } from '@/components/BCDataGrid/components'
+import {
+  BCDateFloatingFilter,
+  BCSelectFloatingFilter
+} from '@/components/BCDataGrid/components'
+import { useInitiativeAgreementStatuses } from '@/hooks/useInitiativeAgreements'
 import { dateFormatter } from '@/utils/formatters'
 import { createStatusRenderer } from '@/utils/grid/cellRenderers'
 
@@ -19,7 +23,7 @@ export const InitiativeAgreementStatusRenderer = createStatusRenderer(
     Completed: 'primary',
     Terminated: 'warning'
   },
-  { statusField: 'currentStatus.status' }
+  { statusField: 'lifecycleStatus.status' }
 )
 
 const COMMENT_CHIP_SX = {
@@ -90,15 +94,19 @@ const dateCol = (field, headerName) => ({
 
 export const initiativeAgreementColDefs = (t): ColDef[] => [
   {
-    field: 'currentStatus.status',
+    field: 'lifecycleStatus.status',
     headerName: t('initiativeAgreement:columns.status'),
     cellRenderer: InitiativeAgreementStatusRenderer,
-    valueGetter: (params) => params.data?.currentStatus?.status,
+    valueGetter: (params) => params.data?.lifecycleStatus?.status,
     minWidth: 140,
-    filter: 'agTextColumnFilter',
-    filterParams: TEXT_FILTER_PARAMS
-    // TODO(#4833): swap to BCSelectFloatingFilter once the statuses
-    // endpoint exists
+    sortable: false,
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'status',
+      labelKey: 'status',
+      optionsQuery: useInitiativeAgreementStatuses
+    },
+    suppressFloatingFilterButton: true
   },
   {
     field: 'organization.name',
