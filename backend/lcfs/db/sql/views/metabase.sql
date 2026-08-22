@@ -510,8 +510,7 @@ matched_rows AS (
                 PARTITION BY
                     v.organization_id,
                     v.compliance_report_group_uuid,
-                    v.charging_equipment_id,
-                    v.charging_equipment_version
+                    ce.group_uuid
                 ORDER BY
                     CASE
                         WHEN v.is_active IS TRUE THEN 0
@@ -531,14 +530,14 @@ SELECT
     rc.organization_id,
     rc.compliance_report_id,
     rc.compliance_report_group_uuid,
-    COALESCE(mr.charging_equipment_id, fr.charging_equipment_id) AS charging_equipment_id,
-    COALESCE(mr.serial_number, fr.serial_number) AS serial_number,
-    COALESCE(mr.manufacturer, fr.manufacturer) AS manufacturer,
-    COALESCE(mr.model, fr.model) AS model,
-    COALESCE(mr.registration_number, fr.registration_number) AS registration_number,
-    COALESCE(mr.site_name, fr.site_name) AS site_name,
-    COALESCE(mr.charging_site_id, fr.charging_site_id) AS charging_site_id,
-    COALESCE(mr.equipment_notes, fr.equipment_notes) AS equipment_notes,
+    fr.charging_equipment_id,
+    fr.serial_number,
+    fr.manufacturer,
+    fr.model,
+    fr.registration_number,
+    fr.site_name,
+    fr.charging_site_id,
+    fr.equipment_notes,
     mr.supply_from_date,
     mr.supply_to_date,
     mr.kwh_usage,
@@ -547,32 +546,35 @@ SELECT
     mr.is_active,
     mr.version,
     mr.action_type,
-    COALESCE(mr.charging_equipment_version, fr.charging_equipment_version) AS charging_equipment_version,
-    COALESCE(mr.street_address, fr.street_address) AS street_address,
-    COALESCE(mr.city, fr.city) AS city,
-    COALESCE(mr.postal_code, fr.postal_code) AS postal_code,
-    COALESCE(mr.latitude, fr.latitude) AS latitude,
-    COALESCE(mr.longitude, fr.longitude) AS longitude,
-    COALESCE(mr.level_of_equipment, fr.level_of_equipment) AS level_of_equipment,
-    COALESCE(mr.level_of_equipment_id, fr.level_of_equipment_id) AS level_of_equipment_id,
-    COALESCE(mr.ports, fr.ports) AS ports,
-    COALESCE(mr.allocating_organization_name, fr.allocating_organization_name) AS allocating_organization_name,
-    COALESCE(mr.intended_uses, fr.intended_uses) AS intended_uses,
-    COALESCE(mr.intended_users, fr.intended_users) AS intended_users,
-    COALESCE(mr.power_output, fr.power_output) AS power_output,
-    COALESCE(
-        mr.capacity_utilization_percent,
-        fr.capacity_utilization_percent
-    ) AS capacity_utilization_percent,
-    COALESCE(mr.charging_equipment_status, fr.charging_equipment_status) AS charging_equipment_status
+    fr.charging_equipment_version,
+    fr.street_address,
+    fr.city,
+    fr.postal_code,
+    fr.latitude,
+    fr.longitude,
+    fr.level_of_equipment,
+    fr.level_of_equipment_id,
+    fr.ports,
+    fr.allocating_organization_name,
+    fr.intended_uses,
+    fr.intended_users,
+    fr.power_output,
+    CASE
+        WHEN mr.kwh_usage IS NULL OR mr.supply_from_date IS NULL OR mr.supply_to_date IS NULL
+             OR fr.power_output IS NULL
+             OR fr.power_output <= 0
+             OR mr.supply_to_date::date < mr.supply_from_date::date
+        THEN NULL
+        ELSE ROUND((mr.kwh_usage::numeric / (fr.power_output::numeric * 24 * ((mr.supply_to_date::date - mr.supply_from_date::date) + 1))) * 100)::integer
+    END AS capacity_utilization_percent,
+    fr.charging_equipment_status
 FROM report_context rc
 JOIN fallback_rows fr
     ON fr.organization_id = rc.organization_id
 LEFT JOIN matched_rows mr
     ON mr.organization_id = rc.organization_id
    AND mr.compliance_report_group_uuid = rc.compliance_report_group_uuid
-   AND mr.charging_equipment_id = fr.charging_equipment_id
-   AND mr.charging_equipment_version = fr.charging_equipment_version;
+   AND mr.charging_equipment_group_uuid = fr.charging_equipment_group_uuid;
 
 -- ==========================================
 -- Notional Transfer Base View

@@ -208,9 +208,14 @@ class TransactionsService:
         export_format: str,
         pagination: PaginationRequestSchema | None = None,
         organization_id: int | None = None,
+        is_government: bool = False,
     ) -> StreamingResponse:
         """
         Prepares a list of transactions in a file that is downloadable
+
+        ``is_government`` selects how ``organization_id`` is applied: government
+        callers scope by organisation but keep government visibility, whereas
+        suppliers get the role-based visibility rules in the repository.
         """
         if not export_format in ["xls", "xlsx", "csv"]:
             raise DataNotFoundException("Export format not supported")
@@ -233,12 +238,28 @@ class TransactionsService:
         if pagination.filters:
             self.apply_transaction_filters(pagination, conditions)
 
+        # Scope a government caller's export the same way the grid does: an
+        # explicit organisation filter, with organization_id left off the repo
+        # call so the government visibility branch still applies. Passing it
+        # through would instead apply the supplier rules, which restrict
+        # non-transfer rows to Approved/Assessed and so drop the legacy
+        # ("Recorded") transactions the analyst can see on screen (#4809).
+        repo_organization_id = organization_id
+        if organization_id and is_government:
+            conditions.append(
+                or_(
+                    TransactionView.from_organization_id == organization_id,
+                    TransactionView.to_organization_id == organization_id,
+                )
+            )
+            repo_organization_id = None
+
         results = await self.repo.get_transactions_paginated(
             0,
             None,
             conditions,
             [SortOrder(field="update_date", direction="desc")],
-            organization_id,
+            repo_organization_id,
         )
 
         # Prepare data for the spreadsheet

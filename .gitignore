@@ -143,6 +143,7 @@ LCFS Local DB.session.sql
 frontend/cucumber-report.html
 
 # AI Assistant Files
+.codex/
 CLAUDE.md
 AGENTS.md
 .cursorrules

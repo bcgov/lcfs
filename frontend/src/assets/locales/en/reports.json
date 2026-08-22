@@ -51,6 +51,8 @@
   "supplementalCreated": "Supplemental report created successfully.",
   "analystAdjustmentCreated": "Analyst adjustment created successfully.",
   "clickDrag": "Drag and drop your (PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, XLSX, CSV, TXT) file(s) here or click to select the file(s) from your machine to upload.",
+  "deleteDocumentConfirmTitle": "Delete document?",
+  "deleteDocumentConfirmText": "Are you sure you want to delete {{fileName}}?",
   "activityLinksList": "Click links to report activities",
   "activitySecondList": "Verification details",
   "activityLists": {

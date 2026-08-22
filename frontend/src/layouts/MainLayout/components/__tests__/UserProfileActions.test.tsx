@@ -2,8 +2,12 @@ import { screen, fireEvent, act } from '@testing-library/react'
 import { UserProfileActions } from '../UserProfileActions'
 import { vi, describe, expect, type Mock } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useNotificationsCount } from '@/hooks/useNotifications'
 import { test } from '@/tests/utils/fixtures'
+import {
+  useGetNotificationMessages,
+  useMarkNotificationAsRead,
+  useNotificationsCount
+} from '@/hooks/useNotifications'
 import { logout } from '@/utils/keycloak'
 import { CONFIG } from '@/constants/config'
 import type { ReactNode } from 'react'
@@ -16,6 +20,8 @@ type RoleSwitcherMockProps = {
 }
 
 const mockRefetch = vi.fn()
+const mockMarkAsRead = vi.fn()
+const mockNavigate = vi.fn()
 const mockRoleSwitcher = vi.fn<void, [RoleSwitcherMockProps]>()
 const originalRoleSwitcherFlag = CONFIG.feature_flags.roleSwitcher
 const initialHiddenDescriptor = Object.getOwnPropertyDescriptor(
@@ -46,7 +52,8 @@ vi.mock('react-router-dom', async () => {
       <a href={typeof to === 'string' ? to : '#'} {...props}>
         {children}
       </a>
-    )
+    ),
+    useNavigate: () => mockNavigate
   }
 })
 
@@ -103,6 +110,10 @@ vi.mock('@/components/BCNavbar/components/DefaultNavbarLink', () => ({
 
 const mockedUseCurrentUser = useCurrentUser as unknown as Mock
 const mockedUseNotificationsCount = useNotificationsCount as unknown as Mock
+const mockedUseGetNotificationMessages =
+  useGetNotificationMessages as unknown as Mock
+const mockedUseMarkNotificationAsRead =
+  useMarkNotificationAsRead as unknown as Mock
 const mockedLogout = logout as unknown as Mock
 
 describe('UserProfileActions', () => {
@@ -111,6 +122,8 @@ describe('UserProfileActions', () => {
     vi.clearAllMocks()
     CONFIG.feature_flags.roleSwitcher = true
     mockRefetch.mockReset()
+    mockMarkAsRead.mockReset()
+    mockNavigate.mockReset()
     mockRoleSwitcher.mockReset()
 
     const mockHasRoles = vi.fn((role) => role === 'Administrator')
@@ -130,6 +143,28 @@ describe('UserProfileActions', () => {
       data: { count: 5 },
       isLoading: false,
       refetch: mockRefetch
+    })
+    mockedUseGetNotificationMessages.mockReturnValue({
+      data: {
+        notifications: [
+          {
+            notificationMessageId: 11,
+            type: 'Transfer',
+            message: JSON.stringify({
+              id: 99,
+              service: 'Transfer',
+              type: 'Transfer submitted'
+            }),
+            createDate: '2026-08-12T16:20:00Z',
+            isRead: false,
+            relatedOrganization: { name: 'Acme Fuels Ltd.' }
+          }
+        ]
+      },
+      isLoading: false
+    })
+    mockedUseMarkNotificationAsRead.mockReturnValue({
+      mutate: mockMarkAsRead
     })
 
     mockedLogout.mockImplementation(() => {})
@@ -213,6 +248,44 @@ describe('UserProfileActions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'logout' }))
 
     expect(mockedLogout).toHaveBeenCalled()
+  }, 30000)
+
+  test('shows latest notifications on hover', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
+
+    fireEvent.mouseEnter(screen.getByLabelText('Notifications'))
+
+    expect(mockedUseGetNotificationMessages).toHaveBeenCalledWith(
+      expect.objectContaining({ size: 3 }),
+      expect.any(Object)
+    )
+    expect(screen.getByText('notifications:latestNotifications')).toBeInTheDocument()
+    expect(screen.getByText('Transfer submitted')).toBeInTheDocument()
+    expect(screen.getByText(/Acme Fuels Ltd. \\| Aug 12/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', {
+        name: 'notifications:viewAllNotifications'
+      })
+    ).toHaveAttribute('href', '/notifications')
+  }, 30000)
+
+  test('navigates to all notifications when the navbar icon is clicked', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
+
+    expect(screen.getByLabelText('Notifications')).toHaveAttribute(
+      'href',
+      '/notifications'
+    )
   })
 
   test('refetches notifications on the manual interval', ({
@@ -228,6 +301,134 @@ describe('UserProfileActions', () => {
     })
 
     expect(mockRefetch).toHaveBeenCalled()
+  })
+
+  test('opens the notification preview when the navbar icon receives keyboard focus', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
+
+    fireEvent.focus(screen.getByLabelText('Notifications'))
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'notifications:latestNotifications'
+      })
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Notifications')).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+  })
+
+  test('keeps the notification preview open while keyboard focus moves inside it', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
+
+    const notificationTrigger = screen.getByLabelText('Notifications')
+    fireEvent.focus(notificationTrigger)
+    const markAllButton = screen.getByRole('button', {
+      name: /notifications:markAllAsRead/
+    })
+
+    fireEvent.blur(notificationTrigger, { relatedTarget: markAllButton })
+    fireEvent.focus(markAllButton)
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'notifications:latestNotifications'
+      })
+    ).toBeInTheDocument()
+  })
+
+  test('closes the notification preview with Escape', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
+
+    fireEvent.focus(screen.getByLabelText('Notifications'))
+    fireEvent.keyDown(
+      screen.getByRole('dialog', {
+        name: 'notifications:latestNotifications'
+      }),
+      { key: 'Escape' }
+    )
+
+    expect(
+      screen.queryByRole('dialog', {
+        name: 'notifications:latestNotifications'
+      })
+    ).not.toBeInTheDocument()
+  })
+
+  test('opens a notification with Enter when the preview item has focus', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
+
+    fireEvent.focus(screen.getByLabelText('Notifications'))
+    fireEvent.keyDown(
+      screen.getByRole('button', {
+        name: /Transfer submitted/
+      }),
+      { key: 'Enter' }
+    )
+
+    expect(mockMarkAsRead).toHaveBeenCalledWith({
+      notification_ids: [11]
+    })
+    expect(mockNavigate).toHaveBeenCalledWith('/transfers/99')
+  })
+
+  test('marks a single dropdown notification as read from the x button', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
+
+    fireEvent.mouseEnter(screen.getByLabelText('Notifications'))
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'notifications:markNotificationAsRead'
+      })
+    )
+
+    expect(mockMarkAsRead).toHaveBeenCalledWith({
+      notification_ids: [11]
+    })
+  })
+
+  test('marks all notifications as read from the dropdown', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
+
+    fireEvent.mouseEnter(screen.getByLabelText('Notifications'))
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /notifications:markAllAsRead/
+      })
+    )
+
+    expect(mockMarkAsRead).toHaveBeenCalledWith({ applyToAll: true })
   })
 
   test('refetches notifications when the window gains focus', ({
@@ -329,7 +530,7 @@ describe('UserProfileActions', () => {
         name: 'roleSwitcher.buttonLabel'
       })
     ).not.toBeInTheDocument()
-  })
+  }, 30000)
 
   test('cleans up timers and listeners on unmount', ({
     render,

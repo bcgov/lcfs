@@ -2,6 +2,7 @@
 import { ColDef } from '@ag-grid-community/core'
 import { TFunction } from 'i18next'
 import { Link } from 'react-router-dom'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components'
 import { fuelCodeColDefs as idirFuelCodeColDefs } from '@/views/FuelCodes/_schema'
 import { ROUTES, buildPath } from '@/routes/routes'
 import BCBadge from '@/components/BCBadge'
@@ -37,6 +38,55 @@ export const dateSortComparator = (a: string, b: string): number => {
   const right = b ? new Date(b).getTime() : -Infinity
   return left - right
 }
+
+const parseDateOnly = (value: string | Date | null | undefined): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly
+    return new Date(Number(year), Number(month) - 1, Number(day))
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const dateFilterComparator = (
+  filterLocalDateAtMidnight: Date,
+  cellValue: string | null | undefined
+): number => {
+  const cellDate = parseDateOnly(cellValue)
+  if (!cellDate) return -1
+  const normalizedCellDate = new Date(
+    cellDate.getFullYear(),
+    cellDate.getMonth(),
+    cellDate.getDate()
+  )
+  if (normalizedCellDate < filterLocalDateAtMidnight) return -1
+  if (normalizedCellDate > filterLocalDateAtMidnight) return 1
+  return 0
+}
+
+const dateFilterParams = {
+  filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+  defaultOption: 'equals',
+  suppressAndOrCondition: true,
+  comparator: dateFilterComparator
+}
+
+const dateFloatingFilterParams = {
+  initialFilterType: 'equals',
+  label: 'YYYY-MM-DD'
+}
+
+const idirDateFields = new Set([
+  'applicationDate',
+  'approvalDate',
+  'effectiveDate',
+  'expirationDate'
+])
 
 const fuelCodeDetailPath = (fuelCodeId: unknown): string | null => {
   const id = Number(fuelCodeId)
@@ -102,6 +152,15 @@ const FuelCodeStatusBadge = (params: any) => {
 const clickableFuelCodeColDefs = (colDefs: ColDef[]): ColDef[] =>
   colDefs.map((colDef) => ({
     ...colDef,
+    ...(idirDateFields.has(String(colDef.field))
+      ? {
+          filter: 'agDateColumnFilter',
+          floatingFilterComponent: BCDateFloatingFilter,
+          floatingFilterComponentParams: dateFloatingFilterParams,
+          filterParams: dateFilterParams,
+          suppressFloatingFilterButton: true
+        }
+      : {}),
     cellRenderer: linkCellRenderer(
       colDef.field === 'status' ? FuelCodeStatusBadge : colDef.cellRenderer
     ),
@@ -148,7 +207,11 @@ export const buildColumnDefs = (t: TFunction, isIdir = false): ColDef[] => {
     {
       headerName: t('columns.effectiveDate'),
       field: 'effectiveDate',
-      filter: false,
+      filter: 'agDateColumnFilter',
+      floatingFilterComponent: BCDateFloatingFilter,
+      floatingFilterComponentParams: dateFloatingFilterParams,
+      filterParams: dateFilterParams,
+      suppressFloatingFilterButton: true,
       sortable: true,
       minWidth: 180,
       comparator: dateSortComparator,
@@ -157,7 +220,11 @@ export const buildColumnDefs = (t: TFunction, isIdir = false): ColDef[] => {
     {
       headerName: t('columns.expiryDate'),
       field: 'expiryDate',
-      filter: false,
+      filter: 'agDateColumnFilter',
+      floatingFilterComponent: BCDateFloatingFilter,
+      floatingFilterComponentParams: dateFloatingFilterParams,
+      filterParams: dateFilterParams,
+      suppressFloatingFilterButton: true,
       sortable: true,
       minWidth: 180,
       comparator: dateSortComparator,

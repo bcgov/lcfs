@@ -192,4 +192,10 @@ CI_APPLICATION_NOTIFICATION_MAPPER = {
     "applicant_activity": [
         NotificationTypeEnum.IDIR_ANALYST__CI_APPLICATION__APPLICANT_ACTIVITY,
     ],
+    "government_action": [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION,
+    ],
+    "fuel_code_approved": [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__FUEL_CODE_APPROVED,
+    ],
 }

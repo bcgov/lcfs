@@ -66,6 +66,7 @@ vi.mock('@/constants/roles', () => ({
     transfers: 'transfers',
     supplier: 'supplier',
     analyst: 'analyst',
+    director: 'director',
     signing_authority: 'signing_authority'
   },
   govRoles: ['analyst']
@@ -151,7 +152,12 @@ vi.mock('@/views/Transfers/components', () => ({
   TransferGraphic: () => (
     <div data-test="transfer-graphic">TransferGraphic</div>
   ),
-  TransferView: () => <div data-test="transfer-view">TransferView</div>
+  TransferView: ({ categoryOverride }) => (
+    <div data-test="transfer-view">
+      TransferView
+      {categoryOverride}
+    </div>
+  )
 }))
 
 vi.mock('../components/CategoryCheckbox', () => ({
@@ -343,6 +349,60 @@ describe('AddEditViewTransfer', () => {
 
     renderComponent()
     expect(screen.getByTestId('recommendation')).toBeInTheDocument()
+  })
+
+  it.each([
+    {
+      description: 'allows analysts on submitted transfers',
+      role: 'analyst',
+      status: TRANSFER_STATUSES.SUBMITTED,
+      expected: true
+    },
+    {
+      description: 'does not allow analysts after recommendation',
+      role: 'analyst',
+      status: TRANSFER_STATUSES.RECOMMENDED,
+      expected: false
+    },
+    {
+      description: 'does not allow analysts on recorded transfers',
+      role: 'analyst',
+      status: TRANSFER_STATUSES.RECORDED,
+      expected: false
+    },
+    {
+      description: 'continues to allow directors on recorded transfers',
+      role: 'director',
+      status: TRANSFER_STATUSES.RECORDED,
+      expected: true
+    }
+  ])('$description', ({ role, status, expected }) => {
+    useCurrentUser.mockReturnValue({
+      data: {
+        organization: { organizationId: 1 },
+        isGovernmentUser: true
+      },
+      hasRoles: vi.fn((requestedRole) => requestedRole === role),
+      hasAnyRole: vi.fn().mockReturnValue(true)
+    })
+    useTransfer.mockReturnValue({
+      data: {
+        transferHistory: [],
+        currentStatus: { status }
+      },
+      isLoading: false,
+      isFetched: true,
+      isLoadingError: false
+    })
+
+    renderComponent()
+
+    const categoryOverride = screen.queryByTestId('category-checkbox')
+    if (expected) {
+      expect(categoryOverride).toBeInTheDocument()
+    } else {
+      expect(categoryOverride).not.toBeInTheDocument()
+    }
   })
 
   it('renders modal component', () => {

@@ -37,6 +37,8 @@ TEMPLATE_MAPPING = {
     "IDIR_ANALYST__CI_APPLICATION__DIRECTOR_APPROVAL": "ci_application_notification.html",
     "IDIR_ANALYST__CI_APPLICATION__DIRECTOR_RETURNED": "ci_application_notification.html",
     "IDIR_ANALYST__CI_APPLICATION__APPLICANT_ACTIVITY": "ci_application_notification.html",
+    "BCEID__CI_APPLICATION__GOVERNMENT_ACTION": "ci_application_notification.html",
+    "BCEID__CI_APPLICATION__FUEL_CODE_APPROVED": "ci_application_notification.html",
     "BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE": "bceid__credit_market__credits_listed_for_sale.html",
     "IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION": "idir_analyst__fuel_code__expiry_notification.html",
     "BCEID__GOVERNMENT_NOTIFICATION": "government_notification.html",

@@ -16,18 +16,32 @@ _TYPES = [
     (
         "IDIR_ANALYST__CI_APPLICATION__DIRECTOR_APPROVAL",
         "Director approved CI application",
+        4,
     ),
     (
         "IDIR_ANALYST__CI_APPLICATION__DIRECTOR_RETURNED",
         "Director returned CI application to analyst",
+        4,
     ),
     (
         "IDIR_ANALYST__CI_APPLICATION__APPLICANT_ACTIVITY",
         "CI application submitted, additional information provided or comment received by BCeID applicant",
+        4,
     ),
     (
         "IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION",
         "Analyst recommendation provided for the CI application",
+        6,
+    ),
+    (
+        "BCEID__CI_APPLICATION__GOVERNMENT_ACTION",
+        "Government requested CI application changes or entered a public comment",
+        12,
+    ),
+    (
+        "BCEID__CI_APPLICATION__FUEL_CODE_APPROVED",
+        "Fuel codes approved for the CI application",
+        12,
     ),
 ]
 
@@ -42,11 +56,11 @@ def upgrade() -> None:
         );
         """
     )
-    for name, description in _TYPES:
+    for name, description, role_id in _TYPES:
         op.execute(
             f"""
             INSERT INTO notification_type (name, description, email_content, role_id, create_user, update_user)
-            SELECT '{name}', '{description}', 'Email content', 4, 'system', 'system'
+            SELECT '{name}', '{description}', 'Email content', {role_id}, 'system', 'system'
             WHERE NOT EXISTS (
                 SELECT 1 FROM notification_type WHERE name = '{name}'
             );
@@ -55,7 +69,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    names = ", ".join(f"'{name}'" for name, _ in _TYPES)
+    names = ", ".join(f"'{name}'" for name, _, _ in _TYPES)
     op.execute(
         f"""
         DELETE FROM notification_channel_subscription
@@ -63,7 +77,11 @@ def downgrade() -> None:
             SELECT notification_type_id FROM notification_type
             WHERE name IN ({names})
         );
+        """
+    )
 
+    op.execute(
+        f"""
         DELETE FROM notification_type
         WHERE name IN ({names});
         """

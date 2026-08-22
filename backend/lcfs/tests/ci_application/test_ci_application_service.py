@@ -18,6 +18,7 @@ from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import NotificationTypeEnum, PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
+    CIApplicationRiskAssessmentDraftSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationStatusEnum,
@@ -45,7 +46,11 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 
 @pytest.mark.parametrize(
     "schema",
-    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+    [
+        CIApplicationVerification1Schema,
+        CIApplicationVerification2Schema,
+        CIApplicationRiskAssessmentDraftSchema,
+    ],
 )
 def test_verification_priority_score_requires_whole_number_1_to_999(schema):
     payload = {"priorityScore": 120}
@@ -59,7 +64,11 @@ def test_verification_priority_score_requires_whole_number_1_to_999(schema):
 
 @pytest.mark.parametrize(
     "schema",
-    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+    [
+        CIApplicationVerification1Schema,
+        CIApplicationVerification2Schema,
+        CIApplicationRiskAssessmentDraftSchema,
+    ],
 )
 @pytest.mark.parametrize("payload", [{}, {"priorityScore": None}])
 def test_verification_priority_score_schema_allows_null_when_not_completing_status(
@@ -80,7 +89,11 @@ def test_verification_priority_score_schema_allows_null_when_not_completing_stat
 )
 @pytest.mark.parametrize(
     "schema",
-    [CIApplicationVerification1Schema, CIApplicationVerification2Schema],
+    [
+        CIApplicationVerification1Schema,
+        CIApplicationVerification2Schema,
+        CIApplicationRiskAssessmentDraftSchema,
+    ],
 )
 def test_verification_priority_score_rejects_decimal_and_out_of_range(
     schema, priority_score
@@ -137,6 +150,10 @@ async def test_complete_verification_2_allowed_for_medium_and_high(
     ci.preliminary_risk_assessment = risk
     ci.priority_score = 10
     ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+    ci.assigned_analyst_id = 44
+    ci.assigned_analyst = SimpleNamespace(
+        user_profile_id=44, first_name="Alex", last_name="Analyst"
+    )
     repo.update.side_effect = lambda obj: obj
     repo.get_by_id.return_value = ci
 
@@ -148,6 +165,11 @@ async def test_complete_verification_2_allowed_for_medium_and_high(
     assert ci.verification_2_date is not None
     assert ci.verification_2_risk_assessment == risk
     assert ci.verification_2_priority_score == 25
+    assert ci.assigned_analyst_id is None
+    snapshot = repo.add_history.await_args.kwargs["snapshot"]
+    assert snapshot["event"] == "analyst_unassigned"
+    assert snapshot["previous_analyst"]["full_name"] == "Alex Analyst"
+    assert snapshot["new_analyst"] is None
 
 
 @pytest.mark.anyio
@@ -181,6 +203,107 @@ async def test_complete_verification_2_requires_verification_1_for_medium(
 
     assert exc.value.status_code == 400
     assert "Verification 1 must be completed first" in exc.value.detail
+
+
+def _risk_assessment_draft_payload(**overrides):
+    data = dict(
+        preliminary_risk_assessment=CIRiskAssessmentEnum.Low,
+        priority_score=42,
+    )
+    data.update(overrides)
+    return CIApplicationRiskAssessmentDraftSchema(**data)
+
+
+@pytest.mark.anyio
+async def test_update_risk_assessment_draft_writes_verification_1_fields(
+    service, repo, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    result = await service.update_risk_assessment_draft(
+        ci, _risk_assessment_draft_payload(), mock_user
+    )
+
+    assert ci.preliminary_risk_assessment == CIRiskAssessmentEnum.Low.value
+    assert ci.priority_score == 42
+    assert ci.verification_2_risk_assessment is None
+    assert ci.verification_2_priority_score is None
+    repo.add_history.assert_not_awaited()
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_update_risk_assessment_draft_writes_verification_2_fields(
+    service, repo, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.Medium.value
+    ci.priority_score = 10
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    await service.update_risk_assessment_draft(
+        ci,
+        _risk_assessment_draft_payload(
+            preliminary_risk_assessment=CIRiskAssessmentEnum.High,
+            priority_score=88,
+        ),
+        mock_user,
+    )
+
+    assert ci.preliminary_risk_assessment == CIRiskAssessmentEnum.Medium.value
+    assert ci.priority_score == 10
+    assert ci.verification_2_risk_assessment == CIRiskAssessmentEnum.High.value
+    assert ci.verification_2_priority_score == 88
+    repo.add_history.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_update_risk_assessment_draft_rejects_after_verification_2(
+    service, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.High.value
+    ci.priority_score = 10
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+    ci.verification_2_date = datetime(2026, 5, 3, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_risk_assessment_draft(
+            ci, _risk_assessment_draft_payload(), mock_user
+        )
+
+    assert exc.value.status_code == 400
+    assert "after verification is complete" in exc.value.detail
+    assert ci.preliminary_risk_assessment == CIRiskAssessmentEnum.High.value
+    assert ci.priority_score == 10
+
+
+@pytest.mark.anyio
+async def test_update_risk_assessment_draft_rejects_after_verification_1_when_v2_not_required(
+    service, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = CIRiskAssessmentEnum.Low.value
+    ci.priority_score = 10
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_risk_assessment_draft(
+            ci,
+            _risk_assessment_draft_payload(
+                preliminary_risk_assessment=CIRiskAssessmentEnum.Medium,
+                priority_score=99,
+            ),
+            mock_user,
+        )
+
+    assert exc.value.status_code == 400
+    assert ci.preliminary_risk_assessment == CIRiskAssessmentEnum.Low.value
+    assert ci.priority_score == 10
 
 
 @pytest.fixture
@@ -300,6 +423,13 @@ def _ci_application(
         group_uuid="abc",
         version=0,
         action_type=ActionTypeEnum.CREATE,
+        preliminary_risk_assessment=None,
+        priority_score=None,
+        verification_1_date=None,
+        verification_2_date=None,
+        verification_2_risk_assessment=None,
+        verification_2_priority_score=None,
+        recommendation_date=None,
     )
 
 
@@ -551,6 +681,153 @@ async def test_assign_analyst_rejects_withdrawn_application(service, repo, mock_
     repo.update.assert_not_awaited()
 
 
+def _analyst(user_profile_id: int, first_name: str, last_name: str):
+    return SimpleNamespace(
+        user_profile_id=user_profile_id,
+        first_name=first_name,
+        last_name=last_name,
+        organization_id=None,
+        is_active=True,
+        user_roles=[SimpleNamespace(role=SimpleNamespace(name=RoleEnum.ANALYST))],
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("previous", "new", "expected_event"),
+    [
+        (None, _analyst(12, "Alex", "Analyst"), "analyst_assigned"),
+        (
+            _analyst(12, "Alex", "Analyst"),
+            _analyst(13, "Sam", "Reviewer"),
+            "analyst_reassigned",
+        ),
+        (_analyst(12, "Alex", "Analyst"), None, "analyst_unassigned"),
+    ],
+)
+async def test_assign_analyst_records_assignment_history(
+    service, repo, mock_user, previous, new, expected_event
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = previous.user_profile_id if previous else None
+    ci.assigned_analyst = previous
+    ci.history_records = []
+    mock_user.first_name = "Casey"
+    mock_user.last_name = "Reviewer"
+    mock_user.role_names = {RoleEnum.GOVERNMENT}
+    if new:
+        repo.get_user_by_id.return_value = new
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    result = await service.assign_analyst_to_application(
+        ci, new.user_profile_id if new else None, mock_user
+    )
+
+    assert isinstance(result, CIApplicationSchema)
+    snapshot = repo.add_history.await_args.kwargs["snapshot"]
+    assert snapshot["event"] == expected_event
+    assert snapshot["changed_by"] == "Casey Reviewer"
+    assert snapshot["changed_at"]
+    assert snapshot["previous_analyst"] == (
+        None
+        if previous is None
+        else {
+            "user_profile_id": previous.user_profile_id,
+            "first_name": previous.first_name,
+            "last_name": previous.last_name,
+            "initials": "AA",
+            "full_name": "Alex Analyst",
+        }
+    )
+    assert snapshot["new_analyst"] == (
+        None
+        if new is None
+        else {
+            "user_profile_id": new.user_profile_id,
+            "first_name": new.first_name,
+            "last_name": new.last_name,
+            "initials": "AA" if new.user_profile_id == 12 else "SR",
+            "full_name": (
+                "Alex Analyst" if new.user_profile_id == 12 else "Sam Reviewer"
+            ),
+        }
+    )
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_noop_does_not_create_history(service, repo, mock_user):
+    analyst = _analyst(12, "Alex", "Analyst")
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = analyst.user_profile_id
+    ci.assigned_analyst = analyst
+
+    await service.assign_analyst_to_application(ci, analyst.user_profile_id, mock_user)
+
+    repo.update.assert_not_awaited()
+    repo.add_history.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_rejects_inactive_idir_analyst(
+    service, repo, mock_user
+):
+    inactive_analyst = _analyst(12, "Alex", "Analyst")
+    inactive_analyst.is_active = False
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = None
+    ci.assigned_analyst = None
+    repo.get_user_by_id.return_value = inactive_analyst
+
+    with pytest.raises(HTTPException) as exc:
+        await service.assign_analyst_to_application(ci, 12, mock_user)
+
+    assert exc.value.status_code == 400
+    repo.update.assert_not_awaited()
+    repo.add_history.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_assignment_history_is_only_serialized_for_idir_users(service, repo):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.history_records = [
+        SimpleNamespace(
+            ci_application_snapshot={
+                "event": "analyst_reassigned",
+                "previous_analyst": {
+                    "user_profile_id": 12,
+                    "first_name": "Alex",
+                    "last_name": "Analyst",
+                    "initials": "AA",
+                    "full_name": "Alex Analyst",
+                },
+                "new_analyst": {
+                    "user_profile_id": 13,
+                    "first_name": "Sam",
+                    "last_name": "Reviewer",
+                    "initials": "SR",
+                    "full_name": "Sam Reviewer",
+                },
+                "changed_at": "2026-08-19T18:45:00+00:00",
+                "changed_by": "Casey Reviewer",
+            }
+        )
+    ]
+    repo.get_by_id.return_value = ci
+    idir_user = SimpleNamespace(role_names={RoleEnum.GOVERNMENT})
+    supplier_user = SimpleNamespace(role_names={RoleEnum.CI_APPLICANT})
+
+    idir_result = await service.get_ci_application(10, idir_user)
+    supplier_result = await service.get_ci_application(10, supplier_user)
+
+    assert len(idir_result.assignment_history) == 1
+    assert (
+        idir_result.assignment_history[0].previous_analyst.full_name == "Alex Analyst"
+    )
+    assert idir_result.assignment_history[0].new_analyst.full_name == "Sam Reviewer"
+    assert supplier_result.assignment_history is None
+
+
 # ---------------------------------------------------------------------------
 # Create draft
 # ---------------------------------------------------------------------------
@@ -741,6 +1018,8 @@ def test_pathway_input_requires_operating_dates_for_operational_data():
             operating_data_from=None,
             operating_data_to=None,
         )
+
+
 def test_pathway_input_requires_mode_level_distances():
     with pytest.raises(ValidationError):
         _new_pathway_input(feedstock_transport_mode=["Truck"])
@@ -1956,7 +2235,7 @@ async def test_recommend_to_director_requires_workflow_role(service, repo, mock_
     [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
 )
 async def test_request_documentation_enables_upload_for_workflow_roles(
-    service, repo, mock_user, role
+    service, repo, notification_service, mock_user, role
 ):
     mock_user.role_names = {role}
     ci = _ci_application(status=_status("Submitted", 2))
@@ -1970,6 +2249,16 @@ async def test_request_documentation_enables_upload_for_workflow_roles(
     assert ci.document_changes_requested_at is not None
     assert ci.document_changes_requested_by == mock_user.keycloak_username
     repo.add_history.assert_awaited_once()
+    notification_service.send_notification.assert_awaited_once()
+    request = notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION
+    ]
+    assert request.notification_data.type == "CI Application Changes Requested"
+    assert request.notification_data.related_organization_id == ci.organization_id
+    assert request.notification_data.related_transaction_id == str(
+        ci.ci_application_id
+    )
     assert isinstance(result, CIApplicationSchema)
 
 
@@ -2095,6 +2384,24 @@ async def test_step5_completed_approves_generated_fuel_codes(service, repo, mock
     assert generated_fuel_code.fuel_status_id == 3
     assert generated_fuel_code.approval_date is not None
     assert generated_fuel_code.action_type == ActionTypeEnum.UPDATE
+    sent_requests = [
+        call.args[0]
+        for call in service.notification_service.send_notification.await_args_list
+    ]
+    fuel_code_approval_request = next(
+        request
+        for request in sent_requests
+        if request.notification_types
+        == [NotificationTypeEnum.BCEID__CI_APPLICATION__FUEL_CODE_APPROVED]
+    )
+    assert (
+        fuel_code_approval_request.notification_data.type
+        == "CI Application Fuel Codes Approved"
+    )
+    assert (
+        fuel_code_approval_request.notification_data.related_organization_id
+        == ci.organization_id
+    )
     assert isinstance(result, CIApplicationSchema)
 
 
@@ -2124,7 +2431,7 @@ async def test_step5_decision_can_return_recommended_to_submitted(
 
 @pytest.mark.anyio
 async def test_request_pathway_changes_clears_previous_government_review(
-    service, repo, mock_user
+    service, repo, notification_service, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _ci_application(status=_status("Submitted", 2))
@@ -2163,6 +2470,16 @@ async def test_request_pathway_changes_clears_previous_government_review(
     assert ci.pathway_supplemental_edit_enabled is True
     snapshot = repo.add_history.await_args.kwargs["snapshot"]
     assert snapshot["event"] == "pathway_changes_requested"
+    notification_service.send_notification.assert_awaited_once()
+    request = notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION
+    ]
+    assert request.notification_data.type == "CI Application Changes Requested"
+    assert request.notification_data.related_organization_id == ci.organization_id
+    assert request.notification_data.related_transaction_id == str(
+        ci.ci_application_id
+    )
     assert isinstance(result, CIApplicationSchema)
 
 

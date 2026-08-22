@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -348,6 +349,46 @@ export const useAssignCIApplicationAnalyst = (
       ).data
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+      updateCIApplicationListCaches(queryClient, data)
+    }
+  })
+}
+
+export const useUpdateCIApplicationRiskAssessment = (
+  ciApplicationId: number | string | undefined | null
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const inFlightRef = useRef(false)
+  const pendingPayloadRef = useRef<any>(null)
+  const url = apiRoutes.updateCIApplicationRiskAssessment.replace(
+    ':ciApplicationId',
+    String(ciApplicationId ?? '')
+  )
+
+  return useMutation({
+    mutationFn: async (payload: any) => {
+      // Keep only the latest payload so a slower earlier PUT cannot win the
+      // cache (or the DB) after a newer autosave has already been queued.
+      pendingPayloadRef.current = payload
+      if (inFlightRef.current) return undefined
+      inFlightRef.current = true
+      let data
+      try {
+        while (pendingPayloadRef.current) {
+          const next = pendingPayloadRef.current
+          pendingPayloadRef.current = null
+          data = (await client.put(url, next)).data
+        }
+      } finally {
+        inFlightRef.current = false
+      }
+      return data
+    },
+    onSuccess: (data) => {
+      if (!data?.ciApplicationId) return
       queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
       queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
       updateCIApplicationListCaches(queryClient, data)

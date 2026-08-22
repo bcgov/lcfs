@@ -12,12 +12,20 @@ import { DocumentsModellingStep } from '@/views/CarbonIntensity/components/Docum
 import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({
+    t: (key, options = {}) => {
+      if (key === 'carbonIntensity:step3.deleteDocumentConfirmText') {
+        return `Are you sure you want to delete ${options.fileName}?`
+      }
+      return key
+    }
+  })
 }))
 
 let mockDocs = []
 const mockUpload = vi.fn().mockResolvedValue({})
 const mockDelete = vi.fn().mockResolvedValue({})
+const mockUpdate = vi.fn().mockResolvedValue({})
 const mockDownloadDoc = vi.fn().mockResolvedValue({})
 
 vi.mock('@/hooks/useDocuments', () => ({
@@ -29,6 +37,9 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDeleteDocument: vi.fn(() => ({
     mutateAsync: mockDelete,
     isPending: false
+  })),
+  useUpdateDocument: vi.fn(() => ({
+    mutateAsync: mockUpdate
   })),
   useDownloadDocument: vi.fn(() => mockDownloadDoc)
 }))
@@ -176,6 +187,125 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1))
     expect(onSave.mock.calls[0][0].supportingDocumentOther).toBe('CCS notes')
   })
+
+  test('downloads a renamed document using its display name', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockDocs = [
+      {
+        documentId: 8,
+        fileName: 'tech.pdf',
+        displayName: 'My Renamed Report.pdf',
+        fileSize: 100,
+        documentCategory: 'supporting'
+      }
+    ]
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+    fireEvent.click(screen.getByTestId('ci-step3-download-doc'))
+    expect(mockDownloadDoc).toHaveBeenCalledWith(8, 'My Renamed Report.pdf')
+  })
+
+  test('shows a confirmation modal before deleting a document', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockDocs = [
+      {
+        documentId: 7,
+        fileName: 'tech.pdf',
+        fileSize: 100,
+        documentCategory: 'supporting'
+      }
+    ]
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+
+    fireEvent.click(screen.getByTestId('ci-step3-delete-doc'))
+
+    expect(
+      screen.getByText('carbonIntensity:step3.deleteDocumentConfirmTitle')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Are you sure you want to delete tech.pdf?')
+    ).toBeInTheDocument()
+    expect(mockDelete).not.toHaveBeenCalled()
+  })
+
+  test('deletes a document after confirmation', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockDocs = [
+      {
+        documentId: 7,
+        fileName: 'tech.pdf',
+        fileSize: 100,
+        documentCategory: 'supporting'
+      }
+    ]
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+
+    fireEvent.click(screen.getByTestId('ci-step3-delete-doc'))
+    fireEvent.click(screen.getByText('common:deleteBtn'))
+
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith(7))
+  })
+
+  test('does not delete a document when confirmation is cancelled', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockDocs = [
+      {
+        documentId: 7,
+        fileName: 'tech.pdf',
+        fileSize: 100,
+        documentCategory: 'supporting'
+      }
+    ]
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+
+    fireEvent.click(screen.getByTestId('ci-step3-delete-doc'))
+    fireEvent.click(screen.getByText('common:cancelBtn'))
+
+    expect(mockDelete).not.toHaveBeenCalled()
+    expect(
+      screen.queryByText('carbonIntensity:step3.deleteDocumentConfirmTitle')
+    ).not.toBeInTheDocument()
+  })
+
 
   test('opens the shared upload modal instead of the OS file browser (#4740)', ({
     render,

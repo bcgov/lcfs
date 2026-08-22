@@ -7,6 +7,7 @@ from lcfs.db.models.comment.ComplianceReportInternalComment import (
     ComplianceReportInternalComment,
 )
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.base import NotificationTypeEnum
 from lcfs.web.api.internal_comment.schema import (
     EntityTypeEnum,
     AudienceScopeEnum,
@@ -265,6 +266,61 @@ async def test_create_ci_application_public_comment_for_non_government_user():
     assert created_comment.audience_scope is None
     mock_repo.create_internal_comment.assert_called_once()
     mock_notification_service.send_notification.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_create_ci_application_public_comment_for_government_user_notifies_applicant():
+    mock_repo = MagicMock()
+    mock_repo.get_entity_org_and_year = AsyncMock(return_value=(7, None))
+    mock_repo.get_category_id_by_name = AsyncMock(return_value=None)
+    mock_repo.create_internal_comment = AsyncMock()
+    mock_repo.create_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=1,
+        comment="Please review this public comment",
+        organization_id=7,
+        audience_scope=AudienceScopeEnum.ANALYST,
+        visibility=CommentVisibilityEnum.PUBLIC,
+        create_user="GOVUSER",
+        create_date=None,
+        update_date=None,
+        update_user=None,
+        update_full_name=None,
+        full_name="Gov User",
+        documents=[],
+    )
+    mock_notification_service = MagicMock()
+    mock_notification_service.send_notification = AsyncMock()
+
+    service = InternalCommentService(
+        request=SimpleNamespace(
+            user=SimpleNamespace(
+                role_names=[RoleEnum.GOVERNMENT],
+                keycloak_username="GOVUSER",
+                user_profile_id=99,
+            )
+        ),
+        repo=mock_repo,
+        notification_service=mock_notification_service,
+    )
+
+    await service.create_internal_comment(
+        InternalCommentCreateSchema(
+            entity_type=EntityTypeEnum.CI_APPLICATION,
+            entity_id=123,
+            comment="Please review this public comment",
+            visibility=CommentVisibilityEnum.PUBLIC,
+            audience_scope=AudienceScopeEnum.ANALYST,
+        )
+    )
+
+    mock_notification_service.send_notification.assert_awaited_once()
+    request = mock_notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION
+    ]
+    assert request.notification_data.type == "CI Application Comment Received"
+    assert request.notification_data.related_organization_id == 7
+    assert request.notification_data.related_transaction_id == "123"
 
 
 @pytest.mark.anyio

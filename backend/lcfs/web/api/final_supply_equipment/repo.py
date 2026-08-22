@@ -241,7 +241,6 @@ class FinalSupplyEquipmentRepository:
             else:
                 association.charging_equipment_id = latest_equipment_id
                 association.charging_equipment_version = latest_equipment_version
-                association.is_active = True
                 retained_association_id = association.charging_equipment_compliance_id
 
             previous_versions_subquery = (

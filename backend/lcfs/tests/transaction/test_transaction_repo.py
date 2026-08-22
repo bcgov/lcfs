@@ -964,8 +964,24 @@ async def test_transactions_in_have_correct_visibilities(
         await transaction_repo.get_transactions_paginated(0, 10, [], sort_orders)
     )
 
-    assert len(transactions_transferor) == 9
-    assert total_count_transferor == 9
+    assert len(transactions_transferor) == 10  # Limited by page size
+    assert total_count_transferor == 12
+
+    # Legacy (standalone) transactions are "Recorded" on arrival and belong to
+    # the organisation they were issued to, so a supplier must see their own in
+    # the grid and in the Excel export (#4809).
+    assert any(
+        t.transaction_type == "StandaloneTransaction" and t.status == "Recorded"
+        for t in transactions_transferor
+    )
+
+    # Widening the non-transfer status list must not expose another
+    # organisation's rows: every non-transfer row is still scoped to the org.
+    assert all(
+        t.to_organization_id == test_org_id
+        for t in transactions_transferor
+        if t.transaction_type != "Transfer"
+    )
 
     assert len(transactions_transferee) == 8
     assert total_count_transferee == 8

@@ -59,7 +59,7 @@ async def government_update_transfer(
     response_model=TransferSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.DIRECTOR])
+@view_handler([RoleEnum.ANALYST, RoleEnum.DIRECTOR])
 async def update_category(
     request: Request,
     transfer_id: int,
@@ -79,5 +79,5 @@ async def update_category(
         category,
         is_a1_category=is_a1_category,
         user=request.user,
-        enforce_director_override=True,
+        enforce_category_permissions=True,
     )

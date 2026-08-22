@@ -135,3 +135,35 @@ async def test_update_category_success(
     data = response.json()
 
     assert data["transferId"] == transfer_id
+
+
+@pytest.mark.anyio
+async def test_analyst_can_access_update_category(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_transfer_services,
+):
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+
+    transfer_id = 1
+    url = fastapi_app.url_path_for("update_category", transfer_id=transfer_id)
+    mock_transfer_services.update_category.return_value = {
+        "transfer_id": transfer_id,
+        "from_organization": {"organization_id": 1, "name": "org1"},
+        "to_organization": {"organization_id": 2, "name": "org2"},
+        "agreement_date": date.today(),
+        "quantity": 1,
+        "price_per_unit": 1,
+        "current_status": {"transfer_status_id": 2, "status": "Submitted"},
+    }
+    fastapi_app.dependency_overrides[TransferServices] = lambda: mock_transfer_services
+
+    response = await client.put(url, json={"category": "B"})
+
+    assert response.status_code == 200
+    mock_transfer_services.update_category.assert_awaited_once()
+    call = mock_transfer_services.update_category.await_args
+    assert call.args == (transfer_id, "B")
+    assert RoleEnum.ANALYST in call.kwargs["user"].role_names
+    assert call.kwargs["enforce_category_permissions"] is True

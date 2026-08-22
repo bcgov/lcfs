@@ -11,7 +11,7 @@ export const NotificationSettings = () => {
   return (
     <>
       {/* BCeID User */}
-      <Role roles={[roles.supplier]}>
+      <Role roles={[roles.supplier, roles.ci_applicant]}>
         <BCeIDNotificationSettings />
       </Role>
 

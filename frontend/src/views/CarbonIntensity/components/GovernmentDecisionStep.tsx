@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Box from '@mui/material/Box'
 import FormControlLabel from '@mui/material/FormControlLabel'
@@ -23,7 +23,8 @@ import {
   useRecommendCIApplication,
   useRequestCIApplicationPathwayChanges,
   useRequestCIApplicationDocumentation,
-  useRecordCIDecision
+  useRecordCIDecision,
+  useUpdateCIApplicationRiskAssessment
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
 
@@ -72,6 +73,8 @@ export const GovernmentDecisionStep = ({
   } = useRequestCIApplicationDocumentation(ciApplicationId)
   const { mutateAsync: generateFuelCodes, isPending: isGeneratingFuelCodes } =
     useGenerateCIApplicationFuelCodes(ciApplicationId)
+  const { mutate: saveRiskAssessmentDraft } =
+    useUpdateCIApplicationRiskAssessment(ciApplicationId)
 
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -94,6 +97,10 @@ export const GovernmentDecisionStep = ({
   const [
     isRequestDocumentationConfirmOpen,
     setIsRequestDocumentationConfirmOpen
+  ] = useState(false)
+  const [
+    isRequestPathwayChangesConfirmOpen,
+    setIsRequestPathwayChangesConfirmOpen
   ] = useState(false)
   const [priorityScoreTouched, setPriorityScoreTouched] = useState(false)
   const [
@@ -256,6 +263,36 @@ export const GovernmentDecisionStep = ({
     !!ciApplication?.verification1Date &&
     (savedRiskAssessment !== null || savedPriorityScore !== null)
 
+  const canEditRiskAssessment =
+    !readOnly && (showVerification1Panel || showVerification2Panel)
+  const isFirstRiskAssessmentRender = useRef(true)
+  useEffect(() => {
+    if (!canEditRiskAssessment) return
+    if (isFirstRiskAssessmentRender.current) {
+      isFirstRiskAssessmentRender.current = false
+      return
+    }
+    const timeoutId = setTimeout(() => {
+      saveRiskAssessmentDraft(
+        {
+          preliminaryRiskAssessment: riskAssessment,
+          priorityScore: isPriorityScoreValid ? priorityScoreNumber : null
+        },
+        {
+          onError: (err: any) => {
+            setError(
+              err?.response?.data?.detail ||
+                err?.message ||
+                'Failed to save risk assessment.'
+            )
+          }
+        }
+      )
+    }, 600)
+    return () => clearTimeout(timeoutId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riskAssessment, priorityScore, canEditRiskAssessment])
+
   const workflowButtonSx = {
     minHeight: 44,
     px: 2,
@@ -284,6 +321,14 @@ export const GovernmentDecisionStep = ({
   }
 
   const handleRequestPathwayChanges = () => {
+    // Ask the analyst to confirm before requesting pathway changes (#4829).
+    // Cancelling leaves the button enabled; only confirming performs the
+    // action and disables it.
+    setIsRequestPathwayChangesConfirmOpen(true)
+  }
+
+  const confirmRequestPathwayChanges = () => {
+    setIsRequestPathwayChangesConfirmOpen(false)
     setRequestedPathwayChanges(true)
     onSupplierRequest?.('pathwayChanges')
     recordWorkflowAction(
@@ -727,6 +772,21 @@ export const GovernmentDecisionStep = ({
           content: (
             <BCTypography variant="body1">
               {t('carbonIntensity:step5.requestDocumentationConfirmText')}
+            </BCTypography>
+          )
+        }}
+      />
+      <BCModal
+        open={isRequestPathwayChangesConfirmOpen}
+        onClose={() => setIsRequestPathwayChangesConfirmOpen(false)}
+        data={{
+          title: t('carbonIntensity:step5.requestPathwayChangesConfirmTitle'),
+          primaryButtonText: t('carbonIntensity:step5.requestPathwayChanges'),
+          primaryButtonAction: confirmRequestPathwayChanges,
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <BCTypography variant="body1">
+              {t('carbonIntensity:step5.requestPathwayChangesConfirmText')}
             </BCTypography>
           )
         }}

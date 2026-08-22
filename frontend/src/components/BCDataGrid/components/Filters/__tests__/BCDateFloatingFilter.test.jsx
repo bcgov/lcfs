@@ -129,7 +129,7 @@ describe('BCDateFloatingFilter', () => {
     disabled: false,
     minDate: '2013-01-01',
     maxDate: '2040-01-01',
-    initialFilterType: 'any',
+    initialFilterType: 'equals',
     label: 'Select date'
   }
 
@@ -212,7 +212,7 @@ describe('BCDateFloatingFilter', () => {
 
       expect(mockOnModelChange).toHaveBeenCalledWith({
         filterType: 'date',
-        type: 'any',
+        type: 'equals',
         dateFrom: '2023-12-25',
         dateTo: undefined
       })
@@ -454,8 +454,24 @@ describe('BCDateFloatingFilter', () => {
       render(<BCDateFloatingFilter {...customProps} />)
 
       // Verify the DatePicker received the correct props
-      expect(mockDatePickerProps.minDate).toEqual(new Date('2020-01-01'))
-      expect(mockDatePickerProps.maxDate).toEqual(new Date('2030-12-31'))
+      expect(mockDatePickerProps.minDate).toEqual(new Date(2020, 0, 1))
+      expect(mockDatePickerProps.maxDate).toEqual(new Date(2030, 11, 31))
+    })
+
+    it('stops key events from bubbling to the grid', () => {
+      render(<BCDateFloatingFilter {...defaultProps} />)
+      const event = { stopPropagation: vi.fn() }
+
+      mockDatePickerProps.slotProps.textField.onKeyDown(event)
+
+      expect(event.stopPropagation).toHaveBeenCalled()
+    })
+
+    it('allows year, month, and day selection', () => {
+      render(<BCDateFloatingFilter {...defaultProps} />)
+
+      expect(mockDatePickerProps.openTo).toBe('day')
+      expect(mockDatePickerProps.views).toEqual(['year', 'month', 'day'])
     })
   })
 })

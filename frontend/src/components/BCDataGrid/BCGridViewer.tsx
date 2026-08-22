@@ -187,58 +187,68 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
           .join(',')
       }
 
-      return Object.entries(filterModel)
-        .map(([field, filterConfig]) => {
-          const baseFilter = { field }
+      const sanitizeDateValue = (value) => {
+        if (typeof value !== 'string') {
+          return value
+        }
+        const dateOnly = value.match(/^(\d{4}-\d{2}-\d{2})/)
+        return dateOnly ? dateOnly[1] : value.trim()
+      }
 
-          if (filterConfig.filterType === 'set') {
-            // For set filters, use the 'filter' array or 'values' array
-            const values =
-              filterConfig.values !== undefined
-                ? filterConfig.values
-                : filterConfig.filter || []
-            const cleanValues = sanitizeArrayValues(values)
-            if (!cleanValues.length) {
-              return null
-            }
-            return {
-              ...baseFilter,
-              filterType: 'set',
-              values: cleanValues
-            }
-          } else if (filterConfig.filterType === 'text') {
-            // For text filters, skip if filter value is empty
-            if (
-              filterConfig.filter === undefined ||
-              filterConfig.filter === null ||
-              filterConfig.filter === ''
-            ) {
-              return null
-            }
-            const sanitizedFilter = sanitizeCsvString(filterConfig.filter)
-            if (!sanitizedFilter) {
-              return null
-            }
+      return Object.entries(filterModel).map(([field, filterConfig]) => {
+        const baseFilter = { field }
 
-            return {
-              ...baseFilter,
-              filterType: 'text',
-              type: filterConfig.type,
-              filter: sanitizedFilter
-            }
-          } else {
-            // For other filter types, include all properties but clean empty values
-            const cleanConfig = { ...filterConfig }
-            if (cleanConfig.filter === '' || cleanConfig.filter === null) {
-              return null
-            }
-            return {
-              ...baseFilter,
-              ...cleanConfig
-            }
+        if (filterConfig.filterType === 'set') {
+          // For set filters, use the 'filter' array or 'values' array
+          const values =
+            filterConfig.values !== undefined
+              ? filterConfig.values
+              : filterConfig.filter || []
+          const cleanValues = sanitizeArrayValues(values)
+          if (!cleanValues.length) {
+            return null
           }
-        })
-        .filter(Boolean) // Remove null entries
+          return {
+            ...baseFilter,
+            filterType: 'set',
+            values: cleanValues
+          }
+        } else if (filterConfig.filterType === 'text') {
+          // For text filters, skip if filter value is empty
+          if (
+            filterConfig.filter === undefined ||
+            filterConfig.filter === null ||
+            filterConfig.filter === ''
+          ) {
+            return null
+          }
+          const sanitizedFilter = sanitizeCsvString(filterConfig.filter)
+          if (!sanitizedFilter) {
+            return null
+          }
+          return {
+            ...baseFilter,
+            filterType: 'text',
+            type: filterConfig.type,
+            filter: sanitizedFilter
+          }
+        } else {
+          // For other filter types, include all properties but clean empty values
+          const cleanConfig = { ...filterConfig }
+          if (cleanConfig.filter === '' || cleanConfig.filter === null) {
+            return null
+          }
+          if (cleanConfig.filterType === 'date') {
+            cleanConfig.type = cleanConfig.type || 'equals'
+            cleanConfig.dateFrom = sanitizeDateValue(cleanConfig.dateFrom)
+            cleanConfig.dateTo = sanitizeDateValue(cleanConfig.dateTo)
+          }
+          return {
+            ...baseFilter,
+            ...cleanConfig
+          }
+        }
+      }).filter(Boolean) // Remove null entries
     }, [])
 
     // Cache pagination options to sessionStorage
