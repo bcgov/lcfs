@@ -46,6 +46,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationAssignmentHistorySchema,
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
+    CIApplicationRiskAssessmentDraftSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationStatusEnum,
@@ -1729,6 +1730,39 @@ class CIApplicationServices:
         return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
+    async def update_risk_assessment_draft(
+        self,
+        ci_application: CIApplication,
+        data: CIApplicationRiskAssessmentDraftSchema,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        self._require_submitted_workflow(ci_application)
+        self._require_editable_risk_assessment_draft(ci_application)
+
+        risk_value = (
+            data.preliminary_risk_assessment.value
+            if data.preliminary_risk_assessment is not None
+            else None
+        )
+        editing_verification_2 = bool(
+            ci_application.verification_1_date
+            and not ci_application.verification_2_date
+        )
+        if editing_verification_2:
+            ci_application.verification_2_risk_assessment = risk_value
+            ci_application.verification_2_priority_score = data.priority_score
+        else:
+            ci_application.preliminary_risk_assessment = risk_value
+            ci_application.priority_score = data.priority_score
+
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
+
+    @service_handler
     async def complete_verification_1(
         self,
         ci_application: CIApplication,
@@ -1898,6 +1932,29 @@ class CIApplicationServices:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Priority score is required and must be a whole number from 1 to 999.",
+            )
+
+    def _require_editable_risk_assessment_draft(
+        self, ci_application: CIApplication
+    ) -> None:
+        """Autosave is only valid while a verification panel is still open.
+
+        Status stays Submitted after Verification 1/2, so a status-only check
+        would let a later PUT overwrite the completed verification record.
+        """
+        if getattr(ci_application, "verification_2_date", None):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Risk assessment cannot be changed after verification is complete.",
+            )
+        if getattr(
+            ci_application, "verification_1_date", None
+        ) and not _requires_verification_2(
+            getattr(ci_application, "preliminary_risk_assessment", None)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Risk assessment cannot be changed after verification is complete.",
             )
 
     def _require_submitted_workflow(self, ci_application: CIApplication) -> None:

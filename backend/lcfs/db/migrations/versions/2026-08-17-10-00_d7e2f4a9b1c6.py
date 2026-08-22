@@ -23,7 +23,7 @@ working until the transaction-flow cutover.
   - designated_action_internal_comment — internal comment association.
 
 Revision ID: d7e2f4a9b1c6
-Revises: b6c7d8e9f0a1
+Revises: a1c2d3e4f5b6
 Create Date: 2026-08-17 10:00:00.000000
 """
 
@@ -34,7 +34,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
 revision = "d7e2f4a9b1c6"
-down_revision = "b6c7d8e9f0a1"
+down_revision = "a1c2d3e4f5b6"
 branch_labels = None
 depends_on = None
 
