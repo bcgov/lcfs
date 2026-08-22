@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException
 from io import UnsupportedOperation
 import os
+import re
 import uuid
 
 from lcfs.utils.constants import ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES
@@ -46,6 +47,65 @@ from botocore.exceptions import ClientError
 BUCKET_NAME = settings.s3_bucket
 MAX_FILE_SIZE_MB = 50
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+
+DOCUMENT_RENAME_ENABLED_PARENT_TYPES = {"ci_application"}
+
+DOCUMENT_PARENT_ASSOCIATIONS = {
+    "compliance_report": (
+        compliance_report_document_association,
+        "compliance_report_id",
+    ),
+    "administrativeAdjustment": (
+        admin_adjustment_document_association,
+        "admin_adjustment_id",
+    ),
+    "initiativeAgreement": (
+        initiative_agreement_document_association,
+        "initiative_agreement_id",
+    ),
+    "charging_site": (
+        charging_site_document_association,
+        "charging_site_id",
+    ),
+    "ci_application": (
+        ci_application_document_association,
+        "ci_application_id",
+    ),
+    "internal_comment": (
+        internal_comment_document_association,
+        "internal_comment_id",
+    ),
+}
+
+_INVALID_DISPLAY_NAME_CHARS_RE = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+_TRAILING_EXTENSION_RE = re.compile(r"\.[A-Za-z0-9]{1,10}$")
+MAX_DISPLAY_NAME_LENGTH = 255
+
+
+def _normalize_display_name(requested_name: str, original_file_name: str) -> str:
+    requested_name = (requested_name or "").strip()
+    if not requested_name:
+        raise HTTPException(status_code=400, detail="Display name cannot be empty.")
+    if _INVALID_DISPLAY_NAME_CHARS_RE.search(requested_name):
+        raise HTTPException(
+            status_code=400,
+            detail='Display name contains invalid characters (\\ / : * ? " < > |).',
+        )
+
+    _, original_ext = os.path.splitext(original_file_name)
+    if original_ext and not requested_name.lower().endswith(original_ext.lower()):
+        if _TRAILING_EXTENSION_RE.search(requested_name):
+            requested_name = _TRAILING_EXTENSION_RE.sub(original_ext, requested_name)
+        else:
+            requested_name = f"{requested_name}{original_ext}"
+
+    if len(requested_name) > MAX_DISPLAY_NAME_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Display name must be {MAX_DISPLAY_NAME_LENGTH} characters or fewer.",
+        )
+
+    return requested_name
 
 
 class DocumentService:
@@ -366,6 +426,68 @@ class DocumentService:
 
         return comment
 
+    async def _get_document_for_parent(
+        self, document_id: int, parent_id: int, parent_type: str
+    ) -> Document:
+        association_info = DOCUMENT_PARENT_ASSOCIATIONS.get(parent_type)
+        if not association_info:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported parent_type: {parent_type}",
+            )
+
+        association_table, parent_column = association_info
+        result = await self.db.execute(
+            select(Document)
+            .join(
+                association_table,
+                association_table.c.document_id == Document.document_id,
+            )
+            .where(
+                Document.document_id == document_id,
+                getattr(association_table.c, parent_column) == parent_id,
+            )
+        )
+        document = result.scalar_one_or_none()
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        return document
+
+    @repo_handler
+    async def rename_file(
+        self,
+        document_id: int,
+        parent_id: int,
+        parent_type: str,
+        display_name: str,
+    ):
+        if parent_type not in DOCUMENT_RENAME_ENABLED_PARENT_TYPES:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Renaming documents is not enabled for '{parent_type}'.",
+            )
+
+        document = await self._get_document_for_parent(
+            document_id, parent_id, parent_type
+        )
+        new_display_name = _normalize_display_name(display_name, document.file_name)
+
+        siblings = await self.get_by_id_and_type(parent_id, parent_type)
+        for sibling in siblings:
+            if sibling.document_id == document_id:
+                continue
+            existing_name = sibling.display_name or sibling.file_name
+            if existing_name.lower() == new_display_name.lower():
+                raise HTTPException(
+                    status_code=400,
+                    detail="A file with this name already exists.",
+                )
+
+        document.display_name = new_display_name
+        await self.db.flush()
+        await self.db.refresh(document)
+        return document
+
     @repo_handler
     async def generate_presigned_url(self, document_id: int):
         document = await self.db.get_one(Document, document_id)
@@ -387,36 +509,7 @@ class DocumentService:
         if not document:
             raise Exception("Document not found")
 
-        # Mapping of parent types to their respective association tables and columns
-        type_mapping = {
-            "compliance_report": (
-                compliance_report_document_association,
-                "compliance_report_id",
-            ),
-            "administrativeAdjustment": (
-                admin_adjustment_document_association,
-                "admin_adjustment_id",
-            ),
-            "initiativeAgreement": (
-                initiative_agreement_document_association,
-                "initiative_agreement_id",
-            ),
-            "charging_site": (
-                charging_site_document_association,
-                "charging_site_id",
-            ),
-            "ci_application": (
-                ci_application_document_association,
-                "ci_application_id",
-            ),
-            "internal_comment": (
-                internal_comment_document_association,
-                "internal_comment_id",
-            ),
-        }
-
-        # Get the association table and column based on the parent_type
-        association_info = type_mapping.get(parent_type)
+        association_info = DOCUMENT_PARENT_ASSOCIATIONS.get(parent_type)
 
         if not association_info:
             raise Exception(f"Unsupported parent_type: {parent_type}")
@@ -452,36 +545,7 @@ class DocumentService:
 
     @repo_handler
     async def get_by_id_and_type(self, parent_id: int, parent_type="compliance_report"):
-        # Mapping of parent types to their respective association tables and columns
-        type_mapping = {
-            "compliance_report": (
-                compliance_report_document_association,
-                "compliance_report_id",
-            ),
-            "administrativeAdjustment": (
-                admin_adjustment_document_association,
-                "admin_adjustment_id",
-            ),
-            "initiativeAgreement": (
-                initiative_agreement_document_association,
-                "initiative_agreement_id",
-            ),
-            "charging_site": (
-                charging_site_document_association,
-                "charging_site_id",
-            ),
-            "ci_application": (
-                ci_application_document_association,
-                "ci_application_id",
-            ),
-            "internal_comment": (
-                internal_comment_document_association,
-                "internal_comment_id",
-            ),
-        }
-
-        # Retrieve the association table and column based on the parent_type
-        association_info = type_mapping.get(parent_type)
+        association_info = DOCUMENT_PARENT_ASSOCIATIONS.get(parent_type)
 
         if not association_info:
             raise ServiceException(f"Invalid Type for loading Documents {parent_type}")
@@ -542,9 +606,20 @@ class DocumentService:
         document = await self.db.get_one(Document, document_id)
 
         if not document:
-            raise Exception("Document not found")
+            raise HTTPException(status_code=404, detail="Document not found")
 
-        response = self.s3_client.get_object(Bucket=BUCKET_NAME, Key=document.file_key)
+        try:
+            response = self.s3_client.get_object(
+                Bucket=BUCKET_NAME, Key=document.file_key
+            )
+        except ClientError as exc:
+            error_code = exc.response.get("Error", {}).get("Code")
+            if error_code in ("NoSuchKey", "404"):
+                raise HTTPException(
+                    status_code=404,
+                    detail="The file for this document could not be found in storage.",
+                )
+            raise
         return response, document
 
     async def copy_documents(self, copy_from_id: int, copy_to_id: int):

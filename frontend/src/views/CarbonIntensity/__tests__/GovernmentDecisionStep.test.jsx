@@ -52,6 +52,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
   useRecordCIDecision: vi.fn(() => ({
     mutateAsync: mockRecordDecision,
     isPending: false
+  })),
+  useUpdateCIApplicationRiskAssessment: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false
   }))
 }))
 
@@ -604,6 +608,11 @@ describe('GovernmentDecisionStep', () => {
       { wrapper }
     )
     fireEvent.click(screen.getByTestId('ci-request-pathway-changes-btn'))
+    const modal = screen.getByTestId('modal')
+    fireEvent.click(
+      within(modal).getByText('carbonIntensity:step5.requestPathwayChanges')
+    )
+
     expect(screen.getByTestId('ci-request-pathway-changes-btn')).toBeDisabled()
     expect(
       screen.getByTestId('ci-request-documentation-btn')
@@ -613,6 +622,51 @@ describe('GovernmentDecisionStep', () => {
       expect(mockRequestPathwayChanges).toHaveBeenCalledTimes(1)
     )
     expect(mockRecordDecision).not.toHaveBeenCalled()
+  })
+
+  it('opens a confirmation on click without firing the pathway request or disabling the button (#4829)', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    const onSupplierRequest = vi.fn()
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        onSupplierRequest={onSupplierRequest}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-request-pathway-changes-btn'))
+
+    expect(screen.getByTestId('modal')).toBeInTheDocument()
+    expect(mockRequestPathwayChanges).not.toHaveBeenCalled()
+    expect(onSupplierRequest).not.toHaveBeenCalled()
+    expect(
+      screen.getByTestId('ci-request-pathway-changes-btn')
+    ).not.toBeDisabled()
+  })
+
+  it('leaves the pathway button enabled after cancelling the confirmation (#4829)', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    const onSupplierRequest = vi.fn()
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        onSupplierRequest={onSupplierRequest}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-request-pathway-changes-btn'))
+    const modal = screen.getByTestId('modal')
+    fireEvent.click(within(modal).getByText('common:cancelBtn'))
+
+    expect(mockRequestPathwayChanges).not.toHaveBeenCalled()
+    expect(onSupplierRequest).not.toHaveBeenCalled()
+    expect(
+      screen.getByTestId('ci-request-pathway-changes-btn')
+    ).not.toBeDisabled()
   })
 
   it('keeps documentation and pathway request buttons active at the same time', () => {
