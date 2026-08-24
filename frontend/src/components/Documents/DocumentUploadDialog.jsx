@@ -5,7 +5,12 @@ import BCTypography from '@/components/BCTypography'
 import DocumentTable from '@/components/Documents/DocumentTable.jsx'
 
 function DocumentUploadDialog({ open, close, parentType, parentID }) {
-  const { t } = useTranslation(['report', 'chargingSite', 'carbonIntensity'])
+  const { t } = useTranslation([
+    'report',
+    'chargingSite',
+    'carbonIntensity',
+    'initiativeAgreement'
+  ])
   const onClose = () => {
     close()
   }
@@ -23,6 +28,12 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
           title: t('carbonIntensity:documents.uploadTitle'),
           documentLabel: t('carbonIntensity:documents.documentLabel'),
           returnButton: t('carbonIntensity:documents.returnButton')
+        }
+      case 'initiativeAgreement':
+        return {
+          title: t('initiativeAgreement:documents.uploadTitle'),
+          documentLabel: t('initiativeAgreement:documents.documentLabel'),
+          returnButton: t('initiativeAgreement:documents.returnButton')
         }
       case 'compliance_report':
       default:

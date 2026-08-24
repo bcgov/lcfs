@@ -307,7 +307,11 @@ class InitiativeAgreementRepository:
         query = (
             select(InitiativeAgreement)
             .options(
-                selectinload(InitiativeAgreement.to_organization),
+                # The detail card renders the organization's address block, so
+                # it must be eager-loaded; a lazy load raises MissingGreenlet.
+                selectinload(InitiativeAgreement.to_organization).selectinload(
+                    Organization.org_address
+                ),
                 selectinload(InitiativeAgreement.lifecycle_status),
                 selectinload(InitiativeAgreement.designated_actions).selectinload(
                     DesignatedAction.current_status

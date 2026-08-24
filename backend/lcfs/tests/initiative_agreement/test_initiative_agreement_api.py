@@ -488,3 +488,76 @@ async def test_last_comment_is_plain_text(
     )
     assert row["lastComment"]["comment"] == "plain words"
     assert "<p>" not in row["lastComment"]["comment"]
+
+
+@pytest.mark.anyio
+async def test_profile_returns_the_organization_address_block(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The detail card renders the organization's address, phone and email."""
+    from lcfs.db.models.organization.Organization import Organization
+
+    org = (
+        (
+            await dbsession.execute(
+                select(Organization)
+                .where(Organization.organization_address_id.is_not(None))
+                .limit(1)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if org is None:
+        pytest.skip("no seeded organization with an address")
+
+    agreement = await _seed_agreement(dbsession, org.organization_id, "IA-26ADDR")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "get_initiative_agreement_profile",
+        initiative_agreement_id=agreement.initiative_agreement_id,
+    )
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    organization = response.json()["organization"]
+    assert organization["organizationId"] == org.organization_id
+    assert organization["name"] == org.name
+    assert "organizationCode" in organization
+    assert organization["orgAddress"] is not None
+    assert "streetAddress" in organization["orgAddress"]
+
+
+@pytest.mark.anyio
+async def test_profile_tolerates_an_organization_without_an_address(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """An address gap must render an incomplete card, not fail the request."""
+    from lcfs.db.models.organization.Organization import Organization
+
+    org = (
+        (
+            await dbsession.execute(
+                select(Organization)
+                .where(Organization.organization_address_id.is_(None))
+                .limit(1)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if org is None:
+        pytest.skip("every seeded organization has an address")
+
+    agreement = await _seed_agreement(dbsession, org.organization_id, "IA-26NOADDR")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "get_initiative_agreement_profile",
+        initiative_agreement_id=agreement.initiative_agreement_id,
+    )
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["organization"]["orgAddress"] is None

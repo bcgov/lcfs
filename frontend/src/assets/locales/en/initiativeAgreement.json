@@ -1,7 +1,7 @@
 {
   "title": "Initiative agreements",
   "initiativeAgreementsPlaceholder": "This section will provide access to Initiative Agreement functionality. Content and features are currently under development.",
-  "initiativeAgreement": "Initiative agreement — ID:",
+  "initiativeAgreement": "Initiative agreement \u2014 ID:",
   "editInitiativeAgreementID": "Edit initiative agreement ID: ",
   "newInitiativeAgreement": "New initiative agreement",
   "actionMsgs": {
@@ -44,6 +44,14 @@
     "initiativeAgreementCode": "Initiative agreement:",
     "startDate": "Start date:",
     "endDate": "End date:",
-    "sectionPlaceholder": "This section is under development and will be populated once the agreement management API is available."
+    "sectionPlaceholder": "This section is under development and will be populated once the agreement management API is available.",
+    "manageDocuments": "Manage documents",
+    "noDocuments": "No documents have been attached to this agreement.",
+    "loadFailMsg": "Failed to load the initiative agreement."
+  },
+  "documents": {
+    "uploadTitle": "Initiative Agreement documents",
+    "documentLabel": "the initiative agreement",
+    "returnButton": "Return to initiative agreement"
   }
 }
