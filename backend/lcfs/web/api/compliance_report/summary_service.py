@@ -162,6 +162,67 @@ class ComplianceReportSummaryService:
         )
         return prev_compliance_report is not None
 
+    async def _normalize_locked_supplemental_without_assessed_baseline(
+        self,
+        summary: ComplianceReportSummarySchema,
+        compliance_report: ComplianceReport,
+    ) -> None:
+        """Correct stale low-carbon carry-forward rows for locked supplementals.
+
+        Some historical/government-initiated supplementals can exist even when
+        the original same-period report was never assessed. In that case there
+        are no previously issued units to carry forward, so stored Line 15/16
+        values from the prior submitted version must not affect the displayed
+        balance.
+        """
+        report_version = getattr(compliance_report, "version", None)
+        if not isinstance(report_version, int) or report_version <= 0:
+            return
+
+        assessed_report = await self.cr_repo.get_assessed_compliance_report_by_period(
+            compliance_report.organization_id,
+            int(compliance_report.compliance_period.description),
+            compliance_report.compliance_report_id,
+        )
+        if assessed_report:
+            return
+
+        rows_by_line = {
+            int(row.line): row
+            for row in summary.low_carbon_fuel_target_summary or []
+            if row.line is not None
+        }
+        if not rows_by_line:
+            return
+
+        line_17 = rows_by_line.get(17).value if rows_by_line.get(17) else 0
+        line_18 = rows_by_line.get(18).value if rows_by_line.get(18) else 0
+        line_19 = rows_by_line.get(19).value if rows_by_line.get(19) else 0
+        line_20 = int(line_18 or 0) + int(line_19 or 0)
+        line_22 = max(int(line_17 or 0) + line_20, 0)
+
+        for line, value in ((15, 0), (16, 0), (20, line_20), (22, line_22)):
+            if line in rows_by_line:
+                rows_by_line[line].value = value
+
+        if 21 in rows_by_line:
+            penalty_units = min(int(line_17 or 0) + line_20, 0)
+            penalty_rate = get_low_carbon_penalty_rate(
+                int(compliance_report.compliance_period.description)
+            )
+            rows_by_line[21].value = (
+                int(
+                    (Decimal(str(penalty_units)) * Decimal(str(-penalty_rate))).max(
+                        Decimal("0")
+                    )
+                )
+                if penalty_units < 0
+                else 0
+            )
+            rows_by_line[21].description = LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[21][
+                "description"
+            ].format(units="{:,}".format(penalty_units * -1), rate=penalty_rate)
+
     def convert_summary_to_dict(
         self,
         summary_obj: ComplianceReportSummary,
@@ -603,6 +664,10 @@ class ComplianceReportSummaryService:
                 locked_summary.lines_7_and_9_locked
                 or await self._should_lock_lines_7_and_9(compliance_report)
             )
+            await self._normalize_locked_supplemental_without_assessed_baseline(
+                locked_summary, compliance_report
+            )
+            self._apply_exemption_overrides(locked_summary, compliance_report)
             locked_summary.lines_6_and_8_locked = True
             return locked_summary
 
