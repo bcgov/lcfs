@@ -7,7 +7,7 @@ describe('initiativeAgreementColDefs', () => {
   it('defines the wireframe columns in order', () => {
     const fields = initiativeAgreementColDefs(t).map((colDef) => colDef.field)
     expect(fields).toEqual([
-      'currentStatus.status',
+      'lifecycleStatus.status',
       'organization.name',
       'contactName',
       'iaCode',
