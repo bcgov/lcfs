@@ -1,14 +1,6 @@
-import React, { useMemo, useState, useRef } from 'react'
+import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  FormControl,
-  MenuItem,
-  Select,
-  Stack,
-  Typography,
-  IconButton,
-  Box
-} from '@mui/material'
+import { Paper, Stack, Typography, IconButton, Box } from '@mui/material'
 import { ChevronLeft, ChevronRight } from '@mui/icons-material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
@@ -19,7 +11,22 @@ import {
   useGetLookupTableData
 } from '@/hooks/useCalculator'
 import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
-import { lookupTableColumnDefs } from './_schema'
+import { createLookupTableColumnDefs } from './_schema'
+
+const buildColumnFilterOptions = (rows, field) => {
+  return Array.from(
+    new Set(
+      rows
+        .map((row) => row[field])
+        .filter(
+          (value) => value !== null && value !== undefined && value !== ''
+        )
+        .map(String)
+    )
+  )
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => ({ name }))
+}
 
 export const LookupTableView = () => {
   const { t } = useTranslation(['common'])
@@ -61,6 +68,16 @@ export const LookupTableView = () => {
   }, [formattedCompliancePeriods])
 
   const [selectedYear, setSelectedYear] = useState(defaultCompliancePeriod)
+  const [paginationOptions, setPaginationOptions] = useState({
+    page: 1,
+    size: 10000,
+    sortOrders: [],
+    filters: []
+  })
+
+  useEffect(() => {
+    setSelectedYear(defaultCompliancePeriod)
+  }, [defaultCompliancePeriod])
 
   // Fetch lookup table data
   const { data: lookupTableData, isLoading: isLoadingData } =
@@ -73,6 +90,7 @@ export const LookupTableView = () => {
     )
     if (currentIndex < formattedCompliancePeriods.length - 1) {
       setSelectedYear(formattedCompliancePeriods[currentIndex + 1].value)
+      setPaginationOptions((options) => ({ ...options, filters: [] }))
     }
   }
 
@@ -82,6 +100,7 @@ export const LookupTableView = () => {
     )
     if (currentIndex > 0) {
       setSelectedYear(formattedCompliancePeriods[currentIndex - 1].value)
+      setPaginationOptions((options) => ({ ...options, filters: [] }))
     }
   }
 
@@ -92,12 +111,37 @@ export const LookupTableView = () => {
   const canGoNext =
     formattedCompliancePeriods.findIndex((p) => p.value === selectedYear) > 0
 
-  const columnDefs = useMemo(() => lookupTableColumnDefs, [])
-
   const rowData = useMemo(() => {
     if (!lookupTableData?.data?.data) return []
     return lookupTableData.data.data
   }, [lookupTableData])
+
+  const columnFilterOptions = useMemo(
+    () => ({
+      fuelType: buildColumnFilterOptions(rowData, 'fuelType'),
+      fuelCategory: buildColumnFilterOptions(rowData, 'fuelCategory'),
+      endUse: buildColumnFilterOptions(rowData, 'endUse'),
+      determiningCarbonIntensity: buildColumnFilterOptions(
+        rowData,
+        'determiningCarbonIntensity'
+      )
+    }),
+    [rowData]
+  )
+
+  const columnDefs = useMemo(
+    () => createLookupTableColumnDefs(columnFilterOptions),
+    [columnFilterOptions]
+  )
+
+  const handleClearFilters = () => {
+    setPaginationOptions({
+      page: 1,
+      size: 10000,
+      sortOrders: [],
+      filters: []
+    })
+  }
 
   if (isLoadingPeriods) {
     return <Loading />
@@ -106,18 +150,31 @@ export const LookupTableView = () => {
   return (
     <BCBox sx={{ mb: 15 }}>
       <Stack spacing={3}>
-        <Box
+        <Box>
+          <BCTypography variant="h5" component="h2" color="primary" mb={1}>
+            {t('common:publicDashboard.links.calculationData')}
+          </BCTypography>
+        </Box>
+
+        <Paper
+          elevation={0}
           sx={{
             display: 'flex',
             alignItems: 'center',
             gap: 2,
-            width: 'fit-content'
+            width: 'fit-content',
+            maxWidth: '100%',
+            border: '1px solid #D8D8D8',
+            borderRadius: '8px',
+            px: 1.5,
+            py: 1
           }}
         >
           <IconButton
             onClick={handlePreviousYear}
             disabled={!canGoPrevious}
             size="small"
+            aria-label={t('common:publicCalculator.previousComplianceYear')}
             sx={{
               backgroundColor: '#003366',
               color: 'white !important',
@@ -138,7 +195,10 @@ export const LookupTableView = () => {
               },
               '&.Mui-disabled': {
                 backgroundColor: '#c0c0c0',
-                color: '#808080'
+                color: '#808080',
+                '& .MuiSvgIcon-root': {
+                  color: '#808080'
+                }
               }
             }}
           >
@@ -147,8 +207,8 @@ export const LookupTableView = () => {
           <BCTypography
             variant="h4"
             fontWeight="bold"
-            sx={{ 
-              minWidth: '80px', 
+            sx={{
+              minWidth: '80px',
               textAlign: 'center',
               color: '#003366'
             }}
@@ -159,6 +219,7 @@ export const LookupTableView = () => {
             onClick={handleNextYear}
             disabled={!canGoNext}
             size="small"
+            aria-label={t('common:publicCalculator.nextComplianceYear')}
             sx={{
               backgroundColor: '#003366',
               color: 'white !important',
@@ -179,13 +240,16 @@ export const LookupTableView = () => {
               },
               '&.Mui-disabled': {
                 backgroundColor: '#c0c0c0',
-                color: '#808080'
+                color: '#808080',
+                '& .MuiSvgIcon-root': {
+                  color: '#808080'
+                }
               }
             }}
           >
             <ChevronRight />
           </IconButton>
-        </Box>
+        </Paper>
 
         <BCBox>
           {isLoadingData ? (
@@ -197,32 +261,31 @@ export const LookupTableView = () => {
               align="center"
               py={4}
             >
-              No data available for the selected year.
+              {t('common:publicCalculator.noCalculationData')}
             </Typography>
           ) : (
             <BCGridViewer
               gridRef={gridRef}
-              gridKey="lookup-table-grid"
+              gridKey={`lookup-table-grid-${selectedYear}`}
               columnDefs={columnDefs}
               rowData={rowData}
               suppressPagination={true}
               defaultColDef={{
                 sortable: true,
                 resizable: true,
-                filter: false,
-                floatingFilter: false,
-                menuTabs: []
+                filter: true,
+                floatingFilter: true,
+                suppressHeaderFilterButton: true,
+                filterParams: {
+                  maxNumConditions: 1
+                }
               }}
-              paginationOptions={{
-                page: 1,
-                size: 10000,
-                sortOrders: [],
-                filters: []
-              }}
-              onPaginationChange={() => {}}
+              paginationOptions={paginationOptions}
+              onPaginationChange={setPaginationOptions}
+              onClearFilters={handleClearFilters}
               queryData={{
                 data: { items: rowData },
-                isLoading: isLoadingPeriods
+                isLoading: isLoadingData
               }}
               dataKey="items"
             />

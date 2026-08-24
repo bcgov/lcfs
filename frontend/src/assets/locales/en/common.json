@@ -138,6 +138,27 @@
       "releaseNotes": "Release notes"
     }
   },
+  "publicCalculator": {
+    "tabsAriaLabel": "Calculator tabs",
+    "previousComplianceYear": "Previous compliance year",
+    "nextComplianceYear": "Next compliance year",
+    "noCalculationData": "No data available for the selected year.",
+    "tableHeaders": {
+      "complianceUnits": "Compliance units",
+      "quantitySupplied": "Quantity supplied",
+      "units": "Units",
+      "fuelType": "Fuel type",
+      "fuelCategory": "Fuel category",
+      "endUse": "End use",
+      "determiningCarbonIntensity": "Determining carbon intensity",
+      "targetCi": "Target CI",
+      "ciOfFuel": "CI of fuel",
+      "uci": "UCI",
+      "energyDensity": "Energy density",
+      "eer": "EER",
+      "energyContent": "Energy content (MJ)"
+    }
+  },
   "layout": {
     "breadCrumbHome": "Home",
     "disclaimer": {

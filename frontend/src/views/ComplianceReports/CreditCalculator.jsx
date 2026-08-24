@@ -3,8 +3,6 @@ import { useForm, FormProvider, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import {
   Grid2 as Grid,
-  Paper,
-  Divider,
   Stack,
   TextField,
   Select,
@@ -12,11 +10,12 @@ import {
   FormControl,
   InputAdornment
 } from '@mui/material'
+import { Check, ContentCopy } from '@mui/icons-material'
 import colors from '@/themes/base/colors'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCButton from '@/components/BCButton'
+import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { BCFormRadio } from '@/components/BCForm'
 import { NumericFormat } from 'react-number-format'
 import {
@@ -575,7 +574,8 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
   return (
     <BCBox
       sx={{
-        '& .MuiCardContent-root': { padding: '0 !important', margin: 0 },
+        paddingTop: 2,
+        '& .MuiCardContent-root': { padding: '0 !important', margin: 0, },
         '& .MuiFormLabel-root': {
           transform: 'translate(-0px, -32px) scale(1) !important'
         }
@@ -584,357 +584,294 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
       <FormProvider {...methods}>
         <BCWidgetCard
           component="div"
-          color="primary"
+          data-test="dashboard-credit-calculator-card"
+          color="nav"
           title={t('report:calcTitle')}
-          headerSx={{
-            borderRadius: '4px',
-            borderBottom: '3px solid #FCBA19'
-          }}
-          sx={{
-            border: '1px solid #D8D8D8',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
-          }}
           content={
-            <>
-              <Grid container flexDirection={'column'} rowSpacing={1}>
-                {/* Top Section */}
-                <Grid px={4} py={2} flexDirection={'row'} container spacing={4}>
-                  <Stack direction={'column'} size={3} flex={0.5} gap={4}>
-                    {/* Compliance Year */}
-                    <FormControl>
-                      <BCTypography variant="label" component="span">
-                        {t('report:complianceYear')}
-                      </BCTypography>
+            <Grid container flexDirection={'column'}>
+              {/* Top Section */}
+              <Grid
+                px={{ xs: 2, md: 3 }}
+                py={{ xs: 2.5, md: 3 }}
+                flexDirection={'row'}
+                container
+                spacing={{ xs: 3, md: 4 }}
+                sx={{
+                  alignItems: 'flex-start',
+                  borderBottom: '1px solid #D8D8D8'
+                }}
+              >
+                <Stack
+                  direction={'column'}
+                  size={{ xs: 12, md: 3 }}
+                  flex={{ xs: '1 1 100%', md: 0.55 }}
+                  gap={4}
+                >
+                  {/* Compliance Year */}
+                  <FormControl>
+                    <BCTypography variant="label" component="span">
+                      {t('report:complianceYear')}
+                    </BCTypography>
 
-                      <Controller
-                        name="complianceYear"
-                        control={control}
-                        render={({ field }) => (
-                          <Select
-                            id="compliance-year"
-                            labelId="compliance-year-select-label"
-                            aria-label="compliance year"
-                            {...field}
-                            error={!!errors.complianceYear}
-                            displayEmpty
-                            MenuProps={{
-                              sx: {
-                                marginTop: '0 !important'
-                              }
-                            }}
-                            sx={{
-                              height: '40px'
-                            }}
-                          >
-                            {formattedCompliancePeriods.map((period) => (
-                              <MenuItem key={period.value} value={period.value}>
-                                {period.label}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        )}
-                      />
-                      {renderError('complianceYear')}
-                    </FormControl>
-                    {/* Fuel Category */}
-                    <BCFormRadio
-                      label={t('report:fuelCategory')}
-                      name="fuelCategory"
+                    <Controller
+                      name="complianceYear"
                       control={control}
-                      options={FUEL_CATEGORIES.filter(
-                        (category) =>
-                          (parseInt(complianceYear) <
-                            LEGISLATION_TRANSITION_YEAR &&
-                            category !== 'Jet fuel') ||
-                          parseInt(complianceYear) >=
-                            LEGISLATION_TRANSITION_YEAR
-                      ).map((type) => ({
-                        value: type,
-                        label: type
-                      }))}
-                      orientation="vertical"
-                      sx={{ mt: '0 !important' }}
+                      render={({ field }) => (
+                        <Select
+                          id="compliance-year"
+                          labelId="compliance-year-select-label"
+                          aria-label="compliance year"
+                          {...field}
+                          error={!!errors.complianceYear}
+                          displayEmpty
+                          MenuProps={{
+                            sx: {
+                              marginTop: '0 !important'
+                            }
+                          }}
+                          sx={{
+                            height: '40px'
+                          }}
+                        >
+                          {formattedCompliancePeriods.map((period) => (
+                            <MenuItem key={period.value} value={period.value}>
+                              {period.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      )}
                     />
-                  </Stack>
-                  {/* <Grid container flexDirection={'row'} rowSpacing={1} mt={4}> */}
-                  <Grid size={3} flex={1}>
-                    {isFuelTypeListLoading && <Loading />}
-                    <BCFormRadio
-                      label={t('report:selectFuelType')}
-                      name="fuelType"
-                      control={control}
-                      options={fuelTypes}
-                      disabled={isFuelTypeListLoading || fuelTypes.length === 0}
-                    />
-                  </Grid>
-
-                  <Grid size={3} flex={2}>
-                    {isLoadingFuelOptions && <Loading />}
-                    <BCFormRadio
-                      label={t('report:endUse')}
-                      name="endUseType"
-                      control={control}
-                      options={endUses}
-                      disabled={
-                        isLoadingFuelOptions || !endUses.length || !fuelType
-                      }
-                    />
-                  </Grid>
-                  {/* </Grid> */}
-
-                  <Stack direction="column" spacing={2} size={3} flex={1}>
-                    <BCFormRadio
-                      label={t('report:ciLabel')}
-                      name="provisionOfTheAct"
-                      control={control}
-                      options={provisionOptions}
-                      disabled={
-                        isLoadingFuelOptions ||
-                        !provisionOptions.length ||
-                        (!endUseType &&
-                          parseInt(complianceYear) >=
-                            LEGISLATION_TRANSITION_YEAR) ||
-                        (!fuelType &&
-                          parseInt(complianceYear) <
-                            LEGISLATION_TRANSITION_YEAR)
-                      }
-                    />
-                    {renderError('provisionOfTheAct')}
-                    {/* Fuel Code */}
-                    <FormControl>
-                      <BCTypography variant="label" component="span">
-                        {t('report:fuelCodeLabel')}
-                      </BCTypography>
-
-                      <Controller
-                        name="fuelCode"
-                        control={control}
-                        render={({ field }) => (
-                          <Select
-                            id="fuel-code"
-                            labelId="fuel-code-select-label"
-                            {...field}
-                            error={!!errors.fuelCode}
-                            disabled={isFuelCodeDisabled()}
-                            displayEmpty
-                            MenuProps={{
-                              sx: {
-                                marginTop: '0 !important'
-                              }
-                            }}
-                            sx={{
-                              height: '40px'
-                            }}
-                          >
-                            {fuelTypeOptions?.data?.fuelCodes?.map((code) => (
-                              <MenuItem
-                                key={code.fuelCodeId}
-                                value={code.fuelCode}
-                              >
-                                {code.fuelCode}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        )}
-                      />
-                      {renderError('fuelCode')}
-                    </FormControl>
-                    <FormControl>
-                      <BCTypography variant="label" component="span">
-                        Custom CI
-                      </BCTypography>
-                      <Controller
-                        name="customCi"
-                        control={control}
-                        render={({
-                          field: { onChange, onBlur, value, name, ref }
-                        }) =>
-                          isCustomCiSelected ? (
-                            <NumericFormat
-                              id="carbon-intensity-input"
-                              customInput={TextField}
-                              name={name}
-                              inputRef={ref}
-                              value={value ?? ''}
-                              onValueChange={(vals) => {
-                                onChange(
-                                  typeof vals.floatValue === 'number'
-                                    ? Number(vals.floatValue.toFixed(2))
-                                    : ''
-                                )
-                              }}
-                              onBlur={onBlur}
-                              placeholder="0.00"
-                              size="small"
-                              sx={{ mt: 1 }}
-                              decimalScale={2}
-                              fixedDecimalScale
-                              allowNegative
-                              InputProps={{
-                                endAdornment: (
-                                  <InputAdornment position="end">
-                                    <BCTypography
-                                      variant="caption1"
-                                      component="span"
-                                    >
-                                      {CARBON_INTENSITY_UNIT}
-                                    </BCTypography>
-                                  </InputAdornment>
-                                )
-                              }}
-                              error={!!errors.customCi}
-                              helperText={errors.customCi?.message}
-                            />
-                          ) : (
-                            <TextField
-                              id="carbon-intensity-display"
-                              value={carbonIntensityDisplayValue}
-                              placeholder="N/A"
-                              size="small"
-                              sx={{ mt: 1 }}
-                              disabled
-                            />
-                          )
-                        }
-                      />
-                    </FormControl>
-                  </Stack>
+                    {renderError('complianceYear')}
+                  </FormControl>
+                  {/* Fuel Category */}
+                  <BCFormRadio
+                    label={t('report:fuelCategory')}
+                    name="fuelCategory"
+                    control={control}
+                    options={FUEL_CATEGORIES.filter(
+                      (category) =>
+                        (parseInt(complianceYear) <
+                          LEGISLATION_TRANSITION_YEAR &&
+                          category !== 'Jet fuel') ||
+                        parseInt(complianceYear) >= LEGISLATION_TRANSITION_YEAR
+                    ).map((type) => ({
+                      value: type,
+                      label: type
+                    }))}
+                    orientation="vertical"
+                    sx={{ mt: '0 !important' }}
+                  />
+                </Stack>
+                {/* <Grid container flexDirection={'row'} rowSpacing={1} mt={4}> */}
+                <Grid size={{ xs: 12, md: 3 }} flex={1}>
+                  {isFuelTypeListLoading && <Loading />}
+                  <BCFormRadio
+                    label={t('report:selectFuelType')}
+                    name="fuelType"
+                    control={control}
+                    options={fuelTypes}
+                    disabled={isFuelTypeListLoading || fuelTypes.length === 0}
+                  />
                 </Grid>
 
-                {/* Bottom Section */}
-                <Grid container flexDirection="row">
-                  <Stack
-                    size={6}
-                    flex={1}
-                    px={4}
-                    gap={4}
-                    justifyContent={'center'}
-                    sx={{
-                      backgroundColor: colors.primary.main,
-                      color: colors.white.main,
-                      textAlign: 'center'
-                    }}
-                  >
-                    {/* Quantity supplied section */}
-                    <Stack gap={1}>
-                      <BCTypography variant="span" fontWeight="bold">
-                        {t('report:qtySuppliedLabel')}
-                      </BCTypography>
-                      <Controller
-                        name="quantity"
-                        control={control}
-                        render={({
-                          field: { onChange, onBlur, value, name, ref }
-                        }) => (
-                          <Stack
-                            direction="row"
-                            alignItems="center"
-                            justifyContent="center"
-                            gap={1}
-                          >
-                            <NumericFormat
-                              id="quantity"
-                              customInput={TextField}
-                              thousandSeparator
-                              decimalScale={2}
-                              fixedDecimalScale={false}
-                              prefix=""
-                              value={value}
-                              onValueChange={(vals) => {
-                                if (syncingFieldRef.current !== 'quantity') {
-                                  setActiveCalculatorMode('quantity')
-                                }
-                                onChange(vals.floatValue)
-                              }}
-                              onBlur={onBlur}
-                              onFocus={() => {
-                                if (syncingFieldRef.current !== 'quantity') {
-                                  setActiveCalculatorMode('quantity')
-                                }
-                              }}
-                              name={name}
-                              inputRef={ref}
-                              placeholder={t('report:qtySuppliedLabel')}
-                              size="small"
-                              error={!!errors.quantity}
-                              helperText={errors.quantity?.message}
-                              sx={{
-                                width: '200px',
-                                alignSelf: 'center',
-                                '& .MuiInputBase-input': {
-                                  fontSize: '1.5rem',
-                                  fontWeight: 'bold',
-                                  textAlign: 'center'
-                                }
-                              }}
-                              slotProps={{
-                                input: {
-                                  style: { textAlign: 'left' }
-                                },
-                                htmlInput: {
-                                  maxLength: 13,
-                                  'data-test': 'quantity'
-                                }
-                              }}
-                            />
-                            {unit && (
-                              <BCTypography
-                                variant="body2"
-                                component="span"
-                                data-test="quantity-unit"
-                                data-testid="quantity-unit"
-                              >
-                                {unit}
-                              </BCTypography>
-                            )}
-                          </Stack>
-                        )}
-                      />
-                    </Stack>
-                    {/* compliance units section */}
+                <Grid size={{ xs: 12, md: 3 }} flex={1.6}>
+                  {isLoadingFuelOptions && <Loading />}
+                  <BCFormRadio
+                    label={t('report:endUse')}
+                    name="endUseType"
+                    control={control}
+                    options={endUses}
+                    disabled={
+                      isLoadingFuelOptions || !endUses.length || !fuelType
+                    }
+                  />
+                </Grid>
+                {/* </Grid> */}
 
-                    <Stack gap={1}>
-                      <BCTypography variant="span" fontWeight="bold">
-                        {t('report:quantitySuppliedcu')}
-                      </BCTypography>
-                      <Controller
-                        name="complianceUnits"
-                        control={control}
-                        render={({
-                          field: { onChange, onBlur, value, name, ref }
-                        }) => (
+                <Stack
+                  direction="column"
+                  spacing={2}
+                  size={{ xs: 12, md: 3 }}
+                  flex={{ xs: '1 1 100%', md: 1.1 }}
+                >
+                  <BCFormRadio
+                    label={t('report:ciLabel')}
+                    name="provisionOfTheAct"
+                    control={control}
+                    options={provisionOptions}
+                    disabled={
+                      isLoadingFuelOptions ||
+                      !provisionOptions.length ||
+                      (!endUseType &&
+                        parseInt(complianceYear) >=
+                          LEGISLATION_TRANSITION_YEAR) ||
+                      (!fuelType &&
+                        parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR)
+                    }
+                  />
+                  {renderError('provisionOfTheAct')}
+                  {/* Fuel Code */}
+                  <FormControl>
+                    <BCTypography variant="label" component="span">
+                      {t('report:fuelCodeLabel')}
+                    </BCTypography>
+
+                    <Controller
+                      name="fuelCode"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          id="fuel-code"
+                          labelId="fuel-code-select-label"
+                          {...field}
+                          error={!!errors.fuelCode}
+                          disabled={isFuelCodeDisabled()}
+                          displayEmpty
+                          MenuProps={{
+                            sx: {
+                              marginTop: '0 !important'
+                            }
+                          }}
+                          sx={{
+                            height: '40px'
+                          }}
+                        >
+                          {fuelTypeOptions?.data?.fuelCodes?.map((code) => (
+                            <MenuItem
+                              key={code.fuelCodeId}
+                              value={code.fuelCode}
+                            >
+                              {code.fuelCode}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      )}
+                    />
+                    {renderError('fuelCode')}
+                  </FormControl>
+                  <FormControl>
+                    <BCTypography variant="label" component="span">
+                      {t('report:customCiLabel')}
+                    </BCTypography>
+                    <Controller
+                      name="customCi"
+                      control={control}
+                      render={({
+                        field: { onChange, onBlur, value, name, ref }
+                      }) =>
+                        isCustomCiSelected ? (
                           <NumericFormat
-                            id="complianceUnits"
+                            id="carbon-intensity-input"
+                            customInput={TextField}
+                            name={name}
+                            inputRef={ref}
+                            value={value ?? ''}
+                            onValueChange={(vals) => {
+                              onChange(
+                                typeof vals.floatValue === 'number'
+                                  ? Number(vals.floatValue.toFixed(2))
+                                  : ''
+                              )
+                            }}
+                            onBlur={onBlur}
+                            placeholder="0.00"
+                            size="small"
+                            sx={{ mt: 1 }}
+                            decimalScale={2}
+                            fixedDecimalScale
+                            allowNegative
+                            InputProps={{
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  <BCTypography
+                                    variant="caption1"
+                                    component="span"
+                                  >
+                                    {CARBON_INTENSITY_UNIT}
+                                  </BCTypography>
+                                </InputAdornment>
+                              )
+                            }}
+                            error={!!errors.customCi}
+                            helperText={errors.customCi?.message}
+                          />
+                        ) : (
+                          <TextField
+                            id="carbon-intensity-display"
+                            value={carbonIntensityDisplayValue}
+                            placeholder="N/A"
+                            size="small"
+                            sx={{ mt: 1 }}
+                            disabled
+                          />
+                        )
+                      }
+                    />
+                  </FormControl>
+                </Stack>
+              </Grid>
+
+              {/* Bottom Section */}
+              <Grid container flexDirection={{ xs: 'column', md: 'row' }}>
+                <Stack
+                  size={{ xs: 12, md: 6 }}
+                  flex={1}
+                  px={{ xs: 2, md: 4 }}
+                  py={{ xs: 3, md: 4 }}
+                  gap={3}
+                  justifyContent={'center'}
+                  sx={{
+                    backgroundColor: colors.secondary.nav,
+                    color: colors.white.main,
+                    textAlign: 'center',
+                    minHeight: { xs: 'auto', md: 320 }
+                  }}
+                >
+                  {/* Quantity supplied section */}
+                  <Stack gap={1}>
+                    <BCTypography variant="span" fontWeight="bold">
+                      {t('report:qtySuppliedLabel')}
+                    </BCTypography>
+                    <Controller
+                      name="quantity"
+                      control={control}
+                      render={({
+                        field: { onChange, onBlur, value, name, ref }
+                      }) => (
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="center"
+                          gap={1}
+                        >
+                          <NumericFormat
+                            id="quantity"
                             customInput={TextField}
                             thousandSeparator
+                            decimalScale={2}
                             fixedDecimalScale={false}
                             prefix=""
                             value={value}
                             onValueChange={(vals) => {
-                              if (
-                                syncingFieldRef.current !== 'complianceUnits'
-                              ) {
-                                setActiveCalculatorMode('complianceUnits')
+                              if (syncingFieldRef.current !== 'quantity') {
+                                setActiveCalculatorMode('quantity')
                               }
                               onChange(vals.floatValue)
                             }}
                             onBlur={onBlur}
                             onFocus={() => {
-                              if (
-                                syncingFieldRef.current !== 'complianceUnits'
-                              ) {
-                                setActiveCalculatorMode('complianceUnits')
+                              if (syncingFieldRef.current !== 'quantity') {
+                                setActiveCalculatorMode('quantity')
                               }
                             }}
                             name={name}
                             inputRef={ref}
-                            placeholder=""
+                            placeholder={t('report:qtySuppliedLabel')}
                             size="small"
-                            error={!!errors.complianceUnits}
-                            helperText={errors.complianceUnits?.message}
+                            error={!!errors.quantity}
+                            helperText={errors.quantity?.message}
                             sx={{
-                              width: '200px',
+                              width: { xs: '100%', sm: '220px' },
                               alignSelf: 'center',
                               '& .MuiInputBase-input': {
                                 fontSize: '1.5rem',
@@ -948,158 +885,207 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                               },
                               htmlInput: {
                                 maxLength: 13,
-                                'data-test': 'complianceUnits'
+                                'data-test': 'quantity'
                               }
                             }}
                           />
-                        )}
-                      />
-                    </Stack>
-                    {/* Formula calculation display */}
-                    <BCTypography
-                      variant="body2"
-                      sx={{
-                        textAlign: 'center'
-                      }}
-                    >
-                      {resultData.formulaDisplay}
-                    </BCTypography>
+                          {unit && (
+                            <BCTypography
+                              variant="body2"
+                              component="span"
+                              data-test="quantity-unit"
+                              data-testid="quantity-unit"
+                            >
+                              {unit}
+                            </BCTypography>
+                          )}
+                        </Stack>
+                      )}
+                    />
                   </Stack>
-                  {/* Formula values table */}
+                  {/* compliance units section */}
 
-                  <Stack
-                    size={6}
-                    flex={1}
-                    px={4}
-                    py={8}
-                    gap={2}
+                  <Stack gap={1}>
+                    <BCTypography variant="span" fontWeight="bold">
+                      {t('report:quantitySuppliedcu')}
+                    </BCTypography>
+                    <Controller
+                      name="complianceUnits"
+                      control={control}
+                      render={({
+                        field: { onChange, onBlur, value, name, ref }
+                      }) => (
+                        <NumericFormat
+                          id="complianceUnits"
+                          customInput={TextField}
+                          thousandSeparator
+                          fixedDecimalScale={false}
+                          prefix=""
+                          value={value}
+                          onValueChange={(vals) => {
+                            if (syncingFieldRef.current !== 'complianceUnits') {
+                              setActiveCalculatorMode('complianceUnits')
+                            }
+                            onChange(vals.floatValue)
+                          }}
+                          onBlur={onBlur}
+                          onFocus={() => {
+                            if (syncingFieldRef.current !== 'complianceUnits') {
+                              setActiveCalculatorMode('complianceUnits')
+                            }
+                          }}
+                          name={name}
+                          inputRef={ref}
+                          placeholder=""
+                          size="small"
+                          error={!!errors.complianceUnits}
+                          helperText={errors.complianceUnits?.message}
+                          sx={{
+                            width: { xs: '100%', sm: '220px' },
+                            alignSelf: 'center',
+                            '& .MuiInputBase-input': {
+                              fontSize: '1.5rem',
+                              fontWeight: 'bold',
+                              textAlign: 'center'
+                            }
+                          }}
+                          slotProps={{
+                            input: {
+                              style: { textAlign: 'left' }
+                            },
+                            htmlInput: {
+                              maxLength: 13,
+                              'data-test': 'complianceUnits'
+                            }
+                          }}
+                        />
+                      )}
+                    />
+                  </Stack>
+                  {/* Formula calculation display */}
+                  <BCTypography
+                    variant="body2"
                     sx={{
-                      backgroundColor: '#F2F2F2'
+                      textAlign: 'center',
+                      overflowWrap: 'anywhere'
                     }}
                   >
-                    <BCBox>
-                      <BCBox
-                        sx={{
-                          display: 'grid',
-                          gridTemplateColumns: 'max-content auto',
-                          columnGap: 4,
-                          rowGap: 1,
-                          width: 'fit-content',
-                          justifySelf: 'center'
-                        }}
-                      >
-                        {Object.entries(ciParameterLabels).map(
-                          ([key, label], index) => (
-                            <React.Fragment key={key}>
-                              {/* Left column - Label */}
-                              <BCTypography
-                                variant="body2"
-                                sx={{
-                                  fontWeight: 'bold',
-                                  gridColumn: 1
-                                }}
-                              >
-                                {`${key.toUpperCase()} - ${label}`}:
-                              </BCTypography>
+                    {resultData.formulaDisplay}
+                  </BCTypography>
+                </Stack>
+                {/* Formula values table */}
 
-                              {/* Right column - Value */}
-                              <BCTypography
-                                variant="body2"
-                                sx={{
-                                  gridColumn: 2
-                                }}
-                              >
-                                {Object.values(resultData.formulaValues)[index]}
-                              </BCTypography>
-                            </React.Fragment>
-                          )
-                        )}
-                      </BCBox>
+                <Stack
+                  size={{ xs: 12, md: 6 }}
+                  flex={1}
+                  px={{ xs: 2, md: 4 }}
+                  py={{ xs: 3, md: 4 }}
+                  gap={2}
+                  sx={{
+                    backgroundColor: '#F2F2F2',
+                    minHeight: { xs: 'auto', md: 320 }
+                  }}
+                >
+                  <BCBox>
+                    <BCBox
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: {
+                          xs: '1fr',
+                          sm: 'minmax(220px, max-content) auto'
+                        },
+                        columnGap: 3,
+                        rowGap: 1,
+                        width: { xs: '100%', sm: 'fit-content' },
+                        justifySelf: 'center'
+                      }}
+                    >
+                      {Object.entries(ciParameterLabels).map(
+                        ([key, label], index) => (
+                          <React.Fragment key={key}>
+                            {/* Left column - Label */}
+                            <BCTypography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 'bold',
+                                gridColumn: { xs: '1', sm: 1 }
+                              }}
+                            >
+                              {`${key.toUpperCase()} - ${label}`}:
+                            </BCTypography>
+
+                            {/* Right column - Value */}
+                            <BCTypography
+                              variant="body2"
+                              sx={{
+                                gridColumn: { xs: '1', sm: 2 },
+                                mb: { xs: 1, sm: 0 },
+                                overflowWrap: 'anywhere'
+                              }}
+                            >
+                              {Object.values(resultData.formulaValues)[index]}
+                            </BCTypography>
+                          </React.Fragment>
+                        )
+                      )}
                     </BCBox>
-                    {/* Compliance units formula */}
+                  </BCBox>
+                  {/* Compliance units formula */}
 
-                    {parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR ? (
+                  {parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR ? (
+                    <BCTypography variant="body2" sx={{ textAlign: 'center' }}>
+                      {t('report:formulaBefore2024')}
+                    </BCTypography>
+                  ) : (
+                    <>
                       <BCTypography
                         variant="body2"
                         sx={{ textAlign: 'center' }}
                       >
-                        {t('report:formulaBefore2024')}
+                        {t('report:formulaAfter2024')}
                       </BCTypography>
-                    ) : (
-                      <>
-                        <BCTypography
-                          variant="body2"
-                          sx={{ textAlign: 'center' }}
-                        >
-                          {t('report:formulaAfter2024')}
-                        </BCTypography>
-                        <BCTypography
-                          variant="body2"
-                          sx={{ textAlign: 'center' }}
-                        >
-                          {t('report:formulaECDefinition')}
-                        </BCTypography>
-                      </>
-                    )}
-                    <Stack
-                      direction="row"
-                      justifyContent="flex-end"
-                      spacing={2}
+                      <BCTypography
+                        variant="body2"
+                        sx={{ textAlign: 'center' }}
+                      >
+                        {t('report:formulaECDefinition')}
+                      </BCTypography>
+                    </>
+                  )}
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    justifyContent="flex-end"
+                    spacing={2}
+                  >
+                    <BCButton
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      onClick={handleClear}
                     >
-                      <BCButton
-                        variant="outlined"
-                        color="primary"
-                        size="small"
-                        onClick={handleClear}
-                      >
-                        Clear
-                      </BCButton>
-                      <BCButton
-                        variant={copySuccess ? 'contained' : 'outlined'}
-                        color={copySuccess ? 'success' : 'primary'}
-                        size="small"
-                        onClick={handleCopy}
-                        startIcon={
-                          copySuccess ? (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <polyline points="20,6 9,17 4,12"></polyline>
-                            </svg>
-                          ) : (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <rect
-                                x="9"
-                                y="9"
-                                width="13"
-                                height="13"
-                                rx="2"
-                                ry="2"
-                              ></rect>
-                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                          )
-                        }
-                      >
-                        {copySuccess ? 'Copied!' : 'Copy'}
-                      </BCButton>
-                    </Stack>
+                      {t('report:clearCalculator')}
+                    </BCButton>
+                    <BCButton
+                      variant={copySuccess ? 'contained' : 'outlined'}
+                      color={copySuccess ? 'success' : 'primary'}
+                      size="small"
+                      onClick={handleCopy}
+                      startIcon={
+                        copySuccess ? (
+                          <Check fontSize="small" />
+                        ) : (
+                          <ContentCopy fontSize="small" />
+                        )
+                      }
+                    >
+                      {copySuccess
+                        ? t('report:copiedCalculation')
+                        : t('report:copyCalculation')}
+                    </BCButton>
                   </Stack>
-                </Grid>
+                </Stack>
               </Grid>
-            </>
+            </Grid>
           }
         />
       </FormProvider>
