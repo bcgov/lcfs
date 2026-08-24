@@ -11,6 +11,7 @@ import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import Comments from '@/components/Comments'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
 import { roles } from '@/constants/roles'
 import { useDocuments } from '@/hooks/useDocuments'
@@ -248,7 +249,7 @@ const InitiativeAgreementDetailBase = () => {
         parentID={initiativeAgreementId}
       />
 
-      {/* Designated actions grid arrives with #4896, comments with #4897. */}
+      {/* Designated actions grid arrives with #4896. */}
       <Paper
         variant="outlined"
         sx={{ p: 3, mt: 3 }}
@@ -261,6 +262,18 @@ const InitiativeAgreementDetailBase = () => {
           {t('initiativeAgreement:detail.sectionPlaceholder')}
         </BCTypography>
       </Paper>
+
+      {/* The thread is IDIR-only until the BCeID story opens Public
+          comments to proponents; the API 403s them today. */}
+      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
+        <BCBox mt={3} data-test="initiative-agreement-comments-section">
+          <Comments
+            entityType={PARENT_TYPE}
+            entityId={Number(initiativeAgreementId)}
+            commentMode="dual"
+          />
+        </BCBox>
+      </Role>
     </BCBox>
   )
 }
