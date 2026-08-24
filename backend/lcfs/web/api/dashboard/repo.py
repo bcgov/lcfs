@@ -18,6 +18,13 @@ from lcfs.db.models.compliance.ComplianceReportCountView import (
 from lcfs.db.models.fuel.FuelCodeCountView import FuelCodeCountView
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.ci_application.CIApplication import CIApplication
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    RECORD_KIND_AGREEMENT,
+    InitiativeAgreement,
+)
+from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleStatus import (
+    InitiativeAgreementLifecycleStatus,
+)
 from lcfs.db.models.ci_application.CIApplicationStatus import CIApplicationStatus
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
 
@@ -28,9 +35,7 @@ class DashboardRepository:
     def __init__(
         self,
         db: AsyncSession = Depends(get_async_db_session),
-        ci_application_repo: CIApplicationRepository = Depends(
-            CIApplicationRepository
-        ),
+        ci_application_repo: CIApplicationRepository = Depends(CIApplicationRepository),
     ):
         self.db = db
         self.ci_application_repo = ci_application_repo
@@ -138,8 +143,7 @@ class DashboardRepository:
             .select_from(CIApplication)
             .join(
                 CIApplicationStatus,
-                CIApplication.status_id
-                == CIApplicationStatus.ci_application_status_id,
+                CIApplication.status_id == CIApplicationStatus.ci_application_status_id,
             )
             .where(CIApplication.organization_id == organization_id)
         )
@@ -147,6 +151,23 @@ class DashboardRepository:
         result = await self.db.execute(query)
         row = result.one()
         return {"draft": row.draft or 0, "submitted": row.submitted or 0}
+
+    @repo_handler
+    async def get_initiative_agreement_counts(self):
+        """Counts of agreement-kind initiative agreements by lifecycle
+        status. Legacy award rows never carry a lifecycle status and are
+        excluded by record_kind."""
+        query = (
+            select(
+                InitiativeAgreementLifecycleStatus.status,
+                func.count(InitiativeAgreement.initiative_agreement_id),
+            )
+            .join(InitiativeAgreement.lifecycle_status)
+            .where(InitiativeAgreement.record_kind == RECORD_KIND_AGREEMENT)
+            .group_by(InitiativeAgreementLifecycleStatus.status)
+        )
+        result = await self.db.execute(query)
+        return {status: count for status, count in result.all()}
 
     @repo_handler
     async def get_ci_application_counts(self):

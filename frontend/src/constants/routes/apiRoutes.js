@@ -73,7 +73,8 @@ export const apiRoutes = {
   // consumed by hooks/useInitiativeAgreements.ts
   getInitiativeAgreementsList: '/initiative-agreements/list',
   getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
-  getInitiativeAgreement: '/initiative-agreements/:initiativeAgreementId/profile',
+  getInitiativeAgreement:
+    '/initiative-agreements/:initiativeAgreementId/profile',
 
   // fuel-type
   getFuelTypeOthers: '/fuel-type/others/list',
@@ -264,6 +265,7 @@ export const apiRoutes = {
   fuelCodeCounts: '/dashboard/fuel-code-counts',
   orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
   ciApplicationCounts: '/dashboard/ci-application-counts',
+  initiativeAgreementCounts: '/dashboard/initiative-agreement-counts',
 
   // credit market
   creditMarketOverview: '/credit-market/overview',
