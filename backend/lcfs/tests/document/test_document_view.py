@@ -48,6 +48,10 @@ class FakeDocumentService:
             "create_user": "tester",
         }
 
+    async def get_uploading_organization_codes(self, usernames):
+        # tester belongs to a supplier organization in these fixtures.
+        return {"tester": "ABCD"} if "tester" in usernames else {}
+
     async def get_object(self, document_id: int):
         file = {
             "ContentLength": 789,
@@ -144,6 +148,7 @@ async def test_get_all_documents(fastapi_app, client):
     assert doc["fileSize"] == 123
     assert doc["createDate"] == "2024-01-01T00:00:00Z"
     assert doc["createUser"] == "tester"
+    assert doc["uploadingOrganizationCode"] == "ABCD"
 
 
 @pytest.mark.anyio
@@ -183,7 +188,7 @@ async def test_stream_document_compliance_report(fastapi_app, client):
     assert response.status_code == status.HTTP_200_OK
 
     cd = response.headers.get("Content-Disposition")
-    assert cd == 'attachment; filename="document.pdf"; filename*=UTF-8\'\'document.pdf'
+    assert cd == "attachment; filename=\"document.pdf\"; filename*=UTF-8''document.pdf"
     cl = response.headers.get("content-length")
     assert cl == "789"
 
@@ -203,7 +208,7 @@ async def test_stream_document_initiative_agreement(fastapi_app, client):
     assert response.status_code == status.HTTP_200_OK
 
     cd = response.headers.get("Content-Disposition")
-    assert cd == 'attachment; filename="document.pdf"; filename*=UTF-8\'\'document.pdf'
+    assert cd == "attachment; filename=\"document.pdf\"; filename*=UTF-8''document.pdf"
     cl = response.headers.get("content-length")
     assert cl == "789"
 
@@ -253,7 +258,7 @@ async def test_stream_document_admin_adjustment(fastapi_app, client):
     assert response.status_code == status.HTTP_200_OK
 
     cd = response.headers.get("Content-Disposition")
-    assert cd == 'attachment; filename="document.pdf"; filename*=UTF-8\'\'document.pdf'
+    assert cd == "attachment; filename=\"document.pdf\"; filename*=UTF-8''document.pdf"
     cl = response.headers.get("content-length")
     assert cl == "789"
 

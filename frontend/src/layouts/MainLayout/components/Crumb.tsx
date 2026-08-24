@@ -7,6 +7,7 @@ import { isNumeric } from '@/utils/formatters'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { useFuelCodePageStore } from '@/stores/useFuelCodePageStore'
+import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 
 type RouteTitleResolver = (args: {
   params: Record<string, string | undefined>
@@ -80,6 +81,9 @@ const Crumb = () => {
     (state) => state.activeTabLabel
   )
   const fuelCodeTitle = useFuelCodePageStore((state) => state.fuelCodeTitle)
+  const initiativeAgreementCrumb = useInitiativeAgreementPageStore(
+    (state) => state.agreementCrumb
+  )
 
   // Get the actual compliance period from the cached report data (not the URL)
   // This prevents URL manipulation from showing incorrect year in breadcrumbs
@@ -253,6 +257,10 @@ const Crumb = () => {
 
           const isFuelCodeViewLast =
             isLast && name === 'view' && pathnames[0] === 'fuel-codes'
+          const isInitiativeAgreementIdLast =
+            isLast &&
+            isNumeric(name) &&
+            pathnames[0] === 'initiative-agreements'
 
           return isLast ? (
             <StyledBreadcrumb
@@ -261,11 +269,13 @@ const Crumb = () => {
               label={
                 isFuelCodeViewLast && fuelCodeTitle
                   ? fuelCodeTitle
-                  : title && title !== ''
-                    ? title
-                    : isNumeric(name)
-                      ? 'ID: ' + name
-                      : displayName
+                  : isInitiativeAgreementIdLast && initiativeAgreementCrumb
+                    ? initiativeAgreementCrumb
+                    : title && title !== ''
+                      ? title
+                      : isNumeric(name)
+                        ? 'ID: ' + name
+                        : displayName
               }
               key={name}
             />

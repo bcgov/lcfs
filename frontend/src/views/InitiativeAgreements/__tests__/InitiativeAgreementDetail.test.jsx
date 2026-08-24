@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
 import { wrapper } from '@/tests/utils/wrapper'
 import { InitiativeAgreementDetail } from '../InitiativeAgreementDetail'
+import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -19,7 +20,8 @@ let mockRoles = [{ name: roles.ia_analyst }]
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
     data: { roles: mockRoles },
-    hasRoles: (...names) => names.some((n) => mockRoles.some((r) => r.name === n)),
+    hasRoles: (...names) =>
+      names.some((n) => mockRoles.some((r) => r.name === n)),
     hasAnyRole: (...names) =>
       names.some((n) => mockRoles.some((r) => r.name === n))
   })
@@ -42,8 +44,7 @@ vi.mock('@/hooks/useDocuments', () => ({
 }))
 
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
-  default: ({ open }) =>
-    open ? <div data-test="upload-dialog" /> : null
+  default: ({ open }) => (open ? <div data-test="upload-dialog" /> : null)
 }))
 
 const agreement = {
@@ -84,9 +85,9 @@ describe('InitiativeAgreementDetail', () => {
   it('renders the agreement card with organization, status and dates', () => {
     render(<InitiativeAgreementDetail />, { wrapper })
 
-    expect(screen.getByTestId('initiative-agreement-detail-title')).toHaveTextContent(
-      'IA-26ORG1'
-    )
+    expect(
+      screen.getByTestId('initiative-agreement-detail-title')
+    ).toHaveTextContent('IA-26ORG1')
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
     expect(screen.getByTestId('agreement-status-chip')).toHaveTextContent(
       'Underway'
@@ -101,7 +102,9 @@ describe('InitiativeAgreementDetail', () => {
     expect(
       screen.getByText('Renewable Fuels Production Facility')
     ).toBeInTheDocument()
-    expect(screen.getByText('A description of the project.')).toBeInTheDocument()
+    expect(
+      screen.getByText('A description of the project.')
+    ).toBeInTheDocument()
   })
 
   it('offers document upload to an IA analyst', () => {
@@ -112,7 +115,9 @@ describe('InitiativeAgreementDetail', () => {
   it('does not offer document upload to a BCeID proponent', () => {
     mockRoles = [{ name: roles.ia_proponent }]
     render(<InitiativeAgreementDetail />, { wrapper })
-    expect(screen.queryByTestId('upload-documents-button')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('upload-documents-button')
+    ).not.toBeInTheDocument()
   })
 
   it('renders an empty state when the agreement has no documents', () => {
@@ -131,6 +136,44 @@ describe('InitiativeAgreementDetail', () => {
     })
     render(<InitiativeAgreementDetail />, { wrapper })
     expect(screen.getByTestId('alert-box')).toHaveTextContent('boom')
+  })
+
+  it('renders document rows with size and uploading organization code', () => {
+    mockDocuments.mockReturnValue({
+      data: [
+        {
+          documentId: 9,
+          fileName: 'signed-agreement.pdf',
+          fileSize: 1000000,
+          createDate: '2026-06-01T00:00:00Z',
+          createUser: 'LCFS1_bat',
+          uploadingOrganizationCode: 'BETZ'
+        },
+        {
+          documentId: 10,
+          fileName: 'award-letter.pdf',
+          fileSize: 2048,
+          createDate: '2026-06-02T00:00:00Z',
+          createUser: 'IDIRSTAFF',
+          uploadingOrganizationCode: null
+        }
+      ],
+      refetch: vi.fn()
+    })
+    render(<InitiativeAgreementDetail />, { wrapper })
+
+    expect(screen.getByText('signed-agreement.pdf')).toBeInTheDocument()
+    expect(screen.getByText(/1 MB/)).toBeInTheDocument()
+    expect(screen.getByText(/BETZ/)).toBeInTheDocument()
+    // Government upload falls back to the government label.
+    expect(screen.getByText(/gov/)).toBeInTheDocument()
+  })
+
+  it('publishes the agreement code to the breadcrumb store', () => {
+    render(<InitiativeAgreementDetail />, { wrapper })
+    expect(useInitiativeAgreementPageStore.getState().agreementCrumb).toBe(
+      'IA-26ORG1'
+    )
   })
 
   it('tolerates an organization with no address', () => {

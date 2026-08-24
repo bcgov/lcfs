@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { Divider, Paper, Stack } from '@mui/material'
@@ -20,6 +20,7 @@ import { dateFormatter } from '@/utils/formatters'
 import withRole from '@/utils/withRole'
 
 import { useGetInitiativeAgreement } from '@/hooks/useInitiativeAgreements'
+import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
 
 // The shared document machinery keys on this string for initiative agreements.
@@ -47,6 +48,19 @@ const InitiativeAgreementDetailBase = () => {
     PARENT_TYPE,
     initiativeAgreementId
   )
+
+  // Surface the agreement code in the breadcrumb while this page is open.
+  const setAgreementCrumb = useInitiativeAgreementPageStore(
+    (state) => state.setAgreementCrumb
+  )
+  useEffect(() => {
+    setAgreementCrumb(
+      agreement
+        ? agreement.iaCode || `IA${agreement.initiativeAgreementId}`
+        : null
+    )
+    return () => setAgreementCrumb(null)
+  }, [agreement, setAgreementCrumb])
 
   if (isLoading) {
     return <Loading message={t('initiativeAgreement:loadingText')} />
@@ -187,7 +201,9 @@ const InitiativeAgreementDetailBase = () => {
                 </BCTypography>
                 {/* Upload is IDIR-only for this story; the shared upload
                     endpoint's role list is broader than this module. */}
-                <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
+                <Role
+                  roles={[roles.ia_analyst, roles.ia_manager, roles.director]}
+                >
                   <BCTypography
                     component="button"
                     variant="body4"
@@ -210,6 +226,7 @@ const InitiativeAgreementDetailBase = () => {
                   parentID={initiativeAgreementId}
                   parentType={PARENT_TYPE}
                   data={documents}
+                  detailed
                 />
               ) : (
                 <BCTypography variant="body4" color="text.secondary">
