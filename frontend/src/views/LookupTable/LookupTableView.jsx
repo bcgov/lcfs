@@ -164,8 +164,7 @@ export const LookupTableView = () => {
             gap: 2,
             width: 'fit-content',
             maxWidth: '100%',
-            border: '1px solid #D8D8D8',
-            borderRadius: '8px',
+            border: 'none',
             px: 1.5,
             py: 1
           }}
