@@ -72,9 +72,9 @@
   "sections": {
     "companyOverview": {
       "title": "Company overview",
-      "description": "Internal notes about this organization. Comments are searchable in the Comment log.",
-      "empty": "No company overview comments yet.",
-      "addTitle": "Add a company overview comment"
+      "description": "Internal shared overview for this organization. Previous overview comments remain searchable in the Comment log.",
+      "empty": "No company overview statement yet.",
+      "addTitle": "Add company overview"
     },
     "penaltyLog": {
       "title": "Penalty log",

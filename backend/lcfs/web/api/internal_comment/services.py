@@ -219,6 +219,38 @@ class InternalCommentService:
                 )
 
         username = self.request.user.keycloak_username
+
+        if data.entity_type == EntityTypeEnum.ORGANIZATION:
+            category_name = (
+                data.comment_category
+                or DEFAULT_CATEGORY_BY_ENTITY[EntityTypeEnum.ORGANIZATION]
+            )
+            existing_comment_id = await self.repo.get_latest_organization_comment_id(
+                data.entity_id, category_name
+            )
+            if existing_comment_id is not None:
+                transient = InternalComment(comment=data.comment)
+                await self._populate_comment_metadata(
+                    transient,
+                    entity_type=None,
+                    entity_id=None,
+                    category_display_name=category_name,
+                )
+                updated_comment = await self.repo.update_internal_comment(
+                    internal_comment_id=existing_comment_id,
+                    new_comment_text=data.comment,
+                    visibility=CommentVisibilityEnum.INTERNAL.value,
+                    audience_scope=(
+                        data.audience_scope.value
+                        if data.audience_scope is not None
+                        else None
+                    ),
+                    comment_category_id=transient.comment_category_id,
+                    comment_search_text=transient.comment_search_text,
+                    comment_search_vector=transient.comment_search_vector,
+                )
+                return InternalCommentResponseSchema.model_validate(updated_comment)
+
         comment = InternalComment(
             comment=data.comment,
             audience_scope=data.audience_scope,
@@ -235,17 +267,16 @@ class InternalCommentService:
             comment, data.entity_type, data.entity_id
         )
 
-        if (
-            not is_government_user
-            and data.entity_type == EntityTypeEnum.CI_APPLICATION
-        ):
+        if not is_government_user and data.entity_type == EntityTypeEnum.CI_APPLICATION:
             await self._send_ci_comment_notification(
                 data.entity_id,
                 "applicant_activity",
                 "CI Application Comment Received",
-                self.request.user.user_profile_id
-                if hasattr(self.request.user, "user_profile_id")
-                else None,
+                (
+                    self.request.user.user_profile_id
+                    if hasattr(self.request.user, "user_profile_id")
+                    else None
+                ),
             )
         elif (
             is_government_user
@@ -256,9 +287,11 @@ class InternalCommentService:
                 data.entity_id,
                 "government_action",
                 "CI Application Comment Received",
-                self.request.user.user_profile_id
-                if hasattr(self.request.user, "user_profile_id")
-                else None,
+                (
+                    self.request.user.user_profile_id
+                    if hasattr(self.request.user, "user_profile_id")
+                    else None
+                ),
                 related_organization_id=created_comment.organization_id,
             )
 
@@ -513,7 +546,18 @@ class InternalCommentService:
                 full_name=row["full_name"],
                 create_date=row["create_date"],
                 update_date=row["update_date"],
-                can_edit=bool(username is not None and row["create_user"] == username),
+                update_user=row.get("update_user"),
+                update_full_name=row.get("update_full_name"),
+                can_edit=bool(
+                    username is not None
+                    and (
+                        row["create_user"] == username
+                        or (
+                            is_government_user
+                            and row["entity_type"] == EntityTypeEnum.ORGANIZATION.value
+                        )
+                    )
+                ),
             )
             for row in rows
         ]

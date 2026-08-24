@@ -502,6 +502,42 @@ class InternalCommentRepository:
         return result.scalar_one_or_none() is not None
 
     @repo_handler
+    async def get_latest_organization_comment_id(
+        self, organization_id: int, category_display_name: str
+    ) -> Optional[int]:
+        """
+        Return the current shared organization comment for a category, choosing
+        the most recently edited/created record when historical records exist.
+        """
+        result = await self.db.execute(
+            select(InternalComment.internal_comment_id)
+            .join(
+                OrganizationInternalComment,
+                OrganizationInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
+            .outerjoin(
+                CommentCategory,
+                CommentCategory.comment_category_id
+                == InternalComment.comment_category_id,
+            )
+            .where(
+                OrganizationInternalComment.organization_id == organization_id,
+                CommentCategory.display_name == category_display_name,
+            )
+            .order_by(
+                desc(
+                    func.coalesce(
+                        InternalComment.update_date, InternalComment.create_date
+                    )
+                ),
+                desc(InternalComment.internal_comment_id),
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
     async def get_entity_org_and_year(
         self, entity_type: EntityTypeEnum, entity_id: int
     ) -> Tuple[Optional[int], Optional[int]]:
@@ -793,7 +829,7 @@ class InternalCommentRepository:
 
             ilike_term = f"%{search_term}%"
             normalized_search = _SEARCH_NORMALIZE_RE.sub("", search_term).lower()
-            
+
             stripped_comment = func.regexp_replace(
                 func.coalesce(InternalComment.comment, ""),
                 r"<[^>]*>",
@@ -878,6 +914,7 @@ class InternalCommentRepository:
                 InternalComment.create_user,
                 InternalComment.create_date,
                 InternalComment.update_date,
+                InternalComment.update_user,
                 Organization.name.label("organization_name"),
                 CommentCategory.display_name.label("category"),
                 full_name_col,
@@ -932,6 +969,7 @@ class InternalCommentRepository:
                 inner_q.c.create_user,
                 inner_q.c.create_date,
                 inner_q.c.update_date,
+                inner_q.c.update_user,
                 inner_q.c.organization_name,
                 inner_q.c.category,
                 inner_q.c.full_name,
@@ -953,4 +991,28 @@ class InternalCommentRepository:
         )
 
         rows = (await self.db.execute(query)).mappings().all()
-        return ([dict(r) for r in rows], int(total))
+        comments = [dict(r) for r in rows]
+        update_usernames = {c["update_user"] for c in comments if c.get("update_user")}
+        if update_usernames:
+            update_users_result = await self.db.execute(
+                select(
+                    UserProfile.keycloak_username,
+                    (UserProfile.first_name + " " + UserProfile.last_name).label(
+                        "full_name"
+                    ),
+                ).where(UserProfile.keycloak_username.in_(update_usernames))
+            )
+            full_name_by_username = {
+                row.keycloak_username: row.full_name
+                for row in update_users_result.all()
+            }
+            for comment in comments:
+                username = comment.get("update_user")
+                comment["update_full_name"] = (
+                    full_name_by_username.get(username) if username else None
+                )
+        else:
+            for comment in comments:
+                comment["update_full_name"] = None
+
+        return (comments, int(total))
