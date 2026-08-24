@@ -125,10 +125,17 @@ async def get_all_documents(
     documents = await document_service.get_by_id_and_type(parent_id, parent_type)
 
     file_responses = [
-        (FileResponseSchema.model_validate(document)) for document in documents
+        FileResponseSchema.model_validate(document) for document in documents
     ]
 
-    return file_responses
+    # The IA detail page shows which organization supplied each file, so
+    # resolve uploader usernames to their organization's code in one query.
+    usernames = {f.create_user for f in file_responses if f.create_user}
+    codes = await document_service.get_uploading_organization_codes(usernames)
+    return [
+        f.model_copy(update={"uploading_organization_code": codes.get(f.create_user)})
+        for f in file_responses
+    ]
 
 
 @router.post(

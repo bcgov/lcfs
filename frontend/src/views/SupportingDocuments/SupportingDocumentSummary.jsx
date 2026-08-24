@@ -1,11 +1,22 @@
 import Box from '@mui/material/Box'
 import { List } from '@mui/material'
+import prettyBytes from 'pretty-bytes'
+import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 import { useDownloadDocument } from '@/hooks/useDocuments.js'
 import { timezoneFormatter } from '@/utils/formatters'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
-export const SupportingDocumentSummary = ({ parentID, parentType, data }) => {
+// `detailed` adds the file size and the uploading organization's code to
+// each row (initiative agreement wireframes); other callers keep the
+// original compact line.
+export const SupportingDocumentSummary = ({
+  parentID,
+  parentType,
+  data,
+  detailed = false
+}) => {
+  const { t } = useTranslation(['common'])
   const downloadDocument = useDownloadDocument(parentType, parentID)
   const { hasRoles } = useCurrentUser()
   const files = Array.isArray(data) ? data : []
@@ -38,7 +49,11 @@ export const SupportingDocumentSummary = ({ parentID, parentType, data }) => {
               variant="subtitle2"
               sx={{ marginLeft: 1 }}
             >
-              - {timezoneFormatter({ value: file.createDate })}
+              {detailed
+                ? `- ${prettyBytes(file.fileSize ?? 0)} - ${
+                    file.uploadingOrganizationCode || t('gov')
+                  } - ${timezoneFormatter({ value: file.createDate })}`
+                : `- ${timezoneFormatter({ value: file.createDate })}`}
               {file.createUser && !hasRoles('Supplier')
                 ? ` - ${file.createUser}`
                 : ''}

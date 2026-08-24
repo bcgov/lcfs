@@ -488,3 +488,148 @@ async def test_last_comment_is_plain_text(
     )
     assert row["lastComment"]["comment"] == "plain words"
     assert "<p>" not in row["lastComment"]["comment"]
+
+
+@pytest.mark.anyio
+async def test_profile_returns_the_organization_address_block(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The detail card renders the organization's address, phone and email."""
+    from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
+
+    address = OrganizationAddress(
+        name="Addressed Fuels",
+        street_address="697 Burrard Street",
+        city="Vancouver",
+        province_state="BC",
+        country="Canada",
+        postalCode_zipCode="V6G 2P3",
+    )
+    dbsession.add(address)
+    await dbsession.flush()
+    org = Organization(
+        name="Addressed Fuels",
+        operating_name="Addressed Fuels",
+        organization_status_id=2,
+        organization_type_id=1,
+        organization_address_id=address.organization_address_id,
+        phone="604-555-0100",
+        email="contact@example.com",
+    )
+    dbsession.add(org)
+    await dbsession.flush()
+
+    agreement = await _seed_agreement(dbsession, org.organization_id, "IA-26ADDR")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "get_initiative_agreement_profile",
+        initiative_agreement_id=agreement.initiative_agreement_id,
+    )
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    organization = response.json()["organization"]
+    assert organization["organizationId"] == org.organization_id
+    assert organization["name"] == "Addressed Fuels"
+    assert "organizationCode" in organization
+    assert organization["phone"] == "604-555-0100"
+    assert organization["orgAddress"]["streetAddress"] == "697 Burrard Street"
+    assert organization["orgAddress"]["city"] == "Vancouver"
+
+
+@pytest.mark.anyio
+async def test_profile_tolerates_an_organization_without_an_address(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """An address gap must render an incomplete card, not fail the request."""
+    org = Organization(
+        name="No Address Holdings",
+        operating_name="No Address Holdings",
+        organization_status_id=2,
+        organization_type_id=1,
+    )
+    dbsession.add(org)
+    await dbsession.flush()
+
+    agreement = await _seed_agreement(dbsession, org.organization_id, "IA-26NOADDR")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "get_initiative_agreement_profile",
+        initiative_agreement_id=agreement.initiative_agreement_id,
+    )
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["organization"]["orgAddress"] is None
+
+
+@pytest.mark.anyio
+async def test_agreement_documents_carry_the_uploading_organization_code(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The documents card shows which organization supplied each file;
+    government uploads carry no code."""
+    from lcfs.db.models.document import Document
+    from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+        initiative_agreement_document_association,
+    )
+    from lcfs.db.models.user.UserProfile import UserProfile
+
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26DOCS")
+
+    supplier = (
+        (
+            await dbsession.execute(
+                select(UserProfile)
+                .where(UserProfile.organization_id.isnot(None))
+                .limit(1)
+            )
+        )
+        .scalars()
+        .one()
+    )
+    org_code = (
+        await dbsession.execute(
+            select(Organization.organization_code).where(
+                Organization.organization_id == supplier.organization_id
+            )
+        )
+    ).scalar_one()
+
+    for name, uploader in (
+        ("signed-agreement.pdf", supplier.keycloak_username),
+        # No IDIR user carries an organization, so any government username
+        # exercises the None branch.
+        ("award-letter.pdf", "IDIRSTAFF"),
+    ):
+        document = Document(
+            file_key=f"ia/{name}",
+            file_name=name,
+            file_size=2048,
+            mime_type="application/pdf",
+        )
+        document.create_user = uploader
+        dbsession.add(document)
+        await dbsession.flush()
+        await dbsession.execute(
+            initiative_agreement_document_association.insert().values(
+                initiative_agreement_id=agreement.initiative_agreement_id,
+                document_id=document.document_id,
+            )
+        )
+
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    url = fastapi_app.url_path_for(
+        "get_all_documents",
+        parent_type="initiativeAgreement",
+        parent_id=agreement.initiative_agreement_id,
+    )
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    by_name = {row["fileName"]: row for row in response.json()}
+    assert by_name["signed-agreement.pdf"]["uploadingOrganizationCode"] == org_code
+    assert by_name["award-letter.pdf"]["uploadingOrganizationCode"] is None

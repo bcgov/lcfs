@@ -28,6 +28,42 @@ class OrganizationSchema(BaseSchema):
         from_attributes = True
 
 
+class AgreementOrganizationAddressSchema(BaseSchema):
+    """
+    Every field is optional: organization address rows carry gaps, and the
+    agreement detail card must render what exists rather than 500.
+    """
+
+    name: Optional[str] = None
+    street_address: Optional[str] = None
+    address_other: Optional[str] = None
+    city: Optional[str] = None
+    province_state: Optional[str] = None
+    country: Optional[str] = None
+    postalCode_zipCode: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AgreementOrganizationSchema(BaseSchema):
+    """
+    Organization detail for the agreement header card. Kept separate from the
+    lean OrganizationSchema used by the grid and by the legacy award flow,
+    whose queries do not eager-load the address.
+    """
+
+    organization_id: int
+    name: str
+    organization_code: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    org_address: Optional[AgreementOrganizationAddressSchema] = None
+
+    class Config:
+        from_attributes = True
+
+
 class InitiativeAgreementHistorySchema(BaseSchema):
     create_date: datetime
     initiative_agreement_status: InitiativeAgreementStatusSchema
@@ -171,6 +207,8 @@ class InitiativeAgreementsListSchema(BaseSchema):
 
 
 class InitiativeAgreementProfileSchema(InitiativeAgreementListItemSchema):
+    # Overrides the grid's lean organization payload with the detail card's.
+    organization: AgreementOrganizationSchema
     project_description: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None

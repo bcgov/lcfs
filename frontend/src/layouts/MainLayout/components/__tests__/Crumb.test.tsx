@@ -1,9 +1,18 @@
 import { render, screen } from '@testing-library/react'
 import Crumb from '../Crumb'
-import { vi, describe, it, expect, beforeEach, afterEach, type Mock } from 'vitest'
+import {
+  vi,
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  type Mock
+} from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useLocation, useMatches, useParams } from 'react-router-dom'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
+import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 
 // Mock router hooks
 vi.mock('react-router-dom', async () => {
@@ -88,6 +97,32 @@ describe('Crumb', () => {
     expect(screen.getByText('Admin Dashboard')).toBeInTheDocument()
   })
 
+  it('shows the agreement code for an initiative agreement detail path', () => {
+    setupRouterMocks({
+      pathname: '/initiative-agreements/5',
+      matches: [{ handle: { title: 'Initiative agreement' } }]
+    })
+    useInitiativeAgreementPageStore.getState().setAgreementCrumb('IA-26ORG1')
+
+    render(<Crumb />, { wrapper })
+
+    expect(screen.getByText('Initiative agreements')).toBeInTheDocument()
+    expect(screen.getByText('IA-26ORG1')).toBeInTheDocument()
+
+    useInitiativeAgreementPageStore.getState().setAgreementCrumb(null)
+  })
+
+  it('falls back to the route title when no agreement code is set', () => {
+    setupRouterMocks({
+      pathname: '/initiative-agreements/5',
+      matches: [{ handle: { title: 'Initiative agreement' } }]
+    })
+
+    render(<Crumb />, { wrapper })
+
+    expect(screen.getByText('Initiative agreement')).toBeInTheDocument()
+  })
+
   it('displays numeric IDs with ID prefix', () => {
     setupRouterMocks({
       pathname: '/transactions/12345',
@@ -129,12 +164,10 @@ describe('Crumb', () => {
       matches: [{ handle: { title: 'Organization users' } }]
     })
 
-    useOrganizationPageStore
-      .getState()
-      .setOrganizationContext({
-        organizationName: 'LCFS Org 1',
-        activeTabLabel: 'Users'
-      })
+    useOrganizationPageStore.getState().setOrganizationContext({
+      organizationName: 'LCFS Org 1',
+      activeTabLabel: 'Users'
+    })
 
     render(<Crumb />, { wrapper })
 

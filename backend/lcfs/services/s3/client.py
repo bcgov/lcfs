@@ -32,6 +32,8 @@ from lcfs.db.models.ci_application.CIApplication import (
     ci_application_document_association,
 )
 from lcfs.db.models.document import Document
+from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.comment.InternalComment import (
     InternalComment,
     internal_comment_document_association,
@@ -597,6 +599,25 @@ class DocumentService:
         )
         result = await self.db.execute(stmt)
         return result.scalars().all()
+
+    async def get_uploading_organization_codes(self, usernames):
+        """Map uploader usernames to their organization's code.
+
+        Government (IDIR) users carry no organization, so they are absent
+        from the result and their uploads render as government files.
+        """
+        if not usernames:
+            return {}
+        stmt = (
+            select(UserProfile.keycloak_username, Organization.organization_code)
+            .join(
+                Organization,
+                UserProfile.organization_id == Organization.organization_id,
+            )
+            .where(UserProfile.keycloak_username.in_(usernames))
+        )
+        result = await self.db.execute(stmt)
+        return {username: code for username, code in result.all()}
 
     @repo_handler
     async def get_object(self, document_id: int):
