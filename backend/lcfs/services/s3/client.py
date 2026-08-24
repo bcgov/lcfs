@@ -17,6 +17,7 @@ from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from sqlalchemy import select, delete, and_
+from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.services.s3.dependency import get_s3_client
 from lcfs.db.dependencies import get_async_db_session
@@ -41,7 +42,7 @@ from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServic
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.db.models.compliance.ChargingSite import charging_site_document_association
 from lcfs.web.core.decorators import repo_handler
-from lcfs.web.exception.exceptions import ServiceException
+from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from botocore.exceptions import ClientError
 
 BUCKET_NAME = settings.s3_bucket
@@ -562,9 +563,7 @@ class DocumentService:
             stmt = (
                 select(Document)
                 .join(association_table)
-                .where(
-                    getattr(association_table.c, column_name).in_(parent_ids)
-                )
+                .where(getattr(association_table.c, column_name).in_(parent_ids))
                 .distinct(Document.document_id)
             )
             result = await self.db.execute(stmt)
@@ -580,9 +579,7 @@ class DocumentService:
                     association_table,
                     association_table.c.document_id == Document.document_id,
                 )
-                .where(
-                    getattr(association_table.c, column_name) == parent_id
-                )
+                .where(getattr(association_table.c, column_name) == parent_id)
             )
             result = await self.db.execute(stmt)
             documents = []
@@ -621,6 +618,30 @@ class DocumentService:
                 )
             raise
         return response, document
+
+    async def get_object_for_parent(
+        self, document_id: int, parent_id: int, parent_type: str
+    ):
+        """
+        Fetch a document only when it belongs to the given parent.
+
+        Callers validate the user's access to *parent_id*; without this check
+        that validation is meaningless, because a caller who legitimately
+        reaches one parent could stream any document id in the system.
+        """
+        documents = await self.get_by_id_and_type(parent_id, parent_type)
+        # ci_application projects (Document, document_category) rows.
+        document_ids = {
+            (row[0] if isinstance(row, (tuple, Row)) else row).document_id
+            for row in documents
+        }
+
+        if document_id not in document_ids:
+            raise DataNotFoundException(
+                f"Document {document_id} does not belong to {parent_type} {parent_id}"
+            )
+
+        return await self.get_object(document_id)
 
     async def copy_documents(self, copy_from_id: int, copy_to_id: int):
         documents = await self.db.execute(
