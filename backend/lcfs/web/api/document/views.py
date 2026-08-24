@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from lcfs.web.api.admin_adjustment.validation import AdminAdjustmentValidation
 import structlog
 from typing import List, Optional
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Query, Request, UploadFile
 from fastapi.params import File
@@ -11,11 +12,17 @@ from starlette.responses import StreamingResponse
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
-from lcfs.services.s3.schema import FileResponseSchema
+from lcfs.services.s3.schema import DocumentRenameSchema, FileResponseSchema
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
 from lcfs.web.api.charging_site.validation import ChargingSiteValidation
 from lcfs.web.core.decorators import view_handler
+
+
+def _content_disposition(filename: str) -> str:
+    ascii_fallback = filename.encode("ascii", "ignore").decode("ascii") or "download"
+    encoded = quote(filename, safe="")
+    return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded}"
 
 
 # Lazy-resolved CI validation: see note inside ``ci_application_validator``.
@@ -216,14 +223,64 @@ async def stream_document(
         document_id, parent_id, parent_type
     )
 
+    download_name = document.display_name or document.file_name
     headers = {
-        "Content-Disposition": f'attachment; filename="{document.file_name}"',
+        "Content-Disposition": _content_disposition(download_name),
         "content-length": str(file["ContentLength"]),
     }
 
     return StreamingResponse(
         content=file["Body"], media_type=file["ContentType"], headers=headers
     )
+
+
+@router.put(
+    "/{parent_type}/{parent_id}/{document_id}",
+    response_model=FileResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.SUPPLIER,
+        RoleEnum.ANALYST,
+        RoleEnum.GOVERNMENT,
+        RoleEnum.CI_APPLICANT,
+    ]
+)
+async def rename_file(
+    request: Request,
+    parent_type: str,
+    parent_id: int,
+    document_id: int,
+    data: DocumentRenameSchema,
+    document_service: DocumentService = Depends(),
+    cr_validate: ComplianceReportValidation = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+    aa_validate: AdminAdjustmentValidation = Depends(),
+    cs_validate: ChargingSiteValidation = Depends(),
+    ci_validate=Depends(ci_application_validator),
+) -> FileResponseSchema:
+    if parent_type == "compliance_report":
+        await cr_validate.validate_organization_access(parent_id)
+    elif parent_type == "initiativeAgreement":
+        await ia_validate.validate_organization_access(parent_id)
+    elif parent_type == "administrativeAdjustment":
+        await aa_validate.validate_organization_access(parent_id)
+    elif parent_type == "charging_site":
+        await cs_validate.validate_organization_access(parent_id)
+    elif parent_type == "ci_application":
+        await ci_validate.validate_access(parent_id)
+    elif parent_type == "internal_comment":
+        await document_service.verify_internal_comment_access(
+            parent_id, request.user, write=True
+        )
+    else:
+        raise HTTPException(403, "Unable to verify authorization for document rename")
+
+    document = await document_service.rename_file(
+        document_id, parent_id, parent_type, data.display_name
+    )
+    return FileResponseSchema.model_validate(document)
 
 
 @router.delete(

@@ -25,6 +25,7 @@ vi.mock('react-i18next', () => ({
 let mockDocs = []
 const mockUpload = vi.fn().mockResolvedValue({})
 const mockDelete = vi.fn().mockResolvedValue({})
+const mockUpdate = vi.fn().mockResolvedValue({})
 const mockDownloadDoc = vi.fn().mockResolvedValue({})
 
 vi.mock('@/hooks/useDocuments', () => ({
@@ -36,6 +37,9 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDeleteDocument: vi.fn(() => ({
     mutateAsync: mockDelete,
     isPending: false
+  })),
+  useUpdateDocument: vi.fn(() => ({
+    mutateAsync: mockUpdate
   })),
   useDownloadDocument: vi.fn(() => mockDownloadDoc)
 }))
@@ -127,6 +131,23 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     })
     fireEvent.click(screen.getByTestId('ci-step3-download-doc'))
     expect(mockDownloadDoc).toHaveBeenCalledWith(7, 'tech.pdf')
+  })
+
+  it('downloads a renamed document using its display name', () => {
+    mockDocs = [
+      {
+        documentId: 8,
+        fileName: 'tech.pdf',
+        displayName: 'My Renamed Report.pdf',
+        fileSize: 100,
+        documentCategory: 'supporting'
+      }
+    ]
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
+      wrapper
+    })
+    fireEvent.click(screen.getByTestId('ci-step3-download-doc'))
+    expect(mockDownloadDoc).toHaveBeenCalledWith(8, 'My Renamed Report.pdf')
   })
 
   it('shows a confirmation modal before deleting a document', () => {

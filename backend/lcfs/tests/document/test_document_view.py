@@ -15,6 +15,7 @@ class DummyDocument:
         self.file_name = file_name
         self.document_id = document_id
         self.file_size = file_size
+        self.display_name = None
         self.create_date = "2024-01-01T00:00:00Z"
         self.create_user = "tester"
 
@@ -182,7 +183,7 @@ async def test_stream_document_compliance_report(fastapi_app, client):
     assert response.status_code == status.HTTP_200_OK
 
     cd = response.headers.get("Content-Disposition")
-    assert cd == 'attachment; filename="document.pdf"'
+    assert cd == 'attachment; filename="document.pdf"; filename*=UTF-8\'\'document.pdf'
     cl = response.headers.get("content-length")
     assert cl == "789"
 
@@ -202,10 +203,43 @@ async def test_stream_document_initiative_agreement(fastapi_app, client):
     assert response.status_code == status.HTTP_200_OK
 
     cd = response.headers.get("Content-Disposition")
-    assert cd == 'attachment; filename="document.pdf"'
+    assert cd == 'attachment; filename="document.pdf"; filename*=UTF-8\'\'document.pdf'
     cl = response.headers.get("content-length")
     assert cl == "789"
 
+    body = await response.aread()
+    assert body == b"streamed content"
+
+
+@pytest.mark.anyio
+async def test_stream_document_filename_outside_latin1(fastapi_app, client):
+    class NonLatin1FilenameDocumentService(FakeDocumentService):
+        async def get_object(self, document_id: int):
+            file = {
+                "ContentLength": 789,
+                "Body": [b"streamed content"],
+                "ContentType": "image/png",
+            }
+            document = DummyDocument(
+                "Screenshot 2026-08-13 at 11.33.24\u202fAM.png",
+                document_id=10,
+                file_size=789,
+            )
+            return file, document
+
+    fastapi_app.dependency_overrides[DocumentService] = (
+        lambda: NonLatin1FilenameDocumentService()
+    )
+
+    url = fastapi_app.url_path_for(
+        "stream_document", parent_type="compliance_report", parent_id=1, document_id=10
+    )
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    cd = response.headers.get("Content-Disposition")
+    assert cd is not None
+    assert "filename*=UTF-8''" in cd
     body = await response.aread()
     assert body == b"streamed content"
 
@@ -219,7 +253,7 @@ async def test_stream_document_admin_adjustment(fastapi_app, client):
     assert response.status_code == status.HTTP_200_OK
 
     cd = response.headers.get("Content-Disposition")
-    assert cd == 'attachment; filename="document.pdf"'
+    assert cd == 'attachment; filename="document.pdf"; filename*=UTF-8\'\'document.pdf'
     cl = response.headers.get("content-length")
     assert cl == "789"
 
