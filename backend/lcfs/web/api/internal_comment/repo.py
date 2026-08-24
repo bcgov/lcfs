@@ -354,6 +354,7 @@ class InternalCommentRepository:
         comment_category_id: Optional[int] = None,
         comment_search_text: Optional[str] = None,
         comment_search_vector=None,
+        update_user: Optional[str] = None,
     ) -> InternalComment:
         """
         Updates the text of an existing internal comment.
@@ -366,6 +367,7 @@ class InternalCommentRepository:
             comment_category_id (int, optional): New category FK if changed.
             comment_search_text (str, optional): Refreshed sanitized text.
             comment_search_vector: SQL expression / value for the tsvector.
+            update_user (str, optional): Authenticated username making the edit.
 
         Returns:
             InternalComment: The updated internal comment object.
@@ -398,6 +400,8 @@ class InternalCommentRepository:
             internal_comment.comment_search_text = comment_search_text
         if comment_search_vector is not None:
             internal_comment.comment_search_vector = comment_search_vector
+        if update_user is not None:
+            internal_comment.update_user = update_user
         await self.db.flush()
         await self.db.refresh(internal_comment)
         # Load documents so response serialization does not lazy-load outside

@@ -248,6 +248,7 @@ class InternalCommentService:
                     comment_category_id=transient.comment_category_id,
                     comment_search_text=transient.comment_search_text,
                     comment_search_vector=transient.comment_search_vector,
+                    update_user=username,
                 )
                 return InternalCommentResponseSchema.model_validate(updated_comment)
 
@@ -430,6 +431,7 @@ class InternalCommentService:
             comment_category_id=transient.comment_category_id,
             comment_search_text=transient.comment_search_text,
             comment_search_vector=transient.comment_search_vector,
+            update_user=self.request.user.keycloak_username,
         )
         return InternalCommentResponseSchema.model_validate(updated_comment)
 
