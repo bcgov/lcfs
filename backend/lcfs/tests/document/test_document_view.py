@@ -1,5 +1,3 @@
-from http.client import HTTPException
-
 import io
 import pytest
 from fastapi import UploadFile
@@ -59,6 +57,17 @@ class FakeDocumentService:
         }
         document = DummyDocument("document.pdf", document_id=10, file_size=789)
         return file, document
+
+    async def get_object_for_parent(
+        self, document_id: int, parent_id: int, parent_type: str
+    ):
+        # Mirrors the real service: the document must belong to the parent.
+        FakeDocumentService.last_scoped_fetch = {
+            "document_id": document_id,
+            "parent_id": parent_id,
+            "parent_type": parent_type,
+        }
+        return await self.get_object(document_id)
 
     async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
         return
@@ -269,13 +278,17 @@ async def test_delete_file_valid(fastapi_app, client, parent_type):
 
 @pytest.mark.anyio
 async def test_delete_file_invalid_parent_type(fastapi_app, client):
+    """
+    An unsupported parent type is refused with a 403 response. This used to
+    raise http.client.HTTPException, which is not an HTTP error class, so the
+    exception escaped the handler and surfaced as an unhandled server error.
+    """
     url = fastapi_app.url_path_for(
         "delete_file", parent_type="invalid", parent_id=1, document_id=100
     )
-    with pytest.raises(HTTPException) as exc_info:
-        await client.delete(url)
-    assert exc_info.value.args[0] == 403
-    assert "Unable to verify authorization" in exc_info.value.args[1]
+    response = await client.delete(url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "Unable to verify authorization" in response.json()["detail"]
 
 
 # --- internal_comment attachments (issue #4514) ------------------------------
