@@ -69,6 +69,10 @@ export const apiRoutes = {
 
   // initiative-agreements
   initiativeAgreements: '/initiative-agreements/',
+  // Agreement-management endpoints (Initiative Agreements module); backend
+  // arrives with the API phase — consumed by hooks/useInitiativeAgreements.ts
+  getInitiativeAgreementsList: '/initiative-agreements/list',
+  getInitiativeAgreement: '/initiative-agreements/:initiativeAgreementId',
 
   // fuel-type
   getFuelTypeOthers: '/fuel-type/others/list',
