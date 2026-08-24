@@ -43,6 +43,14 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDownloadDocument: () => vi.fn()
 }))
 
+const commentsProps = vi.fn()
+vi.mock('@/components/Comments', () => ({
+  default: (props) => {
+    commentsProps(props)
+    return <div data-test="comments-component" />
+  }
+}))
+
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   default: ({ open }) => (open ? <div data-test="upload-dialog" /> : null)
 }))
@@ -174,6 +182,26 @@ describe('InitiativeAgreementDetail', () => {
     expect(useInitiativeAgreementPageStore.getState().agreementCrumb).toBe(
       'IA-26ORG1'
     )
+  })
+
+  it('shows the dual-mode comment thread to IDIR IA roles', () => {
+    render(<InitiativeAgreementDetail />, { wrapper })
+
+    expect(screen.getByTestId('comments-component')).toBeInTheDocument()
+    expect(commentsProps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: 'initiativeAgreement',
+        entityId: 5,
+        commentMode: 'dual'
+      })
+    )
+  })
+
+  it('hides the comment thread from a BCeID proponent', () => {
+    mockRoles = [{ name: roles.ia_proponent }]
+    render(<InitiativeAgreementDetail />, { wrapper })
+
+    expect(screen.queryByTestId('comments-component')).not.toBeInTheDocument()
   })
 
   it('tolerates an organization with no address', () => {
