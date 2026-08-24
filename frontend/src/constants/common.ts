@@ -79,7 +79,8 @@ export const FILTER_KEYS = {
   COMPLIANCE_REPORT_GRID: 'compliance-reports-grid-filter',
   TRANSACTIONS_GRID: 'transactions-grid-filter',
   FUEL_CODES_GRID: 'fuel-codes-grid-filter',
-  CI_APPLICATIONS_GRID: 'ci-applications-grid-filter'
+  CI_APPLICATIONS_GRID: 'ci-applications-grid-filter',
+  INITIATIVE_AGREEMENTS_GRID: 'initiative-agreements-grid-filter'
 } as const
 
 export const MAX_FILE_SIZE_BYTES = 52428800 // 50MB

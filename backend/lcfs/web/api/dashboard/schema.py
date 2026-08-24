@@ -40,3 +40,10 @@ class OrgFuelCodeCountsSchema(BaseSchema):
 
 class CIApplicationCountsSchema(BaseSchema):
     in_progress: int = Field(default=0)
+
+
+class InitiativeAgreementCountsSchema(BaseSchema):
+    # Counts of agreement-kind records by lifecycle status; legacy award
+    # rows are excluded (#4895).
+    draft: int = Field(default=0)
+    underway: int = Field(default=0)

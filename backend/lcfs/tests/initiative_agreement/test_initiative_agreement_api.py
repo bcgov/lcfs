@@ -633,3 +633,36 @@ async def test_agreement_documents_carry_the_uploading_organization_code(
     by_name = {row["fileName"]: row for row in response.json()}
     assert by_name["signed-agreement.pdf"]["uploadingOrganizationCode"] == org_code
     assert by_name["award-letter.pdf"]["uploadingOrganizationCode"] is None
+
+
+@pytest.mark.anyio
+async def test_dashboard_counts_cover_only_agreement_kind_rows(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The dashboard card counts lifecycle statuses of agreement-kind rows;
+    legacy award rows must not inflate them (#4895)."""
+    org_id, _ = await _two_org_ids(dbsession)
+    await _seed_agreement(dbsession, org_id, "IA-26DSH1")
+    await _seed_agreement(dbsession, org_id, "IA-26DSH2")
+    await _seed_agreement(
+        dbsession,
+        org_id,
+        "IA-26DSH3",
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
+    )
+    # A legacy award row: no lifecycle status, legacy record kind.
+    dbsession.add(
+        InitiativeAgreement(
+            to_organization_id=org_id,
+            compliance_units=100,
+        )
+    )
+    await dbsession.flush()
+
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    response = await client.get("/api/dashboard/initiative-agreement-counts")
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["underway"] == 2
+    assert data["draft"] == 1
