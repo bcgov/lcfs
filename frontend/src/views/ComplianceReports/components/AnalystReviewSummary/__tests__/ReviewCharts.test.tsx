@@ -149,6 +149,97 @@ describe('ReviewCharts', () => {
     )
   })
 
+  it('renders the supply and FSE correlation trend as a dual-axis chart', () => {
+    const chartData: ReviewChartData = {
+      historicalVariance: [
+        {
+          title: 'Fuel supply and FSE count trend',
+          currentLabel: '2025',
+          comparisonLabel: '2024',
+          points: [
+            {
+              label: 'Total fuel supply',
+              currentValue: 1400000,
+              comparisonValue: 1000000,
+              delta: 400000,
+              percentChange: 40,
+              units: 'reported units'
+            },
+            {
+              label: 'FSE count',
+              currentValue: 12,
+              comparisonValue: 10,
+              delta: 2,
+              percentChange: 20,
+              units: 'count'
+            }
+          ]
+        }
+      ]
+    }
+
+    render(<ReviewCharts chartData={chartData} />)
+
+    const option = chartProps[0].option
+    expect(option.yAxis).toHaveLength(2)
+    expect(option.yAxis[0].name).toBe('Supply volume')
+    expect(option.yAxis[1].name).toBe('FSE count')
+    expect(option.series).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Total fuel supply',
+          yAxisIndex: 0,
+          data: [1000000, 1400000]
+        }),
+        expect.objectContaining({
+          name: 'FSE count',
+          yAxisIndex: 1,
+          data: [10, 12]
+        })
+      ])
+    )
+  })
+
+  it('renders the fuel presence matrix as a heatmap', () => {
+    const chartData: ReviewChartData = {
+      historicalVariance: [
+        {
+          title: 'Fuel supply presence by fuel category and type',
+          currentLabel: '2025',
+          comparisonLabel: '2024',
+          points: [
+            {
+              label: 'Gasoline - Ethanol',
+              currentValue: 0,
+              comparisonValue: 100,
+              delta: -100,
+              percentChange: -100,
+              units: 'reported units'
+            }
+          ]
+        }
+      ]
+    }
+
+    render(<ReviewCharts chartData={chartData} />)
+
+    const option = chartProps[0].option
+    expect(option.series[0].type).toBe('heatmap')
+    expect(option.visualMap.text).toEqual(['Higher volume', 'Missing'])
+    expect(option.visualMap.dimension).toBe(3)
+    expect(option.visualMap.max).toBeCloseTo(Math.log10(101))
+    expect(option.series[0].data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: [0, 0, 100, Math.log10(101)]
+        }),
+        expect.objectContaining({
+          value: [1, 0, 0, 0]
+        })
+      ])
+    )
+  })
+
   it('does not render when no chart data is available', () => {
     const { container } = render(<ReviewCharts chartData={{}} />)
 

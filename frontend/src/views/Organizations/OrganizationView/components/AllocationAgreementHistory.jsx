@@ -21,6 +21,12 @@ import ReactECharts from 'echarts-for-react'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import {
+  BC_CHART_AXIS_LABEL,
+  BC_CHART_CATEGORY_AXIS_LABEL,
+  BC_CHART_COLORS,
+  BC_CHART_GRID
+} from '@/components/charts/chartStyles'
 import Loading from '@/components/Loading'
 import { useOrganizationAllocationAgreementAnalytics } from '@/hooks/useOrganization'
 import { formatNumberWithCommas } from '@/utils/formatters'
@@ -86,29 +92,15 @@ const getChangeColor = (value) => {
 }
 
 const CHART_COLORS = {
-  blue: '#0072B2',
-  green: '#009E73',
-  orange: '#D55E00',
-  purple: '#CC79A7',
-  neutralText: '#405074'
+  blue: BC_CHART_COLORS.blue,
+  green: BC_CHART_COLORS.green,
+  orange: BC_CHART_COLORS.orange,
+  purple: BC_CHART_COLORS.purple,
+  neutralText: BC_CHART_COLORS.text
 }
-const CHART_GRID = {
-  left: 64,
-  right: 24,
-  top: 56,
-  bottom: 56,
-  containLabel: true
-}
-const CHART_AXIS_LABEL = {
-  color: '#5f6675',
-  hideOverlap: true
-}
-const CHART_CATEGORY_AXIS_LABEL = {
-  ...CHART_AXIS_LABEL,
-  show: true,
-  interval: 0,
-  margin: 10
-}
+const CHART_GRID = BC_CHART_GRID
+const CHART_AXIS_LABEL = BC_CHART_AXIS_LABEL
+const CHART_CATEGORY_AXIS_LABEL = BC_CHART_CATEGORY_AXIS_LABEL
 
 const MetricCard = ({ title, value, period, comparison, comparisonColor }) => (
   <Card

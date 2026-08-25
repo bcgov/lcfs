@@ -153,16 +153,17 @@ export const PenaltyLog = () => {
 
   const yearLabels = allYears
 
-  const sparklineData = useMemo(
-    () => ({
-      total: yearlyPenalties.map((item) => item.totalAutomatic),
-      automatic: yearlyPenalties.map((item) => item.autoRenewable),
-      discretionary: processDiscretionaryData(rawPenaltyLogs, yearLabels)
-    }),
-    [yearlyPenalties, rawPenaltyLogs, yearLabels]
-  )
+  const sparklineData = useMemo(() => {
+    const discretionary = processDiscretionaryData(rawPenaltyLogs, yearLabels)
+    const automatic = yearlyPenalties.map((item) => item.totalAutomatic)
+    return {
+      total: automatic.map((amount, index) => amount + discretionary[index]),
+      automatic,
+      discretionary
+    }
+  }, [yearlyPenalties, rawPenaltyLogs, yearLabels])
 
-  const stackedBarOption = useStackedBarOption(yearlyPenalties, theme)
+  const stackedBarOption = useStackedBarOption(yearlyPenalties)
   const penaltyMixOption = usePenaltyMixOption(penaltyTotals, theme)
 
   const sparklineOptions = useMemo(
@@ -170,23 +171,20 @@ export const PenaltyLog = () => {
       total: useSparklineOption(
         yearLabels,
         sparklineData.total,
-        theme,
         t('org:penaltyLog.totalPenalties')
       ),
       automatic: useSparklineOption(
         yearLabels,
         sparklineData.automatic,
-        theme,
         t('org:penaltyLog.autoPenalties')
       ),
       discretionary: useSparklineOption(
         yearLabels,
         sparklineData.discretionary,
-        theme,
         t('org:penaltyLog.discretionaryPenalties')
       )
     }),
-    [yearLabels, sparklineData, theme]
+    [yearLabels, sparklineData, t]
   )
 
   if (analyticsLoading || currentUserLoading) {

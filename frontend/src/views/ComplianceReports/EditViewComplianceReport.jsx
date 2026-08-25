@@ -849,16 +849,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           </BCTypography>
         </BCBox>
         <Stack direction="column" mt={2}>
-          {isDeterministicReportSummaryEnabled &&
-            isIdirUser &&
-            !location.state?.newReport && (
-              <BCBox
-                id="report-section-analyst-review"
-                sx={{ scrollMarginTop: 96, marginBottom: '2rem' }}
-              >
-                <AnalystReviewSummary complianceReportId={complianceReportId} />
-              </BCBox>
-            )}
+          {isIdirUser && !location.state?.newReport && (
+            <BCBox
+              id="report-section-analyst-review"
+              sx={{ scrollMarginTop: 96, marginBottom: '2rem' }}
+            >
+              <AnalystReviewSummary complianceReportId={complianceReportId} />
+            </BCBox>
+          )}
           <Stack
             id="report-section-review-actions"
             direction={{ md: 'column', lg: 'row' }}

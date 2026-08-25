@@ -1,5 +1,13 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import {
+  BC_CHART_AXIS_LABEL,
+  BC_CHART_COLORS,
+  BC_CHART_GRID,
+  getStandardBarSeriesStyle,
+  getStandardChartOptions,
+  getStandardLineSeriesStyle
+} from '@/components/charts/chartStyles'
 import { FormControl, InputLabel, MenuItem, Select, Stack } from '@mui/material'
 import { useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
@@ -37,18 +45,8 @@ type HistoricalChartMode = 'trend' | 'horizontal-bars' | 'grouped-bars'
 
 const ALL_FILTER_VALUE = 'all'
 
-const chartGrid = {
-  left: 64,
-  right: 24,
-  bottom: 44,
-  top: 56,
-  containLabel: true
-}
-
-const chartAxisLabel = {
-  color: '#5f6675',
-  hideOverlap: true
-}
+const chartGrid = { ...BC_CHART_GRID, bottom: 44 }
+const chartAxisLabel = BC_CHART_AXIS_LABEL
 
 const getHistoricalChartMode = (
   group: HistoricalChartGroup
@@ -64,6 +62,8 @@ const getHistoricalChartMode = (
 
 const getHistoricalChartModeLabel = (group: HistoricalChartGroup) => {
   if (isFuelCodeSunburstGroup(group)) return 'fuel-code hierarchy'
+  if (isSupplyFseCorrelationGroup(group)) return 'correlation'
+  if (isFuelPresenceHeatmapGroup(group)) return 'presence heatmap'
   const mode = getHistoricalChartMode(group)
   if (mode === 'trend') return 'trend'
   if (mode === 'horizontal-bars') return 'wide variance'
@@ -76,47 +76,57 @@ const isFuelCodeSunburstGroup = (group: HistoricalChartGroup) =>
 const isFseUsageUtilizationGroup = (group: HistoricalChartGroup) =>
   group.title === 'FSE kWh usage and capacity utilization'
 
-const buildSupplementalImpactChartOptions = (series: ComparisonSeries) => ({
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: { type: 'shadow' }
-  },
-  legend: {
-    top: 0
-  },
-  grid: chartGrid,
-  xAxis: {
-    type: 'category',
-    data: series.points.map((point) => point.label),
-    axisLabel: {
-      ...chartAxisLabel,
-      rotate: series.points.length > 4 ? 30 : 0,
-      overflow: 'truncate',
-      width: 100
-    }
-  },
-  yAxis: {
-    type: 'value'
-  },
-  series: [
-    {
-      name: series.comparisonLabel,
-      type: 'bar',
-      data: series.points.map((point) => point.comparisonValue)
+const isSupplyFseCorrelationGroup = (group: HistoricalChartGroup) =>
+  group.title === 'Fuel supply and FSE count trend'
+
+const isFuelPresenceHeatmapGroup = (group: HistoricalChartGroup) =>
+  group.title === 'Fuel supply presence by fuel category and type'
+
+const buildSupplementalImpactChartOptions = (series: ComparisonSeries) =>
+  getStandardChartOptions({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
     },
-    {
-      name: series.currentLabel,
-      type: 'bar',
-      data: series.points.map((point) => point.currentValue)
+    legend: {
+      top: 0
     },
-    {
-      name: 'Delta',
-      type: 'line',
-      data: series.points.map((point) => point.delta),
-      yAxisIndex: 0
-    }
-  ]
-})
+    grid: chartGrid,
+    xAxis: {
+      type: 'category',
+      data: series.points.map((point) => point.label),
+      axisLabel: {
+        ...chartAxisLabel,
+        rotate: series.points.length > 4 ? 30 : 0,
+        overflow: 'truncate',
+        width: 100
+      }
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: [
+      {
+        name: series.comparisonLabel,
+        type: 'bar',
+        ...getStandardBarSeriesStyle(0),
+        data: series.points.map((point) => point.comparisonValue)
+      },
+      {
+        name: series.currentLabel,
+        type: 'bar',
+        ...getStandardBarSeriesStyle(1),
+        data: series.points.map((point) => point.currentValue)
+      },
+      {
+        name: 'Delta',
+        type: 'line',
+        ...getStandardLineSeriesStyle(2),
+        data: series.points.map((point) => point.delta),
+        yAxisIndex: 0
+      }
+    ]
+  })
 
 const groupHistoricalSeries = (
   historicalSeries: ComparisonSeries[]
@@ -176,6 +186,12 @@ const buildHistoricalChartOptions = (group: HistoricalChartGroup) => {
       fuelType: ALL_FILTER_VALUE
     })
   }
+  if (isSupplyFseCorrelationGroup(group)) {
+    return buildSupplyFseCorrelationChartOptions(group)
+  }
+  if (isFuelPresenceHeatmapGroup(group)) {
+    return buildFuelPresenceHeatmapOptions(group)
+  }
   if (isFseUsageUtilizationGroup(group)) {
     return buildFseUsageUtilizationChartOptions(group)
   }
@@ -183,7 +199,7 @@ const buildHistoricalChartOptions = (group: HistoricalChartGroup) => {
   const mode = getHistoricalChartMode(group)
 
   if (mode === 'trend') {
-    return {
+    return getStandardChartOptions({
       tooltip: { trigger: 'axis' },
       legend: { top: 0, type: 'scroll' },
       grid: chartGrid,
@@ -196,20 +212,20 @@ const buildHistoricalChartOptions = (group: HistoricalChartGroup) => {
         type: 'value',
         axisLabel: chartAxisLabel
       },
-      series: group.labels.map((label) => ({
+      series: group.labels.map((label, index) => ({
         name: label,
         type: 'line',
         smooth: true,
-        symbolSize: 7,
+        ...getStandardLineSeriesStyle(index),
         data: group.periodLabels.map(
           (period) => group.valuesByPeriod.get(period)?.get(label) || 0
         )
       }))
-    }
+    })
   }
 
   if (mode === 'horizontal-bars') {
-    return {
+    return getStandardChartOptions({
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' }
@@ -229,17 +245,18 @@ const buildHistoricalChartOptions = (group: HistoricalChartGroup) => {
           width: 120
         }
       },
-      series: group.periodLabels.map((period) => ({
+      series: group.periodLabels.map((period, index) => ({
         name: period,
         type: 'bar',
+        ...getStandardBarSeriesStyle(index),
         data: group.labels.map(
           (label) => group.valuesByPeriod.get(period)?.get(label) || 0
         )
       }))
-    }
+    })
   }
 
-  return {
+  return getStandardChartOptions({
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' }
@@ -263,68 +280,208 @@ const buildHistoricalChartOptions = (group: HistoricalChartGroup) => {
       type: 'value',
       axisLabel: chartAxisLabel
     },
-    series: group.periodLabels.map((period) => ({
+    series: group.periodLabels.map((period, index) => ({
       name: period,
       type: 'bar',
+      ...getStandardBarSeriesStyle(index),
       data: group.labels.map(
         (label) => group.valuesByPeriod.get(period)?.get(label) || 0
       )
     }))
-  }
+  })
 }
 
-const buildFseUsageUtilizationChartOptions = (group: HistoricalChartGroup) => ({
-  tooltip: { trigger: 'axis' },
-  legend: { top: 0, type: 'scroll' },
-  grid: {
-    ...chartGrid,
-    right: 56
-  },
-  xAxis: {
-    type: 'category',
-    data: group.periodLabels,
-    axisLabel: chartAxisLabel
-  },
-  yAxis: [
-    {
-      type: 'value',
-      name: 'kWh usage',
-      nameLocation: 'middle',
-      nameGap: 48,
-      nameRotate: 90,
-      nameTextStyle: {
-        color: '#405074',
-        align: 'center'
-      },
+const buildFseUsageUtilizationChartOptions = (group: HistoricalChartGroup) =>
+  getStandardChartOptions({
+    tooltip: { trigger: 'axis' },
+    legend: { top: 0, type: 'scroll' },
+    grid: {
+      ...chartGrid,
+      right: 56
+    },
+    xAxis: {
+      type: 'category',
+      data: group.periodLabels,
       axisLabel: chartAxisLabel
     },
-    {
-      type: 'value',
-      name: 'Utilization %',
-      nameLocation: 'middle',
-      nameGap: 48,
-      nameRotate: 90,
-      nameTextStyle: {
-        color: '#405074',
-        align: 'center'
+    yAxis: [
+      {
+        type: 'value',
+        name: 'kWh usage',
+        nameLocation: 'middle',
+        nameGap: 48,
+        nameRotate: 90,
+        nameTextStyle: {
+          color: BC_CHART_COLORS.text,
+          align: 'center'
+        },
+        axisLabel: chartAxisLabel
       },
-      axisLabel: {
-        ...chartAxisLabel,
-        formatter: '{value}%'
+      {
+        type: 'value',
+        name: 'Utilization %',
+        nameLocation: 'middle',
+        nameGap: 48,
+        nameRotate: 90,
+        nameTextStyle: {
+          color: BC_CHART_COLORS.text,
+          align: 'center'
+        },
+        axisLabel: {
+          ...chartAxisLabel,
+          formatter: '{value}%'
+        }
       }
-    }
-  ],
-  series: group.labels.map((label) => ({
-    name: label,
-    type: 'line',
-    smooth: true,
-    symbolSize: 7,
-    yAxisIndex: label === 'Average capacity utilization' ? 1 : 0,
-    data: group.periodLabels.map(
+    ],
+    series: group.labels.map((label, index) => ({
+      name: label,
+      type: 'line',
+      smooth: true,
+      ...getStandardLineSeriesStyle(index),
+      yAxisIndex: label === 'Average capacity utilization' ? 1 : 0,
+      data: group.periodLabels.map(
+        (period) => group.valuesByPeriod.get(period)?.get(label) || 0
+      )
+    }))
+  })
+
+const buildSupplyFseCorrelationChartOptions = (group: HistoricalChartGroup) =>
+  getStandardChartOptions({
+    tooltip: { trigger: 'axis' },
+    legend: { top: 0, type: 'scroll' },
+    grid: {
+      ...chartGrid,
+      right: 56
+    },
+    xAxis: {
+      type: 'category',
+      data: group.periodLabels,
+      axisLabel: chartAxisLabel
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: 'Supply volume',
+        nameLocation: 'middle',
+        nameGap: 48,
+        nameRotate: 90,
+        nameTextStyle: {
+          color: BC_CHART_COLORS.text,
+          align: 'center'
+        },
+        axisLabel: chartAxisLabel
+      },
+      {
+        type: 'value',
+        name: 'FSE count',
+        nameLocation: 'middle',
+        nameGap: 48,
+        nameRotate: 90,
+        nameTextStyle: {
+          color: BC_CHART_COLORS.text,
+          align: 'center'
+        },
+        axisLabel: chartAxisLabel
+      }
+    ],
+    series: group.labels.map((label, index) => ({
+      name: label,
+      type: 'line',
+      smooth: true,
+      ...getStandardLineSeriesStyle(index),
+      yAxisIndex: label === 'FSE count' ? 1 : 0,
+      data: group.periodLabels.map(
+        (period) => group.valuesByPeriod.get(period)?.get(label) || 0
+      )
+    }))
+  })
+
+const buildFuelPresenceHeatmapOptions = (group: HistoricalChartGroup) => {
+  const quantities = group.labels.flatMap((label) =>
+    group.periodLabels.map(
       (period) => group.valuesByPeriod.get(period)?.get(label) || 0
     )
-  }))
-})
+  )
+  const nonZeroQuantities = quantities.filter((quantity) => quantity > 0)
+  const maxLogQuantity = nonZeroQuantities.length
+    ? Math.max(...nonZeroQuantities.map((quantity) => Math.log10(quantity + 1)))
+    : 0
+  const heatmapData = group.labels.flatMap((label, yIndex) =>
+    group.periodLabels.map((period, xIndex) => {
+      const quantity = group.valuesByPeriod.get(period)?.get(label) || 0
+      return {
+        value: [xIndex, yIndex, quantity, Math.log10(quantity + 1)]
+      }
+    })
+  )
+
+  return getStandardChartOptions({
+    tooltip: {
+      position: 'top',
+      formatter: (params: any) => {
+        const [xIndex, yIndex, quantity] = params.value || []
+        const period = group.periodLabels[xIndex]
+        const fuel = group.labels[yIndex]
+        return `${fuel}<br/>${period}<br/>${
+          quantity > 0 ? 'Reported' : 'Not reported'
+        }<br/>Quantity: ${Number(quantity || 0).toLocaleString()}`
+      }
+    },
+    grid: {
+      ...chartGrid,
+      top: 36,
+      height: '68%'
+    },
+    xAxis: {
+      type: 'category',
+      data: group.periodLabels,
+      splitArea: { show: true },
+      axisLabel: chartAxisLabel
+    },
+    yAxis: {
+      type: 'category',
+      data: group.labels,
+      splitArea: { show: true },
+      axisLabel: {
+        ...chartAxisLabel,
+        overflow: 'truncate',
+        width: 140
+      }
+    },
+    visualMap: {
+      min: 0,
+      max: maxLogQuantity || 1,
+      calculable: false,
+      dimension: 3,
+      type: 'continuous',
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 0,
+      text: ['Higher volume', 'Missing'],
+      inRange: {
+        color: ['#dbeafe', '#60a5fa', '#1d4ed8']
+      },
+      outOfRange: {
+        color: ['#f3f6fb']
+      }
+    },
+    series: [
+      {
+        name: 'Fuel presence',
+        type: 'heatmap',
+        data: heatmapData,
+        label: {
+          show: false
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 8
+          }
+        }
+      }
+    ]
+  })
+}
 
 const parseFuelCodeLabel = (label: string) => {
   const match = label.match(/^(.*?) \((.*?) - (.*?)\)$/)
@@ -410,7 +567,7 @@ const buildFuelCodeSunburstOptions = (
     }))
     .filter((fuelType) => fuelType.children.length > 0)
 
-  return {
+  return getStandardChartOptions({
     tooltip: {
       trigger: 'item',
       formatter: (params: any) => {
@@ -468,7 +625,7 @@ const buildFuelCodeSunburstOptions = (
         ]
       }
     ]
-  }
+  })
 }
 
 const FuelCodeSunburstChartCard = ({
@@ -584,50 +741,52 @@ const groupComplianceUnitSeries = (
   }
 }
 
-const buildComplianceUnitChartOptions = (group: ComplianceUnitChartGroup) => ({
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: { type: 'shadow' }
-  },
-  legend: {
-    top: 0,
-    type: 'scroll'
-  },
-  grid: chartGrid,
-  xAxis: {
-    type: 'category',
-    data: group.fuelLabels,
-    axisLabel: {
-      ...chartAxisLabel,
-      rotate: group.fuelLabels.length > 4 ? 30 : 0,
-      overflow: 'truncate',
-      width: 100
-    }
-  },
-  yAxis: {
-    type: 'value',
-    name: 'Compliance units',
-    nameLocation: 'middle',
-    nameGap: 52,
-    nameRotate: 90,
-    nameTextStyle: {
-      color: '#405074',
-      align: 'center'
+const buildComplianceUnitChartOptions = (group: ComplianceUnitChartGroup) =>
+  getStandardChartOptions({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
     },
-    axisLabel: chartAxisLabel
-  },
-  series: group.schedules.map((schedule) => ({
-    name: schedule,
-    type: 'bar',
-    stack: 'compliance-units',
-    emphasis: {
-      focus: 'series'
+    legend: {
+      top: 0,
+      type: 'scroll'
     },
-    data: group.fuelLabels.map(
-      (fuelLabel) => group.values.get(`${schedule}|${fuelLabel}`) || 0
-    )
-  }))
-})
+    grid: chartGrid,
+    xAxis: {
+      type: 'category',
+      data: group.fuelLabels,
+      axisLabel: {
+        ...chartAxisLabel,
+        rotate: group.fuelLabels.length > 4 ? 30 : 0,
+        overflow: 'truncate',
+        width: 100
+      }
+    },
+    yAxis: {
+      type: 'value',
+      name: 'Compliance units',
+      nameLocation: 'middle',
+      nameGap: 52,
+      nameRotate: 90,
+      nameTextStyle: {
+        color: BC_CHART_COLORS.text,
+        align: 'center'
+      },
+      axisLabel: chartAxisLabel
+    },
+    series: group.schedules.map((schedule, index) => ({
+      name: schedule,
+      type: 'bar',
+      stack: 'compliance-units',
+      ...getStandardBarSeriesStyle(index),
+      emphasis: {
+        focus: 'series'
+      },
+      data: group.fuelLabels.map(
+        (fuelLabel) => group.values.get(`${schedule}|${fuelLabel}`) || 0
+      )
+    }))
+  })
 
 interface ReviewChartsProps {
   chartData?: ReviewChartData
