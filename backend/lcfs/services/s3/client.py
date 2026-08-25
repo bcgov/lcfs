@@ -36,6 +36,12 @@ from lcfs.db.models.comment.InternalComment import (
     InternalComment,
     internal_comment_document_association,
 )
+from lcfs.db.models.comment.CIApplicationInternalComment import (
+    CIApplicationInternalComment,
+)
+from lcfs.db.models.comment.ComplianceReportInternalComment import (
+    ComplianceReportInternalComment,
+)
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
@@ -392,6 +398,49 @@ class DocumentService:
             detail="Only Analysts and Government Staff and related Organization users can upload files to Charging Sites.",
         )
 
+    async def _get_readable_comment_organization_ids(
+        self, internal_comment_id: int
+    ) -> set[int]:
+        """
+        Organizations owning the entities a comment hangs off, restricted to
+        the entity types a non-government caller may read.
+
+        Only compliance report and CI application threads are resolved, because
+        those are the only ones InternalCommentService.get_internal_comments
+        exposes to a non-government caller. A comment on any other entity — or
+        on none — resolves to an empty set and is refused.
+
+        The organization is derived live from the association tables rather than
+        read from ``internal_comment.organization_id``: that column is a
+        nullable denormalization, so authorizing off it would deny access to
+        attachments on older comments whose value was never backfilled.
+        """
+        report_orgs = (
+            select(ComplianceReport.organization_id)
+            .join(
+                ComplianceReportInternalComment,
+                ComplianceReportInternalComment.compliance_report_id
+                == ComplianceReport.compliance_report_id,
+            )
+            .where(
+                ComplianceReportInternalComment.internal_comment_id
+                == internal_comment_id
+            )
+        )
+        application_orgs = (
+            select(CIApplication.organization_id)
+            .join(
+                CIApplicationInternalComment,
+                CIApplicationInternalComment.ci_application_id
+                == CIApplication.ci_application_id,
+            )
+            .where(
+                CIApplicationInternalComment.internal_comment_id == internal_comment_id
+            )
+        )
+        result = await self.db.execute(report_orgs.union(application_orgs))
+        return {row[0] for row in result.all() if row[0] is not None}
+
     async def verify_internal_comment_access(self, parent_id, user, write=False):
         """Authorise attachment access for an internal comment.
 
@@ -401,7 +450,8 @@ class DocumentService:
         * write (add/remove attachment): only the comment's author, mirroring
           internal comment edit permissions.
         * read (list/download): government staff see everything; everyone else
-          only Public comments.
+          only Public comments, on a compliance report or CI application
+          belonging to their own organization.
         """
         comment = await self.db.get(InternalComment, parent_id)
         if not comment:
@@ -415,15 +465,32 @@ class DocumentService:
                     status_code=403,
                     detail="Only the comment author can modify its attachments.",
                 )
-        else:
+        elif not is_government:
             visibility = (
                 str(comment.visibility) if comment.visibility is not None else None
             )
-            if not is_government and visibility != "Public":
-                raise HTTPException(
-                    status_code=403,
-                    detail="You do not have access to this comment's attachments.",
+            forbidden = HTTPException(
+                status_code=403,
+                detail="You do not have access to this comment's attachments.",
+            )
+            if visibility != "Public":
+                raise forbidden
+            # Visibility alone is not an organization scope, so the same
+            # entity-type and ownership rules the comment read path applies
+            # are applied here.
+            user_organization_id = getattr(user, "organization_id", None)
+            if user_organization_id is None:
+                user_organization_id = getattr(
+                    getattr(user, "organization", None), "organization_id", None
                 )
+            readable_organization_ids = (
+                await self._get_readable_comment_organization_ids(parent_id)
+            )
+            if (
+                user_organization_id is None
+                or user_organization_id not in readable_organization_ids
+            ):
+                raise forbidden
 
         return comment
 
