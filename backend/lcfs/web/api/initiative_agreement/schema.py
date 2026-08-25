@@ -138,33 +138,6 @@ class AssignedAnalystSchema(BaseSchema):
         from_attributes = True
 
 
-class DesignatedActionSchema(BaseSchema):
-    designated_action_id: int
-    action_number: int
-    name: str
-    description: Optional[str] = None
-    specified_date: Optional[date] = None
-    completed_date: Optional[date] = None
-    determination_date: Optional[date] = None
-    credit_allocation: int
-    determination: Optional[str] = None
-    current_status: DesignatedActionStatusSchema
-    assigned_analyst: Optional[AssignedAnalystSchema] = None
-    transaction_id: Optional[int] = None
-
-    class Config:
-        from_attributes = True
-
-
-class InitiativeAgreementLifecycleStatusSchema(BaseSchema):
-    initiative_agreement_lifecycle_status_id: int
-    status: str
-    description: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
-
 class LastCommentSchema(BaseSchema):
     """
     Newest comment visible to the caller, for the grid's avatar column.
@@ -176,6 +149,71 @@ class LastCommentSchema(BaseSchema):
     full_name: str
     comment: str
     create_date: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DesignatedActionSchema(BaseSchema):
+    designated_action_id: int
+    action_number: int
+    name: str
+    description: Optional[str] = None
+    specified_date: Optional[date] = None
+    completed_date: Optional[date] = None
+    determination_date: Optional[date] = None
+    credit_allocation: int
+    recommended_credits: Optional[int] = None
+    determination: Optional[str] = None
+    current_status: DesignatedActionStatusSchema
+    assigned_analyst: Optional[AssignedAnalystSchema] = None
+    transaction_id: Optional[int] = None
+    update_date: Optional[datetime] = None
+    # Newest comment visible to the caller; populated by the grid endpoint
+    # only. DA comments arrive with #4900 — the column exists first.
+    last_comment: Optional[LastCommentSchema] = None
+
+    class Config:
+        from_attributes = True
+
+
+class DesignatedActionsListSchema(BaseSchema):
+    pagination: PaginationResponseSchema
+    designated_actions: List[DesignatedActionSchema]
+
+
+class AnalystAssignmentSchema(BaseSchema):
+    assigned_analyst_id: Optional[int] = None
+
+
+class IAAnalystSchema(BaseSchema):
+    user_profile_id: int
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    initials: Optional[str] = None
+    full_name: Optional[str] = None
+
+    @classmethod
+    def model_validate(cls, user):
+        if user is None:
+            return None
+        first_name = getattr(user, "first_name", "") or ""
+        last_name = getattr(user, "last_name", "") or ""
+        initials = f"{first_name[:1]}{last_name[:1]}".upper() or None
+        full_name = " ".join(p for p in (first_name, last_name) if p) or None
+        return cls(
+            user_profile_id=user.user_profile_id,
+            first_name=first_name or None,
+            last_name=last_name or None,
+            initials=initials,
+            full_name=full_name,
+        )
+
+
+class InitiativeAgreementLifecycleStatusSchema(BaseSchema):
+    initiative_agreement_lifecycle_status_id: int
+    status: str
+    description: Optional[str] = None
 
     class Config:
         from_attributes = True

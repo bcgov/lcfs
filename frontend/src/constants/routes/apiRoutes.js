@@ -75,6 +75,11 @@ export const apiRoutes = {
   getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
   getInitiativeAgreement:
     '/initiative-agreements/:initiativeAgreementId/profile',
+  getInitiativeAgreementAnalysts: '/initiative-agreements/analysts',
+  getDesignatedActionsList:
+    '/initiative-agreements/:initiativeAgreementId/designated-actions/list',
+  assignDesignatedActionAnalyst:
+    '/initiative-agreements/designated-actions/:designatedActionId/assign',
 
   // fuel-type
   getFuelTypeOthers: '/fuel-type/others/list',

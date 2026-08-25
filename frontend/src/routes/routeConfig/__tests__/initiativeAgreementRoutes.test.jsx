@@ -4,7 +4,8 @@ import { initiativeAgreementRoutes } from '../initiativeAgreementRoutes'
 // Mock the view components
 vi.mock('@/views/InitiativeAgreements', () => ({
   InitiativeAgreements: () => 'InitiativeAgreements',
-  InitiativeAgreementDetail: () => 'InitiativeAgreementDetail'
+  InitiativeAgreementDetail: () => 'InitiativeAgreementDetail',
+  DesignatedActionDetail: () => 'DesignatedActionDetail'
 }))
 
 vi.mock('../routes', () => ({
@@ -12,7 +13,9 @@ vi.mock('../routes', () => ({
   default: {
     INITIATIVE_AGREEMENTS: {
       LIST: '/initiative-agreements',
-      VIEW: '/initiative-agreements/:initiativeAgreementId'
+      VIEW: '/initiative-agreements/:initiativeAgreementId',
+      ACTION_VIEW:
+        '/initiative-agreements/:initiativeAgreementId/designated-actions/:designatedActionId'
     }
   }
 }))
@@ -20,7 +23,7 @@ vi.mock('../routes', () => ({
 describe('initiativeAgreementRoutes', () => {
   it('should export the list and detail route configurations', () => {
     expect(Array.isArray(initiativeAgreementRoutes)).toBe(true)
-    expect(initiativeAgreementRoutes).toHaveLength(2)
+    expect(initiativeAgreementRoutes).toHaveLength(3)
   })
 
   it('should have correct route structure for the agreements list', () => {
@@ -39,5 +42,16 @@ describe('initiativeAgreementRoutes', () => {
     expect(detailRoute).toBeDefined()
     expect(detailRoute.handle.title).toBe('Initiative agreement')
     expect(detailRoute.handle.crumb()).toBe('Initiative agreement')
+  })
+
+  it('should have correct route structure for the designated action detail', () => {
+    const actionRoute = initiativeAgreementRoutes.find(
+      (route) =>
+        route.path ===
+        '/initiative-agreements/:initiativeAgreementId/designated-actions/:designatedActionId'
+    )
+    expect(actionRoute).toBeDefined()
+    expect(actionRoute.handle.title).toBe('Designated action')
+    expect(actionRoute.handle.crumb()).toBe('Designated action')
   })
 })
