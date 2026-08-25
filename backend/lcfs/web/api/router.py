@@ -29,6 +29,7 @@ from lcfs.web.api import (
     dashboard,
     allocation_agreement,
     document,
+    document_folder,
     fuel_type,
     audit_log,
     email,
@@ -122,6 +123,9 @@ api_router.include_router(
     fuel_supply.router, prefix="/fuel-supply", tags=["fuel_supplies"]
 )
 api_router.include_router(document.router, prefix="/documents", tags=["documents"])
+api_router.include_router(
+    document_folder.router, prefix="/document-folders", tags=["document-folders"]
+)
 api_router.include_router(fuel_type.router, prefix="/fuel-type", tags=["fuel_type"])
 api_router.include_router(audit_log.router, prefix="/audit-log", tags=["audit_log"])
 api_router.include_router(email.router, prefix="/email", tags=["emails"])
