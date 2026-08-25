@@ -68,7 +68,29 @@
     "unassigned": "Unassigned"
   },
   "actionDetail": {
-    "title": "Designated action",
-    "placeholder": "Designated action details are under construction."
+    "title": "Designated actions",
+    "cardHeader": "Designated actions",
+    "creditsToBeIssued": "Number of credits to be issued under this designated action:",
+    "upTo": "Up to {{count}}",
+    "recommendedCredits": "Recommended credits to be issued:",
+    "completionDate": "Dates for completion of designated action:",
+    "completedDate": "Completed:",
+    "determination": "Determination:",
+    "documents": "Evidence submissions",
+    "manageDocuments": "Manage documents",
+    "noDocuments": "No documents have been uploaded for this designated action.",
+    "loadFailMsg": "The designated action could not be loaded.",
+    "previousAction": "Previous designated action",
+    "nextAction": "Next designated action",
+    "steps": {
+      "submissionReceived": "Submission received",
+      "underway": "Underway",
+      "approved": "Approved"
+    }
+  },
+  "actionDocuments": {
+    "uploadTitle": "Designated action documents",
+    "documentLabel": "the designated action",
+    "returnButton": "Return to designated action"
   }
 }

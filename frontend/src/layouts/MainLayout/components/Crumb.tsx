@@ -187,6 +187,14 @@ const Crumb = () => {
           if (reportPathRegex.test(name)) {
             routeTo = `compliance-reporting/${reportCompliancePeriod}/${complianceReportId}`
           }
+          // "Designated actions" leads back to the agreement page, where
+          // the grid lives — the bare segment path is not a route.
+          if (
+            name === 'designated-actions' &&
+            pathnames[0] === 'initiative-agreements'
+          ) {
+            routeTo = `/${pathnames.slice(0, index).join('/')}`
+          }
           const displayName =
             customCrumb.label ||
             name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
@@ -198,6 +206,16 @@ const Crumb = () => {
 
           // Skip numeric ID crumb for fuel-code detail routes (e.g., /fuel-codes/:id/view)
           if (isNumeric(name) && pathnames[index - 1] === 'fuel-codes') {
+            return null
+          }
+
+          // Skip the numeric agreement ID between the module and the
+          // designated action child route
+          if (
+            isNumeric(name) &&
+            pathnames[index - 1] === 'initiative-agreements' &&
+            pathnames[index + 1] === 'designated-actions'
+          ) {
             return null
           }
 

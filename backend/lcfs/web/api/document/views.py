@@ -75,6 +75,12 @@ async def validate_parent_access(
         # "administrativeAdjustment"; the frontend sends the same. Accept both
         # so the guard cannot be bypassed by choosing the other spelling.
         await aa_validate.validate_organization_access(parent_id)
+    elif parent_type == "designatedAction":
+        # An action's audience is its agreement's audience.
+        agreement_id = await document_service.get_designated_action_agreement_id(
+            parent_id
+        )
+        await ia_validate.validate_organization_access(agreement_id)
     elif parent_type == "charging_site":
         await cs_validate.validate_organization_access(parent_id)
     elif parent_type == "ci_application":

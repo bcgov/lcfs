@@ -124,6 +124,8 @@ class CreateInitiativeAgreementHistorySchema(BaseSchema):
 class DesignatedActionStatusSchema(BaseSchema):
     designated_action_status_id: int
     status: str
+    # Drives the workflow progress stepper on the action detail page.
+    display_order: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -175,6 +177,14 @@ class DesignatedActionSchema(BaseSchema):
 
     class Config:
         from_attributes = True
+
+
+class DesignatedActionProfileSchema(DesignatedActionSchema):
+    initiative_agreement_id: int
+    ia_code: Optional[str] = None
+    # Current-version sibling ids in action_number order, for the detail
+    # page's previous/next navigation.
+    sibling_action_ids: List[int] = []
 
 
 class DesignatedActionsListSchema(BaseSchema):

@@ -6,6 +6,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Table,
     Text,
     UniqueConstraint,
     text,
@@ -13,6 +14,25 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import Auditable, BaseModel, Versioning
+
+# Documents attach to a concrete action row; change-order-aware reads
+# resolve across the group_uuid group like every other child (#4840).
+designated_action_document_association = Table(
+    "designated_action_document_association",
+    BaseModel.metadata,
+    Column(
+        "designated_action_id",
+        Integer,
+        ForeignKey("designated_action.designated_action_id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "document_id",
+        Integer,
+        ForeignKey("document.document_id"),
+        primary_key=True,
+    ),
+)
 
 
 class DesignatedAction(BaseModel, Auditable, Versioning):
@@ -154,6 +174,11 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
     )
     evidence_submissions = relationship(
         "EvidenceSubmission", back_populates="designated_action"
+    )
+    documents = relationship(
+        "Document",
+        secondary=designated_action_document_association,
+        back_populates="designated_actions",
     )
     designated_action_internal_comments = relationship(
         "DesignatedActionInternalComment", back_populates="designated_action"

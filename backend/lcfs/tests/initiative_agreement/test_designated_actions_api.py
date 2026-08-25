@@ -393,3 +393,107 @@ async def test_analyst_options_are_idir_only(
     forbidden = await client.get(url)
 
     assert forbidden.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_action_profile_carries_the_agreement_and_siblings(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The detail page needs the agreement code for its title, the status
+    display order for the stepper, and sibling ids for prev/next."""
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26PROF1")
+    first = await _seed_action(dbsession, agreement, 1, "Permitting", 1850)
+    second = await _seed_action(dbsession, agreement, 2, "Construction", 27309)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "get_designated_action_profile",
+        designated_action_id=second.designated_action_id,
+    )
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["iaCode"] == "IA-26PROF1"
+    assert data["initiativeAgreementId"] == agreement.initiative_agreement_id
+    assert data["actionNumber"] == 2
+    assert data["creditAllocation"] == 27309
+    assert data["currentStatus"]["status"] == "Not started"
+    assert data["currentStatus"]["displayOrder"] == 10
+    assert data["siblingActionIds"] == [
+        first.designated_action_id,
+        second.designated_action_id,
+    ]
+
+
+@pytest.mark.anyio
+async def test_action_profile_404s_and_refuses_proponents(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    url = fastapi_app.url_path_for(
+        "get_designated_action_profile", designated_action_id=999999
+    )
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+async def test_action_profile_is_idir_only(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26PROF2")
+    action = await _seed_action(dbsession, agreement, 1, "Permitting")
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
+
+    url = fastapi_app.url_path_for(
+        "get_designated_action_profile",
+        designated_action_id=action.designated_action_id,
+    )
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_action_documents_list_and_are_org_gated(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Per-action documents flow through the shared machinery; access
+    resolves through the action's agreement (#4840)."""
+    from lcfs.db.models.document import Document
+    from lcfs.db.models.initiative_agreement.DesignatedAction import (
+        designated_action_document_association,
+    )
+
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26DOC1")
+    action = await _seed_action(dbsession, agreement, 1, "Permitting")
+    document = Document(
+        file_key="da/award-letter.pdf",
+        file_name="award-letter.pdf",
+        file_size=4096,
+        mime_type="application/pdf",
+    )
+    dbsession.add(document)
+    await dbsession.flush()
+    await dbsession.execute(
+        designated_action_document_association.insert().values(
+            designated_action_id=action.designated_action_id,
+            document_id=document.document_id,
+        )
+    )
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "get_all_documents",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+    )
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    files = response.json()
+    assert [f["fileName"] for f in files] == ["award-letter.pdf"]

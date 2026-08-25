@@ -12,6 +12,10 @@ from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportSta
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     initiative_agreement_document_association,
 )
+from lcfs.db.models.initiative_agreement.DesignatedAction import (
+    DesignatedAction,
+    designated_action_document_association,
+)
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -65,6 +69,10 @@ DOCUMENT_PARENT_ASSOCIATIONS = {
     "initiativeAgreement": (
         initiative_agreement_document_association,
         "initiative_agreement_id",
+    ),
+    "designatedAction": (
+        designated_action_document_association,
+        "designated_action_id",
     ),
     "charging_site": (
         charging_site_document_association,
@@ -147,6 +155,8 @@ class DocumentService:
             await self._verify_administrative_adjustment_access(parent_id, user)
         elif parent_type == "initiativeAgreement":
             await self._verify_initiative_agreement_access(parent_id, user)
+        elif parent_type == "designatedAction":
+            await self._verify_designated_action_access(parent_id, user)
         elif parent_type == "charging_site":
             await self._verify_charging_site_access(parent_id, user)
         elif parent_type == "internal_comment":
@@ -271,6 +281,19 @@ class DocumentService:
                 document_id=document.document_id,
             )
             await self.db.execute(stmt)
+        elif parent_type == "designatedAction":
+            action = await self.db.get(DesignatedAction, parent_id)
+            if not action:
+                raise Exception("Designated action not found")
+
+            self.db.add(document)
+            await self.db.flush()
+
+            stmt = designated_action_document_association.insert().values(
+                designated_action_id=action.designated_action_id,
+                document_id=document.document_id,
+            )
+            await self.db.execute(stmt)
         elif parent_type == "charging_site":
             charging_site = await self.charging_site_repo.get_charging_site_by_id(
                 parent_id
@@ -375,6 +398,31 @@ class DocumentService:
             status_code=400,
             detail="Only Government Staff can upload files to Initiative Agreements.",
         )
+
+    async def _verify_designated_action_access(self, parent_id, user):
+        action = await self.db.get(DesignatedAction, parent_id)
+        if not action:
+            raise HTTPException(status_code=404, detail="Designated action not found")
+
+        if RoleEnum.GOVERNMENT in user.role_names:
+            return
+        raise HTTPException(
+            status_code=400,
+            detail="Only Government Staff can upload files to designated actions.",
+        )
+
+    async def get_designated_action_agreement_id(self, designated_action_id: int):
+        """Resolve an action's agreement for parent-access checks."""
+        agreement_id = (
+            await self.db.execute(
+                select(DesignatedAction.initiative_agreement_id).where(
+                    DesignatedAction.designated_action_id == designated_action_id
+                )
+            )
+        ).scalar_one_or_none()
+        if agreement_id is None:
+            raise HTTPException(status_code=404, detail="Designated action not found")
+        return agreement_id
 
     async def _verify_charging_site_access(self, parent_id, user):
         charging_site = await self.charging_site_repo.get_charging_site_by_id(parent_id)

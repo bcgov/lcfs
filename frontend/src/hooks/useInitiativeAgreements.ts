@@ -107,6 +107,28 @@ export const useDesignatedActions = (
   })
 }
 
+/** The designated action detail page's record (#4840). */
+export const useDesignatedActionProfile = (
+  designatedActionId: number | string,
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    enabled: !!designatedActionId,
+    queryKey: ['designated-actions', 'detail', String(designatedActionId)],
+    queryFn: async () =>
+      (
+        await client.get(
+          apiRoutes.getDesignatedActionProfile.replace(
+            ':designatedActionId',
+            String(designatedActionId)
+          )
+        )
+      ).data,
+    ...options
+  })
+}
+
 /** Active IA analysts for the assignment dropdown and its filter. */
 export const useInitiativeAgreementAnalysts = (
   options: QueryOptions<unknown> = {}
