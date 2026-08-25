@@ -5,10 +5,10 @@ import type { ReviewChartData } from '../types'
 
 const chartProps: any[] = []
 
-vi.mock('echarts-for-react', () => ({
-  default: (props: any) => {
+vi.mock('@/components/charts/BCResponsiveEchart', () => ({
+  BCResponsiveEChart: (props: any) => {
     chartProps.push(props)
-    return <div data-test="echarts" />
+    return <div data-test="echarts" role="img" aria-label={props.ariaLabel} />
   }
 }))
 
@@ -49,8 +49,10 @@ describe('ReviewCharts', () => {
     render(<ReviewCharts chartData={chartData} />)
 
     expect(
-      screen.getByText(/FSE kWh usage and capacity utilization/)
+      screen.getByLabelText(/FSE kWh usage and capacity utilization/i)
     ).toBeInTheDocument()
+    expect(screen.getByText('Total kWh usage')).toBeInTheDocument()
+    expect(screen.getByText('Average capacity utilization')).toBeInTheDocument()
 
     const fseOption = chartProps[0].option
     expect(fseOption.yAxis).toHaveLength(2)
@@ -94,7 +96,9 @@ describe('ReviewCharts', () => {
 
     render(<ReviewCharts chartData={chartData} />)
 
-    expect(screen.getByText(/Fuel supply by fuel code/)).toBeInTheDocument()
+    expect(
+      screen.getByLabelText(/Fuel supply by fuel code/i)
+    ).toBeInTheDocument()
     expect(screen.getByLabelText('Compliance year')).toBeInTheDocument()
     expect(screen.getByLabelText('Fuel type')).toBeInTheDocument()
 
@@ -128,7 +132,7 @@ describe('ReviewCharts', () => {
     render(<ReviewCharts chartData={chartData} />)
 
     expect(
-      screen.getByText('Compliance units by fuel category, type, and schedule')
+      screen.getByLabelText(/Compliance units by fuel category, type, and schedule/i)
     ).toBeInTheDocument()
 
     const option = chartProps[0].option
@@ -180,6 +184,10 @@ describe('ReviewCharts', () => {
 
     render(<ReviewCharts chartData={chartData} />)
 
+    expect(
+      screen.getByLabelText(/Fuel supply and FSE count trend/i)
+    ).toBeInTheDocument()
+
     const option = chartProps[0].option
     expect(option.yAxis).toHaveLength(2)
     expect(option.yAxis[0].name).toBe('Supply volume')
@@ -222,6 +230,10 @@ describe('ReviewCharts', () => {
     }
 
     render(<ReviewCharts chartData={chartData} />)
+
+    expect(
+      screen.getByLabelText(/Fuel supply presence by fuel category and type/i)
+    ).toBeInTheDocument()
 
     const option = chartProps[0].option
     expect(option.series[0].type).toBe('heatmap')

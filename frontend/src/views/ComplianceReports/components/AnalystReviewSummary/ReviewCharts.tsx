@@ -1,5 +1,6 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import { BCResponsiveEChart } from '@/components/charts/BCResponsiveEchart'
 import {
   BC_CHART_AXIS_LABEL,
   BC_CHART_COLORS,
@@ -10,7 +11,6 @@ import {
 } from '@/components/charts/chartStyles'
 import { FormControl, InputLabel, MenuItem, Select, Stack } from '@mui/material'
 import { useMemo, useState } from 'react'
-import ReactECharts from 'echarts-for-react'
 import type {
   ComparisonSeries,
   ComplianceUnitPoint,
@@ -47,6 +47,21 @@ const ALL_FILTER_VALUE = 'all'
 
 const chartGrid = { ...BC_CHART_GRID, bottom: 44 }
 const chartAxisLabel = BC_CHART_AXIS_LABEL
+const srOnlySx = {
+  border: 0,
+  clip: 'rect(0 0 0 0)',
+  clipPath: 'inset(50%)',
+  height: 1,
+  left: 0,
+  m: -1,
+  maxHeight: 1,
+  maxWidth: 1,
+  overflow: 'hidden',
+  p: 0,
+  position: 'absolute',
+  top: 0,
+  width: 1
+} as const
 
 const getHistoricalChartMode = (
   group: HistoricalChartGroup
@@ -69,6 +84,123 @@ const getHistoricalChartModeLabel = (group: HistoricalChartGroup) => {
   if (mode === 'horizontal-bars') return 'wide variance'
   return 'comparison'
 }
+
+const formatAccessibleNumber = (value: number) => value.toLocaleString()
+
+const getHistoricalChartAriaLabel = (group: HistoricalChartGroup) => {
+  const samplePoints = group.labels.slice(0, 4).map((label) => {
+    const values = group.periodLabels
+      .map((period) => {
+        const value = group.valuesByPeriod.get(period)?.get(label) || 0
+        return `${period}: ${formatAccessibleNumber(value)}`
+      })
+      .join(', ')
+    return `${label}. ${values}.`
+  })
+  return `${group.title}. ${getHistoricalChartModeLabel(group)} chart. Periods: ${group.periodLabels.join(', ')}. ${samplePoints.join(' ')}`
+}
+
+const getSupplementalChartAriaLabel = (series: ComparisonSeries) => {
+  const pointSummary = series.points
+    .slice(0, 5)
+    .map(
+      (point) =>
+        `${point.label}: ${series.comparisonLabel} ${formatAccessibleNumber(point.comparisonValue)}, ${series.currentLabel} ${formatAccessibleNumber(point.currentValue)}, delta ${formatAccessibleNumber(point.delta)}`
+    )
+    .join('. ')
+  return `${series.title}. Comparison between ${series.comparisonLabel} and ${series.currentLabel}. ${pointSummary}.`
+}
+
+const getComplianceUnitsChartAriaLabel = (group: ComplianceUnitChartGroup) => {
+  const sampleLabels = group.fuelLabels.slice(0, 4).map((fuelLabel) => {
+    const scheduleValues = group.schedules
+      .map((schedule) => {
+        const value = group.values.get(`${schedule}|${fuelLabel}`) || 0
+        return `${schedule}: ${formatAccessibleNumber(value)}`
+      })
+      .join(', ')
+    return `${fuelLabel}. ${scheduleValues}.`
+  })
+  return `Compliance units by fuel category, type, and schedule. ${sampleLabels.join(' ')}`
+}
+
+const AccessibleChartSummary = ({
+  title,
+  ariaLabel,
+  rows,
+  id
+}: {
+  title: string
+  ariaLabel: string
+  rows: Array<{ label: string; values: Array<{ key: string; value: string }> }>
+  id: string
+}) => (
+  <BCBox id={id} sx={srOnlySx}>
+    <BCTypography component="p">{ariaLabel}</BCTypography>
+    <table>
+      <caption>{title}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Label</th>
+          {rows[0]?.values.map((item) => (
+            <th key={item.key} scope="col">
+              {item.key}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.label}>
+            <th scope="row">{row.label}</th>
+            {row.values.map((item) => (
+              <td key={`${row.label}-${item.key}`}>{item.value}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </BCBox>
+)
+
+const getHistoricalAccessibleRows = (group: HistoricalChartGroup) =>
+  group.labels.map((label) => ({
+    label,
+    values: group.periodLabels.map((period) => ({
+      key: period,
+      value: formatAccessibleNumber(
+        group.valuesByPeriod.get(period)?.get(label) || 0
+      )
+    }))
+  }))
+
+const getSupplementalAccessibleRows = (series: ComparisonSeries) =>
+  series.points.map((point) => ({
+    label: point.label,
+    values: [
+      {
+        key: series.comparisonLabel,
+        value: formatAccessibleNumber(point.comparisonValue)
+      },
+      {
+        key: series.currentLabel,
+        value: formatAccessibleNumber(point.currentValue)
+      },
+      {
+        key: 'Delta',
+        value: formatAccessibleNumber(point.delta)
+      }
+    ]
+  }))
+
+const getComplianceUnitAccessibleRows = (group: ComplianceUnitChartGroup) =>
+  group.fuelLabels.map((fuelLabel) => ({
+    label: fuelLabel,
+    values: group.schedules.map((schedule) => ({
+      key: schedule,
+      value: formatAccessibleNumber(group.values.get(`${schedule}|${fuelLabel}`) || 0)
+    }))
+  }))
 
 const isFuelCodeSunburstGroup = (group: HistoricalChartGroup) =>
   group.title === 'Fuel supply by fuel code'
@@ -647,6 +779,8 @@ const FuelCodeSunburstChartCard = ({
       }),
     [complianceYear, fuelType, group]
   )
+  const ariaLabel = useMemo(() => getHistoricalChartAriaLabel(group), [group])
+  const summaryId = `chart-summary-${group.title.replace(/\s+/g, '-').toLowerCase()}`
 
   return (
     <BCBox
@@ -662,19 +796,26 @@ const FuelCodeSunburstChartCard = ({
       <BCTypography variant="body2">
         {group.title} ({getHistoricalChartModeLabel(group)})
       </BCTypography>
+      <AccessibleChartSummary
+        id={summaryId}
+        title={group.title}
+        ariaLabel={ariaLabel}
+        rows={getHistoricalAccessibleRows(group)}
+      />
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         justifyContent="space-between"
         spacing={1}
         sx={{ mb: 1 }}
       >
-        <ReactECharts
+        <BCResponsiveEChart
           option={chartOptions}
-          style={{ height: 520, width: '100%', minWidth: 0 }}
-          notMerge
-          lazyUpdate
+          height={520}
+          ariaLabel={ariaLabel}
+          ariaDescribedBy={summaryId}
+          sx={{ flex: 1, minWidth: 0 }}
         />
-        <Stack direction={'column'} spacing={8} sx={{ pt: 2 }}>
+        <Stack direction={'column'} spacing={8} sx={{ pt: 2, flexShrink: 0 }}>
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel id="fuel-code-year-filter-label">
               Compliance year
@@ -837,11 +978,17 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
             <BCTypography variant="body2" sx={{ mb: 1 }}>
               Compliance units by fuel category, type, and schedule
             </BCTypography>
-            <ReactECharts
+            <AccessibleChartSummary
+              id="compliance-units-chart-summary"
+              title="Compliance units by fuel category, type, and schedule"
+              ariaLabel={getComplianceUnitsChartAriaLabel(complianceUnitGroup)}
+              rows={getComplianceUnitAccessibleRows(complianceUnitGroup)}
+            />
+            <BCResponsiveEChart
               option={buildComplianceUnitChartOptions(complianceUnitGroup)}
-              style={{ height: 280, width: '100%', minWidth: 0 }}
-              notMerge
-              lazyUpdate
+              height={280}
+              ariaLabel={getComplianceUnitsChartAriaLabel(complianceUnitGroup)}
+              ariaDescribedBy="compliance-units-chart-summary"
             />
           </BCBox>
         )}
@@ -862,15 +1009,17 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
               <BCTypography variant="body2" sx={{ mb: 1 }}>
                 {item.title} ({getHistoricalChartModeLabel(item)})
               </BCTypography>
-              <ReactECharts
+              <AccessibleChartSummary
+                id={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}`}
+                title={item.title}
+                ariaLabel={getHistoricalChartAriaLabel(item)}
+                rows={getHistoricalAccessibleRows(item)}
+              />
+              <BCResponsiveEChart
                 option={buildHistoricalChartOptions(item)}
-                style={{
-                  height: 280,
-                  width: '100%',
-                  minWidth: 0
-                }}
-                notMerge
-                lazyUpdate
+                height={280}
+                ariaLabel={getHistoricalChartAriaLabel(item)}
+                ariaDescribedBy={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}`}
               />
             </BCBox>
           )
@@ -889,11 +1038,17 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
             <BCTypography variant="body2" sx={{ mb: 1 }}>
               {item.title}
             </BCTypography>
-            <ReactECharts
+            <AccessibleChartSummary
+              id={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}-${item.currentLabel}-${item.comparisonLabel}`}
+              title={item.title}
+              ariaLabel={getSupplementalChartAriaLabel(item)}
+              rows={getSupplementalAccessibleRows(item)}
+            />
+            <BCResponsiveEChart
               option={buildSupplementalImpactChartOptions(item)}
-              style={{ height: 280, width: '100%', minWidth: 0 }}
-              notMerge
-              lazyUpdate
+              height={280}
+              ariaLabel={getSupplementalChartAriaLabel(item)}
+              ariaDescribedBy={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}-${item.currentLabel}-${item.comparisonLabel}`}
             />
           </BCBox>
         ))}

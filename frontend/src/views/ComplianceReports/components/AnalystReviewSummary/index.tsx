@@ -50,7 +50,6 @@ export const AnalystReviewSummary = ({
     new Set()
   )
   const typedSummary = useTypewriter(data?.summary || '')
-  const isDrafting = !!data?.summary && typedSummary !== data.summary
   const actionableFindingIds = useMemo(() => {
     if (!data?.sections) {
       return []
@@ -156,6 +155,8 @@ export const AnalystReviewSummary = ({
         border: '1px solid rgba(0, 0, 0, 0.18)',
         borderRadius: '8px',
         backgroundColor: '#fff',
+        maxWidth: '100%',
+        overflow: 'hidden',
         '&:before': { display: 'none' }
       }}
     >
@@ -164,7 +165,9 @@ export const AnalystReviewSummary = ({
         sx={{
           alignItems: 'flex-start',
           '& .MuiAccordionSummary-content': {
-            my: 2
+            my: 2,
+            minWidth: 0,
+            overflow: 'hidden'
           }
         }}
       >
@@ -172,52 +175,47 @@ export const AnalystReviewSummary = ({
           direction={{ xs: 'column', md: 'row' }}
           justifyContent="space-between"
           spacing={1}
-          sx={{ width: '100%' }}
+          sx={{ width: '100%', minWidth: 0 }}
         >
-          <BCBox>
-            <Stack direction="row" spacing={1.5} alignItems="center">
+          <BCBox sx={{ minWidth: 0, flex: 1 }}>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
+              sx={{ minWidth: 0 }}
+            >
               <RobotAvatar robot={robot} />
-              <BCBox>
-                <Stack direction="row" spacing={0.75} alignItems="center">
+              <BCBox sx={{ minWidth: 0 }}>
+                <Stack
+                  direction="row"
+                  spacing={0.75}
+                  alignItems="center"
+                  sx={{ minWidth: 0, flexWrap: 'wrap' }}
+                >
                   <BCTypography variant="h6" color="primary">
                     {analystReviewAssistantName} pre-screen
                   </BCTypography>
                   <Chip
                     size="small"
                     icon={<AutoAwesomeIcon />}
-                    label={isDrafting ? 'Drafting' : 'Draft ready'}
-                    color={isDrafting ? 'info' : 'success'}
+                    label={'Draft ready'}
+                    color={'success'}
                     variant="outlined"
                   />
                 </Stack>
                 <BCTypography variant="caption" display="block">
                   {robot.name} generated this from deterministic review checks.
                 </BCTypography>
-                <BCTypography variant="body2" sx={{ minHeight: 22 }}>
-                  {typedSummary}
-                  {isDrafting && (
-                    <BCBox
-                      component="span"
-                      sx={{
-                        display: 'inline-block',
-                        width: '0.55em',
-                        ml: 0.25,
-                        borderRight: '2px solid currentColor',
-                        animation: 'cursorBlink 0.8s steps(2, start) infinite',
-                        '@keyframes cursorBlink': {
-                          '0%, 45%': { opacity: 1 },
-                          '46%, 100%': { opacity: 0 }
-                        }
-                      }}
-                    >
-                      &nbsp;
-                    </BCBox>
-                  )}
-                </BCTypography>
               </BCBox>
             </Stack>
           </BCBox>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={1}
+            flexWrap="wrap"
+            useFlexGap
+            sx={{ minWidth: 0 }}
+          >
             <Chip
               size="small"
               color="error"
@@ -247,8 +245,8 @@ export const AnalystReviewSummary = ({
         </Stack>
       </AccordionSummary>
 
-      <AccordionDetails sx={{ pt: 0 }}>
-        <Stack spacing={1.5}>
+      <AccordionDetails sx={{ pt: 0, overflow: 'hidden' }}>
+        <Stack spacing={1.5} sx={{ minWidth: 0 }}>
           <BCAlert severity="info" noFade>
             Deterministic checks only and it must not determine compliance,
             approve or reject reports, calculate authoritative values, or make
@@ -272,6 +270,46 @@ export const AnalystReviewSummary = ({
                 ))}
               </Stack>
             </BCBox>
+          )}
+          {data.summary && (
+            <>
+              <Divider />
+              <BCBox sx={{ minWidth: 0 }}>
+                <BCTypography
+                  variant="subtitle2"
+                  color="primary"
+                  sx={{ mb: 0.5 }}
+                >
+                  {robot.name} summary
+                </BCTypography>
+                <BCTypography
+                  variant="body2"
+                  sx={{
+                    minHeight: 22,
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word'
+                  }}
+                >
+                  {typedSummary}
+                  <BCBox
+                    component="span"
+                    sx={{
+                      display: 'inline-block',
+                      width: '0.55em',
+                      ml: 0.25,
+                      borderRight: '2px solid currentColor',
+                      animation: 'cursorBlink 0.8s steps(2, start) infinite',
+                      '@keyframes cursorBlink': {
+                        '0%, 45%': { opacity: 1 },
+                        '46%, 100%': { opacity: 0 }
+                      }
+                    }}
+                  >
+                    &nbsp;
+                  </BCBox>
+                </BCTypography>
+              </BCBox>
+            </>
           )}
           <ReviewSections
             sections={data.sections}
