@@ -86,6 +86,31 @@ class InternalCommentService:
     def _is_government_user(self) -> bool:
         return RoleEnum.GOVERNMENT in self.request.user.role_names
 
+    def _user_organization_id(self) -> Optional[int]:
+        """The caller's organization id, however the user object carries it."""
+        current_user = self.request.user
+        user_org = getattr(current_user, "organization", None)
+        if user_org is not None:
+            return getattr(user_org, "organization_id", None)
+        return getattr(current_user, "organization_id", None)
+
+    async def _require_own_organization(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> None:
+        """
+        Assert a non-government caller owns the entity a comment thread hangs
+        off.
+
+        Entity type and visibility do not bound which organization a caller
+        reaches, so ownership is resolved here as well. An entity that
+        resolves to no organization fails closed rather than revealing
+        whether it exists.
+        """
+        org_id, _ = await self.repo.get_entity_org_and_year(entity_type, entity_id)
+        user_org_id = self._user_organization_id()
+        if org_id is None or user_org_id is None or org_id != user_org_id:
+            raise HTTPException(status_code=403, detail="Forbidden resource")
+
     async def _send_ci_comment_notification(
         self,
         ci_application_id: int,
@@ -206,6 +231,7 @@ class InternalCommentService:
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             if data.visibility != CommentVisibilityEnum.PUBLIC:
                 raise HTTPException(status_code=403, detail="Forbidden resource")
+            await self._require_own_organization(data.entity_type, data.entity_id)
             data.audience_scope = None
         elif (
             data.visibility == CommentVisibilityEnum.INTERNAL
@@ -235,17 +261,16 @@ class InternalCommentService:
             comment, data.entity_type, data.entity_id
         )
 
-        if (
-            not is_government_user
-            and data.entity_type == EntityTypeEnum.CI_APPLICATION
-        ):
+        if not is_government_user and data.entity_type == EntityTypeEnum.CI_APPLICATION:
             await self._send_ci_comment_notification(
                 data.entity_id,
                 "applicant_activity",
                 "CI Application Comment Received",
-                self.request.user.user_profile_id
-                if hasattr(self.request.user, "user_profile_id")
-                else None,
+                (
+                    self.request.user.user_profile_id
+                    if hasattr(self.request.user, "user_profile_id")
+                    else None
+                ),
             )
         elif (
             is_government_user
@@ -256,9 +281,11 @@ class InternalCommentService:
                 data.entity_id,
                 "government_action",
                 "CI Application Comment Received",
-                self.request.user.user_profile_id
-                if hasattr(self.request.user, "user_profile_id")
-                else None,
+                (
+                    self.request.user.user_profile_id
+                    if hasattr(self.request.user, "user_profile_id")
+                    else None
+                ),
                 related_organization_id=created_comment.organization_id,
             )
 
@@ -287,6 +314,7 @@ class InternalCommentService:
                 EntityTypeEnum.CI_APPLICATION,
             ):
                 raise HTTPException(status_code=403, detail="Forbidden resource")
+            await self._require_own_organization(entity_type, entity_id)
             visibility_filter = CommentVisibilityEnum.PUBLIC.value
 
         comments = await self.repo.get_internal_comments(
@@ -462,12 +490,7 @@ class InternalCommentService:
         current_user = self.request.user
 
         if not is_government_user:
-            user_org = getattr(current_user, "organization", None)
-            user_org_id = (
-                getattr(user_org, "organization_id", None)
-                if user_org is not None
-                else getattr(current_user, "organization_id", None)
-            )
+            user_org_id = self._user_organization_id()
             if user_org_id is None or user_org_id != organization_id:
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             visibility_filter: Optional[str] = CommentVisibilityEnum.PUBLIC.value

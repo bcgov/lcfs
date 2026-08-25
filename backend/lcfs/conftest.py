@@ -268,6 +268,8 @@ class MockAuthenticationBackend(AuthenticationBackend):
             RoleEnum.ADMINISTRATOR,
             RoleEnum.DIRECTOR,
             RoleEnum.COMPLIANCE_MANAGER,
+            RoleEnum.IA_ANALYST,
+            RoleEnum.IA_MANAGER,
         ]
         if any(role in government_specific_roles for role in self.user_roles_enum):
             if RoleEnum.GOVERNMENT not in roles_to_add:
@@ -282,6 +284,7 @@ class MockAuthenticationBackend(AuthenticationBackend):
             RoleEnum.READ_ONLY,
             RoleEnum.CI_APPLICANT,
             RoleEnum.IA_PROPONENT,
+            RoleEnum.IA_SIGNER,
         ]
         if any(role in supplier_specific_roles for role in self.user_roles_enum):
             if RoleEnum.SUPPLIER not in roles_to_add:

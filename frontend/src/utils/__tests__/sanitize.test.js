@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   sanitizeAndHighlightCommentHtml,
   sanitizeCommentHtml
-} from '../sanitize'
+} from '../sanitizeCommentHtml'
 
 describe('sanitizeCommentHtml', () => {
   it('returns empty string for nullish input', () => {

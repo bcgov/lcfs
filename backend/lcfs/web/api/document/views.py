@@ -1,4 +1,4 @@
-from http.client import HTTPException
+from fastapi import HTTPException
 from lcfs.web.api.admin_adjustment.validation import AdminAdjustmentValidation
 import structlog
 from typing import List, Optional
@@ -42,13 +42,52 @@ async def ci_application_validator(
     from lcfs.web.api.ci_application.repo import CIApplicationRepository
     from lcfs.web.api.ci_application.validation import CIApplicationValidation
 
-    return CIApplicationValidation(
-        request=request, repo=CIApplicationRepository(db=db)
-    )
+    return CIApplicationValidation(request=request, repo=CIApplicationRepository(db=db))
 
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
+
+
+async def validate_parent_access(
+    parent_type: str,
+    parent_id: int,
+    request: Request,
+    document_service: DocumentService,
+    cr_validate: ComplianceReportValidation,
+    ia_validate: InitiativeAgreementValidation,
+    aa_validate: AdminAdjustmentValidation,
+    cs_validate: ChargingSiteValidation,
+    ci_validate,
+) -> None:
+    """
+    Assert the caller may reach *parent_id* of *parent_type*.
+
+    Every document route funnels through this, so a parent type that is not
+    handled fails closed rather than silently skipping validation.
+    """
+    if parent_type == "compliance_report":
+        await cr_validate.validate_organization_access(parent_id)
+    elif parent_type == "initiativeAgreement":
+        await ia_validate.validate_organization_access(parent_id)
+    elif parent_type in ("adminAdjustment", "administrativeAdjustment"):
+        # The service layer and the delete route spell this
+        # "administrativeAdjustment"; the frontend sends the same. Accept both
+        # so the guard cannot be bypassed by choosing the other spelling.
+        await aa_validate.validate_organization_access(parent_id)
+    elif parent_type == "charging_site":
+        await cs_validate.validate_organization_access(parent_id)
+    elif parent_type == "ci_application":
+        await ci_validate.validate_access(parent_id)
+    elif parent_type == "internal_comment":
+        await document_service.verify_internal_comment_access(
+            parent_id, request.user, write=False
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unsupported document parent type.",
+        )
 
 
 @router.get(
@@ -56,16 +95,32 @@ logger = structlog.get_logger(__name__)
     response_model=List[FileResponseSchema],
     status_code=status.HTTP_200_OK,
 )
+@view_handler(["*"])
 async def get_all_documents(
     request: Request,
     parent_id: int,
     parent_type: str,
     document_service: DocumentService = Depends(),
+    cr_validate: ComplianceReportValidation = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+    aa_validate: AdminAdjustmentValidation = Depends(),
+    cs_validate: ChargingSiteValidation = Depends(),
+    ci_validate=Depends(ci_application_validator),
 ) -> List[FileResponseSchema]:
-    if parent_type == "internal_comment":
-        await document_service.verify_internal_comment_access(
-            parent_id, request.user, write=False
-        )
+    # Previously only internal_comment was validated, so any authenticated
+    # user could enumerate file names, sizes and uploader usernames for any
+    # compliance report, agreement or charging site by iterating parent_id.
+    await validate_parent_access(
+        parent_type,
+        parent_id,
+        request,
+        document_service,
+        cr_validate,
+        ia_validate,
+        aa_validate,
+        cs_validate,
+        ci_validate,
+    )
 
     documents = await document_service.get_by_id_and_type(parent_id, parent_type)
 
@@ -137,6 +192,7 @@ async def upload_file(
     "/{parent_type}/{parent_id}/{document_id}",
     status_code=status.HTTP_200_OK,
 )
+@view_handler(["*"])
 async def stream_document(
     request: Request,
     parent_id: int,
@@ -149,27 +205,23 @@ async def stream_document(
     cs_validate: ChargingSiteValidation = Depends(),
     ci_validate=Depends(ci_application_validator),
 ):
-    if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
+    await validate_parent_access(
+        parent_type,
+        parent_id,
+        request,
+        document_service,
+        cr_validate,
+        ia_validate,
+        aa_validate,
+        cs_validate,
+        ci_validate,
+    )
 
-    if parent_type == "initiativeAgreement":
-        await ia_validate.validate_organization_access(parent_id)
-
-    if parent_type == "adminAdjustment":
-        await aa_validate.validate_organization_access(parent_id)
-
-    if parent_type == "charging_site":
-        await cs_validate.validate_organization_access(parent_id)
-
-    if parent_type == "ci_application":
-        await ci_validate.validate_access(parent_id)
-
-    if parent_type == "internal_comment":
-        await document_service.verify_internal_comment_access(
-            parent_id, request.user, write=False
-        )
-
-    file, document = await document_service.get_object(document_id)
+    # Scoped to the parent: validating access to parent_id is meaningless if
+    # the caller can then name any document id in the system.
+    file, document = await document_service.get_object_for_parent(
+        document_id, parent_id, parent_type
+    )
 
     download_name = document.display_name or document.file_name
     headers = {

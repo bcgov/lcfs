@@ -218,7 +218,9 @@ async def test_copy_internal_comments_large_number_of_comments():
 @pytest.mark.anyio
 async def test_create_ci_application_public_comment_for_non_government_user():
     mock_repo = MagicMock()
-    mock_repo.get_entity_org_and_year = AsyncMock(return_value=(None, None))
+    # The applicant's own organization — a non-government caller may only
+    # comment on an entity belonging to their org.
+    mock_repo.get_entity_org_and_year = AsyncMock(return_value=(7, None))
     mock_repo.get_category_id_by_name = AsyncMock(return_value=None)
     mock_repo.create_internal_comment = AsyncMock()
     mock_repo.create_internal_comment.return_value = SimpleNamespace(
@@ -243,6 +245,7 @@ async def test_create_ci_application_public_comment_for_non_government_user():
                 role_names=[RoleEnum.SUPPLIER],
                 keycloak_username="BCEIDUSER",
                 user_profile_id=12,
+                organization_id=7,
             )
         ),
         repo=mock_repo,
@@ -362,6 +365,10 @@ def _build_service_with_user_roles(role_names):
     service.request.user = SimpleNamespace(
         role_names=role_names,
         keycloak_username="mockuser",
+        # Matches the org that ``get_entity_org_and_year`` reports below, so a
+        # non-government caller passes the entity-ownership check; tests for
+        # that check use a different org.
+        organization_id=7,
     )
     service.repo = MagicMock()
     service.repo.create_internal_comment = AsyncMock()
