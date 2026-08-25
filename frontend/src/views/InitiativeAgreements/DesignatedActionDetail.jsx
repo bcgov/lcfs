@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -21,9 +22,7 @@ import Comments from '@/components/Comments'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
 import { roles } from '@/constants/roles'
-import { useDocuments } from '@/hooks/useDocuments'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { dateFormatter } from '@/utils/formatters'
 import withRole from '@/utils/withRole'
@@ -31,6 +30,7 @@ import withRole from '@/utils/withRole'
 import { useDesignatedActionProfile } from '@/hooks/useInitiativeAgreements'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
+import { DocumentTree } from './components/DocumentTree'
 
 // The shared document machinery keys on this string for designated actions.
 const PARENT_TYPE = 'designatedAction'
@@ -68,10 +68,11 @@ const DesignatedActionDetailBase = () => {
     error
   } = useDesignatedActionProfile(designatedActionId)
 
-  const { data: documents, refetch: refetchDocuments } = useDocuments(
-    PARENT_TYPE,
-    designatedActionId
-  )
+  const queryClient = useQueryClient()
+  const refreshTree = () =>
+    queryClient.invalidateQueries({
+      queryKey: ['document-tree', PARENT_TYPE, String(designatedActionId)]
+    })
 
   // Surface the wireframe's action identifier in the breadcrumb.
   const setAgreementCrumb = useInitiativeAgreementPageStore(
@@ -276,18 +277,10 @@ const DesignatedActionDetailBase = () => {
                   </BCTypography>
                 </Role>
               </BCBox>
-              {documents?.length ? (
-                <SupportingDocumentSummary
-                  parentID={designatedActionId}
-                  parentType={PARENT_TYPE}
-                  data={documents}
-                  detailed
-                />
-              ) : (
-                <BCTypography variant="body4" color="text.secondary">
-                  {t('initiativeAgreement:actionDetail.noDocuments')}
-                </BCTypography>
-              )}
+              <DocumentTree
+                parentType={PARENT_TYPE}
+                parentID={designatedActionId}
+              />
             </Paper>
           </BCBox>
         }
@@ -297,7 +290,7 @@ const DesignatedActionDetailBase = () => {
         open={uploadOpen}
         close={() => {
           setUploadOpen(false)
-          refetchDocuments()
+          refreshTree()
         }}
         parentType={PARENT_TYPE}
         parentID={designatedActionId}

@@ -52,6 +52,10 @@ vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   default: ({ open }) => (open ? <div data-test="upload-dialog" /> : null)
 }))
 
+vi.mock('../components/DocumentTree', () => ({
+  DocumentTree: () => <div data-test="document-tree" />
+}))
+
 vi.mock('@/components/Comments', () => ({
   default: () => <div data-test="comments-component" />
 }))
@@ -136,6 +140,11 @@ describe('DesignatedActionDetail', () => {
   it('offers document upload to IDIR IA roles only', () => {
     render(<DesignatedActionDetail />, { wrapper })
     expect(screen.getByTestId('upload-documents-button')).toBeInTheDocument()
+  })
+
+  it('renders the folder tree in the documents section', () => {
+    render(<DesignatedActionDetail />, { wrapper })
+    expect(screen.getByTestId('document-tree')).toBeInTheDocument()
   })
 
   it('renders the comments thread', () => {

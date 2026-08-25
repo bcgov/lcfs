@@ -82,6 +82,9 @@ export const apiRoutes = {
     '/initiative-agreements/designated-actions/:designatedActionId/assign',
   getDesignatedActionProfile:
     '/initiative-agreements/designated-actions/:designatedActionId/profile',
+  documentFolderTree: '/document-folders/:parentType/:parentID',
+  documentFolderUpdate: '/document-folders/:parentType/:parentID/:folderId',
+  documentFolderItems: '/document-folders/:parentType/:parentID/items',
 
   // fuel-type
   getFuelTypeOthers: '/fuel-type/others/list',
