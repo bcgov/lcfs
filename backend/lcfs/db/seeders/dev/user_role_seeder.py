@@ -61,6 +61,20 @@ async def seed_user_roles(session):
         {"user_profile_id": 21, "role_id": 4},
         {"user_profile_id": 22, "role_id": 1},
         {"user_profile_id": 22, "role_id": 3},
+        # Initiative Agreements module (#4804). Every IA surface is role
+        # gated, so without these a dev environment renders none of it.
+        # role 15 = IA_ANALYST, 16 = IA_MANAGER, 13 = IA_PROPONENT.
+        # ALZORKIN carries both IDIR roles: analyst for the review
+        # surfaces, manager because assigning an analyst to a designated
+        # action is restricted to managers and directors.
+        {"user_profile_id": 22, "role_id": 15},
+        {"user_profile_id": 22, "role_id": 16},
+        # More analysts so the assignment dropdown has real options.
+        {"user_profile_id": 17, "role_id": 15},
+        {"user_profile_id": 18, "role_id": 15},
+        # A BCeID proponent in organization 1, which owns IA-26DEV1, so
+        # the organization-scoped list has something to show.
+        {"user_profile_id": 7, "role_id": 13},
     ]
 
     try:
