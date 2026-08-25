@@ -6,7 +6,11 @@ import {
   BCDateFloatingFilter,
   BCSelectFloatingFilter
 } from '@/components/BCDataGrid/components'
-import { useInitiativeAgreementStatuses } from '@/hooks/useInitiativeAgreements'
+import {
+  useInitiativeAgreementAnalysts,
+  useInitiativeAgreementStatuses
+} from '@/hooks/useInitiativeAgreements'
+import { DAAssignedAnalystCell } from './components/DAAssignedAnalystCell'
 import { dateFormatter } from '@/utils/formatters'
 import { createStatusRenderer } from '@/utils/grid/cellRenderers'
 
@@ -144,3 +148,72 @@ export const initiativeAgreementColDefs = (t): ColDef[] => [
 ]
 
 export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
+
+// Column definitions for the designated actions grid on the agreement
+// detail page (#4896). The ID renders as "DA{n}-IA{agreement}", matching
+// the wireframe; the analyst column assigns inline for managers and
+// directors and its floating filter sends the analyst's id.
+export const designatedActionColDefs = (t, initiativeAgreementId): ColDef[] => [
+  {
+    colId: 'actionNumber',
+    field: 'actionNumber',
+    headerName: t('initiativeAgreement:actions.columns.id'),
+    valueGetter: (params) =>
+      `DA${params.data?.actionNumber}-IA${initiativeAgreementId}`,
+    minWidth: 120,
+    filter: false
+  },
+  {
+    field: 'name',
+    headerName: t('initiativeAgreement:actions.columns.name'),
+    minWidth: 240,
+    flex: 1,
+    filter: 'agTextColumnFilter',
+    filterParams: TEXT_FILTER_PARAMS
+  },
+  {
+    colId: 'assignedAnalyst',
+    field: 'assignedAnalyst',
+    headerName: t('initiativeAgreement:actions.columns.assignedAnalyst'),
+    minWidth: 180,
+    sortable: false,
+    valueGetter: ({ data }) => data?.assignedAnalyst?.userProfileId ?? '',
+    cellRenderer: DAAssignedAnalystCell,
+    filter: 'agTextColumnFilter',
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      optionsQuery: useInitiativeAgreementAnalysts,
+      valueKey: 'userProfileId',
+      labelKey: 'fullName'
+    },
+    suppressFloatingFilterButton: true
+  },
+  {
+    field: 'lastComment',
+    headerName: t('initiativeAgreement:actions.columns.lastComment'),
+    minWidth: 140,
+    sortable: false,
+    filter: false,
+    valueGetter: ({ data }) => data?.lastComment?.fullName || '',
+    cellRenderer: LastCommentRenderer
+  },
+  {
+    field: 'creditAllocation',
+    headerName: t('initiativeAgreement:actions.columns.creditsToBeIssued'),
+    minWidth: 200,
+    filter: false,
+    valueFormatter: ({ value }) =>
+      value != null
+        ? t('initiativeAgreement:actions.upToCredits', {
+            count: value.toLocaleString()
+          })
+        : '',
+    valueGetter: ({ data }) => data?.creditAllocation
+  },
+  {
+    ...dateCol(
+      'updateDate',
+      t('initiativeAgreement:actions.columns.lastUpdated')
+    )
+  }
+]

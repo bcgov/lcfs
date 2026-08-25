@@ -4,6 +4,10 @@ from fastapi import APIRouter, Body, Depends, Request, status
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import (
+    AnalystAssignmentSchema,
+    DesignatedActionSchema,
+    DesignatedActionsListSchema,
+    IAAnalystSchema,
     InitiativeAgreementCreateSchema,
     InitiativeAgreementLifecycleStatusSchema,
     InitiativeAgreementProfileSchema,
@@ -25,6 +29,10 @@ IA_MODULE_ROLES = [
     RoleEnum.IA_PROPONENT,
 ]
 
+# The designated-action grid and analyst tools are the IDIR story (#4896);
+# the proponent's view arrives with the BCeID story.
+IA_IDIR_ROLES = [RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR]
+
 router = APIRouter()
 
 
@@ -41,6 +49,56 @@ async def get_initiative_agreements(
 ):
     """Paginated list of initiative agreements for the agreement-management grid."""
     return await service.get_initiative_agreements_paginated(pagination)
+
+
+@router.get(
+    "/analysts",
+    response_model=List[IAAnalystSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def get_initiative_agreement_analysts(
+    request: Request,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Active IA analysts, for the assignment dropdown and its filter."""
+    return await service.get_available_analysts()
+
+
+@router.post(
+    "/{initiative_agreement_id}/designated-actions/list",
+    response_model=DesignatedActionsListSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def get_designated_actions(
+    request: Request,
+    initiative_agreement_id: int,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Paginated designated actions for one agreement's grid."""
+    return await service.get_designated_actions_paginated(
+        initiative_agreement_id, pagination
+    )
+
+
+@router.put(
+    "/designated-actions/{designated_action_id}/assign",
+    response_model=DesignatedActionSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR])
+async def assign_designated_action_analyst(
+    request: Request,
+    designated_action_id: int,
+    data: AnalystAssignmentSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Assign, reassign or unassign an analyst (IA managers and directors)."""
+    return await service.assign_designated_action_analyst(
+        designated_action_id, data, request.user
+    )
 
 
 @router.get(

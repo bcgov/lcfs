@@ -11,6 +11,12 @@ import structlog
 from datetime import datetime, timezone
 from fastapi import Depends, Request, HTTPException
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
+    EVENT_ANALYST_ASSIGNED,
+    EVENT_ANALYST_REASSIGNED,
+    EVENT_ANALYST_UNASSIGNED,
+    DesignatedActionHistory,
+)
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
@@ -22,6 +28,10 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.internal_comment.services import sanitize_comment_text
 from lcfs.web.api.initiative_agreement.schema import (
+    AnalystAssignmentSchema,
+    DesignatedActionSchema,
+    DesignatedActionsListSchema,
+    IAAnalystSchema,
     CreateInitiativeAgreementHistorySchema,
     LastCommentSchema,
     InitiativeAgreementCreateSchema,
@@ -188,6 +198,124 @@ class InitiativeAgreementServices:
             create_date=agreement.create_date,
             designated_actions=designated_actions,
         )
+
+    @service_handler
+    async def get_designated_actions_paginated(
+        self, initiative_agreement_id: int, pagination: PaginationRequestSchema
+    ) -> DesignatedActionsListSchema:
+        """Paginated designated actions for one agreement's grid (#4896)."""
+        agreement = await self.repo.get_initiative_agreement_by_id(
+            initiative_agreement_id
+        )
+        if not agreement:
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+        pagination = validate_pagination(pagination)
+        pagination.size = min(pagination.size, MAX_PAGE_SIZE)
+        actions, total_count = await self.repo.get_designated_actions_paginated(
+            initiative_agreement_id, pagination
+        )
+        # The grid endpoint is IDIR-only, so internal comments are visible.
+        latest_comments = await self.repo.get_latest_comments_by_designated_action_ids(
+            actions, include_internal=True
+        )
+        rows = []
+        for action in actions:
+            row = DesignatedActionSchema.model_validate(action)
+            entry = latest_comments.get(action.designated_action_id)
+            if entry:
+                comment, full_name = entry
+                if full_name:
+                    text = comment.comment_search_text or sanitize_comment_text(
+                        comment.comment
+                    )
+                    row = row.model_copy(
+                        update={
+                            "last_comment": LastCommentSchema(
+                                full_name=full_name,
+                                comment=text,
+                                create_date=comment.create_date,
+                            )
+                        }
+                    )
+            rows.append(row)
+        return DesignatedActionsListSchema(
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=(
+                    math.ceil(total_count / pagination.size) if pagination.size else 0
+                ),
+            ),
+            designated_actions=rows,
+        )
+
+    @service_handler
+    async def get_available_analysts(self) -> list[IAAnalystSchema]:
+        analysts = await self.repo.get_active_ia_analysts()
+        return [IAAnalystSchema.model_validate(a) for a in analysts]
+
+    @service_handler
+    async def assign_designated_action_analyst(
+        self,
+        designated_action_id: int,
+        data: AnalystAssignmentSchema,
+        user,
+    ) -> DesignatedActionSchema:
+        """
+        Assign, reassign or unassign the analyst on a designated action.
+
+        Mutates the current row in place and records the change in
+        designated_action_history — assignment is operational state, not a
+        change order, so it must never append a version row (#4896).
+        """
+        action = await self.repo.get_designated_action_by_id(designated_action_id)
+        if not action:
+            raise DataNotFoundException(
+                f"Designated action with id {designated_action_id} not found"
+            )
+
+        new_analyst_id = data.assigned_analyst_id
+        if new_analyst_id is not None:
+            analysts = await self.repo.get_active_ia_analysts()
+            if new_analyst_id not in {a.user_profile_id for a in analysts}:
+                raise HTTPException(
+                    status_code=400,
+                    detail="assigned_analyst_id is not an active IA analyst.",
+                )
+
+        old_analyst_id = action.assigned_analyst_id
+        if old_analyst_id is None and new_analyst_id is not None:
+            event = EVENT_ANALYST_ASSIGNED
+        elif old_analyst_id is not None and new_analyst_id is None:
+            event = EVENT_ANALYST_UNASSIGNED
+        elif old_analyst_id != new_analyst_id:
+            event = EVENT_ANALYST_REASSIGNED
+        else:
+            # No change; do not write a history row for a no-op.
+            return DesignatedActionSchema.model_validate(action)
+
+        action.assigned_analyst_id = new_analyst_id
+        display_name = " ".join(
+            p for p in (user.first_name, user.last_name) if p
+        ).strip()
+        await self.repo.add_designated_action_history(
+            DesignatedActionHistory(
+                designated_action_id=action.designated_action_id,
+                designated_action_group_uuid=action.group_uuid,
+                event=event,
+                user_profile_id=getattr(user, "user_profile_id", None),
+                display_name=display_name or None,
+                snapshot={
+                    "from_analyst_id": old_analyst_id,
+                    "to_analyst_id": new_analyst_id,
+                },
+            )
+        )
+        refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
+        return DesignatedActionSchema.model_validate(refreshed)
 
     @service_handler
     async def update_initiative_agreement(

@@ -23,6 +23,7 @@ import withRole from '@/utils/withRole'
 import { useGetInitiativeAgreement } from '@/hooks/useInitiativeAgreements'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
+import { DesignatedActionsGrid } from './components/DesignatedActionsGrid'
 
 // The shared document machinery keys on this string for initiative agreements.
 const PARENT_TYPE = 'initiativeAgreement'
@@ -249,19 +250,22 @@ const InitiativeAgreementDetailBase = () => {
         parentID={initiativeAgreementId}
       />
 
-      {/* Designated actions grid arrives with #4896. */}
-      <Paper
-        variant="outlined"
-        sx={{ p: 3, mt: 3 }}
-        data-test="initiative-agreement-actions-section"
-      >
-        <BCTypography variant="h6" color="primary" mb={1}>
-          {t('initiativeAgreement:detail.designatedActions')}
-        </BCTypography>
-        <BCTypography variant="body2" color="text.secondary">
-          {t('initiativeAgreement:detail.sectionPlaceholder')}
-        </BCTypography>
-      </Paper>
+      {/* The designated-action grid is the IDIR story (#4896); the
+          proponent's view arrives with the BCeID story. */}
+      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
+        <Paper
+          variant="outlined"
+          sx={{ p: 3, mt: 3 }}
+          data-test="initiative-agreement-actions-section"
+        >
+          <BCTypography variant="h6" color="primary" mb={1}>
+            {t('initiativeAgreement:detail.designatedActions')}
+          </BCTypography>
+          <DesignatedActionsGrid
+            initiativeAgreementId={initiativeAgreementId}
+          />
+        </Paper>
+      </Role>
 
       {/* The thread is IDIR-only until the BCeID story opens Public
           comments to proponents; the API 403s them today. */}

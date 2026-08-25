@@ -1,7 +1,7 @@
 {
   "title": "Initiative agreements",
   "initiativeAgreementsPlaceholder": "This section will provide access to Initiative Agreement functionality. Content and features are currently under development.",
-  "initiativeAgreement": "Initiative agreement \u2014 ID:",
+  "initiativeAgreement": "Initiative agreement — ID:",
   "editInitiativeAgreementID": "Edit initiative agreement ID: ",
   "newInitiativeAgreement": "New initiative agreement",
   "actionMsgs": {
@@ -53,5 +53,22 @@
     "uploadTitle": "Initiative Agreement documents",
     "documentLabel": "the initiative agreement",
     "returnButton": "Return to initiative agreement"
+  },
+  "actions": {
+    "columns": {
+      "id": "ID",
+      "name": "DA name",
+      "assignedAnalyst": "Assigned analyst",
+      "lastComment": "Last comment",
+      "creditsToBeIssued": "Compliance units to be issued",
+      "lastUpdated": "Last updated"
+    },
+    "upToCredits": "up to {{count}}",
+    "noActionsFound": "No designated actions found",
+    "unassigned": "Unassigned"
+  },
+  "actionDetail": {
+    "title": "Designated action",
+    "placeholder": "Designated action details are under construction."
   }
 }

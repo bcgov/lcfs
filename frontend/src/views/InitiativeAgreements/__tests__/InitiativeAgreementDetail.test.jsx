@@ -51,6 +51,14 @@ vi.mock('@/components/Comments', () => ({
   }
 }))
 
+const daGridProps = vi.fn()
+vi.mock('../components/DesignatedActionsGrid', () => ({
+  DesignatedActionsGrid: (props) => {
+    daGridProps(props)
+    return <div data-test="designated-actions-grid" />
+  }
+}))
+
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   default: ({ open }) => (open ? <div data-test="upload-dialog" /> : null)
 }))
@@ -182,6 +190,24 @@ describe('InitiativeAgreementDetail', () => {
     expect(useInitiativeAgreementPageStore.getState().agreementCrumb).toBe(
       'IA-26ORG1'
     )
+  })
+
+  it('renders the designated actions grid for IDIR IA roles', () => {
+    render(<InitiativeAgreementDetail />, { wrapper })
+
+    expect(screen.getByTestId('designated-actions-grid')).toBeInTheDocument()
+    expect(daGridProps).toHaveBeenCalledWith(
+      expect.objectContaining({ initiativeAgreementId: '5' })
+    )
+  })
+
+  it('hides the designated actions grid from a BCeID proponent', () => {
+    mockRoles = [{ name: roles.ia_proponent }]
+    render(<InitiativeAgreementDetail />, { wrapper })
+
+    expect(
+      screen.queryByTestId('designated-actions-grid')
+    ).not.toBeInTheDocument()
   })
 
   it('shows the dual-mode comment thread to IDIR IA roles', () => {
