@@ -1,6 +1,6 @@
 import json
 import math
-from typing import Optional
+from typing import List, Optional
 from lcfs.web.api.notification.schema import (
     INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER,
     NotificationMessageSchema,
@@ -11,6 +11,10 @@ import structlog
 from datetime import datetime, timezone
 from fastapi import Depends, Request, HTTPException
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
+    REVIEW_OUTCOMES,
+    EvidenceRequirement,
+)
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_ANALYST_ASSIGNED,
     EVENT_ANALYST_REASSIGNED,
@@ -28,6 +32,9 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.internal_comment.services import sanitize_comment_text
 from lcfs.web.api.initiative_agreement.schema import (
+    EvidenceRequirementCreateSchema,
+    EvidenceRequirementSchema,
+    EvidenceRequirementUpdateSchema,
     DesignatedActionProfileSchema,
     AnalystAssignmentSchema,
     DesignatedActionSchema,
@@ -273,6 +280,129 @@ class InitiativeAgreementServices:
             ia_code=action.initiative_agreement.ia_code,
             sibling_action_ids=[s.designated_action_id for s in siblings],
         )
+
+    async def _get_action_or_404(self, designated_action_id: int):
+        action = await self.repo.get_designated_action_by_id(designated_action_id)
+        if not action:
+            raise DataNotFoundException(
+                f"Designated action with id {designated_action_id} not found"
+            )
+        return action
+
+    @service_handler
+    async def get_evidence_requirements(
+        self, designated_action_id: int
+    ) -> List[EvidenceRequirementSchema]:
+        """The evidence of completion list for one designated action."""
+        await self._get_action_or_404(designated_action_id)
+        requirements = await self.repo.get_evidence_requirements(designated_action_id)
+        return [EvidenceRequirementSchema.model_validate(r) for r in requirements]
+
+    @service_handler
+    async def create_evidence_requirement(
+        self,
+        designated_action_id: int,
+        data: EvidenceRequirementCreateSchema,
+        user,
+    ) -> EvidenceRequirementSchema:
+        """Add an evidence requirement to an action (the wireframe's Add EOC)."""
+        await self._get_action_or_404(designated_action_id)
+        description = (data.description or "").strip()
+        if not description:
+            raise HTTPException(
+                status_code=400, detail="A requirement description is required."
+            )
+        number = data.requirement_number
+        if number is None:
+            number = await self.repo.next_requirement_number(designated_action_id)
+        username = getattr(user, "keycloak_username", None)
+        requirement = await self.repo.add_evidence_requirement(
+            EvidenceRequirement(
+                designated_action_id=designated_action_id,
+                requirement_number=number,
+                description=description,
+                evidence_type=data.evidence_type,
+                create_user=username,
+                update_user=username,
+            )
+        )
+        return EvidenceRequirementSchema.model_validate(requirement)
+
+    @service_handler
+    async def update_evidence_requirement(
+        self,
+        evidence_requirement_id: int,
+        data: EvidenceRequirementUpdateSchema,
+        user,
+    ) -> EvidenceRequirementSchema:
+        """Edit a requirement's wording or record the analyst's assessment.
+
+        Recording an assessment stamps who decided and when. The previous
+        round's finding is not lost when information is requested: the round
+        is captured with its full payload in designated_action_history.
+        """
+        requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
+        if not requirement:
+            raise DataNotFoundException(
+                f"Evidence requirement with id {evidence_requirement_id} not found"
+            )
+
+        if data.description is not None:
+            description = data.description.strip()
+            if not description:
+                raise HTTPException(
+                    status_code=400, detail="A requirement description is required."
+                )
+            requirement.description = description
+        if data.evidence_type is not None:
+            requirement.evidence_type = data.evidence_type
+        if data.requirement_number is not None:
+            requirement.requirement_number = data.requirement_number
+
+        review_touched = False
+        if data.analyst_review is not None:
+            requirement.analyst_review = data.analyst_review
+            review_touched = True
+        if data.review_notes is not None:
+            requirement.review_notes = data.review_notes
+            review_touched = True
+        if data.clear_review_outcome:
+            requirement.review_outcome = None
+            review_touched = True
+        elif data.review_outcome is not None:
+            if data.review_outcome not in REVIEW_OUTCOMES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "review_outcome must be one of: " + ", ".join(REVIEW_OUTCOMES)
+                    ),
+                )
+            requirement.review_outcome = data.review_outcome
+            review_touched = True
+
+        if review_touched:
+            requirement.reviewed_by_user_id = getattr(user, "user_profile_id", None)
+            requirement.reviewed_date = datetime.now(timezone.utc)
+        requirement.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+
+        refreshed = await self.repo.get_evidence_requirement(evidence_requirement_id)
+        return EvidenceRequirementSchema.model_validate(refreshed)
+
+    @service_handler
+    async def deactivate_evidence_requirement(
+        self, evidence_requirement_id: int, user
+    ) -> None:
+        """Remove a requirement from the list without erasing it — a
+        requirement that was once reviewed is part of the record."""
+        requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
+        if not requirement:
+            raise DataNotFoundException(
+                f"Evidence requirement with id {evidence_requirement_id} not found"
+            )
+        requirement.is_active = False
+        requirement.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
 
     @service_handler
     async def get_available_analysts(self) -> list[IAAnalystSchema]:

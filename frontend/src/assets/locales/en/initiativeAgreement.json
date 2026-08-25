@@ -110,5 +110,21 @@
     "undo": "Undo",
     "draggingFiles": "{{count}} file(s)",
     "draggingFolder": "Folder"
+  },
+  "evidence": {
+    "sectionTitle": "Evidence of completion of designated action:",
+    "addEoc": "Add EOC",
+    "removeRequirement": "Remove this requirement",
+    "evidencePlaceholder": "Enter evidence of completion...",
+    "notesLabel": "Notes",
+    "satisfactory": "Evidence is satisfactory",
+    "requestInformation": "Request information",
+    "reviewSummary": "Review summary",
+    "empty": "No evidence requirements have been added yet.",
+    "loading": "Loading evidence requirements...",
+    "newRequirementTitle": "New evidence requirement",
+    "requirementNamePlaceholder": "Describe what the proponent must provide",
+    "reviewedBy": "Reviewed by {{name}}",
+    "pending": "Not yet reviewed"
   }
 }

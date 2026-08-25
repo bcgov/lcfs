@@ -31,6 +31,7 @@ import { useDesignatedActionProfile } from '@/hooks/useInitiativeAgreements'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
 import { DocumentTree } from './components/DocumentTree'
+import { EvidenceOfCompletion } from './components/EvidenceOfCompletion'
 
 // The shared document machinery keys on this string for designated actions.
 const PARENT_TYPE = 'designatedAction'
@@ -285,6 +286,12 @@ const DesignatedActionDetailBase = () => {
           </BCBox>
         }
       />
+
+      {/* Evidence of completion review (#4899). The Accept and Request
+          additional information buttons belong to the workflow story. */}
+      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
+        <EvidenceOfCompletion designatedActionId={designatedActionId} />
+      </Role>
 
       <DocumentUploadDialog
         open={uploadOpen}

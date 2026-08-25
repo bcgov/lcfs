@@ -179,6 +179,41 @@ class DesignatedActionSchema(BaseSchema):
         from_attributes = True
 
 
+class EvidenceRequirementSchema(BaseSchema):
+    evidence_requirement_id: int
+    designated_action_id: int
+    requirement_number: int
+    description: str
+    evidence_type: Optional[str] = None
+    is_active: bool = True
+    analyst_review: Optional[str] = None
+    review_outcome: Optional[str] = None
+    review_notes: Optional[str] = None
+    reviewed_by: Optional[AssignedAnalystSchema] = None
+    reviewed_date: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class EvidenceRequirementCreateSchema(BaseSchema):
+    description: str
+    evidence_type: Optional[str] = None
+    requirement_number: Optional[int] = None
+
+
+class EvidenceRequirementUpdateSchema(BaseSchema):
+    description: Optional[str] = None
+    evidence_type: Optional[str] = None
+    requirement_number: Optional[int] = None
+    analyst_review: Optional[str] = None
+    review_notes: Optional[str] = None
+    # Absent leaves the outcome untouched; explicit null clears it back to
+    # unreviewed, which is how the UI unchecks both boxes.
+    review_outcome: Optional[str] = None
+    clear_review_outcome: bool = False
+
+
 class DesignatedActionProfileSchema(DesignatedActionSchema):
     initiative_agreement_id: int
     ia_code: Optional[str] = None

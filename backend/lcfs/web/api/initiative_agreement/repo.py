@@ -30,6 +30,9 @@ from lcfs.db.models.comment.DesignatedActionInternalComment import (
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     DesignatedActionHistory,
 )
+from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
+    EvidenceRequirement,
+)
 from lcfs.db.models.initiative_agreement.DesignatedActionStatus import (
     DesignatedActionStatus,
 )
@@ -660,6 +663,60 @@ class InitiativeAgreementRepository:
             key = by_group.get(group_uuid, da_id)
             latest[key] = (comment, full_name)
         return latest
+
+    @repo_handler
+    async def get_evidence_requirements(
+        self, designated_action_id: int, include_inactive: bool = False
+    ) -> List[EvidenceRequirement]:
+        """Requirements for one action, in their business numbering order."""
+        query = select(EvidenceRequirement).where(
+            EvidenceRequirement.designated_action_id == designated_action_id
+        )
+        if not include_inactive:
+            query = query.where(EvidenceRequirement.is_active.is_(True))
+        result = await self.db.execute(
+            query.options(selectinload(EvidenceRequirement.reviewed_by)).order_by(
+                asc(EvidenceRequirement.requirement_number),
+                asc(EvidenceRequirement.evidence_requirement_id),
+            )
+        )
+        return list(result.scalars().all())
+
+    @repo_handler
+    async def get_evidence_requirement(
+        self, evidence_requirement_id: int
+    ) -> Optional[EvidenceRequirement]:
+        result = await self.db.execute(
+            select(EvidenceRequirement)
+            .options(selectinload(EvidenceRequirement.reviewed_by))
+            .where(
+                EvidenceRequirement.evidence_requirement_id == evidence_requirement_id
+            )
+            .execution_options(populate_existing=True)
+        )
+        return result.scalars().first()
+
+    @repo_handler
+    async def next_requirement_number(self, designated_action_id: int) -> int:
+        """Next business number for an action, counting inactive rows so a
+        deactivated requirement's number is never silently reused."""
+        highest = (
+            await self.db.execute(
+                select(func.max(EvidenceRequirement.requirement_number)).where(
+                    EvidenceRequirement.designated_action_id == designated_action_id
+                )
+            )
+        ).scalar()
+        return (highest or 0) + 1
+
+    @repo_handler
+    async def add_evidence_requirement(
+        self, requirement: EvidenceRequirement
+    ) -> EvidenceRequirement:
+        self.db.add(requirement)
+        await self.db.flush()
+        await self.db.refresh(requirement)
+        return requirement
 
     @repo_handler
     async def get_active_ia_analysts(self) -> List[UserProfile]:

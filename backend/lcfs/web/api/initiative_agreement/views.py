@@ -4,6 +4,9 @@ from fastapi import APIRouter, Body, Depends, Request, status
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import (
+    EvidenceRequirementCreateSchema,
+    EvidenceRequirementSchema,
+    EvidenceRequirementUpdateSchema,
     DesignatedActionProfileSchema,
     AnalystAssignmentSchema,
     DesignatedActionSchema,
@@ -33,6 +36,10 @@ IA_MODULE_ROLES = [
 # The designated-action grid and analyst tools are the IDIR story (#4896);
 # the proponent's view arrives with the BCeID story.
 IA_IDIR_ROLES = [RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR]
+
+# Recording an assessment is the analyst's job and a manager may cover for
+# them; directors see the review but do not author it (#4899).
+IA_REVIEW_ROLES = [RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER]
 
 router = APIRouter()
 
@@ -82,6 +89,71 @@ async def get_designated_actions(
     return await service.get_designated_actions_paginated(
         initiative_agreement_id, pagination
     )
+
+
+@router.get(
+    "/designated-actions/{designated_action_id}/evidence-requirements",
+    response_model=List[EvidenceRequirementSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def get_evidence_requirements(
+    request: Request,
+    designated_action_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """The evidence of completion list for a designated action."""
+    return await service.get_evidence_requirements(designated_action_id)
+
+
+@router.post(
+    "/designated-actions/{designated_action_id}/evidence-requirements",
+    response_model=EvidenceRequirementSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def create_evidence_requirement(
+    request: Request,
+    designated_action_id: int,
+    data: EvidenceRequirementCreateSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Add an evidence requirement to a designated action."""
+    return await service.create_evidence_requirement(
+        designated_action_id, data, request.user
+    )
+
+
+@router.put(
+    "/evidence-requirements/{evidence_requirement_id}",
+    response_model=EvidenceRequirementSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def update_evidence_requirement(
+    request: Request,
+    evidence_requirement_id: int,
+    data: EvidenceRequirementUpdateSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Edit a requirement's wording or record the analyst's assessment."""
+    return await service.update_evidence_requirement(
+        evidence_requirement_id, data, request.user
+    )
+
+
+@router.delete(
+    "/evidence-requirements/{evidence_requirement_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def deactivate_evidence_requirement(
+    request: Request,
+    evidence_requirement_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Remove a requirement from the list without erasing it."""
+    await service.deactivate_evidence_requirement(evidence_requirement_id, request.user)
 
 
 @router.get(

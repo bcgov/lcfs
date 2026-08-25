@@ -165,3 +165,100 @@ export const useAssignDesignatedActionAnalyst = (
     }
   })
 }
+
+/** Evidence of completion requirements for a designated action (#4899). */
+const evidenceKey = (designatedActionId: number | string) => [
+  'evidence-requirements',
+  String(designatedActionId)
+]
+
+export const useEvidenceRequirements = (
+  designatedActionId: number | string,
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    enabled: !!designatedActionId,
+    queryKey: evidenceKey(designatedActionId),
+    queryFn: async () =>
+      (
+        await client.get(
+          apiRoutes.evidenceRequirements.replace(
+            ':designatedActionId',
+            String(designatedActionId)
+          )
+        )
+      ).data,
+    ...options
+  })
+}
+
+const useEvidenceMutation = (
+  designatedActionId: number | string,
+  mutationFn: (client: any) => (variables: any) => Promise<unknown>
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: mutationFn(client),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: evidenceKey(designatedActionId)
+      })
+  })
+}
+
+export const useCreateEvidenceRequirement = (
+  designatedActionId: number | string
+) =>
+  useEvidenceMutation(
+    designatedActionId,
+    (client) => async (payload: { description: string }) =>
+      (
+        await client.post(
+          apiRoutes.evidenceRequirements.replace(
+            ':designatedActionId',
+            String(designatedActionId)
+          ),
+          payload
+        )
+      ).data
+  )
+
+export const useUpdateEvidenceRequirement = (
+  designatedActionId: number | string
+) =>
+  useEvidenceMutation(
+    designatedActionId,
+    (client) =>
+      async ({
+        evidenceRequirementId,
+        ...payload
+      }: {
+        evidenceRequirementId: number
+        [key: string]: unknown
+      }) =>
+        (
+          await client.put(
+            apiRoutes.evidenceRequirement.replace(
+              ':evidenceRequirementId',
+              String(evidenceRequirementId)
+            ),
+            payload
+          )
+        ).data
+  )
+
+export const useDeleteEvidenceRequirement = (
+  designatedActionId: number | string
+) =>
+  useEvidenceMutation(
+    designatedActionId,
+    (client) => async (evidenceRequirementId: number) =>
+      client.delete(
+        apiRoutes.evidenceRequirement.replace(
+          ':evidenceRequirementId',
+          String(evidenceRequirementId)
+        )
+      )
+  )

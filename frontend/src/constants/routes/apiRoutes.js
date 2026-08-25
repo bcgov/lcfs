@@ -82,6 +82,10 @@ export const apiRoutes = {
     '/initiative-agreements/designated-actions/:designatedActionId/assign',
   getDesignatedActionProfile:
     '/initiative-agreements/designated-actions/:designatedActionId/profile',
+  evidenceRequirements:
+    '/initiative-agreements/designated-actions/:designatedActionId/evidence-requirements',
+  evidenceRequirement:
+    '/initiative-agreements/evidence-requirements/:evidenceRequirementId',
   documentFolderTree: '/document-folders/:parentType/:parentID',
   documentFolderUpdate: '/document-folders/:parentType/:parentID/:folderId',
   documentFolderItems: '/document-folders/:parentType/:parentID/items',

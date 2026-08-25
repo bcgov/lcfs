@@ -56,6 +56,10 @@ vi.mock('../components/DocumentTree', () => ({
   DocumentTree: () => <div data-test="document-tree" />
 }))
 
+vi.mock('../components/EvidenceOfCompletion', () => ({
+  EvidenceOfCompletion: () => <div data-test="evidence-of-completion" />
+}))
+
 vi.mock('@/components/Comments', () => ({
   default: () => <div data-test="comments-component" />
 }))
@@ -145,6 +149,11 @@ describe('DesignatedActionDetail', () => {
   it('renders the folder tree in the documents section', () => {
     render(<DesignatedActionDetail />, { wrapper })
     expect(screen.getByTestId('document-tree')).toBeInTheDocument()
+  })
+
+  it('renders the evidence of completion section', () => {
+    render(<DesignatedActionDetail />, { wrapper })
+    expect(screen.getByTestId('evidence-of-completion')).toBeInTheDocument()
   })
 
   it('renders the comments thread', () => {
