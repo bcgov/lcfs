@@ -15,6 +15,9 @@ from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
     REVIEW_OUTCOMES,
     EvidenceRequirement,
 )
+from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
+    REVIEW_OUTCOME_SATISFACTORY,
+)
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_ANALYST_ASSIGNED,
     EVENT_ANALYST_REASSIGNED,
@@ -32,6 +35,8 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.internal_comment.services import sanitize_comment_text
 from lcfs.web.api.initiative_agreement.schema import (
+    DesignatedActionHistorySchema,
+    DesignatedActionWorkflowSchema,
     EvidenceRequirementCreateSchema,
     EvidenceRequirementSchema,
     EvidenceRequirementUpdateSchema,
@@ -49,6 +54,10 @@ from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementsListSchema,
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
+from lcfs.web.api.initiative_agreement.workflow import (
+    TRANSITIONS,
+    WORKFLOW_ACTIONS,
+)
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.role.schema import user_has_roles
@@ -279,6 +288,9 @@ class InitiativeAgreementServices:
             initiative_agreement_id=action.initiative_agreement_id,
             ia_code=action.initiative_agreement.ia_code,
             sibling_action_ids=[s.designated_action_id for s in siblings],
+            available_actions=self._available_actions(
+                action, self.request.user if self.request else None
+            ),
         )
 
     async def _get_action_or_404(self, designated_action_id: int):
@@ -288,6 +300,198 @@ class InitiativeAgreementServices:
                 f"Designated action with id {designated_action_id} not found"
             )
         return action
+
+    def _user_may(self, transition, user) -> bool:
+        return any(user_has_roles(user, [role]) for role in transition.roles)
+
+    def _available_actions(self, action, user) -> List[str]:
+        """Actions this caller may take on this action right now."""
+        if user is None:
+            return []
+        current = action.current_status.status if action.current_status else None
+        return [
+            name
+            for name, transition in TRANSITIONS.items()
+            if self._user_may(transition, user) and current in transition.from_statuses
+        ]
+
+    async def _evidence_snapshot(self, designated_action_id: int) -> dict:
+        """Every requirement's review exactly as it stands.
+
+        Stored on the history event so a round's findings survive the next
+        one — requesting more information must never be the reason an
+        earlier assessment becomes unreadable.
+        """
+        requirements = await self.repo.get_evidence_requirements(designated_action_id)
+        return {
+            "evidence_requirements": [
+                {
+                    "evidence_requirement_id": r.evidence_requirement_id,
+                    "requirement_number": r.requirement_number,
+                    "description": r.description,
+                    "analyst_review": r.analyst_review,
+                    "review_outcome": r.review_outcome,
+                    "review_notes": r.review_notes,
+                    "reviewed_date": (
+                        r.reviewed_date.isoformat() if r.reviewed_date else None
+                    ),
+                }
+                for r in requirements
+            ]
+        }
+
+    async def _all_evidence_satisfactory(self, designated_action_id: int) -> bool:
+        requirements = await self.repo.get_evidence_requirements(designated_action_id)
+        if not requirements:
+            return False
+        return all(
+            r.review_outcome == REVIEW_OUTCOME_SATISFACTORY for r in requirements
+        )
+
+    @service_handler
+    async def set_recommended_credits(
+        self, designated_action_id: int, credits: Optional[int], user
+    ) -> DesignatedActionSchema:
+        """Persist the analyst's recommended amount before they recommend.
+
+        No history event: this is a working value until a recommendation is
+        actually made, and that event records the figure that counted.
+        """
+        action = await self._get_action_or_404(designated_action_id)
+        if credits is not None:
+            if credits < 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Recommended credits cannot be negative.",
+                )
+            if (
+                action.credit_allocation is not None
+                and credits > action.credit_allocation
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Recommended credits cannot exceed the "
+                        f"{action.credit_allocation} allocated to this action."
+                    ),
+                )
+        action.recommended_credits = credits
+        action.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+        refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
+        return DesignatedActionSchema.model_validate(refreshed)
+
+    @service_handler
+    async def perform_workflow_action(
+        self, designated_action_id: int, data: DesignatedActionWorkflowSchema, user
+    ) -> DesignatedActionSchema:
+        """Advance a designated action through its review workflow (#4898)."""
+        action = await self._get_action_or_404(designated_action_id)
+
+        transition = TRANSITIONS.get(data.action)
+        if transition is None:
+            raise HTTPException(
+                status_code=400,
+                detail="action must be one of: " + ", ".join(WORKFLOW_ACTIONS),
+            )
+        if not self._user_may(transition, user):
+            raise HTTPException(
+                status_code=403,
+                detail="Your role may not take this action.",
+            )
+
+        current = action.current_status.status if action.current_status else None
+        if current not in transition.from_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"A designated action that is '{current}' cannot be "
+                    f"'{data.action}'."
+                ),
+            )
+
+        comment = (data.comment or "").strip()
+        if transition.requires_comment and not comment:
+            raise HTTPException(
+                status_code=400,
+                detail="This action requires a comment explaining it.",
+            )
+
+        if transition.requires_all_evidence_satisfactory:
+            if not await self._all_evidence_satisfactory(designated_action_id):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Every evidence requirement must be marked satisfactory "
+                        "first."
+                    ),
+                )
+
+        if transition.requires_credits:
+            credits = (
+                data.recommended_credits
+                if data.recommended_credits is not None
+                else action.recommended_credits
+            )
+            if credits is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A recommended credit amount is required.",
+                )
+            await self.set_recommended_credits(designated_action_id, credits, user)
+            action = await self.repo.get_designated_action_by_id(designated_action_id)
+
+        snapshot = {}
+        if comment:
+            snapshot["comment"] = comment
+        if transition.captures_evidence:
+            snapshot.update(await self._evidence_snapshot(designated_action_id))
+        if transition.requires_credits:
+            snapshot["recommended_credits"] = action.recommended_credits
+
+        status_id = action.current_status_id
+        if transition.to_status is not None:
+            new_status = await self.repo.get_designated_action_status_by_name(
+                transition.to_status
+            )
+            if new_status is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Status '{transition.to_status}' is not configured.",
+                )
+            action.current_status_id = new_status.designated_action_status_id
+            status_id = new_status.designated_action_status_id
+
+        display_name = " ".join(
+            p
+            for p in (getattr(user, "first_name", ""), getattr(user, "last_name", ""))
+            if p
+        ).strip()
+        await self.repo.add_designated_action_history(
+            DesignatedActionHistory(
+                designated_action_id=action.designated_action_id,
+                designated_action_group_uuid=action.group_uuid,
+                event=transition.event,
+                status_id=status_id,
+                user_profile_id=getattr(user, "user_profile_id", None),
+                display_name=display_name or None,
+                snapshot=snapshot or None,
+            )
+        )
+        action.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+
+        refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
+        return DesignatedActionSchema.model_validate(refreshed)
+
+    @service_handler
+    async def get_designated_action_history(
+        self, designated_action_id: int
+    ) -> List[DesignatedActionHistorySchema]:
+        """The audit trail behind the action, newest first."""
+        await self._get_action_or_404(designated_action_id)
+        history = await self.repo.get_designated_action_history(designated_action_id)
+        return [DesignatedActionHistorySchema.model_validate(h) for h in history]
 
     @service_handler
     async def get_evidence_requirements(

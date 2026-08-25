@@ -86,6 +86,12 @@ export const apiRoutes = {
     '/initiative-agreements/designated-actions/:designatedActionId/evidence-requirements',
   evidenceRequirement:
     '/initiative-agreements/evidence-requirements/:evidenceRequirementId',
+  designatedActionWorkflow:
+    '/initiative-agreements/designated-actions/:designatedActionId/workflow',
+  designatedActionRecommendedCredits:
+    '/initiative-agreements/designated-actions/:designatedActionId/recommended-credits',
+  designatedActionHistory:
+    '/initiative-agreements/designated-actions/:designatedActionId/history',
   documentFolderTree: '/document-folders/:parentType/:parentID',
   documentFolderUpdate: '/document-folders/:parentType/:parentID/:folderId',
   documentFolderItems: '/document-folders/:parentType/:parentID/items',

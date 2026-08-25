@@ -126,5 +126,24 @@
     "requirementNamePlaceholder": "Describe what the proponent must provide",
     "reviewedBy": "Reviewed by {{name}}",
     "pending": "Not yet reviewed"
+  },
+  "workflow": {
+    "accept": "Accept",
+    "requestInformation": "Request additional information",
+    "recommendToManager": "Recommend to manager",
+    "recommendToDirector": "Recommend to director",
+    "approve": "Approve",
+    "return": "Return for further work",
+    "reject": "Reject",
+    "submit": "Submit",
+    "commentPrompt": "Explain what is needed. This is kept with the designated action's history.",
+    "actionFailed": "That action could not be completed.",
+    "history": "Activity",
+    "noHistory": "Nothing has happened on this designated action yet.",
+    "confirm": {
+      "request_information": "Request additional information",
+      "return": "Return for further work",
+      "reject": "Reject this designated action"
+    }
   }
 }

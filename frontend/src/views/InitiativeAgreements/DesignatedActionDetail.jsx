@@ -27,11 +27,16 @@ import { ROUTES, buildPath } from '@/routes/routes'
 import { dateFormatter } from '@/utils/formatters'
 import withRole from '@/utils/withRole'
 
-import { useDesignatedActionProfile } from '@/hooks/useInitiativeAgreements'
+import {
+  useDesignatedActionProfile,
+  useEvidenceRequirements
+} from '@/hooks/useInitiativeAgreements'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
 import { DocumentTree } from './components/DocumentTree'
 import { EvidenceOfCompletion } from './components/EvidenceOfCompletion'
+import { DesignatedActionWorkflow } from './components/DesignatedActionWorkflow'
 
 // The shared document machinery keys on this string for designated actions.
 const PARENT_TYPE = 'designatedAction'
@@ -69,7 +74,21 @@ const DesignatedActionDetailBase = () => {
     error
   } = useDesignatedActionProfile(designatedActionId)
 
+  const { hasRoles } = useCurrentUser()
+  const canRecommend =
+    hasRoles?.(roles.ia_analyst) || hasRoles?.(roles.ia_manager)
+
+  const { data: requirements = [] } =
+    useEvidenceRequirements(designatedActionId)
+  const allEvidenceSatisfactory =
+    requirements.length > 0 &&
+    requirements.every((r) => r.reviewOutcome === 'Satisfactory')
+
   const queryClient = useQueryClient()
+  const refreshAction = () => {
+    queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
+    queryClient.invalidateQueries({ queryKey: ['evidence-requirements'] })
+  }
   const refreshTree = () =>
     queryClient.invalidateQueries({
       queryKey: ['document-tree', PARENT_TYPE, String(designatedActionId)]
@@ -291,6 +310,20 @@ const DesignatedActionDetailBase = () => {
           additional information buttons belong to the workflow story. */}
       <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
         <EvidenceOfCompletion designatedActionId={designatedActionId} />
+      </Role>
+
+      {/* Workflow actions (#4898). Which buttons appear comes from the
+          API, so the page cannot offer a transition the server refuses. */}
+      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
+        <DesignatedActionWorkflow
+          designatedActionId={designatedActionId}
+          availableActions={action.availableActions}
+          recommendedCredits={action.recommendedCredits}
+          creditAllocation={action.creditAllocation}
+          allEvidenceSatisfactory={allEvidenceSatisfactory}
+          canEditCredits={canRecommend}
+          onChanged={refreshAction}
+        />
       </Role>
 
       <DocumentUploadDialog
