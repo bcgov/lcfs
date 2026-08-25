@@ -22,18 +22,26 @@ branch_labels = None
 depends_on = None
 
 FSE_MATERIALIZED_VIEW_SECTIONS = [
+    "FSE Reporting Base View",
     "FSE Reporting Base Preferred View",
     "FSE Base View YoY Optimised",
 ]
 
 FSE_REFRESH_TRIGGER_TABLES = {
     "compliance_report": "refresh_fse_mv_after_cr",
+    "compliance_report_status": "refresh_fse_mv_after_crs",
     "compliance_report_charging_equipment": "refresh_fse_mv_after_crce",
     "charging_equipment": "refresh_fse_mv_after_ce",
     "charging_site": "refresh_fse_mv_after_cs",
+    "level_of_equipment": "refresh_fse_mv_after_loe",
+    "charging_equipment_status": "refresh_fse_mv_after_ces",
     "charging_equipment_intended_use_association": "refresh_fse_mv_after_ceiu",
     "charging_equipment_intended_user_association": "refresh_fse_mv_after_ceiur",
+    "end_use_type": "refresh_fse_mv_after_eut",
+    "end_user_type": "refresh_fse_mv_after_eurt",
+    "charging_power_output": "refresh_fse_mv_after_cpo",
     "organization": "refresh_fse_mv_after_org",
+    "compliance_period": "refresh_fse_mv_after_cp",
 }
 
 
