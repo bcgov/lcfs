@@ -92,5 +92,16 @@
     "uploadTitle": "Designated action documents",
     "documentLabel": "the designated action",
     "returnButton": "Return to designated action"
+  },
+  "folders": {
+    "newFolder": "New folder",
+    "newSubfolder": "New subfolder",
+    "newFolderName": "New folder",
+    "rename": "Rename",
+    "delete": "Delete folder",
+    "folderActions": "Folder actions",
+    "loading": "Loading documents...",
+    "empty": "No documents or folders yet.",
+    "helperText": "Double-click any name to rename. Deleting a folder moves its contents up one level."
   }
 }
