@@ -4,6 +4,9 @@ from fastapi import APIRouter, Body, Depends, Request, status
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import (
+    DesignatedActionHistorySchema,
+    DesignatedActionWorkflowSchema,
+    RecommendedCreditsSchema,
     EvidenceRequirementCreateSchema,
     EvidenceRequirementSchema,
     EvidenceRequirementUpdateSchema,
@@ -89,6 +92,61 @@ async def get_designated_actions(
     return await service.get_designated_actions_paginated(
         initiative_agreement_id, pagination
     )
+
+
+@router.put(
+    "/designated-actions/{designated_action_id}/workflow",
+    response_model=DesignatedActionSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def perform_designated_action_workflow(
+    request: Request,
+    designated_action_id: int,
+    data: DesignatedActionWorkflowSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Advance a designated action through its review workflow.
+
+    Gated to the Initiative Agreement roles at the door; which specific
+    action each role may take is enforced against the transition table.
+    """
+    return await service.perform_workflow_action(
+        designated_action_id, data, request.user
+    )
+
+
+@router.put(
+    "/designated-actions/{designated_action_id}/recommended-credits",
+    response_model=DesignatedActionSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def set_designated_action_recommended_credits(
+    request: Request,
+    designated_action_id: int,
+    data: RecommendedCreditsSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Save the recommended amount before recommending."""
+    return await service.set_recommended_credits(
+        designated_action_id, data.recommended_credits, request.user
+    )
+
+
+@router.get(
+    "/designated-actions/{designated_action_id}/history",
+    response_model=List[DesignatedActionHistorySchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def get_designated_action_history(
+    request: Request,
+    designated_action_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """The audit trail behind a designated action."""
+    return await service.get_designated_action_history(designated_action_id)
 
 
 @router.get(

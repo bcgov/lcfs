@@ -39,7 +39,10 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 const mockProfile = vi.fn()
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
-  useDesignatedActionProfile: () => mockProfile()
+  useDesignatedActionProfile: () => mockProfile(),
+  useEvidenceRequirements: () => ({
+    data: [{ evidenceRequirementId: 1, reviewOutcome: 'Satisfactory' }]
+  })
 }))
 
 const mockDocuments = vi.fn()
@@ -60,6 +63,14 @@ vi.mock('../components/EvidenceOfCompletion', () => ({
   EvidenceOfCompletion: () => <div data-test="evidence-of-completion" />
 }))
 
+const workflowProps = vi.fn()
+vi.mock('../components/DesignatedActionWorkflow', () => ({
+  DesignatedActionWorkflow: (props) => {
+    workflowProps(props)
+    return <div data-test="designated-action-workflow" />
+  }
+}))
+
 vi.mock('@/components/Comments', () => ({
   default: () => <div data-test="comments-component" />
 }))
@@ -74,7 +85,8 @@ const action = {
   currentStatus: { status: 'Underway', displayOrder: 30 },
   initiativeAgreementId: 5,
   iaCode: 'IA-26ORG1',
-  siblingActionIds: [9, 12, 15]
+  siblingActionIds: [9, 12, 15],
+  availableActions: ['accept_evidence', 'recommend_to_manager']
 }
 
 describe('DesignatedActionDetail', () => {
@@ -154,6 +166,19 @@ describe('DesignatedActionDetail', () => {
   it('renders the evidence of completion section', () => {
     render(<DesignatedActionDetail />, { wrapper })
     expect(screen.getByTestId('evidence-of-completion')).toBeInTheDocument()
+  })
+
+  it('passes the available actions and evidence state to the workflow', () => {
+    render(<DesignatedActionDetail />, { wrapper })
+
+    expect(screen.getByTestId('designated-action-workflow')).toBeInTheDocument()
+    expect(workflowProps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        availableActions: ['accept_evidence', 'recommend_to_manager'],
+        allEvidenceSatisfactory: true,
+        creditAllocation: 1850
+      })
+    )
   })
 
   it('renders the comments thread', () => {

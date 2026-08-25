@@ -737,6 +737,30 @@ class InitiativeAgreementRepository:
         return list(result.scalars().all())
 
     @repo_handler
+    async def get_designated_action_status_by_name(
+        self, status: str
+    ) -> Optional[DesignatedActionStatus]:
+        result = await self.db.execute(
+            select(DesignatedActionStatus).where(
+                DesignatedActionStatus.status == status
+            )
+        )
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_designated_action_history(
+        self, designated_action_id: int
+    ) -> List[DesignatedActionHistory]:
+        """The action's audit trail, newest first."""
+        result = await self.db.execute(
+            select(DesignatedActionHistory)
+            .options(selectinload(DesignatedActionHistory.status))
+            .where(DesignatedActionHistory.designated_action_id == designated_action_id)
+            .order_by(desc(DesignatedActionHistory.designated_action_history_id))
+        )
+        return list(result.scalars().all())
+
+    @repo_handler
     async def add_designated_action_history(
         self, history: DesignatedActionHistory
     ) -> DesignatedActionHistory:

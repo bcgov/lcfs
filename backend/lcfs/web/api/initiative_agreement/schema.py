@@ -214,9 +214,36 @@ class EvidenceRequirementUpdateSchema(BaseSchema):
     clear_review_outcome: bool = False
 
 
+class DesignatedActionWorkflowSchema(BaseSchema):
+    action: str
+    # The dedicated text area behind Request additional information, and the
+    # reason a manager or director returns or rejects (#4898).
+    comment: Optional[str] = None
+    recommended_credits: Optional[int] = None
+
+
+class RecommendedCreditsSchema(BaseSchema):
+    recommended_credits: Optional[int] = None
+
+
+class DesignatedActionHistorySchema(BaseSchema):
+    designated_action_history_id: int
+    event: str
+    display_name: Optional[str] = None
+    create_date: Optional[datetime] = None
+    status: Optional[DesignatedActionStatusSchema] = None
+    snapshot: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+
 class DesignatedActionProfileSchema(DesignatedActionSchema):
     initiative_agreement_id: int
     ia_code: Optional[str] = None
+    # Which workflow actions this caller may take right now. Derived from
+    # the transition table so the page and the API cannot disagree.
+    available_actions: List[str] = []
     # Current-version sibling ids in action_number order, for the detail
     # page's previous/next navigation.
     sibling_action_ids: List[int] = []

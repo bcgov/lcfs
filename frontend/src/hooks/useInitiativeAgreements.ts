@@ -262,3 +262,72 @@ export const useDeleteEvidenceRequirement = (
         )
       )
   )
+
+/** Designated action workflow transitions and audit trail (#4898). */
+const actionPath = (template: string, designatedActionId: number | string) =>
+  template.replace(':designatedActionId', String(designatedActionId))
+
+export const useDesignatedActionWorkflow = (
+  designatedActionId: number | string
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      action: string
+      comment?: string
+      recommendedCredits?: number | null
+    }) =>
+      (
+        await client.put(
+          actionPath(apiRoutes.designatedActionWorkflow, designatedActionId),
+          payload
+        )
+      ).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
+      queryClient.invalidateQueries({
+        queryKey: ['designated-action-history', String(designatedActionId)]
+      })
+    }
+  })
+}
+
+export const useSetRecommendedCredits = (
+  designatedActionId: number | string
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (recommendedCredits: number | null) =>
+      (
+        await client.put(
+          actionPath(
+            apiRoutes.designatedActionRecommendedCredits,
+            designatedActionId
+          ),
+          { recommendedCredits }
+        )
+      ).data,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
+  })
+}
+
+export const useDesignatedActionHistory = (
+  designatedActionId: number | string,
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    enabled: !!designatedActionId,
+    queryKey: ['designated-action-history', String(designatedActionId)],
+    queryFn: async () =>
+      (
+        await client.get(
+          actionPath(apiRoutes.designatedActionHistory, designatedActionId)
+        )
+      ).data,
+    ...options
+  })
+}
