@@ -28,6 +28,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.internal_comment.services import sanitize_comment_text
 from lcfs.web.api.initiative_agreement.schema import (
+    DesignatedActionProfileSchema,
     AnalystAssignmentSchema,
     DesignatedActionSchema,
     DesignatedActionsListSchema,
@@ -250,6 +251,27 @@ class InitiativeAgreementServices:
                 ),
             ),
             designated_actions=rows,
+        )
+
+    @service_handler
+    async def get_designated_action_profile(
+        self, designated_action_id: int
+    ) -> DesignatedActionProfileSchema:
+        """The action detail page's record (#4840)."""
+        action = await self.repo.get_designated_action_by_id(designated_action_id)
+        if not action:
+            raise DataNotFoundException(
+                f"Designated action with id {designated_action_id} not found"
+            )
+        siblings = await self.repo.get_current_designated_actions(
+            action.initiative_agreement_id
+        )
+        base = DesignatedActionSchema.model_validate(action)
+        return DesignatedActionProfileSchema(
+            **base.model_dump(),
+            initiative_agreement_id=action.initiative_agreement_id,
+            ia_code=action.initiative_agreement.ia_code,
+            sibling_action_ids=[s.designated_action_id for s in siblings],
         )
 
     @service_handler

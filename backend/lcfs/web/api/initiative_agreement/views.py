@@ -4,6 +4,7 @@ from fastapi import APIRouter, Body, Depends, Request, status
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import (
+    DesignatedActionProfileSchema,
     AnalystAssignmentSchema,
     DesignatedActionSchema,
     DesignatedActionsListSchema,
@@ -81,6 +82,21 @@ async def get_designated_actions(
     return await service.get_designated_actions_paginated(
         initiative_agreement_id, pagination
     )
+
+
+@router.get(
+    "/designated-actions/{designated_action_id}/profile",
+    response_model=DesignatedActionProfileSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def get_designated_action_profile(
+    request: Request,
+    designated_action_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """The designated action detail page's record."""
+    return await service.get_designated_action_profile(designated_action_id)
 
 
 @router.put(

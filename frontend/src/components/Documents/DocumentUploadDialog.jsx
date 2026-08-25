@@ -35,6 +35,12 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
           documentLabel: t('initiativeAgreement:documents.documentLabel'),
           returnButton: t('initiativeAgreement:documents.returnButton')
         }
+      case 'designatedAction':
+        return {
+          title: t('initiativeAgreement:actionDocuments.uploadTitle'),
+          documentLabel: t('initiativeAgreement:actionDocuments.documentLabel'),
+          returnButton: t('initiativeAgreement:actionDocuments.returnButton')
+        }
       case 'compliance_report':
       default:
         return {

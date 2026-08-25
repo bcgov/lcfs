@@ -80,6 +80,8 @@ export const apiRoutes = {
     '/initiative-agreements/:initiativeAgreementId/designated-actions/list',
   assignDesignatedActionAnalyst:
     '/initiative-agreements/designated-actions/:designatedActionId/assign',
+  getDesignatedActionProfile:
+    '/initiative-agreements/designated-actions/:designatedActionId/profile',
 
   // fuel-type
   getFuelTypeOthers: '/fuel-type/others/list',
