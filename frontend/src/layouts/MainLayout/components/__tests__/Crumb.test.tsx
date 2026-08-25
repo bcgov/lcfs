@@ -112,6 +112,27 @@ describe('Crumb', () => {
     useInitiativeAgreementPageStore.getState().setAgreementCrumb(null)
   })
 
+  it('renders the designated action trail without the numeric agreement id', () => {
+    setupRouterMocks({
+      pathname: '/initiative-agreements/5/designated-actions/9',
+      matches: [{ handle: { title: 'Designated action' } }]
+    })
+    useInitiativeAgreementPageStore.getState().setAgreementCrumb('DA1-IA5')
+
+    render(<Crumb />, { wrapper })
+
+    expect(screen.getByText('Initiative agreements')).toBeInTheDocument()
+    const designatedActions = screen.getByText('Designated actions')
+    expect(designatedActions.closest('a')).toHaveAttribute(
+      'href',
+      '/initiative-agreements/5'
+    )
+    expect(screen.queryByText('ID: 5')).not.toBeInTheDocument()
+    expect(screen.getByText('DA1-IA5')).toBeInTheDocument()
+
+    useInitiativeAgreementPageStore.getState().setAgreementCrumb(null)
+  })
+
   it('falls back to the route title when no agreement code is set', () => {
     setupRouterMocks({
       pathname: '/initiative-agreements/5',
