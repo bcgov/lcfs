@@ -109,12 +109,57 @@ def test_fse_pref_view_matches_reporting_rows_by_equipment_group_uuid():
 
     assert "v.compliance_report_group_uuid,\n                    ce.group_uuid" in sql
     assert "mr.charging_equipment_group_uuid = fr.charging_equipment_group_uuid" in sql
-    assert "fr.charging_equipment_id,\n    fr.serial_number" in sql
+    assert "COALESCE(fr.charging_equipment_id, mr.charging_equipment_id)" in sql
+    assert "COALESCE(fr.serial_number, mr.serial_number)" in sql
     assert (
         "mr.charging_equipment_id = fr.charging_equipment_id\n"
         "   AND mr.charging_equipment_version = fr.charging_equipment_version"
         not in sql
     )
+
+
+def test_fse_pref_view_includes_historical_report_rows_without_current_fallback():
+    sql = (
+        Path(__file__).resolve().parents[3] / "lcfs/db/sql/views/metabase.sql"
+    ).read_text()
+
+    assert "report_equipment_keys AS" in sql
+    assert "JOIN matched_rows mr" in sql
+    assert "mr.compliance_report_group_uuid = rc.compliance_report_group_uuid" in sql
+    assert "COALESCE(fr.charging_equipment_id, mr.charging_equipment_id)" in sql
+    assert "FROM report_equipment_keys rek" in sql
+    assert "LEFT JOIN fallback_rows fr" in sql
+
+
+def test_fse_reporting_pref_and_yoy_base_are_materialized_views():
+    sql = (
+        Path(__file__).resolve().parents[3] / "lcfs/db/sql/views/metabase.sql"
+    ).read_text()
+
+    assert "CREATE MATERIALIZED VIEW v_fse_reporting_base_pref AS" in sql
+    assert "CREATE MATERIALIZED VIEW vw_fse_base AS" in sql
+    assert "CREATE OR REPLACE VIEW v_fse_reporting_base_pref AS" not in sql
+    assert "CREATE OR REPLACE VIEW vw_fse_base AS" not in sql
+
+
+def test_fse_materialized_view_refresh_migration_tracks_source_tables():
+    migration = (
+        Path(__file__).resolve().parents[3]
+        / "lcfs/db/migrations/versions/2026-03-24-12-00_098cf79762b9.py"
+    ).read_text()
+
+    assert "CREATE OR REPLACE FUNCTION refresh_fse_materialized_views()" in migration
+    assert "REFRESH MATERIALIZED VIEW v_fse_reporting_base_pref" in migration
+    assert "REFRESH MATERIALIZED VIEW vw_fse_base" in migration
+    for table_name in [
+        "compliance_report",
+        "compliance_report_charging_equipment",
+        "charging_equipment",
+        "charging_site",
+        "charging_equipment_intended_use_association",
+        "charging_equipment_intended_user_association",
+    ]:
+        assert table_name in migration
 
 
 @pytest.mark.anyio
