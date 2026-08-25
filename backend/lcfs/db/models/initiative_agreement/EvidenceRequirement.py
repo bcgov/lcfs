@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    TIMESTAMP,
     Boolean,
     Column,
     ForeignKey,
@@ -10,6 +11,17 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import Auditable, BaseModel
+
+# Outcome vocabulary for an analyst's assessment of one requirement.
+# Held as a String and validated at the API layer, mirroring
+# ``designated_action.determination`` — the workflow can grow without an
+# enum migration. NULL means the requirement has not been reviewed yet.
+REVIEW_OUTCOME_SATISFACTORY = "Satisfactory"
+REVIEW_OUTCOME_INFORMATION_REQUESTED = "Information requested"
+REVIEW_OUTCOMES = (
+    REVIEW_OUTCOME_SATISFACTORY,
+    REVIEW_OUTCOME_INFORMATION_REQUESTED,
+)
 
 
 class EvidenceRequirement(BaseModel, Auditable):
@@ -74,6 +86,42 @@ class EvidenceRequirement(BaseModel, Auditable):
         ),
     )
 
+    # --- Analyst assessment (#4846 analyst review field, #4899) ----------
+    # The current round's assessment. Each completed round is preserved in
+    # designated_action_history with the full review payload, so requesting
+    # more information never destroys what the previous round concluded.
+    analyst_review = Column(
+        Text,
+        nullable=True,
+        comment="Analyst's long-form record of the evidence for this requirement",
+    )
+    review_outcome = Column(
+        String(100),
+        nullable=True,
+        comment=(
+            "Assessment result (Satisfactory | Information requested); "
+            "NULL until the requirement has been reviewed"
+        ),
+    )
+    review_notes = Column(
+        Text,
+        nullable=True,
+        comment="Optional analyst notes accompanying the assessment",
+    )
+    reviewed_by_user_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        index=True,
+        comment="User who recorded the current assessment",
+    )
+    reviewed_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="When the current assessment was recorded",
+    )
+
     designated_action = relationship(
         "DesignatedAction", back_populates="evidence_requirements"
     )
+    reviewed_by = relationship("UserProfile", foreign_keys=[reviewed_by_user_id])
