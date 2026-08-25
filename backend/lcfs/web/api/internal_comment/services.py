@@ -40,6 +40,7 @@ DEFAULT_CATEGORY_BY_ENTITY: dict[EntityTypeEnum, str] = {
     EntityTypeEnum.COMPLIANCE_REPORT: "Compliance notes",
     EntityTypeEnum.TRANSFER: "Transfer notes",
     EntityTypeEnum.INITIATIVE_AGREEMENT: "IA notes",
+    EntityTypeEnum.DESIGNATED_ACTION: "IA notes",
     EntityTypeEnum.ADMIN_ADJUSTMENT: "Penalty notes",
     EntityTypeEnum.CI_APPLICATION: "CI application notes",
     EntityTypeEnum.ORGANIZATION: "Company Overview",
@@ -235,17 +236,16 @@ class InternalCommentService:
             comment, data.entity_type, data.entity_id
         )
 
-        if (
-            not is_government_user
-            and data.entity_type == EntityTypeEnum.CI_APPLICATION
-        ):
+        if not is_government_user and data.entity_type == EntityTypeEnum.CI_APPLICATION:
             await self._send_ci_comment_notification(
                 data.entity_id,
                 "applicant_activity",
                 "CI Application Comment Received",
-                self.request.user.user_profile_id
-                if hasattr(self.request.user, "user_profile_id")
-                else None,
+                (
+                    self.request.user.user_profile_id
+                    if hasattr(self.request.user, "user_profile_id")
+                    else None
+                ),
             )
         elif (
             is_government_user
@@ -256,9 +256,11 @@ class InternalCommentService:
                 data.entity_id,
                 "government_action",
                 "CI Application Comment Received",
-                self.request.user.user_profile_id
-                if hasattr(self.request.user, "user_profile_id")
-                else None,
+                (
+                    self.request.user.user_profile_id
+                    if hasattr(self.request.user, "user_profile_id")
+                    else None
+                ),
                 related_organization_id=created_comment.organization_id,
             )
 

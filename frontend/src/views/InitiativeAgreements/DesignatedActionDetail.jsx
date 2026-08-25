@@ -4,6 +4,7 @@ import { Divider } from '@mui/material'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import Comments from '@/components/Comments'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import withRole from '@/utils/withRole'
@@ -32,6 +33,16 @@ const DesignatedActionDetailBase = () => {
       <BCTypography variant="body1" color="text.secondary">
         {t('initiativeAgreement:actionDetail.placeholder')}
       </BCTypography>
+
+      {/* Standard dual-mode thread (#4900); the page is IDIR-only until
+          the BCeID story, matching the API. */}
+      <BCBox mt={3} data-test="designated-action-comments-section">
+        <Comments
+          entityType="designatedAction"
+          entityId={Number(designatedActionId)}
+          commentMode="dual"
+        />
+      </BCBox>
     </BCBox>
   )
 }
