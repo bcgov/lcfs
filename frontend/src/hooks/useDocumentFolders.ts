@@ -76,7 +76,8 @@ export const useUpdateFolder = (
   parentID: number | string
 ) => {
   const client = useApiService()
-  const invalidate = useInvalidateTree(parentType, parentID)
+  const queryClient = useQueryClient()
+  const key = treeKey(parentType, parentID)
   return useMutation({
     mutationFn: async ({
       folderId,
@@ -98,7 +99,35 @@ export const useUpdateFolder = (
           payload
         )
       ).data,
-    onSuccess: invalidate
+    // A drag that visibly waits on a round trip reads as broken, so
+    // folder moves apply optimistically and roll back on error.
+    onMutate: async (variables) => {
+      if (variables.parentFolderId === undefined && !variables.moveToRoot) {
+        return {}
+      }
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData(key)
+      if (previous) {
+        const { applyFolderMove } = await import(
+          '@/views/InitiativeAgreements/components/documentTreeDnd'
+        )
+        queryClient.setQueryData(
+          key,
+          applyFolderMove(
+            previous,
+            variables.folderId,
+            variables.moveToRoot ? null : variables.parentFolderId
+          )
+        )
+      }
+      return { previous }
+    },
+    onError: (_error, _variables, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(key, context.previous)
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: key })
   })
 }
 
@@ -132,7 +161,8 @@ export const useMoveDocuments = (
   parentID: number | string
 ) => {
   const client = useApiService()
-  const invalidate = useInvalidateTree(parentType, parentID)
+  const queryClient = useQueryClient()
+  const key = treeKey(parentType, parentID)
   return useMutation({
     mutationFn: async ({
       documentIds,
@@ -145,6 +175,71 @@ export const useMoveDocuments = (
         fillPath(apiRoutes.documentFolderItems, parentType, parentID),
         { documentIds, folderId }
       ),
-    onSuccess: invalidate
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData(key)
+      if (previous) {
+        const { applyDocumentMove } = await import(
+          '@/views/InitiativeAgreements/components/documentTreeDnd'
+        )
+        queryClient.setQueryData(
+          key,
+          applyDocumentMove(previous, variables.documentIds, variables.folderId)
+        )
+      }
+      return { previous }
+    },
+    onError: (_error, _variables, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(key, context.previous)
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: key })
+  })
+}
+
+/**
+ * Upload files straight into a folder: the shared upload route first, then
+ * one placement call — the design's two-call pattern, so the upload path
+ * itself stays untouched. A failure between the calls leaves the file at
+ * the root: visible and fixable by dragging.
+ */
+export const useFolderUpload = (
+  parentType: string,
+  parentID: number | string
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const key = treeKey(parentType, parentID)
+  return useMutation({
+    mutationFn: async ({
+      files,
+      folderId
+    }: {
+      files: File[]
+      folderId: number | null
+    }) => {
+      const uploadPath = apiRoutes.getDocuments
+        .replace(':parentType', parentType)
+        .replace(':parentID', String(parentID))
+      const documentIds: number[] = []
+      for (const file of files) {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('filename', file.name)
+        const response = await client.post(uploadPath, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        documentIds.push(response.data.documentId)
+      }
+      if (folderId !== null && documentIds.length) {
+        await client.put(
+          fillPath(apiRoutes.documentFolderItems, parentType, parentID),
+          { documentIds, folderId }
+        )
+      }
+      return documentIds
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: key })
   })
 }

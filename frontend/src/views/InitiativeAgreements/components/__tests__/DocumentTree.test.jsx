@@ -12,12 +12,15 @@ const mockTree = vi.fn()
 const mockCreate = vi.fn()
 const mockUpdate = vi.fn()
 const mockDelete = vi.fn()
+const mockMove = vi.fn()
+const mockUpload = vi.fn()
 vi.mock('@/hooks/useDocumentFolders', () => ({
   useDocumentTree: () => mockTree(),
   useCreateFolder: () => ({ mutate: mockCreate }),
   useUpdateFolder: () => ({ mutate: mockUpdate }),
   useDeleteFolder: () => ({ mutate: mockDelete }),
-  useMoveDocuments: () => ({ mutate: vi.fn() })
+  useMoveDocuments: () => ({ mutate: mockMove }),
+  useFolderUpload: () => ({ mutate: mockUpload })
 }))
 
 const mockDownload = vi.fn()
@@ -155,6 +158,21 @@ describe('DocumentTree', () => {
       name: 'Evidence',
       parentFolderId: 12
     })
+  })
+
+  it('uploads into a folder from the menu', () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    fireEvent.click(screen.getByTestId('folder-menu-12'))
+    fireEvent.click(screen.getByTestId('menu-upload-here'))
+
+    const input = screen.getByTestId('folder-upload-input')
+    const file = new File(['x'], 'evidence.pdf', { type: 'application/pdf' })
+    fireEvent.change(input, { target: { files: [file] } })
+
+    expect(mockUpload).toHaveBeenCalledWith({ files: [file], folderId: 12 })
   })
 
   it('shows the empty state', () => {

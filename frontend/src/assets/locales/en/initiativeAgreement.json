@@ -102,6 +102,13 @@
     "folderActions": "Folder actions",
     "loading": "Loading documents...",
     "empty": "No documents or folders yet.",
-    "helperText": "Double-click any name to rename. Deleting a folder moves its contents up one level."
+    "helperText": "Double-click any name to rename. Drag files into folders. Deleting a folder moves its contents up one level.",
+    "uploadHere": "Upload here",
+    "dropToRoot": "Drop here to move out of all folders",
+    "moved": "Moved {{count}} file(s)",
+    "movedFolder": "Moved folder",
+    "undo": "Undo",
+    "draggingFiles": "{{count}} file(s)",
+    "draggingFolder": "Folder"
   }
 }
