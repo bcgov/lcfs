@@ -4,7 +4,7 @@
 
 This document outlines the LCFS database views organized by their dependency levels. Views must be created in the specified order to avoid reference errors.
 
-> **Note:** All compliance-report analytics views include `compliance_period_id` and `compliance_period` columns so Metabase dashboards can apply field filters consistently. `v_fse_reporting_base_pref` and `vw_fse_base` are materialized views refreshed by FSE source-table triggers.
+> **Note:** All compliance-report analytics views include `compliance_period_id` and `compliance_period` columns so Metabase dashboards can apply field filters consistently.
 
 ## Dependency Tree Structure
 
@@ -33,8 +33,7 @@ Level 2 (Depends on Level 1)
 ├── vw_bceid_user_statistics (depends on: vw_user_login_analytics_base)
 ├── vw_login_failures_analysis (depends on: vw_user_login_analytics_base)
 ├── vw_compliance_report_base (depends on: vw_compliance_report_chained)
-├── v_fse_reporting_base_pref (materialized, depends on: v_fse_reporting_base)
-├── vw_fse_base (materialized, depends on: compliance_report and FSE source tables)
+├── vw_fse_base (depends on: v_compliance_report)
 ├── vw_electricity_allocation_fse_match (depends on: v_compliance_report)
 ├── vw_allocation_agreement_duplicate_check (depends on: v_compliance_report)
 └── vw_fse_duplicate_check (depends on: v_compliance_report)
@@ -71,8 +70,7 @@ Level 3 (Depends on Level 2)
 -   **vw_fuel_export_analytics_base**: Fuel export data for analytics
 -   **vw_fuel_code_base**: Comprehensive fuel code information
 -   **vw_fuels_other_use_base**: Non-standard fuel usage tracking
--   **v_fse_reporting_base_pref**: Materialized preferred FSE rows used by report display
--   **vw_fse_base**: Materialized Final Supply Equipment reporting
+-   **vw_fse_base**: Final Supply Equipment reporting
 -   **vw_allocation_agreement_base**: Latest allocation agreements
 -   **vw_notional_transfer_base**: Notional transfer tracking
 

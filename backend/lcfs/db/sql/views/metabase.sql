@@ -416,8 +416,8 @@ LEFT JOIN LATERAL (
 -- ==========================================
 -- FSE Reporting Base Preferred View
 -- ==========================================
-DROP MATERIALIZED VIEW IF EXISTS v_fse_reporting_base_pref;
-CREATE MATERIALIZED VIEW v_fse_reporting_base_pref AS
+DROP VIEW IF EXISTS v_fse_reporting_base_pref;
+CREATE OR REPLACE VIEW v_fse_reporting_base_pref AS
 WITH report_context AS (
     SELECT
         cr.compliance_report_id,
@@ -2542,8 +2542,8 @@ GRANT SELECT ON vw_compliance_report_base TO basic_lcfs_reporting_role;
 -- FSE Base View YoY Optimised
 -- ==========================================
 -- Replaces v_fse_reporting_base_pref chain with flat CTEs for performance.
-DROP MATERIALIZED VIEW IF EXISTS vw_fse_base CASCADE;
-CREATE MATERIALIZED VIEW vw_fse_base AS
+DROP VIEW IF EXISTS vw_fse_base CASCADE;
+CREATE OR REPLACE VIEW vw_fse_base AS
 WITH
 target_reports AS (
     SELECT DISTINCT ON (cr.compliance_report_group_uuid)
