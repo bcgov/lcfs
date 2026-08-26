@@ -161,7 +161,10 @@ export const DesignatedActionWorkflow = ({
             inputProps={{
               min: 0,
               max: creditAllocation ?? undefined,
-              'data-test': 'recommended-credits-input'
+              'data-test': 'recommended-credits-input',
+              'aria-label': t(
+                'initiativeAgreement:actionDetail.recommendedCredits'
+              )
             }}
             onChange={(event) => setCredits(event.target.value)}
             onBlur={() => {
@@ -228,7 +231,10 @@ export const DesignatedActionWorkflow = ({
                 fullWidth
                 autoFocus
                 value={comment}
-                inputProps={{ 'data-test': 'workflow-comment' }}
+                inputProps={{
+                  'data-test': 'workflow-comment',
+                  'aria-label': t('initiativeAgreement:workflow.commentPrompt')
+                }}
                 onChange={(event) => setComment(event.target.value)}
               />
             </Box>

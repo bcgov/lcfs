@@ -109,7 +109,9 @@
     "movedFolder": "Moved folder",
     "undo": "Undo",
     "draggingFiles": "{{count}} file(s)",
-    "draggingFolder": "Folder"
+    "draggingFolder": "Folder",
+    "folderDragHandle": "Move folder {{name}}",
+    "fileDragHandle": "Move file {{name}}"
   },
   "evidence": {
     "sectionTitle": "Evidence of completion of designated action:",
@@ -125,7 +127,9 @@
     "newRequirementTitle": "New evidence requirement",
     "requirementNamePlaceholder": "Describe what the proponent must provide",
     "reviewedBy": "Reviewed by {{name}}",
-    "pending": "Not yet reviewed"
+    "pending": "Not yet reviewed",
+    "evidenceFor": "Evidence of completion for {{name}}",
+    "notesFor": "Notes for {{name}}"
   },
   "workflow": {
     "accept": "Accept",

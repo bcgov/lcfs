@@ -16,6 +16,7 @@ import { TreeItem } from '@mui/x-tree-view/TreeItem'
 import {
   DndContext,
   DragOverlay,
+  KeyboardSensor,
   PointerSensor,
   pointerWithin,
   useDraggable,
@@ -29,6 +30,7 @@ import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutli
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined'
 import prettyBytes from 'pretty-bytes'
 
@@ -82,14 +84,13 @@ const NameEditor = ({ initialValue, onCommit, onCancel }) => (
 )
 
 const FileLabel = ({ file, onDownload }) => {
+  const { t } = useTranslation(['initiativeAgreement'])
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: docDragId(file.documentId)
   })
   return (
     <Box
       ref={setNodeRef}
-      {...attributes}
-      {...listeners}
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -100,8 +101,11 @@ const FileLabel = ({ file, onDownload }) => {
       data-test={`tree-file-${file.documentId}`}
     >
       <InsertDriveFileOutlinedIcon fontSize="small" color="action" />
+      {/* A real button: a clickable span cannot be reached by keyboard
+          and announces nothing. */}
       <BCTypography
-        component="span"
+        component="button"
+        type="button"
         variant="subtitle2"
         color="link"
         onClick={(event) => {
@@ -109,6 +113,11 @@ const FileLabel = ({ file, onDownload }) => {
           onDownload(file.documentId)
         }}
         sx={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          font: 'inherit',
+          textAlign: 'left',
           textDecoration: 'underline',
           cursor: 'pointer',
           '&:hover': { color: 'info.main' }
@@ -121,6 +130,18 @@ const FileLabel = ({ file, onDownload }) => {
         {' · '}
         {timezoneFormatter({ value: file.createDate })}
       </BCTypography>
+      <IconButton
+        size="small"
+        {...attributes}
+        {...listeners}
+        data-test={`tree-file-handle-${file.documentId}`}
+        aria-label={t('initiativeAgreement:folders.fileDragHandle', {
+          name: file.fileName
+        })}
+        sx={{ cursor: 'grab' }}
+      >
+        <DragIndicatorIcon fontSize="inherit" />
+      </IconButton>
     </Box>
   )
 }
@@ -136,6 +157,7 @@ const FolderLabel = ({
   onOsFileDrop,
   externalDragSuppressed
 }) => {
+  const { t } = useTranslation(['initiativeAgreement'])
   const {
     attributes,
     listeners,
@@ -167,12 +189,7 @@ const FolderLabel = ({
 
   return (
     <Box
-      ref={(node) => {
-        setDragRef(node)
-        setDropRef(node)
-      }}
-      {...attributes}
-      {...listeners}
+      ref={setDropRef}
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -207,7 +224,20 @@ const FolderLabel = ({
       }}
     >
       <FolderOutlinedIcon fontSize="small" color="action" />
-      <BCTypography component="span" variant="subtitle2">
+      {/* The drag handle is the name, not the whole row: the row also
+          holds the actions button, and nesting one control inside another
+          leaves neither reachable in order. */}
+      <BCTypography
+        component="span"
+        variant="subtitle2"
+        ref={setDragRef}
+        {...attributes}
+        {...listeners}
+        aria-label={t('initiativeAgreement:folders.folderDragHandle', {
+          name: folder.name
+        })}
+        sx={{ cursor: 'grab' }}
+      >
         {folder.name}
       </BCTypography>
       <BCTypography component="span" variant="subtitle2" color="text.secondary">
@@ -275,7 +305,10 @@ export const DocumentTree = ({ parentType, parentID }) => {
 
   const sensors = useSensors(
     // A few pixels of slack so click-to-download never starts a drag.
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    // Dragging must not be the only way to move something: space picks a
+    // node up, the arrows move between targets, space drops it.
+    useSensor(KeyboardSensor)
   )
 
   useEffect(() => {

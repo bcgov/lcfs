@@ -194,7 +194,10 @@ const DesignatedActionDetailBase = () => {
                       px: 1.5,
                       py: 0.25,
                       borderRadius: 4,
-                      bgcolor: 'success.light',
+                      // success.contrastText is computed against
+                      // success.main, so pairing it with the lighter shade
+                      // gives 3.27:1 and fails AA.
+                      bgcolor: 'success.main',
                       color: 'success.contrastText',
                       fontSize: '0.8rem'
                     }}

@@ -112,7 +112,12 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
             value={analystReview}
             placeholder={t('initiativeAgreement:evidence.evidencePlaceholder')}
             inputProps={{
-              'data-test': `eoc-review-${requirement.evidenceRequirementId}`
+              'data-test': `eoc-review-${requirement.evidenceRequirementId}`,
+              // A placeholder is not a label: it disappears on input and
+              // is not reliably announced.
+              'aria-label': t('initiativeAgreement:evidence.evidenceFor', {
+                name: requirement.description
+              })
             }}
             onChange={(event) => setAnalystReview(event.target.value)}
             onBlur={() => {
@@ -134,7 +139,10 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
                 disabled={!canEdit}
                 value={reviewNotes}
                 inputProps={{
-                  'data-test': `eoc-notes-${requirement.evidenceRequirementId}`
+                  'data-test': `eoc-notes-${requirement.evidenceRequirementId}`,
+                  'aria-label': t('initiativeAgreement:evidence.notesFor', {
+                    name: requirement.description
+                  })
                 }}
                 onChange={(event) => setReviewNotes(event.target.value)}
                 onBlur={() => {
@@ -226,8 +234,14 @@ const ReviewSummary = ({ requirements }) => {
             key={requirement.evidenceRequirementId}
             sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
           >
+            {/* The icon carries the outcome, so it needs words: colour
+                and shape alone are not an accessible name. */}
             {requirement.reviewOutcome === OUTCOME_SATISFACTORY ? (
-              <CheckCircleIcon fontSize="small" color="success" />
+              <CheckCircleIcon
+                fontSize="small"
+                color="success"
+                titleAccess={t('initiativeAgreement:evidence.satisfactory')}
+              />
             ) : (
               <ErrorIcon
                 fontSize="small"
@@ -235,6 +249,11 @@ const ReviewSummary = ({ requirements }) => {
                   requirement.reviewOutcome === OUTCOME_INFORMATION_REQUESTED
                     ? 'warning'
                     : 'disabled'
+                }
+                titleAccess={
+                  requirement.reviewOutcome === OUTCOME_INFORMATION_REQUESTED
+                    ? t('initiativeAgreement:evidence.requestInformation')
+                    : t('initiativeAgreement:evidence.pending')
                 }
               />
             )}
@@ -340,7 +359,12 @@ export const EvidenceOfCompletion = ({
                   placeholder={t(
                     'initiativeAgreement:evidence.requirementNamePlaceholder'
                   )}
-                  inputProps={{ 'data-test': 'eoc-new-description' }}
+                  inputProps={{
+                    'data-test': 'eoc-new-description',
+                    'aria-label': t(
+                      'initiativeAgreement:evidence.requirementNamePlaceholder'
+                    )
+                  }}
                   onChange={(event) => setNewDescription(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') commitNew()
