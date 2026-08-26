@@ -78,6 +78,8 @@ export const apiRoutes = {
   getInitiativeAgreementAnalysts: '/initiative-agreements/analysts',
   getDesignatedActionsList:
     '/initiative-agreements/:initiativeAgreementId/designated-actions/list',
+  createDesignatedAction:
+    '/initiative-agreements/:initiativeAgreementId/designated-actions',
   assignDesignatedActionAnalyst:
     '/initiative-agreements/designated-actions/:designatedActionId/assign',
   getDesignatedActionProfile:

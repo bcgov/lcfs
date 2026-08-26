@@ -51,6 +51,11 @@ vi.mock('@/components/Comments', () => ({
   }
 }))
 
+vi.mock('../components/AddDesignatedAction', () => ({
+  AddDesignatedAction: ({ isDraft }) =>
+    isDraft ? <div data-test="add-designated-action" /> : null
+}))
+
 const daGridProps = vi.fn()
 vi.mock('../components/DesignatedActionsGrid', () => ({
   DesignatedActionsGrid: (props) => {
@@ -190,6 +195,24 @@ describe('InitiativeAgreementDetail', () => {
     expect(useInitiativeAgreementPageStore.getState().agreementCrumb).toBe(
       'IA-26ORG1'
     )
+  })
+
+  it('does not offer to add an action to an agreement that is underway', () => {
+    render(<InitiativeAgreementDetail />, { wrapper })
+    expect(
+      screen.queryByTestId('add-designated-action')
+    ).not.toBeInTheDocument()
+  })
+
+  it('offers to add an action while the agreement is a draft', () => {
+    mockAgreement.mockReturnValue({
+      data: { ...agreement, lifecycleStatus: { status: 'Draft' } },
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    render(<InitiativeAgreementDetail />, { wrapper })
+    expect(screen.getByTestId('add-designated-action')).toBeInTheDocument()
   })
 
   it('renders the designated actions grid for IDIR IA roles', () => {

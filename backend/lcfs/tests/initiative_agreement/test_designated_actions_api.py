@@ -24,6 +24,7 @@ from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
 from lcfs.tests.initiative_agreement.test_initiative_agreement_api import (
     IDIR_IA_ANALYST,
+    _lifecycle_status_id,
     PAGINATION_BODY,
     _action_status_id,
     _seed_agreement,
@@ -31,6 +32,7 @@ from lcfs.tests.initiative_agreement.test_initiative_agreement_api import (
 )
 
 IDIR_IA_MANAGER = [RoleEnum.IA_MANAGER, RoleEnum.GOVERNMENT]
+IDIR_DIRECTOR = [RoleEnum.DIRECTOR, RoleEnum.GOVERNMENT]
 
 
 async def _seed_action(dbsession, agreement, number, name, credits=1000, **overrides):
@@ -497,3 +499,159 @@ async def test_action_documents_list_and_are_org_gated(
     assert response.status_code == status.HTTP_200_OK
     files = response.json()
     assert [f["fileName"] for f in files] == ["award-letter.pdf"]
+
+
+# ---------------------------------------------------------------------------
+# Creating designated actions, which is only possible while the agreement
+# is still a draft.
+# ---------------------------------------------------------------------------
+
+
+def _create_action_url(fastapi_app, agreement):
+    return fastapi_app.url_path_for(
+        "create_designated_action",
+        initiative_agreement_id=agreement.initiative_agreement_id,
+    )
+
+
+async def _draft_agreement(dbsession, code):
+    org_id, _ = await _two_org_ids(dbsession)
+    return await _seed_agreement(
+        dbsession,
+        org_id,
+        code,
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
+    )
+
+
+@pytest.mark.anyio
+async def test_an_analyst_adds_an_action_to_a_draft_agreement(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _draft_agreement(dbsession, "IA-26NEW1")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _create_action_url(fastapi_app, agreement),
+        json={
+            "name": "Commission the first fueling station",
+            "creditAllocation": 1850,
+            "specifiedDate": "2026-09-30",
+        },
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    assert data["name"] == "Commission the first fueling station"
+    assert data["actionNumber"] == 1
+    assert data["creditAllocation"] == 1850
+    # A new action has not been started and belongs to nobody yet.
+    assert data["currentStatus"]["status"] == "Not started"
+    assert data["assignedAnalyst"] is None
+    assert data["recommendedCredits"] is None
+
+
+@pytest.mark.anyio
+async def test_action_numbers_continue_from_what_is_there(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _draft_agreement(dbsession, "IA-26NEW2")
+    await _seed_action(dbsession, agreement, 1, "Existing")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _create_action_url(fastapi_app, agreement), json={"name": "Second"}
+    )
+
+    assert response.json()["actionNumber"] == 2
+
+
+@pytest.mark.anyio
+async def test_actions_cannot_be_added_once_the_agreement_is_underway(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Designated actions are the substance of the agreement, so they are
+    settled before it takes effect."""
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26NEW3")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _create_action_url(fastapi_app, agreement), json={"name": "Too late"}
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "draft" in response.json()["detail"].lower()
+
+
+@pytest.mark.anyio
+async def test_a_nameless_action_is_refused(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _draft_agreement(dbsession, "IA-26NEW4")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _create_action_url(fastapi_app, agreement), json={"name": "   "}
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.anyio
+async def test_negative_credits_are_refused(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _draft_agreement(dbsession, "IA-26NEW5")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _create_action_url(fastapi_app, agreement),
+        json={"name": "Negative", "creditAllocation": -1},
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.anyio
+async def test_an_action_without_an_amount_starts_at_nought(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _draft_agreement(dbsession, "IA-26NEW6")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _create_action_url(fastapi_app, agreement), json={"name": "To be decided"}
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["creditAllocation"] == 0
+
+
+@pytest.mark.anyio
+async def test_a_director_cannot_add_an_action(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Drafting the schedule is the analyst's job, not the approver's."""
+    agreement = await _draft_agreement(dbsession, "IA-26NEW7")
+    set_mock_user(fastapi_app, IDIR_DIRECTOR)
+
+    response = await client.post(
+        _create_action_url(fastapi_app, agreement), json={"name": "Director's own"}
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_a_proponent_cannot_add_an_action(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _draft_agreement(dbsession, "IA-26NEW8")
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
+
+    response = await client.post(
+        _create_action_url(fastapi_app, agreement), json={"name": "Not mine"}
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN

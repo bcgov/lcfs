@@ -141,6 +141,9 @@ class InitiativeAgreementRepository:
             .options(
                 selectinload(InitiativeAgreement.to_organization),
                 selectinload(InitiativeAgreement.current_status),
+                # Agreement-management callers read the lifecycle status;
+                # a lazy load of it here raises MissingGreenlet.
+                selectinload(InitiativeAgreement.lifecycle_status),
                 selectinload(InitiativeAgreement.history).selectinload(
                     InitiativeAgreementHistory.user_profile
                 ),
@@ -735,6 +738,29 @@ class InitiativeAgreementRepository:
             .order_by(UserProfile.first_name, UserProfile.last_name)
         )
         return list(result.scalars().all())
+
+    @repo_handler
+    async def next_action_number(self, initiative_agreement_id: int) -> int:
+        """Next display number for an agreement's actions.
+
+        Counts every version row, so a number belonging to a superseded
+        change-order row is never handed out twice.
+        """
+        highest = (
+            await self.db.execute(
+                select(func.max(DesignatedAction.action_number)).where(
+                    DesignatedAction.initiative_agreement_id == initiative_agreement_id
+                )
+            )
+        ).scalar()
+        return (highest or 0) + 1
+
+    @repo_handler
+    async def add_designated_action(self, action: DesignatedAction) -> DesignatedAction:
+        self.db.add(action)
+        await self.db.flush()
+        await self.db.refresh(action)
+        return action
 
     @repo_handler
     async def get_designated_action_status_by_name(

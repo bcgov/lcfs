@@ -24,6 +24,7 @@ import { useGetInitiativeAgreement } from '@/hooks/useInitiativeAgreements'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
 import { DesignatedActionsGrid } from './components/DesignatedActionsGrid'
+import { AddDesignatedAction } from './components/AddDesignatedAction'
 
 // The shared document machinery keys on this string for initiative agreements.
 const PARENT_TYPE = 'initiativeAgreement'
@@ -261,9 +262,24 @@ const InitiativeAgreementDetailBase = () => {
           sx={{ p: 3, mt: 3 }}
           data-test="initiative-agreement-actions-section"
         >
-          <BCTypography variant="h6" color="primary" mb={1}>
-            {t('initiativeAgreement:detail.designatedActions')}
-          </BCTypography>
+          <BCBox
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+              mb: 1,
+              flexWrap: 'wrap'
+            }}
+          >
+            <BCTypography variant="h6" color="primary">
+              {t('initiativeAgreement:detail.designatedActions')}
+            </BCTypography>
+            <AddDesignatedAction
+              initiativeAgreementId={initiativeAgreementId}
+              isDraft={agreement.lifecycleStatus?.status === 'Draft'}
+            />
+          </BCBox>
           <DesignatedActionsGrid
             initiativeAgreementId={initiativeAgreementId}
           />

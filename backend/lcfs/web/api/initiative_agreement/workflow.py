@@ -21,6 +21,10 @@ from lcfs.db.models.user.Role import RoleEnum
 # Status names as seeded in designated_action_status. "Approved" is the
 # terminal reviewed state — the ticket calls it "Completed"; there is one
 # status and these are two names for it.
+# Agreement lifecycle, distinct from the designated action statuses below.
+# Designated actions may only be added while the agreement is a draft.
+LIFECYCLE_STATUS_DRAFT = "Draft"
+
 STATUS_NOT_STARTED = "Not started"
 STATUS_SUBMISSION_RECEIVED = "Submission received"
 STATUS_UNDERWAY = "Underway"

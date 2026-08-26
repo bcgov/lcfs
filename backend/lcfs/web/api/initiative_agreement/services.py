@@ -18,6 +18,7 @@ from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
 from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
     REVIEW_OUTCOME_SATISFACTORY,
 )
+from lcfs.db.models.initiative_agreement.DesignatedAction import DesignatedAction
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_ANALYST_ASSIGNED,
     EVENT_ANALYST_REASSIGNED,
@@ -35,6 +36,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.internal_comment.services import sanitize_comment_text
 from lcfs.web.api.initiative_agreement.schema import (
+    DesignatedActionCreateSchema,
     DesignatedActionHistorySchema,
     DesignatedActionWorkflowSchema,
     EvidenceRequirementCreateSchema,
@@ -55,6 +57,8 @@ from lcfs.web.api.initiative_agreement.schema import (
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.workflow import (
+    LIFECYCLE_STATUS_DRAFT,
+    STATUS_NOT_STARTED,
     TRANSITIONS,
     WORKFLOW_ACTIONS,
 )
@@ -215,6 +219,83 @@ class InitiativeAgreementServices:
             create_date=agreement.create_date,
             designated_actions=designated_actions,
         )
+
+    @service_handler
+    async def create_designated_action(
+        self,
+        initiative_agreement_id: int,
+        data: DesignatedActionCreateSchema,
+        user,
+    ) -> DesignatedActionSchema:
+        """Add a designated action to an agreement that is still a draft.
+
+        Designated actions are the substance of the agreement, so they are
+        settled before it takes effect. Once an agreement is underway a
+        change order is the route, not a new row appearing beside the
+        signed schedule.
+        """
+        agreement = await self.repo.get_initiative_agreement_by_id(
+            initiative_agreement_id
+        )
+        if not agreement:
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+
+        lifecycle = (
+            agreement.lifecycle_status.status if agreement.lifecycle_status else None
+        )
+        if lifecycle != LIFECYCLE_STATUS_DRAFT:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Designated actions can only be added while the agreement "
+                    f"is a draft; this one is '{lifecycle or 'not set'}'."
+                ),
+            )
+
+        name = (data.name or "").strip()
+        if not name:
+            raise HTTPException(
+                status_code=400, detail="A designated action name is required."
+            )
+
+        credits = data.credit_allocation
+        if credits is not None and credits < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Compliance units to be issued cannot be negative.",
+            )
+
+        not_started = await self.repo.get_designated_action_status_by_name(
+            STATUS_NOT_STARTED
+        )
+        if not_started is None:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Status '{STATUS_NOT_STARTED}' is not configured.",
+            )
+
+        username = getattr(user, "keycloak_username", None)
+        action = await self.repo.add_designated_action(
+            DesignatedAction(
+                initiative_agreement_id=initiative_agreement_id,
+                action_number=await self.repo.next_action_number(
+                    initiative_agreement_id
+                ),
+                name=name,
+                description=data.description,
+                credit_allocation=credits if credits is not None else 0,
+                specified_date=data.specified_date,
+                current_status_id=not_started.designated_action_status_id,
+                create_user=username,
+                update_user=username,
+            )
+        )
+        refreshed = await self.repo.get_designated_action_by_id(
+            action.designated_action_id
+        )
+        return DesignatedActionSchema.model_validate(refreshed)
 
     @service_handler
     async def get_designated_actions_paginated(

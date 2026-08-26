@@ -331,3 +331,31 @@ export const useDesignatedActionHistory = (
     ...options
   })
 }
+
+/** Add a designated action to a draft agreement (analysts and managers). */
+export const useCreateDesignatedAction = (
+  initiativeAgreementId: number | string
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      name: string
+      creditAllocation?: number | null
+      specifiedDate?: string | null
+    }) =>
+      (
+        await client.post(
+          apiRoutes.createDesignatedAction.replace(
+            ':initiativeAgreementId',
+            String(initiativeAgreementId)
+          ),
+          payload
+        )
+      ).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
+      queryClient.invalidateQueries({ queryKey: ['initiative-agreements'] })
+    }
+  })
+}

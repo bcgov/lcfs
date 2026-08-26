@@ -241,6 +241,13 @@ class DesignatedActionHistorySchema(BaseSchema):
         from_attributes = True
 
 
+class DesignatedActionCreateSchema(BaseSchema):
+    name: str
+    description: Optional[str] = None
+    credit_allocation: Optional[int] = None
+    specified_date: Optional[date] = None
+
+
 class DesignatedActionProfileSchema(DesignatedActionSchema):
     initiative_agreement_id: int
     ia_code: Optional[str] = None

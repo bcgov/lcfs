@@ -4,6 +4,7 @@ from fastapi import APIRouter, Body, Depends, Request, status
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import (
+    DesignatedActionCreateSchema,
     DesignatedActionHistorySchema,
     DesignatedActionWorkflowSchema,
     RecommendedCreditsSchema,
@@ -74,6 +75,24 @@ async def get_initiative_agreement_analysts(
 ):
     """Active IA analysts, for the assignment dropdown and its filter."""
     return await service.get_available_analysts()
+
+
+@router.post(
+    "/{initiative_agreement_id}/designated-actions",
+    response_model=DesignatedActionSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def create_designated_action(
+    request: Request,
+    initiative_agreement_id: int,
+    data: DesignatedActionCreateSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Add a designated action while the agreement is still a draft."""
+    return await service.create_designated_action(
+        initiative_agreement_id, data, request.user
+    )
 
 
 @router.post(

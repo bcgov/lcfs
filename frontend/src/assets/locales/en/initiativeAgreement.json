@@ -65,7 +65,15 @@
     },
     "upToCredits": "up to {{count}}",
     "noActionsFound": "No designated actions found",
-    "unassigned": "Unassigned"
+    "unassigned": "Unassigned",
+    "add": "Add designated action",
+    "addTitle": "Add a designated action",
+    "nameLabel": "Designated action name",
+    "creditsLabel": "Compliance units to be issued",
+    "dateLabel": "Date for completion",
+    "create": "Add designated action",
+    "draftOnly": "Designated actions can only be added while the agreement is a draft.",
+    "createFailed": "The designated action could not be added."
   },
   "actionDetail": {
     "title": "Designated actions",
