@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import TIMESTAMP, Column, Integer, String
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
@@ -43,6 +43,22 @@ class Document(BaseModel, Auditable):
     file_size = Column(Integer, nullable=False)
     mime_type = Column(String, nullable=False)
     display_name = Column(String, nullable=True)
+
+    # --- Soft deletion (nothing is ever purged) ------------------------
+    # Only folder-enabled parents have a route that sets these; for every
+    # other surface they stay NULL and the read filter is inert.
+    deleted_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment=(
+            "When the document was removed from its parent's tree; NULL " "means live"
+        ),
+    )
+    deleted_by = Column(
+        String(500),
+        nullable=True,
+        comment="Username of whoever removed it, matching create_user",
+    )
 
     compliance_reports = relationship(
         "ComplianceReport",

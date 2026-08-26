@@ -113,6 +113,7 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
   })
 }))
 
+const mockSoftDelete = vi.fn()
 vi.mock('@/hooks/useDocumentFolders', () => ({
   useDocumentTree: () => ({
     data: {
@@ -144,7 +145,10 @@ vi.mock('@/hooks/useDocumentFolders', () => ({
   useUpdateFolder: () => ({ mutate: vi.fn() }),
   useDeleteFolder: () => ({ mutate: vi.fn() }),
   useMoveDocuments: () => ({ mutate: vi.fn() }),
-  useFolderUpload: () => ({ mutate: vi.fn() })
+  useFolderUpload: () => ({ mutate: vi.fn() }),
+  useSoftDeleteDocument: () => ({ mutate: mockSoftDelete }),
+  useDeletedDocuments: () => ({ data: { documents: [], total: 0 } }),
+  useRestoreDocument: () => ({ mutate: vi.fn() })
 }))
 
 const check = async (ui) => {
@@ -170,9 +174,9 @@ describe('Initiative Agreements accessibility', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('evidence of completion has no violations', async () => {
-    expect(await check(<EvidenceOfCompletion designatedActionId="9" />)).toEqual(
-      []
-    )
+    expect(
+      await check(<EvidenceOfCompletion designatedActionId="9" />)
+    ).toEqual([])
   })
 
   it('the workflow actions have no violations', async () => {

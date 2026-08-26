@@ -372,3 +372,225 @@ async def test_folder_routes_are_idir_only(
 
     response = await client.get(_tree_url(fastapi_app, action))
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# Soft deletion: nothing a user removes is ever destroyed.
+# ---------------------------------------------------------------------------
+
+
+def _deleted_url(fastapi_app, action):
+    return fastapi_app.url_path_for(
+        "get_deleted_documents",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+    )
+
+
+def _delete_url(fastapi_app, action, document):
+    return fastapi_app.url_path_for(
+        "soft_delete_document",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+        document_id=document.document_id,
+    )
+
+
+def _restore_url(fastapi_app, action, document):
+    return fastapi_app.url_path_for(
+        "restore_document",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+        document_id=document.document_id,
+    )
+
+
+@pytest.mark.anyio
+async def test_deleting_a_document_hides_it_but_keeps_it(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26DEL1")
+    document = await _seed_document(dbsession, action, "obsolete.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.delete(_delete_url(fastapi_app, action, document))
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # Gone from the tree...
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    assert tree["rootDocuments"] == []
+
+    # ...but the row is still there, stamped.
+    row = (
+        await dbsession.execute(
+            select(Document).where(Document.document_id == document.document_id)
+        )
+    ).scalar_one()
+    assert row.deleted_date is not None
+    assert row.deleted_by == "mockuser"
+
+
+@pytest.mark.anyio
+async def test_the_bin_lists_what_was_removed(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26DEL2")
+    document = await _seed_document(dbsession, action, "obsolete.pdf")
+    await _seed_document(dbsession, action, "kept.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    await client.delete(_delete_url(fastapi_app, action, document))
+
+    response = await client.get(_deleted_url(fastapi_app, action))
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["total"] == 1
+    assert [d["fileName"] for d in data["documents"]] == ["obsolete.pdf"]
+    assert data["documents"][0]["deletedBy"] == "mockuser"
+
+    # The one that was not deleted is still in the tree.
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    assert [d["fileName"] for d in tree["rootDocuments"]] == ["kept.pdf"]
+
+
+@pytest.mark.anyio
+async def test_restoring_returns_a_document_to_its_folder(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26DEL3")
+    document = await _seed_document(dbsession, action, "permit.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    folder = (await _create_folder(client, fastapi_app, action, "Permits")).json()
+    move_url = fastapi_app.url_path_for(
+        "move_document_folder_items",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+    )
+    await client.put(
+        move_url,
+        json={"documentIds": [document.document_id], "folderId": folder["folderId"]},
+    )
+
+    await client.delete(_delete_url(fastapi_app, action, document))
+    binned = (await client.get(_deleted_url(fastapi_app, action))).json()
+    assert binned["documents"][0]["restoreFolderName"] == "Permits"
+
+    restored = await client.put(_restore_url(fastapi_app, action, document))
+    assert restored.status_code == status.HTTP_204_NO_CONTENT
+
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    assert [d["fileName"] for d in tree["folders"][0]["documents"]] == ["permit.pdf"]
+    assert (await client.get(_deleted_url(fastapi_app, action))).json()["total"] == 0
+
+
+@pytest.mark.anyio
+async def test_restoring_falls_back_to_the_top_level_if_the_folder_went(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Deleting a folder must not resurrect it later by the back door."""
+    action = await _seed_da(dbsession, "IA-26DEL4")
+    document = await _seed_document(dbsession, action, "permit.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    folder = (await _create_folder(client, fastapi_app, action, "Doomed")).json()
+    move_url = fastapi_app.url_path_for(
+        "move_document_folder_items",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+    )
+    await client.put(
+        move_url,
+        json={"documentIds": [document.document_id], "folderId": folder["folderId"]},
+    )
+    await client.delete(_delete_url(fastapi_app, action, document))
+    await client.delete(
+        fastapi_app.url_path_for(
+            "delete_document_folder",
+            parent_type="designatedAction",
+            parent_id=action.designated_action_id,
+            folder_id=folder["folderId"],
+        )
+    )
+
+    binned = (await client.get(_deleted_url(fastapi_app, action))).json()
+    assert binned["documents"][0]["restoreFolderName"] is None
+
+    await client.put(_restore_url(fastapi_app, action, document))
+
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    assert tree["folders"] == []
+    assert [d["fileName"] for d in tree["rootDocuments"]] == ["permit.pdf"]
+
+
+@pytest.mark.anyio
+async def test_deleting_twice_does_not_rewrite_who_removed_it(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26DEL5")
+    document = await _seed_document(dbsession, action, "obsolete.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    await client.delete(_delete_url(fastapi_app, action, document))
+    first = (await client.get(_deleted_url(fastapi_app, action))).json()["documents"][0]
+    await client.delete(_delete_url(fastapi_app, action, document))
+    second = (await client.get(_deleted_url(fastapi_app, action))).json()["documents"][
+        0
+    ]
+
+    assert first["deletedDate"] == second["deletedDate"]
+
+
+@pytest.mark.anyio
+async def test_another_action_cannot_bin_this_ones_document(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26DEL6")
+    other = await _seed_da(dbsession, "IA-26DEL7")
+    document = await _seed_document(dbsession, action, "permit.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.delete(_delete_url(fastapi_app, other, document))
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+async def test_the_bin_is_idir_only(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26DEL8")
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
+
+    response = await client.get(_deleted_url(fastapi_app, action))
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_a_deleted_document_leaves_the_shared_document_list_too(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The filter belongs in the shared read, not only the tree, so no
+    surface can surface a binned document."""
+    action = await _seed_da(dbsession, "IA-26DEL9")
+    document = await _seed_document(dbsession, action, "obsolete.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    before = await client.get(
+        fastapi_app.url_path_for(
+            "get_all_documents",
+            parent_type="designatedAction",
+            parent_id=action.designated_action_id,
+        )
+    )
+    assert [d["fileName"] for d in before.json()] == ["obsolete.pdf"]
+
+    await client.delete(_delete_url(fastapi_app, action, document))
+
+    after = await client.get(
+        fastapi_app.url_path_for(
+            "get_all_documents",
+            parent_type="designatedAction",
+            parent_id=action.designated_action_id,
+        )
+    )
+    assert after.json() == []

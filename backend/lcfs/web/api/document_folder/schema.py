@@ -35,6 +35,25 @@ class DocumentFolderTreeSchema(BaseSchema):
     root_documents: List[FolderDocumentSchema] = []
 
 
+class DeletedDocumentSchema(BaseSchema):
+    document_id: int
+    file_name: str
+    file_size: int
+    deleted_date: Optional[datetime] = None
+    deleted_by: Optional[str] = None
+    # Resolved for display; the stored value is the username.
+    deleted_by_name: Optional[str] = None
+    # Where it will return to. None means the top level, either because it
+    # was there or because the folder it came from has since gone.
+    restore_folder_id: Optional[int] = None
+    restore_folder_name: Optional[str] = None
+
+
+class DeletedDocumentsSchema(BaseSchema):
+    documents: List[DeletedDocumentSchema] = []
+    total: int = 0
+
+
 class FolderCreateSchema(BaseSchema):
     name: str
     parent_folder_id: Optional[int] = None

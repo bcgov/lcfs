@@ -1,4 +1,5 @@
 import structlog
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from fastapi import Depends, HTTPException, Request
@@ -10,6 +11,8 @@ from lcfs.web.api.document_folder.constants import (
 )
 from lcfs.web.api.document_folder.repo import DocumentFolderRepository
 from lcfs.web.api.document_folder.schema import (
+    DeletedDocumentSchema,
+    DeletedDocumentsSchema,
     DocumentFolderTreeSchema,
     FolderCreateSchema,
     FolderDocumentSchema,
@@ -89,6 +92,88 @@ class DocumentFolderServices:
                 detail=f"Folders may nest at most {MAX_FOLDER_DEPTH} levels deep.",
             )
         return depth
+
+    # ------------------------------------------------------------------
+    # Deletion. Nothing is ever destroyed: removing a document stamps it
+    # and it moves to the bin, where it stays. The shared hard-delete path
+    # is never called for these parents.
+    # ------------------------------------------------------------------
+    @service_handler
+    async def soft_delete_document(
+        self, parent_type: str, parent_id: int, document_id: int, user
+    ) -> None:
+        document = await self.repo.get_document_for_parent(document_id, parent_id)
+        if document is None:
+            raise DataNotFoundException(f"Document {document_id} not found")
+        if document.deleted_date is not None:
+            # Already in the bin; deleting twice is not an error, but it
+            # must not overwrite who removed it or when.
+            return
+        document.deleted_date = datetime.now(timezone.utc)
+        document.deleted_by = getattr(user, "keycloak_username", None)
+        # The placement row stays, so restoring returns it to its folder.
+        await self.repo.db.flush()
+
+    @service_handler
+    async def restore_document(
+        self, parent_type: str, parent_id: int, document_id: int
+    ) -> None:
+        document = await self.repo.get_document_for_parent(document_id, parent_id)
+        if document is None:
+            raise DataNotFoundException(f"Document {document_id} not found")
+        if document.deleted_date is None:
+            return
+        placement = await self.repo.get_placement(document_id)
+        if placement is not None:
+            folder = await self.repo.get_folder(placement.folder_id)
+            if (
+                folder is None
+                or folder.parent_type != parent_type
+                or folder.parent_id != parent_id
+            ):
+                # The folder it came from has gone. Put it at the top
+                # level rather than resurrecting a folder someone removed.
+                await self.repo.set_placements([document_id], None)
+        document.deleted_date = None
+        document.deleted_by = None
+        await self.repo.db.flush()
+
+    @service_handler
+    async def get_deleted_documents(
+        self, parent_type: str, parent_id: int, limit: int = 50, offset: int = 0
+    ) -> DeletedDocumentsSchema:
+        documents, total = await self.repo.get_deleted_documents(
+            parent_id, limit=limit, offset=offset
+        )
+        names = await self.repo.get_user_display_names(
+            [d.deleted_by for d in documents]
+        )
+
+        rows = []
+        for document in documents:
+            placement = await self.repo.get_placement(document.document_id)
+            folder = None
+            if placement is not None:
+                candidate = await self.repo.get_folder(placement.folder_id)
+                if (
+                    candidate is not None
+                    and candidate.parent_type == parent_type
+                    and candidate.parent_id == parent_id
+                ):
+                    folder = candidate
+            rows.append(
+                DeletedDocumentSchema(
+                    document_id=document.document_id,
+                    file_name=document.file_name,
+                    file_size=document.file_size,
+                    deleted_date=document.deleted_date,
+                    deleted_by=document.deleted_by,
+                    deleted_by_name=names.get(document.deleted_by),
+                    restore_folder_id=folder.folder_id if folder else None,
+                    restore_folder_name=folder.name if folder else None,
+                )
+            )
+        return DeletedDocumentsSchema(documents=rows, total=total)
 
     # ------------------------------------------------------------------
     # Tree

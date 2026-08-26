@@ -44,8 +44,10 @@ import {
   useDocumentTree,
   useFolderUpload,
   useMoveDocuments,
+  useSoftDeleteDocument,
   useUpdateFolder
 } from '@/hooks/useDocumentFolders'
+import { DeletedItems } from './DeletedItems'
 import { timezoneFormatter } from '@/utils/formatters'
 import {
   ROOT_DROP_ID,
@@ -83,7 +85,7 @@ const NameEditor = ({ initialValue, onCommit, onCancel }) => (
   />
 )
 
-const FileLabel = ({ file, onDownload }) => {
+const FileLabel = ({ file, onDownload, onDelete }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: docDragId(file.documentId)
@@ -130,6 +132,21 @@ const FileLabel = ({ file, onDownload }) => {
         {' · '}
         {timezoneFormatter({ value: file.createDate })}
       </BCTypography>
+      {/* Removing a file sends it to the bin below; nothing is
+          destroyed. */}
+      <IconButton
+        size="small"
+        data-test={`tree-file-delete-${file.documentId}`}
+        aria-label={t('initiativeAgreement:folders.deleteFile', {
+          name: file.fileName
+        })}
+        onClick={(event) => {
+          event.stopPropagation()
+          onDelete(file.documentId)
+        }}
+      >
+        <DeleteOutlineIcon fontSize="inherit" />
+      </IconButton>
       <IconButton
         size="small"
         {...attributes}
@@ -290,6 +307,7 @@ export const DocumentTree = ({ parentType, parentID }) => {
   const { mutate: deleteFolder } = useDeleteFolder(parentType, parentID)
   const { mutate: moveDocuments } = useMoveDocuments(parentType, parentID)
   const { mutate: uploadToFolder } = useFolderUpload(parentType, parentID)
+  const { mutate: deleteDocument } = useSoftDeleteDocument(parentType, parentID)
 
   const [creating, setCreating] = useState(null)
   const [renamingId, setRenamingId] = useState(null)
@@ -492,7 +510,13 @@ export const DocumentTree = ({ parentType, parentID }) => {
         <TreeItem
           key={`doc-${file.documentId}`}
           itemId={`doc-${file.documentId}`}
-          label={<FileLabel file={file} onDownload={downloadDocument} />}
+          label={
+            <FileLabel
+              file={file}
+              onDownload={downloadDocument}
+              onDelete={deleteDocument}
+            />
+          }
         />
       ))}
       {creating?.parentFolderId === folder.folderId && (
@@ -584,7 +608,13 @@ export const DocumentTree = ({ parentType, parentID }) => {
             <TreeItem
               key={`doc-${file.documentId}`}
               itemId={`doc-${file.documentId}`}
-              label={<FileLabel file={file} onDownload={downloadDocument} />}
+              label={
+                <FileLabel
+                  file={file}
+                  onDownload={downloadDocument}
+                  onDelete={deleteDocument}
+                />
+              }
             />
           ))}
         </SimpleTreeView>
@@ -620,6 +650,8 @@ export const DocumentTree = ({ parentType, parentID }) => {
           {t('initiativeAgreement:folders.empty')}
         </BCTypography>
       )}
+
+      <DeletedItems parentType={parentType} parentID={parentID} />
 
       <BCTypography
         variant="body4"

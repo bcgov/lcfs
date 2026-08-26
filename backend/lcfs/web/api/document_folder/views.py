@@ -4,6 +4,7 @@ from fastapi import APIRouter, Body, Depends, Query, Request, status
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.document_folder.schema import (
+    DeletedDocumentsSchema,
     DocumentFolderTreeSchema,
     FolderCreateSchema,
     FolderItemsMoveSchema,
@@ -56,6 +57,80 @@ async def get_document_folder_tree(
         parent_type, parent_id, service, document_service, ia_validate
     )
     return await service.get_tree(parent_type, parent_id)
+
+
+@router.get(
+    "/{parent_type}/{parent_id}/deleted",
+    response_model=DeletedDocumentsSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(FOLDER_ROLES)
+async def get_deleted_documents(
+    request: Request,
+    parent_type: str,
+    parent_id: int,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    service: DocumentFolderServices = Depends(),
+    document_service: DocumentService = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+) -> DeletedDocumentsSchema:
+    """Documents removed from this parent's tree. Nothing ever leaves."""
+    await _validate_parent_access(
+        parent_type, parent_id, service, document_service, ia_validate
+    )
+    return await service.get_deleted_documents(
+        parent_type, parent_id, limit=limit, offset=offset
+    )
+
+
+@router.delete(
+    "/{parent_type}/{parent_id}/documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler(FOLDER_ROLES)
+async def soft_delete_document(
+    request: Request,
+    parent_type: str,
+    parent_id: int,
+    document_id: int,
+    service: DocumentFolderServices = Depends(),
+    document_service: DocumentService = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+) -> None:
+    """Move a document to the bin.
+
+    Deliberately not the shared delete route: that one destroys the S3
+    object and the row, which is exactly what must not happen here.
+    """
+    await _validate_parent_access(
+        parent_type, parent_id, service, document_service, ia_validate
+    )
+    await service.soft_delete_document(
+        parent_type, parent_id, document_id, request.user
+    )
+
+
+@router.put(
+    "/{parent_type}/{parent_id}/documents/{document_id}/restore",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler(FOLDER_ROLES)
+async def restore_document(
+    request: Request,
+    parent_type: str,
+    parent_id: int,
+    document_id: int,
+    service: DocumentFolderServices = Depends(),
+    document_service: DocumentService = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+) -> None:
+    """Return a document to the tree, or to the top level if the folder
+    it came from has since been removed."""
+    await _validate_parent_access(
+        parent_type, parent_id, service, document_service, ia_validate
+    )
+    await service.restore_document(parent_type, parent_id, document_id)
 
 
 @router.post(

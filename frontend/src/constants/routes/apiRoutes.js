@@ -95,6 +95,11 @@ export const apiRoutes = {
   documentFolderTree: '/document-folders/:parentType/:parentID',
   documentFolderUpdate: '/document-folders/:parentType/:parentID/:folderId',
   documentFolderItems: '/document-folders/:parentType/:parentID/items',
+  documentFolderDeleted: '/document-folders/:parentType/:parentID/deleted',
+  documentFolderDeleteDocument:
+    '/document-folders/:parentType/:parentID/documents/:documentId',
+  documentFolderRestoreDocument:
+    '/document-folders/:parentType/:parentID/documents/:documentId/restore',
 
   // fuel-type
   getFuelTypeOthers: '/fuel-type/others/list',
