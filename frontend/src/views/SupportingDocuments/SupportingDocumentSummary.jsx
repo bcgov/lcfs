@@ -29,14 +29,22 @@ export const SupportingDocumentSummary = ({
             sx={{ display: 'list-item', padding: '0', marginLeft: '1.2rem' }}
             key={file.documentId}
           >
+            {/* A real button: a clickable span cannot be reached by
+                keyboard and announces nothing to a screen reader. */}
             <BCTypography
-              component="span"
+              component="button"
+              type="button"
               variant="subtitle2"
               color="link"
               onClick={() => {
                 downloadDocument(file.documentId)
               }}
               sx={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                font: 'inherit',
+                textAlign: 'left',
                 textDecoration: 'underline',
                 cursor: 'pointer',
                 '&:hover': { color: 'info.main' }

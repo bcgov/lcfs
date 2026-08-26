@@ -102,6 +102,9 @@ export const DAAssignedAnalystCell = ({ data }) => {
       }}
     >
       <Select
+        SelectDisplayProps={{
+          'aria-label': t('initiativeAgreement:actions.columns.assignedAnalyst')
+        }}
         data-test="da-analyst-select"
         value={currentAssignee?.userProfileId ?? ''}
         open={isOpen}
