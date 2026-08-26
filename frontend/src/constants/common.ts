@@ -86,7 +86,8 @@ export const FILTER_KEYS = {
 export const MAX_FILE_SIZE_BYTES = 52428800 // 50MB
 
 export const DOCUMENT_RENAME_ENABLED_PARENT_TYPES: readonly string[] = [
-  'ci_application'
+  'ci_application',
+  'designatedAction'
 ]
 
 export const isDocumentRenameEnabled = (parentType?: string | null): boolean =>

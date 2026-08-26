@@ -59,12 +59,15 @@ async def validate_parent_access(
     aa_validate: AdminAdjustmentValidation,
     cs_validate: ChargingSiteValidation,
     ci_validate,
+    write: bool = False,
 ) -> None:
     """
     Assert the caller may reach *parent_id* of *parent_type*.
 
     Every document route funnels through this, so a parent type that is not
-    handled fails closed rather than silently skipping validation.
+    handled fails closed rather than silently skipping validation. *write*
+    is only consulted for internal comments, where reading and editing are
+    separate rights; every other surface grants both together.
     """
     if parent_type == "compliance_report":
         await cr_validate.validate_organization_access(parent_id)
@@ -87,7 +90,7 @@ async def validate_parent_access(
         await ci_validate.validate_access(parent_id)
     elif parent_type == "internal_comment":
         await document_service.verify_internal_comment_access(
-            parent_id, request.user, write=False
+            parent_id, request.user, write=write
         )
     else:
         raise HTTPException(
@@ -273,22 +276,21 @@ async def rename_file(
     cs_validate: ChargingSiteValidation = Depends(),
     ci_validate=Depends(ci_application_validator),
 ) -> FileResponseSchema:
-    if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
-    elif parent_type == "initiativeAgreement":
-        await ia_validate.validate_organization_access(parent_id)
-    elif parent_type == "administrativeAdjustment":
-        await aa_validate.validate_organization_access(parent_id)
-    elif parent_type == "charging_site":
-        await cs_validate.validate_organization_access(parent_id)
-    elif parent_type == "ci_application":
-        await ci_validate.validate_access(parent_id)
-    elif parent_type == "internal_comment":
-        await document_service.verify_internal_comment_access(
-            parent_id, request.user, write=True
-        )
-    else:
-        raise HTTPException(403, "Unable to verify authorization for document rename")
+    # The one dispatch, rather than a fourth copy of it: the inline
+    # copies here had already drifted, and neither knew about
+    # designatedAction.
+    await validate_parent_access(
+        parent_type,
+        parent_id,
+        request,
+        document_service,
+        cr_validate,
+        ia_validate,
+        aa_validate,
+        cs_validate,
+        ci_validate,
+        write=True,
+    )
 
     document = await document_service.rename_file(
         document_id, parent_id, parent_type, data.display_name
@@ -311,22 +313,21 @@ async def delete_file(
     cs_validate: ChargingSiteValidation = Depends(),
     ci_validate=Depends(ci_application_validator),
 ):
-    if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
-    elif parent_type == "initiativeAgreement":
-        await ia_validate.validate_organization_access(parent_id)
-    elif parent_type == "administrativeAdjustment":
-        await aa_validate.validate_organization_access(parent_id)
-    elif parent_type == "charging_site":
-        await cs_validate.validate_organization_access(parent_id)
-    elif parent_type == "ci_application":
-        await ci_validate.validate_access(parent_id)
-    elif parent_type == "internal_comment":
-        await document_service.verify_internal_comment_access(
-            parent_id, request.user, write=True
-        )
-    else:
-        raise HTTPException(403, "Unable to verify authorization for document download")
+    # The one dispatch, rather than a fourth copy of it: the inline
+    # copies here had already drifted, and neither knew about
+    # designatedAction.
+    await validate_parent_access(
+        parent_type,
+        parent_id,
+        request,
+        document_service,
+        cr_validate,
+        ia_validate,
+        aa_validate,
+        cs_validate,
+        ci_validate,
+        write=True,
+    )
 
     await document_service.delete_file(document_id, parent_id, parent_type)
     return {"message": "File and metadata deleted successfully"}

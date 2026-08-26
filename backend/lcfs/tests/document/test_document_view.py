@@ -76,6 +76,23 @@ class FakeDocumentService:
     async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
         return
 
+    async def get_designated_action_agreement_id(self, parent_id: int):
+        # An action's audience is its agreement's audience.
+        return 2
+
+    async def rename_file(
+        self, document_id: int, parent_id: int, parent_type: str, display_name: str
+    ):
+        FakeDocumentService.last_rename = {
+            "document_id": document_id,
+            "parent_id": parent_id,
+            "parent_type": parent_type,
+            "display_name": display_name,
+        }
+        document = DummyDocument("stored.pdf", document_id=document_id, file_size=789)
+        document.display_name = display_name
+        return document
+
     async def verify_internal_comment_access(self, parent_id, user, write=False):
         # Records the most recent call so tests can assert the view invoked
         # the internal-comment access check.
@@ -287,13 +304,16 @@ async def test_delete_file_invalid_parent_type(fastapi_app, client):
     An unsupported parent type is refused with a 403 response. This used to
     raise http.client.HTTPException, which is not an HTTP error class, so the
     exception escaped the handler and surfaced as an unhandled server error.
+
+    The wording now comes from the shared parent-access guard, which this
+    route delegates to rather than carrying its own copy of the dispatch.
     """
     url = fastapi_app.url_path_for(
         "delete_file", parent_type="invalid", parent_id=1, document_id=100
     )
     response = await client.delete(url)
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert "Unable to verify authorization" in response.json()["detail"]
+    assert "Unsupported document parent type" in response.json()["detail"]
 
 
 # --- internal_comment attachments (issue #4514) ------------------------------
@@ -351,4 +371,40 @@ async def test_get_internal_comment_documents_forbidden(fastapi_app, client):
         "get_all_documents", parent_type="internal_comment", parent_id=7
     )
     response = await client.get(url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_rename_file_for_designated_action(fastapi_app, client):
+    """
+    Renaming a designated action's document is allowed.
+
+    The rename route used to carry its own copy of the parent-access
+    dispatch, and that copy never learned about designatedAction — so every
+    rename on the initiative agreements document tree fell through to the
+    catch-all 403. It delegates to the shared guard now.
+    """
+    url = fastapi_app.url_path_for(
+        "rename_file",
+        parent_type="designatedAction",
+        parent_id=9,
+        document_id=88,
+    )
+    response = await client.put(url, json={"displayName": "Signed permit.pdf"})
+
+    assert response.status_code == status.HTTP_200_OK
+    # The stored name is untouched — a rename sets display_name, so the S3
+    # object keeps the key it was written under.
+    assert response.json()["displayName"] == "Signed permit.pdf"
+    assert response.json()["fileName"] == "stored.pdf"
+    assert FakeDocumentService.last_rename["display_name"] == "Signed permit.pdf"
+
+
+@pytest.mark.anyio
+async def test_rename_file_rejects_an_unsupported_parent_type(fastapi_app, client):
+    url = fastapi_app.url_path_for(
+        "rename_file", parent_type="invalid", parent_id=1, document_id=100
+    )
+    response = await client.put(url, json={"displayName": "anything.pdf"})
+
     assert response.status_code == status.HTTP_403_FORBIDDEN

@@ -13,7 +13,11 @@ import {
   Snackbar,
   TextField
 } from '@mui/material'
-import { DOCUMENT_FILE_TYPES, MAX_FILE_SIZE_BYTES } from '@/constants/common'
+import {
+  DOCUMENT_FILE_TYPES,
+  MAX_FILE_SIZE_BYTES,
+  isDocumentRenameEnabled
+} from '@/constants/common'
 import { validateFile } from '@/utils/fileValidation'
 import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView'
 import { TreeItem } from '@mui/x-tree-view/TreeItem'
@@ -30,6 +34,7 @@ import {
 } from '@dnd-kit/core'
 import CreateNewFolderOutlinedIcon from '@mui/icons-material/CreateNewFolderOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline'
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
@@ -42,7 +47,7 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
-import { useDownloadDocument } from '@/hooks/useDocuments'
+import { useDownloadDocument, useUpdateDocument } from '@/hooks/useDocuments'
 import {
   useCreateFolder,
   useDeleteFolder,
@@ -90,16 +95,36 @@ const NameEditor = ({ initialValue, onCommit, onCancel }) => (
   />
 )
 
-// Files cannot be renamed here, which is why only folder names respond to
-// a double-click. Renaming a document is allow-listed in the backend
-// (DOCUMENT_RENAME_ENABLED_PARENT_TYPES, currently CI applications only)
-// and enabling it for designated actions belongs with the document
-// versioning work, since a rename is meant to create a version.
-const FileLabel = ({ file, onDownload, onDelete }) => {
+// Downloading is its own button, which frees the name to behave the way
+// every other name in this tree does: double-click to rename. A rename
+// only sets display_name, so the stored object keeps the key it was
+// written under and nothing that points at it breaks.
+const FileLabel = ({
+  file,
+  onDownload,
+  onDelete,
+  canRename,
+  renaming,
+  onStartRename,
+  onCommitRename,
+  onCancelRename
+}) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: docDragId(file.documentId)
   })
+  const displayName = file.displayName || file.fileName
+
+  if (renaming) {
+    return (
+      <NameEditor
+        initialValue={displayName}
+        onCommit={onCommitRename}
+        onCancel={onCancelRename}
+      />
+    )
+  }
+
   return (
     <Box
       ref={setNodeRef}
@@ -113,35 +138,54 @@ const FileLabel = ({ file, onDownload, onDelete }) => {
       data-test={`tree-file-${file.documentId}`}
     >
       <InsertDriveFileOutlinedIcon fontSize="small" color="action" />
-      {/* A real button: a clickable span cannot be reached by keyboard
-          and announces nothing. */}
       <BCTypography
-        component="button"
-        type="button"
+        component="span"
         variant="subtitle2"
-        color="link"
-        onClick={(event) => {
+        onDoubleClick={(event) => {
+          if (!canRename) return
           event.stopPropagation()
-          onDownload(file.documentId)
+          onStartRename()
         }}
-        sx={{
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          font: 'inherit',
-          textAlign: 'left',
-          textDecoration: 'underline',
-          cursor: 'pointer',
-          '&:hover': { color: 'info.main' }
-        }}
+        sx={{ cursor: canRename ? 'text' : 'default' }}
       >
-        {file.fileName}
+        {displayName}
       </BCTypography>
       <BCTypography component="span" variant="subtitle2" color="text.secondary">
         {prettyBytes(file.fileSize ?? 0)}
         {' · '}
         {timezoneFormatter({ value: file.createDate })}
       </BCTypography>
+      {/* Double-click is the mouse shortcut, but it is only a shortcut:
+          a rename reachable no other way would be mouse-only, which axe
+          cannot see and a keyboard user cannot get past. */}
+      {canRename && (
+        <IconButton
+          size="small"
+          data-test={`tree-file-rename-${file.documentId}`}
+          aria-label={t('initiativeAgreement:folders.renameFile', {
+            name: displayName
+          })}
+          onClick={(event) => {
+            event.stopPropagation()
+            onStartRename()
+          }}
+        >
+          <DriveFileRenameOutlineIcon fontSize="inherit" />
+        </IconButton>
+      )}
+      <IconButton
+        size="small"
+        data-test={`tree-file-download-${file.documentId}`}
+        aria-label={t('initiativeAgreement:folders.downloadFile', {
+          name: displayName
+        })}
+        onClick={(event) => {
+          event.stopPropagation()
+          onDownload(file.documentId)
+        }}
+      >
+        <FileDownloadOutlinedIcon fontSize="inherit" />
+      </IconButton>
       {/* Removing a file sends it to the bin below; nothing is
           destroyed. */}
       <IconButton
@@ -335,9 +379,15 @@ export const DocumentTree = ({ parentType, parentID }) => {
   const { mutate: moveDocuments } = useMoveDocuments(parentType, parentID)
   const { mutate: uploadToFolder } = useFolderUpload(parentType, parentID)
   const { mutate: deleteDocument } = useSoftDeleteDocument(parentType, parentID)
+  const { mutateAsync: renameDocument } = useUpdateDocument(
+    parentType,
+    parentID
+  )
+  const canRenameFiles = isDocumentRenameEnabled(parentType)
 
   const [creating, setCreating] = useState(null)
   const [renamingId, setRenamingId] = useState(null)
+  const [renamingFileId, setRenamingFileId] = useState(null)
   const [menu, setMenu] = useState(null)
   // Deleting is reversible — the file goes to the bin — but it still
   // disappears from the tree, so it asks first.
@@ -506,6 +556,24 @@ export const DocumentTree = ({ parentType, parentID }) => {
     }
   }
 
+  const commitFileRename = async (documentId, value, currentName) => {
+    const next = value.trim()
+    setRenamingFileId(null)
+    if (!next || next === currentName) return
+    try {
+      await renameDocument({
+        documentID: documentId,
+        data: { displayName: next }
+      })
+    } catch (err) {
+      setUploadError(
+        err?.response?.data?.detail ||
+          err?.message ||
+          t('initiativeAgreement:folders.renameFailed')
+      )
+    }
+  }
+
   const uploadKey = (folderId) => folderId ?? 'root'
 
   const trackUpload = (folderId, delta) =>
@@ -596,6 +664,17 @@ export const DocumentTree = ({ parentType, parentID }) => {
               onDelete={(documentId) =>
                 setPendingDelete({ documentId, fileName: file.fileName })
               }
+              canRename={canRenameFiles}
+              renaming={renamingFileId === file.documentId}
+              onStartRename={() => setRenamingFileId(file.documentId)}
+              onCommitRename={(value) =>
+                commitFileRename(
+                  file.documentId,
+                  value,
+                  file.displayName || file.fileName
+                )
+              }
+              onCancelRename={() => setRenamingFileId(null)}
             />
           }
         />

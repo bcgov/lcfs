@@ -37,6 +37,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 vi.mock('@/hooks/useDocuments', () => ({
   useDownloadDocument: () => vi.fn(),
+  useUpdateDocument: () => ({ mutateAsync: vi.fn() }),
   useDocuments: () => ({ data: [], refetch: vi.fn() })
 }))
 

@@ -134,7 +134,10 @@
     "confirmDelete": "Move to deleted items",
     "uploading": "Uploading {{count}} file…",
     "uploading_other": "Uploading {{count}} files…",
-    "uploadFailed": "The file could not be uploaded."
+    "uploadFailed": "The file could not be uploaded.",
+    "downloadFile": "Download {{name}}",
+    "renameFailed": "The file could not be renamed.",
+    "renameFile": "Rename {{name}}"
   },
   "evidence": {
     "sectionTitle": "Evidence of completion of designated action:",

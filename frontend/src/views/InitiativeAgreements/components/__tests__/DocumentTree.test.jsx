@@ -28,8 +28,10 @@ vi.mock('@/hooks/useDocumentFolders', () => ({
 }))
 
 const mockDownload = vi.fn()
+const mockRename = vi.fn()
 vi.mock('@/hooks/useDocuments', () => ({
-  useDownloadDocument: () => mockDownload
+  useDownloadDocument: () => mockDownload,
+  useUpdateDocument: () => ({ mutateAsync: mockRename })
 }))
 
 const tree = {
@@ -93,12 +95,85 @@ describe('DocumentTree', () => {
     expect(screen.getByText('root-letter.pdf')).toBeInTheDocument()
   })
 
-  it('downloads a file from its name', () => {
+  it('downloads a file from its own button', () => {
     render(<DocumentTree parentType="designatedAction" parentID="9" />, {
       wrapper
     })
-    fireEvent.click(screen.getByText('permit.pdf'))
+    fireEvent.click(screen.getByTestId('tree-file-download-88'))
     expect(mockDownload).toHaveBeenCalledWith(88)
+  })
+
+  it('renames a file by double-clicking its name', async () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    fireEvent.doubleClick(screen.getByText('permit.pdf'))
+    const input = screen.getByTestId('folder-name-input')
+    fireEvent.change(input, { target: { value: 'Signed permit.pdf' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    // A rename only sets display_name; the stored object keeps its key.
+    expect(mockRename).toHaveBeenCalledWith({
+      documentID: 88,
+      data: { displayName: 'Signed permit.pdf' }
+    })
+  })
+
+  it('offers rename from a real button, not only a double-click', () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    // Double-click is a mouse shortcut; a keyboard user needs a control.
+    fireEvent.click(screen.getByTestId('tree-file-rename-88'))
+    const input = screen.getByTestId('folder-name-input')
+    fireEvent.change(input, { target: { value: 'Signed permit.pdf' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(mockRename).toHaveBeenCalledWith({
+      documentID: 88,
+      data: { displayName: 'Signed permit.pdf' }
+    })
+  })
+
+  it('does not rename when the name comes back unchanged', () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    fireEvent.doubleClick(screen.getByText('permit.pdf'))
+    fireEvent.keyDown(screen.getByTestId('folder-name-input'), { key: 'Enter' })
+
+    expect(mockRename).not.toHaveBeenCalled()
+  })
+
+  it('leaves the name alone where renaming is not enabled', () => {
+    render(<DocumentTree parentType="initiativeAgreement" parentID="9" />, {
+      wrapper
+    })
+
+    fireEvent.doubleClick(screen.getByText('permit.pdf'))
+
+    expect(screen.queryByTestId('folder-name-input')).not.toBeInTheDocument()
+  })
+
+  it('prefers the display name over the stored file name', () => {
+    mockTree.mockReturnValue({
+      data: {
+        ...tree,
+        rootDocuments: [
+          { ...tree.rootDocuments[0], displayName: 'Cover letter.pdf' }
+        ]
+      },
+      isLoading: false
+    })
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    expect(screen.getByText('Cover letter.pdf')).toBeInTheDocument()
+    expect(screen.queryByText('root-letter.pdf')).not.toBeInTheDocument()
   })
 
   it('creates a folder inline with Enter and cancels with Escape', () => {
