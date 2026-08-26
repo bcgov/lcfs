@@ -761,6 +761,25 @@ class InitiativeAgreementRepository:
         return list(result.scalars().all())
 
     @repo_handler
+    async def get_user_display_names(self, user_profile_ids) -> Dict[int, str]:
+        """Names for a set of users, for rendering stored ids."""
+        ids = [i for i in set(user_profile_ids) if i is not None]
+        if not ids:
+            return {}
+        result = await self.db.execute(
+            select(
+                UserProfile.user_profile_id,
+                UserProfile.first_name,
+                UserProfile.last_name,
+            ).where(UserProfile.user_profile_id.in_(ids))
+        )
+        names = {}
+        for user_profile_id, first_name, last_name in result.all():
+            full = " ".join(p for p in (first_name, last_name) if p).strip()
+            names[user_profile_id] = full or None
+        return names
+
+    @repo_handler
     async def add_designated_action_history(
         self, history: DesignatedActionHistory
     ) -> DesignatedActionHistory:

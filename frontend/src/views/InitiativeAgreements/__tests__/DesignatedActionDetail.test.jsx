@@ -63,6 +63,12 @@ vi.mock('../components/EvidenceOfCompletion', () => ({
   EvidenceOfCompletion: () => <div data-test="evidence-of-completion" />
 }))
 
+vi.mock('../components/DesignatedActionHistoryPanel', () => ({
+  DesignatedActionHistoryPanel: () => (
+    <div data-test="designated-action-history" />
+  )
+}))
+
 const workflowProps = vi.fn()
 vi.mock('../components/DesignatedActionWorkflow', () => ({
   DesignatedActionWorkflow: (props) => {
@@ -179,6 +185,11 @@ describe('DesignatedActionDetail', () => {
         creditAllocation: 1850
       })
     )
+  })
+
+  it('renders the audit trail panel', () => {
+    render(<DesignatedActionDetail />, { wrapper })
+    expect(screen.getByTestId('designated-action-history')).toBeInTheDocument()
   })
 
   it('renders the comments thread', () => {

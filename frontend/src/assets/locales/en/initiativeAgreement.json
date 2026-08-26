@@ -145,5 +145,30 @@
       "return": "Return for further work",
       "reject": "Reject this designated action"
     }
+  },
+  "history": {
+    "title": "Activity",
+    "loading": "Loading activity...",
+    "empty": "Nothing has happened on this designated action yet.",
+    "notReviewed": "Not reviewed",
+    "nobody": "nobody",
+    "assignedTo": "Assigned to {{name}}",
+    "reassigned": "Reassigned from {{from}} to {{to}}",
+    "unassignedFrom": "Unassigned from {{name}}",
+    "recommendedCredits": "Recommended {{count}} compliance units",
+    "movedTo": "Moved to {{status}}",
+    "evidenceSummary": "Evidence at this point: {{count}} requirements, {{satisfactory}} satisfactory, {{outstanding}} outstanding",
+    "events": {
+      "statusChange": "Status changed",
+      "analystAssigned": "Analyst assigned",
+      "analystReassigned": "Analyst reassigned",
+      "analystUnassigned": "Analyst unassigned",
+      "creditsRecommended": "Recommended to manager",
+      "informationRequested": "Additional information requested",
+      "evidenceReviewed": "Evidence accepted",
+      "changeOrder": "Change order",
+      "creditsIssued": "Compliance units issued",
+      "unknown": "Activity"
+    }
   }
 }

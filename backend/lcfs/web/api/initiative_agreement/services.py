@@ -488,10 +488,32 @@ class InitiativeAgreementServices:
     async def get_designated_action_history(
         self, designated_action_id: int
     ) -> List[DesignatedActionHistorySchema]:
-        """The audit trail behind the action, newest first."""
+        """The audit trail behind the action, newest first.
+
+        Assignment events store analyst ids, which say nothing to a reader,
+        so names are resolved here for display. The stored snapshot keeps
+        the ids — they are the stable reference.
+        """
         await self._get_action_or_404(designated_action_id)
         history = await self.repo.get_designated_action_history(designated_action_id)
-        return [DesignatedActionHistorySchema.model_validate(h) for h in history]
+
+        referenced_ids = []
+        for entry in history:
+            snapshot = entry.snapshot or {}
+            referenced_ids.append(snapshot.get("from_analyst_id"))
+            referenced_ids.append(snapshot.get("to_analyst_id"))
+        names = await self.repo.get_user_display_names(referenced_ids)
+
+        rows = []
+        for entry in history:
+            row = DesignatedActionHistorySchema.model_validate(entry)
+            snapshot = dict(row.snapshot or {})
+            if "from_analyst_id" in snapshot or "to_analyst_id" in snapshot:
+                snapshot["from_analyst"] = names.get(snapshot.get("from_analyst_id"))
+                snapshot["to_analyst"] = names.get(snapshot.get("to_analyst_id"))
+                row = row.model_copy(update={"snapshot": snapshot})
+            rows.append(row)
+        return rows
 
     @service_handler
     async def get_evidence_requirements(
