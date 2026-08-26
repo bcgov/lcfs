@@ -1,7 +1,12 @@
-from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
-from typing import Optional, List
 from datetime import date, datetime
+from typing import List, Optional
+
 from pydantic import field_validator
+
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    AGREEMENT_TYPE_INITIATIVE_AGREEMENT,
+)
+from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 
 
 class InitiativeAgreementStatusSchema(BaseSchema):
@@ -344,3 +349,24 @@ class InitiativeAgreementProfileSchema(InitiativeAgreementListItemSchema):
     contact_phone: Optional[str] = None
     create_date: datetime
     designated_actions: List[DesignatedActionSchema] = []
+
+
+class AgreementCreateSchema(BaseSchema):
+    """A new agreement-management record, entered by an analyst.
+
+    Only the organization and the agreement code are required. An
+    agreement is drafted over time — the title, dates, contact and
+    description are all editable afterwards, so demanding them up front
+    would only push analysts into typing placeholders.
+    """
+
+    organization_id: int
+    ia_code: str
+    agreement_type: str = AGREEMENT_TYPE_INITIATIVE_AGREEMENT
+    title: Optional[str] = None
+    project_description: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    agreement_start_date: Optional[date] = None
+    agreement_end_date: Optional[date] = None

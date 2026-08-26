@@ -211,5 +211,18 @@
       "detailsEdited": "Details edited"
     },
     "changed": "{{field}}: {{from}} → {{to}}"
+  },
+  "create": {
+    "button": "New initiative agreement",
+    "title": "New initiative agreement",
+    "confirm": "Create agreement",
+    "organizationLabel": "Organization",
+    "codeLabel": "Initiative agreement code",
+    "typeLabel": "Agreement type",
+    "titleLabel": "Project title",
+    "startLabel": "Start date",
+    "endLabel": "End date",
+    "created": "Agreement {{code}} created as a draft.",
+    "failed": "The agreement could not be created."
   }
 }

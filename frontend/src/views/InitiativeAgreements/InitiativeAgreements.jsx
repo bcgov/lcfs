@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
-import { Divider } from '@mui/material'
+import { Divider, Stack } from '@mui/material'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
@@ -14,6 +14,7 @@ import { ROUTES } from '@/routes/routes'
 
 import { useGetInitiativeAgreements } from '@/hooks/useInitiativeAgreements'
 import { defaultSortModel, initiativeAgreementColDefs } from './_schema'
+import CreateAgreement from './components/CreateAgreement'
 
 const initialPaginationOptions = {
   page: 1,
@@ -73,13 +74,21 @@ const InitiativeAgreementsBase = () => {
           {alertMessage}
         </BCAlert>
       )}
-      <BCTypography
-        variant="h5"
-        color="primary"
-        data-test="initiative-agreements-title"
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        gap={2}
       >
-        {t('InitiativeAgreements')}
-      </BCTypography>
+        <BCTypography
+          variant="h5"
+          color="primary"
+          data-test="initiative-agreements-title"
+        >
+          {t('InitiativeAgreements')}
+        </BCTypography>
+        <CreateAgreement />
+      </Stack>
       <Divider sx={{ mt: 2, mb: 3 }} />
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer

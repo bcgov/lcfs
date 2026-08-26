@@ -1,21 +1,22 @@
 from typing import List
 
 from fastapi import APIRouter, Body, Depends, Request, status
+
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import (
-    DesignatedActionUpdateSchema,
+    AgreementCreateSchema,
+    AnalystAssignmentSchema,
     DesignatedActionCreateSchema,
     DesignatedActionHistorySchema,
+    DesignatedActionProfileSchema,
+    DesignatedActionSchema,
+    DesignatedActionsListSchema,
+    DesignatedActionUpdateSchema,
     DesignatedActionWorkflowSchema,
-    RecommendedCreditsSchema,
     EvidenceRequirementCreateSchema,
     EvidenceRequirementSchema,
     EvidenceRequirementUpdateSchema,
-    DesignatedActionProfileSchema,
-    AnalystAssignmentSchema,
-    DesignatedActionSchema,
-    DesignatedActionsListSchema,
     IAAnalystSchema,
     InitiativeAgreementCreateSchema,
     InitiativeAgreementLifecycleStatusSchema,
@@ -23,10 +24,11 @@ from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementSchema,
     InitiativeAgreementsListSchema,
     InitiativeAgreementUpdateSchema,
+    RecommendedCreditsSchema,
 )
+from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
 from lcfs.web.core.decorators import view_handler
-from lcfs.db.models.user.Role import RoleEnum
 
 # Agreement-management endpoints are scoped to the Initiative Agreement roles.
 # RoleEnum.GOVERNMENT would admit every IDIR user of any role; IA_PROPONENT is
@@ -76,6 +78,21 @@ async def get_initiative_agreement_analysts(
 ):
     """Active IA analysts, for the assignment dropdown and its filter."""
     return await service.get_available_analysts()
+
+
+@router.post(
+    "/agreements",
+    response_model=InitiativeAgreementProfileSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def create_agreement(
+    request: Request,
+    data: AgreementCreateSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Start a new initiative agreement as a draft."""
+    return await service.create_agreement(data, request.user)
 
 
 @router.post(

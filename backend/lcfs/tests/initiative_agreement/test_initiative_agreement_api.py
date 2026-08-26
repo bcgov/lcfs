@@ -732,3 +732,88 @@ async def test_document_access_check_still_refuses_a_missing_agreement(dbsession
     with pytest.raises(HTTPException) as raised:
         await service._verify_initiative_agreement_access(999999, government)
     assert raised.value.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_create_agreement_starts_a_draft(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for("create_agreement")
+    response = await client.post(
+        url,
+        json={
+            "organizationId": org_id,
+            "iaCode": "IA-26NEW1",
+            "title": "A brand new agreement",
+        },
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    body = response.json()
+    assert body["iaCode"] == "IA-26NEW1"
+    assert body["agreementType"] == "Initiative Agreement"
+    # A new agreement starts as a draft, which is what keeps it out of the
+    # reporting totals until it is real.
+    assert body["lifecycleStatus"]["status"] == "Draft"
+    assert body["designatedActions"] == []
+    # Entry date is stamped by the server, not taken from the caller.
+    assert body["entryDate"] is not None
+
+
+@pytest.mark.anyio
+async def test_create_agreement_rejects_a_duplicate_code(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    await _seed_agreement(dbsession, org_id, "IA-26DUPE")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for("create_agreement")
+    response = await client.post(
+        url, json={"organizationId": org_id, "iaCode": "ia-26dupe"}
+    )
+
+    # Case-insensitively: the code is a business identifier, so two that
+    # differ only in case are the same code to a reader.
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "already in use" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_create_agreement_rejects_an_end_before_its_start(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for("create_agreement")
+    response = await client.post(
+        url,
+        json={
+            "organizationId": org_id,
+            "iaCode": "IA-26BADD",
+            "agreementStartDate": "2026-09-01",
+            "agreementEndDate": "2026-08-01",
+        },
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "cannot precede" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_create_agreement_is_closed_to_a_proponent(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
+
+    url = fastapi_app.url_path_for("create_agreement")
+    response = await client.post(
+        url, json={"organizationId": org_id, "iaCode": "IA-26NOPE"}
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN

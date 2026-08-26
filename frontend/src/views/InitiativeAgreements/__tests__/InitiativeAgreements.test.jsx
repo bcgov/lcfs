@@ -34,7 +34,19 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useGetInitiativeAgreements: (...args) =>
     mockUseGetInitiativeAgreements(...args),
   // Consumed by the status column's select filter.
-  useInitiativeAgreementStatuses: () => ({ data: [], isLoading: false })
+  useInitiativeAgreementStatuses: () => ({ data: [], isLoading: false }),
+  // Consumed by the create-agreement control in the page header.
+  useCreateAgreement: () => ({ mutate: vi.fn(), isPending: false })
+}))
+
+vi.mock('@/hooks/useOrganizations', () => ({
+  useOrganizationNames: () => ({ data: [], isLoading: false })
+}))
+
+// Role reaches for the authorization context, which this page-level test
+// has no reason to stand up.
+vi.mock('@/components/Role', () => ({
+  Role: ({ children }) => <>{children}</>
 }))
 
 const mockBCGridViewer = vi.fn()

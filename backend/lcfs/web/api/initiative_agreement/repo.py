@@ -1,15 +1,34 @@
-from fastapi import Depends
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Sequence, Tuple
+
+from fastapi import Depends
 from sqlalchemy import String, and_, asc, desc, func, select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from lcfs.db.base import ActionTypeEnum
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models.comment.DesignatedActionInternalComment import (
+    DesignatedActionInternalComment,
+)
+from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
+    InitiativeAgreementInternalComment,
+)
+from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.initiative_agreement.DesignatedAction import DesignatedAction
-from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
+    DesignatedActionHistory,
+)
+from lcfs.db.models.initiative_agreement.DesignatedActionStatus import (
+    DesignatedActionStatus,
+)
+from lcfs.db.models.initiative_agreement.EvidenceRequirement import EvidenceRequirement
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     RECORD_KIND_AGREEMENT,
+    InitiativeAgreement,
+)
+from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import (
+    InitiativeAgreementHistory,
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleStatus import (
     InitiativeAgreementLifecycleStatus,
@@ -17,37 +36,17 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleStatus impo
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatus,
 )
-from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import (
-    InitiativeAgreementHistory,
-)
-from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
-    InitiativeAgreementInternalComment,
-)
-from lcfs.db.models.comment.InternalComment import InternalComment
-from lcfs.db.models.comment.DesignatedActionInternalComment import (
-    DesignatedActionInternalComment,
-)
-from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
-    DesignatedActionHistory,
-)
-from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
-    EvidenceRequirement,
-)
-from lcfs.db.models.initiative_agreement.DesignatedActionStatus import (
-    DesignatedActionStatus,
-)
-from lcfs.db.models.user.Role import Role, RoleEnum
-from lcfs.db.models.user.UserRole import UserRole
 from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.db.models.user.UserRole import UserRole
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.internal_comment.schema import CommentVisibilityEnum
 from lcfs.web.api.initiative_agreement.schema import (
     CreateInitiativeAgreementHistorySchema,
 )
-
-from lcfs.db.dependencies import get_async_db_session
+from lcfs.web.api.internal_comment.schema import CommentVisibilityEnum
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.exception.exceptions import DataNotFoundException
 
 # Grid field names (snake_cased by PaginationRequestSchema) -> filter/sort columns
 LIST_FIELD_COLUMNS = {
@@ -822,3 +821,35 @@ class InitiativeAgreementRepository:
             )
         )
         return result.scalars().all()
+
+    @repo_handler
+    async def get_agreement_by_ia_code(
+        self, ia_code: str
+    ) -> Optional[InitiativeAgreement]:
+        """An agreement by its business code, for the uniqueness check."""
+        result = await self.db.execute(
+            select(InitiativeAgreement).where(
+                func.lower(InitiativeAgreement.ia_code) == ia_code.lower()
+            )
+        )
+        return result.scalars().first()
+
+    @repo_handler
+    async def add_agreement(
+        self, agreement: InitiativeAgreement
+    ) -> InitiativeAgreement:
+        self.db.add(agreement)
+        await self.db.flush()
+        await self.db.refresh(agreement)
+        return agreement
+
+    @repo_handler
+    async def get_lifecycle_status_by_name(
+        self, status: str
+    ) -> Optional[InitiativeAgreementLifecycleStatus]:
+        result = await self.db.execute(
+            select(InitiativeAgreementLifecycleStatus).where(
+                InitiativeAgreementLifecycleStatus.status == status
+            )
+        )
+        return result.scalars().first()

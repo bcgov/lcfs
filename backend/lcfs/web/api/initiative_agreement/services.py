@@ -1,80 +1,87 @@
 import json
 import math
-from typing import List, Optional
-from lcfs.web.api.notification.schema import (
-    INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER,
-    NotificationMessageSchema,
-    NotificationRequestSchema,
-)
-from lcfs.web.api.notification.services import NotificationService
-import structlog
 from datetime import datetime, timezone
-from fastapi import Depends, Request, HTTPException
-from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
-from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
-    REVIEW_OUTCOMES,
-    EvidenceRequirement,
-)
-from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
-    REVIEW_OUTCOME_SATISFACTORY,
-)
+from typing import List, Optional
+
+import structlog
+from fastapi import Depends, HTTPException, Request
+
 from lcfs.db.models.initiative_agreement.DesignatedAction import DesignatedAction
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
-    EVENT_DETAILS_EDITED,
     EVENT_ANALYST_ASSIGNED,
     EVENT_ANALYST_REASSIGNED,
     EVENT_ANALYST_UNASSIGNED,
+    EVENT_DETAILS_EDITED,
     DesignatedActionHistory,
+)
+from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
+    REVIEW_OUTCOME_SATISFACTORY,
+    REVIEW_OUTCOMES,
+    EvidenceRequirement,
+)
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    AGREEMENT_TYPES,
+    RECORD_KIND_AGREEMENT,
+    InitiativeAgreement,
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
     validate_pagination,
 )
-from lcfs.web.api.internal_comment.services import sanitize_comment_text
+from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.schema import (
-    DesignatedActionUpdateSchema,
+    AgreementCreateSchema,
+    AnalystAssignmentSchema,
+    CreateInitiativeAgreementHistorySchema,
     DesignatedActionCreateSchema,
     DesignatedActionHistorySchema,
+    DesignatedActionProfileSchema,
+    DesignatedActionSchema,
+    DesignatedActionsListSchema,
+    DesignatedActionUpdateSchema,
     DesignatedActionWorkflowSchema,
     EvidenceRequirementCreateSchema,
     EvidenceRequirementSchema,
     EvidenceRequirementUpdateSchema,
-    DesignatedActionProfileSchema,
-    AnalystAssignmentSchema,
-    DesignatedActionSchema,
-    DesignatedActionsListSchema,
     IAAnalystSchema,
-    CreateInitiativeAgreementHistorySchema,
-    LastCommentSchema,
     InitiativeAgreementCreateSchema,
     InitiativeAgreementListItemSchema,
     InitiativeAgreementProfileSchema,
     InitiativeAgreementSchema,
     InitiativeAgreementsListSchema,
+    LastCommentSchema,
 )
-from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.workflow import (
     LIFECYCLE_STATUS_DRAFT,
     STATUS_NOT_STARTED,
     TRANSITIONS,
     WORKFLOW_ACTIONS,
 )
-from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.web.core.decorators import service_handler
-from lcfs.web.api.role.schema import user_has_roles
-from lcfs.db.models.transaction.Transaction import TransactionActionEnum
-from lcfs.web.api.organizations.services import OrganizationsService
-from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.api.internal_comment.schema import (
-    InternalCommentCreateSchema,
     AudienceScopeEnum,
     EntityTypeEnum,
+    InternalCommentCreateSchema,
 )
+from lcfs.web.api.internal_comment.services import (
+    InternalCommentService,
+    sanitize_comment_text,
+)
+from lcfs.web.api.notification.schema import (
+    INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER,
+    NotificationMessageSchema,
+    NotificationRequestSchema,
+)
+from lcfs.web.api.notification.services import NotificationService
+from lcfs.web.api.organizations.services import OrganizationsService
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.core.decorators import service_handler
+from lcfs.web.exception.exceptions import DataNotFoundException
 
 logger = structlog.get_logger(__name__)
 
@@ -220,6 +227,84 @@ class InitiativeAgreementServices:
             contact_phone=agreement.contact_phone,
             create_date=agreement.create_date,
             designated_actions=designated_actions,
+        )
+
+    @service_handler
+    async def create_agreement(
+        self,
+        data: AgreementCreateSchema,
+        user,
+    ) -> InitiativeAgreementProfileSchema:
+        """Start a new agreement as a draft.
+
+        The record is deliberately thin at birth: an analyst opening a file
+        typically has the organization and the agreement code and little
+        else. Everything else is filled in as the agreement is negotiated,
+        and the draft lifecycle is what keeps it out of the reporting
+        totals until it is real.
+        """
+        organization = await self.org_service.get_organization(data.organization_id)
+        if not organization:
+            raise DataNotFoundException(
+                f"Organization with id {data.organization_id} not found"
+            )
+
+        ia_code = (data.ia_code or "").strip()
+        if not ia_code:
+            raise HTTPException(
+                status_code=400, detail="An initiative agreement code is required."
+            )
+        if await self.repo.get_agreement_by_ia_code(ia_code):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Agreement code '{ia_code}' is already in use.",
+            )
+
+        if data.agreement_type not in AGREEMENT_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"'{data.agreement_type}' is not a valid agreement type.",
+            )
+
+        if (
+            data.agreement_start_date
+            and data.agreement_end_date
+            and data.agreement_end_date < data.agreement_start_date
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="The agreement end date cannot precede its start date.",
+            )
+
+        draft = await self.repo.get_lifecycle_status_by_name(LIFECYCLE_STATUS_DRAFT)
+        if draft is None:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Lifecycle status '{LIFECYCLE_STATUS_DRAFT}' is not configured.",
+            )
+
+        username = getattr(user, "keycloak_username", None)
+        agreement = await self.repo.add_agreement(
+            InitiativeAgreement(
+                record_kind=RECORD_KIND_AGREEMENT,
+                to_organization_id=data.organization_id,
+                ia_code=ia_code,
+                agreement_type=data.agreement_type,
+                title=(data.title or None),
+                project_description=(data.project_description or None),
+                contact_name=(data.contact_name or None),
+                contact_email=(data.contact_email or None),
+                contact_phone=(data.contact_phone or None),
+                entry_date=datetime.now(timezone.utc).date(),
+                agreement_start_date=data.agreement_start_date,
+                agreement_end_date=data.agreement_end_date,
+                lifecycle_status_id=(draft.initiative_agreement_lifecycle_status_id),
+                create_user=username,
+                update_user=username,
+            )
+        )
+        return await self.get_initiative_agreement_profile(
+            agreement.initiative_agreement_id
         )
 
     @service_handler

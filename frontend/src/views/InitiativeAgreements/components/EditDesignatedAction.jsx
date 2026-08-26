@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box, TextField } from '@mui/material'
+import { Box } from '@mui/material'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
+import ModalField from './ModalField'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { useUpdateDesignatedAction } from '@/hooks/useInitiativeAgreements'
@@ -108,31 +109,29 @@ export const EditDesignatedAction = ({ action, onChanged }) => {
                   {error}
                 </BCTypography>
               )}
-              <TextField
-                fullWidth
-                autoFocus
-                size="small"
+              <ModalField
+                id="edit-action-name"
                 label={t('initiativeAgreement:actions.nameLabel')}
                 value={name}
+                autoFocus
                 inputProps={{ 'data-test': 'edit-action-name' }}
                 onChange={(event) => setName(event.target.value)}
               />
-              <TextField
-                fullWidth
-                size="small"
-                type="number"
+              <ModalField
+                id="edit-action-credits"
                 label={t('initiativeAgreement:actions.creditsLabel')}
+                optional
+                type="number"
                 value={credits}
                 inputProps={{ min: 0, 'data-test': 'edit-action-credits' }}
                 onChange={(event) => setCredits(event.target.value)}
               />
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
+              <ModalField
+                id="edit-action-date"
                 label={t('initiativeAgreement:actions.dateLabel')}
+                optional
+                type="date"
                 value={completionDate}
-                InputLabelProps={{ shrink: true }}
                 inputProps={{ 'data-test': 'edit-action-date' }}
                 onChange={(event) => setCompletionDate(event.target.value)}
               />
