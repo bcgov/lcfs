@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Box,
@@ -43,6 +43,9 @@ type GovernmentDecisionStepProps = {
   showCommentsTitle?: boolean
 }
 
+const normalizeRisk = (risk?: string | null) =>
+  risk === 'Moderate' ? 'Medium' : risk
+
 export const GovernmentDecisionStep = ({
   ciApplication,
   isGovernment = false,
@@ -75,7 +78,7 @@ export const GovernmentDecisionStep = ({
   } = useRequestCIApplicationDocumentation(ciApplicationId)
   const { mutateAsync: generateFuelCodes, isPending: isGeneratingFuelCodes } =
     useGenerateCIApplicationFuelCodes(ciApplicationId)
-  const { mutate: saveRiskAssessmentDraft } =
+  const { mutateAsync: saveRiskAssessmentDraft } =
     useUpdateCIApplicationRiskAssessment(ciApplicationId)
 
   const [error, setError] = useState<string | null>(null)
@@ -88,11 +91,22 @@ export const GovernmentDecisionStep = ({
   const isRecommended = status === 'Recommended'
   const isSubmitted = status === 'Submitted'
   const isWithdrawn = status === 'Withdrawn'
+  const preliminaryRisk = normalizeRisk(
+    ciApplication?.preliminaryRiskAssessment
+  )
+  const verification2Risk = normalizeRisk(
+    ciApplication?.verification2RiskAssessment
+  )
+  const hasVerification2Draft =
+    ciApplication?.verification2RiskAssessment != null ||
+    ciApplication?.verification2PriorityScore != null
   const [riskAssessment, setRiskAssessment] = useState(
-    ciApplication?.preliminaryRiskAssessment || 'Low'
+    verification2Risk || preliminaryRisk || 'Low'
   )
   const [priorityScore, setPriorityScore] = useState(
-    ciApplication?.priorityScore || ''
+    hasVerification2Draft
+      ? (ciApplication?.verification2PriorityScore ?? '')
+      : (ciApplication?.priorityScore ?? '')
   )
   const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
   const [requestedDocumentation, setRequestedDocumentation] = useState(false)
@@ -122,9 +136,6 @@ export const GovernmentDecisionStep = ({
     !isPriorityScoreValid
       ? t('carbonIntensity:step5.priorityScoreInvalid')
       : null
-
-  const normalizeRisk = (risk?: string | null) =>
-    risk === 'Moderate' ? 'Medium' : risk
 
   // The radio group stores 'Medium' but labels it "Moderate"; legacy rows may
   // already hold 'Moderate'. Keep the read-only text using the same wording.
@@ -192,12 +203,6 @@ export const GovernmentDecisionStep = ({
     }
   }
 
-  const preliminaryRisk = normalizeRisk(
-    ciApplication?.preliminaryRiskAssessment
-  )
-  const verification2Risk = normalizeRisk(
-    ciApplication?.verification2RiskAssessment
-  )
   // Medium and High risk applications both go through Verification 2; only Low
   // risk completes after Verification 1. Keeping Medium here also keeps the
   // Risk Assessment / Priority Score fields visible, since they render inside
@@ -267,33 +272,67 @@ export const GovernmentDecisionStep = ({
 
   const canEditRiskAssessment =
     !readOnly && (showVerification1Panel || showVerification2Panel)
-  const isFirstRiskAssessmentRender = useRef(true)
-  useEffect(() => {
-    if (!canEditRiskAssessment) return
-    if (isFirstRiskAssessmentRender.current) {
-      isFirstRiskAssessmentRender.current = false
-      return
-    }
-    const timeoutId = setTimeout(() => {
-      saveRiskAssessmentDraft(
-        {
-          preliminaryRiskAssessment: riskAssessment,
-          priorityScore: isPriorityScoreValid ? priorityScoreNumber : null
-        },
-        {
-          onError: (err: any) => {
-            setError(
-              err?.response?.data?.detail ||
-                err?.message ||
-                'Failed to save risk assessment.'
-            )
-          }
-        }
+  const currentRiskAssessmentDraft = {
+    preliminaryRiskAssessment: riskAssessment,
+    priorityScore: isPriorityScoreValid ? priorityScoreNumber : null
+  }
+  const riskAssessmentAutosaveRef = useRef({
+    draft: currentRiskAssessmentDraft,
+    dirty: false,
+    enabled: canEditRiskAssessment,
+    save: saveRiskAssessmentDraft,
+    pending: Promise.resolve()
+  })
+  Object.assign(riskAssessmentAutosaveRef.current, {
+    draft: currentRiskAssessmentDraft,
+    enabled: canEditRiskAssessment,
+    save: saveRiskAssessmentDraft
+  })
+
+  const persistRiskAssessmentDraft = useCallback(async () => {
+    const state = riskAssessmentAutosaveRef.current
+    if (!state.enabled) return
+    if (!state.dirty) return state.pending
+
+    state.dirty = false
+    const request = state.save(state.draft)
+    state.pending = request
+    try {
+      await request
+    } catch (err: any) {
+      if (state.pending === request) state.dirty = true
+      setError(
+        err?.response?.data?.detail ||
+          err?.message ||
+          'Failed to save risk assessment.'
       )
+      throw err
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!canEditRiskAssessment || !riskAssessmentAutosaveRef.current.dirty)
+      return
+    const timeout = setTimeout(() => {
+      void persistRiskAssessmentDraft().catch(() => undefined)
     }, 600)
-    return () => clearTimeout(timeoutId)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [riskAssessment, priorityScore, canEditRiskAssessment])
+    return () => clearTimeout(timeout)
+  }, [
+    canEditRiskAssessment,
+    priorityScore,
+    persistRiskAssessmentDraft,
+    riskAssessment
+  ])
+
+  useEffect(
+    () => () => {
+      const state = riskAssessmentAutosaveRef.current
+      if (state.enabled && state.dirty) {
+        void state.save(state.draft).catch(() => undefined)
+      }
+    },
+    []
+  )
 
   const workflowButtonSx = {
     minHeight: 44,
@@ -316,10 +355,10 @@ export const GovernmentDecisionStep = ({
     setIsRequestDocumentationConfirmOpen(false)
     setRequestedDocumentation(true)
     onSupplierRequest?.('documentation')
-    recordWorkflowAction(
-      () => requestDocumentation(),
-      t('carbonIntensity:step5.workflowSuccess')
-    )
+    recordWorkflowAction(async () => {
+      await persistRiskAssessmentDraft()
+      return requestDocumentation()
+    }, t('carbonIntensity:step5.workflowSuccess'))
   }
 
   const handleRequestPathwayChanges = () => {
@@ -333,10 +372,10 @@ export const GovernmentDecisionStep = ({
     setIsRequestPathwayChangesConfirmOpen(false)
     setRequestedPathwayChanges(true)
     onSupplierRequest?.('pathwayChanges')
-    recordWorkflowAction(
-      () => requestPathwayChanges(),
-      t('carbonIntensity:step5.workflowSuccess')
-    )
+    recordWorkflowAction(async () => {
+      await persistRiskAssessmentDraft()
+      return requestPathwayChanges()
+    }, t('carbonIntensity:step5.workflowSuccess'))
   }
 
   const requireValidPriorityScore = () => {
@@ -352,28 +391,26 @@ export const GovernmentDecisionStep = ({
     const validPriorityScore = requireValidPriorityScore()
     if (validPriorityScore === null) return
 
-    recordWorkflowAction(
-      () =>
-        completeVerification1({
-          preliminaryRiskAssessment: riskAssessment,
-          priorityScore: validPriorityScore
-        } as any),
-      t('carbonIntensity:step5.workflowSuccess')
-    )
+    recordWorkflowAction(async () => {
+      await persistRiskAssessmentDraft()
+      return completeVerification1({
+        preliminaryRiskAssessment: riskAssessment,
+        priorityScore: validPriorityScore
+      } as any)
+    }, t('carbonIntensity:step5.workflowSuccess'))
   }
 
   const handleCompleteVerification2 = () => {
     const validPriorityScore = requireValidPriorityScore()
     if (validPriorityScore === null) return
 
-    recordWorkflowAction(
-      () =>
-        completeVerification2({
-          preliminaryRiskAssessment: riskAssessment,
-          priorityScore: validPriorityScore
-        } as any),
-      t('carbonIntensity:step5.workflowSuccess')
-    )
+    recordWorkflowAction(async () => {
+      await persistRiskAssessmentDraft()
+      return completeVerification2({
+        preliminaryRiskAssessment: riskAssessment,
+        priorityScore: validPriorityScore
+      } as any)
+    }, t('carbonIntensity:step5.workflowSuccess'))
   }
 
   return (
@@ -434,9 +471,10 @@ export const GovernmentDecisionStep = ({
                     <RadioGroup
                       row
                       value={riskAssessment}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        riskAssessmentAutosaveRef.current.dirty = true
                         setRiskAssessment(event.target.value)
-                      }
+                      }}
                     >
                       <FormControlLabel
                         labelPlacement="start"
@@ -480,10 +518,16 @@ export const GovernmentDecisionStep = ({
                         }}
                         value={priorityScore}
                         error={!!priorityScoreError}
-                        onBlur={() => setPriorityScoreTouched(true)}
+                        onBlur={() => {
+                          setPriorityScoreTouched(true)
+                          void persistRiskAssessmentDraft().catch(
+                            () => undefined
+                          )
+                        }}
                         onChange={(event) => {
                           const nextValue = event.target.value
                           if (!/^\d*$/.test(nextValue)) return
+                          riskAssessmentAutosaveRef.current.dirty = true
                           if (nextValue === '') {
                             setPriorityScore('')
                             return
