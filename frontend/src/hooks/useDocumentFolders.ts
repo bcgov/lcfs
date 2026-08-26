@@ -243,3 +243,82 @@ export const useFolderUpload = (
     onSettled: () => queryClient.invalidateQueries({ queryKey: key })
   })
 }
+
+// The bin (#deleted items). Nothing ever leaves it, so the endpoint is
+// paginated from the start even though the panel does not page yet.
+const deletedKey = (parentType: string, parentID: number | string) => [
+  'document-tree-deleted',
+  parentType,
+  String(parentID)
+]
+
+export const useDeletedDocuments = (
+  parentType: string,
+  parentID: number | string,
+  options: Record<string, unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    enabled: !!parentID,
+    queryKey: deletedKey(parentType, parentID),
+    queryFn: async () =>
+      (
+        await client.get(
+          fillPath(apiRoutes.documentFolderDeleted, parentType, parentID)
+        )
+      ).data,
+    ...options
+  })
+}
+
+const useBinMutation = (
+  parentType: string,
+  parentID: number | string,
+  run: (client: any) => (documentId: number) => Promise<unknown>
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: run(client),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: treeKey(parentType, parentID) })
+      queryClient.invalidateQueries({
+        queryKey: deletedKey(parentType, parentID)
+      })
+    }
+  })
+}
+
+export const useSoftDeleteDocument = (
+  parentType: string,
+  parentID: number | string
+) =>
+  useBinMutation(
+    parentType,
+    parentID,
+    (client) => async (documentId: number) =>
+      client.delete(
+        fillPath(
+          apiRoutes.documentFolderDeleteDocument,
+          parentType,
+          parentID
+        ).replace(':documentId', String(documentId))
+      )
+  )
+
+export const useRestoreDocument = (
+  parentType: string,
+  parentID: number | string
+) =>
+  useBinMutation(
+    parentType,
+    parentID,
+    (client) => async (documentId: number) =>
+      client.put(
+        fillPath(
+          apiRoutes.documentFolderRestoreDocument,
+          parentType,
+          parentID
+        ).replace(':documentId', String(documentId))
+      )
+  )

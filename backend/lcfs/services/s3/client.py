@@ -680,7 +680,12 @@ class DocumentService:
             stmt = (
                 select(Document)
                 .join(association_table)
-                .where(getattr(association_table.c, column_name).in_(parent_ids))
+                .where(
+                    getattr(association_table.c, column_name).in_(parent_ids),
+                    # Soft-deleted documents live in the bin, not the list.
+                    # Inert for parents that cannot delete softly.
+                    Document.deleted_date.is_(None),
+                )
                 .distinct(Document.document_id)
             )
             result = await self.db.execute(stmt)
@@ -696,7 +701,10 @@ class DocumentService:
                     association_table,
                     association_table.c.document_id == Document.document_id,
                 )
-                .where(getattr(association_table.c, column_name) == parent_id)
+                .where(
+                    getattr(association_table.c, column_name) == parent_id,
+                    Document.deleted_date.is_(None),
+                )
             )
             result = await self.db.execute(stmt)
             documents = []
@@ -710,7 +718,10 @@ class DocumentService:
         stmt = (
             select(Document)
             .join(association_table)
-            .where(getattr(association_table.c, column_name) == parent_id)
+            .where(
+                getattr(association_table.c, column_name) == parent_id,
+                Document.deleted_date.is_(None),
+            )
         )
         result = await self.db.execute(stmt)
         return result.scalars().all()

@@ -111,7 +111,15 @@
     "draggingFiles": "{{count}} file(s)",
     "draggingFolder": "Folder",
     "folderDragHandle": "Move folder {{name}}",
-    "fileDragHandle": "Move file {{name}}"
+    "fileDragHandle": "Move file {{name}}",
+    "deleteFile": "Move {{name}} to deleted items",
+    "deletedItems": "Deleted items",
+    "restore": "Restore",
+    "restoreTo": "Returns to {{folder}}",
+    "restoreToRoot": "Returns to the top level",
+    "deletedBy": "Deleted by {{name}}",
+    "binEmpty": "Nothing has been deleted.",
+    "binHelp": "Deleted files are kept. Restoring returns a file to its folder, or to the top level if that folder has since been removed."
   },
   "evidence": {
     "sectionTitle": "Evidence of completion of designated action:",

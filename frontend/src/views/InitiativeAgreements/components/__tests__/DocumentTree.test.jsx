@@ -14,13 +14,17 @@ const mockUpdate = vi.fn()
 const mockDelete = vi.fn()
 const mockMove = vi.fn()
 const mockUpload = vi.fn()
+const mockSoftDelete = vi.fn()
 vi.mock('@/hooks/useDocumentFolders', () => ({
   useDocumentTree: () => mockTree(),
   useCreateFolder: () => ({ mutate: mockCreate }),
   useUpdateFolder: () => ({ mutate: mockUpdate }),
   useDeleteFolder: () => ({ mutate: mockDelete }),
   useMoveDocuments: () => ({ mutate: mockMove }),
-  useFolderUpload: () => ({ mutate: mockUpload })
+  useFolderUpload: () => ({ mutate: mockUpload }),
+  useSoftDeleteDocument: () => ({ mutate: mockSoftDelete }),
+  useDeletedDocuments: () => ({ data: { documents: [], total: 0 } }),
+  useRestoreDocument: () => ({ mutate: vi.fn() })
 }))
 
 const mockDownload = vi.fn()
