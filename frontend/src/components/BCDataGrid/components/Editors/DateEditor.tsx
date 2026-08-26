@@ -25,13 +25,33 @@ const stopEditingAfterValueChange = (
 
   setTimeout(() => {
     api?.stopEditing?.()
-    requestAnimationFrame(() => {
+    restoreWindowScroll(scrollX, scrollY, () => {
       if (rowIndex !== undefined && colId) {
         api?.setFocusedCell?.(rowIndex, colId)
       }
-      window.scrollTo(scrollX, scrollY)
     })
   }, 0)
+}
+
+const restoreWindowScroll = (scrollX: number, scrollY: number, callback?) => {
+  let hasRunCallback = false
+  const restore = () => {
+    if (!hasRunCallback) {
+      callback?.()
+      hasRunCallback = true
+    }
+    window.scrollTo(scrollX, scrollY)
+  }
+
+  if (typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(() => {
+      restore()
+      setTimeout(restore, 0)
+    })
+    return
+  }
+
+  setTimeout(restore, 0)
 }
 
 const parseDateValue = (dateValue?: string | Date | null) => {
@@ -125,6 +145,10 @@ export const DateEditor = ({
 
   const handleDatePickerClose = () => {
     setIsOpen(false)
+  }
+
+  const handleDatePickerViewChange = () => {
+    restoreWindowScroll(window.scrollX, window.scrollY)
   }
 
   // Improved event handlers for better cross-browser support
@@ -246,6 +270,7 @@ export const DateEditor = ({
         value={selectedDate}
         onChange={updateValue}
         onAccept={commitValue}
+        onViewChange={handleDatePickerViewChange}
         open={isOpen}
         onOpen={handleDatePickerOpen}
         onClose={handleDatePickerClose}
