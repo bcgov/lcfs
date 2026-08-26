@@ -583,14 +583,14 @@ SELECT
     rek.organization_id,
     rek.compliance_report_id,
     rek.compliance_report_group_uuid,
-    COALESCE(fr.charging_equipment_id, mr.charging_equipment_id) AS charging_equipment_id,
-    COALESCE(fr.serial_number, mr.serial_number) AS serial_number,
-    COALESCE(fr.manufacturer, mr.manufacturer) AS manufacturer,
-    COALESCE(fr.model, mr.model) AS model,
-    COALESCE(fr.registration_number, mr.registration_number) AS registration_number,
-    COALESCE(fr.site_name, mr.site_name) AS site_name,
-    COALESCE(fr.charging_site_id, mr.charging_site_id) AS charging_site_id,
-    COALESCE(fr.equipment_notes, mr.equipment_notes) AS equipment_notes,
+    COALESCE(mr.charging_equipment_id, fr.charging_equipment_id) AS charging_equipment_id,
+    COALESCE(mr.serial_number, fr.serial_number) AS serial_number,
+    COALESCE(mr.manufacturer, fr.manufacturer) AS manufacturer,
+    COALESCE(mr.model, fr.model) AS model,
+    COALESCE(mr.registration_number, fr.registration_number) AS registration_number,
+    COALESCE(mr.site_name, fr.site_name) AS site_name,
+    COALESCE(mr.charging_site_id, fr.charging_site_id) AS charging_site_id,
+    COALESCE(mr.equipment_notes, fr.equipment_notes) AS equipment_notes,
     mr.supply_from_date,
     mr.supply_to_date,
     mr.kwh_usage,
@@ -599,28 +599,28 @@ SELECT
     mr.is_active,
     mr.version,
     mr.action_type,
-    COALESCE(fr.charging_equipment_version, mr.charging_equipment_version) AS charging_equipment_version,
-    COALESCE(fr.street_address, mr.street_address) AS street_address,
-    COALESCE(fr.city, mr.city) AS city,
-    COALESCE(fr.postal_code, mr.postal_code) AS postal_code,
-    COALESCE(fr.latitude, mr.latitude) AS latitude,
-    COALESCE(fr.longitude, mr.longitude) AS longitude,
-    COALESCE(fr.level_of_equipment, mr.level_of_equipment) AS level_of_equipment,
-    COALESCE(fr.level_of_equipment_id, mr.level_of_equipment_id) AS level_of_equipment_id,
-    COALESCE(fr.ports, mr.ports) AS ports,
-    COALESCE(fr.allocating_organization_name, mr.allocating_organization_name) AS allocating_organization_name,
-    COALESCE(fr.intended_uses, mr.intended_uses) AS intended_uses,
-    COALESCE(fr.intended_users, mr.intended_users) AS intended_users,
-    COALESCE(fr.power_output, mr.power_output) AS power_output,
+    COALESCE(mr.charging_equipment_version, fr.charging_equipment_version) AS charging_equipment_version,
+    COALESCE(mr.street_address, fr.street_address) AS street_address,
+    COALESCE(mr.city, fr.city) AS city,
+    COALESCE(mr.postal_code, fr.postal_code) AS postal_code,
+    COALESCE(mr.latitude, fr.latitude) AS latitude,
+    COALESCE(mr.longitude, fr.longitude) AS longitude,
+    COALESCE(mr.level_of_equipment, fr.level_of_equipment) AS level_of_equipment,
+    COALESCE(mr.level_of_equipment_id, fr.level_of_equipment_id) AS level_of_equipment_id,
+    COALESCE(mr.ports, fr.ports) AS ports,
+    COALESCE(mr.allocating_organization_name, fr.allocating_organization_name) AS allocating_organization_name,
+    COALESCE(mr.intended_uses, fr.intended_uses) AS intended_uses,
+    COALESCE(mr.intended_users, fr.intended_users) AS intended_users,
+    COALESCE(mr.power_output, fr.power_output) AS power_output,
     CASE
         WHEN mr.kwh_usage IS NULL OR mr.supply_from_date IS NULL OR mr.supply_to_date IS NULL
-             OR COALESCE(fr.power_output, mr.power_output) IS NULL
-             OR COALESCE(fr.power_output, mr.power_output) <= 0
+             OR COALESCE(mr.power_output, fr.power_output) IS NULL
+             OR COALESCE(mr.power_output, fr.power_output) <= 0
              OR mr.supply_to_date::date < mr.supply_from_date::date
         THEN NULL
-        ELSE ROUND((mr.kwh_usage::numeric / (COALESCE(fr.power_output, mr.power_output)::numeric * 24 * ((mr.supply_to_date::date - mr.supply_from_date::date) + 1))) * 100)::integer
+        ELSE ROUND((mr.kwh_usage::numeric / (COALESCE(mr.power_output, fr.power_output)::numeric * 24 * ((mr.supply_to_date::date - mr.supply_from_date::date) + 1))) * 100)::integer
     END AS capacity_utilization_percent,
-    COALESCE(fr.charging_equipment_status, mr.charging_equipment_status) AS charging_equipment_status
+    COALESCE(mr.charging_equipment_status, fr.charging_equipment_status) AS charging_equipment_status
 FROM report_equipment_keys rek
 LEFT JOIN fallback_rows fr
     ON fr.organization_id = rek.organization_id
@@ -629,13 +629,6 @@ LEFT JOIN matched_rows mr
     ON mr.organization_id = rek.organization_id
    AND mr.compliance_report_group_uuid = rek.compliance_report_group_uuid
    AND mr.charging_equipment_group_uuid = rek.charging_equipment_group_uuid;
-
-CREATE INDEX IF NOT EXISTS idx_v_fse_reporting_base_pref_report_org
-    ON v_fse_reporting_base_pref (compliance_report_id, organization_id, is_active);
-CREATE INDEX IF NOT EXISTS idx_v_fse_reporting_base_pref_group
-    ON v_fse_reporting_base_pref (compliance_report_group_uuid);
-CREATE INDEX IF NOT EXISTS idx_v_fse_reporting_base_pref_equipment
-    ON v_fse_reporting_base_pref (charging_equipment_id, charging_equipment_version);
 
 GRANT SELECT ON v_fse_reporting_base_pref TO basic_lcfs_reporting_role;
 
@@ -2691,13 +2684,6 @@ JOIN LATERAL (
     ORDER BY cs.version DESC
     LIMIT 1
 ) ls ON TRUE;
-
-CREATE INDEX IF NOT EXISTS idx_vw_fse_base_report
-    ON vw_fse_base ("Compliance Report ID", "Organization ID");
-CREATE INDEX IF NOT EXISTS idx_vw_fse_base_year_org
-    ON vw_fse_base ("Compliance Year", "Organization");
-CREATE INDEX IF NOT EXISTS idx_vw_fse_base_registration
-    ON vw_fse_base ("Registration Number");
 
 GRANT SELECT ON vw_fse_base TO basic_lcfs_reporting_role;
 -- ==========================================
