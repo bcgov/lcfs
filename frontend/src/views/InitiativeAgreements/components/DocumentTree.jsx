@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  Alert,
   Box,
   Button,
+  CircularProgress,
   IconButton,
   ListItemIcon,
   ListItemText,
@@ -11,6 +13,8 @@ import {
   Snackbar,
   TextField
 } from '@mui/material'
+import { DOCUMENT_FILE_TYPES, MAX_FILE_SIZE_BYTES } from '@/constants/common'
+import { validateFile } from '@/utils/fileValidation'
 import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView'
 import { TreeItem } from '@mui/x-tree-view/TreeItem'
 import {
@@ -173,6 +177,7 @@ const FolderLabel = ({
   folder,
   invalid,
   renaming,
+  uploadingCount,
   onCommitRename,
   onCancelRename,
   onOpenMenu,
@@ -263,6 +268,22 @@ const FolderLabel = ({
       >
         {folder.name}
       </BCTypography>
+      {/* A drop is silent otherwise: the file only appears once the
+          upload and the refetch are both done, which reads as nothing
+          having happened. */}
+      {uploadingCount > 0 && (
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+          data-test={`folder-uploading-${folder.folderId}`}
+        >
+          <CircularProgress size={14} aria-hidden="true" />
+          <BCTypography variant="body4" color="text.secondary">
+            {t('initiativeAgreement:folders.uploading', {
+              count: uploadingCount
+            })}
+          </BCTypography>
+        </Box>
+      )}
       <BCTypography component="span" variant="subtitle2" color="text.secondary">
         ({folder.documentCount})
       </BCTypography>
@@ -326,6 +347,10 @@ export const DocumentTree = ({ parentType, parentID }) => {
   const seededExpansion = useRef(false)
   const [dragState, setDragState] = useState(null) // { activeId, invalid: Set }
   const [undo, setUndo] = useState(null) // { message, run }
+  // Folder id -> number of files in flight, so the row that was dropped
+  // on is the row that shows the spinner. Root drops key on 'root'.
+  const [uploading, setUploading] = useState({})
+  const [uploadError, setUploadError] = useState('')
   const hoverTimer = useRef(null)
   const uploadInputRef = useRef(null)
   const uploadTargetRef = useRef(null)
@@ -481,6 +506,52 @@ export const DocumentTree = ({ parentType, parentID }) => {
     }
   }
 
+  const uploadKey = (folderId) => folderId ?? 'root'
+
+  const trackUpload = (folderId, delta) =>
+    setUploading((prev) => {
+      const key = uploadKey(folderId)
+      const next = (prev[key] ?? 0) + delta
+      if (next <= 0) {
+        const { [key]: _done, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [key]: next }
+    })
+
+  // Everything that uploads goes through here: checks the files the way
+  // the server will, shows what is in flight, and says why if it fails.
+  const uploadFiles = (files, folderId) => {
+    const accepted = []
+    const rejected = []
+    files.forEach((file) => {
+      const { isValid, errorMessage } = validateFile(
+        file,
+        MAX_FILE_SIZE_BYTES,
+        DOCUMENT_FILE_TYPES
+      )
+      if (isValid) accepted.push(file)
+      else rejected.push(`${file.name}: ${errorMessage}`)
+    })
+
+    if (rejected.length) setUploadError(rejected.join('\n'))
+    if (!accepted.length) return
+
+    trackUpload(folderId, accepted.length)
+    uploadToFolder(
+      { files: accepted, folderId },
+      {
+        onError: (err) =>
+          setUploadError(
+            err?.response?.data?.detail ||
+              err?.message ||
+              t('initiativeAgreement:folders.uploadFailed')
+          ),
+        onSettled: () => trackUpload(folderId, -accepted.length)
+      }
+    )
+  }
+
   const startUploadHere = (folderId) => {
     uploadTargetRef.current = folderId
     uploadInputRef.current?.click()
@@ -489,7 +560,7 @@ export const DocumentTree = ({ parentType, parentID }) => {
   const handleUploadInput = (event) => {
     const files = Array.from(event.target.files ?? [])
     if (files.length) {
-      uploadToFolder({ files, folderId: uploadTargetRef.current ?? null })
+      uploadFiles(files, uploadTargetRef.current ?? null)
     }
     event.target.value = ''
   }
@@ -507,9 +578,8 @@ export const DocumentTree = ({ parentType, parentID }) => {
           onCancelRename={() => setRenamingId(null)}
           onOpenMenu={(event) => openMenu(event, folder)}
           onStartRename={() => setRenamingId(folder.folderId)}
-          onOsFileDrop={(files) =>
-            uploadToFolder({ files, folderId: folder.folderId })
-          }
+          onOsFileDrop={(files) => uploadFiles(files, folder.folderId)}
+          uploadingCount={uploading[uploadKey(folder.folderId)] ?? 0}
           externalDragSuppressed={!!dragState}
         />
       }
@@ -775,6 +845,24 @@ export const DocumentTree = ({ parentType, parentID }) => {
           <ListItemText>{t('initiativeAgreement:folders.delete')}</ListItemText>
         </MenuItem>
       </Menu>
+
+      {/* A rejected upload is not a passing notice — it means a file the
+          user meant to file is not there — so this waits to be dismissed
+          rather than timing out. */}
+      <Snackbar
+        open={!!uploadError}
+        onClose={() => setUploadError('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        data-test="upload-error-toast"
+      >
+        <Alert
+          severity="error"
+          onClose={() => setUploadError('')}
+          sx={{ whiteSpace: 'pre-line' }}
+        >
+          {uploadError}
+        </Alert>
+      </Snackbar>
 
       <Snackbar
         open={!!undo}

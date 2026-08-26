@@ -223,21 +223,42 @@ export const useFolderUpload = (
         .replace(':parentType', parentType)
         .replace(':parentID', String(parentID))
       const documentIds: number[] = []
+
+      // File whatever made it into the target folder before re-raising.
+      // Uploads happen one at a time, so a rejection partway through a
+      // batch would otherwise strand its predecessors at the tree root,
+      // where nobody dropped them.
+      const fileIntoFolder = async () => {
+        if (folderId !== null && documentIds.length) {
+          await client.put(
+            fillPath(apiRoutes.documentFolderItems, parentType, parentID),
+            { documentIds, folderId }
+          )
+        }
+      }
+
       for (const file of files) {
         const formData = new FormData()
         formData.append('file', file)
         formData.append('filename', file.name)
-        const response = await client.post(uploadPath, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
-        documentIds.push(response.data.documentId)
+        try {
+          const response = await client.post(uploadPath, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
+          documentIds.push(response.data.documentId)
+        } catch (error: any) {
+          await fileIntoFolder()
+          // Name the file: "that file type is not allowed" is no help
+          // when five were dropped at once.
+          const detail =
+            error?.response?.data?.detail || error?.message || 'Upload failed'
+          const failure: any = new Error(`${file.name}: ${detail}`)
+          failure.uploadedCount = documentIds.length
+          throw failure
+        }
       }
-      if (folderId !== null && documentIds.length) {
-        await client.put(
-          fillPath(apiRoutes.documentFolderItems, parentType, parentID),
-          { documentIds, folderId }
-        )
-      }
+
+      await fileIntoFolder()
       return documentIds
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: key })

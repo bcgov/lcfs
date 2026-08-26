@@ -176,7 +176,110 @@ describe('DocumentTree', () => {
     const file = new File(['x'], 'evidence.pdf', { type: 'application/pdf' })
     fireEvent.change(input, { target: { files: [file] } })
 
-    expect(mockUpload).toHaveBeenCalledWith({ files: [file], folderId: 12 })
+    expect(mockUpload).toHaveBeenCalledWith(
+      { files: [file], folderId: 12 },
+      expect.anything()
+    )
+  })
+
+  it('refuses a file the server would reject, naming it and why', () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    fireEvent.click(screen.getByTestId('folder-menu-12'))
+    fireEvent.click(screen.getByTestId('menu-upload-here'))
+
+    const input = screen.getByTestId('folder-upload-input')
+    const file = new File(['x'], 'notes.exe', {
+      type: 'application/x-msdownload'
+    })
+    fireEvent.change(input, { target: { files: [file] } })
+
+    // Refused here rather than after a round trip that was always going
+    // to 400.
+    expect(mockUpload).not.toHaveBeenCalled()
+    expect(screen.getByTestId('upload-error-toast')).toHaveTextContent(
+      'notes.exe'
+    )
+  })
+
+  it('uploads the good files and reports only the bad one', () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    fireEvent.click(screen.getByTestId('folder-menu-12'))
+    fireEvent.click(screen.getByTestId('menu-upload-here'))
+
+    const good = new File(['x'], 'evidence.pdf', { type: 'application/pdf' })
+    const bad = new File(['x'], 'notes.exe', {
+      type: 'application/x-msdownload'
+    })
+    fireEvent.change(screen.getByTestId('folder-upload-input'), {
+      target: { files: [good, bad] }
+    })
+
+    // One bad file in a batch should not cost the rest their upload.
+    expect(mockUpload).toHaveBeenCalledWith(
+      { files: [good], folderId: 12 },
+      expect.anything()
+    )
+    expect(screen.getByTestId('upload-error-toast')).toHaveTextContent(
+      'notes.exe'
+    )
+  })
+
+  it('shows an upload in flight on the folder it was dropped on', () => {
+    // Held open: the indicator must survive until the mutation settles.
+    mockUpload.mockImplementation(() => {})
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    const file = new File(['x'], 'evidence.pdf', { type: 'application/pdf' })
+    fireEvent.drop(screen.getByTestId('tree-folder-12'), {
+      dataTransfer: { types: ['Files'], files: [file] }
+    })
+
+    expect(screen.getByTestId('folder-uploading-12')).toBeInTheDocument()
+    // And not on a folder nobody dropped on.
+    expect(screen.queryByTestId('folder-uploading-13')).not.toBeInTheDocument()
+  })
+
+  it('clears the in-flight indicator once the upload settles', () => {
+    mockUpload.mockImplementation((_payload, handlers) => handlers.onSettled())
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    const file = new File(['x'], 'evidence.pdf', { type: 'application/pdf' })
+    fireEvent.drop(screen.getByTestId('tree-folder-12'), {
+      dataTransfer: { types: ['Files'], files: [file] }
+    })
+
+    expect(screen.queryByTestId('folder-uploading-12')).not.toBeInTheDocument()
+  })
+
+  it('surfaces the reason an upload failed', () => {
+    mockUpload.mockImplementation((_payload, handlers) => {
+      handlers.onError({
+        message: 'evidence.pdf: File size exceeds the maximum limit of 50 MB'
+      })
+      handlers.onSettled()
+    })
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    const file = new File(['x'], 'evidence.pdf', { type: 'application/pdf' })
+    fireEvent.drop(screen.getByTestId('tree-folder-12'), {
+      dataTransfer: { types: ['Files'], files: [file] }
+    })
+
+    expect(screen.getByTestId('upload-error-toast')).toHaveTextContent(
+      'File size exceeds'
+    )
   })
 
   it('asks before moving a file to deleted items', () => {

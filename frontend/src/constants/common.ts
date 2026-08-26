@@ -109,20 +109,34 @@ const createFileTypeConfig = (
   }
 })
 
+// What the document endpoint accepts, for every parent type. Mirrors the
+// backend's ALLOWED_MIME_TYPES / ALLOWED_FILE_TYPES: the server is the
+// authority and rejects anything else with a 400, so these exist to say
+// no before a doomed upload rather than instead of the server's check.
+const UPLOAD_MIME_TYPES = [
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv',
+  'text/plain'
+]
+const UPLOAD_TYPES_DESCRIPTION =
+  'PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT'
+
 // File upload constants for compliance reports
 export const COMPLIANCE_REPORT_FILE_TYPES = createFileTypeConfig(
-  [
-    'application/pdf',
-    'image/png',
-    'image/jpeg',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/csv',
-    'text/plain'
-  ],
-  'PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT'
+  UPLOAD_MIME_TYPES,
+  UPLOAD_TYPES_DESCRIPTION
+)
+
+// The same allow-list, named for the document tree that also uses it.
+export const DOCUMENT_FILE_TYPES = createFileTypeConfig(
+  UPLOAD_MIME_TYPES,
+  UPLOAD_TYPES_DESCRIPTION
 )
 
 // File upload constants for schedule imports
