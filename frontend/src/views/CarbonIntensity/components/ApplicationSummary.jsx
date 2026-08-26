@@ -25,9 +25,11 @@ import {
   normalizeTransportModes
 } from '@/views/CarbonIntensity/components/_step2Schema'
 import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
+import { CIApplicationAssignmentHistory } from './CIApplicationAssignmentHistory'
 import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
 import { constructAddress } from '@/utils/constructAddress'
 import { exportRowsToXlsx } from './pathwayExport'
+import { getDocumentDisplayName } from '@/utils/documents'
 
 const formatDate = (value) => {
   if (!value) return ''
@@ -555,6 +557,10 @@ export const ApplicationSummary = ({
 
       <Divider sx={{ mb: 2 }} />
 
+      <CIApplicationAssignmentHistory
+        assignmentHistory={ciApplication.assignmentHistory}
+      />
+
       {/* Signing authority */}
       <BCTypography
         variant="subtitle1"
@@ -664,67 +670,71 @@ export const ApplicationSummary = ({
             </BCTypography>
           </Box>
         ) : (
-          documents.map((d) => (
-            <Box
-              key={d.documentId}
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 2fr) 96px 140px 120px',
-                alignItems: 'center',
-                gap: 2,
-                py: 0.75,
-                '&:not(:last-child)': {
-                  borderBottom: 1,
-                  borderColor: 'divider'
-                }
-              }}
-              data-test="ci-summary-document-row"
-            >
+          documents.map((d) => {
+            const displayName = getDocumentDisplayName(d)
+            return (
               <Box
+                key={d.documentId}
                 sx={{
-                  display: 'flex',
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 2fr) 96px 140px 120px',
                   alignItems: 'center',
-                  minWidth: 0
+                  gap: 2,
+                  py: 0.75,
+                  '&:not(:last-child)': {
+                    borderBottom: 1,
+                    borderColor: 'divider'
+                  }
                 }}
+                data-test="ci-summary-document-row"
               >
-                <BCTypography
-                  component="span"
-                  variant="body2"
-                  sx={{ mr: 1, flexShrink: 0 }}
-                >
-                  •
-                </BCTypography>
-                <BCTypography
-                  component="span"
-                  variant="body2"
-                  color="link"
-                  onClick={() => {
-                    downloadDocument(d.documentId, d.fileName)
-                  }}
+                <Box
                   sx={{
-                    minWidth: 0,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    '&:hover': { color: 'info.main' }
+                    display: 'flex',
+                    alignItems: 'center',
+                    minWidth: 0
                   }}
                 >
-                  {d.fileName}
+                  <BCTypography
+                    component="span"
+                    variant="body2"
+                    sx={{ mr: 1, flexShrink: 0 }}
+                  >
+                    •
+                  </BCTypography>
+                  <BCTypography
+                    component="span"
+                    variant="body2"
+                    color="link"
+                    onClick={() => {
+                      downloadDocument(d.documentId, displayName)
+                    }}
+                    sx={{
+                      minWidth: 0,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      '&:hover': { color: 'info.main' }
+                    }}
+                    title={displayName}
+                  >
+                    {displayName}
+                  </BCTypography>
+                </Box>
+                <BCTypography variant="body2" color="text.secondary">
+                  {formatBytes(d.fileSize)}
+                </BCTypography>
+                <BCTypography variant="body2" color="text.secondary">
+                  {d.createUser || ''}
+                </BCTypography>
+                <BCTypography variant="body2" color="text.secondary">
+                  {formatDate(d.createDate)}
                 </BCTypography>
               </Box>
-              <BCTypography variant="body2" color="text.secondary">
-                {formatBytes(d.fileSize)}
-              </BCTypography>
-              <BCTypography variant="body2" color="text.secondary">
-                {d.createUser || ''}
-              </BCTypography>
-              <BCTypography variant="body2" color="text.secondary">
-                {formatDate(d.createDate)}
-              </BCTypography>
-            </Box>
-          ))
+            )
+          })
         )}
       </BCBox>
 

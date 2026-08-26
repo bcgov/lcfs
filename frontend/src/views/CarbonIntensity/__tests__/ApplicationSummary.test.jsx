@@ -1,6 +1,6 @@
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 import { wrapper } from '@/tests/utils/wrapper'
 import { ApplicationSummary } from '@/views/CarbonIntensity/components/ApplicationSummary'
@@ -9,8 +9,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
 
+const mockDownloadDocument = vi.fn()
 vi.mock('@/hooks/useDocuments', () => ({
-  useDownloadDocument: () => vi.fn()
+  useDownloadDocument: () => mockDownloadDocument
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -22,6 +23,10 @@ vi.mock('@/views/CarbonIntensity/components/_step2Schema', () => ({
   ciApplicationPathwaySummaryColDefs: () => []
 }))
 
+vi.mock('@/utils/formatters', () => ({
+  formatDateWithTimezoneAbbr: (date) => `Formatted: ${date}`
+}))
+
 const baseApplication = {
   ciApplicationId: 99,
   documents: [],
@@ -31,6 +36,43 @@ const baseApplication = {
 
 describe('ApplicationSummary', () => {
   afterEach(cleanup)
+
+  it('downloads an un-renamed document using its original file name', () => {
+    render(
+      <ApplicationSummary
+        ciApplication={{
+          ...baseApplication,
+          documents: [{ documentId: 1, fileName: 'tech.pdf', fileSize: 100 }]
+        }}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByText('tech.pdf'))
+    expect(mockDownloadDocument).toHaveBeenCalledWith(1, 'tech.pdf')
+  })
+
+  it('downloads a renamed document using its display name', () => {
+    render(
+      <ApplicationSummary
+        ciApplication={{
+          ...baseApplication,
+          documents: [
+            {
+              documentId: 2,
+              fileName: 'tech.pdf',
+              displayName: 'My Report.pdf',
+              fileSize: 100
+            }
+          ]
+        }}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByText('My Report.pdf'))
+    expect(mockDownloadDocument).toHaveBeenCalledWith(2, 'My Report.pdf')
+  })
 
   it('displays the pathway description above the pathway content', () => {
     render(
@@ -74,4 +116,54 @@ describe('ApplicationSummary', () => {
       ).not.toBeInTheDocument()
     }
   )
+
+  it('displays analyst assignment history with previous and new analysts', () => {
+    render(
+      <ApplicationSummary
+        ciApplication={{
+          ...baseApplication,
+          assignmentHistory: [
+            {
+              event: 'analyst_reassigned',
+              changedAt: '2026-08-19T18:45:00Z',
+              changedBy: 'Casey Reviewer',
+              previousAnalyst: { fullName: 'Alex Analyst' },
+              newAnalyst: { fullName: 'Sam Analyst' }
+            },
+            {
+              event: 'analyst_assigned',
+              changedAt: '2026-08-18T17:30:00Z',
+              changedBy: 'Casey Reviewer',
+              previousAnalyst: null,
+              newAnalyst: { fullName: 'Alex Analyst' }
+            }
+          ]
+        }}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('ci-summary-assignment-history')).toBeVisible()
+    expect(screen.getByTestId('ci-assignment-history-divider')).toBeVisible()
+    expect(
+      screen.getAllByTestId('ci-summary-assignment-history-row')
+    ).toHaveLength(2)
+    expect(screen.getAllByText('Alex Analyst')).toHaveLength(2)
+    expect(screen.getByText('Sam Analyst')).toBeVisible()
+    expect(screen.getByText('carbonIntensity:summary.unassigned')).toBeVisible()
+    expect(screen.getAllByText('Casey Reviewer')).toHaveLength(2)
+    expect(screen.getByRole('list')).toBeVisible()
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    expect(
+      screen.getAllByTestId('ci-summary-assignment-history-row')[0]
+    ).toHaveTextContent('Formatted: 2026-08-19T18:45:00Z')
+  })
+
+  it('does not expose assignment history when it is omitted from the response', () => {
+    render(<ApplicationSummary ciApplication={baseApplication} />, { wrapper })
+
+    expect(
+      screen.queryByTestId('ci-summary-assignment-history')
+    ).not.toBeInTheDocument()
+  })
 })

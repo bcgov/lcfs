@@ -116,6 +116,14 @@ class CIApplicationUserSchema(BaseSchema):
         )
 
 
+class CIApplicationAssignmentHistorySchema(BaseSchema):
+    event: str
+    previous_analyst: Optional[CIApplicationUserSchema] = None
+    new_analyst: Optional[CIApplicationUserSchema] = None
+    changed_at: datetime
+    changed_by: Optional[str] = None
+
+
 class PathwayApplicationTypeSchema(BaseSchema):
     pathway_application_type_id: int
     type: str
@@ -532,6 +540,7 @@ class CIApplicationSchema(BaseSchema):
     preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
     priority_score: Optional[int] = None
     assigned_analyst: Optional[CIApplicationUserSchema] = None
+    assignment_history: Optional[List[CIApplicationAssignmentHistorySchema]] = None
     verification_1_user: Optional[CIApplicationUserSchema] = None
     verification_1_date: Optional[datetime] = None
     verification_2_user: Optional[CIApplicationUserSchema] = None
@@ -559,6 +568,11 @@ class CIApplicationVerification1Schema(BaseSchema):
 
 
 class CIApplicationVerification2Schema(BaseSchema):
+    preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
+    priority_score: Optional[StrictInt] = Field(default=None, ge=1, le=999)
+
+
+class CIApplicationRiskAssessmentDraftSchema(BaseSchema):
     preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
     priority_score: Optional[StrictInt] = Field(default=None, ge=1, le=999)
 

@@ -556,7 +556,7 @@ class TransferServices:
         category: Optional[str] = None,
         is_a1_category: Optional[bool] = None,
         user: Optional[UserProfile] = None,
-        enforce_director_override: bool = False,
+        enforce_category_permissions: bool = False,
     ):
         new_category = None
 
@@ -570,10 +570,15 @@ class TransferServices:
 
         transfer = await self.repo.get_transfer_by_id(transfer_id)
 
-        if enforce_director_override:
-            if user is None or not user_has_roles(user, [RoleEnum.DIRECTOR]):
+        if enforce_category_permissions:
+            if user is None:
                 raise HTTPException(status_code=403, detail="Forbidden.")
-            if transfer.current_status.status not in (
+
+            is_director = user_has_roles(user, [RoleEnum.DIRECTOR])
+            is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+            transfer_status = transfer.current_status.status
+
+            if is_director and transfer_status not in (
                 TransferStatusEnum.Recorded,
                 TransferStatusEnum.Recorded.value,
             ):
@@ -581,6 +586,16 @@ class TransferServices:
                     status_code=400,
                     detail="Credit category overrides are only allowed for recorded transfers.",
                 )
+            elif is_analyst and transfer_status not in (
+                TransferStatusEnum.Submitted,
+                TransferStatusEnum.Submitted.value,
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Analysts can only change credit categories on submitted transfers before recommendation.",
+                )
+            elif not is_director and not is_analyst:
+                raise HTTPException(status_code=403, detail="Forbidden.")
             if is_a1_category and category != TransferCategoryEnum.A.value:
                 raise HTTPException(
                     status_code=400,
