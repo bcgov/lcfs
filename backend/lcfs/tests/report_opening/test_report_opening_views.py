@@ -2,18 +2,13 @@ import pytest
 from unittest.mock import patch
 
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.user.role_domains import ORG_ROLE_SET
 from lcfs.web.api.report_opening.schema import ReportOpeningSchema
 
-SUPPLIER_LIKE_ROLES = {
-    RoleEnum.SUPPLIER,
-    RoleEnum.MANAGE_USERS,
-    RoleEnum.TRANSFER,
-    RoleEnum.COMPLIANCE_REPORTING,
-    RoleEnum.SIGNING_AUTHORITY,
-    RoleEnum.READ_ONLY,
-    RoleEnum.CI_APPLICANT,
-    RoleEnum.IA_PROPONENT,
-}
+# Derived from the role domain model rather than restated here: a BCeID role
+# always carries SUPPLIER, so every organization role reaches this endpoint.
+# The previous hand-maintained copy drifted the moment a BCeID role was added.
+SUPPLIER_LIKE_ROLES = ORG_ROLE_SET
 
 READ_UNAUTHORIZED_ROLES = [
     role
@@ -36,9 +31,7 @@ mock_report_opening = ReportOpeningSchema(
 
 
 @pytest.mark.anyio
-async def test_list_report_openings_as_system_admin(
-    client, fastapi_app, set_mock_user
-):
+async def test_list_report_openings_as_system_admin(client, fastapi_app, set_mock_user):
     """System Admin can read report openings."""
     with patch(
         "lcfs.web.api.report_opening.views.ReportOpeningService.get_report_openings"
