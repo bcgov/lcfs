@@ -165,6 +165,40 @@ describe('DesignatedActionWorkflow', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('a disabled button says what would enable it', () => {
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory={false}
+        hasRequirements
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('workflow-tip-accept_evidence')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('blockedByEvidence')
+    )
+  })
+
+  it('tells you to add a requirement when there are none', () => {
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory={false}
+        hasRequirements={false}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('workflow-tip-accept_evidence')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('blockedNoRequirements')
+    )
+  })
+
   it('surfaces the reason the API refused an action', () => {
     mockPerform.mockImplementation((_payload, handlers) =>
       handlers.onError({

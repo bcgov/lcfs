@@ -179,6 +179,24 @@ describe('DocumentTree', () => {
     expect(mockUpload).toHaveBeenCalledWith({ files: [file], folderId: 12 })
   })
 
+  it('asks before moving a file to deleted items', () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    fireEvent.click(screen.getByTestId('tree-file-delete-88'))
+    // Nothing happens until it is confirmed. (The translation mock in this
+    // file drops interpolations, so the body renders its key, not the
+    // file name.)
+    expect(mockSoftDelete).not.toHaveBeenCalled()
+    expect(screen.getByTestId('confirm-delete-body')).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByText('initiativeAgreement:folders.confirmDelete')
+    )
+    expect(mockSoftDelete).toHaveBeenCalledWith(88)
+  })
+
   it('shows the empty state', () => {
     mockTree.mockReturnValue({
       data: { folders: [], rootDocuments: [] },

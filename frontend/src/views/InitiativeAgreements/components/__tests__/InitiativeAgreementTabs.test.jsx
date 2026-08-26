@@ -28,33 +28,22 @@ describe('InitiativeAgreementTabs', () => {
   })
   afterEach(cleanup)
 
-  it('renders both module tabs with Credit Ledger disabled', () => {
+  it('renders the module tab', () => {
     render(<InitiativeAgreementTabs />, { wrapper })
 
     expect(
       screen.getByTestId('initiative-agreements-tab-initiativeAgreements')
     ).toBeInTheDocument()
+  })
+
+  it('no longer offers a Credit Ledger tab', () => {
+    // It was a disabled placeholder; the ledger is organization-scoped
+    // and no index-level behaviour was ever defined for it.
+    render(<InitiativeAgreementTabs />, { wrapper })
+
     expect(
-      screen.getByTestId('initiative-agreements-tab-creditLedger')
-    ).toBeDisabled()
-  })
-
-  it('navigates to the list route when the agreements tab is selected', () => {
-    mockLocation = { pathname: '/some-other-page', search: '' }
-    render(<InitiativeAgreementTabs />, { wrapper })
-
-    fireEvent.click(
-      screen.getByTestId('initiative-agreements-tab-initiativeAgreements')
-    )
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.INITIATIVE_AGREEMENTS.LIST)
-  })
-
-  it('does not navigate when the disabled Credit Ledger tab is clicked', () => {
-    render(<InitiativeAgreementTabs />, { wrapper })
-
-    fireEvent.click(
-      screen.getByTestId('initiative-agreements-tab-creditLedger')
-    )
-    expect(mockNavigate).not.toHaveBeenCalled()
+      screen.queryByTestId('initiative-agreements-tab-creditLedger')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/credit ledger/i)).not.toBeInTheDocument()
   })
 })

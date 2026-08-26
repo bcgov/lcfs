@@ -10,6 +10,7 @@ import {
   TextField
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import CheckIcon from '@mui/icons-material/Check'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
 import ErrorIcon from '@mui/icons-material/Error'
@@ -44,6 +45,15 @@ const railColour = (outcome) => {
 
 const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
   const { t } = useTranslation(['initiativeAgreement'])
+  // Everything here saves as you go. Without a visible acknowledgement
+  // that is indistinguishable from nothing happening, so each save shows
+  // one briefly.
+  const [justSaved, setJustSaved] = useState(false)
+  const save = (payload) => {
+    onSave(payload)
+    setJustSaved(true)
+    setTimeout(() => setJustSaved(false), 1800)
+  }
   const [analystReview, setAnalystReview] = useState(
     requirement.analystReview || ''
   )
@@ -56,9 +66,9 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
   // unreviewed, which is how an analyst undoes a decision.
   const setOutcome = (next) => {
     if (next === outcome) {
-      onSave({ clearReviewOutcome: true })
+      save({ clearReviewOutcome: true })
     } else {
-      onSave({ reviewOutcome: next })
+      save({ reviewOutcome: next })
     }
   }
 
@@ -81,6 +91,23 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
             {requirement.description}
           </BCTypography>
         </BCBox>
+        {justSaved && (
+          <BCBox
+            component="span"
+            data-test={`eoc-saved-${requirement.evidenceRequirementId}`}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.3,
+              color: 'success.main',
+              fontSize: '0.8rem',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <CheckIcon fontSize="inherit" />
+            {t('initiativeAgreement:evidence.saved')}
+          </BCBox>
+        )}
         {canEdit && (
           <IconButton
             size="small"
@@ -122,7 +149,7 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
             onChange={(event) => setAnalystReview(event.target.value)}
             onBlur={() => {
               if (analystReview !== (requirement.analystReview || '')) {
-                onSave({ analystReview })
+                save({ analystReview })
               }
             }}
           />
@@ -147,7 +174,7 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
                 onChange={(event) => setReviewNotes(event.target.value)}
                 onBlur={() => {
                   if (reviewNotes !== (requirement.reviewNotes || '')) {
-                    onSave({ reviewNotes })
+                    save({ reviewNotes })
                   }
                 }}
               />
@@ -343,6 +370,12 @@ export const EvidenceOfCompletion = ({
               />
             ))}
 
+            {requirements.length > 0 && (
+              <BCTypography variant="body4" color="text.secondary">
+                {t('initiativeAgreement:evidence.autosaveHint')}
+              </BCTypography>
+            )}
+
             {!requirements.length && !adding && (
               <BCTypography variant="body4" color="text.secondary">
                 {t('initiativeAgreement:evidence.empty')}
@@ -374,6 +407,41 @@ export const EvidenceOfCompletion = ({
                     }
                   }}
                 />
+                {/* Enter works, but a button is how people expect to
+                    commit a new row. */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 1,
+                    mt: 1,
+                    justifyContent: 'flex-end'
+                  }}
+                >
+                  <BCButton
+                    type="button"
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    data-test="eoc-new-cancel"
+                    onClick={() => {
+                      setNewDescription('')
+                      setAdding(false)
+                    }}
+                  >
+                    {t('initiativeAgreement:evidence.cancel')}
+                  </BCButton>
+                  <BCButton
+                    type="button"
+                    variant="contained"
+                    color="primary"
+                    size="small"
+                    data-test="eoc-new-create"
+                    disabled={!newDescription.trim()}
+                    onClick={commitNew}
+                  >
+                    {t('initiativeAgreement:evidence.createRequirement')}
+                  </BCButton>
+                </Box>
               </Paper>
             )}
 

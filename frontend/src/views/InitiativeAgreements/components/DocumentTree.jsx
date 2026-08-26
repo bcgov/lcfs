@@ -36,6 +36,7 @@ import prettyBytes from 'pretty-bytes'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
 import { useDownloadDocument } from '@/hooks/useDocuments'
 import {
@@ -85,6 +86,11 @@ const NameEditor = ({ initialValue, onCommit, onCancel }) => (
   />
 )
 
+// Files cannot be renamed here, which is why only folder names respond to
+// a double-click. Renaming a document is allow-listed in the backend
+// (DOCUMENT_RENAME_ENABLED_PARENT_TYPES, currently CI applications only)
+// and enabling it for designated actions belongs with the document
+// versioning work, since a rename is meant to create a version.
 const FileLabel = ({ file, onDownload, onDelete }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -312,6 +318,9 @@ export const DocumentTree = ({ parentType, parentID }) => {
   const [creating, setCreating] = useState(null)
   const [renamingId, setRenamingId] = useState(null)
   const [menu, setMenu] = useState(null)
+  // Deleting is reversible — the file goes to the bin — but it still
+  // disappears from the tree, so it asks first.
+  const [pendingDelete, setPendingDelete] = useState(null)
   const [selectedItems, setSelectedItems] = useState([])
   const [expandedItems, setExpandedItems] = useState([])
   const seededExpansion = useRef(false)
@@ -514,7 +523,9 @@ export const DocumentTree = ({ parentType, parentID }) => {
             <FileLabel
               file={file}
               onDownload={downloadDocument}
-              onDelete={deleteDocument}
+              onDelete={(documentId) =>
+                setPendingDelete({ documentId, fileName: file.fileName })
+              }
             />
           }
         />
@@ -612,7 +623,9 @@ export const DocumentTree = ({ parentType, parentID }) => {
                 <FileLabel
                   file={file}
                   onDownload={downloadDocument}
-                  onDelete={deleteDocument}
+                  onDelete={(documentId) =>
+                    setPendingDelete({ documentId, fileName: file.fileName })
+                  }
                 />
               }
             />
@@ -651,6 +664,27 @@ export const DocumentTree = ({ parentType, parentID }) => {
         </BCTypography>
       )}
 
+      <BCModal
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        data={{
+          title: t('initiativeAgreement:folders.confirmDeleteTitle'),
+          primaryButtonText: t('initiativeAgreement:folders.confirmDelete'),
+          primaryButtonAction: () => {
+            deleteDocument(pendingDelete.documentId)
+            setPendingDelete(null)
+          },
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <BCTypography variant="body4" data-test="confirm-delete-body">
+              {t('initiativeAgreement:folders.confirmDeleteBody', {
+                name: pendingDelete?.fileName ?? ''
+              })}
+            </BCTypography>
+          )
+        }}
+      />
+
       <DeletedItems parentType={parentType} parentID={parentID} />
 
       <BCTypography
@@ -678,6 +712,15 @@ export const DocumentTree = ({ parentType, parentID }) => {
         open={!!menu}
         onClose={closeMenu}
         disableRestoreFocus
+        dense
+        slotProps={{
+          paper: { sx: { maxWidth: 260 } }
+        }}
+        sx={{
+          '& .MuiMenuItem-root': { fontSize: '0.875rem', minHeight: 36 },
+          '& .MuiListItemIcon-root': { minWidth: 30 },
+          '& .MuiTypography-root': { fontSize: '0.875rem' }
+        }}
       >
         <MenuItem
           data-test="menu-new-subfolder"

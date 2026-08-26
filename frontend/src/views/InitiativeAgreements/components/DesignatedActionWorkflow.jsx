@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box, Stack, TextField } from '@mui/material'
+import { Box, Stack, TextField, Tooltip } from '@mui/material'
 
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
@@ -82,6 +82,7 @@ export const DesignatedActionWorkflow = ({
   recommendedCredits,
   creditAllocation,
   allEvidenceSatisfactory,
+  hasRequirements = true,
   canEditCredits = false,
   onChanged
 }) => {
@@ -146,6 +147,16 @@ export const DesignatedActionWorkflow = ({
     (action === ACTION_ACCEPT || action === ACTION_RECOMMEND_TO_MANAGER) &&
     !allEvidenceSatisfactory
 
+  // A disabled button should say what would enable it, not just refuse.
+  const tooltipFor = (action) => {
+    if (blockedByEvidence(action)) {
+      return hasRequirements
+        ? t('initiativeAgreement:workflow.blockedByEvidence')
+        : t('initiativeAgreement:workflow.blockedNoRequirements')
+    }
+    return t(`initiativeAgreement:workflow.tip.${action}`)
+  }
+
   return (
     <BCBox mt={3} data-test="designated-action-workflow">
       {canEditCredits && (
@@ -191,18 +202,23 @@ export const DesignatedActionWorkflow = ({
 
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
         {visible.map((button) => (
-          <BCButton
-            key={button.action}
-            type="button"
-            variant={button.variant}
-            color={button.colour}
-            size="small"
-            disabled={isPending || blockedByEvidence(button.action)}
-            data-test={`workflow-${button.action}`}
-            onClick={() => start(button.action)}
-          >
-            {t(`initiativeAgreement:workflow.${button.labelKey}`)}
-          </BCButton>
+          // The span keeps the tooltip working while the button is
+          // disabled — a disabled control fires no pointer events.
+          <Tooltip key={button.action} title={tooltipFor(button.action)}>
+            <span data-test={`workflow-tip-${button.action}`}>
+              <BCButton
+                type="button"
+                variant={button.variant}
+                color={button.colour}
+                size="small"
+                disabled={isPending || blockedByEvidence(button.action)}
+                data-test={`workflow-${button.action}`}
+                onClick={() => start(button.action)}
+              >
+                {t(`initiativeAgreement:workflow.${button.labelKey}`)}
+              </BCButton>
+            </span>
+          </Tooltip>
         ))}
       </Stack>
 

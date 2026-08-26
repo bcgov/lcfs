@@ -325,6 +325,7 @@ const DesignatedActionDetailBase = () => {
           recommendedCredits={action.recommendedCredits}
           creditAllocation={action.creditAllocation}
           allEvidenceSatisfactory={allEvidenceSatisfactory}
+          hasRequirements={requirements.length > 0}
           canEditCredits={canRecommend}
           onChanged={refreshAction}
         />

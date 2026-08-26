@@ -102,7 +102,7 @@
     "folderActions": "Folder actions",
     "loading": "Loading documents...",
     "empty": "No documents or folders yet.",
-    "helperText": "Double-click any name to rename. Drag files into folders. Deleting a folder moves its contents up one level.",
+    "helperText": "Double-click a folder name to rename it. Drag files into folders. Deleting a folder moves its contents up one level.",
     "uploadHere": "Upload here",
     "dropToRoot": "Drop here to move out of all folders",
     "moved": "Moved {{count}} file(s)",
@@ -119,7 +119,10 @@
     "restoreToRoot": "Returns to the top level",
     "deletedBy": "Deleted by {{name}}",
     "binEmpty": "Nothing has been deleted.",
-    "binHelp": "Deleted files are kept. Restoring returns a file to its folder, or to the top level if that folder has since been removed."
+    "binHelp": "Deleted files are kept and can be restored.",
+    "confirmDeleteTitle": "Move this file to deleted items?",
+    "confirmDeleteBody": "{{name}} leaves the folder tree and moves to deleted items, where it is kept. You can restore it at any time.",
+    "confirmDelete": "Move to deleted items"
   },
   "evidence": {
     "sectionTitle": "Evidence of completion of designated action:",
@@ -137,7 +140,11 @@
     "reviewedBy": "Reviewed by {{name}}",
     "pending": "Not yet reviewed",
     "evidenceFor": "Evidence of completion for {{name}}",
-    "notesFor": "Notes for {{name}}"
+    "notesFor": "Notes for {{name}}",
+    "createRequirement": "Create",
+    "cancel": "Cancel",
+    "saved": "Saved",
+    "autosaveHint": "Changes save as you go."
   },
   "workflow": {
     "accept": "Accept",
@@ -156,7 +163,18 @@
       "request_information": "Request additional information",
       "return": "Return for further work",
       "reject": "Reject this designated action"
-    }
+    },
+    "tip": {
+      "accept_evidence": "Record that the evidence is accepted. Unlocks recommending.",
+      "request_information": "Send the designated action back for more evidence.",
+      "recommend_to_manager": "Send your recommendation, with an amount, to a manager.",
+      "recommend_to_director": "Send the manager's endorsement to the director.",
+      "approve": "Approve the designated action. No credits are issued by this.",
+      "return": "Send it back to the previous reviewer for rework.",
+      "reject": "Reject the designated action."
+    },
+    "blockedByEvidence": "Every evidence requirement must be marked satisfactory first.",
+    "blockedNoRequirements": "Add at least one evidence requirement and mark it satisfactory first."
   },
   "history": {
     "title": "Activity",

@@ -48,7 +48,7 @@ describe('DeletedItems', () => {
     })
 
     expect(screen.getByTestId('deleted-items-count')).toHaveTextContent('1')
-    expect(screen.getByTestId('deleted-items-toggle')).toHaveAttribute(
+    expect(screen.getByTestId('deleted-items-header')).toHaveAttribute(
       'aria-expanded',
       'false'
     )
@@ -60,7 +60,7 @@ describe('DeletedItems', () => {
     render(<DeletedItems parentType="designatedAction" parentID="9" />, {
       wrapper
     })
-    fireEvent.click(screen.getByTestId('deleted-items-toggle'))
+    fireEvent.click(screen.getByTestId('deleted-items-header'))
 
     const row = screen.getByTestId('deleted-item-88')
     expect(row).toHaveTextContent('obsolete.pdf')
@@ -79,7 +79,7 @@ describe('DeletedItems', () => {
     render(<DeletedItems parentType="designatedAction" parentID="9" />, {
       wrapper
     })
-    fireEvent.click(screen.getByTestId('deleted-items-toggle'))
+    fireEvent.click(screen.getByTestId('deleted-items-header'))
 
     expect(screen.getByTestId('deleted-item-88')).toHaveTextContent(
       'folders.restoreToRoot'
@@ -90,7 +90,7 @@ describe('DeletedItems', () => {
     render(<DeletedItems parentType="designatedAction" parentID="9" />, {
       wrapper
     })
-    fireEvent.click(screen.getByTestId('deleted-items-toggle'))
+    fireEvent.click(screen.getByTestId('deleted-items-header'))
     fireEvent.click(screen.getByTestId('restore-88'))
 
     expect(mockRestore).toHaveBeenCalledWith(88)
@@ -103,7 +103,7 @@ describe('DeletedItems', () => {
     render(<DeletedItems parentType="designatedAction" parentID="9" />, {
       wrapper
     })
-    fireEvent.click(screen.getByTestId('deleted-items-toggle'))
+    fireEvent.click(screen.getByTestId('deleted-items-header'))
 
     expect(screen.getByTestId('deleted-item-88')).toHaveTextContent('ALZORKIN')
   })
@@ -113,7 +113,7 @@ describe('DeletedItems', () => {
     render(<DeletedItems parentType="designatedAction" parentID="9" />, {
       wrapper
     })
-    fireEvent.click(screen.getByTestId('deleted-items-toggle'))
+    fireEvent.click(screen.getByTestId('deleted-items-header'))
 
     expect(screen.getByTestId('deleted-items-count')).toHaveTextContent('0')
     expect(
@@ -121,12 +121,27 @@ describe('DeletedItems', () => {
     ).toBeInTheDocument()
   })
 
+  it('toggles from anywhere on the header row, not just the chevron', () => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    const header = screen.getByTestId('deleted-items-header')
+    expect(header).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(header)
+    expect(header).toHaveAttribute('aria-expanded', 'true')
+
+    fireEvent.keyDown(header, { key: 'Enter' })
+    expect(header).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('has no accessibility violations', async () => {
     const { container } = render(
       <DeletedItems parentType="designatedAction" parentID="9" />,
       { wrapper }
     )
-    fireEvent.click(screen.getByTestId('deleted-items-toggle'))
+    fireEvent.click(screen.getByTestId('deleted-items-header'))
 
     const results = await axe.run(container, {
       rules: {

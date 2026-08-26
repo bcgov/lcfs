@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box, Collapse, IconButton, Paper } from '@mui/material'
+import { Box, Collapse, Paper } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -33,12 +33,28 @@ export const DeletedItems = ({ parentType, parentID }) => {
       sx={{ mt: 2, p: 1.5 }}
       data-test="deleted-items-section"
     >
+      {/* The whole header toggles, not just the chevron — a small target
+          in a full-width row is a needless miss. */}
       <Box
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        data-test="deleted-items-header"
+        onClick={() => setExpanded((open) => !open)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            setExpanded((open) => !open)
+          }
+        }}
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 1
+          gap: 1,
+          cursor: 'pointer',
+          borderRadius: 1,
+          '&:hover': { bgcolor: 'action.hover' }
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -62,15 +78,14 @@ export const DeletedItems = ({ parentType, parentID }) => {
             {total}
           </BCBox>
         </Box>
-        <IconButton
-          size="small"
-          data-test="deleted-items-toggle"
-          aria-label={t('initiativeAgreement:folders.deletedItems')}
-          aria-expanded={expanded}
-          onClick={() => setExpanded((open) => !open)}
+        {/* The row is the control; this is only its affordance. */}
+        <Box
+          component="span"
+          aria-hidden="true"
+          sx={{ display: 'inline-flex', color: 'action.active', p: 0.5 }}
         >
           {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </IconButton>
+        </Box>
       </Box>
 
       <Collapse in={expanded}>
@@ -135,9 +150,11 @@ export const DeletedItems = ({ parentType, parentID }) => {
               </Box>
             ))
           )}
-          <BCTypography variant="body4" color="text.secondary" component="p">
-            {t('initiativeAgreement:folders.binHelp')}
-          </BCTypography>
+          {documents.length === 0 && (
+            <BCTypography variant="body4" color="text.secondary" component="p">
+              {t('initiativeAgreement:folders.binHelp')}
+            </BCTypography>
+          )}
         </Box>
       </Collapse>
     </Paper>

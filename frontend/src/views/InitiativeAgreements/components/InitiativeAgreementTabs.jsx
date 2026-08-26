@@ -6,9 +6,9 @@ import ROUTES from '@/routes/routes'
 import breakpoints from '@/themes/base/breakpoints'
 
 // Tab shell for the Initiative Agreements module (mirrors FuelCodesTabs).
-// The Credit Ledger tab is disabled until its index-level behaviour is
-// defined — the existing credit ledger views are organization-scoped
-// (see views/Organizations/OrganizationView/CreditLedger.jsx).
+// A Credit Ledger tab was here as a placeholder and has been removed: the
+// existing ledger is organization-scoped and no index-level behaviour was
+// ever defined for it.
 const tabs = [
   {
     key: 'initiativeAgreements',
@@ -19,13 +19,6 @@ const tabs = [
     // route as well as the index.
     isActive: (loc) =>
       loc.pathname.startsWith(ROUTES.INITIATIVE_AGREEMENTS.LIST)
-  },
-  {
-    key: 'creditLedger',
-    labelKey: 'initiativeAgreement:tabs.creditLedger',
-    path: null,
-    disabled: true,
-    isActive: () => false
   }
 ]
 

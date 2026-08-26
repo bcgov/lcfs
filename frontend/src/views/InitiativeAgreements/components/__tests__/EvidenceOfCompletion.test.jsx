@@ -183,6 +183,32 @@ describe('EvidenceOfCompletion', () => {
     expect(mockCreate).toHaveBeenCalledTimes(1)
   })
 
+  it('creates a requirement from the button, not only from Enter', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    fireEvent.click(screen.getByTestId('eoc-add-button'))
+    // Nothing to create yet, so the button says so.
+    expect(screen.getByTestId('eoc-new-create')).toBeDisabled()
+
+    fireEvent.change(screen.getByTestId('eoc-new-description'), {
+      target: { value: 'Risk register' }
+    })
+    fireEvent.click(screen.getByTestId('eoc-new-create'))
+
+    expect(mockCreate).toHaveBeenCalledWith({ description: 'Risk register' })
+  })
+
+  it('acknowledges a save so the autosave is visible', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    expect(screen.queryByTestId('eoc-saved-1')).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByTestId('eoc-satisfactory-1').querySelector('input')
+    )
+
+    expect(screen.getByTestId('eoc-saved-1')).toBeInTheDocument()
+  })
+
   it('removes a requirement', () => {
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
