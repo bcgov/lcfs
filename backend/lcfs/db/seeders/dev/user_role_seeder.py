@@ -75,6 +75,10 @@ async def seed_user_roles(session):
         # A BCeID proponent in organization 1, which owns IA-26DEV1, so
         # the organization-scoped list has something to show.
         {"user_profile_id": 7, "role_id": 13},
+        # role 6 = DIRECTOR. Approving a designated action is the
+        # director's alone, so without this the review chain dead-ends at
+        # "Recommended to director" and cannot be exercised locally.
+        {"user_profile_id": 22, "role_id": 6},
     ]
 
     try:
