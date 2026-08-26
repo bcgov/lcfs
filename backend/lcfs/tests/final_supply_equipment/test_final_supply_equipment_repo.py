@@ -108,7 +108,8 @@ def test_fse_pref_view_matches_reporting_rows_by_equipment_group_uuid():
     ).read_text()
 
     assert "v.compliance_report_group_uuid,\n                    ce.group_uuid" in sql
-    assert "mr.charging_equipment_group_uuid = fr.charging_equipment_group_uuid" in sql
+    assert "fr.charging_equipment_group_uuid = rek.charging_equipment_group_uuid" in sql
+    assert "mr.charging_equipment_group_uuid = rek.charging_equipment_group_uuid" in sql
     assert "COALESCE(fr.charging_equipment_id, mr.charging_equipment_id)" in sql
     assert "COALESCE(fr.serial_number, mr.serial_number)" in sql
     assert (
