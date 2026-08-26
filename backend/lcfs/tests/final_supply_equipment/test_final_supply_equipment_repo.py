@@ -119,6 +119,17 @@ def test_fse_pref_view_matches_reporting_rows_by_equipment_group_uuid():
     )
 
 
+def test_fse_reporting_views_resolve_latest_site_by_group_uuid():
+    sql = (
+        Path(__file__).resolve().parents[3] / "lcfs/db/sql/views/metabase.sql"
+    ).read_text()
+
+    assert "JOIN charging_site cs_fk ON ce.charging_site_id = cs_fk.charging_site_id" in sql
+    assert "WHERE cs.group_uuid = cs_fk.group_uuid" in sql
+    assert "ORDER BY cs.version DESC" in sql
+    assert "AND cs.version = (SELECT MAX(cs2.version)" not in sql
+
+
 @pytest.mark.anyio
 async def test_sync_reporting_associations_preserves_inactive_selection(repo, fake_db):
     association = MagicMock()

@@ -355,9 +355,9 @@ SELECT DISTINCT
     ce.serial_number,
     ce.manufacturer,
     ce.model,
-    (cs.site_code || '-' || ce.equipment_number) AS registration_number,
-    cs.site_name,
-    cs.charging_site_id,
+    (ls.site_code || '-' || ce.equipment_number) AS registration_number,
+    ls.site_name,
+    ls.charging_site_id,
     ce.notes AS equipment_notes,
     crce.supply_from_date,
     crce.supply_to_date,
@@ -370,15 +370,15 @@ SELECT DISTINCT
     crce.version,
     crce.action_type,
     COALESCE(crce.charging_equipment_version, ce.version) AS charging_equipment_version,
-    cs.street_address,
-    cs.city,
-    cs.postal_code,
-    cs.latitude,
-    cs.longitude,
+    ls.street_address,
+    ls.city,
+    ls.postal_code,
+    ls.latitude,
+    ls.longitude,
     loe.name AS level_of_equipment,
     ce.level_of_equipment_id,
     ce.ports,
-    cs.allocating_organization_name,
+    ls.allocating_organization_name,
     eu.intended_uses,
     eus.intended_users,
     power_lookup.power_output,
@@ -395,8 +395,23 @@ FROM latest_crce crce
 JOIN charging_equipment ce
     ON ce.charging_equipment_id = crce.charging_equipment_id
    AND ce.version = crce.charging_equipment_version
-JOIN charging_site cs ON ce.charging_site_id = cs.charging_site_id 
-    AND cs.version = (SELECT MAX(cs2.version) FROM charging_site cs2 WHERE cs2.group_uuid = cs.group_uuid)
+JOIN charging_site cs_fk ON ce.charging_site_id = cs_fk.charging_site_id
+JOIN LATERAL (
+    SELECT
+        cs.site_code,
+        cs.site_name,
+        cs.charging_site_id,
+        cs.street_address,
+        cs.city,
+        cs.postal_code,
+        cs.latitude,
+        cs.longitude,
+        cs.allocating_organization_name
+    FROM charging_site cs
+    WHERE cs.group_uuid = cs_fk.group_uuid
+    ORDER BY cs.version DESC
+    LIMIT 1
+) ls ON TRUE
 JOIN level_of_equipment loe ON ce.level_of_equipment_id = loe.level_of_equipment_id
 JOIN charging_equipment_status ces ON ce.status_id = ces.charging_equipment_status_id
 LEFT JOIN equipment_uses eu ON ce.charging_equipment_id = eu.charging_equipment_id
@@ -452,26 +467,26 @@ equipment_users AS (
 ),
 fallback_rows AS (
     SELECT
-        cs.organization_id,
+        ls.organization_id,
         ce.group_uuid AS charging_equipment_group_uuid,
         ce.charging_equipment_id,
         ce.serial_number,
         ce.manufacturer,
         ce.model,
-        (cs.site_code || '-' || ce.equipment_number) AS registration_number,
-        cs.site_name,
-        cs.charging_site_id,
+        (ls.site_code || '-' || ce.equipment_number) AS registration_number,
+        ls.site_name,
+        ls.charging_site_id,
         ce.notes AS equipment_notes,
         ce.version AS charging_equipment_version,
-        cs.street_address,
-        cs.city,
-        cs.postal_code,
-        cs.latitude,
-        cs.longitude,
+        ls.street_address,
+        ls.city,
+        ls.postal_code,
+        ls.latitude,
+        ls.longitude,
         loe.name AS level_of_equipment,
         ce.level_of_equipment_id,
         ce.ports,
-        cs.allocating_organization_name,
+        ls.allocating_organization_name,
         eu.intended_uses,
         eus.intended_users,
         power_lookup.power_output,
@@ -481,8 +496,24 @@ fallback_rows AS (
     JOIN charging_equipment ce
         ON le.charging_equipment_id = ce.charging_equipment_id
        AND le.version = ce.version
-    JOIN charging_site cs ON ce.charging_site_id = cs.charging_site_id
-        AND cs.version = (SELECT MAX(cs2.version) FROM charging_site cs2 WHERE cs2.group_uuid = cs.group_uuid)
+    JOIN charging_site cs_fk ON ce.charging_site_id = cs_fk.charging_site_id
+    JOIN LATERAL (
+        SELECT
+            cs.organization_id,
+            cs.site_code,
+            cs.site_name,
+            cs.charging_site_id,
+            cs.street_address,
+            cs.city,
+            cs.postal_code,
+            cs.latitude,
+            cs.longitude,
+            cs.allocating_organization_name
+        FROM charging_site cs
+        WHERE cs.group_uuid = cs_fk.group_uuid
+        ORDER BY cs.version DESC
+        LIMIT 1
+    ) ls ON TRUE
     JOIN level_of_equipment loe ON ce.level_of_equipment_id = loe.level_of_equipment_id
     JOIN charging_equipment_status ces ON ce.status_id = ces.charging_equipment_status_id
     LEFT JOIN equipment_uses eu ON ce.charging_equipment_id = eu.charging_equipment_id
