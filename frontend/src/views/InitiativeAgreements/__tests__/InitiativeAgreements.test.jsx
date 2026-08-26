@@ -68,9 +68,6 @@ describe('InitiativeAgreements', () => {
     expect(
       screen.getByTestId('initiative-agreements-title')
     ).toBeInTheDocument()
-    expect(
-      screen.getByTestId('initiative-agreements-tab-initiativeAgreements')
-    ).toBeInTheDocument()
 
     const grid = screen.getByTestId('bc-grid-container')
     expect(grid).toHaveAttribute('data-grid-key', 'initiative-agreements-grid')

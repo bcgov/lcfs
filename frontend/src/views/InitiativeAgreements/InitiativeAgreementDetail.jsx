@@ -22,7 +22,6 @@ import withRole from '@/utils/withRole'
 
 import { useGetInitiativeAgreement } from '@/hooks/useInitiativeAgreements'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
-import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
 import { DesignatedActionsGrid } from './components/DesignatedActionsGrid'
 import { AddDesignatedAction } from './components/AddDesignatedAction'
 
@@ -72,7 +71,6 @@ const InitiativeAgreementDetailBase = () => {
   if (isError || !agreement) {
     return (
       <BCBox>
-        <InitiativeAgreementTabs />
         <BCAlert data-test="alert-box" severity="error">
           {error?.message || t('initiativeAgreement:detail.loadFailMsg')}
         </BCAlert>
@@ -89,8 +87,6 @@ const InitiativeAgreementDetailBase = () => {
 
   return (
     <BCBox>
-      <InitiativeAgreementTabs />
-
       <BCTypography
         variant="h5"
         color="primary"

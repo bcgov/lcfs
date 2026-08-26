@@ -42,14 +42,18 @@ describe('AddDesignatedAction', () => {
     expect(screen.getByTestId('add-designated-action')).toBeInTheDocument()
   })
 
-  it('is absent once the agreement is no longer a draft', () => {
+  it('stays visible but disabled once the agreement is no longer a draft', () => {
     render(<AddDesignatedAction initiativeAgreementId="1" isDraft={false} />, {
       wrapper
     })
 
-    expect(
-      screen.queryByTestId('add-designated-action')
-    ).not.toBeInTheDocument()
+    // Visible so nobody hunts for a button that was never rendered, and
+    // the tooltip carries the reason.
+    expect(screen.getByTestId('add-designated-action')).toBeDisabled()
+    expect(screen.getByTestId('add-designated-action-tip')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('draftOnly')
+    )
   })
 
   it('is absent for a director, who approves rather than drafts', () => {

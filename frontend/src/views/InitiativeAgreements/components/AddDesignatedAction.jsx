@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box, TextField } from '@mui/material'
+import { Box, TextField, Tooltip } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 
 import BCButton from '@/components/BCButton'
@@ -26,8 +26,6 @@ export const AddDesignatedAction = ({ initiativeAgreementId, isDraft }) => {
   const { mutate: createAction, isPending } = useCreateDesignatedAction(
     initiativeAgreementId
   )
-
-  if (!isDraft) return null
 
   const close = () => {
     setOpen(false)
@@ -62,17 +60,31 @@ export const AddDesignatedAction = ({ initiativeAgreementId, isDraft }) => {
 
   return (
     <Role roles={[roles.ia_analyst, roles.ia_manager]}>
-      <BCButton
-        type="button"
-        variant="outlined"
-        color="primary"
-        size="small"
-        startIcon={<AddIcon />}
-        data-test="add-designated-action"
-        onClick={() => setOpen(true)}
+      {/* Shown even when it cannot be used: a control that simply
+          vanishes leaves someone hunting for a button that was never
+          there. Disabled, it says why. */}
+      <Tooltip
+        title={
+          isDraft
+            ? t('initiativeAgreement:actions.addTooltip')
+            : t('initiativeAgreement:actions.draftOnly')
+        }
       >
-        {t('initiativeAgreement:actions.add')}
-      </BCButton>
+        <span data-test="add-designated-action-tip">
+          <BCButton
+            type="button"
+            variant="outlined"
+            color="primary"
+            size="small"
+            startIcon={<AddIcon />}
+            disabled={!isDraft}
+            data-test="add-designated-action"
+            onClick={() => setOpen(true)}
+          >
+            {t('initiativeAgreement:actions.add')}
+          </BCButton>
+        </span>
+      </Tooltip>
 
       <BCModal
         open={open}

@@ -33,7 +33,6 @@ import {
 } from '@/hooks/useInitiativeAgreements'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
-import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
 import { DocumentTree } from './components/DocumentTree'
 import { EvidenceOfCompletion } from './components/EvidenceOfCompletion'
 import { DesignatedActionWorkflow } from './components/DesignatedActionWorkflow'
@@ -116,7 +115,6 @@ const DesignatedActionDetailBase = () => {
   if (isError || !action) {
     return (
       <BCBox>
-        <InitiativeAgreementTabs />
         <BCAlert data-test="alert-box" severity="error">
           {error?.message || t('initiativeAgreement:actionDetail.loadFailMsg')}
         </BCAlert>
@@ -144,8 +142,6 @@ const DesignatedActionDetailBase = () => {
 
   return (
     <BCBox>
-      <InitiativeAgreementTabs />
-
       <BCTypography
         variant="h5"
         color="primary"

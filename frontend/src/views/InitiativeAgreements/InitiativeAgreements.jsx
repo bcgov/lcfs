@@ -14,7 +14,6 @@ import { ROUTES } from '@/routes/routes'
 
 import { useGetInitiativeAgreements } from '@/hooks/useInitiativeAgreements'
 import { defaultSortModel, initiativeAgreementColDefs } from './_schema'
-import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
 
 const initialPaginationOptions = {
   page: 1,
@@ -69,7 +68,6 @@ const InitiativeAgreementsBase = () => {
 
   return (
     <BCBox>
-      <InitiativeAgreementTabs />
       {alertMessage && (
         <BCAlert data-test="alert-box" severity={alertSeverity}>
           {alertMessage}

@@ -19,10 +19,6 @@
   "loadingText": "Loading initiative agreement",
   "noAgreementsFound": "No initiative agreements found",
   "loadFailMsg": "Failed to load initiative agreements.",
-  "tabs": {
-    "initiativeAgreements": "Initiative agreements",
-    "creditLedger": "Credit Ledger"
-  },
   "columns": {
     "status": "Status",
     "organization": "Organization",
@@ -77,7 +73,8 @@
     "edit": "Edit details",
     "editTitle": "Edit designated action",
     "save": "Save changes",
-    "editFailed": "The changes could not be saved."
+    "editFailed": "The changes could not be saved.",
+    "addTooltip": "Add a designated action to this agreement."
   },
   "actionDetail": {
     "title": "Designated actions",
