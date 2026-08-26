@@ -112,7 +112,7 @@ describe('organization dashboard penalty formatting', () => {
     )
   })
 
-  it('formats monetary chart labels and tooltips with two decimal places', () => {
+  it('formats monetary chart labels by magnitude and keeps exact tooltips', () => {
     const stackedBarOption = useStackedBarOption([], theme)
     const penaltyMixOption = usePenaltyMixOption(
       { autoRenewable: 123.45, autoLowCarbon: 200, discretionary: 50.1 },
@@ -120,7 +120,12 @@ describe('organization dashboard penalty formatting', () => {
     )
     const sparklineOption = useSparklineOption([], [], theme)
 
-    expect(stackedBarOption.yAxis.axisLabel.formatter(1000)).toBe('$1,000.00')
+    const formatAxisLabel = stackedBarOption.yAxis.axisLabel.formatter
+
+    expect(formatAxisLabel(999.5)).toBe('$999.50')
+    expect(formatAxisLabel(1000)).toBe('$1.00K')
+    expect(formatAxisLabel(24500)).toBe('$24.50K')
+    expect(formatAxisLabel(24000000)).toBe('$24.00M')
     expect(
       stackedBarOption.tooltip.formatter([
         {

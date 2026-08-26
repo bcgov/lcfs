@@ -1,5 +1,13 @@
 import { currencyFormatter } from '@/utils/formatters'
 
+const compactCurrencyFormatter = new Intl.NumberFormat('en-CA', {
+  style: 'currency',
+  currency: 'CAD',
+  notation: 'compact',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})
+
 const formatAxisTooltip = (params) => {
   if (!params?.length) return ''
 
@@ -28,7 +36,7 @@ export const useStackedBarOption = (data, theme) => {
     yAxis: {
       type: 'value',
       axisLabel: {
-        formatter: (value) => currencyFormatter(value)
+        formatter: (value) => compactCurrencyFormatter.format(value)
       }
     },
     series: [
