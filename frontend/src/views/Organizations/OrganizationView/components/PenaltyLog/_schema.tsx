@@ -100,9 +100,7 @@ export const penaltyLogColumnDefs = [
     headerName: i18n.t('org:penaltyLog.columns.penaltyAmount'),
     field: 'penaltyAmount',
     valueFormatter: ({ value }) =>
-      value === null || value === undefined
-        ? ''
-        : currencyFormatter(value, false, 0),
+      value === null || value === undefined ? '' : currencyFormatter(value),
     minWidth: 260
   }
 ]
@@ -182,13 +180,7 @@ export const penaltyLogEditorColDefs = (
     }),
     cellEditor: 'agNumberCellEditor',
     valueFormatter: ({ value }) =>
-      value === null || value === undefined
-        ? ''
-        : Number(value).toLocaleString('en-CA', {
-            style: 'currency',
-            currency: 'CAD',
-            maximumFractionDigits: 0
-          }),
+      value === null || value === undefined ? '' : currencyFormatter(value),
     minWidth: 240
   },
   {
