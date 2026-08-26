@@ -69,6 +69,10 @@ vi.mock('../components/DesignatedActionHistoryPanel', () => ({
   )
 }))
 
+vi.mock('../components/EditDesignatedAction', () => ({
+  EditDesignatedAction: () => <div data-test="edit-designated-action" />
+}))
+
 const workflowProps = vi.fn()
 vi.mock('../components/DesignatedActionWorkflow', () => ({
   DesignatedActionWorkflow: (props) => {
@@ -185,6 +189,11 @@ describe('DesignatedActionDetail', () => {
         creditAllocation: 1850
       })
     )
+  })
+
+  it('offers the edit control on the action card', () => {
+    render(<DesignatedActionDetail />, { wrapper })
+    expect(screen.getByTestId('edit-designated-action')).toBeInTheDocument()
   })
 
   it('renders the audit trail panel', () => {

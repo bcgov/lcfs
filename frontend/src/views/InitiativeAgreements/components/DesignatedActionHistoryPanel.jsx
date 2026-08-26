@@ -26,6 +26,7 @@ const EVENT_LABELS = {
   CREDITS_RECOMMENDED: 'creditsRecommended',
   INFORMATION_REQUESTED: 'informationRequested',
   EVIDENCE_REVIEWED: 'evidenceReviewed',
+  DETAILS_EDITED: 'detailsEdited',
   CHANGE_ORDER: 'changeOrder',
   CREDITS_ISSUED: 'creditsIssued'
 }
@@ -141,6 +142,18 @@ const EntryDetail = ({ entry }) => {
         count: Number(snapshot.recommended_credits).toLocaleString()
       })
     )
+  }
+  if (snapshot.changed) {
+    // Show the correction itself: "1,000 to 1,850" is the useful part.
+    for (const [field, change] of Object.entries(snapshot.changed)) {
+      lines.push(
+        t('initiativeAgreement:history.changed', {
+          field,
+          from: change.from ?? '—',
+          to: change.to ?? '—'
+        })
+      )
+    }
   }
   if (entry.status?.status && entry.event === 'STATUS_CHANGE') {
     lines.push(

@@ -37,6 +37,7 @@ import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
 import { DocumentTree } from './components/DocumentTree'
 import { EvidenceOfCompletion } from './components/EvidenceOfCompletion'
 import { DesignatedActionWorkflow } from './components/DesignatedActionWorkflow'
+import { EditDesignatedAction } from './components/EditDesignatedAction'
 import { DesignatedActionHistoryPanel } from './components/DesignatedActionHistoryPanel'
 
 // The shared document machinery keys on this string for designated actions.
@@ -206,7 +207,11 @@ const DesignatedActionDetailBase = () => {
                   </BCBox>
                 )}
               </BCBox>
-              <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <EditDesignatedAction
+                  action={action}
+                  onChanged={refreshAction}
+                />
                 <IconButton
                   size="small"
                   data-test="previous-action-button"

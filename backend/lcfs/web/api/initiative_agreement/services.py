@@ -20,6 +20,7 @@ from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
 )
 from lcfs.db.models.initiative_agreement.DesignatedAction import DesignatedAction
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
+    EVENT_DETAILS_EDITED,
     EVENT_ANALYST_ASSIGNED,
     EVENT_ANALYST_REASSIGNED,
     EVENT_ANALYST_UNASSIGNED,
@@ -36,6 +37,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.internal_comment.services import sanitize_comment_text
 from lcfs.web.api.initiative_agreement.schema import (
+    DesignatedActionUpdateSchema,
     DesignatedActionCreateSchema,
     DesignatedActionHistorySchema,
     DesignatedActionWorkflowSchema,
@@ -295,6 +297,97 @@ class InitiativeAgreementServices:
         refreshed = await self.repo.get_designated_action_by_id(
             action.designated_action_id
         )
+        return DesignatedActionSchema.model_validate(refreshed)
+
+    @service_handler
+    async def update_designated_action(
+        self,
+        designated_action_id: int,
+        data: DesignatedActionUpdateSchema,
+        user,
+    ) -> DesignatedActionSchema:
+        """Correct a designated action's details.
+
+        Editable at any point in the agreement's life: an analyst who
+        spots a wrong figure or a mistyped name should be able to fix it
+        rather than work around it. Every change is recorded with its
+        before and after, so the record shows what was altered and by
+        whom.
+        """
+        action = await self.repo.get_designated_action_by_id(designated_action_id)
+        if not action:
+            raise DataNotFoundException(
+                f"Designated action with id {designated_action_id} not found"
+            )
+
+        changes = {}
+
+        if data.name is not None:
+            name = data.name.strip()
+            if not name:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A designated action name is required.",
+                )
+            if name != action.name:
+                changes["name"] = {"from": action.name, "to": name}
+                action.name = name
+
+        if data.description is not None and data.description != action.description:
+            changes["description"] = {
+                "from": action.description,
+                "to": data.description,
+            }
+            action.description = data.description
+
+        if data.credit_allocation is not None:
+            if data.credit_allocation < 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Compliance units to be issued cannot be negative.",
+                )
+            if data.credit_allocation != action.credit_allocation:
+                changes["credit_allocation"] = {
+                    "from": action.credit_allocation,
+                    "to": data.credit_allocation,
+                }
+                action.credit_allocation = data.credit_allocation
+
+        new_date = None if data.clear_specified_date else data.specified_date
+        if (data.clear_specified_date or data.specified_date is not None) and (
+            new_date != action.specified_date
+        ):
+            changes["specified_date"] = {
+                "from": (
+                    action.specified_date.isoformat() if action.specified_date else None
+                ),
+                "to": new_date.isoformat() if new_date else None,
+            }
+            action.specified_date = new_date
+
+        if not changes:
+            return DesignatedActionSchema.model_validate(action)
+
+        display_name = " ".join(
+            p
+            for p in (getattr(user, "first_name", ""), getattr(user, "last_name", ""))
+            if p
+        ).strip()
+        await self.repo.add_designated_action_history(
+            DesignatedActionHistory(
+                designated_action_id=action.designated_action_id,
+                designated_action_group_uuid=action.group_uuid,
+                event=EVENT_DETAILS_EDITED,
+                status_id=action.current_status_id,
+                user_profile_id=getattr(user, "user_profile_id", None),
+                display_name=display_name or None,
+                snapshot={"changed": changes},
+            )
+        )
+        action.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+
+        refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
         return DesignatedActionSchema.model_validate(refreshed)
 
     @service_handler

@@ -359,3 +359,34 @@ export const useCreateDesignatedAction = (
     }
   })
 }
+
+/** Correct a designated action's details (analysts and managers). */
+export const useUpdateDesignatedAction = (
+  designatedActionId: number | string
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      name?: string
+      creditAllocation?: number | null
+      specifiedDate?: string | null
+      clearSpecifiedDate?: boolean
+    }) =>
+      (
+        await client.put(
+          apiRoutes.updateDesignatedAction.replace(
+            ':designatedActionId',
+            String(designatedActionId)
+          ),
+          payload
+        )
+      ).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
+      queryClient.invalidateQueries({
+        queryKey: ['designated-action-history', String(designatedActionId)]
+      })
+    }
+  })
+}

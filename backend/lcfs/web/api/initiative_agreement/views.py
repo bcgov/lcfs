@@ -4,6 +4,7 @@ from fastapi import APIRouter, Body, Depends, Request, status
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import (
+    DesignatedActionUpdateSchema,
     DesignatedActionCreateSchema,
     DesignatedActionHistorySchema,
     DesignatedActionWorkflowSchema,
@@ -246,6 +247,24 @@ async def get_designated_action_profile(
 ):
     """The designated action detail page's record."""
     return await service.get_designated_action_profile(designated_action_id)
+
+
+@router.put(
+    "/designated-actions/{designated_action_id}",
+    response_model=DesignatedActionSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def update_designated_action(
+    request: Request,
+    designated_action_id: int,
+    data: DesignatedActionUpdateSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Correct a designated action's details. Every change is recorded."""
+    return await service.update_designated_action(
+        designated_action_id, data, request.user
+    )
 
 
 @router.put(

@@ -655,3 +655,165 @@ async def test_a_proponent_cannot_add_an_action(
     )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# Editing a designated action. Analysts and managers may correct one at any
+# point; every change is recorded.
+# ---------------------------------------------------------------------------
+
+
+def _edit_url(fastapi_app, action):
+    return fastapi_app.url_path_for(
+        "update_designated_action",
+        designated_action_id=action.designated_action_id,
+    )
+
+
+async def _action_history(dbsession, action):
+    from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
+        DesignatedActionHistory,
+    )
+
+    result = await dbsession.execute(
+        select(DesignatedActionHistory)
+        .where(
+            DesignatedActionHistory.designated_action_id == action.designated_action_id
+        )
+        .order_by(DesignatedActionHistory.designated_action_history_id)
+    )
+    return list(result.scalars().all())
+
+
+@pytest.mark.anyio
+async def test_an_analyst_corrects_an_action_and_it_is_recorded(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT1")
+    action = await _seed_action(dbsession, agreement, 1, "Comission statoin", 1000)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        _edit_url(fastapi_app, action),
+        json={"name": "Commission station", "creditAllocation": 1850},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["name"] == "Commission station"
+    assert data["creditAllocation"] == 1850
+
+    entries = await _action_history(dbsession, action)
+    assert [e.event for e in entries] == ["DETAILS_EDITED"]
+    changed = entries[0].snapshot["changed"]
+    assert changed["name"] == {"from": "Comission statoin", "to": "Commission station"}
+    assert changed["credit_allocation"] == {"from": 1000, "to": 1850}
+
+
+@pytest.mark.anyio
+async def test_an_action_can_be_corrected_after_the_agreement_is_underway(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """A wrong figure should be fixable rather than worked around."""
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT2")
+    action = await _seed_action(dbsession, agreement, 1, "Commission station")
+    action.current_status_id = await _action_status_id(dbsession, "Underway")
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        _edit_url(fastapi_app, action), json={"name": "Corrected while underway"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["name"] == "Corrected while underway"
+
+
+@pytest.mark.anyio
+async def test_editing_nothing_records_nothing(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT3")
+    action = await _seed_action(dbsession, agreement, 1, "Commission station", 1000)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        _edit_url(fastapi_app, action),
+        json={"name": "Commission station", "creditAllocation": 1000},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert await _action_history(dbsession, action) == []
+
+
+@pytest.mark.anyio
+async def test_the_completion_date_can_be_set_and_cleared(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT4")
+    action = await _seed_action(dbsession, agreement, 1, "Commission station")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    dated = await client.put(
+        _edit_url(fastapi_app, action), json={"specifiedDate": "2026-09-30"}
+    )
+    assert dated.json()["specifiedDate"] == "2026-09-30"
+
+    cleared = await client.put(
+        _edit_url(fastapi_app, action), json={"clearSpecifiedDate": True}
+    )
+    assert cleared.json()["specifiedDate"] is None
+
+
+@pytest.mark.anyio
+async def test_an_edit_cannot_blank_the_name_or_go_negative(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT5")
+    action = await _seed_action(dbsession, agreement, 1, "Commission station")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    blank = await client.put(_edit_url(fastapi_app, action), json={"name": "  "})
+    assert blank.status_code == status.HTTP_400_BAD_REQUEST
+
+    negative = await client.put(
+        _edit_url(fastapi_app, action), json={"creditAllocation": -5}
+    )
+    assert negative.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.anyio
+async def test_a_manager_may_also_correct_an_action(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT6")
+    action = await _seed_action(dbsession, agreement, 1, "Commission station")
+    set_mock_user(fastapi_app, IDIR_IA_MANAGER)
+
+    response = await client.put(
+        _edit_url(fastapi_app, action), json={"name": "Manager's correction"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.anyio
+async def test_a_proponent_cannot_correct_an_action(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT7")
+    action = await _seed_action(dbsession, agreement, 1, "Commission station")
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
+
+    response = await client.put(
+        _edit_url(fastapi_app, action), json={"name": "Not mine to change"}
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN

@@ -248,6 +248,16 @@ class DesignatedActionCreateSchema(BaseSchema):
     specified_date: Optional[date] = None
 
 
+class DesignatedActionUpdateSchema(BaseSchema):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    credit_allocation: Optional[int] = None
+    specified_date: Optional[date] = None
+    # Distinguishes "clear the date" from "leave it alone", which a bare
+    # null cannot.
+    clear_specified_date: bool = False
+
+
 class DesignatedActionProfileSchema(DesignatedActionSchema):
     initiative_agreement_id: int
     ia_code: Optional[str] = None

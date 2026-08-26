@@ -73,7 +73,11 @@
     "dateLabel": "Date for completion",
     "create": "Add designated action",
     "draftOnly": "Designated actions can only be added while the agreement is a draft.",
-    "createFailed": "The designated action could not be added."
+    "createFailed": "The designated action could not be added.",
+    "edit": "Edit details",
+    "editTitle": "Edit designated action",
+    "save": "Save changes",
+    "editFailed": "The changes could not be saved."
   },
   "actionDetail": {
     "title": "Designated actions",
@@ -206,7 +210,9 @@
       "evidenceReviewed": "Evidence accepted",
       "changeOrder": "Change order",
       "creditsIssued": "Compliance units issued",
-      "unknown": "Activity"
-    }
+      "unknown": "Activity",
+      "detailsEdited": "Details edited"
+    },
+    "changed": "{{field}}: {{from}} → {{to}}"
   }
 }
