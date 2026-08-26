@@ -666,3 +666,69 @@ async def test_dashboard_counts_cover_only_agreement_kind_rows(
     data = response.json()
     assert data["underway"] == 2
     assert data["draft"] == 1
+
+
+@pytest.mark.anyio
+async def test_document_access_check_accepts_an_agreement_kind_record(dbsession):
+    """Agreement-management records carry no award-era compliance_units or
+    current_status. The document upload path read one through the legacy
+    response schema, which requires both, so every upload to an agreement
+    failed validation before it reached S3.
+
+    The upload itself cannot run here (it needs object storage), so this
+    exercises the check that broke.
+    """
+    from types import SimpleNamespace
+
+    from lcfs.services.s3.client import DocumentService
+    from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
+
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26UPLD")
+    assert agreement.compliance_units is None
+    assert agreement.current_status_id is None
+
+    service = DocumentService(
+        db=dbsession,
+        clamav_service=None,
+        s3_client=None,
+        compliance_report_repo=None,
+        fuel_supply_repo=None,
+        admin_adjustment_service=None,
+        initiative_agreement_service=None,
+        charging_site_repo=None,
+        initiative_agreement_repo=InitiativeAgreementRepository(dbsession),
+    )
+    government = SimpleNamespace(role_names=[RoleEnum.GOVERNMENT])
+
+    # Raised a pydantic ValidationError before the fix.
+    await service._verify_initiative_agreement_access(
+        agreement.initiative_agreement_id, government
+    )
+
+
+@pytest.mark.anyio
+async def test_document_access_check_still_refuses_a_missing_agreement(dbsession):
+    from types import SimpleNamespace
+
+    from fastapi import HTTPException
+
+    from lcfs.services.s3.client import DocumentService
+    from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
+
+    service = DocumentService(
+        db=dbsession,
+        clamav_service=None,
+        s3_client=None,
+        compliance_report_repo=None,
+        fuel_supply_repo=None,
+        admin_adjustment_service=None,
+        initiative_agreement_service=None,
+        charging_site_repo=None,
+        initiative_agreement_repo=InitiativeAgreementRepository(dbsession),
+    )
+    government = SimpleNamespace(role_names=[RoleEnum.GOVERNMENT])
+
+    with pytest.raises(HTTPException) as raised:
+        await service._verify_initiative_agreement_access(999999, government)
+    assert raised.value.status_code == 404

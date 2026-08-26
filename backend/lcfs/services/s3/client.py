@@ -19,6 +19,7 @@ from lcfs.db.models.initiative_agreement.DesignatedAction import (
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from sqlalchemy import select, delete, and_
 from sqlalchemy.engine import Row
@@ -136,8 +137,10 @@ class DocumentService:
         admin_adjustment_service: AdminAdjustmentServices = Depends(),
         initiative_agreement_service: InitiativeAgreementServices = Depends(),
         charging_site_repo: ChargingSiteRepository = Depends(),
+        initiative_agreement_repo: InitiativeAgreementRepository = Depends(),
     ):
         self.initiative_agreement_service = initiative_agreement_service
+        self.initiative_agreement_repo = initiative_agreement_repo
         self.admin_adjustment_service = admin_adjustment_service
         self.db = db
         self.clamav_service = clamav_service
@@ -270,8 +273,12 @@ class DocumentService:
             )
             await self.db.execute(stmt)
         elif parent_type == "initiativeAgreement":
+            # Read through the repository, not the legacy response schema:
+            # agreement-management records carry no award-era
+            # compliance_units or current_status, both of which that schema
+            # requires, so validating one here rejected the upload.
             initiative_agreement = (
-                await self.initiative_agreement_service.get_initiative_agreement(
+                await self.initiative_agreement_repo.get_initiative_agreement_by_id(
                     parent_id
                 )
             )
@@ -389,8 +396,11 @@ class DocumentService:
         )
 
     async def _verify_initiative_agreement_access(self, parent_id, user):
+        # Repository, not the legacy schema — see the note in upload_file.
         initiative_agreement = (
-            await self.initiative_agreement_service.get_initiative_agreement(parent_id)
+            await self.initiative_agreement_repo.get_initiative_agreement_by_id(
+                parent_id
+            )
         )
         if not initiative_agreement:
             raise HTTPException(
