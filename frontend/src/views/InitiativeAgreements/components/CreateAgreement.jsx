@@ -8,7 +8,9 @@ import {
   MenuItem,
   TextField
 } from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
+
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
@@ -114,11 +116,15 @@ export const CreateAgreement = () => {
         variant="contained"
         color="primary"
         size="small"
-        startIcon={<AddIcon />}
+        startIcon={
+          <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
+        }
         data-test="create-agreement"
         onClick={() => setOpen(true)}
       >
-        {t('initiativeAgreement:create.button')}
+        <BCTypography variant="subtitle2">
+          {t('initiativeAgreement:create.button')}
+        </BCTypography>
       </BCButton>
 
       <BCModal
