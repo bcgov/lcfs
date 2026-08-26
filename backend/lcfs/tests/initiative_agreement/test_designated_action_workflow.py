@@ -443,3 +443,70 @@ async def test_the_history_endpoint_returns_the_trail_newest_first(
     assert response.status_code == status.HTTP_200_OK
     events = [entry["event"] for entry in response.json()]
     assert events == [EVENT_CREDITS_RECOMMENDED, EVENT_EVIDENCE_REVIEWED]
+
+
+@pytest.mark.anyio
+async def test_the_history_names_the_analyst_rather_than_an_id(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Assignment events store ids; a reader needs names."""
+    from lcfs.tests.initiative_agreement.test_designated_actions_api import (
+        _seed_ia_analyst,
+    )
+
+    action = await _seed_da(dbsession, "IA-26WFI")
+    first = await _seed_ia_analyst(dbsession, "hfong", "Harriet", "Fong")
+    second = await _seed_ia_analyst(dbsession, "jwills", "Jo", "Willems")
+    set_mock_user(fastapi_app, IDIR_IA_MANAGER)
+
+    assign_url = fastapi_app.url_path_for(
+        "assign_designated_action_analyst",
+        designated_action_id=action.designated_action_id,
+    )
+    await client.put(assign_url, json={"assignedAnalystId": first.user_profile_id})
+    await client.put(assign_url, json={"assignedAnalystId": second.user_profile_id})
+
+    response = await client.get(
+        fastapi_app.url_path_for(
+            "get_designated_action_history",
+            designated_action_id=action.designated_action_id,
+        )
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    reassignment = response.json()[0]
+    assert reassignment["snapshot"]["from_analyst"] == "Harriet Fong"
+    assert reassignment["snapshot"]["to_analyst"] == "Jo Willems"
+    # The stable ids are still there underneath.
+    assert reassignment["snapshot"]["from_analyst_id"] == first.user_profile_id
+
+
+@pytest.mark.anyio
+async def test_an_unassignment_names_only_who_was_removed(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    from lcfs.tests.initiative_agreement.test_designated_actions_api import (
+        _seed_ia_analyst,
+    )
+
+    action = await _seed_da(dbsession, "IA-26WFJ")
+    analyst = await _seed_ia_analyst(dbsession, "kpatel", "Kiran", "Patel")
+    set_mock_user(fastapi_app, IDIR_IA_MANAGER)
+
+    assign_url = fastapi_app.url_path_for(
+        "assign_designated_action_analyst",
+        designated_action_id=action.designated_action_id,
+    )
+    await client.put(assign_url, json={"assignedAnalystId": analyst.user_profile_id})
+    await client.put(assign_url, json={"assignedAnalystId": None})
+
+    response = await client.get(
+        fastapi_app.url_path_for(
+            "get_designated_action_history",
+            designated_action_id=action.designated_action_id,
+        )
+    )
+
+    unassignment = response.json()[0]
+    assert unassignment["snapshot"]["from_analyst"] == "Kiran Patel"
+    assert unassignment["snapshot"]["to_analyst"] is None

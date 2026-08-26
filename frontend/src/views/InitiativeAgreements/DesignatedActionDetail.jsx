@@ -37,6 +37,7 @@ import { InitiativeAgreementTabs } from './components/InitiativeAgreementTabs'
 import { DocumentTree } from './components/DocumentTree'
 import { EvidenceOfCompletion } from './components/EvidenceOfCompletion'
 import { DesignatedActionWorkflow } from './components/DesignatedActionWorkflow'
+import { DesignatedActionHistoryPanel } from './components/DesignatedActionHistoryPanel'
 
 // The shared document machinery keys on this string for designated actions.
 const PARENT_TYPE = 'designatedAction'
@@ -335,6 +336,11 @@ const DesignatedActionDetailBase = () => {
         parentType={PARENT_TYPE}
         parentID={designatedActionId}
       />
+
+      {/* The audit trail behind every workflow step (#4898). */}
+      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
+        <DesignatedActionHistoryPanel designatedActionId={designatedActionId} />
+      </Role>
 
       {/* Standard dual-mode thread (#4900); the page is IDIR-only until
           the BCeID story, matching the API. */}

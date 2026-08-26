@@ -232,6 +232,9 @@ class DesignatedActionHistorySchema(BaseSchema):
     display_name: Optional[str] = None
     create_date: Optional[datetime] = None
     status: Optional[DesignatedActionStatusSchema] = None
+    # Free-form event payload. Its keys are data rather than schema fields,
+    # so they stay exactly as stored — snake_case — while the surrounding
+    # response is camelCase. Readers of the snapshot must expect that.
     snapshot: Optional[dict] = None
 
     class Config:
