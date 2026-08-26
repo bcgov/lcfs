@@ -49,7 +49,6 @@ export const AnalystReviewSummary = ({
   const [addressedFindingIds, setAddressedFindingIds] = useState<Set<string>>(
     new Set()
   )
-  const typedSummary = useTypewriter(data?.summary || '')
   const actionableFindingIds = useMemo(() => {
     if (!data?.sections) {
       return []
@@ -290,7 +289,7 @@ export const AnalystReviewSummary = ({
                     wordBreak: 'break-word'
                   }}
                 >
-                  {typedSummary}
+                  {data?.summary || ''}
                   <BCBox
                     component="span"
                     sx={{
