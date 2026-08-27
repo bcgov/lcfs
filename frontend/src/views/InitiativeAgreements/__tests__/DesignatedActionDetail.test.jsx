@@ -56,7 +56,14 @@ vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
 }))
 
 vi.mock('../components/DocumentTree', () => ({
-  DocumentTree: () => <div data-test="document-tree" />
+  // The tree owns the section's card and header, so the page's own
+  // controls reach the screen through it.
+  DocumentTree: ({ title, headerAction }) => (
+    <div data-test="document-tree">
+      <span>{title}</span>
+      {headerAction}
+    </div>
+  )
 }))
 
 vi.mock('../components/EvidenceOfCompletion', () => ({

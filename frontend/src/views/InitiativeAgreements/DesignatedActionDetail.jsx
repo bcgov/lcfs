@@ -269,44 +269,41 @@ const DesignatedActionDetailBase = () => {
               )}
             </Stack>
 
-            <Paper
-              variant="outlined"
-              sx={{ p: 2, mt: 3 }}
+            {/* The tree draws its own card, title and actions — wrapping
+                it in a second bordered box with a second heading only
+                made one section look like two. */}
+            <BCBox
+              sx={{ mt: 3 }}
               data-test="designated-action-documents-section"
             >
-              <BCBox
-                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}
-              >
-                <BCTypography variant="h6" color="primary">
-                  {t('initiativeAgreement:actionDetail.documents')}
-                </BCTypography>
-                {/* The folder tree arrives with #4925; evidence review
-                    with #4899. Upload stays IDIR-side, like the API. */}
-                <Role
-                  roles={[roles.ia_analyst, roles.ia_manager, roles.director]}
-                >
-                  <BCTypography
-                    component="button"
-                    variant="body4"
-                    color="link"
-                    data-test="upload-documents-button"
-                    onClick={() => setUploadOpen(true)}
-                    sx={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textDecoration: 'underline'
-                    }}
-                  >
-                    {t('initiativeAgreement:actionDetail.manageDocuments')}
-                  </BCTypography>
-                </Role>
-              </BCBox>
               <DocumentTree
                 parentType={PARENT_TYPE}
                 parentID={designatedActionId}
+                title={t('initiativeAgreement:actionDetail.documents')}
+                headerAction={
+                  // Upload stays IDIR-side, like the API.
+                  <Role
+                    roles={[roles.ia_analyst, roles.ia_manager, roles.director]}
+                  >
+                    <BCTypography
+                      component="button"
+                      variant="body4"
+                      color="link"
+                      data-test="upload-documents-button"
+                      onClick={() => setUploadOpen(true)}
+                      sx={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      {t('initiativeAgreement:actionDetail.manageDocuments')}
+                    </BCTypography>
+                  </Role>
+                }
               />
-            </Paper>
+            </BCBox>
           </BCBox>
         }
       />

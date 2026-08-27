@@ -403,6 +403,9 @@ class DocumentFolderServices:
         folders = await self.repo.get_folders(parent_type, parent_id)
         documents = await self.repo.get_parent_documents(parent_id)
         placements = await self.repo.get_placements([f.folder_id for f in folders])
+        org_codes = await self.repo.get_uploading_organization_codes(
+            [d.create_user for d in documents]
+        )
 
         docs_by_folder: Dict[int, List[FolderDocumentSchema]] = {}
         root_documents: List[FolderDocumentSchema] = []
@@ -410,9 +413,11 @@ class DocumentFolderServices:
             payload = FolderDocumentSchema(
                 document_id=document.document_id,
                 file_name=document.file_name,
+                display_name=document.display_name,
                 file_size=document.file_size,
                 create_date=document.create_date,
                 create_user=document.create_user,
+                uploading_organization_code=org_codes.get(document.create_user),
             )
             folder_id = placements.get(document.document_id)
             if folder_id is None:

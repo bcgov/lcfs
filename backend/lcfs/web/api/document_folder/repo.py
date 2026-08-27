@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.document import Document, DocumentFolder, DocumentFolderItem
+from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
     designated_action_document_association,
@@ -309,3 +310,23 @@ class DocumentFolderRepository:
             .group_by(DocumentFolderItem.folder_id)
         )
         return {row[0]: row[1] for row in result.all()}
+
+    @repo_handler
+    async def get_uploading_organization_codes(self, usernames) -> Dict[str, str]:
+        """Map uploader usernames to their organization's code.
+
+        Government (IDIR) users carry no organization, so they are absent
+        from the result and their uploads render without a code.
+        """
+        wanted = {u for u in usernames if u}
+        if not wanted:
+            return {}
+        result = await self.db.execute(
+            select(UserProfile.keycloak_username, Organization.organization_code)
+            .join(
+                Organization,
+                UserProfile.organization_id == Organization.organization_id,
+            )
+            .where(UserProfile.keycloak_username.in_(wanted))
+        )
+        return {username: code for username, code in result.all()}

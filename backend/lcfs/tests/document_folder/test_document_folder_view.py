@@ -858,3 +858,27 @@ async def test_reparent_delete_still_puts_nothing_in_the_bin(
     tree = (await client.get(_tree_url(fastapi_app, action))).json()
     # C moved up under A rather than going anywhere.
     assert sorted(x["name"] for x in tree["folders"][0]["children"]) == ["C", "D"]
+
+
+@pytest.mark.anyio
+async def test_tree_carries_the_display_name_and_uploader_org(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """A rename sets display_name, so the tree has to return it.
+
+    Without it the tree keeps reading by the stored file name and a
+    rename looks like it silently did nothing.
+    """
+    action = await _seed_da(dbsession, "IA-26DSP1")
+    document = await _seed_document(dbsession, action, "stored-name.pdf")
+    document.display_name = "Signed permit.pdf"
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    row = tree["rootDocuments"][0]
+
+    assert row["fileName"] == "stored-name.pdf"
+    assert row["displayName"] == "Signed permit.pdf"
+    # Present in the payload even when the uploader has no organization.
+    assert "uploadingOrganizationCode" in row

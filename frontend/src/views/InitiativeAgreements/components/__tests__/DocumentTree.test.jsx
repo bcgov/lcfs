@@ -51,7 +51,8 @@ const tree = {
           fileName: 'permit.pdf',
           fileSize: 46080,
           createDate: '2026-05-12T00:00:00Z',
-          createUser: 'LCFS1_bat'
+          createUser: 'LCFS1_bat',
+          uploadingOrganizationCode: 'ORG1'
         }
       ],
       children: [
@@ -105,7 +106,36 @@ describe('DocumentTree', () => {
     expect(mockDownload).toHaveBeenCalledWith(88)
   })
 
-  it('renames a file by double-clicking its name', async () => {
+  it('lays each file row out in aligned columns', () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    const row = screen.getByTestId('tree-file-88')
+    // Name, then size, organisation and date in their own lanes, so the
+    // columns line up down the list rather than trailing each name.
+    expect(row).toHaveTextContent('permit.pdf')
+    expect(row).toHaveTextContent('46.1 kB')
+    expect(row).toHaveTextContent('ORG1')
+  })
+
+  it('titles the section and offers folder creation in its header', () => {
+    render(
+      <DocumentTree
+        parentType="designatedAction"
+        parentID="9"
+        title="Evidence submissions"
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('document-tree-title')).toHaveTextContent(
+      'Evidence submissions'
+    )
+    expect(screen.getByTestId('new-folder-button')).toBeInTheDocument()
+  })
+
+  it('renames a file by double-clicking its name', () => {
     render(<DocumentTree parentType="designatedAction" parentID="9" />, {
       wrapper
     })

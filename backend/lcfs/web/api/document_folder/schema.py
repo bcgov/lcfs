@@ -13,9 +13,14 @@ class FolderDocumentSchema(BaseSchema):
 
     document_id: int
     file_name: str
+    # What a rename set. The tree shows this where it exists, so a renamed
+    # file reads by its new name while the stored object keeps its key.
+    display_name: Optional[str] = None
     file_size: int
     create_date: Optional[datetime] = None
     create_user: Optional[str] = None
+    # Code of the uploader's organization; None for government uploads.
+    uploading_organization_code: Optional[str] = None
 
 
 class FolderNodeSchema(BaseSchema):

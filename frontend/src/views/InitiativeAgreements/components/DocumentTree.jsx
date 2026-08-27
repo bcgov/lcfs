@@ -6,6 +6,7 @@ import {
   Button,
   CircularProgress,
   IconButton,
+  Paper,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -36,7 +37,7 @@ import CreateNewFolderOutlinedIcon from '@mui/icons-material/CreateNewFolderOutl
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline'
-import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
+import FolderIcon from '@mui/icons-material/Folder'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
@@ -44,6 +45,7 @@ import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined'
 import prettyBytes from 'pretty-bytes'
 
 import BCBox from '@/components/BCBox'
+import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
@@ -74,6 +76,28 @@ import {
 // every move offers an undo.
 
 const AUTO_EXPAND_MS = 700
+
+// One lane of a file row's trailing metadata. Fixed widths are the whole
+// point: they are what make size, organisation and date line up down the
+// list instead of drifting with each name's length.
+const MetaColumn = ({ width, align = 'left', children }) => (
+  <BCTypography
+    component="span"
+    variant="subtitle2"
+    color="text.secondary"
+    sx={{
+      width,
+      flexShrink: 0,
+      textAlign: align,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      display: { xs: 'none', sm: 'block' }
+    }}
+  >
+    {children}
+  </BCTypography>
+)
 
 const NameEditor = ({ initialValue, onCommit, onCancel }) => (
   <TextField
@@ -133,11 +157,18 @@ const FileLabel = ({
         alignItems: 'center',
         gap: 1,
         py: 0.25,
+        width: '100%',
         opacity: isDragging ? 0.4 : 1
       }}
       data-test={`tree-file-${file.documentId}`}
     >
-      <InsertDriveFileOutlinedIcon fontSize="small" color="action" />
+      <InsertDriveFileOutlinedIcon
+        fontSize="small"
+        sx={{ color: 'info.main', flexShrink: 0 }}
+      />
+      {/* The name takes the slack so the columns after it line up down
+          the list rather than starting wherever each name happens to
+          end. */}
       <BCTypography
         component="span"
         variant="subtitle2"
@@ -146,15 +177,24 @@ const FileLabel = ({
           event.stopPropagation()
           onStartRename()
         }}
-        sx={{ cursor: canRename ? 'text' : 'default' }}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          cursor: canRename ? 'text' : 'default'
+        }}
       >
         {displayName}
       </BCTypography>
-      <BCTypography component="span" variant="subtitle2" color="text.secondary">
+      <MetaColumn width={64} align="right">
         {prettyBytes(file.fileSize ?? 0)}
-        {' · '}
+      </MetaColumn>
+      <MetaColumn width={64}>{file.uploadingOrganizationCode}</MetaColumn>
+      <MetaColumn width={96}>
         {timezoneFormatter({ value: file.createDate })}
-      </BCTypography>
+      </MetaColumn>
       {/* Double-click is the mouse shortcut, but it is only a shortcut:
           a rename reachable no other way would be mouse-only, which axe
           cannot see and a keyboard user cannot get past. */}
@@ -295,7 +335,10 @@ const FolderLabel = ({
         }
       }}
     >
-      <FolderOutlinedIcon fontSize="small" color="action" />
+      <FolderIcon
+        fontSize="small"
+        sx={{ color: 'primary.main', flexShrink: 0 }}
+      />
       {/* The drag handle is the name, not the whole row: the row also
           holds the actions button, and nesting one control inside another
           leaves neither reachable in order. */}
@@ -308,7 +351,7 @@ const FolderLabel = ({
         aria-label={t('initiativeAgreement:folders.folderDragHandle', {
           name: folder.name
         })}
-        sx={{ cursor: 'grab' }}
+        sx={{ cursor: 'grab', color: 'primary.main', fontWeight: 700 }}
       >
         {folder.name}
       </BCTypography>
@@ -369,7 +412,7 @@ const RootDropZone = ({ visible, label }) => {
   )
 }
 
-export const DocumentTree = ({ parentType, parentID }) => {
+export const DocumentTree = ({ parentType, parentID, title, headerAction }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const { data: tree, isLoading } = useDocumentTree(parentType, parentID)
   const downloadDocument = useDownloadDocument(parentType, parentID)
@@ -709,109 +752,135 @@ export const DocumentTree = ({ parentType, parentID }) => {
 
   return (
     <BCBox data-test="document-tree">
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-        <BCTypography
-          component="button"
-          variant="body4"
-          color="link"
-          data-test="new-folder-button"
-          onClick={() => setCreating({ parentFolderId: null })}
+      <Paper variant="outlined" sx={{ borderRadius: 1, overflow: 'hidden' }}>
+        {/* Title and the one creating action share a header band, so the
+            card reads as a section rather than a loose list. */}
+        <Box
           sx={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            textDecoration: 'underline',
-            display: 'inline-flex',
+            display: 'flex',
             alignItems: 'center',
-            gap: 0.5
+            justifyContent: 'space-between',
+            gap: 1,
+            px: 2,
+            py: 1.25,
+            bgcolor: 'grey.100',
+            borderBottom: '1px solid',
+            borderColor: 'divider'
           }}
         >
-          <CreateNewFolderOutlinedIcon fontSize="small" />
-          {t('initiativeAgreement:folders.newFolder')}
-        </BCTypography>
-      </Box>
+          <BCTypography
+            variant="body4"
+            color="primary"
+            sx={{ fontWeight: 700 }}
+            data-test="document-tree-title"
+          >
+            {title ?? t('initiativeAgreement:folders.title')}
+          </BCTypography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            {headerAction}
+            <BCButton
+              type="button"
+              variant="outlined"
+              color="primary"
+              size="small"
+              startIcon={<CreateNewFolderOutlinedIcon fontSize="small" />}
+              data-test="new-folder-button"
+              onClick={() => setCreating({ parentFolderId: null })}
+            >
+              {t('initiativeAgreement:folders.newFolder')}
+            </BCButton>
+          </Box>
+        </Box>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={pointerWithin}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        onDragCancel={() => {
-          clearTimeout(hoverTimer.current)
-          setDragState(null)
-        }}
-      >
-        <SimpleTreeView
-          multiSelect
-          selectedItems={selectedItems}
-          onSelectedItemsChange={(_event, items) =>
-            setSelectedItems(Array.isArray(items) ? items : [items])
-          }
-          expandedItems={expandedItems}
-          onExpandedItemsChange={(_event, items) => setExpandedItems(items)}
-        >
-          {folders.map(renderFolder)}
-          {creating && creating.parentFolderId === null && (
-            <TreeItem
-              itemId="new-at-root"
-              label={
-                <NameEditor
-                  initialValue={t('initiativeAgreement:folders.newFolderName')}
-                  onCommit={commitCreate}
-                  onCancel={() => setCreating(null)}
-                />
+        <Box sx={{ px: 1.5, py: 1 }}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={pointerWithin}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => {
+              clearTimeout(hoverTimer.current)
+              setDragState(null)
+            }}
+          >
+            <SimpleTreeView
+              multiSelect
+              selectedItems={selectedItems}
+              onSelectedItemsChange={(_event, items) =>
+                setSelectedItems(Array.isArray(items) ? items : [items])
               }
-            />
-          )}
-          {rootDocuments.map((file) => (
-            <TreeItem
-              key={`doc-${file.documentId}`}
-              itemId={`doc-${file.documentId}`}
-              label={
-                <FileLabel
-                  file={file}
-                  onDownload={downloadDocument}
-                  onDelete={(documentId) =>
-                    setPendingDelete({ documentId, fileName: file.fileName })
+              expandedItems={expandedItems}
+              onExpandedItemsChange={(_event, items) => setExpandedItems(items)}
+            >
+              {folders.map(renderFolder)}
+              {creating && creating.parentFolderId === null && (
+                <TreeItem
+                  itemId="new-at-root"
+                  label={
+                    <NameEditor
+                      initialValue={t(
+                        'initiativeAgreement:folders.newFolderName'
+                      )}
+                      onCommit={commitCreate}
+                      onCancel={() => setCreating(null)}
+                    />
                   }
                 />
-              }
+              )}
+              {rootDocuments.map((file) => (
+                <TreeItem
+                  key={`doc-${file.documentId}`}
+                  itemId={`doc-${file.documentId}`}
+                  label={
+                    <FileLabel
+                      file={file}
+                      onDownload={downloadDocument}
+                      onDelete={(documentId) =>
+                        setPendingDelete({
+                          documentId,
+                          fileName: file.fileName
+                        })
+                      }
+                    />
+                  }
+                />
+              ))}
+            </SimpleTreeView>
+
+            <RootDropZone
+              visible={!!dragState}
+              label={t('initiativeAgreement:folders.dropToRoot')}
             />
-          ))}
-        </SimpleTreeView>
 
-        <RootDropZone
-          visible={!!dragState}
-          label={t('initiativeAgreement:folders.dropToRoot')}
-        />
+            <DragOverlay>
+              {dragState ? (
+                <Box
+                  sx={{
+                    px: 1.5,
+                    py: 0.5,
+                    bgcolor: 'background.paper',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    boxShadow: 2
+                  }}
+                >
+                  <BCTypography variant="subtitle2">
+                    {activeDragLabel()}
+                  </BCTypography>
+                </Box>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
 
-        <DragOverlay>
-          {dragState ? (
-            <Box
-              sx={{
-                px: 1.5,
-                py: 0.5,
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1,
-                boxShadow: 2
-              }}
-            >
-              <BCTypography variant="subtitle2">
-                {activeDragLabel()}
-              </BCTypography>
-            </Box>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
-
-      {!folders.length && !rootDocuments.length && !creating && (
-        <BCTypography variant="body4" color="text.secondary">
-          {t('initiativeAgreement:folders.empty')}
-        </BCTypography>
-      )}
+          {!folders.length && !rootDocuments.length && !creating && (
+            <BCTypography variant="body4" color="text.secondary">
+              {t('initiativeAgreement:folders.empty')}
+            </BCTypography>
+          )}
+        </Box>
+      </Paper>
 
       <BCModal
         open={!!pendingDelete}
@@ -840,7 +909,7 @@ export const DocumentTree = ({ parentType, parentID }) => {
         variant="body4"
         color="text.secondary"
         component="p"
-        sx={{ mt: 1 }}
+        sx={{ mt: 1.5, textAlign: 'center' }}
       >
         {t('initiativeAgreement:folders.helperText')}
       </BCTypography>
