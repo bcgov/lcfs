@@ -12,11 +12,12 @@ import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'
 import { ROUTES, buildPath } from '@/routes/routes'
-import { useGetFuelCodeGroup } from '@/hooks/useFuelCode'
+import { useGetFuelCode, useGetFuelCodeGroup } from '@/hooks/useFuelCode'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useFuelCodePageStore } from '@/stores/useFuelCodePageStore'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import withRole from '@/utils/withRole'
-import { govRoles } from '@/constants/roles'
+import { govRoles, nonGovRoles } from '@/constants/roles'
 import { iterationColDefs } from './_schema'
 
 const formatDate = (value) => {
@@ -138,7 +139,6 @@ const IterationCardContent = ({ data, t }) => {
         columnGap={8}
         rowGap={0}
       >
-        {/* Left Column — fuel & feedstock info */}
         <BCBox display="flex" flexDirection="column">
           <DetailRow
             label="Fuel"
@@ -196,7 +196,6 @@ const IterationCardContent = ({ data, t }) => {
           />
         </BCBox>
 
-        {/* Right Column — company, contact, dates */}
         <BCBox display="flex" flexDirection="column">
           {data.company && (
             <BCTypography
@@ -462,6 +461,8 @@ const ComplianceUnitsChart = ({ data, t }) => {
 const FuelCodeDetailBase = () => {
   const { fuelCodeID } = useParams()
   const { t } = useTranslation(['fuelCode', 'common'])
+  const { data: currentUser } = useCurrentUser()
+  const isGovernmentUser = currentUser?.isGovernmentUser === true
   const gridRef = useRef(null)
   const [paginationOptions, setPaginationOptions] = useState({
     page: 1,
@@ -473,7 +474,25 @@ const FuelCodeDetailBase = () => {
     (state) => state.setFuelCodeTitle
   )
 
-  const { data, isLoading, isError, error } = useGetFuelCodeGroup(fuelCodeID)
+  const groupQuery = useGetFuelCodeGroup(fuelCodeID, {
+    enabled: Boolean(fuelCodeID) && isGovernmentUser
+  })
+  const fuelCodeQuery = useGetFuelCode(fuelCodeID, {
+    enabled: Boolean(fuelCodeID) && !isGovernmentUser
+  })
+
+  const activeQuery = isGovernmentUser ? groupQuery : fuelCodeQuery
+  const { isLoading, isError, error } = activeQuery
+  const data = isGovernmentUser
+    ? groupQuery.data
+    : fuelCodeQuery.data
+      ? {
+          latestIteration: fuelCodeQuery.data,
+          iterations: [],
+          volumeOverTime: [],
+          complianceUnitsOverTime: []
+        }
+      : undefined
 
   const latest = data?.latestIteration
   const iterations = data?.iterations ?? []
@@ -486,7 +505,6 @@ const FuelCodeDetailBase = () => {
   const baseTitle = formatFuelCodeLabel(prefix, baseSuffix)
   const iterationLabel = formatFuelCodeLabel(prefix, suffix)
 
-  // Sync the base fuel code title into the breadcrumb store
   useEffect(() => {
     if (baseTitle) {
       setFuelCodeTitle(baseTitle)
@@ -572,10 +590,9 @@ const FuelCodeDetailBase = () => {
 
   return (
     <BCBox mx={-1}>
-      <FuelCodesTabs variant="internal" />
+      <FuelCodesTabs variant={isGovernmentUser ? 'internal' : 'default'} />
 
       <BCBox sx={{ px: 3, pt: 2 }}>
-        {/* Latest iteration card */}
         {isLoading ? (
           <>
             <Skeleton variant="text" width={280} height={42} sx={{ mb: 2 }} />
@@ -615,99 +632,104 @@ const FuelCodeDetailBase = () => {
           </>
         )}
 
-        {/* Iterations table */}
-        <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
-          {isLoading
-            ? t('fuelCode:detail.allIterationsTitle')
-            : baseTitle
-              ? `${baseTitle} ${t('fuelCode:detail.iterationsSuffix')}`
-              : t('fuelCode:detail.allIterationsTitle')}
-        </BCTypography>
-        <BCBox sx={{ width: '100%', mb: 4, overflowX: 'auto' }}>
-          {isLoading ? (
-            <Card elevation={1} sx={{ width: '100%', minWidth: 980 }}>
-              <CardContent sx={{ p: 2 }}>
-                <Skeleton variant="rounded" height={38} sx={{ mb: 1 }} />
-                <Skeleton variant="rounded" height={46} sx={{ mb: 1 }} />
-                <Skeleton variant="rounded" height={46} sx={{ mb: 1 }} />
-                <Skeleton variant="rounded" height={46} />
-              </CardContent>
-            </Card>
-          ) : (
-            <BCGridViewer
-              gridRef={gridRef}
-              queryData={queryData}
-              dataKey="fuelCodes"
-              columnDefs={colDefs}
-              gridKey="fuel-code-iterations-grid"
-              gridOptions={iterationGridOptions}
-              defaultColDef={iterationDefaultColDef}
-              paginationOptions={paginationOptions}
-              onPaginationChange={handleIterationPaginationChange}
-              enablePageCaching={false}
-              overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
-              getRowId={(params) =>
-                params.data.id ?? params.data.fuelCodeId?.toString()
-              }
-            />
-          )}
-        </BCBox>
-
-        {/* Charts: side-by-side when ≥750px viewport, stacked below */}
-        {/* Charts: stacked under 750px, side-by-side above */}
-        <BCBox
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr)',
-            '@media (min-width:750px)': {
-              gridTemplateColumns: 'repeat(2, minmax(320px, 1fr))'
-            },
-            columnGap: { xs: 2, md: 3 },
-            rowGap: { xs: 2, md: 3 },
-            mb: 4,
-            width: '100%',
-            maxWidth: '2160px'
-          }}
-        >
-          {/* Volume over time chart */}
-          <BCBox sx={{ minWidth: 0 }}>
+        {isGovernmentUser && (
+          <>
             <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
-              {t('fuelCode:detail.volumeOverTimeTitle')}
+              {isLoading
+                ? t('fuelCode:detail.allIterationsTitle')
+                : baseTitle
+                  ? `${baseTitle} ${t('fuelCode:detail.iterationsSuffix')}`
+                  : t('fuelCode:detail.allIterationsTitle')}
             </BCTypography>
-            <Card elevation={1} sx={{ width: '100%', height: '100%' }}>
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton variant="rounded" height={360} />
-                ) : (
-                  <VolumeChart data={volumeOverTime} t={t} />
-                )}
-              </CardContent>
-            </Card>
-          </BCBox>
+            <BCBox sx={{ width: '100%', mb: 4, overflowX: 'auto' }}>
+              {isLoading ? (
+                <Card elevation={1} sx={{ width: '100%', minWidth: 980 }}>
+                  <CardContent sx={{ p: 2 }}>
+                    <Skeleton variant="rounded" height={38} sx={{ mb: 1 }} />
+                    <Skeleton variant="rounded" height={46} sx={{ mb: 1 }} />
+                    <Skeleton variant="rounded" height={46} sx={{ mb: 1 }} />
+                    <Skeleton variant="rounded" height={46} />
+                  </CardContent>
+                </Card>
+              ) : (
+                <BCGridViewer
+                  gridRef={gridRef}
+                  queryData={queryData}
+                  dataKey="fuelCodes"
+                  columnDefs={colDefs}
+                  gridKey="fuel-code-iterations-grid"
+                  gridOptions={iterationGridOptions}
+                  defaultColDef={iterationDefaultColDef}
+                  paginationOptions={paginationOptions}
+                  onPaginationChange={handleIterationPaginationChange}
+                  enablePageCaching={false}
+                  overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
+                  getRowId={(params) =>
+                    params.data.id ?? params.data.fuelCodeId?.toString()
+                  }
+                />
+              )}
+            </BCBox>
 
-          {/* Compliance units over time chart */}
-          <BCBox sx={{ minWidth: 0 }}>
-            <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
-              {t('fuelCode:detail.complianceUnitsOverTimeTitle')}
-            </BCTypography>
-            <Card
-              elevation={1}
-              sx={{ width: '100%', height: '100%' }}
-              data-test="compliance-units-chart-card"
+            <BCBox
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr)',
+                '@media (min-width:750px)': {
+                  gridTemplateColumns: 'repeat(2, minmax(320px, 1fr))'
+                },
+                columnGap: { xs: 2, md: 3 },
+                rowGap: { xs: 2, md: 3 },
+                mb: 4,
+                width: '100%',
+                maxWidth: '2160px'
+              }}
             >
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton variant="rounded" height={360} />
-                ) : (
-                  <ComplianceUnitsChart data={complianceUnitsOverTime} t={t} />
-                )}
-              </CardContent>
-            </Card>
-          </BCBox>
-        </BCBox>
+              <BCBox sx={{ minWidth: 0 }}>
+                <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
+                  {t('fuelCode:detail.volumeOverTimeTitle')}
+                </BCTypography>
+                <Card elevation={1} sx={{ width: '100%', height: '100%' }}>
+                  <CardContent>
+                    {isLoading ? (
+                      <Skeleton variant="rounded" height={360} />
+                    ) : (
+                      <VolumeChart data={volumeOverTime} t={t} />
+                    )}
+                  </CardContent>
+                </Card>
+              </BCBox>
+
+              <BCBox sx={{ minWidth: 0 }}>
+                <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
+                  {t('fuelCode:detail.complianceUnitsOverTimeTitle')}
+                </BCTypography>
+                <Card
+                  elevation={1}
+                  sx={{ width: '100%', height: '100%' }}
+                  data-test="compliance-units-chart-card"
+                >
+                  <CardContent>
+                    {isLoading ? (
+                      <Skeleton variant="rounded" height={360} />
+                    ) : (
+                      <ComplianceUnitsChart
+                        data={complianceUnitsOverTime}
+                        t={t}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              </BCBox>
+            </BCBox>
+          </>
+        )}
       </BCBox>
     </BCBox>
   )
 }
 
-export const FuelCodeDetail = withRole(FuelCodeDetailBase, govRoles)
+export const FuelCodeDetail = withRole(FuelCodeDetailBase, [
+  ...govRoles,
+  ...nonGovRoles
+])
