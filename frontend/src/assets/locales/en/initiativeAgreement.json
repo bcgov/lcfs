@@ -137,7 +137,11 @@
     "uploadFailed": "The file could not be uploaded.",
     "downloadFile": "Download {{name}}",
     "renameFailed": "The file could not be renamed.",
-    "renameFile": "Rename {{name}}"
+    "renameFile": "Rename {{name}}",
+    "binFileCount": "{{count}} file",
+    "binFileCount_other": "{{count}} files",
+    "restoreFolderLabel": "Restore folder {{name}} and its files",
+    "restoreFileLabel": "Restore {{name}}"
   },
   "evidence": {
     "sectionTitle": "Evidence of completion of designated action:",

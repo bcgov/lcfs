@@ -17,9 +17,11 @@ vi.mock('@/utils/formatters', () => ({
 
 const mockDeleted = vi.fn()
 const mockRestore = vi.fn()
+const mockRestoreFolder = vi.fn()
 vi.mock('@/hooks/useDocumentFolders', () => ({
   useDeletedDocuments: () => mockDeleted(),
-  useRestoreDocument: () => ({ mutate: mockRestore })
+  useRestoreDocument: () => ({ mutate: mockRestore }),
+  useRestoreFolder: () => ({ mutate: mockRestoreFolder })
 }))
 
 const binned = (overrides = {}) => ({
@@ -150,5 +152,88 @@ describe('DeletedItems', () => {
       }
     })
     expect(results.violations.map((v) => v.id)).toEqual([])
+  })
+})
+
+describe('DeletedItems folders', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockDeleted.mockReturnValue({
+      data: {
+        documents: [],
+        folders: [
+          {
+            folderId: 12,
+            name: 'Permits',
+            path: ['Evidence', '2026'],
+            documentCount: 3,
+            deletedDate: '2026-08-20T00:00:00Z',
+            deletedBy: 'LCFS1_bat',
+            deletedByName: 'Bat Analyst'
+          },
+          {
+            folderId: 13,
+            name: 'At the top',
+            path: [],
+            documentCount: 1,
+            deletedDate: '2026-08-19T00:00:00Z',
+            deletedBy: 'LCFS1_bat',
+            deletedByName: 'Bat Analyst'
+          }
+        ],
+        total: 2
+      }
+    })
+  })
+
+  const open = () => fireEvent.click(screen.getByTestId('deleted-items-header'))
+
+  it('lists a deleted folder with what it holds and where it returns to', () => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+    open()
+
+    const row = screen.getByTestId('deleted-folder-12')
+    expect(row).toHaveTextContent('Permits')
+    expect(row).toHaveTextContent('binFileCount')
+    // The path shows where a restore will put it back.
+    expect(row).toHaveTextContent('Evidence / 2026')
+  })
+
+  it('says a folder returns to the top level when it has no path', () => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+    open()
+
+    expect(screen.getByTestId('deleted-folder-13')).toHaveTextContent(
+      'restoreToRoot'
+    )
+  })
+
+  it('restores a folder', () => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+    open()
+
+    fireEvent.click(screen.getByTestId('restore-folder-12'))
+
+    expect(mockRestoreFolder).toHaveBeenCalledWith(12)
+    // A folder restore is its own operation; it must not be routed
+    // through the single-document restore.
+    expect(mockRestore).not.toHaveBeenCalled()
+  })
+
+  it('is not empty when only folders are in the bin', () => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+    open()
+
+    expect(
+      screen.queryByText('initiativeAgreement:folders.binEmpty')
+    ).toBeNull()
   })
 })

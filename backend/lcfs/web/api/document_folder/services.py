@@ -1,6 +1,7 @@
 import structlog
+import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from fastapi import Depends, HTTPException, Request
 
@@ -11,6 +12,7 @@ from lcfs.web.api.document_folder.constants import (
 )
 from lcfs.web.api.document_folder.repo import DocumentFolderRepository
 from lcfs.web.api.document_folder.schema import (
+    DeletedFolderSchema,
     DeletedDocumentSchema,
     DeletedDocumentsSchema,
     DocumentFolderTreeSchema,
@@ -49,18 +51,37 @@ class DocumentFolderServices:
             )
 
     async def _get_scoped_folder(
-        self, folder_id: int, parent_type: str, parent_id: int
+        self,
+        folder_id: int,
+        parent_type: str,
+        parent_id: int,
+        include_deleted: bool = False,
     ) -> DocumentFolder:
         folder = await self.repo.get_folder(folder_id)
         if (
             folder is None
             or folder.parent_type != parent_type
             or folder.parent_id != parent_id
+            or (folder.deleted_date is not None and not include_deleted)
         ):
-            # A folder belonging to another parent is indistinguishable
-            # from a missing one on purpose.
+            # A folder belonging to another parent — or sitting in the bin
+            # — is indistinguishable from a missing one on purpose.
             raise DataNotFoundException(f"Folder {folder_id} not found")
         return folder
+
+    @staticmethod
+    def _subtree_ids(root_id: int, folders: List[DocumentFolder]) -> List[int]:
+        """*root_id* and every folder beneath it, deleted rows included."""
+        children_of: Dict[Optional[int], List[int]] = {}
+        for f in folders:
+            children_of.setdefault(f.parent_folder_id, []).append(f.folder_id)
+        subtree = [root_id]
+        frontier = [root_id]
+        while frontier:
+            for child_id in children_of.get(frontier.pop(), []):
+                subtree.append(child_id)
+                frontier.append(child_id)
+        return subtree
 
     async def _walk_depth_and_cycles(
         self,
@@ -131,11 +152,151 @@ class DocumentFolderServices:
                 or folder.parent_type != parent_type
                 or folder.parent_id != parent_id
             ):
-                # The folder it came from has gone. Put it at the top
-                # level rather than resurrecting a folder someone removed.
+                # Belongs to another parent, or the row is simply gone.
                 await self.repo.set_placements([document_id], None)
+            elif folder.deleted_date is not None:
+                # Its folder is in the bin. Restore the folder itself and
+                # the chain above it as empty shells, so the file returns
+                # where it lived instead of landing at the root — the same
+                # rule restoring a folder follows. Nothing else in those
+                # folders comes back.
+                folders = await self.repo.get_all_folders_including_deleted(
+                    parent_type, parent_id
+                )
+                await self._restore_ancestor_path(folder, folders)
+                folder.name = await self._free_sibling_name(
+                    folder, folder.parent_folder_id, folders
+                )
+                folder.deleted_date = None
+                folder.deleted_by = None
+                folder.deleted_group_uuid = None
         document.deleted_date = None
         document.deleted_by = None
+        document.deleted_group_uuid = None
+        await self.repo.db.flush()
+
+    async def _free_sibling_name(
+        self,
+        folder: DocumentFolder,
+        parent_folder_id: Optional[int],
+        folders: List[DocumentFolder],
+    ) -> str:
+        """A name for *folder* that no live sibling already holds.
+
+        Sibling names are unique among live folders, and while a folder sat
+        in the bin someone may well have made a new one with its name.
+        Refusing the restore would leave no way forward at all, so the
+        returned folder is suffixed instead.
+        """
+        taken = {
+            f.name.lower()
+            for f in folders
+            if f.deleted_date is None
+            and f.parent_folder_id == parent_folder_id
+            and f.folder_id != folder.folder_id
+        }
+        if folder.name.lower() not in taken:
+            return folder.name
+        candidate = f"{folder.name} (restored)"
+        suffix = 2
+        while candidate.lower() in taken:
+            candidate = f"{folder.name} (restored {suffix})"
+            suffix += 1
+        return candidate
+
+    async def _restore_ancestor_path(
+        self, folder: DocumentFolder, folders: List[DocumentFolder]
+    ) -> None:
+        """Bring back whichever ancestors of *folder* are in the bin.
+
+        Only the chain itself: each comes back as an empty shell, and its
+        own files and other children stay binned. Without this the thing
+        being restored has no address, and dropping it at the root would
+        lose the place it is being restored to.
+        """
+        by_id = {f.folder_id: f for f in folders}
+        binned = []
+        cursor = by_id.get(folder.parent_folder_id) if folder.parent_folder_id else None
+        seen: Set[int] = set()
+        while cursor is not None and cursor.folder_id not in seen:
+            seen.add(cursor.folder_id)
+            if cursor.deleted_date is not None:
+                binned.append(cursor)
+            cursor = (
+                by_id.get(cursor.parent_folder_id) if cursor.parent_folder_id else None
+            )
+
+        # Outermost first, so a folder's parent is live before its own name
+        # is checked against that parent's living children.
+        for shell in reversed(binned):
+            shell.name = await self._free_sibling_name(
+                shell, shell.parent_folder_id, folders
+            )
+            shell.deleted_date = None
+            shell.deleted_by = None
+            shell.deleted_group_uuid = None
+
+    @service_handler
+    async def restore_folder(
+        self, parent_type: str, parent_id: int, folder_id: int
+    ) -> None:
+        """Bring a folder back where it was, with what was inside it.
+
+        Two rules decide what comes back:
+
+        *Its own subtree, from its own deletion.* Rows beneath the folder
+        that share its deleted_group_uuid are restored. A subfolder that
+        someone had removed separately, before this delete, keeps its own
+        group and stays in the bin — restoring a parent must not quietly
+        undo a decision nobody revisited.
+
+        *Its ancestors, as empty shells.* If a parent was removed too, the
+        folder has no address without it, so the chain back to the root is
+        restored — but only the chain. The ancestors' own files and their
+        other children stay in the bin, each restorable on its own terms.
+        A folder is a container, not data; bringing back an empty one to
+        hold something costs nobody anything, while bringing back its
+        contents would restore what nobody asked for.
+        """
+        folder = await self._get_scoped_folder(
+            folder_id, parent_type, parent_id, include_deleted=True
+        )
+        if folder.deleted_date is None:
+            return
+
+        folders = await self.repo.get_all_folders_including_deleted(
+            parent_type, parent_id
+        )
+        by_id = {f.folder_id: f for f in folders}
+        group_uuid = folder.deleted_group_uuid
+
+        # The subtree, limited to rows that went down with this one.
+        restoring = [
+            by_id[fid]
+            for fid in self._subtree_ids(folder_id, folders)
+            if fid in by_id
+            and by_id[fid].deleted_date is not None
+            and by_id[fid].deleted_group_uuid == group_uuid
+        ]
+
+        await self._restore_ancestor_path(folder, folders)
+
+        for restored in restoring:
+            restored.name = await self._free_sibling_name(
+                restored, restored.parent_folder_id, folders
+            )
+            restored.deleted_date = None
+            restored.deleted_by = None
+            restored.deleted_group_uuid = None
+
+        documents = await self.repo.get_deleted_documents_in_folders(
+            [f.folder_id for f in restoring], group_uuid
+        )
+        for document in documents:
+            document.deleted_date = None
+            document.deleted_by = None
+            document.deleted_group_uuid = None
+
         await self.repo.db.flush()
 
     @service_handler
@@ -145,9 +306,60 @@ class DocumentFolderServices:
         documents, total = await self.repo.get_deleted_documents(
             parent_id, limit=limit, offset=offset
         )
+        all_folders_for_names = await self.repo.get_all_folders_including_deleted(
+            parent_type, parent_id
+        )
         names = await self.repo.get_user_display_names(
             [d.deleted_by for d in documents]
+            + [f.deleted_by for f in all_folders_for_names if f.deleted_date]
         )
+
+        # Folders in the bin that directly held a file. A deleted empty
+        # folder gets no row: nothing was lost with it, and it comes back
+        # by itself when something beneath it is restored.
+        folders = await self.repo.get_all_folders_including_deleted(
+            parent_type, parent_id
+        )
+        by_id = {f.folder_id: f for f in folders}
+        binned = [f for f in folders if f.deleted_date is not None]
+        folder_rows = []
+        listed_folder_ids = set()
+        for folder in binned:
+            if not folder.deleted_group_uuid:
+                continue
+            counts = await self.repo.count_documents_per_folder(
+                [folder.folder_id], folder.deleted_group_uuid
+            )
+            count = counts.get(folder.folder_id, 0)
+            if not count:
+                continue
+            listed_folder_ids.add(folder.folder_id)
+            # Outermost first, so the panel can show where it returns to.
+            path = []
+            cursor = (
+                by_id.get(folder.parent_folder_id) if folder.parent_folder_id else None
+            )
+            seen = set()
+            while cursor is not None and cursor.folder_id not in seen:
+                seen.add(cursor.folder_id)
+                path.append(cursor.name)
+                cursor = (
+                    by_id.get(cursor.parent_folder_id)
+                    if cursor.parent_folder_id
+                    else None
+                )
+            folder_rows.append(
+                DeletedFolderSchema(
+                    folder_id=folder.folder_id,
+                    name=folder.name,
+                    path=list(reversed(path)),
+                    document_count=count,
+                    deleted_date=folder.deleted_date,
+                    deleted_by=folder.deleted_by,
+                    deleted_by_name=names.get(folder.deleted_by),
+                )
+            )
+        folder_rows.sort(key=lambda r: r.deleted_date or datetime.min, reverse=True)
 
         rows = []
         for document in documents:
@@ -161,6 +373,10 @@ class DocumentFolderServices:
                     and candidate.parent_id == parent_id
                 ):
                     folder = candidate
+            if folder is not None and folder.folder_id in listed_folder_ids:
+                # It went down with its folder and comes back with it;
+                # listing it separately would show the same file twice.
+                continue
             rows.append(
                 DeletedDocumentSchema(
                     document_id=document.document_id,
@@ -173,7 +389,9 @@ class DocumentFolderServices:
                     restore_folder_name=folder.name if folder else None,
                 )
             )
-        return DeletedDocumentsSchema(documents=rows, total=total)
+        return DeletedDocumentsSchema(
+            documents=rows, folders=folder_rows, total=total + len(folder_rows)
+        )
 
     # ------------------------------------------------------------------
     # Tree
@@ -292,7 +510,7 @@ class DocumentFolderServices:
 
     @service_handler
     async def delete_folder(
-        self, parent_type: str, parent_id: int, folder_id: int, strategy: str
+        self, parent_type: str, parent_id: int, folder_id: int, strategy: str, user=None
     ) -> None:
         folder = await self._get_scoped_folder(folder_id, parent_type, parent_id)
         if folder.is_system:
@@ -304,21 +522,35 @@ class DocumentFolderServices:
             await self.repo.reparent_contents(folder_id, folder.parent_folder_id)
             await self.repo.delete_folders([folder_id])
         elif strategy == "cascade":
-            # Removes the subtree's structure. Placement rows cascade away,
-            # so the files fall to the root — file deletion itself stays
-            # with the existing per-file delete flow and its ownership rule.
-            subtree = [folder_id]
-            frontier = [folder_id]
-            all_folders = await self.repo.get_folders(parent_type, parent_id)
-            children_of: Dict[Optional[int], List[int]] = {}
-            for f in all_folders:
-                children_of.setdefault(f.parent_folder_id, []).append(f.folder_id)
-            while frontier:
-                current = frontier.pop()
-                for child_id in children_of.get(current, []):
-                    subtree.append(child_id)
-                    frontier.append(child_id)
-            await self.repo.delete_folders(subtree)
+            # The subtree and everything filed in it go to the bin
+            # together, sharing one group so a restore can bring back
+            # exactly what went down. Placement rows are left alone —
+            # they are the only record of where each file lived.
+            all_folders = await self.repo.get_all_folders_including_deleted(
+                parent_type, parent_id
+            )
+            subtree = self._subtree_ids(folder_id, all_folders)
+            documents = await self.repo.get_documents_in_folders(subtree)
+
+            group_uuid = str(uuid.uuid4())
+            now = datetime.now(timezone.utc)
+            username = getattr(user, "keycloak_username", None)
+            by_id = {f.folder_id: f for f in all_folders}
+            for fid in subtree:
+                folder = by_id.get(fid)
+                if folder is None or folder.deleted_date is not None:
+                    # Already in the bin from an earlier delete. Leaving it
+                    # on its own group is what keeps restoring this folder
+                    # from resurrecting it.
+                    continue
+                folder.deleted_date = now
+                folder.deleted_by = username
+                folder.deleted_group_uuid = group_uuid
+            for document in documents:
+                document.deleted_date = now
+                document.deleted_by = username
+                document.deleted_group_uuid = group_uuid
+            await self.repo.db.flush()
         else:
             raise HTTPException(
                 status_code=400,

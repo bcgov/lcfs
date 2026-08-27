@@ -115,6 +115,7 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
 }))
 
 const mockSoftDelete = vi.fn()
+const mockRestoreFolder = vi.fn()
 vi.mock('@/hooks/useDocumentFolders', () => ({
   useDocumentTree: () => ({
     data: {
@@ -149,7 +150,8 @@ vi.mock('@/hooks/useDocumentFolders', () => ({
   useFolderUpload: () => ({ mutate: vi.fn() }),
   useSoftDeleteDocument: () => ({ mutate: mockSoftDelete }),
   useDeletedDocuments: () => ({ data: { documents: [], total: 0 } }),
-  useRestoreDocument: () => ({ mutate: vi.fn() })
+  useRestoreDocument: () => ({ mutate: vi.fn() }),
+  useRestoreFolder: () => ({ mutate: mockRestoreFolder })
 }))
 
 const check = async (ui) => {

@@ -59,6 +59,15 @@ class Document(BaseModel, Auditable):
         nullable=True,
         comment="Username of whoever removed it, matching create_user",
     )
+    deleted_group_uuid = Column(
+        String(36),
+        nullable=True,
+        index=True,
+        comment=(
+            "Set when the document went to the bin as part of a folder "
+            "delete; NULL when it was deleted on its own."
+        ),
+    )
 
     compliance_reports = relationship(
         "ComplianceReport",

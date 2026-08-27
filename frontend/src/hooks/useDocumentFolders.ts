@@ -343,3 +343,21 @@ export const useRestoreDocument = (
         ).replace(':documentId', String(documentId))
       )
   )
+
+/** Bring a folder back, with what was inside it and the path it needs. */
+export const useRestoreFolder = (
+  parentType: string,
+  parentID: number | string
+) =>
+  useBinMutation(
+    parentType,
+    parentID,
+    (client) => async (folderId: number) =>
+      client.put(
+        fillPath(
+          apiRoutes.documentFolderRestoreFolder,
+          parentType,
+          parentID
+        ).replace(':folderId', String(folderId))
+      )
+  )

@@ -266,7 +266,8 @@ async def test_delete_reparents_by_default_and_cascades_on_request(
     assert [c["name"] for c in top_node["children"]] == ["Leaf"]
     assert [d["fileName"] for d in top_node["documents"]] == ["evidence.pdf"]
 
-    # Cascade: the whole subtree goes; the file falls to the root.
+    # Cascade: the subtree and everything filed in it go to the bin
+    # together. The file does not fall to the root — nobody put it there.
     delete_top = fastapi_app.url_path_for(
         "delete_document_folder",
         parent_type="designatedAction",
@@ -278,7 +279,16 @@ async def test_delete_reparents_by_default_and_cascades_on_request(
 
     tree = (await client.get(_tree_url(fastapi_app, action))).json()
     assert tree["folders"] == []
-    assert [d["fileName"] for d in tree["rootDocuments"]] == ["evidence.pdf"]
+    assert tree["rootDocuments"] == []
+
+    deleted = (await client.get(_deleted_url(fastapi_app, action))).json()
+    # One row, for the folder that actually held the file. Top and Leaf
+    # were empty, so they are not worth listing — they come back on their
+    # own when something beneath them is restored.
+    assert [f["name"] for f in deleted["folders"]] == ["Top"]
+    assert deleted["folders"][0]["documentCount"] == 1
+    # And the file is not listed separately: it comes back with its folder.
+    assert deleted["documents"] == []
 
 
 @pytest.mark.anyio
@@ -594,3 +604,257 @@ async def test_a_deleted_document_leaves_the_shared_document_list_too(
         )
     )
     assert after.json() == []
+
+
+# ---------------------------------------------------------------------------
+# Restoring folders. A folder is a container, not data: restoring one brings
+# back what was inside it and the chain of ancestors it needs for an address,
+# and nothing else.
+# ---------------------------------------------------------------------------
+
+
+def _folder_delete_url(fastapi_app, action, folder_id):
+    return fastapi_app.url_path_for(
+        "delete_document_folder",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+        folder_id=folder_id,
+    )
+
+
+def _folder_restore_url(fastapi_app, action, folder_id):
+    return fastapi_app.url_path_for(
+        "restore_document_folder",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+        folder_id=folder_id,
+    )
+
+
+async def _place(client, fastapi_app, action, document, folder_id):
+    url = fastapi_app.url_path_for(
+        "move_document_folder_items",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+    )
+    return await client.put(
+        url, json={"documentIds": [document.document_id], "folderId": folder_id}
+    )
+
+
+async def _build_nest(client, fastapi_app, action, dbsession):
+    """A > B > C with a file in C, plus a sibling D holding its own file."""
+    a = (await _create_folder(client, fastapi_app, action, "A")).json()
+    b = (
+        await _create_folder(
+            client, fastapi_app, action, "B", parent_folder_id=a["folderId"]
+        )
+    ).json()
+    c = (
+        await _create_folder(
+            client, fastapi_app, action, "C", parent_folder_id=b["folderId"]
+        )
+    ).json()
+    d = (
+        await _create_folder(
+            client, fastapi_app, action, "D", parent_folder_id=a["folderId"]
+        )
+    ).json()
+    in_c = await _seed_document(dbsession, action, "in-c.pdf")
+    in_d = await _seed_document(dbsession, action, "in-d.pdf")
+    await _place(client, fastapi_app, action, in_c, c["folderId"])
+    await _place(client, fastapi_app, action, in_d, d["folderId"])
+    return a, b, c, d, in_c, in_d
+
+
+@pytest.mark.anyio
+async def test_restoring_a_folder_brings_its_files_back_in_place(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26RST1")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    a, b, c, _d, _in_c, _in_d = await _build_nest(
+        client, fastapi_app, action, dbsession
+    )
+
+    await client.delete(
+        f"{_folder_delete_url(fastapi_app, action, c['folderId'])}?strategy=cascade"
+    )
+    await client.put(_folder_restore_url(fastapi_app, action, c["folderId"]))
+
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    node_a = tree["folders"][0]
+    node_b = next(x for x in node_a["children"] if x["name"] == "B")
+    node_c = next(x for x in node_b["children"] if x["name"] == "C")
+    # Back where it was, not at the root.
+    assert [d["fileName"] for d in node_c["documents"]] == ["in-c.pdf"]
+
+
+@pytest.mark.anyio
+async def test_restoring_a_subfolder_rebuilds_only_its_path(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The heart of it: A is deleted whole, then only C is restored.
+
+    C has no address without A and B, so they come back — as empty
+    shells. A's other child D, and D's file, stay in the bin: nobody
+    asked for them back.
+    """
+    action = await _seed_da(dbsession, "IA-26RST2")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    a, _b, c, _d, _in_c, _in_d = await _build_nest(
+        client, fastapi_app, action, dbsession
+    )
+
+    await client.delete(
+        f"{_folder_delete_url(fastapi_app, action, a['folderId'])}?strategy=cascade"
+    )
+    await client.put(_folder_restore_url(fastapi_app, action, c["folderId"]))
+
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    node_a = tree["folders"][0]
+    assert node_a["name"] == "A"
+    # A came back as a shell holding only the path to C — D did not.
+    assert [x["name"] for x in node_a["children"]] == ["B"]
+    node_c = node_a["children"][0]["children"][0]
+    assert node_c["name"] == "C"
+    assert [d["fileName"] for d in node_c["documents"]] == ["in-c.pdf"]
+
+    # D is still in the bin, restorable on its own terms.
+    deleted = (await client.get(_deleted_url(fastapi_app, action))).json()
+    assert [f["name"] for f in deleted["folders"]] == ["D"]
+
+
+@pytest.mark.anyio
+async def test_restoring_a_parent_leaves_separately_deleted_children_alone(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """C was removed on its own, before A. Restoring A must not undo that.
+
+    This is what the deletion group buys: without it, A's subtree walk
+    would sweep C back up along with everything else.
+    """
+    action = await _seed_da(dbsession, "IA-26RST3")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    a, _b, c, _d, _in_c, _in_d = await _build_nest(
+        client, fastapi_app, action, dbsession
+    )
+
+    await client.delete(
+        f"{_folder_delete_url(fastapi_app, action, c['folderId'])}?strategy=cascade"
+    )
+    await client.delete(
+        f"{_folder_delete_url(fastapi_app, action, a['folderId'])}?strategy=cascade"
+    )
+    await client.put(_folder_restore_url(fastapi_app, action, a["folderId"]))
+
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    node_a = tree["folders"][0]
+    node_b = next(x for x in node_a["children"] if x["name"] == "B")
+    # D came back with A; C stayed in the bin where it was put separately.
+    assert [x["name"] for x in node_a["children"]] == ["B", "D"]
+    assert node_b["children"] == []
+
+    deleted = (await client.get(_deleted_url(fastapi_app, action))).json()
+    assert [f["name"] for f in deleted["folders"]] == ["C"]
+
+
+@pytest.mark.anyio
+async def test_an_empty_folder_is_not_worth_a_bin_row(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26RST4")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    empty = (await _create_folder(client, fastapi_app, action, "Nothing here")).json()
+
+    await client.delete(
+        f"{_folder_delete_url(fastapi_app, action, empty['folderId'])}?strategy=cascade"
+    )
+
+    deleted = (await client.get(_deleted_url(fastapi_app, action))).json()
+    # Nothing was lost with it, so it is not offered back.
+    assert deleted["folders"] == []
+
+
+@pytest.mark.anyio
+async def test_a_restored_folder_yields_a_name_a_live_sibling_took(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Nothing is ever purged, so the old name cannot simply be reclaimed.
+
+    Refusing the restore would leave no way forward at all, so the
+    returning folder is suffixed instead.
+    """
+    action = await _seed_da(dbsession, "IA-26RST5")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    original = (await _create_folder(client, fastapi_app, action, "Permits")).json()
+    document = await _seed_document(dbsession, action, "permit.pdf")
+    await _place(client, fastapi_app, action, document, original["folderId"])
+
+    await client.delete(
+        f"{_folder_delete_url(fastapi_app, action, original['folderId'])}?strategy=cascade"
+    )
+    # The name is free again while the old folder sits in the bin.
+    replacement = await _create_folder(client, fastapi_app, action, "Permits")
+    assert replacement.status_code == status.HTTP_201_CREATED
+
+    response = await client.put(
+        _folder_restore_url(fastapi_app, action, original["folderId"])
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    names = sorted(f["name"] for f in tree["folders"])
+    assert names == ["Permits", "Permits (restored)"]
+
+
+@pytest.mark.anyio
+async def test_restoring_a_file_rebuilds_the_folder_it_lived_in(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """A lone file follows the same rule as a folder: it goes back where
+    it was, not to the root."""
+    action = await _seed_da(dbsession, "IA-26RST6")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    _a, _b, c, _d, in_c, _in_d = await _build_nest(
+        client, fastapi_app, action, dbsession
+    )
+
+    await client.delete(
+        f"{_folder_delete_url(fastapi_app, action, c['folderId'])}?strategy=cascade"
+    )
+    restore_url = fastapi_app.url_path_for(
+        "restore_document",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+        document_id=in_c.document_id,
+    )
+    await client.put(restore_url)
+
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    node_a = tree["folders"][0]
+    node_c = next(x for x in node_a["children"] if x["name"] == "B")["children"][0]
+    assert node_c["name"] == "C"
+    assert [d["fileName"] for d in node_c["documents"]] == ["in-c.pdf"]
+    assert tree["rootDocuments"] == []
+
+
+@pytest.mark.anyio
+async def test_reparent_delete_still_puts_nothing_in_the_bin(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The two strategies stay genuine opposites."""
+    action = await _seed_da(dbsession, "IA-26RST7")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    a, b, _c, _d, _in_c, _in_d = await _build_nest(
+        client, fastapi_app, action, dbsession
+    )
+
+    await client.delete(_folder_delete_url(fastapi_app, action, b["folderId"]))
+
+    deleted = (await client.get(_deleted_url(fastapi_app, action))).json()
+    assert deleted["folders"] == []
+    assert deleted["documents"] == []
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    # C moved up under A rather than going anywhere.
+    assert sorted(x["name"] for x in tree["folders"][0]["children"]) == ["C", "D"]

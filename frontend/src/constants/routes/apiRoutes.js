@@ -105,6 +105,8 @@ export const apiRoutes = {
     '/document-folders/:parentType/:parentID/documents/:documentId',
   documentFolderRestoreDocument:
     '/document-folders/:parentType/:parentID/documents/:documentId/restore',
+  documentFolderRestoreFolder:
+    '/document-folders/:parentType/:parentID/:folderId/restore',
 
   // fuel-type
   getFuelTypeOthers: '/fuel-type/others/list',

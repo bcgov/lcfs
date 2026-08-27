@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    TIMESTAMP,
     Boolean,
     Column,
     ForeignKey,
@@ -31,6 +32,8 @@ class DocumentFolder(BaseModel, Auditable):
         # Case-insensitive sibling uniqueness. parent_folder_id is NULL at
         # the root, and NULLs never collide in a plain unique index, so the
         # root level coalesces to 0 to get the same guarantee.
+        # Live folders only: a folder in the bin would otherwise hold its
+        # name hostage forever, since nothing is ever purged.
         Index(
             "uq_document_folder_sibling_name",
             "parent_type",
@@ -38,7 +41,9 @@ class DocumentFolder(BaseModel, Auditable):
             text("coalesce(parent_folder_id, 0)"),
             func.lower(text("name")),
             unique=True,
+            postgresql_where=text("deleted_date IS NULL"),
         ),
+        Index("ix_document_folder_deleted_group_uuid", "deleted_group_uuid"),
         {
             "comment": (
                 "Folder tree for parent-scoped document organisation; "
@@ -81,6 +86,26 @@ class DocumentFolder(BaseModel, Auditable):
         nullable=False,
         server_default=text("false"),
         comment="Seeded structure; system folders reject rename, move and delete",
+    )
+    deleted_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="When the folder was sent to the bin; NULL while it is live",
+    )
+    deleted_by = Column(
+        String(255),
+        nullable=True,
+        comment="Username that sent the folder to the bin",
+    )
+    deleted_group_uuid = Column(
+        String(36),
+        nullable=True,
+        comment=(
+            "Groups every row removed by one delete action. A restore "
+            "un-deletes the rows in the target's subtree that share this "
+            "value, so a folder removed separately beforehand is not "
+            "dragged back by a later cascade of its parent."
+        ),
     )
 
     parent_folder = relationship(

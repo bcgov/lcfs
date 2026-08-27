@@ -49,8 +49,28 @@ class DeletedDocumentSchema(BaseSchema):
     restore_folder_name: Optional[str] = None
 
 
+class DeletedFolderSchema(BaseSchema):
+    """A folder in the bin.
+
+    Only folders that directly held a file are listed. A deleted empty
+    folder is not worth a row — nothing was lost with it, and it comes
+    back on its own if something beneath it is restored.
+    """
+
+    folder_id: int
+    name: str
+    # The path it will return to, outermost first, so the panel can show
+    # where a restore will put it.
+    path: List[str] = []
+    document_count: int = 0
+    deleted_date: Optional[datetime] = None
+    deleted_by: Optional[str] = None
+    deleted_by_name: Optional[str] = None
+
+
 class DeletedDocumentsSchema(BaseSchema):
     documents: List[DeletedDocumentSchema] = []
+    folders: List[DeletedFolderSchema] = []
     total: int = 0
 
 

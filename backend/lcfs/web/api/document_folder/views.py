@@ -210,8 +210,9 @@ async def delete_document_folder(
     folder_id: int,
     strategy: str = Query(
         "reparent",
-        description="reparent moves contents up one level; cascade removes "
-        "the subtree's structure and its files fall to the root.",
+        description="reparent moves contents up one level, leaving nothing "
+        "in the bin; cascade sends the subtree and everything filed in it "
+        "to the bin together, restorable as a unit.",
     ),
     service: DocumentFolderServices = Depends(),
     document_service: DocumentService = Depends(),
@@ -220,4 +221,27 @@ async def delete_document_folder(
     await _validate_parent_access(
         parent_type, parent_id, service, document_service, ia_validate
     )
-    await service.delete_folder(parent_type, parent_id, folder_id, strategy)
+    await service.delete_folder(
+        parent_type, parent_id, folder_id, strategy, request.user
+    )
+
+
+@router.put(
+    "/{parent_type}/{parent_id}/{folder_id}/restore",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler(FOLDER_ROLES)
+async def restore_document_folder(
+    request: Request,
+    parent_type: str,
+    parent_id: int,
+    folder_id: int,
+    service: DocumentFolderServices = Depends(),
+    document_service: DocumentService = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+) -> None:
+    """Bring a folder back where it was, with what was inside it."""
+    await _validate_parent_access(
+        parent_type, parent_id, service, document_service, ia_validate
+    )
+    await service.restore_folder(parent_type, parent_id, folder_id)

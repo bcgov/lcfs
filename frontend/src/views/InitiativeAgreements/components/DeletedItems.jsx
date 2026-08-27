@@ -4,6 +4,7 @@ import { Box, Collapse, Paper } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
 import RestoreIcon from '@mui/icons-material/Restore'
 import prettyBytes from 'pretty-bytes'
 
@@ -11,7 +12,8 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import {
   useDeletedDocuments,
-  useRestoreDocument
+  useRestoreDocument,
+  useRestoreFolder
 } from '@/hooks/useDocumentFolders'
 import { timezoneFormatter } from '@/utils/formatters'
 
@@ -23,9 +25,38 @@ export const DeletedItems = ({ parentType, parentID }) => {
   const [expanded, setExpanded] = useState(false)
   const { data } = useDeletedDocuments(parentType, parentID)
   const { mutate: restore } = useRestoreDocument(parentType, parentID)
+  const { mutate: restoreFolder } = useRestoreFolder(parentType, parentID)
 
   const documents = data?.documents ?? []
+  const folders = data?.folders ?? []
   const total = data?.total ?? 0
+  const isEmpty = documents.length === 0 && folders.length === 0
+
+  const restoreControl = (key, label, onRestore) => (
+    <BCTypography
+      component="button"
+      type="button"
+      variant="subtitle2"
+      color="link"
+      data-test={key}
+      aria-label={label}
+      onClick={onRestore}
+      sx={{
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        font: 'inherit',
+        cursor: 'pointer',
+        textDecoration: 'underline',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.5
+      }}
+    >
+      <RestoreIcon fontSize="inherit" />
+      {t('initiativeAgreement:folders.restore')}
+    </BCTypography>
+  )
 
   return (
     <Paper
@@ -90,7 +121,51 @@ export const DeletedItems = ({ parentType, parentID }) => {
 
       <Collapse in={expanded}>
         <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {documents.length === 0 ? (
+          {/* Folders first: restoring one brings its files back with it,
+              so those files are not listed separately below. */}
+          {folders.map((folder) => (
+            <Box
+              key={`folder-${folder.folderId}`}
+              data-test={`deleted-folder-${folder.folderId}`}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flexWrap: 'wrap'
+              }}
+            >
+              <FolderOutlinedIcon fontSize="small" color="action" />
+              <BCTypography variant="subtitle2">{folder.name}</BCTypography>
+              <BCTypography variant="subtitle2" color="text.secondary">
+                {t('initiativeAgreement:folders.binFileCount', {
+                  count: folder.documentCount
+                })}
+                {' · '}
+                {t('initiativeAgreement:folders.deletedBy', {
+                  name: folder.deletedByName || folder.deletedBy || '—'
+                })}
+                {' · '}
+                {timezoneFormatter({ value: folder.deletedDate })}
+              </BCTypography>
+              {/* Where it will land. Any folders on that path that are
+                  also in the bin come back with it, empty. */}
+              <BCTypography variant="subtitle2" color="text.secondary">
+                {folder.path?.length
+                  ? t('initiativeAgreement:folders.restoreTo', {
+                      folder: folder.path.join(' / ')
+                    })
+                  : t('initiativeAgreement:folders.restoreToRoot')}
+              </BCTypography>
+              {restoreControl(
+                `restore-folder-${folder.folderId}`,
+                t('initiativeAgreement:folders.restoreFolderLabel', {
+                  name: folder.name
+                }),
+                () => restoreFolder(folder.folderId)
+              )}
+            </Box>
+          ))}
+          {isEmpty ? (
             <BCTypography variant="body4" color="text.secondary">
               {t('initiativeAgreement:folders.binEmpty')}
             </BCTypography>
@@ -125,32 +200,17 @@ export const DeletedItems = ({ parentType, parentID }) => {
                       })
                     : t('initiativeAgreement:folders.restoreToRoot')}
                 </BCTypography>
-                <BCTypography
-                  component="button"
-                  type="button"
-                  variant="subtitle2"
-                  color="link"
-                  data-test={`restore-${document.documentId}`}
-                  onClick={() => restore(document.documentId)}
-                  sx={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    font: 'inherit',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.5
-                  }}
-                >
-                  <RestoreIcon fontSize="inherit" />
-                  {t('initiativeAgreement:folders.restore')}
-                </BCTypography>
+                {restoreControl(
+                  `restore-${document.documentId}`,
+                  t('initiativeAgreement:folders.restoreFileLabel', {
+                    name: document.fileName
+                  }),
+                  () => restore(document.documentId)
+                )}
               </Box>
             ))
           )}
-          {documents.length === 0 && (
+          {isEmpty && (
             <BCTypography variant="body4" color="text.secondary" component="p">
               {t('initiativeAgreement:folders.binHelp')}
             </BCTypography>

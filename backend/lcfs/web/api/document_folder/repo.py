@@ -26,6 +26,7 @@ class DocumentFolderRepository:
             .where(
                 DocumentFolder.parent_type == parent_type,
                 DocumentFolder.parent_id == parent_id,
+                DocumentFolder.deleted_date.is_(None),
             )
             .order_by(DocumentFolder.sort_order, DocumentFolder.name)
         )
@@ -223,3 +224,88 @@ class DocumentFolderRepository:
             else:
                 item.folder_id = new_parent_folder_id
         await self.db.flush()
+
+    @repo_handler
+    async def get_all_folders_including_deleted(
+        self, parent_type: str, parent_id: int
+    ) -> List[DocumentFolder]:
+        """Every folder for a parent, bin included.
+
+        Restoring needs the deleted rows, and walking a restored folder's
+        ancestors needs the live ones, so both come back together.
+        """
+        result = await self.db.execute(
+            select(DocumentFolder)
+            .where(
+                DocumentFolder.parent_type == parent_type,
+                DocumentFolder.parent_id == parent_id,
+            )
+            .order_by(DocumentFolder.sort_order, DocumentFolder.name)
+        )
+        return list(result.scalars().all())
+
+    @repo_handler
+    async def get_documents_in_folders(
+        self, folder_ids: Sequence[int]
+    ) -> List[Document]:
+        """Live documents placed in any of these folders."""
+        if not folder_ids:
+            return []
+        result = await self.db.execute(
+            select(Document)
+            .join(
+                DocumentFolderItem,
+                DocumentFolderItem.document_id == Document.document_id,
+            )
+            .where(
+                DocumentFolderItem.folder_id.in_(folder_ids),
+                Document.deleted_date.is_(None),
+            )
+        )
+        return list(result.scalars().all())
+
+    @repo_handler
+    async def get_deleted_documents_in_folders(
+        self, folder_ids: Sequence[int], group_uuid: str
+    ) -> List[Document]:
+        """Binned documents that went down with one delete of these folders."""
+        if not folder_ids:
+            return []
+        result = await self.db.execute(
+            select(Document)
+            .join(
+                DocumentFolderItem,
+                DocumentFolderItem.document_id == Document.document_id,
+            )
+            .where(
+                DocumentFolderItem.folder_id.in_(folder_ids),
+                Document.deleted_date.isnot(None),
+                Document.deleted_group_uuid == group_uuid,
+            )
+        )
+        return list(result.scalars().all())
+
+    @repo_handler
+    async def count_documents_per_folder(
+        self, folder_ids: Sequence[int], group_uuid: str
+    ) -> Dict[int, int]:
+        """How many binned documents each folder directly holds."""
+        if not folder_ids:
+            return {}
+        result = await self.db.execute(
+            select(
+                DocumentFolderItem.folder_id,
+                func.count(Document.document_id),
+            )
+            .join(
+                Document,
+                Document.document_id == DocumentFolderItem.document_id,
+            )
+            .where(
+                DocumentFolderItem.folder_id.in_(folder_ids),
+                Document.deleted_date.isnot(None),
+                Document.deleted_group_uuid == group_uuid,
+            )
+            .group_by(DocumentFolderItem.folder_id)
+        )
+        return {row[0]: row[1] for row in result.all()}
