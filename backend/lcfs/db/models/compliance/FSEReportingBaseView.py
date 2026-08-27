@@ -9,7 +9,6 @@ class FSEReportingBaseView(Base):
     __tablename__ = "v_fse_reporting_base"
     __table_args__ = {
         "extend_existing": True,
-        "info": {"is_view": True},
         "comment": "View for charging equipment reporting base rows",
     }
 

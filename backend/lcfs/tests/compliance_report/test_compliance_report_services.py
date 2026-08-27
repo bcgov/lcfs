@@ -285,6 +285,42 @@ async def test_get_compliance_reports_paginated_unexpected_error(
         )
 
 
+def test_mask_report_status_masks_analyst_adjustment_list_row_for_supplier(
+    compliance_report_service, compliance_report_schema
+):
+    supplier_user = SimpleNamespace(role_names=[RoleEnum.SUPPLIER])
+    report = compliance_report_schema(
+        report_status_id=7,
+        report_status=ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
+    )
+
+    [masked_report] = compliance_report_service._mask_report_status(
+        [report], supplier_user
+    )
+
+    assert masked_report.report_status == ComplianceReportStatusEnum.Submitted.value
+    assert masked_report.report_status_id is None
+
+
+def test_mask_report_status_masks_analyst_adjustment_base_report_for_supplier(
+    compliance_report_service, compliance_report_base_schema
+):
+    supplier_user = SimpleNamespace(role_names=[RoleEnum.SUPPLIER])
+    report = compliance_report_base_schema()
+    report.current_status.status = ComplianceReportStatusEnum.Analyst_adjustment.value
+    report.current_status.compliance_report_status_id = 7
+
+    [masked_report] = compliance_report_service._mask_report_status(
+        [report], supplier_user
+    )
+
+    assert (
+        masked_report.current_status.status
+        == ComplianceReportStatusEnum.Submitted.value
+    )
+    assert masked_report.current_status.compliance_report_status_id is None
+
+
 # get_compliance_report_by_id
 @pytest.mark.anyio
 async def test_get_compliance_report_by_id_success(

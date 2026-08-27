@@ -24,6 +24,7 @@ ORG_ROLE_SET: set[RoleEnum] = {
     RoleEnum.READ_ONLY,
     RoleEnum.CI_APPLICANT,
     RoleEnum.IA_PROPONENT,
+    RoleEnum.IA_SIGNER,
 }
 
 

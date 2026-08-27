@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Literal, List, Optional, Union
 
 import structlog
 from fastapi import (
@@ -461,6 +461,11 @@ async def get_fse_reporting_list(
         None, alias="complianceReportId", description="Compliance Report ID"
     ),
     mode: str = Query(None, alias="mode", description="Mode"),
+    source: Literal["base_pref", "vw_fse_base"] = Query(
+        "base_pref",
+        alias="source",
+        description="Reporting source: 'base_pref' uses preferred rows; 'vw_fse_base' uses the base view",
+    ),
     service: FinalSupplyEquipmentServices = Depends(),
 ) -> dict:
     """
@@ -472,7 +477,7 @@ async def get_fse_reporting_list(
         else request.user.organization_id
     )
     return await service.get_fse_reporting_list_paginated(
-        org_id, pagination, compliance_report_id, mode
+        org_id, pagination, compliance_report_id, mode, source
     )
 
 

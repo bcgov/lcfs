@@ -12,12 +12,16 @@ import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import RenameableFileName from '@/components/Documents/RenameableFileName'
 import {
   useDeleteDocument,
   useDocuments,
-  useDownloadDocument
+  useDownloadDocument,
+  useUpdateDocument
 } from '@/hooks/useDocuments'
 import colors from '@/themes/base/colors'
+import { isDocumentRenameEnabled } from '@/constants/common'
+import { getDocumentDisplayName } from '@/utils/documents'
 
 // CI document-category constants. Uploading no longer tags a category (Step 3
 // now uses the shared upload modal — #4740), but these remain the canonical
@@ -63,7 +67,12 @@ export const DocumentsModellingStep = ({
   )
   const { mutateAsync: deleteDoc, isPending: isDeletingDoc } =
     useDeleteDocument(PARENT_TYPE, ciApplicationId)
+  const { mutateAsync: updateDoc } = useUpdateDocument(
+    PARENT_TYPE,
+    ciApplicationId
+  )
   const downloadDocument = useDownloadDocument(PARENT_TYPE, ciApplicationId)
+  const renameEnabled = isDocumentRenameEnabled(PARENT_TYPE)
 
   const hasDocuments = documents.length > 0
 
@@ -77,6 +86,13 @@ export const DocumentsModellingStep = ({
           t('carbonIntensity:step3.errors.deleteFailed')
       )
     }
+  }
+
+  const handleRename = async (documentId, newDisplayName) => {
+    await updateDoc({
+      documentID: documentId,
+      data: { displayName: newDisplayName }
+    })
   }
 
   const handleDeleteClick = (document) => {
@@ -135,62 +151,74 @@ export const DocumentsModellingStep = ({
               {t('common:loading')}
             </BCTypography>
           ) : (
-            documents.map((doc) => (
-              <Box
-                key={doc.documentId}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1fr 1fr 1fr auto',
-                  alignItems: 'center',
-                  py: 0.5,
-                  gap: 2
-                }}
-                data-test="ci-step3-uploaded-row"
-              >
-                <Link
-                  component="button"
-                  type="button"
-                  underline="hover"
-                  onClick={() => downloadDocument(doc.documentId, doc.fileName)}
+            documents.map((doc) => {
+              const displayName = getDocumentDisplayName(doc)
+              return (
+                <Box
+                  key={doc.documentId}
                   sx={{
-                    minWidth: 0,
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 1fr 1fr 1fr auto',
+                    alignItems: 'center',
+                    py: 0.5,
+                    gap: 2
                   }}
-                  title={doc.fileName}
-                  data-test="ci-step3-download-doc"
+                  data-test="ci-step3-uploaded-row"
                 >
-                  <BCTypography variant="body2">{doc.fileName}</BCTypography>
-                </Link>
-                <BCTypography variant="body2">
-                  {formatBytes(doc.fileSize)}
-                </BCTypography>
-                <BCTypography variant="body2">
-                  {doc.createUser || ''}
-                </BCTypography>
-                <BCTypography variant="body2">
-                  {formatDate(doc.createDate)}
-                </BCTypography>
-                {!readOnly && (
-                  <Tooltip title={t('common:deleteBtn')}>
-                    <span>
-                      <IconButton
-                        aria-label="delete document"
-                        size="small"
-                        onClick={() => handleDeleteClick(doc)}
-                        disabled={isDeletingDoc}
-                        data-test="ci-step3-delete-doc"
+                  <RenameableFileName
+                    displayName={displayName}
+                    canRename={renameEnabled && !readOnly}
+                    onRename={(newName) =>
+                      handleRename(doc.documentId, newName)
+                    }
+                    renderName={(name) => (
+                      <Link
+                        component="button"
+                        type="button"
+                        underline="hover"
+                        onClick={() => downloadDocument(doc.documentId, name)}
+                        sx={{
+                          minWidth: 0,
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title={name}
+                        data-test="ci-step3-download-doc"
                       >
-                        <DeleteIcon fontSize="small" color="error" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                )}
-              </Box>
-            ))
+                        {name}
+                      </Link>
+                    )}
+                  />
+                  <BCTypography variant="body2">
+                    {formatBytes(doc.fileSize)}
+                  </BCTypography>
+                  <BCTypography variant="body2">
+                    {doc.createUser || ''}
+                  </BCTypography>
+                  <BCTypography variant="body2">
+                    {formatDate(doc.createDate)}
+                  </BCTypography>
+                  {!readOnly && (
+                    <Tooltip title={t('common:deleteBtn')}>
+                      <span>
+                        <IconButton
+                          aria-label="delete document"
+                          size="small"
+                          onClick={() => handleDeleteClick(doc)}
+                          disabled={isDeletingDoc}
+                          data-test="ci-step3-delete-doc"
+                        >
+                          <DeleteIcon fontSize="small" color="error" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  )}
+                </Box>
+              )
+            })
           )}
         </BCBox>
       )}
@@ -311,7 +339,7 @@ export const DocumentsModellingStep = ({
             content: (
               <BCTypography variant="body2">
                 {t('carbonIntensity:step3.deleteDocumentConfirmText', {
-                  fileName: documentPendingDelete.fileName
+                  fileName: getDocumentDisplayName(documentPendingDelete)
                 })}
               </BCTypography>
             ),
