@@ -13,6 +13,7 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDocuments: vi.fn(),
   useUploadDocument: vi.fn(),
   useDeleteDocument: vi.fn(),
+  useUpdateDocument: vi.fn(),
   useDownloadDocument: vi.fn()
 }))
 
@@ -52,12 +53,13 @@ import {
   useDocuments,
   useUploadDocument,
   useDeleteDocument,
+  useUpdateDocument,
   useDownloadDocument
 } from '@/hooks/useDocuments'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 describe('DocumentTable', () => {
-  let mockUploadMutate, mockDeleteMutate, mockDownloadDocument
+  let mockUploadMutate, mockDeleteMutate, mockUpdateMutate, mockDownloadDocument
 
   const defaultProps = {
     parentType: 'compliance-report',
@@ -85,6 +87,7 @@ describe('DocumentTable', () => {
 
     mockUploadMutate = vi.fn()
     mockDeleteMutate = vi.fn().mockResolvedValue({})
+    mockUpdateMutate = vi.fn().mockResolvedValue({})
     mockDownloadDocument = vi.fn()
 
     // Set up default mock returns
@@ -98,6 +101,9 @@ describe('DocumentTable', () => {
     })
     useDeleteDocument.mockReturnValue({
       mutate: mockDeleteMutate
+    })
+    useUpdateDocument.mockReturnValue({
+      mutateAsync: mockUpdateMutate
     })
     useDownloadDocument.mockReturnValue(mockDownloadDocument)
     useCurrentUser.mockReturnValue({
@@ -351,7 +357,29 @@ describe('DocumentTable', () => {
     const fileName = screen.getByText('test.pdf')
     fireEvent.click(fileName)
 
-    expect(mockDownloadDocument).toHaveBeenCalledWith(1)
+    expect(mockDownloadDocument).toHaveBeenCalledWith(1, 'test.pdf')
+  })
+
+  it('should download a renamed file using its display name', async () => {
+    const mockFiles = [
+      {
+        documentId: 1,
+        fileName: 'test.pdf',
+        displayName: 'My Renamed File.pdf',
+        fileSize: 1024000,
+        createDate: '2024-01-01T10:00:00Z',
+        createUser: 'testuser'
+      }
+    ]
+
+    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+
+    render(<DocumentTable {...defaultProps} />, { wrapper })
+
+    const fileName = await screen.findByText('My Renamed File.pdf')
+    fireEvent.click(fileName)
+
+    expect(mockDownloadDocument).toHaveBeenCalledWith(1, 'My Renamed File.pdf')
   })
 
   it('should display loaded files from server', async () => {

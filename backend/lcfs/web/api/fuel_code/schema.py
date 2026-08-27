@@ -364,6 +364,13 @@ class SearchFuelCodeList(BaseSchema):
     fuel_codes: Union[List[str], List[FuelCodeCloneSchema]]
 
 
+class CompanySearchOptionSchema(BaseSchema):
+    label: str
+    value: str
+    source: str
+    organization_id: Optional[int] = None
+
+
 class FuelCodesSchema(BaseSchema):
     fuel_codes: List[FuelCodeBaseSchema]
     pagination: Optional[PaginationResponseSchema] = None

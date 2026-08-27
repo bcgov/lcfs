@@ -1,7 +1,11 @@
 import pytest
 
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.db.models.user.role_domains import validate_seed_user_roles
+from lcfs.db.models.user.role_domains import (
+    GOVERNMENT_ROLE_SET,
+    ORG_ROLE_SET,
+    validate_seed_user_roles,
+)
 
 
 ROLE_ID_TO_ENUM = {
@@ -21,6 +25,7 @@ ROLE_ID_TO_ENUM = {
     14: RoleEnum.SYSTEM_ADMIN,
     15: RoleEnum.IA_ANALYST,
     16: RoleEnum.IA_MANAGER,
+    17: RoleEnum.IA_SIGNER,
 }
 
 
@@ -78,3 +83,44 @@ def test_validate_seed_user_roles_rejects_unknown_role_id_and_user_id():
     ]
     with pytest.raises(ValueError, match="unknown user_profile_id"):
         validate_seed_user_roles(profiles, roles, ROLE_ID_TO_ENUM)
+
+
+def test_ia_roles_belong_to_exactly_one_domain():
+    """
+    Every IA role must sit in a domain set. IA_SIGNER sat in neither, so
+    seeding one raised "role not allowed for org user".
+    """
+    ia_roles = {
+        RoleEnum.IA_PROPONENT,
+        RoleEnum.IA_ANALYST,
+        RoleEnum.IA_MANAGER,
+        RoleEnum.IA_SIGNER,
+    }
+    for role in ia_roles:
+        in_government = role in GOVERNMENT_ROLE_SET
+        in_org = role in ORG_ROLE_SET
+        assert in_government != in_org, (
+            f"{role.name} must belong to exactly one domain "
+            f"(government={in_government}, org={in_org})"
+        )
+
+    assert {RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER} <= GOVERNMENT_ROLE_SET
+    assert {RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER} <= ORG_ROLE_SET
+
+
+def test_validate_seed_user_roles_accepts_an_ia_signer():
+    profiles = [{"user_profile_id": 300, "organization_id": 42}]
+    roles = [
+        {"user_profile_id": 300, "role_id": 2},
+        {"user_profile_id": 300, "role_id": 17},
+    ]
+    validate_seed_user_roles(profiles, roles, ROLE_ID_TO_ENUM)
+
+
+def test_validate_seed_user_roles_accepts_an_ia_analyst():
+    profiles = [{"user_profile_id": 400, "organization_id": None}]
+    roles = [
+        {"user_profile_id": 400, "role_id": 1},
+        {"user_profile_id": 400, "role_id": 15},
+    ]
+    validate_seed_user_roles(profiles, roles, ROLE_ID_TO_ENUM)

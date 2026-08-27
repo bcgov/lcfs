@@ -313,22 +313,24 @@ GRANT SELECT ON vw_compliance_reports_time_per_status TO basic_lcfs_reporting_ro
 -- FSE Reporting Base View
 -- ==========================================
 DROP VIEW IF EXISTS v_fse_reporting_base CASCADE;
-CREATE OR REPLACE VIEW v_fse_reporting_base as
+CREATE OR REPLACE VIEW v_fse_reporting_base AS
 WITH equipment_uses AS (
     SELECT
         ceiu.charging_equipment_id,
+        ceiu.charging_equipment_version,
         array_agg(eut.type ORDER BY eut.type) AS intended_uses
     FROM charging_equipment_intended_use_association ceiu
     JOIN end_use_type eut ON ceiu.end_use_type_id = eut.end_use_type_id
-    GROUP BY ceiu.charging_equipment_id
+    GROUP BY ceiu.charging_equipment_id, ceiu.charging_equipment_version
 ),
 equipment_users AS (
     SELECT
         ceiu2.charging_equipment_id,
+        ceiu2.charging_equipment_version,
         array_agg(eut2.type_name ORDER BY eut2.type_name) AS intended_users
     FROM charging_equipment_intended_user_association ceiu2
     JOIN end_user_type eut2 ON ceiu2.end_user_type_id = eut2.end_user_type_id
-    GROUP BY ceiu2.charging_equipment_id
+    GROUP BY ceiu2.charging_equipment_id, ceiu2.charging_equipment_version
 ),
 latest_crce AS (
     SELECT *
@@ -355,9 +357,9 @@ SELECT DISTINCT
     ce.serial_number,
     ce.manufacturer,
     ce.model,
-    (cs.site_code || '-' || ce.equipment_number) AS registration_number,
-    cs.site_name,
-    cs.charging_site_id,
+    (ls.site_code || '-' || ce.equipment_number) AS registration_number,
+    ls.site_name,
+    ls.charging_site_id,
     ce.notes AS equipment_notes,
     crce.supply_from_date,
     crce.supply_to_date,
@@ -370,15 +372,15 @@ SELECT DISTINCT
     crce.version,
     crce.action_type,
     COALESCE(crce.charging_equipment_version, ce.version) AS charging_equipment_version,
-    cs.street_address,
-    cs.city,
-    cs.postal_code,
-    cs.latitude,
-    cs.longitude,
+    ls.street_address,
+    ls.city,
+    ls.postal_code,
+    ls.latitude,
+    ls.longitude,
     loe.name AS level_of_equipment,
     ce.level_of_equipment_id,
     ce.ports,
-    cs.allocating_organization_name,
+    ls.allocating_organization_name,
     eu.intended_uses,
     eus.intended_users,
     power_lookup.power_output,
@@ -395,12 +397,31 @@ FROM latest_crce crce
 JOIN charging_equipment ce
     ON ce.charging_equipment_id = crce.charging_equipment_id
    AND ce.version = crce.charging_equipment_version
-JOIN charging_site cs ON ce.charging_site_id = cs.charging_site_id 
-    AND cs.version = (SELECT MAX(cs2.version) FROM charging_site cs2 WHERE cs2.group_uuid = cs.group_uuid)
+JOIN charging_site cs_fk ON ce.charging_site_id = cs_fk.charging_site_id
+JOIN LATERAL (
+    SELECT
+        cs.site_code,
+        cs.site_name,
+        cs.charging_site_id,
+        cs.street_address,
+        cs.city,
+        cs.postal_code,
+        cs.latitude,
+        cs.longitude,
+        cs.allocating_organization_name
+    FROM charging_site cs
+    WHERE cs.group_uuid = cs_fk.group_uuid
+    ORDER BY cs.version DESC
+    LIMIT 1
+) ls ON TRUE
 JOIN level_of_equipment loe ON ce.level_of_equipment_id = loe.level_of_equipment_id
 JOIN charging_equipment_status ces ON ce.status_id = ces.charging_equipment_status_id
-LEFT JOIN equipment_uses eu ON ce.charging_equipment_id = eu.charging_equipment_id
-LEFT JOIN equipment_users eus ON ce.charging_equipment_id = eus.charging_equipment_id
+LEFT JOIN equipment_uses eu
+    ON ce.charging_equipment_id = eu.charging_equipment_id
+   AND ce.version = eu.charging_equipment_version
+LEFT JOIN equipment_users eus
+    ON ce.charging_equipment_id = eus.charging_equipment_id
+   AND ce.version = eus.charging_equipment_version
 LEFT JOIN LATERAL (
     SELECT cpo.charger_power_output AS power_output
     FROM charging_power_output cpo
@@ -416,8 +437,8 @@ LEFT JOIN LATERAL (
 -- ==========================================
 -- FSE Reporting Base Preferred View
 -- ==========================================
-DROP VIEW IF EXISTS v_fse_reporting_base_pref;
-CREATE OR REPLACE VIEW v_fse_reporting_base_pref AS
+DROP MATERIALIZED VIEW IF EXISTS mv_fse_reporting_base_pref;
+CREATE MATERIALIZED VIEW mv_fse_reporting_base_pref AS
 WITH report_context AS (
     SELECT
         cr.compliance_report_id,
@@ -437,41 +458,43 @@ latest_equipment AS (
 equipment_uses AS (
     SELECT
         ceiu.charging_equipment_id,
+        ceiu.charging_equipment_version,
         array_agg(eut.type ORDER BY eut.type) AS intended_uses
     FROM charging_equipment_intended_use_association ceiu
     JOIN end_use_type eut ON ceiu.end_use_type_id = eut.end_use_type_id
-    GROUP BY ceiu.charging_equipment_id
+    GROUP BY ceiu.charging_equipment_id, ceiu.charging_equipment_version
 ),
 equipment_users AS (
     SELECT
         ceiu2.charging_equipment_id,
+        ceiu2.charging_equipment_version,
         array_agg(eut2.type_name ORDER BY eut2.type_name) AS intended_users
     FROM charging_equipment_intended_user_association ceiu2
     JOIN end_user_type eut2 ON ceiu2.end_user_type_id = eut2.end_user_type_id
-    GROUP BY ceiu2.charging_equipment_id
+    GROUP BY ceiu2.charging_equipment_id, ceiu2.charging_equipment_version
 ),
 fallback_rows AS (
     SELECT
-        cs.organization_id,
+        ls.organization_id,
         ce.group_uuid AS charging_equipment_group_uuid,
         ce.charging_equipment_id,
         ce.serial_number,
         ce.manufacturer,
         ce.model,
-        (cs.site_code || '-' || ce.equipment_number) AS registration_number,
-        cs.site_name,
-        cs.charging_site_id,
+        (ls.site_code || '-' || ce.equipment_number) AS registration_number,
+        ls.site_name,
+        ls.charging_site_id,
         ce.notes AS equipment_notes,
         ce.version AS charging_equipment_version,
-        cs.street_address,
-        cs.city,
-        cs.postal_code,
-        cs.latitude,
-        cs.longitude,
+        ls.street_address,
+        ls.city,
+        ls.postal_code,
+        ls.latitude,
+        ls.longitude,
         loe.name AS level_of_equipment,
         ce.level_of_equipment_id,
         ce.ports,
-        cs.allocating_organization_name,
+        ls.allocating_organization_name,
         eu.intended_uses,
         eus.intended_users,
         power_lookup.power_output,
@@ -481,12 +504,32 @@ fallback_rows AS (
     JOIN charging_equipment ce
         ON le.charging_equipment_id = ce.charging_equipment_id
        AND le.version = ce.version
-    JOIN charging_site cs ON ce.charging_site_id = cs.charging_site_id
-        AND cs.version = (SELECT MAX(cs2.version) FROM charging_site cs2 WHERE cs2.group_uuid = cs.group_uuid)
+    JOIN charging_site cs_fk ON ce.charging_site_id = cs_fk.charging_site_id
+    JOIN LATERAL (
+        SELECT
+            cs.organization_id,
+            cs.site_code,
+            cs.site_name,
+            cs.charging_site_id,
+            cs.street_address,
+            cs.city,
+            cs.postal_code,
+            cs.latitude,
+            cs.longitude,
+            cs.allocating_organization_name
+        FROM charging_site cs
+        WHERE cs.group_uuid = cs_fk.group_uuid
+        ORDER BY cs.version DESC
+        LIMIT 1
+    ) ls ON TRUE
     JOIN level_of_equipment loe ON ce.level_of_equipment_id = loe.level_of_equipment_id
     JOIN charging_equipment_status ces ON ce.status_id = ces.charging_equipment_status_id
-    LEFT JOIN equipment_uses eu ON ce.charging_equipment_id = eu.charging_equipment_id
-    LEFT JOIN equipment_users eus ON ce.charging_equipment_id = eus.charging_equipment_id
+    LEFT JOIN equipment_uses eu
+        ON ce.charging_equipment_id = eu.charging_equipment_id
+       AND ce.version = eu.charging_equipment_version
+    LEFT JOIN equipment_users eus
+        ON ce.charging_equipment_id = eus.charging_equipment_id
+       AND ce.version = eus.charging_equipment_version
     LEFT JOIN LATERAL (
         SELECT cpo.charger_power_output AS power_output
         FROM charging_power_output cpo
@@ -510,8 +553,7 @@ matched_rows AS (
                 PARTITION BY
                     v.organization_id,
                     v.compliance_report_group_uuid,
-                    v.charging_equipment_id,
-                    v.charging_equipment_version
+                    ce.group_uuid
                 ORDER BY
                     CASE
                         WHEN v.is_active IS TRUE THEN 0
@@ -526,11 +568,33 @@ matched_rows AS (
            AND ce.version = v.charging_equipment_version
     ) x
     WHERE x.rn = 1
+),
+report_equipment_keys AS (
+    SELECT
+        rc.organization_id,
+        rc.compliance_report_id,
+        rc.compliance_report_group_uuid,
+        fr.charging_equipment_group_uuid
+    FROM report_context rc
+    JOIN fallback_rows fr
+        ON fr.organization_id = rc.organization_id
+
+    UNION
+
+    SELECT
+        rc.organization_id,
+        rc.compliance_report_id,
+        rc.compliance_report_group_uuid,
+        mr.charging_equipment_group_uuid
+    FROM report_context rc
+    JOIN matched_rows mr
+        ON mr.organization_id = rc.organization_id
+       AND mr.compliance_report_group_uuid = rc.compliance_report_group_uuid
 )
 SELECT
-    rc.organization_id,
-    rc.compliance_report_id,
-    rc.compliance_report_group_uuid,
+    rek.organization_id,
+    rek.compliance_report_id,
+    rek.compliance_report_group_uuid,
     COALESCE(mr.charging_equipment_id, fr.charging_equipment_id) AS charging_equipment_id,
     COALESCE(mr.serial_number, fr.serial_number) AS serial_number,
     COALESCE(mr.manufacturer, fr.manufacturer) AS manufacturer,
@@ -560,19 +624,48 @@ SELECT
     COALESCE(mr.intended_uses, fr.intended_uses) AS intended_uses,
     COALESCE(mr.intended_users, fr.intended_users) AS intended_users,
     COALESCE(mr.power_output, fr.power_output) AS power_output,
-    COALESCE(
-        mr.capacity_utilization_percent,
-        fr.capacity_utilization_percent
-    ) AS capacity_utilization_percent,
+    CASE
+        WHEN mr.kwh_usage IS NULL OR mr.supply_from_date IS NULL OR mr.supply_to_date IS NULL
+             OR COALESCE(mr.power_output, fr.power_output) IS NULL
+             OR COALESCE(mr.power_output, fr.power_output) <= 0
+             OR mr.supply_to_date::date < mr.supply_from_date::date
+        THEN NULL
+        ELSE ROUND((mr.kwh_usage::numeric / (COALESCE(mr.power_output, fr.power_output)::numeric * 24 * ((mr.supply_to_date::date - mr.supply_from_date::date) + 1))) * 100)::integer
+    END AS capacity_utilization_percent,
     COALESCE(mr.charging_equipment_status, fr.charging_equipment_status) AS charging_equipment_status
-FROM report_context rc
-JOIN fallback_rows fr
-    ON fr.organization_id = rc.organization_id
+FROM report_equipment_keys rek
+LEFT JOIN fallback_rows fr
+    ON fr.organization_id = rek.organization_id
+   AND fr.charging_equipment_group_uuid = rek.charging_equipment_group_uuid
 LEFT JOIN matched_rows mr
-    ON mr.organization_id = rc.organization_id
-   AND mr.compliance_report_group_uuid = rc.compliance_report_group_uuid
-   AND mr.charging_equipment_id = fr.charging_equipment_id
-   AND mr.charging_equipment_version = fr.charging_equipment_version;
+    ON mr.organization_id = rek.organization_id
+   AND mr.compliance_report_group_uuid = rek.compliance_report_group_uuid
+   AND mr.charging_equipment_group_uuid = rek.charging_equipment_group_uuid;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_mv_fse_reporting_base_pref_mv
+    ON mv_fse_reporting_base_pref (
+        compliance_report_id,
+        charging_equipment_id,
+        charging_equipment_version
+    );
+
+CREATE INDEX IF NOT EXISTS ix_mv_fse_reporting_base_pref_report_filters
+    ON mv_fse_reporting_base_pref (
+        organization_id,
+        compliance_report_id,
+        is_active,
+        charging_equipment_status
+    );
+
+CREATE INDEX IF NOT EXISTS ix_mv_fse_reporting_base_pref_report_sort
+    ON mv_fse_reporting_base_pref (
+        compliance_report_id,
+        site_name,
+        registration_number,
+        charging_equipment_id
+    );
+
+GRANT SELECT ON mv_fse_reporting_base_pref TO basic_lcfs_reporting_role;
 
 -- ==========================================
 -- Notional Transfer Base View
@@ -2505,149 +2598,10 @@ GROUP BY
 
 GRANT SELECT ON vw_compliance_report_base TO basic_lcfs_reporting_role;
 -- ==========================================
--- Final Supply Equipment Base View
--- ==========================================
-DROP VIEW IF EXISTS vw_fse_base CASCADE;
-CREATE OR REPLACE VIEW vw_fse_base AS
-WITH
-fse_intended_uses AS (
-    SELECT 
-        fse.final_supply_equipment_id,
-        STRING_AGG(DISTINCT eut.type, ', ' ORDER BY eut.type) AS intended_uses
-    FROM final_supply_equipment fse
-    LEFT JOIN final_supply_intended_use_association fsiua 
-        ON fse.final_supply_equipment_id = fsiua.final_supply_equipment_id
-    LEFT JOIN end_use_type eut 
-        ON fsiua.end_use_type_id = eut.end_use_type_id
-        AND eut.intended_use = true
-    GROUP BY fse.final_supply_equipment_id
-),
-fse_intended_users AS (
-    SELECT 
-        fse.final_supply_equipment_id,
-        STRING_AGG(DISTINCT eurt.type_name, ', ' ORDER BY eurt.type_name) AS intended_users
-    FROM final_supply_equipment fse
-    LEFT JOIN final_supply_intended_user_association fsiura 
-        ON fse.final_supply_equipment_id = fsiura.final_supply_equipment_id
-    LEFT JOIN end_user_type eurt 
-        ON fsiura.end_user_type_id = eurt.end_user_type_id
-        AND eurt.intended_use = true
-    GROUP BY fse.final_supply_equipment_id
-)
-SELECT 
-    o.name AS "Organization",
-    fse.supply_from_date AS "Supply From Date",
-    fse.supply_to_date AS "Supply To Date",
-    fse.kwh_usage AS "kWh Usage",
-    fse.serial_nbr AS "Serial #",
-    fse.manufacturer AS "Manufacturer",
-    fse.model AS "Model",
-    loe.name AS "Level of Equipment",
-    fse.ports AS "Ports",
-    COALESCE(fiu.intended_uses, '') AS "Intended Use",
-    COALESCE(fiur.intended_users, '') AS "Intended Users",
-    fse.street_address AS "Street Address",
-    fse.city AS "City",
-    fse.postal_code AS "Postal Code",
-    fse.latitude AS "Latitude",
-    fse.longitude AS "Longitude",
-    fse.notes AS "Notes"
-    
-FROM final_supply_equipment fse
-JOIN v_compliance_report vcr 
-    ON vcr.compliance_report_id = fse.compliance_report_id
-    AND vcr.is_latest = true
-JOIN compliance_report cr 
-    ON cr.compliance_report_id = fse.compliance_report_id
-JOIN compliance_report_status crs 
-    ON crs.compliance_report_status_id = cr.current_status_id
-    AND crs.status != 'Draft'  -- Exclude draft reports
-JOIN organization o 
-    ON o.organization_id = cr.organization_id
-JOIN compliance_period cp 
-    ON cp.compliance_period_id = cr.compliance_period_id
-LEFT JOIN level_of_equipment loe 
-    ON loe.level_of_equipment_id = fse.level_of_equipment_id
-LEFT JOIN fse_intended_uses fiu 
-    ON fiu.final_supply_equipment_id = fse.final_supply_equipment_id
-LEFT JOIN fse_intended_users fiur 
-    ON fiur.final_supply_equipment_id = fse.final_supply_equipment_id
-
-ORDER BY 
-    o.name,
-    cp.description DESC,
-    fse.supply_from_date,
-    fse.serial_nbr;
-
-GRANT SELECT ON vw_fse_base TO basic_lcfs_reporting_role;
-
--- Create indexes
-CREATE INDEX IF NOT EXISTS idx_fse_info_org_year
-    ON final_supply_equipment (compliance_report_id);
-CREATE INDEX IF NOT EXISTS idx_fse_info_supply_dates
-    ON final_supply_equipment (supply_from_date, supply_to_date);
-CREATE INDEX IF NOT EXISTS idx_fse_info_location
-    ON final_supply_equipment (latitude, longitude);
--- ==========================================
--- FSE Base View YoY
--- ==========================================
-DROP VIEW IF EXISTS vw_fse_base CASCADE;
-CREATE OR REPLACE VIEW vw_fse_base AS
-SELECT
-    cp.compliance_period_id              AS "Compliance Period ID",
-    cp.description                       AS "Compliance Year",
-    o.organization_id                    AS "Organization ID",
-    o.name                               AS "Organization",
-    o.operating_name                     AS "Organization Operating Name",
-    fse.registration_number              AS "Registration Number",
-    vcr.compliance_report_id             AS "Compliance Report ID",
-    vcr.compliance_report_group_uuid     AS "Compliance Report Group UUID",
-    vcr.version                          AS "Report Version",
-    vcr.report_type                      AS "Report Type",
-    vcr.supplemental_initiator           AS "Supplemental Initiator",
-    vcr.report_status                    AS "Report Status",
-    fse.site_name                        AS "Site Name",
-    fse.supply_from_date                 AS "Supply From Date",
-    fse.supply_to_date                   AS "Supply To Date",
-    fse.kwh_usage                        AS "kWh Usage",
-    fse.serial_number                    AS "Serial #",
-    fse.manufacturer                     AS "Manufacturer",
-    fse.model                            AS "Model",
-    fse.level_of_equipment               AS "Level of Equipment",
-    fse.ports                            AS "Ports",
-    COALESCE(array_to_string(fse.intended_uses, ', '), '')  AS "Intended Use",
-    COALESCE(array_to_string(fse.intended_users, ', '), '') AS "Intended Users",
-    fse.allocating_organization_name     AS "Allocating Organization",
-    fse.street_address                   AS "Street Address",
-    fse.city                             AS "City",
-    fse.postal_code                      AS "Postal Code",
-    fse.latitude                         AS "Latitude",
-    fse.longitude                        AS "Longitude",
-    fse.power_output                     AS "Power Output (kW)",
-    fse.capacity_utilization_percent     AS "Capacity Utilization %",
-    fse.charging_equipment_status        AS "Charging Equipment Status",
-    fse.equipment_notes                  AS "Equipment Notes",
-    fse.compliance_notes                 AS "Compliance Notes"
-FROM v_fse_reporting_base_pref fse
-JOIN v_compliance_report vcr
-    ON vcr.compliance_report_group_uuid = fse.compliance_report_group_uuid
-   AND vcr.is_latest = true
-JOIN organization o
-    ON o.organization_id = vcr.organization_id
-JOIN compliance_period cp
-    ON cp.compliance_period_id = vcr.compliance_period_id
-WHERE vcr.report_status != 'Draft'
-ORDER BY
-    cp.description DESC,
-    o.name,
-    fse.supply_from_date,
-    fse.serial_number;
-
-GRANT SELECT ON vw_fse_base TO basic_lcfs_reporting_role;
--- ==========================================
 -- FSE Base View YoY Optimised
 -- ==========================================
--- Replaces v_fse_reporting_base_pref chain with flat CTEs for performance.
+-- Projects the preferred FSE reporting materialized view with report metadata
+-- and snake_case columns for API/reporting consumers.
 DROP VIEW IF EXISTS vw_fse_base CASCADE;
 CREATE OR REPLACE VIEW vw_fse_base AS
 WITH
@@ -2666,106 +2620,55 @@ target_reports AS (
         ON crs.compliance_report_status_id = cr.current_status_id
     WHERE crs.status != 'Draft'
     ORDER BY cr.compliance_report_group_uuid, cr.version DESC
-),
-best_crce AS (
-    SELECT DISTINCT ON (
-        crce.compliance_report_group_uuid,
-        crce.organization_id,
-        crce.charging_equipment_id,
-        crce.charging_equipment_version
-    )
-        crce.compliance_report_group_uuid,
-        crce.organization_id,
-        crce.charging_equipment_id,
-        crce.charging_equipment_version,
-        crce.supply_from_date,
-        crce.supply_to_date,
-        crce.kwh_usage,
-        crce.compliance_notes
-    FROM compliance_report_charging_equipment crce
-    JOIN target_reports tr
-        ON tr.compliance_report_group_uuid = crce.compliance_report_group_uuid
-    ORDER BY
-        crce.compliance_report_group_uuid,
-        crce.organization_id,
-        crce.charging_equipment_id,
-        crce.charging_equipment_version,
-        (crce.is_active IS TRUE) DESC,
-        crce.version DESC,
-        crce.charging_equipment_compliance_id DESC
 )
 SELECT
-    tr.compliance_period_id                       AS "Compliance Period ID",
-    cp.description                                AS "Compliance Year",
-    tr.organization_id                            AS "Organization ID",
-    o.name                                        AS "Organization",
-    o.operating_name                              AS "Organization Operating Name",
-    (ls.site_code || '-' || ce.equipment_number)  AS "Registration Number",
-    tr.compliance_report_id                       AS "Compliance Report ID",
-    tr.compliance_report_group_uuid               AS "Compliance Report Group UUID",
-    tr.version                                    AS "Report Version",
-    tr.report_type                                AS "Report Type",
-    tr.supplemental_initiator                     AS "Supplemental Initiator",
-    tr.report_status                              AS "Report Status",
-    ls.site_name                                  AS "Site Name",
-    ls.street_address                             AS "Street Address",
-    ls.city                                       AS "City",
-    ls.postal_code                                AS "Postal Code",
-    ls.latitude                                   AS "Latitude",
-    ls.longitude                                  AS "Longitude",
-    bc.supply_from_date                           AS "Supply From Date",
-    bc.supply_to_date                             AS "Supply To Date",
-    bc.kwh_usage                                  AS "kWh Usage",
-    ce.serial_number                              AS "Serial #",
-    ce.manufacturer                               AS "Manufacturer",
-    ce.model                                      AS "Model",
-    (
-        SELECT loe.name
-        FROM level_of_equipment loe
-        WHERE loe.level_of_equipment_id = ce.level_of_equipment_id
-    )                                             AS "Level of Equipment",
-    ce.ports                                      AS "Ports",
-    COALESCE((
-        SELECT string_agg(eut.type, ', ' ORDER BY eut.type)
-        FROM charging_equipment_intended_use_association ceiu
-        JOIN end_use_type eut ON eut.end_use_type_id = ceiu.end_use_type_id
-        WHERE ceiu.charging_equipment_id = ce.charging_equipment_id
-    ), '')                                        AS "Intended Use",
-    COALESCE((
-        SELECT string_agg(eut2.type_name, ', ' ORDER BY eut2.type_name)
-        FROM charging_equipment_intended_user_association ceiu2
-        JOIN end_user_type eut2 ON eut2.end_user_type_id = ceiu2.end_user_type_id
-        WHERE ceiu2.charging_equipment_id = ce.charging_equipment_id
-    ), '')                                        AS "Intended Users",
-    ls.allocating_organization_name               AS "Allocating Organization",
-    ce.notes                                      AS "Equipment Notes",
-    bc.compliance_notes                           AS "Compliance Notes"
-FROM best_crce bc
+    tr.compliance_period_id                       AS compliance_period_id,
+    cp.description                                AS compliance_year,
+    v.organization_id                             AS organization_id,
+    o.name                                        AS organization_name,
+    o.operating_name                              AS organization_operating_name,
+    v.charging_equipment_compliance_id            AS charging_equipment_compliance_id,
+    v.charging_equipment_id                       AS charging_equipment_id,
+    v.charging_equipment_version                  AS charging_equipment_version,
+    v.charging_site_id                            AS charging_site_id,
+    v.registration_number                         AS registration_number,
+    v.compliance_report_id                        AS compliance_report_id,
+    v.compliance_report_group_uuid                AS compliance_report_group_uuid,
+    tr.version                                    AS report_version,
+    tr.report_type                                AS report_type,
+    tr.supplemental_initiator                     AS supplemental_initiator,
+    tr.report_status                              AS report_status,
+    v.site_name                                   AS site_name,
+    v.street_address                              AS street_address,
+    v.city                                        AS city,
+    v.postal_code                                 AS postal_code,
+    v.latitude                                    AS latitude,
+    v.longitude                                   AS longitude,
+    v.supply_from_date                            AS supply_from_date,
+    v.supply_to_date                              AS supply_to_date,
+    v.kwh_usage                                   AS kwh_usage,
+    v.compliance_notes                            AS compliance_notes,
+    v.is_active                                   AS is_active,
+    v.serial_number                               AS serial_number,
+    v.manufacturer                                AS manufacturer,
+    v.model                                       AS model,
+    v.level_of_equipment                          AS level_of_equipment,
+    v.level_of_equipment_id                       AS level_of_equipment_id,
+    v.ports                                       AS ports,
+    COALESCE(v.intended_uses, ARRAY[]::varchar[]) AS intended_uses,
+    COALESCE(v.intended_users, ARRAY[]::varchar[]) AS intended_users,
+    v.allocating_organization_name                AS allocating_organization_name,
+    v.equipment_notes                             AS equipment_notes,
+    v.power_output                                AS power_output,
+    v.capacity_utilization_percent                AS capacity_utilization_percent,
+    v.charging_equipment_status                   AS charging_equipment_status
+FROM mv_fse_reporting_base_pref v
 JOIN target_reports tr
-    ON tr.compliance_report_group_uuid = bc.compliance_report_group_uuid
+    ON tr.compliance_report_id = v.compliance_report_id
 JOIN organization o
-    ON o.organization_id = tr.organization_id
+    ON o.organization_id = v.organization_id
 JOIN compliance_period cp
-    ON cp.compliance_period_id = tr.compliance_period_id
-JOIN charging_equipment ce
-    ON ce.charging_equipment_id = bc.charging_equipment_id
-   AND ce.version              = bc.charging_equipment_version
-JOIN charging_site cs_fk
-    ON cs_fk.charging_site_id = ce.charging_site_id
-JOIN LATERAL (
-    SELECT cs.site_code,
-           cs.site_name,
-           cs.street_address,
-           cs.city,
-           cs.postal_code,
-           cs.latitude,
-           cs.longitude,
-           cs.allocating_organization_name
-    FROM charging_site cs
-    WHERE cs.group_uuid = cs_fk.group_uuid
-    ORDER BY cs.version DESC
-    LIMIT 1
-) ls ON TRUE;
+    ON cp.compliance_period_id = tr.compliance_period_id;
 
 GRANT SELECT ON vw_fse_base TO basic_lcfs_reporting_role;
 -- ==========================================
