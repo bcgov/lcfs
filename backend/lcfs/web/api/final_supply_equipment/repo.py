@@ -1092,7 +1092,7 @@ class FinalSupplyEquipmentRepository:
         Reporting selections live at the compliance-report-group level and carry
         across report versions, so we match on ``compliance_report_group_uuid``
         (not a single ``compliance_report_id``) — otherwise a supplemental would
-        miss equipment selected on the original report. ``v_fse_reporting_base``
+        miss equipment selected on the original report. ``mv_fse_reporting_base``
         already contains only the actually-selected reporting rows (one per
         ``compliance_report_charging_equipment``), so it is queried directly
         rather than the heavier "preferred"/editing view.
@@ -1143,7 +1143,7 @@ class FinalSupplyEquipmentRepository:
         decommissioned.
 
         Matches the report group's reporting set via
-        ``compliance_report_group_uuid`` against ``v_fse_reporting_base`` (the
+        ``compliance_report_group_uuid`` against ``mv_fse_reporting_base`` (the
         selected-rows view), consistent with ``has_decommissioned_fse_in_report``.
 
         Period-aware: when ``compliance_year`` is provided, only rows for
@@ -1234,7 +1234,7 @@ class FinalSupplyEquipmentRepository:
         """
         Return total kWh usage for the rows shown in the FSE reporting list.
 
-        This sums ``kwh_usage`` over the same ``v_fse_reporting_base_pref`` rows
+        This sums ``kwh_usage`` over the same ``mv_fse_reporting_base_pref`` rows
         (and identical filters) that ``get_fse_reporting_list_paginated``
         returns, so the total displayed above the table always matches the sum
         of the rows in the table and the Excel export. Pagination/user filters
@@ -1279,7 +1279,7 @@ class FinalSupplyEquipmentRepository:
                     capacity_utilization_percent,
                     kwh_usage,
                     registration_number
-                FROM v_fse_reporting_base_pref
+                FROM mv_fse_reporting_base_pref
                 WHERE organization_id = :organization_id
                   AND compliance_report_id = :compliance_report_id
                   AND (
@@ -1557,7 +1557,7 @@ class FinalSupplyEquipmentRepository:
         Return export rows for a BCeID (supplier) compliance report download.
 
         The row set, kWh usage and reporting data (supply dates, compliance
-        notes) come from ``v_fse_reporting_base_pref`` using the exact same
+        notes) come from ``mv_fse_reporting_base_pref`` using the exact same
         filters as the on-screen FSE table, the header total and the government
         export — see ``_fse_reporting_base_conditions`` with ``mode="summary"``.
         This guarantees the supplier's Excel kWh sum matches the total shown

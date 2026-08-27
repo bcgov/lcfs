@@ -312,8 +312,8 @@ GRANT SELECT ON vw_compliance_reports_time_per_status TO basic_lcfs_reporting_ro
 -- ==========================================
 -- FSE Reporting Base View
 -- ==========================================
-DROP VIEW IF EXISTS v_fse_reporting_base CASCADE;
-CREATE OR REPLACE VIEW v_fse_reporting_base as
+DROP MATERIALIZED VIEW IF EXISTS mv_fse_reporting_base CASCADE;
+CREATE MATERIALIZED VIEW mv_fse_reporting_base AS
 WITH equipment_uses AS (
     SELECT
         ceiu.charging_equipment_id,
@@ -428,11 +428,27 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) power_lookup ON TRUE;
 
+CREATE UNIQUE INDEX IF NOT EXISTS ux_mv_fse_reporting_base_mv
+    ON mv_fse_reporting_base (charging_equipment_compliance_id);
+
+CREATE INDEX IF NOT EXISTS ix_mv_fse_reporting_base_equipment_version
+    ON mv_fse_reporting_base (
+        charging_equipment_id,
+        charging_equipment_version
+    );
+
+CREATE INDEX IF NOT EXISTS ix_mv_fse_reporting_base_group_status_active
+    ON mv_fse_reporting_base (
+        compliance_report_group_uuid,
+        charging_equipment_status,
+        is_active
+    );
+
 -- ==========================================
 -- FSE Reporting Base Preferred View
 -- ==========================================
-DROP VIEW IF EXISTS v_fse_reporting_base_pref;
-CREATE OR REPLACE VIEW v_fse_reporting_base_pref AS
+DROP MATERIALIZED VIEW IF EXISTS mv_fse_reporting_base_pref;
+CREATE MATERIALIZED VIEW mv_fse_reporting_base_pref AS
 WITH report_context AS (
     SELECT
         cr.compliance_report_id,
@@ -550,7 +566,7 @@ matched_rows AS (
                     v.version DESC,
                     v.charging_equipment_compliance_id DESC
             ) AS rn
-        FROM v_fse_reporting_base v
+        FROM mv_fse_reporting_base v
         JOIN charging_equipment ce
             ON ce.charging_equipment_id = v.charging_equipment_id
            AND ce.version = v.charging_equipment_version
@@ -630,7 +646,30 @@ LEFT JOIN matched_rows mr
    AND mr.compliance_report_group_uuid = rek.compliance_report_group_uuid
    AND mr.charging_equipment_group_uuid = rek.charging_equipment_group_uuid;
 
-GRANT SELECT ON v_fse_reporting_base_pref TO basic_lcfs_reporting_role;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_mv_fse_reporting_base_pref_mv
+    ON mv_fse_reporting_base_pref (
+        compliance_report_id,
+        charging_equipment_id,
+        charging_equipment_version
+    );
+
+CREATE INDEX IF NOT EXISTS ix_mv_fse_reporting_base_pref_report_filters
+    ON mv_fse_reporting_base_pref (
+        organization_id,
+        compliance_report_id,
+        is_active,
+        charging_equipment_status
+    );
+
+CREATE INDEX IF NOT EXISTS ix_mv_fse_reporting_base_pref_report_sort
+    ON mv_fse_reporting_base_pref (
+        compliance_report_id,
+        site_name,
+        registration_number,
+        charging_equipment_id
+    );
+
+GRANT SELECT ON mv_fse_reporting_base_pref TO basic_lcfs_reporting_role;
 
 -- ==========================================
 -- Notional Transfer Base View
@@ -2565,7 +2604,7 @@ GRANT SELECT ON vw_compliance_report_base TO basic_lcfs_reporting_role;
 -- ==========================================
 -- FSE Base View YoY Optimised
 -- ==========================================
--- Replaces v_fse_reporting_base_pref chain with flat CTEs for performance.
+-- Replaces mv_fse_reporting_base_pref chain with flat CTEs for performance.
 DROP VIEW IF EXISTS vw_fse_base CASCADE;
 CREATE OR REPLACE VIEW vw_fse_base AS
 WITH

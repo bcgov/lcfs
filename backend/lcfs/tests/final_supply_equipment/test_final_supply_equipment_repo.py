@@ -624,8 +624,8 @@ async def test_get_total_kwh_usage_for_report_sums_same_view_and_filters(repo, f
     stmt = fake_db.scalar.call_args[0][0]
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
     # Same source view as the list query, summing the kWh column.
-    assert "v_fse_reporting_base_pref" in compiled
-    assert "sum(v_fse_reporting_base_pref.kwh_usage)" in compiled
+    assert "mv_fse_reporting_base_pref" in compiled
+    assert "sum(mv_fse_reporting_base_pref.kwh_usage)" in compiled
     # Same scoping/filters as the list query, including the summary is_active
     # filter so active-only rows are counted exactly as the table shows them.
     assert "compliance_report_id = 10" in compiled
@@ -666,7 +666,7 @@ async def test_review_fse_summary_uses_same_view_and_filters_as_grid(repo, fake_
 
     stmt, params = fake_db.execute.call_args.args
     sql = str(stmt)
-    assert "v_fse_reporting_base_pref" in sql
+    assert "mv_fse_reporting_base_pref" in sql
     assert "fse_review_summary_counts" in sql
     assert "fse_review_level_counts" in sql
     assert "GROUP BY COALESCE(level_of_equipment, 'Unknown level')" in sql
@@ -717,9 +717,9 @@ async def test_effective_fse_export_rows_match_total_view_and_filters(repo, fake
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
 
     # kWh + row set come from the same view + summary filters as the total.
-    assert "v_fse_reporting_base_pref" in compiled
-    assert "v_fse_reporting_base_pref.kwh_usage" in compiled
-    assert "v_fse_reporting_base_pref.compliance_report_id = 1" in compiled
+    assert "mv_fse_reporting_base_pref" in compiled
+    assert "mv_fse_reporting_base_pref.kwh_usage" in compiled
+    assert "mv_fse_reporting_base_pref.compliance_report_id = 1" in compiled
     assert "Decommissioned" in compiled
     assert "charging_equipment_compliance_id IS NOT NULL" in compiled
     assert "is_active IS true" in compiled
@@ -744,8 +744,8 @@ async def test_has_decommissioned_fse_in_report_true(repo, fake_db):
     # report's selections.
     stmt = fake_db.scalar.call_args[0][0]
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
-    assert "v_fse_reporting_base" in compiled
-    assert "v_fse_reporting_base_pref" not in compiled
+    assert "mv_fse_reporting_base" in compiled
+    assert "mv_fse_reporting_base_pref" not in compiled
     assert "compliance_report_group_uuid = 'group-10'" in compiled
     assert "compliance_report_id" not in compiled
 
@@ -776,8 +776,8 @@ async def test_deactivate_decommissioned_fse_for_report(repo, fake_db):
     assert "charging_equipment_status = 'Decommissioned'" in compiled_sql
     assert "is_active IS true" in compiled_sql
     # Sources rows from the selected-rows base view, matched by report group.
-    assert "v_fse_reporting_base" in compiled_sql
-    assert "v_fse_reporting_base_pref" not in compiled_sql
+    assert "mv_fse_reporting_base" in compiled_sql
+    assert "mv_fse_reporting_base_pref" not in compiled_sql
     assert "compliance_report_group_uuid = 'group-10'" in compiled_sql
 
 
@@ -1016,7 +1016,7 @@ async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fak
     compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
 
     # When mode='all', the query should use FSEReportingBasePrefView which has prioritization logic
-    assert "v_fse_reporting_base_pref" in compiled_sql
+    assert "mv_fse_reporting_base_pref" in compiled_sql
 
 
 @pytest.mark.anyio
