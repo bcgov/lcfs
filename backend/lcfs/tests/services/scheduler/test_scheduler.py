@@ -152,11 +152,11 @@ async def test_scheduler_adds_startup_job(mock_app):
             # Verify start was called
             mock_start.assert_called_once()
 
-            mock_add_job.assert_called_once()
-            assert (
-                mock_add_job.call_args.kwargs["id"]
-                == "reindex_compliance_report_tables"
-            )
+            added_job_ids = [
+                call.kwargs["id"] for call in mock_add_job.call_args_list
+            ]
+            assert "reindex_compliance_report_tables" in added_job_ids
+            assert "refresh_fse_reporting_materialized_views" in added_job_ids
 
             # # Verify the job was added
             # mock_add_job.assert_called_once()
