@@ -6,11 +6,10 @@ Base = declarative_base()
 
 
 class FSEReportingBasePrefView(Base):
-    __tablename__ = "v_fse_reporting_base_pref"
+    __tablename__ = "mv_fse_reporting_base_pref"
     __table_args__ = {
         "extend_existing": True,
-        "info": {"is_view": True},
-        "comment": "View for preferred charging equipment reporting rows by report",
+        "comment": "Materialized view for preferred charging equipment reporting rows by report",
     }
 
     compliance_report_id = Column(Integer, primary_key=True)

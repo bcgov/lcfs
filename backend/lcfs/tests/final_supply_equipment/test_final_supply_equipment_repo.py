@@ -74,6 +74,16 @@ def repo(fake_db):
     return FinalSupplyEquipmentRepository(db=fake_db)
 
 
+def mock_reporting_record_resolution(repo, record_id=1, compliance_report_id=10):
+    record = MagicMock(
+        charging_equipment_compliance_id=record_id,
+        compliance_report_id=compliance_report_id,
+    )
+    repo.get_reporting_record_by_id = AsyncMock(return_value=record)
+    repo._resolve_reporting_record_to_latest_equipment = AsyncMock(return_value=record)
+    return record
+
+
 def test_combine_reporting_queries_uses_union_for_multiple_queries(repo):
     first_query = select(literal(1).label("charging_equipment_id"))
     second_query = select(literal(1).label("charging_equipment_id"))
@@ -100,21 +110,6 @@ def test_latest_equipment_versions_subquery_ranks_by_group_uuid(repo):
 
     assert "PARTITION BY charging_equipment.group_uuid" in compiled
     assert "charging_equipment.version DESC" in compiled
-
-
-def test_fse_pref_view_matches_reporting_rows_by_equipment_group_uuid():
-    sql = (
-        Path(__file__).resolve().parents[3] / "lcfs/db/sql/views/metabase.sql"
-    ).read_text()
-
-    assert "v.compliance_report_group_uuid,\n                    ce.group_uuid" in sql
-    assert "mr.charging_equipment_group_uuid = fr.charging_equipment_group_uuid" in sql
-    assert "fr.charging_equipment_id,\n    fr.serial_number" in sql
-    assert (
-        "mr.charging_equipment_id = fr.charging_equipment_id\n"
-        "   AND mr.charging_equipment_version = fr.charging_equipment_version"
-        not in sql
-    )
 
 
 @pytest.mark.anyio
@@ -611,8 +606,8 @@ async def test_get_total_kwh_usage_for_report_sums_same_view_and_filters(repo, f
     stmt = fake_db.scalar.call_args[0][0]
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
     # Same source view as the list query, summing the kWh column.
-    assert "v_fse_reporting_base_pref" in compiled
-    assert "sum(v_fse_reporting_base_pref.kwh_usage)" in compiled
+    assert "mv_fse_reporting_base_pref" in compiled
+    assert "sum(mv_fse_reporting_base_pref.kwh_usage)" in compiled
     # Same scoping/filters as the list query, including the summary is_active
     # filter so active-only rows are counted exactly as the table shows them.
     assert "compliance_report_id = 10" in compiled
@@ -653,7 +648,7 @@ async def test_review_fse_summary_uses_same_view_and_filters_as_grid(repo, fake_
 
     stmt, params = fake_db.execute.call_args.args
     sql = str(stmt)
-    assert "v_fse_reporting_base_pref" in sql
+    assert "mv_fse_reporting_base_pref" in sql
     assert "fse_review_summary_counts" in sql
     assert "fse_review_level_counts" in sql
     assert "GROUP BY COALESCE(level_of_equipment, 'Unknown level')" in sql
@@ -682,13 +677,29 @@ async def test_get_total_kwh_usage_for_report_excludes_is_active_when_not_summar
 
 
 @pytest.mark.anyio
+async def test_get_total_kwh_usage_for_report_can_use_vw_fse_base(repo, fake_db):
+    fake_db.scalar.return_value = 321.0
+
+    result = await repo.get_total_kwh_usage_for_report(
+        1, 10, "summary", source="vw_fse_base"
+    )
+
+    assert result == 321.0
+
+    stmt = fake_db.scalar.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "vw_fse_base" in compiled
+    assert "mv_fse_reporting_base_pref" not in compiled
+    assert "sum(vw_fse_base.kwh_usage)" in compiled
+    assert "vw_fse_base.compliance_report_id = 10" in compiled
+
+
+@pytest.mark.anyio
 async def test_effective_fse_export_rows_match_total_view_and_filters(repo, fake_db):
     """
-    The supplier (BCeID) export must draw its row set + kWh from the SAME
-    pref-view rows and SAME summary filters as the header total / UI table /
-    government export, so the supplier's Excel sum cannot diverge from the
-    total shown above the table. Equipment metadata is enriched from the latest
-    version via COALESCE.
+    The supplier (BCeID) export must draw its row set + kWh from vw_fse_base,
+    matching the summary table source. Equipment metadata is enriched from the
+    latest version via COALESCE.
     """
     data_result = MagicMock()
     data_result.fetchall.return_value = []
@@ -703,10 +714,11 @@ async def test_effective_fse_export_rows_match_total_view_and_filters(repo, fake
     stmt = fake_db.execute.call_args[0][0]
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
 
-    # kWh + row set come from the same view + summary filters as the total.
-    assert "v_fse_reporting_base_pref" in compiled
-    assert "v_fse_reporting_base_pref.kwh_usage" in compiled
-    assert "v_fse_reporting_base_pref.compliance_report_id = 1" in compiled
+    # kWh + row set come from the same view + summary filters as the summary.
+    assert "vw_fse_base" in compiled
+    assert "vw_fse_base.kwh_usage" in compiled
+    assert "vw_fse_base.compliance_report_id = 1" in compiled
+    assert "mv_fse_reporting_base_pref" not in compiled
     assert "Decommissioned" in compiled
     assert "charging_equipment_compliance_id IS NOT NULL" in compiled
     assert "is_active IS true" in compiled
@@ -732,7 +744,7 @@ async def test_has_decommissioned_fse_in_report_true(repo, fake_db):
     stmt = fake_db.scalar.call_args[0][0]
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
     assert "v_fse_reporting_base" in compiled
-    assert "v_fse_reporting_base_pref" not in compiled
+    assert "mv_fse_reporting_base_pref" not in compiled
     assert "compliance_report_group_uuid = 'group-10'" in compiled
     assert "compliance_report_id" not in compiled
 
@@ -764,7 +776,7 @@ async def test_deactivate_decommissioned_fse_for_report(repo, fake_db):
     assert "is_active IS true" in compiled_sql
     # Sources rows from the selected-rows base view, matched by report group.
     assert "v_fse_reporting_base" in compiled_sql
-    assert "v_fse_reporting_base_pref" not in compiled_sql
+    assert "mv_fse_reporting_base_pref" not in compiled_sql
     assert "compliance_report_group_uuid = 'group-10'" in compiled_sql
 
 
@@ -876,27 +888,21 @@ async def test_create_fse_reporting_batch(repo, fake_db):
 async def test_update_fse_reporting(repo, fake_db):
     """Test updating FSE reporting"""
     data = {"kwh_usage": 1500.0, "notes": "Updated notes"}
-    existing_record = MagicMock(compliance_report_id=10)
-    records_result = MagicMock()
-    records_result.scalars.return_value.first.return_value = existing_record
-    fake_db.execute.side_effect = [records_result, MagicMock()]
+    mock_reporting_record_resolution(repo, record_id=1, compliance_report_id=10)
 
     result = await repo.update_fse_reporting(1, data)
 
     assert result["id"] == 1
     assert result["kwh_usage"] == 1500.0
     assert result["notes"] == "Updated notes"
-    assert fake_db.execute.await_count == 2
+    fake_db.execute.assert_awaited_once()
     fake_db.flush.assert_called_once()
 
 
 @pytest.mark.anyio
 async def test_update_fse_reporting_does_not_move_report_association(repo, fake_db):
     """Updating usage must not re-point the FSE association to another report."""
-    existing_record = MagicMock(compliance_report_id=3814)
-    records_result = MagicMock()
-    records_result.scalars.return_value.first.return_value = existing_record
-    fake_db.execute.side_effect = [records_result, MagicMock()]
+    mock_reporting_record_resolution(repo, record_id=1, compliance_report_id=3814)
     data = {
         "kwh_usage": 1500.0,
         "compliance_report_id": 3814,
@@ -909,7 +915,7 @@ async def test_update_fse_reporting_does_not_move_report_association(repo, fake_
     result = await repo.update_fse_reporting(1, data)
 
     assert result == {"id": 1, "kwh_usage": 1500.0}
-    stmt = fake_db.execute.call_args_list[1][0][0]
+    stmt = fake_db.execute.call_args[0][0]
     compiled_sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
 
     assert "kwh_usage" in compiled_sql
@@ -919,6 +925,76 @@ async def test_update_fse_reporting_does_not_move_report_association(repo, fake_
     assert "charging_equipment_id" not in compiled_sql
     assert "charging_equipment_version" not in compiled_sql
     fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_resolve_reporting_record_moves_to_latest_equipment_version(repo, fake_db):
+    reporting_record = MagicMock(
+        charging_equipment_compliance_id=10,
+        charging_equipment_id=100,
+        charging_equipment_version=1,
+        compliance_report_group_uuid="report-group",
+        organization_id=7,
+    )
+    latest_row = MagicMock(charging_equipment_id=101, charging_equipment_version=3)
+    latest_result = MagicMock()
+    latest_result.fetchone.return_value = latest_row
+    target_result = MagicMock()
+    target_result.scalars.return_value.first.return_value = None
+    fake_db.execute.side_effect = [latest_result, target_result]
+
+    resolved = await repo._resolve_reporting_record_to_latest_equipment(
+        reporting_record
+    )
+
+    assert resolved is reporting_record
+    assert reporting_record.charging_equipment_id == 101
+    assert reporting_record.charging_equipment_version == 3
+    fake_db.delete.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_resolve_reporting_record_reuses_existing_latest_equipment_row(
+    repo, fake_db
+):
+    reporting_record = MagicMock(
+        charging_equipment_compliance_id=10,
+        charging_equipment_id=100,
+        charging_equipment_version=1,
+        compliance_report_group_uuid="report-group",
+        organization_id=7,
+        compliance_report_id=44,
+        supply_from_date=datetime(2024, 1, 1),
+        supply_to_date=datetime(2024, 12, 31),
+        kwh_usage=123.4,
+        compliance_notes="notes",
+        is_active=True,
+    )
+    existing_target = MagicMock(
+        charging_equipment_compliance_id=20,
+        kwh_usage=None,
+        compliance_notes=None,
+        is_active=False,
+    )
+    latest_row = MagicMock(charging_equipment_id=101, charging_equipment_version=3)
+    latest_result = MagicMock()
+    latest_result.fetchone.return_value = latest_row
+    target_result = MagicMock()
+    target_result.scalars.return_value.first.return_value = existing_target
+    fake_db.execute.side_effect = [latest_result, target_result]
+
+    resolved = await repo._resolve_reporting_record_to_latest_equipment(
+        reporting_record
+    )
+
+    assert resolved is existing_target
+    assert existing_target.supply_from_date == reporting_record.supply_from_date
+    assert existing_target.supply_to_date == reporting_record.supply_to_date
+    assert existing_target.kwh_usage == 123.4
+    assert existing_target.compliance_notes == "notes"
+    assert existing_target.is_active is True
+    assert existing_target.compliance_report_id == 44
+    fake_db.delete.assert_awaited_once_with(reporting_record)
 
 
 @pytest.mark.anyio
@@ -1003,7 +1079,38 @@ async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fak
     compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
 
     # When mode='all', the query should use FSEReportingBasePrefView which has prioritization logic
-    assert "v_fse_reporting_base_pref" in compiled_sql
+    assert "mv_fse_reporting_base_pref" in compiled_sql
+
+
+@pytest.mark.anyio
+async def test_get_fse_reporting_list_paginated_can_use_vw_fse_base(repo, fake_db):
+    fake_db.scalar.return_value = 0
+    data_result = MagicMock()
+    data_result.fetchall.return_value = []
+    fake_db.execute.return_value = data_result
+
+    pagination = PaginationRequestSchema(page=1, size=10, filters=[], sort_orders=[])
+
+    await repo.get_fse_reporting_list_paginated(
+        1, pagination, 10, "summary", source="vw_fse_base"
+    )
+
+    executed_query = fake_db.execute.call_args[0][0]
+    compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
+
+    assert "vw_fse_base" in compiled_sql
+    assert "mv_fse_reporting_base_pref" not in compiled_sql
+
+
+def test_vw_fse_base_projects_capacity_from_preferred_materialized_view():
+    metabase_sql = Path("lcfs/db/sql/views/metabase.sql").read_text()
+    start = metabase_sql.index("CREATE OR REPLACE VIEW vw_fse_base AS")
+    end = metabase_sql.index("GRANT SELECT ON vw_fse_base", start)
+    view_sql = metabase_sql[start:end]
+
+    assert "FROM mv_fse_reporting_base_pref v" in view_sql
+    assert "v.capacity_utilization_percent" in view_sql
+    assert "NULL::integer                                 AS capacity_utilization_percent" not in view_sql
 
 
 @pytest.mark.anyio
@@ -1052,6 +1159,8 @@ async def test_bulk_update_all_fields_executes_update(repo, fake_db):
     """All four data fields + activate → execute + flush called once each."""
     from datetime import date
 
+    mock_reporting_record_resolution(repo, record_id=10)
+
     await repo.bulk_update_fse_reporting_record(
         charging_equipment_compliance_id=10,
         supply_from_date=date(2024, 1, 1),
@@ -1068,6 +1177,8 @@ async def test_bulk_update_all_fields_executes_update(repo, fake_db):
 @pytest.mark.anyio
 async def test_bulk_update_partial_fields_still_executes(repo, fake_db):
     """Providing only kwh_usage + activate still triggers execute + flush."""
+    mock_reporting_record_resolution(repo, record_id=10)
+
     await repo.bulk_update_fse_reporting_record(
         charging_equipment_compliance_id=10,
         supply_from_date=None,
@@ -1100,6 +1211,8 @@ async def test_bulk_update_no_fields_skips_execute(repo, fake_db):
 @pytest.mark.anyio
 async def test_bulk_update_activate_only_executes(repo, fake_db):
     """activate=True with all data fields None → is_active update still runs."""
+    mock_reporting_record_resolution(repo, record_id=10)
+
     await repo.bulk_update_fse_reporting_record(
         charging_equipment_compliance_id=10,
         supply_from_date=None,
@@ -1117,6 +1230,8 @@ async def test_bulk_update_activate_only_executes(repo, fake_db):
 async def test_bulk_update_without_activate_does_not_set_is_active(repo, fake_db):
     """activate=False (default) → is_active is NOT included in the UPDATE statement."""
     from datetime import date
+
+    mock_reporting_record_resolution(repo, record_id=7)
 
     await repo.bulk_update_fse_reporting_record(
         charging_equipment_compliance_id=7,
@@ -1137,6 +1252,8 @@ async def test_bulk_update_without_activate_does_not_set_is_active(repo, fake_db
 async def test_bulk_update_with_activate_includes_is_active(repo, fake_db):
     """activate=True → the compiled UPDATE statement must contain is_active = true."""
     from datetime import date
+
+    mock_reporting_record_resolution(repo, record_id=7)
 
     await repo.bulk_update_fse_reporting_record(
         charging_equipment_compliance_id=7,
@@ -1208,7 +1325,7 @@ async def test_get_fse_reporting_record_for_group_query_does_not_filter_on_versi
 
     await repo.get_fse_reporting_record_for_group(
         charging_equipment_id=1,
-        charging_equipment_version=99,   # arbitrary; must be ignored
+        charging_equipment_version=99,  # arbitrary; must be ignored
         compliance_report_group_uuid="group-xyz",
     )
 
@@ -1218,7 +1335,9 @@ async def test_get_fse_reporting_record_for_group_query_does_not_filter_on_versi
     # compliance_report_group_uuid but NOT on charging_equipment_version.
     assert "charging_equipment_id" in compiled
     assert "compliance_report_group_uuid" in compiled
-    assert "charging_equipment_version" not in compiled.split("WHERE")[1].split("ORDER")[0]
+    assert (
+        "charging_equipment_version" not in compiled.split("WHERE")[1].split("ORDER")[0]
+    )
 
 
 # ===========================================================================
@@ -1229,6 +1348,8 @@ async def test_get_fse_reporting_record_for_group_query_does_not_filter_on_versi
 @pytest.mark.anyio
 async def test_bulk_update_deactivate_executes_update(repo, fake_db):
     """deactivate=True → execute + flush are called."""
+    mock_reporting_record_resolution(repo, record_id=20)
+
     await repo.bulk_update_fse_reporting_record(
         charging_equipment_compliance_id=20,
         supply_from_date=None,
@@ -1245,6 +1366,8 @@ async def test_bulk_update_deactivate_executes_update(repo, fake_db):
 @pytest.mark.anyio
 async def test_bulk_update_deactivate_sets_is_active_false(repo, fake_db):
     """deactivate=True → compiled SQL must set is_active = false."""
+    mock_reporting_record_resolution(repo, record_id=20)
+
     await repo.bulk_update_fse_reporting_record(
         charging_equipment_compliance_id=20,
         supply_from_date=None,
@@ -1266,6 +1389,8 @@ async def test_bulk_update_deactivate_does_not_set_dates(repo, fake_db):
     deactivate=True must NOT update supply_from_date or supply_to_date because
     those columns are NOT NULL in the database.
     """
+    mock_reporting_record_resolution(repo, record_id=20)
+
     await repo.bulk_update_fse_reporting_record(
         charging_equipment_compliance_id=20,
         supply_from_date=None,
@@ -1287,6 +1412,8 @@ async def test_bulk_update_deactivate_takes_precedence_over_activate(repo, fake_
     When both deactivate=True and activate=True are passed, deactivate must win
     (is_active is set to False, not True).
     """
+    mock_reporting_record_resolution(repo, record_id=30)
+
     await repo.bulk_update_fse_reporting_record(
         charging_equipment_compliance_id=30,
         supply_from_date=None,
