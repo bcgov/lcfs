@@ -55,6 +55,7 @@ COMPLIANCE_REINDEX_TABLES = (
 )
 COMPLIANCE_REINDEX_LOCK_ID = 60271451
 CREDIT_MARKET_REPORT_LOCK_ID = 60271452
+FSE_REPORTING_MV_REFRESH_LOCK_ID = 60271453
 CREDIT_MARKET_REPORT_MAX_ATTEMPTS = 3
 CREDIT_MARKET_REPORT_RETRY_DELAY_SECONDS = 60
 
@@ -277,6 +278,103 @@ async def reindex_compliance_report_tables(app: FastAPI):
         await conn.close()
 
     logger.info("Finished compliance-report table reindex job")
+
+
+async def refresh_fse_reporting_materialized_views(app: FastAPI):
+    """
+    Refresh FSE reporting materialized views out of the request path.
+
+    Source-table triggers only increment dirty_generation. This job refreshes
+    the materialized views when dirty_generation is ahead of refreshed_generation.
+    The captured generation prevents losing changes made while a refresh is
+    running; those changes remain dirty for the next scheduler pass.
+    """
+    conn = await app.state.db_engine.connect()
+    lock_acquired = False
+
+    try:
+        conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
+        lock_acquired = await conn.scalar(
+            text("SELECT pg_try_advisory_lock(:lock_id)"),
+            {"lock_id": FSE_REPORTING_MV_REFRESH_LOCK_ID},
+        )
+
+        if not lock_acquired:
+            logger.info(
+                "Skipping FSE reporting MV refresh because another instance holds the lock"
+            )
+            return False
+
+        refresh_objects_exist = await conn.scalar(
+            text(
+                """
+                SELECT
+                    to_regclass('fse_reporting_mv_refresh_state') IS NOT NULL
+                    AND to_regclass('v_fse_reporting_base') IS NOT NULL
+                    AND to_regclass('mv_fse_reporting_base_pref') IS NOT NULL;
+                """
+            )
+        )
+
+        if not refresh_objects_exist:
+            logger.info(
+                "Skipping FSE reporting MV refresh because refresh objects do not exist"
+            )
+            return False
+
+        dirty_generation = await conn.scalar(
+            text(
+                """
+                SELECT dirty_generation
+                FROM fse_reporting_mv_refresh_state
+                WHERE id = 1
+                  AND dirty_generation > refreshed_generation;
+                """
+            )
+        )
+
+        if dirty_generation is None:
+            return False
+
+        logger.info(
+            "Refreshing FSE reporting preferred materialized view",
+            extra={"dirty_generation": dirty_generation},
+        )
+        await conn.execute(
+            text("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fse_reporting_base_pref")
+        )
+        await conn.execute(
+            text(
+                """
+                UPDATE fse_reporting_mv_refresh_state
+                SET refreshed_generation = GREATEST(
+                        refreshed_generation,
+                        :dirty_generation
+                    ),
+                    update_date = now()
+                WHERE id = 1;
+                """
+            ),
+            {"dirty_generation": dirty_generation},
+        )
+        logger.info(
+            "Finished FSE reporting materialized view refresh",
+            extra={"refreshed_generation": dirty_generation},
+        )
+        return True
+    except Exception:
+        logger.exception("FSE reporting materialized view refresh job failed")
+        raise
+    finally:
+        if lock_acquired:
+            try:
+                await conn.execute(
+                    text("SELECT pg_advisory_unlock(:lock_id)"),
+                    {"lock_id": FSE_REPORTING_MV_REFRESH_LOCK_ID},
+                )
+            except Exception:
+                logger.debug("FSE reporting MV refresh advisory unlock skipped")
+        await conn.close()
 
 
 async def send_monthly_credit_market_report(app: FastAPI):

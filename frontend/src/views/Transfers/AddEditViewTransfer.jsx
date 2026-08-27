@@ -435,8 +435,11 @@ export const AddEditViewTransfer = () => {
                 editorMode={editorMode}
                 transferData={transferData}
                 categoryOverride={
-                  currentStatus === TRANSFER_STATUSES.RECORDED &&
-                  hasRoles(roles.director) ? (
+                  (hasRoles(roles.director) &&
+                    currentStatus === TRANSFER_STATUSES.RECORDED) ||
+                  (!hasRoles(roles.director) &&
+                    hasRoles(roles.analyst) &&
+                    currentStatus === TRANSFER_STATUSES.SUBMITTED) ? (
                     <CategoryCheckbox />
                   ) : null
                 }
