@@ -5,7 +5,7 @@
     "date": "2026-08-27",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.8",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.7...v1.3.8",
-    "summary": "This release includes 16 new features, 22 bug fixes, 8 dependency updates and 15 other changes. Highlights: Update analyst notifications for CI applications; CI application notifications IDIR director; Refine commenting feature - 4793, 4794, 4795; Add CI application location autocomplete.",
+    "summary": "This release includes 16 new features, 22 bug fixes, 8 dependency updates and 16 other changes. Highlights: Update analyst notifications for CI applications; CI application notifications IDIR director; Refine commenting feature - 4793, 4794, 4795; Add CI application location autocomplete.",
     "sections": {
       "features": [
         "Update analyst notifications for CI applications - 4759",
@@ -70,6 +70,7 @@
         "Generate release notes before the prod image is built (#4663)",
         "Hotfix: LCFS - Excel download the entire credit ledger",
         "Hotfix: Credit ledger assessed balances and compliance year envelopes (#4831, #4832)",
+        "Hotfix Release v1.3.7+3",
         "Compose the release notes summary instead of dumping raw markdown (#4663)",
         "Develop Release v1.3.7",
         "Display CI priority score and risk assessment after verification",
