@@ -47,8 +47,9 @@ async def test_scheduler_lifecycle(mock_app):
         start_scheduler(mock_app)
         assert scheduler.running, "Scheduler should be running after start"
 
-        mock_add_job.assert_called_once()
-        assert mock_add_job.call_args.kwargs["id"] == "reindex_compliance_report_tables"
+        added_job_ids = [call.kwargs["id"] for call in mock_add_job.call_args_list]
+        assert "reindex_compliance_report_tables" in added_job_ids
+        assert "refresh_fse_reporting_materialized_views" in added_job_ids
 
         safe_shutdown_scheduler()
 
@@ -220,11 +221,12 @@ async def test_scheduler_startup_job_essentials(mock_app):
         # Verify scheduler.start was called
         mock_scheduler_instance.start.assert_called_once()
 
-        mock_scheduler_instance.add_job.assert_called_once()
-        assert (
-            mock_scheduler_instance.add_job.call_args.kwargs["id"]
-            == "reindex_compliance_report_tables"
-        )
+        added_job_ids = [
+            call.kwargs["id"]
+            for call in mock_scheduler_instance.add_job.call_args_list
+        ]
+        assert "reindex_compliance_report_tables" in added_job_ids
+        assert "refresh_fse_reporting_materialized_views" in added_job_ids
 
         # # Verify add_job was called with correct parameters
         # mock_scheduler_instance.add_job.assert_called_once()
@@ -254,10 +256,10 @@ async def test_scheduler_adds_one_time_startup_reindex_job_when_enabled(mock_app
         try:
             start_scheduler(mock_app)
 
-            assert mock_add_job.call_count == 2
             added_job_ids = [call.kwargs["id"] for call in mock_add_job.call_args_list]
             assert "reindex_compliance_report_tables" in added_job_ids
             assert "reindex_compliance_report_tables_startup" in added_job_ids
+            assert "refresh_fse_reporting_materialized_views" in added_job_ids
         finally:
             settings.compliance_reindex_run_on_startup = original_value
             scheduler._state = 0

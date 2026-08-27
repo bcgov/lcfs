@@ -31,6 +31,7 @@ from lcfs.db.models.compliance import (
     EndUserType,
     FSEReportingBasePrefView,
     FSEReportingBaseView,
+    VwFSEBaseView,
     FinalSupplyEquipment,
     ChargingEquipmentStatus,
     ComplianceReportChargingEquipment,
@@ -787,8 +788,12 @@ class FinalSupplyEquipmentRepository:
                 == EndUseType.end_use_type_id,
             )
             .where(
-                charging_equipment_intended_use_association.c.charging_equipment_id
-                == ChargingEquipment.charging_equipment_id
+                and_(
+                    charging_equipment_intended_use_association.c.charging_equipment_id
+                    == ChargingEquipment.charging_equipment_id,
+                    charging_equipment_intended_use_association.c.charging_equipment_version
+                    == ChargingEquipment.version
+                )
             )
             .correlate(ChargingEquipment)
             .scalar_subquery()
@@ -804,8 +809,12 @@ class FinalSupplyEquipmentRepository:
                 == EndUserType.end_user_type_id,
             )
             .where(
-                charging_equipment_intended_user_association.c.charging_equipment_id
-                == ChargingEquipment.charging_equipment_id
+                and_(
+                    charging_equipment_intended_user_association.c.charging_equipment_id
+                    == ChargingEquipment.charging_equipment_id,
+                    charging_equipment_intended_user_association.c.charging_equipment_version
+                    == ChargingEquipment.version
+                )
             )
             .correlate(ChargingEquipment)
             .scalar_subquery()
@@ -1092,7 +1101,7 @@ class FinalSupplyEquipmentRepository:
         Reporting selections live at the compliance-report-group level and carry
         across report versions, so we match on ``compliance_report_group_uuid``
         (not a single ``compliance_report_id``) — otherwise a supplemental would
-        miss equipment selected on the original report. ``mv_fse_reporting_base``
+        miss equipment selected on the original report. ``v_fse_reporting_base``
         already contains only the actually-selected reporting rows (one per
         ``compliance_report_charging_equipment``), so it is queried directly
         rather than the heavier "preferred"/editing view.
@@ -1143,7 +1152,7 @@ class FinalSupplyEquipmentRepository:
         decommissioned.
 
         Matches the report group's reporting set via
-        ``compliance_report_group_uuid`` against ``mv_fse_reporting_base`` (the
+        ``compliance_report_group_uuid`` against ``v_fse_reporting_base`` (the
         selected-rows view), consistent with ``has_decommissioned_fse_in_report``.
 
         Period-aware: when ``compliance_year`` is provided, only rows for
@@ -1230,17 +1239,18 @@ class FinalSupplyEquipmentRepository:
         compliance_report_id: int,
         mode: str = "all",
         include_decommissioned_attached: bool = True,
+        source: str = "base_pref",
     ) -> float:
         """
         Return total kWh usage for the rows shown in the FSE reporting list.
 
-        This sums ``kwh_usage`` over the same ``mv_fse_reporting_base_pref`` rows
+        This sums ``kwh_usage`` over the same reporting view rows
         (and identical filters) that ``get_fse_reporting_list_paginated``
         returns, so the total displayed above the table always matches the sum
         of the rows in the table and the Excel export. Pagination/user filters
         are intentionally excluded so the total reflects the whole report.
         """
-        vt = FSEReportingBasePrefView.__table__
+        vt = self._get_fse_reporting_source_table(source)
         conditions = self._fse_reporting_base_conditions(
             vt,
             organization_id,
@@ -1252,6 +1262,57 @@ class FinalSupplyEquipmentRepository:
             select(func.coalesce(func.sum(vt.c.kwh_usage), 0)).where(*conditions)
         )
         return float(total or 0)
+
+    @staticmethod
+    def _get_fse_reporting_source_table(source: str):
+        if source == "vw_fse_base":
+            return VwFSEBaseView.__table__
+        if source in (None, "base_pref"):
+            return FSEReportingBasePrefView.__table__
+        raise ValueError("Invalid FSE reporting source")
+
+    @staticmethod
+    def _fse_reporting_filter_field_map(vt) -> dict:
+        return {
+            "site_name": vt.c.site_name,
+            "registration_number": vt.c.registration_number,
+            "street_address": vt.c.street_address,
+            "charging_site_id": vt.c.charging_site_id,
+            "serial_number": vt.c.serial_number,
+            "manufacturer": vt.c.manufacturer,
+            "model": vt.c.model,
+            "equipment_notes": vt.c.equipment_notes,
+            "supply_from_date": vt.c.supply_from_date,
+            "supply_to_date": vt.c.supply_to_date,
+            "kwh_usage": vt.c.kwh_usage,
+            "compliance_report_id": vt.c.compliance_report_id,
+            "compliance_notes": vt.c.compliance_notes,
+            "level_of_equipment": vt.c.level_of_equipment,
+            "ports": vt.c.ports,
+            "status": vt.c.charging_equipment_status,
+            "is_active": vt.c.is_active,
+            "power_output": vt.c.power_output,
+            "capacity_utilization_percent": vt.c.capacity_utilization_percent,
+        }
+
+    @staticmethod
+    def _fse_reporting_sort_field_map(vt) -> dict:
+        return {
+            "site_name": vt.c.site_name,
+            "serial_number": vt.c.serial_number,
+            "manufacturer": vt.c.manufacturer,
+            "model": vt.c.model,
+            "supply_from_date": vt.c.supply_from_date,
+            "supply_to_date": vt.c.supply_to_date,
+            "kwh_usage": vt.c.kwh_usage,
+            "compliance_report_id": vt.c.compliance_report_id,
+            "registration_number": vt.c.registration_number,
+            "level_of_equipment": vt.c.level_of_equipment,
+            "power_output": vt.c.power_output,
+            "capacity_utilization_percent": vt.c.capacity_utilization_percent,
+            "status": vt.c.charging_equipment_status,
+            "is_active": vt.c.is_active,
+        }
 
     @repo_handler
     async def get_review_fse_summary_for_report(
@@ -1385,12 +1446,12 @@ class FinalSupplyEquipmentRepository:
         compliance_report_id: int,
         mode: str = "all",
         include_decommissioned_attached: bool = True,
+        source: str = "base_pref",
     ) -> tuple[list[dict], int]:
         """
         Get paginated charging equipment reporting rows from reporting views.
         """
-        view_model = FSEReportingBasePrefView
-        vt = view_model.__table__
+        vt = self._get_fse_reporting_source_table(source)
 
         stmt = select(
             vt.c.charging_equipment_compliance_id,
@@ -1435,27 +1496,7 @@ class FinalSupplyEquipmentRepository:
             include_decommissioned_attached,
         )
 
-        filter_field_map = {
-            "site_name": vt.c.site_name,
-            "registration_number": vt.c.registration_number,
-            "street_address": vt.c.street_address,
-            "charging_site_id": vt.c.charging_site_id,
-            "serial_number": vt.c.serial_number,
-            "manufacturer": vt.c.manufacturer,
-            "model": vt.c.model,
-            "equipment_notes": vt.c.equipment_notes,
-            "supply_from_date": vt.c.supply_from_date,
-            "supply_to_date": vt.c.supply_to_date,
-            "kwh_usage": vt.c.kwh_usage,
-            "compliance_report_id": vt.c.compliance_report_id,
-            "compliance_notes": vt.c.compliance_notes,
-            "level_of_equipment": vt.c.level_of_equipment,
-            "ports": vt.c.ports,
-            "status": vt.c.charging_equipment_status,
-            "is_active": vt.c.is_active,
-            "power_output": vt.c.power_output,
-            "capacity_utilization_percent": vt.c.capacity_utilization_percent,
-        }
+        filter_field_map = self._fse_reporting_filter_field_map(vt)
         if pagination.filters:
             for f in pagination.filters:
                 field = filter_field_map.get(f.field)
@@ -1469,22 +1510,7 @@ class FinalSupplyEquipmentRepository:
 
         final_query = stmt.where(*conditions)
         # Apply sorting
-        sort_field_map = {
-            "site_name": vt.c.site_name,
-            "serial_number": vt.c.serial_number,
-            "manufacturer": vt.c.manufacturer,
-            "model": vt.c.model,
-            "supply_from_date": vt.c.supply_from_date,
-            "supply_to_date": vt.c.supply_to_date,
-            "kwh_usage": vt.c.kwh_usage,
-            "compliance_report_id": vt.c.compliance_report_id,
-            "registration_number": vt.c.registration_number,
-            "level_of_equipment": vt.c.level_of_equipment,
-            "power_output": vt.c.power_output,
-            "capacity_utilization_percent": vt.c.capacity_utilization_percent,
-            "status": vt.c.charging_equipment_status,
-            "is_active": vt.c.is_active,
-        }
+        sort_field_map = self._fse_reporting_sort_field_map(vt)
         if pagination.sort_orders:
             for sort_order in pagination.sort_orders:
                 field = sort_field_map.get(sort_order.field)
@@ -1557,9 +1583,8 @@ class FinalSupplyEquipmentRepository:
         Return export rows for a BCeID (supplier) compliance report download.
 
         The row set, kWh usage and reporting data (supply dates, compliance
-        notes) come from ``mv_fse_reporting_base_pref`` using the exact same
-        filters as the on-screen FSE table, the header total and the government
-        export — see ``_fse_reporting_base_conditions`` with ``mode="summary"``.
+        notes) come from ``vw_fse_base`` using the exact same summary filters
+        as the FSE summary table.
         This guarantees the supplier's Excel kWh sum matches the total shown
         above the table.
 
@@ -1575,10 +1600,9 @@ class FinalSupplyEquipmentRepository:
         compatibility; scoping is handled by ``compliance_report_id`` via the
         view, consistent with the government export.
         """
-        vt = FSEReportingBasePrefView.__table__
+        vt = VwFSEBaseView.__table__
 
-        # Authoritative row set + kWh: identical to the header total / UI table
-        # / government export (summary filters on the same view).
+        # Authoritative row set + kWh: identical to the summary table source.
         base_conditions = self._fse_reporting_base_conditions(
             vt, organization_id, compliance_report_id, "summary"
         )
@@ -1611,8 +1635,12 @@ class FinalSupplyEquipmentRepository:
                 == EndUseType.end_use_type_id,
             )
             .where(
-                charging_equipment_intended_use_association.c.charging_equipment_id
-                == latest_equipment.charging_equipment_id
+                and_(
+                    charging_equipment_intended_use_association.c.charging_equipment_id
+                    == latest_equipment.charging_equipment_id,
+                    charging_equipment_intended_use_association.c.charging_equipment_version
+                    == latest_equipment.version
+                )
             )
             .scalar_subquery()
         )
@@ -1626,8 +1654,12 @@ class FinalSupplyEquipmentRepository:
                 == EndUserType.end_user_type_id,
             )
             .where(
-                charging_equipment_intended_user_association.c.charging_equipment_id
-                == latest_equipment.charging_equipment_id
+                and_(
+                    charging_equipment_intended_user_association.c.charging_equipment_id
+                    == latest_equipment.charging_equipment_id,
+                    charging_equipment_intended_user_association.c.charging_equipment_version
+                    == latest_equipment.version
+                )
             )
             .scalar_subquery()
         )
@@ -1789,9 +1821,11 @@ class FinalSupplyEquipmentRepository:
         existing_record = await self.get_reporting_record_by_id(
             charging_equipment_compliance_id
         )
+        if not existing_record:
+            return {"id": charging_equipment_compliance_id}
+
         if (
-            existing_record
-            and data.get("compliance_report_id") is not None
+            data.get("compliance_report_id") is not None
             and existing_record.compliance_report_id != data["compliance_report_id"]
         ):
             revision = await self._create_fse_reporting_revision(
@@ -1806,6 +1840,11 @@ class FinalSupplyEquipmentRepository:
                     revision.charging_equipment_compliance_id
                 ),
             }
+
+        target_record = await self._resolve_reporting_record_to_latest_equipment(
+            existing_record
+        )
+        target_record_id = target_record.charging_equipment_compliance_id
 
         immutable_fields = {
             "charging_equipment_compliance_id",
@@ -1827,17 +1866,121 @@ class FinalSupplyEquipmentRepository:
             update(ComplianceReportChargingEquipment)
             .where(
                 ComplianceReportChargingEquipment.charging_equipment_compliance_id
-                == charging_equipment_compliance_id
+                == target_record_id
             )
             .values(**update_data)
         )
         await self.db.execute(stmt)
         await self.db.flush()
-        return {"id": charging_equipment_compliance_id, **update_data}
+        return {"id": target_record_id, **update_data}
+
+    async def _get_latest_equipment_identity_for_reporting_record(
+        self, reporting_record: ComplianceReportChargingEquipment
+    ) -> tuple[int, int]:
+        current_equipment = aliased(ChargingEquipment, name="current_reporting_ce")
+        latest_equipment = aliased(ChargingEquipment, name="latest_reporting_ce")
+
+        stmt = (
+            select(
+                latest_equipment.charging_equipment_id,
+                latest_equipment.version.label("charging_equipment_version"),
+            )
+            .select_from(current_equipment)
+            .join(
+                latest_equipment,
+                latest_equipment.group_uuid == current_equipment.group_uuid,
+            )
+            .where(
+                current_equipment.charging_equipment_id
+                == reporting_record.charging_equipment_id
+            )
+            .order_by(
+                latest_equipment.version.desc(),
+                latest_equipment.charging_equipment_id.desc(),
+            )
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        latest = result.fetchone()
+
+        if latest is None:
+            return (
+                reporting_record.charging_equipment_id,
+                reporting_record.charging_equipment_version,
+            )
+
+        return latest.charging_equipment_id, latest.charging_equipment_version
+
+    async def _resolve_reporting_record_to_latest_equipment(
+        self, reporting_record: ComplianceReportChargingEquipment
+    ) -> ComplianceReportChargingEquipment:
+        (
+            latest_equipment_id,
+            latest_equipment_version,
+        ) = await self._get_latest_equipment_identity_for_reporting_record(
+            reporting_record
+        )
+
+        if (
+            reporting_record.charging_equipment_id == latest_equipment_id
+            and reporting_record.charging_equipment_version == latest_equipment_version
+        ):
+            return reporting_record
+
+        existing_target_stmt = select(ComplianceReportChargingEquipment).where(
+            and_(
+                ComplianceReportChargingEquipment.compliance_report_group_uuid
+                == reporting_record.compliance_report_group_uuid,
+                ComplianceReportChargingEquipment.organization_id
+                == reporting_record.organization_id,
+                ComplianceReportChargingEquipment.charging_equipment_id
+                == latest_equipment_id,
+                ComplianceReportChargingEquipment.charging_equipment_version
+                == latest_equipment_version,
+            )
+        )
+        existing_target = (
+            await self.db.execute(existing_target_stmt)
+        ).scalars().first()
+
+        if (
+            existing_target
+            and existing_target.charging_equipment_compliance_id
+            != reporting_record.charging_equipment_compliance_id
+        ):
+            existing_target.supply_from_date = reporting_record.supply_from_date
+            existing_target.supply_to_date = reporting_record.supply_to_date
+            existing_target.kwh_usage = (
+                reporting_record.kwh_usage
+                if reporting_record.kwh_usage is not None
+                else existing_target.kwh_usage
+            )
+            existing_target.compliance_notes = (
+                reporting_record.compliance_notes
+                if reporting_record.compliance_notes is not None
+                else existing_target.compliance_notes
+            )
+            existing_target.is_active = (
+                reporting_record.is_active or existing_target.is_active
+            )
+            existing_target.compliance_report_id = reporting_record.compliance_report_id
+            await self.db.delete(reporting_record)
+            return existing_target
+
+        reporting_record.charging_equipment_id = latest_equipment_id
+        reporting_record.charging_equipment_version = latest_equipment_version
+        return reporting_record
 
     async def _get_next_reporting_version(
-        self, reporting_record: ComplianceReportChargingEquipment
+        self,
+        reporting_record: ComplianceReportChargingEquipment,
+        charging_equipment_id: int | None = None,
+        charging_equipment_version: int | None = None,
     ) -> int:
+        version_equipment_id = charging_equipment_id or reporting_record.charging_equipment_id
+        version_equipment_version = (
+            charging_equipment_version or reporting_record.charging_equipment_version
+        )
         stmt = select(
             func.coalesce(func.max(ComplianceReportChargingEquipment.version), -1) + 1
         ).where(
@@ -1845,9 +1988,9 @@ class FinalSupplyEquipmentRepository:
                 ComplianceReportChargingEquipment.compliance_report_group_uuid
                 == reporting_record.compliance_report_group_uuid,
                 ComplianceReportChargingEquipment.charging_equipment_id
-                == reporting_record.charging_equipment_id,
+                == version_equipment_id,
                 ComplianceReportChargingEquipment.charging_equipment_version
-                == reporting_record.charging_equipment_version,
+                == version_equipment_version,
                 ComplianceReportChargingEquipment.organization_id
                 == reporting_record.organization_id,
             )
@@ -1860,9 +2003,15 @@ class FinalSupplyEquipmentRepository:
         data: dict,
         action_type: ActionTypeEnum,
     ) -> ComplianceReportChargingEquipment:
+        (
+            latest_equipment_id,
+            latest_equipment_version,
+        ) = await self._get_latest_equipment_identity_for_reporting_record(
+            existing_record
+        )
         revision = ComplianceReportChargingEquipment(
-            charging_equipment_id=existing_record.charging_equipment_id,
-            charging_equipment_version=existing_record.charging_equipment_version,
+            charging_equipment_id=latest_equipment_id,
+            charging_equipment_version=latest_equipment_version,
             compliance_report_id=data.get(
                 "compliance_report_id", existing_record.compliance_report_id
             ),
@@ -1877,7 +2026,11 @@ class FinalSupplyEquipmentRepository:
                 "compliance_notes", existing_record.compliance_notes
             ),
             is_active=data.get("is_active", existing_record.is_active),
-            version=await self._get_next_reporting_version(existing_record),
+            version=await self._get_next_reporting_version(
+                existing_record,
+                latest_equipment_id,
+                latest_equipment_version,
+            ),
             action_type=action_type,
         )
         self.db.add(revision)
@@ -2272,11 +2425,21 @@ class FinalSupplyEquipmentRepository:
         if not values:
             return
 
+        reporting_record = await self.get_reporting_record_by_id(
+            charging_equipment_compliance_id
+        )
+        if not reporting_record:
+            return
+
+        target_record = await self._resolve_reporting_record_to_latest_equipment(
+            reporting_record
+        )
+
         stmt = (
             update(ComplianceReportChargingEquipment)
             .where(
                 ComplianceReportChargingEquipment.charging_equipment_compliance_id
-                == charging_equipment_compliance_id
+                == target_record.charging_equipment_compliance_id
             )
             .values(**values)
         )

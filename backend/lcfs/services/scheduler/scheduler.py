@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from lcfs.services.jobs.jobs import (
     check_overdue_supplemental_reports,
+    refresh_fse_reporting_materialized_views,
     reindex_compliance_report_tables,
     send_monthly_credit_market_report,
 )
@@ -91,6 +92,23 @@ def start_scheduler(app: FastAPI):
             )
             logger.info(
                 "Added one-time startup job: 'reindex_compliance_report_tables_startup'"
+            )
+
+        if settings.fse_reporting_mv_refresh_enabled:
+            scheduler.add_job(
+                refresh_fse_reporting_materialized_views,
+                "interval",
+                seconds=settings.fse_reporting_mv_refresh_interval_seconds,
+                timezone=ZoneInfo("America/Vancouver"),
+                id="refresh_fse_reporting_materialized_views",
+                replace_existing=True,
+                args=[app],
+            )
+            logger.info(
+                "Added job: 'refresh_fse_reporting_materialized_views'",
+                extra={
+                    "seconds": settings.fse_reporting_mv_refresh_interval_seconds,
+                },
             )
 
         if settings.credit_market_report_enabled:

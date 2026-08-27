@@ -74,8 +74,6 @@ WITH expected_materialized_views AS (
     UNION ALL
     SELECT 'mv_fuel_code_count'
     UNION ALL
-    SELECT 'mv_fse_reporting_base'
-    UNION ALL
     SELECT 'mv_fse_reporting_base_pref'
 )
 SELECT 
@@ -290,7 +288,6 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY mv_compliance_report_count;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fuel_code_count;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_org_compliance_report_count;
-REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fse_reporting_base;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fse_reporting_base_pref;
 
 COMMIT;

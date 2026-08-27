@@ -411,7 +411,8 @@ export const useGetFSEReportingList = (
   pagination = { page: 1, size: 10, filters: [], sort_orders: [] },
   options: QueryOptions<unknown> = {},
   organizationId: number | string | undefined | null = null,
-  mode = undefined
+  mode = undefined,
+  source = undefined
 ) => {
   const client = useApiService()
 
@@ -428,7 +429,8 @@ export const useGetFSEReportingList = (
       complianceReportId,
       organizationId,
       pagination,
-      mode
+      mode,
+      source
     ],
     queryFn: async () => {
       if (!organizationId) {
@@ -450,6 +452,9 @@ export const useGetFSEReportingList = (
       }
       if (mode) {
         queryParams.append('mode', mode)
+      }
+      if (source) {
+        queryParams.append('source', source)
       }
 
       const queryString = queryParams.toString()
