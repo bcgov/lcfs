@@ -7,6 +7,7 @@ from lcfs.db.models.comment.ComplianceReportInternalComment import (
     ComplianceReportInternalComment,
 )
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.base import NotificationTypeEnum
 from lcfs.web.api.internal_comment.schema import (
     EntityTypeEnum,
     AudienceScopeEnum,
@@ -214,12 +215,160 @@ async def test_copy_internal_comments_large_number_of_comments():
     mock_db.flush.assert_called_once()
 
 
+@pytest.mark.anyio
+async def test_create_ci_application_public_comment_for_non_government_user():
+    mock_repo = MagicMock()
+    # The applicant's own organization — a non-government caller may only
+    # comment on an entity belonging to their org.
+    mock_repo.get_entity_org_and_year = AsyncMock(return_value=(7, None))
+    mock_repo.get_category_id_by_name = AsyncMock(return_value=None)
+    mock_repo.create_internal_comment = AsyncMock()
+    mock_repo.create_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=1,
+        comment="Public applicant comment",
+        audience_scope=None,
+        visibility=CommentVisibilityEnum.PUBLIC,
+        create_user="BCEIDUSER",
+        create_date=None,
+        update_date=None,
+        update_user=None,
+        update_full_name=None,
+        full_name="BCeID User",
+        documents=[],
+    )
+    mock_notification_service = MagicMock()
+    mock_notification_service.send_notification = AsyncMock()
+
+    service = InternalCommentService(
+        request=SimpleNamespace(
+            user=SimpleNamespace(
+                role_names=[RoleEnum.SUPPLIER],
+                keycloak_username="BCEIDUSER",
+                user_profile_id=12,
+                organization_id=7,
+            )
+        ),
+        repo=mock_repo,
+        notification_service=mock_notification_service,
+    )
+
+    result = await service.create_internal_comment(
+        InternalCommentCreateSchema(
+            entity_type=EntityTypeEnum.CI_APPLICATION,
+            entity_id=123,
+            comment="Public applicant comment",
+            visibility=CommentVisibilityEnum.PUBLIC,
+            audience_scope=AudienceScopeEnum.ANALYST,
+        )
+    )
+
+    created_comment = mock_repo.create_internal_comment.call_args.args[0]
+    assert result.visibility == CommentVisibilityEnum.PUBLIC
+    assert result.audience_scope is None
+    assert created_comment.visibility == CommentVisibilityEnum.PUBLIC
+    assert created_comment.audience_scope is None
+    mock_repo.create_internal_comment.assert_called_once()
+    mock_notification_service.send_notification.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_create_ci_application_public_comment_for_government_user_notifies_applicant():
+    mock_repo = MagicMock()
+    mock_repo.get_entity_org_and_year = AsyncMock(return_value=(7, None))
+    mock_repo.get_category_id_by_name = AsyncMock(return_value=None)
+    mock_repo.create_internal_comment = AsyncMock()
+    mock_repo.create_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=1,
+        comment="Please review this public comment",
+        organization_id=7,
+        audience_scope=AudienceScopeEnum.ANALYST,
+        visibility=CommentVisibilityEnum.PUBLIC,
+        create_user="GOVUSER",
+        create_date=None,
+        update_date=None,
+        update_user=None,
+        update_full_name=None,
+        full_name="Gov User",
+        documents=[],
+    )
+    mock_notification_service = MagicMock()
+    mock_notification_service.send_notification = AsyncMock()
+
+    service = InternalCommentService(
+        request=SimpleNamespace(
+            user=SimpleNamespace(
+                role_names=[RoleEnum.GOVERNMENT],
+                keycloak_username="GOVUSER",
+                user_profile_id=99,
+            )
+        ),
+        repo=mock_repo,
+        notification_service=mock_notification_service,
+    )
+
+    await service.create_internal_comment(
+        InternalCommentCreateSchema(
+            entity_type=EntityTypeEnum.CI_APPLICATION,
+            entity_id=123,
+            comment="Please review this public comment",
+            visibility=CommentVisibilityEnum.PUBLIC,
+            audience_scope=AudienceScopeEnum.ANALYST,
+        )
+    )
+
+    mock_notification_service.send_notification.assert_awaited_once()
+    request = mock_notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION
+    ]
+    assert request.notification_data.type == "CI Application Comment Received"
+    assert request.notification_data.related_organization_id == 7
+    assert request.notification_data.related_transaction_id == "123"
+
+
+@pytest.mark.anyio
+async def test_create_ci_application_internal_comment_for_non_government_user_forbidden():
+    mock_repo = MagicMock()
+    mock_repo.create_internal_comment = AsyncMock()
+    mock_notification_service = MagicMock()
+    mock_notification_service.send_notification = AsyncMock()
+
+    service = InternalCommentService(
+        request=SimpleNamespace(
+            user=SimpleNamespace(
+                role_names=[RoleEnum.SUPPLIER],
+                keycloak_username="BCEIDUSER",
+            )
+        ),
+        repo=mock_repo,
+        notification_service=mock_notification_service,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_internal_comment(
+            InternalCommentCreateSchema(
+                entity_type=EntityTypeEnum.CI_APPLICATION,
+                entity_id=123,
+                comment="Internal applicant comment",
+                visibility=CommentVisibilityEnum.INTERNAL,
+            )
+        )
+
+    assert exc_info.value.status_code == 403
+    mock_repo.create_internal_comment.assert_not_called()
+    mock_notification_service.send_notification.assert_not_awaited()
+
+
 def _build_service_with_user_roles(role_names):
     service = InternalCommentService()
     service.request = MagicMock()
     service.request.user = SimpleNamespace(
         role_names=role_names,
         keycloak_username="mockuser",
+        # Matches the org that ``get_entity_org_and_year`` reports below, so a
+        # non-government caller passes the entity-ownership check; tests for
+        # that check use a different org.
+        organization_id=7,
     )
     service.repo = MagicMock()
     service.repo.create_internal_comment = AsyncMock()

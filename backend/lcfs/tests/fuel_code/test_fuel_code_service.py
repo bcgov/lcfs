@@ -490,6 +490,7 @@ async def test_search_company_success():
 
     company = "ABC Corp"
     repo_mock.get_distinct_company_names.return_value = ["ABC Corp", "ABC Energy"]
+    repo_mock.get_organization_names_like.return_value = []
 
     # Act
     result = await service.search_company(company)
@@ -497,6 +498,28 @@ async def test_search_company_success():
     # Assert
     assert result == ["ABC Corp", "ABC Energy"]
     repo_mock.get_distinct_company_names.assert_called_once_with(company)
+
+
+@pytest.mark.anyio
+async def test_search_former_company_returns_grouped_sources():
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+    repo_mock.get_distinct_former_company_names.return_value = [
+        "Old Energy Ltd",
+        "Acme Fuels",
+    ]
+    repo_mock.get_organizations_like.return_value = [(7, "Acme Fuels")]
+
+    result = await service.search_former_company("Ac")
+
+    assert [option.source for option in result] == [
+        "organization",
+        "former_company",
+    ]
+    assert result[0].label == "Acme Fuels"
+    assert result[0].organization_id == 7
+    assert result[1].label == "Old Energy Ltd"
+    assert result[1].organization_id is None
 
 
 @pytest.mark.anyio

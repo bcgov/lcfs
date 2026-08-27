@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { DatePicker } from '@mui/x-date-pickers'
-import { format, parseISO } from 'date-fns'
+import { format, isValid, parseISO } from 'date-fns'
 import { useEffect, useRef, useState } from 'react'
 
 export interface DateEditorProps {
@@ -25,19 +25,49 @@ const stopEditingAfterValueChange = (
 
   setTimeout(() => {
     api?.stopEditing?.()
-    requestAnimationFrame(() => {
+    restoreWindowScroll(scrollX, scrollY, () => {
       if (rowIndex !== undefined && colId) {
         api?.setFocusedCell?.(rowIndex, colId)
       }
-      window.scrollTo(scrollX, scrollY)
     })
   }, 0)
+}
+
+const restoreWindowScroll = (scrollX: number, scrollY: number, callback?) => {
+  let hasRunCallback = false
+  const restore = () => {
+    if (!hasRunCallback) {
+      callback?.()
+      hasRunCallback = true
+    }
+    window.scrollTo(scrollX, scrollY)
+  }
+
+  if (typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(() => {
+      restore()
+      setTimeout(restore, 0)
+    })
+    return
+  }
+
+  setTimeout(restore, 0)
 }
 
 const parseDateValue = (dateValue?: string | Date | null) => {
   if (!dateValue || dateValue === 'YYYY-MM-DD') return null
   if (dateValue instanceof Date) return dateValue
   return parseISO(dateValue)
+}
+
+const normalizeDate = (val?: Date | null) => {
+  if (!val || !isValid(val)) return null
+  return new Date(val.getFullYear(), val.getMonth(), val.getDate())
+}
+
+const formatDateValue = (val?: Date | null) => {
+  const normalizedDate = normalizeDate(val)
+  return normalizedDate ? format(normalizedDate, 'yyyy-MM-dd') : null
 }
 
 export const DateEditor = ({
@@ -58,6 +88,8 @@ export const DateEditor = ({
     return rowIndex === lastRowIndex
   })
   const containerRef = useRef(null)
+  const initialValueRef = useRef(formatDateValue(parseDateValue(value)))
+  const hasCommittedRef = useRef(false)
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -81,23 +113,29 @@ export const DateEditor = ({
     }
   }, [])
 
-  // Fixed updateValue function to handle null values properly
   const updateValue = (val) => {
-    // If val is null or undefined, set it as null explicitly
+    setSelectedDate(normalizeDate(val))
+  }
+
+  const commitValue = (val = selectedDate) => {
     if (val === null || val === undefined) {
+      if (initialValueRef.current === null) return
       setSelectedDate(null)
       onValueChange(null)
+      hasCommittedRef.current = true
+      stopEditingAfterValueChange(api, rowIndex, column)
       return
     }
 
-    // Normalize the date to avoid timezone issues (common cross-browser problem)
-    const normalizedDate = new Date(
-      val.getFullYear(),
-      val.getMonth(),
-      val.getDate()
-    )
+    const normalizedDate = normalizeDate(val)
+    if (!normalizedDate) return
+
+    const formattedValue = format(normalizedDate, 'yyyy-MM-dd')
+    if (formattedValue === initialValueRef.current) return
+
     setSelectedDate(normalizedDate)
-    onValueChange(format(normalizedDate, 'yyyy-MM-dd'))
+    onValueChange(formattedValue)
+    hasCommittedRef.current = true
     stopEditingAfterValueChange(api, rowIndex, column)
   }
 
@@ -107,6 +145,10 @@ export const DateEditor = ({
 
   const handleDatePickerClose = () => {
     setIsOpen(false)
+  }
+
+  const handleDatePickerViewChange = () => {
+    restoreWindowScroll(window.scrollX, window.scrollY)
   }
 
   // Improved event handlers for better cross-browser support
@@ -132,6 +174,23 @@ export const DateEditor = ({
     setSelectedDate(null)
     onValueChange(null)
     stopEditingAfterValueChange(api, rowIndex, column)
+  }
+
+  const handleKeyDown = (e) => {
+    stopPropagation(e)
+    if (e?.key === 'Enter') {
+      e.preventDefault?.()
+      commitValue()
+    }
+    if (e?.key === 'Tab') {
+      commitValue()
+    }
+  }
+
+  const handleBlur = () => {
+    if (!hasCommittedRef.current) {
+      commitValue()
+    }
   }
 
   return (
@@ -161,6 +220,8 @@ export const DateEditor = ({
           field: {
             clearable: true,
             onClear: handleClear,
+            onKeyDown: handleKeyDown,
+            onBlur: handleBlur,
             sx: {
               width: '100%',
               '& .MuiInputBase-root': {
@@ -174,6 +235,15 @@ export const DateEditor = ({
                 padding: '2px',
                 touchAction: 'manipulation'
               }
+            }
+          },
+          textField: {
+            placeholder: 'yyyy-mm-dd',
+            onKeyDown: handleKeyDown,
+            onBlur: handleBlur,
+            inputProps: {
+              inputMode: 'numeric',
+              'aria-label': 'Date in yyyy-mm-dd format'
             }
           },
           popper: {
@@ -199,9 +269,12 @@ export const DateEditor = ({
         }}
         value={selectedDate}
         onChange={updateValue}
+        onAccept={commitValue}
+        onViewChange={handleDatePickerViewChange}
         open={isOpen}
         onOpen={handleDatePickerOpen}
         onClose={handleDatePickerClose}
+        views={['year', 'month', 'day']}
         variant="inline"
         disableToolbar
         minDate={minDate}

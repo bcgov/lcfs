@@ -1,6 +1,6 @@
 import asyncio
 from datetime import date, datetime, timezone
-from typing import Optional
+from typing import List, Optional
 import math
 import uuid
 
@@ -46,10 +46,46 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeBulletinRowSchema,
     VolumeDataPointSchema,
     ComplianceUnitsDataPointSchema,
+    CompanySearchOptionSchema,
 )
 from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
+
+
+def _transport_mode_name(value):
+    if value in (None, ""):
+        return None
+    if isinstance(value, str):
+        return value.strip() or None
+    if isinstance(value, dict):
+        return value.get("transportMode") or value.get("transport_mode")
+    return getattr(value, "transport_mode", None) or getattr(
+        value, "transportMode", None
+    )
+
+
+def _transport_mode_distance(value):
+    if isinstance(value, dict):
+        distance = value.get("distance")
+    else:
+        distance = getattr(value, "distance", None)
+    if distance in (None, ""):
+        return None
+    return int(distance)
+
+
+def _transport_mode_details(value):
+    values = value if isinstance(value, list) else [value]
+    details = []
+    for item in values or []:
+        name = _transport_mode_name(item)
+        if not name:
+            continue
+        details.append(
+            {"transportMode": name, "distance": _transport_mode_distance(item)}
+        )
+    return details
 
 
 class FuelCodeServices:
@@ -120,6 +156,39 @@ class FuelCodeServices:
         seen = set(n.lower() for n in org_names)
         merged = list(org_names) + [n for n in fuel_code_names if n.lower() not in seen]
         return merged[:10]
+
+    @service_handler
+    async def search_former_company(self, former_company):
+        former_company_names, orgs = await asyncio.gather(
+            self.repo.get_distinct_former_company_names(former_company),
+            self.repo.get_organizations_like(former_company),
+        )
+        options: List[CompanySearchOptionSchema] = []
+        seen = set()
+        for org_id, name in orgs:
+            if not name or name.lower() in seen:
+                continue
+            seen.add(name.lower())
+            options.append(
+                CompanySearchOptionSchema(
+                    label=name,
+                    value=name,
+                    source="organization",
+                    organization_id=org_id,
+                )
+            )
+        for name in former_company_names:
+            if not name or name.lower() in seen:
+                continue
+            seen.add(name.lower())
+            options.append(
+                CompanySearchOptionSchema(
+                    label=name,
+                    value=name,
+                    source="former_company",
+                )
+            )
+        return options[:10]
 
     @service_handler
     async def search_contact_name(self, company, contact_name):
@@ -299,9 +368,15 @@ class FuelCodeServices:
 
         fuel_code.feedstock_fuel_transport_modes = []
         fuel_code.finished_fuel_transport_modes = []
-        for transport_mode in fuel_code_schema.feedstock_fuel_transport_mode or []:
+        for transport_mode in _transport_mode_details(
+            fuel_code_schema.feedstock_fuel_transport_mode
+        ):
             matching_transport_mode = next(
-                (tm for tm in transport_modes if tm.transport_mode == transport_mode),
+                (
+                    tm
+                    for tm in transport_modes
+                    if tm.transport_mode == transport_mode["transportMode"]
+                ),
                 None,
             )
             if matching_transport_mode:
@@ -309,14 +384,21 @@ class FuelCodeServices:
                     FeedstockFuelTransportMode(
                         fuel_code_id=fuel_code.fuel_code_id,
                         transport_mode_id=matching_transport_mode.transport_mode_id,
+                        distance=transport_mode["distance"],
                     )
                 )
             else:
                 raise ValueError(f"Invalid transport mode: {transport_mode}")
 
-        for transport_mode in fuel_code_schema.finished_fuel_transport_mode or []:
+        for transport_mode in _transport_mode_details(
+            fuel_code_schema.finished_fuel_transport_mode
+        ):
             matching_transport_mode = next(
-                (tm for tm in transport_modes if tm.transport_mode == transport_mode),
+                (
+                    tm
+                    for tm in transport_modes
+                    if tm.transport_mode == transport_mode["transportMode"]
+                ),
                 None,
             )
             if matching_transport_mode:
@@ -324,6 +406,7 @@ class FuelCodeServices:
                     FinishedFuelTransportMode(
                         fuel_code_id=fuel_code.fuel_code_id,
                         transport_mode_id=matching_transport_mode.transport_mode_id,
+                        distance=transport_mode["distance"],
                     )
                 )
             else:
@@ -534,23 +617,33 @@ class FuelCodeServices:
         fuel_code.feedstock_fuel_transport_modes.clear()
 
         if fuel_code_data.feedstock_fuel_transport_mode:
-            for mode_name in fuel_code_data.feedstock_fuel_transport_mode:
-                transport_mode = await self.repo.get_transport_mode_by_name(mode_name)
+            for mode in _transport_mode_details(
+                fuel_code_data.feedstock_fuel_transport_mode
+            ):
+                transport_mode = await self.repo.get_transport_mode_by_name(
+                    mode["transportMode"]
+                )
                 feedstock_mode = FeedstockFuelTransportMode(
                     fuel_code_id=fuel_code.fuel_code_id,
                     transport_mode_id=transport_mode.transport_mode_id,
+                    distance=mode["distance"],
                 )
                 fuel_code.feedstock_fuel_transport_modes.append(feedstock_mode)
 
         fuel_code.finished_fuel_transport_modes.clear()
 
         if fuel_code_data.finished_fuel_transport_mode:
-            for mode_name in fuel_code_data.finished_fuel_transport_mode:
-                transport_mode = await self.repo.get_transport_mode_by_name(mode_name)
+            for mode in _transport_mode_details(
+                fuel_code_data.finished_fuel_transport_mode
+            ):
+                transport_mode = await self.repo.get_transport_mode_by_name(
+                    mode["transportMode"]
+                )
                 if transport_mode:
                     finished_mode = FinishedFuelTransportMode(
                         fuel_code_id=fuel_code.fuel_code_id,
                         transport_mode_id=transport_mode.transport_mode_id,
+                        distance=mode["distance"],
                     )
                     fuel_code.finished_fuel_transport_modes.append(finished_mode)
 

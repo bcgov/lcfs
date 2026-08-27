@@ -62,7 +62,11 @@ from lcfs.web.api.base import (
     apply_filter_conditions,
     paginate_with_window_count,
 )
-from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema, FuelCodeBaseSchema
+from lcfs.web.api.fuel_code.schema import (
+    FuelCodeCloneSchema,
+    FuelCodeSchema,
+    FuelCodeBaseSchema,
+)
 from lcfs.web.core.decorators import repo_handler
 from lcfs.utils.constants import LCFS_Constants
 
@@ -76,6 +80,10 @@ class CarbonIntensityResult:
     eer: float
     energy_density: float | None
     uci: float | None
+
+
+def _row_mapping(row: Any) -> dict[str, Any]:
+    return {key: value for key, value in row._mapping.items() if key != "_wf_total"}
 
 
 class FuelCodeRepository:
@@ -110,8 +118,10 @@ class FuelCodeRepository:
 
             filter_option = filter.type
             filter_type = filter.filter_type
-            field = filter_field_map.get(filter.field) or get_field_for_filter(
-                FuelCodeListView, filter.field
+            field = (
+                filter_field_map[filter.field]
+                if filter.field in filter_field_map
+                else get_field_for_filter(FuelCodeListView, filter.field)
             )
             conditions.append(
                 apply_filter_conditions(field, filter_value, filter_option, filter_type)
@@ -310,9 +320,7 @@ class FuelCodeRepository:
         return formatted_rows, (total or 0)
 
     @repo_handler
-    async def get_fuel_code_group_detail(
-        self, fuel_code_id: int
-    ) -> tuple:
+    async def get_fuel_code_group_detail(self, fuel_code_id: int) -> tuple:
         """
         Returns all iterations (same prefix + base suffix) for a fuel code group,
         the full details of the latest iteration, and volume-over-time data.
@@ -328,13 +336,10 @@ class FuelCodeRepository:
         prefix_id = source_fc.prefix_id
 
         # Find all fuel code IDs in this group (same prefix + base number in suffix)
-        group_id_subquery = (
-            select(FuelCode.fuel_code_id)
-            .where(
-                and_(
-                    FuelCode.prefix_id == prefix_id,
-                    FuelCode.fuel_suffix.like(f"{base_suffix}.%"),
-                )
+        group_id_subquery = select(FuelCode.fuel_code_id).where(
+            and_(
+                FuelCode.prefix_id == prefix_id,
+                FuelCode.fuel_suffix.like(f"{base_suffix}.%"),
             )
         )
 
@@ -817,7 +822,68 @@ class FuelCodeRepository:
         fuel_codes, total_count = await paginate_with_window_count(
             self.db, base_query, offset, limit
         )
+        fuel_codes = await self._with_transport_mode_distances(fuel_codes)
         return fuel_codes, total_count
+
+    async def _with_transport_mode_distances(self, fuel_codes: Sequence[Any]):
+        fuel_code_rows = [_row_mapping(row) for row in fuel_codes]
+        fuel_code_ids = [row["fuel_code_id"] for row in fuel_code_rows]
+        if not fuel_code_ids:
+            return fuel_code_rows
+
+        feedstock_rows = await self.db.execute(
+            select(
+                FeedstockFuelTransportMode.fuel_code_id,
+                TransportMode.transport_mode,
+                FeedstockFuelTransportMode.distance,
+            )
+            .join(
+                TransportMode,
+                FeedstockFuelTransportMode.transport_mode_id
+                == TransportMode.transport_mode_id,
+            )
+            .where(FeedstockFuelTransportMode.fuel_code_id.in_(fuel_code_ids))
+            .order_by(TransportMode.transport_mode)
+        )
+        finished_rows = await self.db.execute(
+            select(
+                FinishedFuelTransportMode.fuel_code_id,
+                TransportMode.transport_mode,
+                FinishedFuelTransportMode.distance,
+            )
+            .join(
+                TransportMode,
+                FinishedFuelTransportMode.transport_mode_id
+                == TransportMode.transport_mode_id,
+            )
+            .where(FinishedFuelTransportMode.fuel_code_id.in_(fuel_code_ids))
+            .order_by(TransportMode.transport_mode)
+        )
+
+        feedstock_by_fuel_code: dict[int, list[dict[str, Any]]] = {}
+        for fuel_code_id, transport_mode, distance in feedstock_rows.all():
+            feedstock_by_fuel_code.setdefault(fuel_code_id, []).append(
+                {"transport_mode": transport_mode, "distance": distance}
+            )
+
+        finished_by_fuel_code: dict[int, list[dict[str, Any]]] = {}
+        for fuel_code_id, transport_mode, distance in finished_rows.all():
+            finished_by_fuel_code.setdefault(fuel_code_id, []).append(
+                {"transport_mode": transport_mode, "distance": distance}
+            )
+
+        for row in fuel_code_rows:
+            fuel_code_id = row["fuel_code_id"]
+            row["feedstock_fuel_transport_modes"] = feedstock_by_fuel_code.get(
+                fuel_code_id,
+                row.get("feedstock_fuel_transport_modes") or [],
+            )
+            row["finished_fuel_transport_modes"] = finished_by_fuel_code.get(
+                fuel_code_id,
+                row.get("finished_fuel_transport_modes") or [],
+            )
+
+        return fuel_code_rows
 
     @repo_handler
     async def get_fuel_code_statuses(self):
@@ -949,6 +1015,32 @@ class FuelCodeRepository:
             select(Organization.name)
             .where(func.lower(Organization.name).like(func.lower(prefix + "%")))
             .order_by(Organization.name)
+            .limit(10)
+        )
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_organizations_like(self, prefix: str) -> List[tuple]:
+        """Return registered orgs starting with prefix (id + name)."""
+        query = (
+            select(Organization.organization_id, Organization.name)
+            .where(func.lower(Organization.name).like(func.lower(prefix + "%")))
+            .order_by(Organization.name)
+            .limit(10)
+        )
+        return (await self.db.execute(query)).all()
+
+    @repo_handler
+    async def get_distinct_former_company_names(self, former_company: str) -> List[str]:
+        query = (
+            select(distinct(FuelCode.former_company))
+            .where(
+                FuelCode.former_company.isnot(None),
+                func.lower(FuelCode.former_company).like(
+                    func.lower(former_company + "%")
+                ),
+            )
+            .order_by(FuelCode.former_company)
             .limit(10)
         )
         return (await self.db.execute(query)).scalars().all()
@@ -1153,7 +1245,8 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
-        query = text("""
+        query = text(
+            """
             WITH parsed_codes AS (
                 SELECT SPLIT_PART(fc.fuel_suffix, '.', 1)::INTEGER AS base_code
                 FROM fuel_code fc
@@ -1187,14 +1280,16 @@ class FuelCodeRepository:
             )
             SELECT LPAD(next_base_code::TEXT, 3, '0') || '.0' AS next_fuel_code
             FROM next_code;
-            """)
+            """
+        )
         result = (await self.db.execute(query, {"prefix": prefix})).scalar_one_or_none()
         return self.format_decimal(result)
 
     async def get_next_available_sub_version_fuel_code_by_prefix(
         self, input_version: str, prefix_id: int
     ) -> str:
-        query = text("""
+        query = text(
+            """
             WITH split_versions AS (
                 SELECT
                     fuel_suffix,
@@ -1227,7 +1322,8 @@ class FuelCodeRepository:
                 COALESCE((SELECT sub_version FROM missing_sub_versions)::VARCHAR,
                         (SELECT COALESCE(MAX(sub_version), -1) + 1 FROM sub_versions)::VARCHAR)
                 AS next_available_version
-            """)
+            """
+        )
         result = (
             await self.db.execute(
                 query, {"input_version": int(input_version), "prefix_id": prefix_id}

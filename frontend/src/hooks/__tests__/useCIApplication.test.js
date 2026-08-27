@@ -5,6 +5,7 @@ import { wrapper } from '@/tests/utils/wrapper'
 import {
   useAssignCIApplicationAnalyst,
   useCIApplicationOptions,
+  useCIFacilityLocationSearch,
   useCreateCIApplication,
   useDeleteCIApplication,
   useGetCIApplication,
@@ -12,6 +13,7 @@ import {
   useRecordCIDecision,
   useRequestCIApplicationPathwayChanges,
   useSubmitCIApplication,
+  useUpdateCIApplicationRiskAssessment,
   useUpdateCIApplicationStep1
 } from '../useCIApplication'
 
@@ -77,6 +79,33 @@ describe('useCIApplication hooks', () => {
       })
       await waitFor(() => expect(result.current.isError).toBe(true))
       expect(result.current.error).toBe(err)
+    })
+  })
+
+  describe('useCIFacilityLocationSearch', () => {
+    it('GETs /ci-applications/location-search with city param', async () => {
+      mockGet.mockResolvedValue({ data: ['Vancouver, BC, Canada'] })
+
+      const { result } = renderHook(
+        () => useCIFacilityLocationSearch({ city: 'Van' }),
+        { wrapper }
+      )
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+      expect(result.current.data).toEqual(['Vancouver, BC, Canada'])
+      expect(mockGet).toHaveBeenCalledWith(
+        '/ci-applications/location-search?city=Van'
+      )
+    })
+
+    it('does not fetch when no search term is provided', async () => {
+      const { result } = renderHook(
+        () => useCIFacilityLocationSearch({}),
+        { wrapper }
+      )
+
+      expect(result.current.fetchStatus).toBe('idle')
+      expect(mockGet).not.toHaveBeenCalled()
     })
   })
 
@@ -299,6 +328,92 @@ describe('useCIApplication hooks', () => {
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ['ci-applications']
       })
+    })
+  })
+
+  describe('useUpdateCIApplicationRiskAssessment', () => {
+    it('PUTs /ci-applications/:id/risk-assessment and updates caches', async () => {
+      const saved = {
+        ciApplicationId: 12,
+        preliminaryRiskAssessment: 'Low',
+        priorityScore: 42
+      }
+      mockPut.mockResolvedValue({ data: saved })
+
+      const { result } = renderHook(
+        () => useUpdateCIApplicationRiskAssessment(12),
+        { wrapper }
+      )
+      const out = await result.current.mutateAsync({
+        preliminaryRiskAssessment: 'Low',
+        priorityScore: 42
+      })
+
+      expect(mockPut).toHaveBeenCalledWith(
+        '/ci-applications/12/risk-assessment',
+        { preliminaryRiskAssessment: 'Low', priorityScore: 42 }
+      )
+      expect(out).toEqual(saved)
+      expect(mockSetQueryData).toHaveBeenCalledWith(
+        ['ci-application', '12'],
+        saved
+      )
+    })
+
+    it('does not restore a stale PUT when a newer autosave is already queued', async () => {
+      const stale = {
+        ciApplicationId: 12,
+        preliminaryRiskAssessment: 'Low',
+        priorityScore: 10
+      }
+      const latest = {
+        ciApplicationId: 12,
+        preliminaryRiskAssessment: 'High',
+        priorityScore: 20
+      }
+      let resolveFirst
+      mockPut
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveFirst = resolve
+            })
+        )
+        .mockResolvedValueOnce({ data: latest })
+
+      const { result } = renderHook(
+        () => useUpdateCIApplicationRiskAssessment(12),
+        { wrapper }
+      )
+
+      result.current.mutate({
+        preliminaryRiskAssessment: 'Low',
+        priorityScore: 10
+      })
+      await waitFor(() => expect(mockPut).toHaveBeenCalledTimes(1))
+
+      result.current.mutate({
+        preliminaryRiskAssessment: 'High',
+        priorityScore: 20
+      })
+      // Let the second mutate mark itself pending before the first PUT resolves.
+      await Promise.resolve()
+
+      resolveFirst({ data: stale })
+
+      await waitFor(() => expect(mockPut).toHaveBeenCalledTimes(2))
+      expect(mockPut).toHaveBeenLastCalledWith(
+        '/ci-applications/12/risk-assessment',
+        { preliminaryRiskAssessment: 'High', priorityScore: 20 }
+      )
+      expect(mockSetQueryData).toHaveBeenLastCalledWith(
+        ['ci-application', '12'],
+        latest
+      )
+      expect(mockSetQueryData).not.toHaveBeenCalledWith(
+        ['ci-application', '12'],
+        stale
+      )
     })
   })
 

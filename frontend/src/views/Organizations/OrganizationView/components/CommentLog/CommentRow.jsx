@@ -15,7 +15,7 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import CommentForm from '@/components/Comments/CommentForm'
 
-import { sanitizeCommentHtml } from './sanitize'
+import { sanitizeAndHighlightCommentHtml } from '@/utils/sanitizeCommentHtml'
 import { formatCommentDateTime, isCommentEdited } from './dateUtils'
 
 const ENTITY_TYPE_CONFIG = {
@@ -74,6 +74,7 @@ export const CommentRow = forwardRef(function CommentRow(
     showInternalBadge,
     isGovernmentUser,
     allowPublicVisibility = true,
+    searchQuery = '',
     onEdit,
     isEditPending
   },
@@ -101,9 +102,9 @@ export const CommentRow = forwardRef(function CommentRow(
     setEditing(false)
   }
 
-  const sanitizedHtml = useMemo(
-    () => sanitizeCommentHtml(comment.comment),
-    [comment.comment]
+  const renderedHtml = useMemo(
+    () => sanitizeAndHighlightCommentHtml(comment.comment, searchQuery),
+    [comment.comment, searchQuery]
   )
 
   const edited = isCommentEdited(comment.createDate, comment.updateDate)
@@ -328,7 +329,7 @@ export const CommentRow = forwardRef(function CommentRow(
         <div
           className="comment-content"
           data-test="comment-body"
-          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+          dangerouslySetInnerHTML={{ __html: renderedHtml }}
         />
         {editing && (
           <>

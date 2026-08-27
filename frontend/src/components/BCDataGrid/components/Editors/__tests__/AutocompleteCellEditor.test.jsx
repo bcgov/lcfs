@@ -15,6 +15,7 @@ vi.mock('@mui/material', () => ({
       onOpen,
       onClose,
       onKeyDown,
+      onHighlightChange,
       getOptionLabel,
       renderOption,
       renderInput,
@@ -62,15 +63,28 @@ vi.mock('@mui/material', () => ({
           {renderInput && renderInput({ inputProps: {} })}
           {renderOption && renderOption({}, 'option', { selected: false })}
           {renderTags && renderTags(['tag1', 'tag2'], () => ({ index: 0 }))}
-        <button
-          data-test="autocomplete-input-change"
-          onClick={(event) => {
-            event.stopPropagation()
-            const customValue =
-              event.currentTarget.getAttribute('data-value') || 'typed input'
-            if (onInputChange) {
-              onInputChange({}, customValue, 'input')
-            }
+          <button
+            data-test="autocomplete-highlight-option"
+            onClick={(event) => {
+              event.stopPropagation()
+              const defaultValue =
+                autocompleteOptions.length > 0
+                  ? autocompleteOptions[0]
+                  : 'new value'
+              onHighlightChange?.({}, defaultValue)
+            }}
+          >
+            highlight option
+          </button>
+          <button
+            data-test="autocomplete-input-change"
+            onClick={(event) => {
+              event.stopPropagation()
+              const customValue =
+                event.currentTarget.getAttribute('data-value') || 'typed input'
+              if (onInputChange) {
+                onInputChange({}, customValue, 'input')
+              }
             }}
           >
             change input
@@ -352,6 +366,26 @@ describe('AutocompleteCellEditor Component', () => {
       fireEvent.keyDown(autocomplete, { key: 'Enter' })
 
       expect(mockProps.onKeyDownCapture).toHaveBeenCalled()
+    })
+
+    it('commits the highlighted option when Enter is pressed', () => {
+      vi.useFakeTimers()
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      fireEvent.click(screen.getByTestId('autocomplete-highlight-option'))
+      fireEvent.keyDown(screen.getByTestId('autocomplete'), { key: 'Enter' })
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(mockProps.onValueChange).toHaveBeenCalledWith('Option 1')
+      expect(mockApi.stopEditing).toHaveBeenCalled()
+      expect(mockApi.tabToNextCell).toHaveBeenCalled()
+      expect(mockApi.startEditingCell).toHaveBeenCalledWith({
+        rowIndex: 0,
+        colKey: 'testColumn'
+      })
+      vi.useRealTimers()
     })
   })
 

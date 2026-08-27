@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Numeric
+from sqlalchemy import Boolean, Column, Integer, String, Date, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, Versioning
@@ -6,11 +6,7 @@ from lcfs.db.base import BaseModel, Auditable, Versioning
 
 class Pathway(BaseModel, Auditable, Versioning):
     __tablename__ = "pathway"
-    __table_args__ = {
-        "comment": (
-            "CI pathway details for a CI application"
-        )
-    }
+    __table_args__ = {"comment": ("CI pathway details for a CI application")}
 
     pathway_id = Column(
         Integer,
@@ -40,16 +36,23 @@ class Pathway(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Duration type of the proposed fuel code (1-year provisional or 3-year)",
     )
+    design_data = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="Whether the pathway is based on design data instead of operational data",
+    )
 
     # ---------- Operating data collection window ----------
     operating_data_from = Column(
         Date,
-        nullable=False,
+        nullable=True,
         comment="Start date of the operating data collection period",
     )
     operating_data_to = Column(
         Date,
-        nullable=False,
+        nullable=True,
         comment="End date of the operating data collection period",
     )
 
@@ -90,34 +93,11 @@ class Pathway(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Geographic region from which the feedstock is sourced",
     )
-    feedstock_transport_mode = Column(
-        String(500),
-        nullable=False,
-        comment="Mode of transport used to move the feedstock to the facility",
-    )
-    feedstock_transport_distance = Column(
-        Integer,
-        nullable=False,
-        comment="Distance (km) the feedstock is transported to the facility",
-    )
-
     # ---------- Co-products ----------
     coproducts = Column(
         String(1000),
         nullable=True,
         comment="Description of co-products produced alongside the main fuel (if any)",
-    )
-
-    # ---------- Finished fuel transport ----------
-    finished_fuel_transport_mode = Column(
-        String(500),
-        nullable=False,
-        comment="Mode of transport used to deliver the finished fuel",
-    )
-    finished_fuel_transport_distance = Column(
-        Integer,
-        nullable=False,
-        comment="Distance (km) the finished fuel is transported for delivery",
     )
 
     # ---------- Relationships ----------
@@ -142,5 +122,17 @@ class Pathway(BaseModel, Auditable, Versioning):
     )
     fuel_type = relationship(
         "FuelType",
+        lazy="selectin",
+    )
+    feedstock_transport_modes = relationship(
+        "PathwayFeedstockTransportMode",
+        back_populates="pathway",
+        cascade="all, delete, delete-orphan",
+        lazy="selectin",
+    )
+    finished_fuel_transport_modes = relationship(
+        "PathwayFinishedFuelTransportMode",
+        back_populates="pathway",
+        cascade="all, delete, delete-orphan",
         lazy="selectin",
     )

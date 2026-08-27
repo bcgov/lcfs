@@ -1,3 +1,4 @@
+import json
 import re
 import structlog
 from math import ceil
@@ -25,6 +26,12 @@ from .schema import (
     OrganizationCommentsPaginationSchema,
     OrganizationCommentsResponseSchema,
 )
+from lcfs.web.api.notification.schema import (
+    CI_APPLICATION_NOTIFICATION_MAPPER,
+    NotificationMessageSchema,
+    NotificationRequestSchema,
+)
+from lcfs.web.api.notification.services import NotificationService
 
 logger = structlog.get_logger(__name__)
 
@@ -61,6 +68,7 @@ class InternalCommentService:
         self,
         request: Request = None,
         repo: InternalCommentRepository = Depends(InternalCommentRepository),
+        notification_service: NotificationService = Depends(NotificationService),
     ) -> None:
         """
         Initializes the InternalCommentService with a request object and an
@@ -69,12 +77,76 @@ class InternalCommentService:
         Args:
             request (Request, optional): The current HTTP request. Defaults to None.
             repo (InternalCommentRepository): The repository instance for internal comment operations.
+            notification_service: Notification service for sending notifications.
         """
         self.request = request
         self.repo = repo
+        self.notification_service = notification_service
 
     def _is_government_user(self) -> bool:
         return RoleEnum.GOVERNMENT in self.request.user.role_names
+
+    def _user_organization_id(self) -> Optional[int]:
+        """The caller's organization id, however the user object carries it."""
+        current_user = self.request.user
+        user_org = getattr(current_user, "organization", None)
+        if user_org is not None:
+            return getattr(user_org, "organization_id", None)
+        return getattr(current_user, "organization_id", None)
+
+    async def _require_own_organization(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> None:
+        """
+        Assert a non-government caller owns the entity a comment thread hangs
+        off.
+
+        Entity type and visibility do not bound which organization a caller
+        reaches, so ownership is resolved here as well. An entity that
+        resolves to no organization fails closed rather than revealing
+        whether it exists.
+        """
+        org_id, _ = await self.repo.get_entity_org_and_year(entity_type, entity_id)
+        user_org_id = self._user_organization_id()
+        if org_id is None or user_org_id is None or org_id != user_org_id:
+            raise HTTPException(status_code=403, detail="Forbidden resource")
+
+    async def _send_ci_comment_notification(
+        self,
+        ci_application_id: int,
+        event_key: str,
+        notification_type: str,
+        origin_user_profile_id: Optional[int],
+        related_organization_id: Optional[int] = None,
+    ) -> None:
+        """Send CI application notifications for public comments."""
+        notification_types = CI_APPLICATION_NOTIFICATION_MAPPER.get(event_key, [])
+        if not notification_types:
+            return
+        message_data = {
+            "id": ci_application_id,
+            "service": "ciApplication",
+            "type": notification_type,
+        }
+        notification_data = NotificationMessageSchema(
+            type=notification_type,
+            message=json.dumps(message_data),
+            related_organization_id=related_organization_id,
+            origin_user_profile_id=origin_user_profile_id,
+            related_transaction_id=str(ci_application_id),
+        )
+        try:
+            await self.notification_service.send_notification(
+                NotificationRequestSchema(
+                    notification_types=notification_types,
+                    notification_data=notification_data,
+                )
+            )
+        except Exception:
+            logger.exception(
+                "Failed to send CI application comment notification",
+                ci_application_id=ci_application_id,
+            )
 
     async def _populate_comment_metadata(
         self,
@@ -159,6 +231,7 @@ class InternalCommentService:
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             if data.visibility != CommentVisibilityEnum.PUBLIC:
                 raise HTTPException(status_code=403, detail="Forbidden resource")
+            await self._require_own_organization(data.entity_type, data.entity_id)
             data.audience_scope = None
         elif (
             data.visibility == CommentVisibilityEnum.INTERNAL
@@ -187,6 +260,35 @@ class InternalCommentService:
         created_comment = await self.repo.create_internal_comment(
             comment, data.entity_type, data.entity_id
         )
+
+        if not is_government_user and data.entity_type == EntityTypeEnum.CI_APPLICATION:
+            await self._send_ci_comment_notification(
+                data.entity_id,
+                "applicant_activity",
+                "CI Application Comment Received",
+                (
+                    self.request.user.user_profile_id
+                    if hasattr(self.request.user, "user_profile_id")
+                    else None
+                ),
+            )
+        elif (
+            is_government_user
+            and data.entity_type == EntityTypeEnum.CI_APPLICATION
+            and data.visibility == CommentVisibilityEnum.PUBLIC
+        ):
+            await self._send_ci_comment_notification(
+                data.entity_id,
+                "government_action",
+                "CI Application Comment Received",
+                (
+                    self.request.user.user_profile_id
+                    if hasattr(self.request.user, "user_profile_id")
+                    else None
+                ),
+                related_organization_id=created_comment.organization_id,
+            )
+
         return InternalCommentResponseSchema.from_orm(created_comment)
 
     @service_handler
@@ -212,6 +314,7 @@ class InternalCommentService:
                 EntityTypeEnum.CI_APPLICATION,
             ):
                 raise HTTPException(status_code=403, detail="Forbidden resource")
+            await self._require_own_organization(entity_type, entity_id)
             visibility_filter = CommentVisibilityEnum.PUBLIC.value
 
         comments = await self.repo.get_internal_comments(
@@ -387,12 +490,7 @@ class InternalCommentService:
         current_user = self.request.user
 
         if not is_government_user:
-            user_org = getattr(current_user, "organization", None)
-            user_org_id = (
-                getattr(user_org, "organization_id", None)
-                if user_org is not None
-                else getattr(current_user, "organization_id", None)
-            )
+            user_org_id = self._user_organization_id()
             if user_org_id is None or user_org_id != organization_id:
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             visibility_filter: Optional[str] = CommentVisibilityEnum.PUBLIC.value

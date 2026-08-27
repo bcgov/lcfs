@@ -64,6 +64,7 @@ vi.mock('@/constants/roles', () => ({
     transfers: 'transfers',
     supplier: 'supplier',
     analyst: 'analyst',
+    director: 'director',
     signing_authority: 'signing_authority'
   },
   govRoles: ['analyst']
@@ -127,7 +128,12 @@ vi.mock('@/views/Transfers/components', () => ({
   Comments: () => <div data-test="comments">Comments</div>,
   TransferDetails: () => <div data-test="transfer-details">TransferDetails</div>,
   TransferGraphic: () => <div data-test="transfer-graphic">TransferGraphic</div>,
-  TransferView: () => <div data-test="transfer-view">TransferView</div>
+  TransferView: ({ categoryOverride }) => (
+    <div data-test="transfer-view">
+      TransferView
+      {categoryOverride}
+    </div>
+  )
 }))
 
 vi.mock('../components/CategoryCheckbox', () => ({
@@ -167,7 +173,7 @@ const renderComponent = () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } }
   })
-  
+
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -186,14 +192,14 @@ describe('AddEditViewTransfer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Default safe mocks
     useNavigate.mockReturnValue(mockNavigate)
     useLocation.mockReturnValue({ state: null })
     useMatches.mockReturnValue([{ handle: { mode: 'view' } }])
     useParams.mockReturnValue({ transferId: null })
     useQueryClient.mockReturnValue(mockQueryClient)
-    
+
     useCurrentUser.mockReturnValue({
       data: {
         organization: { organizationId: 1 },
@@ -203,21 +209,21 @@ describe('AddEditViewTransfer', () => {
       hasRoles: vi.fn().mockReturnValue(false),
       hasAnyRole: vi.fn().mockReturnValue(false)
     })
-    
+
     useRegExtOrgs.mockReturnValue({ data: [] })
-    
+
     useTransfer.mockReturnValue({
       data: null,
       isLoading: false,
       isFetched: false,
       isLoadingError: false
     })
-    
+
     useCreateUpdateTransfer.mockReturnValue({
       mutate: mockMutate,
       isPending: false
     })
-    
+
     mockQueryClient.getQueryState.mockReturnValue({ status: 'success' })
     buttonClusterConfigFn.mockReturnValue({ New: [] })
   })
@@ -230,7 +236,7 @@ describe('AddEditViewTransfer', () => {
       isFetched: false,
       isLoadingError: false
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('loading')).toBeInTheDocument()
     expect(screen.getByText('transfer:loadingText')).toBeInTheDocument()
@@ -239,7 +245,7 @@ describe('AddEditViewTransfer', () => {
   it('renders loading state when query is pending', () => {
     useParams.mockReturnValue({ transferId: '123' })
     mockQueryClient.getQueryState.mockReturnValue({ status: 'pending' })
-    
+
     renderComponent()
     expect(screen.getByTestId('loading')).toBeInTheDocument()
   })
@@ -249,7 +255,7 @@ describe('AddEditViewTransfer', () => {
       mutate: mockMutate,
       isPending: true
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('loading')).toBeInTheDocument()
     expect(screen.getByText('transfer:processingText')).toBeInTheDocument()
@@ -265,14 +271,14 @@ describe('AddEditViewTransfer', () => {
       hasRoles: vi.fn().mockReturnValue(true),
       hasAnyRole: vi.fn().mockReturnValue(false)
     })
-    
+
     renderComponent()
     expect(screen.getByText('transfer:newTransfer')).toBeInTheDocument()
   })
 
   it('renders view mode with transfer data', () => {
     useParams.mockReturnValue({ transferId: '123' })
-    
+
     renderComponent()
     expect(screen.getByTestId('transfer-view')).toBeInTheDocument()
   })
@@ -287,7 +293,7 @@ describe('AddEditViewTransfer', () => {
       isFetched: true,
       isLoadingError: false
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('stepper')).toBeInTheDocument()
   })
@@ -309,9 +315,63 @@ describe('AddEditViewTransfer', () => {
       isFetched: true,
       isLoadingError: false
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('recommendation')).toBeInTheDocument()
+  })
+
+  it.each([
+    {
+      description: 'allows analysts on submitted transfers',
+      role: 'analyst',
+      status: TRANSFER_STATUSES.SUBMITTED,
+      expected: true
+    },
+    {
+      description: 'does not allow analysts after recommendation',
+      role: 'analyst',
+      status: TRANSFER_STATUSES.RECOMMENDED,
+      expected: false
+    },
+    {
+      description: 'does not allow analysts on recorded transfers',
+      role: 'analyst',
+      status: TRANSFER_STATUSES.RECORDED,
+      expected: false
+    },
+    {
+      description: 'continues to allow directors on recorded transfers',
+      role: 'director',
+      status: TRANSFER_STATUSES.RECORDED,
+      expected: true
+    }
+  ])('$description', ({ role, status, expected }) => {
+    useCurrentUser.mockReturnValue({
+      data: {
+        organization: { organizationId: 1 },
+        isGovernmentUser: true
+      },
+      hasRoles: vi.fn((requestedRole) => requestedRole === role),
+      hasAnyRole: vi.fn().mockReturnValue(true)
+    })
+    useTransfer.mockReturnValue({
+      data: {
+        transferHistory: [],
+        currentStatus: { status }
+      },
+      isLoading: false,
+      isFetched: true,
+      isLoadingError: false
+    })
+
+    renderComponent()
+
+    const categoryOverride = screen.queryByTestId('category-checkbox')
+    if (expected) {
+      expect(categoryOverride).toBeInTheDocument()
+    } else {
+      expect(categoryOverride).not.toBeInTheDocument()
+    }
   })
 
   it('renders modal component', () => {
@@ -347,7 +407,7 @@ describe('AddEditViewTransfer', () => {
       hasRoles: vi.fn().mockReturnValue(false),
       hasAnyRole: vi.fn().mockReturnValue(false)
     })
-    
+
     renderComponent()
     expect(screen.queryByTestId('transfer-graphic')).not.toBeInTheDocument()
   })
@@ -361,7 +421,7 @@ describe('AddEditViewTransfer', () => {
       hasRoles: vi.fn().mockReturnValue(false),
       hasAnyRole: vi.fn().mockReturnValue(false)
     })
-    
+
     useTransfer.mockReturnValue({
       data: {
         transferHistory: [
@@ -373,7 +433,7 @@ describe('AddEditViewTransfer', () => {
       isFetched: true,
       isLoadingError: false
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('stepper')).toBeInTheDocument()
   })
@@ -390,7 +450,7 @@ describe('AddEditViewTransfer', () => {
       isFetched: true,
       isLoadingError: false
     })
-    
+
     renderComponent()
     expect(screen.getByTestId('stepper')).toBeInTheDocument()
   })

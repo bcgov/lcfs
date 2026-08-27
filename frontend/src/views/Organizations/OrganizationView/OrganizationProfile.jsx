@@ -48,7 +48,13 @@ export const OrganizationProfile = ({
                 ? ' (non-BCeID user)'
                 : ''}
           </BCTypography>
-
+          
+          {orgData?.contactName && (
+            <BCTypography variant="body4">
+              <strong>{t('org:contactNameLabel')}:</strong>{' '}
+              {orgData.contactName}
+            </BCTypography>
+          )}
           <BCTypography variant="body4">
             <strong>{t('org:phoneNbrLabel')}:</strong>{' '}
             {phoneNumberFormatter({ value: orgData?.phone })}
@@ -92,6 +98,11 @@ export const OrganizationProfile = ({
               : t('org:registeredTransferNo')}
           </BCTypography>
 
+          <BCTypography variant="body4">
+            <strong>{t('org:edrmsNumberLabel')}:</strong>{' '}
+            {orgData?.edrmsRecord || t('org:noInformationProvided')}
+          </BCTypography>
+
           {(hasRoles(roles.government) || orgData?.hasEarlyIssuance) && (
             <BCTypography variant="body4">
               <strong>
@@ -103,16 +114,15 @@ export const OrganizationProfile = ({
               {orgData?.hasEarlyIssuance ? t('common:yes') : t('common:no')}
             </BCTypography>
           )}
-          {isFeatureEnabled(FEATURE_FLAGS.OBFUSCATED_LINKS) && (
-            <Role roles={[roles.analyst]}>
-              <BCBox>
-                <LinkKeyManagement orgData={orgData} orgID={orgID} />
-              </BCBox>
-            </Role>
-          )}
         </BCBox>
       </BCBox>
-
+      {isFeatureEnabled(FEATURE_FLAGS.OBFUSCATED_LINKS) && (
+        <Role roles={[roles.analyst]}>
+          <BCBox mt={2}>
+            <LinkKeyManagement orgData={orgData} orgID={orgID} />
+          </BCBox>
+        </Role>
+      )}
       {!isCurrentUserLoading && !hasRoles(roles.government) && (
         <BCBox mt={2}>
           <BCTypography variant="body4">

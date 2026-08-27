@@ -74,20 +74,20 @@ export const OrganizationAddress = ({
       .required('Email address is required.')
       .email('Please enter a valid email address.'),
     serviceAddress: Yup.string()
-      .required('Service Address is required.')
+      .required('Service address is required.')
       .test(
         'postal-code',
-        'Service Address must include a valid postal code.',
+        'Service address must include a valid postal code.',
         addressHasPostalCode
       ),
     recordsAddress: Yup.string()
-      .required('Records Address is required.')
+      .required('Records address is required.')
       .test(
         'postal-code',
-        'Records Address must include a valid postal code.',
+        'Records address must include a valid postal code.',
         addressHasPostalCode
       ),
-    headOfficeAddress: Yup.string().required('Head Office Address is required.')
+    headOfficeAddress: Yup.string().required('Head office address is required.')
   })
 
   // Hook for updating the organization snapshot
@@ -223,6 +223,10 @@ export const OrganizationAddress = ({
       label: t('org:emailAddrLabel')
     },
     {
+      name: 'contactName',
+      label: t('org:contactNameLabel')
+    },
+    {
       name: 'headOfficeAddress',
       label: isEditing
         ? t('report:hoAddrLabelEdit')
@@ -289,19 +293,26 @@ export const OrganizationAddress = ({
               }
             }}
           >
-            {allFormFields.map(({ name, label }) => (
-              <ListItem key={name} sx={{ display: 'flex' }}>
-                <strong>{label}:</strong>{' '}
-                <span>
-                  {displayAddressValue(snapshotData[name]) ||
-                    (requiredFields.includes(name) && (
-                      <BCTypography variant="body4" color="error">
-                        Required
-                      </BCTypography>
-                    ))}
-                </span>
-              </ListItem>
-            ))}
+            {allFormFields.map(({ name, label }) => {
+              const value = displayAddressValue(snapshotData[name])
+              if (name === 'contactName' && !value) {
+                return null
+              }
+
+              return (
+                <ListItem key={name} sx={{ display: 'flex' }}>
+                  <strong>{label}:</strong>{' '}
+                  <span>
+                    {value ||
+                      (requiredFields.includes(name) && (
+                        <BCTypography variant="body4" color="error">
+                          Required
+                        </BCTypography>
+                      ))}
+                  </span>
+                </ListItem>
+              )
+            })}
           </List>
           {isGovernmentUser && snapshotData?.isEdited && (
             <BCButton

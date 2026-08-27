@@ -37,16 +37,23 @@ const displayVersion = getArg("--display-version") ?? tag;
 const nativeNotesPath = getArg("--native-notes");
 const enhancedNotesPath = getArg("--enhanced-notes");
 
-if (!tag || !nativeNotesPath || !enhancedNotesPath) {
+if (!tag || !nativeNotesPath) {
   console.error(
     "Usage: build-release-notes.mjs --tag <tag> [--display-version <ver>]" +
-      " --native-notes <path> --enhanced-notes <path>",
+      " --native-notes <path> [--enhanced-notes <path>]",
   );
   process.exit(1);
 }
 
 const nativeMarkdown = readFileSync(nativeNotesPath, "utf8");
-const enhancedMarkdown = readFileSync(enhancedNotesPath, "utf8");
+// Optional. A prose summary from an external writer, if one is wired up. When
+// absent — or when it is really just the raw notes handed back unchanged — the
+// summary is composed from the parsed sections instead. Dumping raw GitHub
+// markdown onto a public page is never an acceptable fallback.
+const enhancedMarkdown =
+  enhancedNotesPath && existsSync(enhancedNotesPath)
+    ? readFileSync(enhancedNotesPath, "utf8")
+    : "";
 
 // ---------------------------------------------------------------------------
 // Markdown parser
@@ -85,6 +92,14 @@ const stripConventionalPrefix = (text) =>
     "",
   );
 
+/**
+ * Release-branch bookkeeping ("Release v1.3.6", "Prod Release v1.3.7"). These
+ * are merges of the release process itself, not changes a fuel supplier or
+ * ministry analyst would recognise, so they never belong on the page.
+ */
+const isReleaseBookkeeping = (text) =>
+  /^(prod\s+)?release\s+v?\d+\.\d+\.\d+\b/i.test(text.trim());
+
 /** Strip the "by @user in #NNN" or "by @user in https://…/pull/NNN" suffix */
 const stripGitHubSuffix = (text) =>
   text
@@ -105,6 +120,7 @@ function parseNativeNotes(markdown) {
     other: [],
   };
   const contributors = [];
+  const seenItems = new Set();
   let fullChangelogUrl = "";
   let currentKey = null;
 
@@ -137,7 +153,16 @@ function parseNativeNotes(markdown) {
         continue;
       }
 
+      if (isReleaseBookkeeping(rawText)) continue;
+
       const cleaned = stripConventionalPrefix(stripGitHubSuffix(rawText));
+      // The same change can land more than once (a fix re-applied on a release
+      // branch, a reverted-and-retried PR), which would otherwise show up as a
+      // repeated bullet on the page.
+      const dedupeKey = cleaned.toLowerCase().replace(/\s+/g, " ").trim();
+      if (cleaned && seenItems.has(dedupeKey)) continue;
+      if (cleaned) seenItems.add(dedupeKey);
+
       if (cleaned) {
         // If we're in the catch-all "other" section, try to infer category
         // from a conventional-commit prefix still present before stripping
@@ -167,10 +192,88 @@ function parseNativeNotes(markdown) {
 }
 
 // ---------------------------------------------------------------------------
+// Summary
+//
+// The summary is what the page shows under "What's in this release", so it has
+// to be readable prose. It used to be whatever an external writer returned,
+// falling back to the raw GitHub markdown — which meant that when that service
+// went away the page started rendering nine thousand characters of
+// "* chore(deps): bump … by @dependabot[bot] in https://…". Composing from the
+// parsed sections instead has no external dependency and cannot degrade.
+// ---------------------------------------------------------------------------
+
+/**
+ * True when the supplied text is really the raw GitHub notes rather than a
+ * written summary — a generation comment, a "What's Changed" heading, or
+ * "by @user in <url>" attributions all give it away.
+ */
+const looksLikeRawNotes = (text) =>
+  !text.trim() ||
+  /^<!--/.test(text.trim()) ||
+  /^#{1,3}\s+What's Changed/im.test(text) ||
+  /\bby @[\w-]+ in https?:\/\//.test(text);
+
+/** Trim an "LCFS - " prefix and trailing issue/PR references off a bullet. */
+const titleOf = (text) =>
+  text
+    .replace(/^LCFS\s*[-–—]\s*/i, "")
+    .replace(/\s*\(#\d+(?:\s*,\s*#\d+)*\)\s*\.?\s*$/, "")
+    .replace(/\s*[-–—]\s*#?\d{3,}\s*\.?\s*$/, "")
+    .replace(/\s+#\d{3,}\s*\.?\s*$/, "")
+    .replace(/\.\s*$/, "")
+    .trim();
+
+const countPhrase = (n, singular, plural) => `${n} ${n === 1 ? singular : plural}`;
+
+/** "a, b and c" */
+const joinList = (items) =>
+  items.length <= 1
+    ? items.join("")
+    : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+
+function composeSummary(sections) {
+  const counts = [
+    [sections.breaking, "breaking change", "breaking changes"],
+    [sections.features, "new feature", "new features"],
+    [sections.fixes, "bug fix", "bug fixes"],
+    [sections.security, "security update", "security updates"],
+    [sections.dependencies, "dependency update", "dependency updates"],
+    [sections.other, "other change", "other changes"],
+  ]
+    .filter(([items]) => items.length)
+    .map(([items, one, many]) => countPhrase(items.length, one, many));
+
+  const sentences = [
+    counts.length
+      ? `This release includes ${joinList(counts)}.`
+      : "No recorded changes in this release.",
+  ];
+
+  // Lead with the things a reader most needs to know about; fall back to the
+  // uncategorised bucket only when there is nothing else to show.
+  const primary = [
+    ...sections.breaking,
+    ...sections.features,
+    ...sections.security,
+  ];
+  const highlights = (primary.length ? primary : sections.other)
+    .map(titleOf)
+    .filter(Boolean)
+    .slice(0, 4);
+  if (highlights.length) sentences.push(`Highlights: ${highlights.join("; ")}.`);
+
+  return sentences.join(" ");
+}
+
+// ---------------------------------------------------------------------------
 // Build new entry
 // ---------------------------------------------------------------------------
 const { sections, contributors, fullChangelogUrl } =
   parseNativeNotes(nativeMarkdown);
+
+const summary = looksLikeRawNotes(enhancedMarkdown)
+  ? composeSummary(sections)
+  : enhancedMarkdown.trim();
 
 const today = new Date().toISOString().split("T")[0];
 const REPO_URL = "https://github.com/bcgov/lcfs";
@@ -181,7 +284,7 @@ const newEntry = {
   date: today,
   releaseUrl: `${REPO_URL}/releases/tag/${encodeURIComponent(tag)}`,
   fullChangelogUrl,
-  summary: enhancedMarkdown.trim(),
+  summary,
   sections,
   contributors,
 };

@@ -24,6 +24,15 @@ describe('notificationTypes', () => {
     expect(notificationTypes.IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION).toBe('IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION')
   })
 
+  it('has CI application notifications for directors', () => {
+    expect(notificationTypes.IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION).toBe('IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION')
+  })
+
+  it('has CI application notifications for BCeID CI applicants', () => {
+    expect(notificationTypes.BCEID__CI_APPLICATION__GOVERNMENT_ACTION).toBe('BCEID__CI_APPLICATION__GOVERNMENT_ACTION')
+    expect(notificationTypes.BCEID__CI_APPLICATION__FUEL_CODE_APPROVED).toBe('BCEID__CI_APPLICATION__FUEL_CODE_APPROVED')
+  })
+
   it('follows consistent naming convention for fuel code notifications', () => {
     const fuelCodeNotificationKeys = Object.keys(notificationTypes).filter(key => 
       key.includes('FUEL_CODE')
@@ -49,8 +58,15 @@ describe('notificationTypes', () => {
       key.includes('FUEL_CODE')
     )
     
-    // Should have exactly 3 fuel code notification types
-    expect(fuelCodeNotificationKeys).toHaveLength(3)
+    expect(fuelCodeNotificationKeys).toHaveLength(4)
+  })
+
+  it('has the correct number of CI application notifications', () => {
+    const ciApplicationNotificationKeys = Object.keys(notificationTypes).filter(key =>
+      key.includes('CI_APPLICATION')
+    )
+
+    expect(ciApplicationNotificationKeys).toHaveLength(6)
   })
 
   it('maintains consistency with other notification types', () => {

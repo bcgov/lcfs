@@ -21,12 +21,15 @@ import colors from '@/themes/base/colors'
 import {
   ciApplicationPathwayChangelogColDefs,
   ciApplicationPathwaySummaryColDefs,
+  normalizeTransportModeDistances,
   normalizeTransportModes
 } from '@/views/CarbonIntensity/components/_step2Schema'
 import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
+import { CIApplicationAssignmentHistory } from './CIApplicationAssignmentHistory'
 import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
 import { constructAddress } from '@/utils/constructAddress'
 import { exportRowsToXlsx } from './pathwayExport'
+import { getDocumentDisplayName } from '@/utils/documents'
 
 const formatDate = (value) => {
   if (!value) return ''
@@ -60,6 +63,7 @@ const formatBytes = (bytes) => {
 const PATHWAY_CHANGELOG_FIELD_MAP = {
   application_type_id: 'applicationTypeId',
   fuel_code_type_id: 'fuelCodeTypeId',
+  design_data: 'designData',
   operating_data_from: 'operatingDataFrom',
   operating_data_to: 'operatingDataTo',
   fuel_code_id: 'fuelCodeId',
@@ -68,10 +72,10 @@ const PATHWAY_CHANGELOG_FIELD_MAP = {
   feedstock: 'feedstock',
   feedstock_region: 'feedstockRegion',
   feedstock_transport_mode: 'feedstockTransportMode',
-  feedstock_transport_distance: 'feedstockTransportDistance',
+  feedstock_transport_mode_details: 'feedstockTransportMode',
   coproducts: 'coproducts',
   finished_fuel_transport_mode: 'finishedFuelTransportMode',
-  finished_fuel_transport_distance: 'finishedFuelTransportDistance'
+  finished_fuel_transport_mode_details: 'finishedFuelTransportMode'
 }
 
 const toPathwayChangelogRow = (snapshot = {}) => ({
@@ -79,6 +83,7 @@ const toPathwayChangelogRow = (snapshot = {}) => ({
   pathwayGroupUuid: snapshot.pathway_group_uuid,
   applicationTypeId: snapshot.application_type_id,
   fuelCodeTypeId: snapshot.fuel_code_type_id,
+  designData: snapshot.design_data,
   operatingDataFrom: snapshot.operating_data_from,
   operatingDataTo: snapshot.operating_data_to,
   fuelCodeId: snapshot.fuel_code_id,
@@ -89,11 +94,13 @@ const toPathwayChangelogRow = (snapshot = {}) => ({
   fuelTypeId: snapshot.fuel_type_id,
   feedstock: snapshot.feedstock,
   feedstockRegion: snapshot.feedstock_region,
-  feedstockTransportMode: normalizeTransportModes(snapshot.feedstock_transport_mode),
-  feedstockTransportDistance: snapshot.feedstock_transport_distance,
+  feedstockTransportMode:
+    snapshot.feedstock_transport_mode_details ||
+    normalizeTransportModes(snapshot.feedstock_transport_mode),
   coproducts: snapshot.coproducts,
-  finishedFuelTransportMode: normalizeTransportModes(snapshot.finished_fuel_transport_mode),
-  finishedFuelTransportDistance: snapshot.finished_fuel_transport_distance
+  finishedFuelTransportMode:
+    snapshot.finished_fuel_transport_mode_details ||
+    normalizeTransportModes(snapshot.finished_fuel_transport_mode)
 })
 
 const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
@@ -108,6 +115,7 @@ const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
   pathwayGroupUuid: pathway.groupUuid || pathway.group_uuid,
   applicationTypeId: pathway.applicationTypeId || pathway.application_type_id,
   fuelCodeTypeId: pathway.fuelCodeTypeId || pathway.fuel_code_type_id,
+  designData: pathway.designData ?? pathway.design_data,
   operatingDataFrom: pathway.operatingDataFrom || pathway.operating_data_from,
   operatingDataTo: pathway.operatingDataTo || pathway.operating_data_to,
   fuelCodeId: pathway.fuelCodeId || pathway.fuel_code_id,
@@ -120,18 +128,13 @@ const toPlainPathwayChangelogRow = (pathway = {}, index) => ({
   fuelTypeId: pathway.fuelTypeId || pathway.fuel_type_id,
   feedstock: pathway.feedstock,
   feedstockRegion: pathway.feedstockRegion || pathway.feedstock_region,
-  feedstockTransportMode: normalizeTransportModes(
+  feedstockTransportMode: normalizeTransportModeDistances(
     pathway.feedstockTransportMode ?? pathway.feedstock_transport_mode
   ),
-  feedstockTransportDistance:
-    pathway.feedstockTransportDistance || pathway.feedstock_transport_distance,
   coproducts: pathway.coproducts,
-  finishedFuelTransportMode: normalizeTransportModes(
+  finishedFuelTransportMode: normalizeTransportModeDistances(
     pathway.finishedFuelTransportMode ?? pathway.finished_fuel_transport_mode
   ),
-  finishedFuelTransportDistance:
-    pathway.finishedFuelTransportDistance ||
-    pathway.finished_fuel_transport_distance,
   actionType: '',
   updated: false,
   diff: []
@@ -505,19 +508,21 @@ export const ApplicationSummary = ({
           {org.email && (
             <BCTypography variant="body2">{org.email}</BCTypography>
           )}
-          <BCTypography
-            variant="body2"
-            sx={{ mt: 1, fontStyle: 'italic' }}
-            data-test="ci-summary-org-info-confirmation"
-          >
-            "{t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
-            <a
-              href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+          {organizationAddress && (
+            <BCTypography
+              variant="body2"
+              sx={{ mt: 1 }}
+              data-test="ci-summary-org-info-confirmation"
             >
-              {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
-            </a>
-            "
-          </BCTypography>
+              {t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
+              <a
+                href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
+              >
+                {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
+              </a>
+              .
+            </BCTypography>
+          )}
         </Grid>
         <Grid item xs={12} md={6}>
           <Stack spacing={0.5}>
@@ -551,6 +556,10 @@ export const ApplicationSummary = ({
       </Grid>
 
       <Divider sx={{ mb: 2 }} />
+
+      <CIApplicationAssignmentHistory
+        assignmentHistory={ciApplication.assignmentHistory}
+      />
 
       {/* Signing authority */}
       <BCTypography
@@ -661,67 +670,71 @@ export const ApplicationSummary = ({
             </BCTypography>
           </Box>
         ) : (
-          documents.map((d) => (
-            <Box
-              key={d.documentId}
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 2fr) 96px 140px 120px',
-                alignItems: 'center',
-                gap: 2,
-                py: 0.75,
-                '&:not(:last-child)': {
-                  borderBottom: 1,
-                  borderColor: 'divider'
-                }
-              }}
-              data-test="ci-summary-document-row"
-            >
+          documents.map((d) => {
+            const displayName = getDocumentDisplayName(d)
+            return (
               <Box
+                key={d.documentId}
                 sx={{
-                  display: 'flex',
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 2fr) 96px 140px 120px',
                   alignItems: 'center',
-                  minWidth: 0
+                  gap: 2,
+                  py: 0.75,
+                  '&:not(:last-child)': {
+                    borderBottom: 1,
+                    borderColor: 'divider'
+                  }
                 }}
+                data-test="ci-summary-document-row"
               >
-                <BCTypography
-                  component="span"
-                  variant="body2"
-                  sx={{ mr: 1, flexShrink: 0 }}
-                >
-                  •
-                </BCTypography>
-                <BCTypography
-                  component="span"
-                  variant="body2"
-                  color="link"
-                  onClick={() => {
-                    downloadDocument(d.documentId, d.fileName)
-                  }}
+                <Box
                   sx={{
-                    minWidth: 0,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    '&:hover': { color: 'info.main' }
+                    display: 'flex',
+                    alignItems: 'center',
+                    minWidth: 0
                   }}
                 >
-                  {d.fileName}
+                  <BCTypography
+                    component="span"
+                    variant="body2"
+                    sx={{ mr: 1, flexShrink: 0 }}
+                  >
+                    •
+                  </BCTypography>
+                  <BCTypography
+                    component="span"
+                    variant="body2"
+                    color="link"
+                    onClick={() => {
+                      downloadDocument(d.documentId, displayName)
+                    }}
+                    sx={{
+                      minWidth: 0,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      '&:hover': { color: 'info.main' }
+                    }}
+                    title={displayName}
+                  >
+                    {displayName}
+                  </BCTypography>
+                </Box>
+                <BCTypography variant="body2" color="text.secondary">
+                  {formatBytes(d.fileSize)}
+                </BCTypography>
+                <BCTypography variant="body2" color="text.secondary">
+                  {d.createUser || ''}
+                </BCTypography>
+                <BCTypography variant="body2" color="text.secondary">
+                  {formatDate(d.createDate)}
                 </BCTypography>
               </Box>
-              <BCTypography variant="body2" color="text.secondary">
-                {formatBytes(d.fileSize)}
-              </BCTypography>
-              <BCTypography variant="body2" color="text.secondary">
-                {d.createUser || ''}
-              </BCTypography>
-              <BCTypography variant="body2" color="text.secondary">
-                {formatDate(d.createDate)}
-              </BCTypography>
-            </Box>
-          ))
+            )
+          })
         )}
       </BCBox>
 

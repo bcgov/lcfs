@@ -52,6 +52,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
   useRecordCIDecision: vi.fn(() => ({
     mutateAsync: mockRecordDecision,
     isPending: false
+  })),
+  useUpdateCIApplicationRiskAssessment: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false
   }))
 }))
 
@@ -604,6 +608,11 @@ describe('GovernmentDecisionStep', () => {
       { wrapper }
     )
     fireEvent.click(screen.getByTestId('ci-request-pathway-changes-btn'))
+    const modal = screen.getByTestId('modal')
+    fireEvent.click(
+      within(modal).getByText('carbonIntensity:step5.requestPathwayChanges')
+    )
+
     expect(screen.getByTestId('ci-request-pathway-changes-btn')).toBeDisabled()
     expect(
       screen.getByTestId('ci-request-documentation-btn')
@@ -613,6 +622,51 @@ describe('GovernmentDecisionStep', () => {
       expect(mockRequestPathwayChanges).toHaveBeenCalledTimes(1)
     )
     expect(mockRecordDecision).not.toHaveBeenCalled()
+  })
+
+  it('opens a confirmation on click without firing the pathway request or disabling the button (#4829)', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    const onSupplierRequest = vi.fn()
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        onSupplierRequest={onSupplierRequest}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-request-pathway-changes-btn'))
+
+    expect(screen.getByTestId('modal')).toBeInTheDocument()
+    expect(mockRequestPathwayChanges).not.toHaveBeenCalled()
+    expect(onSupplierRequest).not.toHaveBeenCalled()
+    expect(
+      screen.getByTestId('ci-request-pathway-changes-btn')
+    ).not.toBeDisabled()
+  })
+
+  it('leaves the pathway button enabled after cancelling the confirmation (#4829)', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    const onSupplierRequest = vi.fn()
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        onSupplierRequest={onSupplierRequest}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-request-pathway-changes-btn'))
+    const modal = screen.getByTestId('modal')
+    fireEvent.click(within(modal).getByText('common:cancelBtn'))
+
+    expect(mockRequestPathwayChanges).not.toHaveBeenCalled()
+    expect(onSupplierRequest).not.toHaveBeenCalled()
+    expect(
+      screen.getByTestId('ci-request-pathway-changes-btn')
+    ).not.toBeDisabled()
   })
 
   it('keeps documentation and pathway request buttons active at the same time', () => {
@@ -733,5 +787,217 @@ describe('GovernmentDecisionStep', () => {
     expect(
       screen.queryByText('carbonIntensity:step5.commentsToOrganizationHeader')
     ).not.toBeInTheDocument()
+  })
+
+  // #4797 — the risk assessment and priority score used to vanish from the
+  // application once the last verification panel closed.
+  describe('post-verification read-only summary', () => {
+    const verifiedCi = {
+      ...baseCi,
+      preliminaryRiskAssessment: 'Medium',
+      priorityScore: 42,
+      verification1Date: '2026-05-19T12:00:00Z',
+      verification2Date: '2026-05-20T12:00:00Z',
+      verification2RiskAssessment: 'High',
+      verification2PriorityScore: 77
+    }
+
+    it('shows the Verification 2 risk assessment and priority score as text', () => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={verifiedCi}
+          isGovernment={true}
+        />,
+        { wrapper }
+      )
+
+      const summary = screen.getByTestId('ci-verification-summary')
+      expect(within(summary).getByText('Verification 2')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('ci-verification-summary-risk')
+      ).toHaveTextContent('High')
+      expect(
+        screen.getByTestId('ci-verification-summary-priority-score')
+      ).toHaveTextContent('77')
+      expect(
+        screen.queryByTestId('ci-priority-score-input')
+      ).not.toBeInTheDocument()
+    })
+
+    it('keeps the values visible once fuel codes are generated', () => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={{
+            ...verifiedCi,
+            generatedFuelCodes: [{ isValid: true }]
+          }}
+          isGovernment={true}
+        />,
+        { wrapper }
+      )
+
+      expect(
+        screen.getByTestId('ci-verification-summary-priority-score')
+      ).toHaveTextContent('77')
+    })
+
+    it('keeps the values visible after recommendation and approval', () => {
+      mockUserRoles = [{ name: roles.director }]
+      const { rerender } = render(
+        <GovernmentDecisionStep
+          ciApplication={{
+            ...verifiedCi,
+            status: { status: 'Recommended' },
+            recommendationDate: '2026-05-21T12:00:00Z'
+          }}
+          isGovernment={true}
+        />,
+        { wrapper }
+      )
+
+      expect(
+        screen.getByTestId('ci-verification-summary-risk')
+      ).toHaveTextContent('High')
+
+      rerender(
+        <GovernmentDecisionStep
+          ciApplication={{
+            ...verifiedCi,
+            status: { status: 'Completed' },
+            recommendationDate: '2026-05-21T12:00:00Z',
+            approvalDate: '2026-05-22T12:00:00Z'
+          }}
+          isGovernment={true}
+          readOnly={true}
+        />
+      )
+
+      expect(
+        screen.getByTestId('ci-verification-summary-risk')
+      ).toHaveTextContent('High')
+    })
+
+    it('falls back to the Verification 1 values for low risk applications', () => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={{
+            ...baseCi,
+            preliminaryRiskAssessment: 'Low',
+            priorityScore: 12,
+            verification1Date: '2026-05-19T12:00:00Z'
+          }}
+          isGovernment={true}
+        />,
+        { wrapper }
+      )
+
+      const summary = screen.getByTestId('ci-verification-summary')
+      expect(within(summary).getByText('Verification 1')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('ci-verification-summary-risk')
+      ).toHaveTextContent('Low')
+      expect(
+        screen.getByTestId('ci-verification-summary-priority-score')
+      ).toHaveTextContent('12')
+    })
+
+    it('labels a Medium risk assessment as Moderate', () => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={{
+            ...verifiedCi,
+            verification2RiskAssessment: 'Medium'
+          }}
+          isGovernment={true}
+        />,
+        { wrapper }
+      )
+
+      expect(
+        screen.getByTestId('ci-verification-summary-risk')
+      ).toHaveTextContent('Moderate')
+    })
+
+    it('is visible to read-only IDIR users', () => {
+      mockUserRoles = [{ name: roles.government }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={verifiedCi}
+          isGovernment={true}
+        />,
+        { wrapper }
+      )
+
+      expect(
+        screen.getByTestId('ci-verification-summary-priority-score')
+      ).toHaveTextContent('77')
+    })
+
+    it('is hidden from BCeID users', () => {
+      mockUserRoles = [{ name: roles.ci_applicant }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={verifiedCi}
+          isGovernment={false}
+        />,
+        { wrapper }
+      )
+
+      expect(
+        screen.queryByTestId('ci-verification-summary')
+      ).not.toBeInTheDocument()
+    })
+
+    it('is hidden while a verification panel is still editable', () => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={{
+            ...baseCi,
+            preliminaryRiskAssessment: 'Medium',
+            priorityScore: 42,
+            verification1Date: '2026-05-19T12:00:00Z'
+          }}
+          isGovernment={true}
+        />,
+        { wrapper }
+      )
+
+      expect(
+        screen.queryByTestId('ci-verification-summary')
+      ).not.toBeInTheDocument()
+      expect(screen.getByTestId('ci-priority-score-input')).toBeInTheDocument()
+    })
+
+    it('is hidden before any verification is complete', () => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+        { wrapper }
+      )
+
+      expect(
+        screen.queryByTestId('ci-verification-summary')
+      ).not.toBeInTheDocument()
+    })
+
+    it('renders the values as a description list for assistive technology', () => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={verifiedCi}
+          isGovernment={true}
+        />,
+        { wrapper }
+      )
+
+      const value = screen.getByTestId('ci-verification-summary-priority-score')
+      expect(value.tagName).toBe('DD')
+      expect(value.closest('dl')).not.toBeNull()
+    })
   })
 })

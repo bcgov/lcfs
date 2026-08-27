@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Box,
@@ -25,7 +25,8 @@ import {
   useRecommendCIApplication,
   useRequestCIApplicationPathwayChanges,
   useRequestCIApplicationDocumentation,
-  useRecordCIDecision
+  useRecordCIDecision,
+  useUpdateCIApplicationRiskAssessment
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
 
@@ -74,6 +75,8 @@ export const GovernmentDecisionStep = ({
   } = useRequestCIApplicationDocumentation(ciApplicationId)
   const { mutateAsync: generateFuelCodes, isPending: isGeneratingFuelCodes } =
     useGenerateCIApplicationFuelCodes(ciApplicationId)
+  const { mutate: saveRiskAssessmentDraft } =
+    useUpdateCIApplicationRiskAssessment(ciApplicationId)
 
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -97,6 +100,10 @@ export const GovernmentDecisionStep = ({
     isRequestDocumentationConfirmOpen,
     setIsRequestDocumentationConfirmOpen
   ] = useState(false)
+  const [
+    isRequestPathwayChangesConfirmOpen,
+    setIsRequestPathwayChangesConfirmOpen
+  ] = useState(false)
   const [priorityScoreTouched, setPriorityScoreTouched] = useState(false)
   const [
     priorityScoreVerificationAttempted,
@@ -118,6 +125,11 @@ export const GovernmentDecisionStep = ({
 
   const normalizeRisk = (risk?: string | null) =>
     risk === 'Moderate' ? 'Medium' : risk
+
+  // The radio group stores 'Medium' but labels it "Moderate"; legacy rows may
+  // already hold 'Moderate'. Keep the read-only text using the same wording.
+  const riskDisplayLabel = (risk?: string | null) =>
+    normalizeRisk(risk) === 'Medium' ? 'Moderate' : risk
 
   const isLowOrModerateRisk = (risk?: string | null) =>
     ['Low', 'Medium'].includes(normalizeRisk(risk) || '')
@@ -231,6 +243,58 @@ export const GovernmentDecisionStep = ({
     ? 'Verification 2'
     : 'Verification 1'
 
+  // Once the last verification is complete both editable panels disappear, and
+  // with them the risk assessment / priority score the reviewer entered — the
+  // values were only readable from the CI application index (#4797). Keep the
+  // saved values on the application as read-only text for the rest of the
+  // workflow, preferring the Verification 2 values when that step ran.
+  const savedRiskAssessment =
+    ciApplication?.verification2RiskAssessment ||
+    ciApplication?.preliminaryRiskAssessment ||
+    null
+  const savedPriorityScore =
+    ciApplication?.verification2PriorityScore ??
+    ciApplication?.priorityScore ??
+    null
+  const completedVerificationLabel = ciApplication?.verification2Date
+    ? 'Verification 2'
+    : 'Verification 1'
+  const showVerificationSummary =
+    !showVerification1Panel &&
+    !showVerification2Panel &&
+    !!ciApplication?.verification1Date &&
+    (savedRiskAssessment !== null || savedPriorityScore !== null)
+
+  const canEditRiskAssessment =
+    !readOnly && (showVerification1Panel || showVerification2Panel)
+  const isFirstRiskAssessmentRender = useRef(true)
+  useEffect(() => {
+    if (!canEditRiskAssessment) return
+    if (isFirstRiskAssessmentRender.current) {
+      isFirstRiskAssessmentRender.current = false
+      return
+    }
+    const timeoutId = setTimeout(() => {
+      saveRiskAssessmentDraft(
+        {
+          preliminaryRiskAssessment: riskAssessment,
+          priorityScore: isPriorityScoreValid ? priorityScoreNumber : null
+        },
+        {
+          onError: (err: any) => {
+            setError(
+              err?.response?.data?.detail ||
+                err?.message ||
+                'Failed to save risk assessment.'
+            )
+          }
+        }
+      )
+    }, 600)
+    return () => clearTimeout(timeoutId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riskAssessment, priorityScore, canEditRiskAssessment])
+
   const workflowButtonSx = {
     minHeight: 44,
     px: 2,
@@ -259,6 +323,14 @@ export const GovernmentDecisionStep = ({
   }
 
   const handleRequestPathwayChanges = () => {
+    // Ask the analyst to confirm before requesting pathway changes (#4829).
+    // Cancelling leaves the button enabled; only confirming performs the
+    // action and disables it.
+    setIsRequestPathwayChangesConfirmOpen(true)
+  }
+
+  const confirmRequestPathwayChanges = () => {
+    setIsRequestPathwayChangesConfirmOpen(false)
     setRequestedPathwayChanges(true)
     onSupplierRequest?.('pathwayChanges')
     recordWorkflowAction(
@@ -457,6 +529,61 @@ export const GovernmentDecisionStep = ({
               </>
             )}
 
+            {showVerificationSummary && (
+              <Box sx={{ mb: 2 }} data-test="ci-verification-summary">
+                <BCTypography
+                  variant="h6"
+                  sx={{ fontWeight: 700, color: 'primary.main', mb: 2 }}
+                >
+                  {completedVerificationLabel}
+                </BCTypography>
+                <Stack
+                  component="dl"
+                  direction={{ xs: 'column', lg: 'row' }}
+                  spacing={{ xs: 1, lg: 4 }}
+                  alignItems={{ xs: 'flex-start', lg: 'center' }}
+                  sx={{ my: 0 }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                    <BCTypography
+                      component="dt"
+                      variant="body2"
+                      sx={{ fontWeight: 700 }}
+                    >
+                      {t('carbonIntensity:step5.riskAssessment')}:
+                    </BCTypography>
+                    <BCTypography
+                      component="dd"
+                      variant="body2"
+                      sx={{ m: 0 }}
+                      data-test="ci-verification-summary-risk"
+                    >
+                      {riskDisplayLabel(savedRiskAssessment) ||
+                        t('carbonIntensity:step5.notRecorded')}
+                    </BCTypography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                    <BCTypography
+                      component="dt"
+                      variant="body2"
+                      sx={{ fontWeight: 700 }}
+                    >
+                      {t('carbonIntensity:step5.priorityScore')}:
+                    </BCTypography>
+                    <BCTypography
+                      component="dd"
+                      variant="body2"
+                      sx={{ m: 0 }}
+                      data-test="ci-verification-summary-priority-score"
+                    >
+                      {savedPriorityScore ??
+                        t('carbonIntensity:step5.notRecorded')}
+                    </BCTypography>
+                  </Stack>
+                </Stack>
+              </Box>
+            )}
+
             <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
               {showVerification1Panel && (
                 <BCButton
@@ -647,6 +774,21 @@ export const GovernmentDecisionStep = ({
           content: (
             <BCTypography variant="body1">
               {t('carbonIntensity:step5.requestDocumentationConfirmText')}
+            </BCTypography>
+          )
+        }}
+      />
+      <BCModal
+        open={isRequestPathwayChangesConfirmOpen}
+        onClose={() => setIsRequestPathwayChangesConfirmOpen(false)}
+        data={{
+          title: t('carbonIntensity:step5.requestPathwayChangesConfirmTitle'),
+          primaryButtonText: t('carbonIntensity:step5.requestPathwayChanges'),
+          primaryButtonAction: confirmRequestPathwayChanges,
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <BCTypography variant="body1">
+              {t('carbonIntensity:step5.requestPathwayChangesConfirmText')}
             </BCTypography>
           )
         }}

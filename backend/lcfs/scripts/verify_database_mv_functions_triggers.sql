@@ -73,6 +73,8 @@ WITH expected_materialized_views AS (
     SELECT 'mv_compliance_report_count'
     UNION ALL
     SELECT 'mv_fuel_code_count'
+    UNION ALL
+    SELECT 'mv_fse_reporting_base_pref'
 )
 SELECT 
     'Materialized View' AS item_type,
@@ -102,6 +104,8 @@ WITH expected_functions AS (
     SELECT 'refresh_mv_compliance_report_count'
     UNION ALL
     SELECT 'refresh_mv_fuel_code_count'
+    UNION ALL
+    SELECT 'refresh_fse_reporting_base_views'
     UNION ALL
     SELECT 'update_organization_balance'
     UNION ALL
@@ -161,6 +165,16 @@ WITH expected_triggers AS (
     SELECT 'refresh_mv_compliance_report_count_after_change', 'compliance_report'
     UNION ALL
     SELECT 'refresh_mv_fuel_code_count_after_change', 'fuel_code'
+    UNION ALL
+    SELECT 'refresh_fse_reporting_mvs_after_ce', 'charging_equipment'
+    UNION ALL
+    SELECT 'refresh_fse_reporting_mvs_after_ceiu', 'charging_equipment_intended_use_association'
+    UNION ALL
+    SELECT 'refresh_fse_reporting_mvs_after_ceuser', 'charging_equipment_intended_user_association'
+    UNION ALL
+    SELECT 'refresh_fse_reporting_mvs_after_cs', 'charging_site'
+    UNION ALL
+    SELECT 'refresh_fse_reporting_mvs_after_crce', 'compliance_report_charging_equipment'
     UNION ALL
     SELECT 'update_organization_balance_trigger', 'transaction'
     UNION ALL
@@ -274,6 +288,7 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY mv_compliance_report_count;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fuel_code_count;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_org_compliance_report_count;
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fse_reporting_base_pref;
 
 COMMIT;
 

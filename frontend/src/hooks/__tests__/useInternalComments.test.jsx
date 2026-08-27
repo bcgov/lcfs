@@ -186,6 +186,37 @@ describe('useComments', () => {
       expect(result.current.comments).toEqual(expectedSorted)
     })
 
+    it('should reorder cached comments without refetching when sort order changes', async () => {
+      mockHasAnyRole.mockImplementation((role) => role === 'director')
+
+      const mockComments = [
+        { internalCommentId: 1, comment: 'First comment' },
+        { internalCommentId: 3, comment: 'Third comment' },
+        { internalCommentId: 2, comment: 'Second comment' }
+      ]
+      mockApiService.get.mockResolvedValue({ data: mockComments })
+
+      const { result } = renderHook(
+        () => useComments('compliance_report', 123),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(
+          result.current.comments.map((comment) => comment.internalCommentId)
+        ).toEqual([3, 2, 1])
+      })
+
+      act(() => {
+        result.current.handleSortOrderChange('asc')
+      })
+
+      expect(
+        result.current.comments.map((comment) => comment.internalCommentId)
+      ).toEqual([1, 2, 3])
+      expect(mockApiService.get).toHaveBeenCalledTimes(1)
+    })
+
     it('should not fetch when entityId is missing', () => {
       mockHasAnyRole.mockImplementation((role) => role === 'director')
 

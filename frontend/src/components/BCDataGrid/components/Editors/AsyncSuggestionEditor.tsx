@@ -20,6 +20,8 @@ export interface AsyncSuggestionEditorProps {
   onKeyDownCapture?: (event: KeyboardEvent) => void
   api?: any
   optionLabel?: string
+  valueKey?: string
+  groupBy?: (option: any) => string
 }
 
 /**
@@ -46,7 +48,9 @@ export const AsyncSuggestionEditor = ({
   debounceValue = 500,
   onKeyDownCapture,
   api,
-  optionLabel = 'name'
+  optionLabel = 'name',
+  valueKey,
+  groupBy
 }: AsyncSuggestionEditorProps) => {
   const [inputValue, setInputValue] = useState('')
   const [highlightedOption, setHighlightedOption] = useState(null)
@@ -76,8 +80,9 @@ export const AsyncSuggestionEditor = ({
       debouncedSetInputValue(newValue)
       onValueChange(newValue)
     } else if (newValue && typeof newValue === 'object') {
+      const storedValue = valueKey ? newValue[valueKey] : newValue
       debouncedSetInputValue(newValue[optionLabel])
-      onValueChange(newValue) // Set full object if option is an object
+      onValueChange(storedValue)
     } else {
       onValueChange('')
     }
@@ -133,6 +138,7 @@ export const AsyncSuggestionEditor = ({
           typeof option === 'string' ? option : option[optionLabel]
         }
         options={options || []}
+        groupBy={groupBy}
         onHighlightChange={(_, option) => setHighlightedOption(option)}
         onClose={() => setHighlightedOption(null)}
         includeInputInList

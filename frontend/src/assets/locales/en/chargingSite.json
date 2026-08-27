@@ -1,12 +1,12 @@
 {
-  "idirSitetitle": "Charging site/Equipment processing",
+  "idirSitetitle": "Charging site/equipment processing",
   "chargingSitesTitle": "Charging sites",
   "mngTitle": "Manage charging sites",
   "mngCSdescription": "Create new charging site locations where you want to add FSE. Charging sites must be created before adding FSE.",
   "csDescription": "Open charging sites to view file attachments and process FSE by site.",
   "chargingSiteTitle": "Charging site",
   "equipmentProcessingTitle": "Equipment processing",
-  "attachmentsTitle": "Charging site/Equipment attachments",
+  "attachmentsTitle": "Charging site/equipment attachments",
   "equipmentProcessingDescription": "Set equipment as validated or return to draft for the supplier to make further changes. The Set/Return button will only apply to the visible rows. Use the site name filter and/or paging to assist.",
   "noAttachments": "No attachments available",
   "noIntendedUsers": "No intended users specified",
@@ -84,7 +84,7 @@
     "documentLabel": "Supporting documents help provide additional context and evidence for this charging site.",
     "returnButton": "Return to charging site"
   },
-  "viewTitle": "Charging Site/FSE list",
+  "viewTitle": "Charging site/FSE list",
   "cardTitle": "Charging site",
   "historyToggle": "Site/FSE history",
   "cardLabels": {
