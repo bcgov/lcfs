@@ -1,19 +1,42 @@
 import { currencyFormatter } from '@/utils/formatters'
 
+const compactCurrencyFormatter = new Intl.NumberFormat('en-CA', {
+  style: 'currency',
+  currency: 'CAD',
+  notation: 'compact',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})
+
+const formatAxisTooltip = (params) => {
+  if (!params?.length) return ''
+
+  const year = params[0].axisValueLabel ?? params[0].axisValue ?? ''
+  const values = params.map(
+    ({ marker = '', seriesName, value }) =>
+      `${marker}${seriesName}: ${currencyFormatter(value)}`
+  )
+
+  return [year, ...values].join('<br/>')
+}
+
+const formatItemTooltip = ({ marker = '', name, value, percent }) =>
+  `${marker}${name}: ${currencyFormatter(value)} (${percent}%)`
+
 export const useStackedBarOption = (data, theme) => {
   const primary = theme.palette.primary.main
   const info = theme.palette.info.main
 
   return {
     color: [primary, info],
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', formatter: formatAxisTooltip },
     legend: { top: 0 },
     grid: { left: 16, right: 24, bottom: 8, top: 40, containLabel: true },
     xAxis: { type: 'category', data: data.map((item) => item.year) },
     yAxis: {
       type: 'value',
       axisLabel: {
-        formatter: (val) => (val >= 1000 ? `${val / 1000}k` : val)
+        formatter: (value) => compactCurrencyFormatter.format(value)
       }
     },
     series: [
@@ -40,7 +63,7 @@ export const usePenaltyMixOption = (totals, theme) => {
 
   return {
     color: [palette.primary.main, palette.info.main, palette.warning.main],
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    tooltip: { trigger: 'item', formatter: formatItemTooltip },
     legend: { orient: 'horizontal', bottom: 0 },
     series: [
       {

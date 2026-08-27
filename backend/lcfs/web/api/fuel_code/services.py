@@ -1,6 +1,6 @@
 import asyncio
 from datetime import date, datetime, timezone
-from typing import Optional
+from typing import List, Optional
 import math
 import uuid
 
@@ -46,6 +46,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeBulletinRowSchema,
     VolumeDataPointSchema,
     ComplianceUnitsDataPointSchema,
+    CompanySearchOptionSchema,
 )
 from lcfs.web.core.decorators import service_handler
 
@@ -155,6 +156,39 @@ class FuelCodeServices:
         seen = set(n.lower() for n in org_names)
         merged = list(org_names) + [n for n in fuel_code_names if n.lower() not in seen]
         return merged[:10]
+
+    @service_handler
+    async def search_former_company(self, former_company):
+        former_company_names, orgs = await asyncio.gather(
+            self.repo.get_distinct_former_company_names(former_company),
+            self.repo.get_organizations_like(former_company),
+        )
+        options: List[CompanySearchOptionSchema] = []
+        seen = set()
+        for org_id, name in orgs:
+            if not name or name.lower() in seen:
+                continue
+            seen.add(name.lower())
+            options.append(
+                CompanySearchOptionSchema(
+                    label=name,
+                    value=name,
+                    source="organization",
+                    organization_id=org_id,
+                )
+            )
+        for name in former_company_names:
+            if not name or name.lower() in seen:
+                continue
+            seen.add(name.lower())
+            options.append(
+                CompanySearchOptionSchema(
+                    label=name,
+                    value=name,
+                    source="former_company",
+                )
+            )
+        return options[:10]
 
     @service_handler
     async def search_contact_name(self, company, contact_name):
