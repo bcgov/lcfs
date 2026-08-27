@@ -401,7 +401,7 @@ def _create_refresh_triggers() -> None:
         op.execute(
             f"""
             CREATE TRIGGER {trigger_name}
-            AFTER INSERT OR UPDATE ON {table_name}
+            AFTER INSERT OR UPDATE OR DELETE ON {table_name}
             FOR EACH STATEMENT
             EXECUTE FUNCTION refresh_fse_reporting_base_views();
             """
