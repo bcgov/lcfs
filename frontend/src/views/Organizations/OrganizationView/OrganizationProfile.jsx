@@ -49,17 +49,16 @@ export const OrganizationProfile = ({
                 : ''}
           </BCTypography>
 
-          <BCTypography variant="body4">
-            <strong>{t('org:phoneNbrLabel')}:</strong>{' '}
-            {phoneNumberFormatter({ value: orgData?.phone })}
-          </BCTypography>
-
           {orgData?.contactName && (
             <BCTypography variant="body4">
               <strong>{t('org:contactNameLabel')}:</strong>{' '}
               {orgData.contactName}
             </BCTypography>
           )}
+          <BCTypography variant="body4">
+            <strong>{t('org:phoneNbrLabel')}:</strong>{' '}
+            {phoneNumberFormatter({ value: orgData?.phone })}
+          </BCTypography>
 
           <BCTypography variant="body4">
             <strong>{t('org:emailAddrLabel')}:</strong> {orgData?.email}
