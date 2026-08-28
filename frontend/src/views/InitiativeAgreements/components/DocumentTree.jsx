@@ -157,7 +157,6 @@ const FileLabel = ({
         alignItems: 'center',
         gap: 1,
         py: 0.25,
-        width: '100%',
         opacity: isDragging ? 0.4 : 1
       }}
       data-test={`tree-file-${file.documentId}`}
@@ -166,9 +165,10 @@ const FileLabel = ({
         fontSize="small"
         sx={{ color: 'info.main', flexShrink: 0 }}
       />
-      {/* The name takes the slack so the columns after it line up down
-          the list rather than starting wherever each name happens to
-          end. */}
+      {/* A fixed basis rather than flex:1. Both keep the columns after it
+          aligned, but growing to fill the row shoves the metadata and the
+          actions out to the far edge, stranding them from the name they
+          describe. This keeps the whole cluster packed left. */}
       <BCTypography
         component="span"
         variant="subtitle2"
@@ -178,7 +178,7 @@ const FileLabel = ({
           onStartRename()
         }}
         sx={{
-          flex: 1,
+          flex: '0 1 340px',
           minWidth: 0,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
