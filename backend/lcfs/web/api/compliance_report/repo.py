@@ -427,10 +427,10 @@ class ComplianceReportRepository:
         excluded_statuses = []
 
         is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
-        if not is_analyst:
+        is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
+        if not is_analyst and not is_supplier:
             excluded_statuses.append(ComplianceReportStatusEnum.Analyst_adjustment)
 
-        is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
         if not is_supplier:
             excluded_statuses.append(ComplianceReportStatusEnum.Draft)
 

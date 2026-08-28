@@ -36,6 +36,7 @@ vi.mock('@mui/x-date-pickers', () => ({
       onAccept,
       onOpen,
       onClose,
+      onViewChange,
       open,
       slotProps,
       minDate,
@@ -535,6 +536,36 @@ describe('DateEditor', () => {
 
       expect(datePickerProps.views).toEqual(['year', 'month', 'day'])
       expect(datePickerProps.onAccept).toEqual(expect.any(Function))
+    })
+
+    it('preserves window scroll when the picker changes between year, month, and day views', () => {
+      vi.useFakeTimers()
+      Object.defineProperty(window, 'scrollX', {
+        value: 12,
+        writable: true,
+        configurable: true
+      })
+      Object.defineProperty(window, 'scrollY', {
+        value: 640,
+        writable: true,
+        configurable: true
+      })
+
+      render(<DateEditor {...defaultProps} />)
+
+      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+
+      act(() => {
+        datePickerProps.onViewChange('month')
+        vi.runOnlyPendingTimers()
+      })
+
+      expect(window.scrollTo).toHaveBeenCalledWith(12, 640)
+
+      act(() => {
+        vi.runOnlyPendingTimers()
+      })
+      vi.useRealTimers()
     })
 
     it('keeps manual text entry enabled with an explicit date placeholder', () => {

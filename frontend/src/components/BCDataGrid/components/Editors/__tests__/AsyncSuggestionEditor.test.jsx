@@ -165,6 +165,40 @@ describe('AsyncSuggestionEditor', () => {
     expect(mockOnValueChange).toHaveBeenCalled()
   })
 
+  it('stores valueKey when selecting a structured option', async () => {
+    mockQueryFn.mockResolvedValue([
+      {
+        label: 'Acme Fuels',
+        value: 'Acme Fuels',
+        source: 'organization',
+        organizationId: 7
+      }
+    ])
+
+    renderComponent({
+      optionLabel: 'label',
+      valueKey: 'value',
+      groupBy: (option) =>
+        option?.source === 'organization' ? 'Organizations' : 'Former companies'
+    })
+
+    const autocomplete = screen.getByRole('combobox')
+    await act(async () => {
+      fireEvent.change(autocomplete, { target: { value: 'Acme' } })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('option')).toHaveTextContent('Acme Fuels')
+    })
+    expect(screen.getByText('Organizations')).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option'))
+    })
+
+    expect(mockOnValueChange).toHaveBeenCalledWith('Acme Fuels')
+  })
+
   it('handles Enter key press', async () => {
     renderComponent()
 

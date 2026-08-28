@@ -622,7 +622,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                 </Box>
                 <Box mb={2}>
                   <InputLabel htmlFor="orgContactName" sx={{ pb: 1 }}>
-                    {t('org:contactNameLabel')}:
+                    {t('org:contactNameLabelOptional')}:
                   </InputLabel>
                   <TextField
                     id="orgContactName"

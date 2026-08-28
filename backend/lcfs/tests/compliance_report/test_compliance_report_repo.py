@@ -1,10 +1,13 @@
 import pytest
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+from sqlalchemy import select
 
 from lcfs.db.models.compliance import (
     CompliancePeriod,
     ComplianceReport,
+    ComplianceReportListView,
     ComplianceReportStatus,
     ComplianceReportHistory,
 )
@@ -14,6 +17,8 @@ from lcfs.web.api.base import (
     PaginationRequestSchema,
     SortOrder,
 )
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportViewSchema,
@@ -241,6 +246,70 @@ async def test_get_reports_paginated_sort_by_assigned_analyst(
     assert len(reports) > 0
     assert isinstance(reports[0], ComplianceReportViewSchema)
     assert total_count >= len(reports)
+
+
+@pytest.mark.anyio
+async def test_get_reports_paginated_keeps_analyst_adjustment_visible_for_supplier(
+    compliance_report_repo, monkeypatch
+):
+    pagination = PaginationRequestSchema(
+        page=1,
+        size=10,
+        sort_orders=[],
+        filters=[],
+    )
+    supplier_user = SimpleNamespace(role_names=[RoleEnum.SUPPLIER], organization_id=1)
+
+    latest_visible_query = AsyncMock(return_value=select(ComplianceReportListView))
+    monkeypatch.setattr(
+        compliance_report_repo,
+        "get_latest_visible_reports_query",
+        latest_visible_query,
+    )
+    monkeypatch.setattr(
+        "lcfs.web.api.compliance_report.repo.paginate_with_window_count",
+        AsyncMock(return_value=([], 0)),
+    )
+
+    await compliance_report_repo.get_reports_paginated(pagination, supplier_user)
+
+    latest_visible_query.assert_awaited_once_with([], supplier_user.organization_id)
+
+
+@pytest.mark.anyio
+async def test_get_reports_paginated_excludes_analyst_adjustment_for_non_supplier_non_analyst(
+    compliance_report_repo, monkeypatch
+):
+    pagination = PaginationRequestSchema(
+        page=1,
+        size=10,
+        sort_orders=[],
+        filters=[],
+    )
+    government_user = SimpleNamespace(
+        role_names=[RoleEnum.GOVERNMENT], organization_id=None
+    )
+
+    latest_visible_query = AsyncMock(return_value=select(ComplianceReportListView))
+    monkeypatch.setattr(
+        compliance_report_repo,
+        "get_latest_visible_reports_query",
+        latest_visible_query,
+    )
+    monkeypatch.setattr(
+        "lcfs.web.api.compliance_report.repo.paginate_with_window_count",
+        AsyncMock(return_value=([], 0)),
+    )
+
+    await compliance_report_repo.get_reports_paginated(pagination, government_user)
+
+    latest_visible_query.assert_awaited_once_with(
+        [
+            ComplianceReportStatusEnum.Analyst_adjustment,
+            ComplianceReportStatusEnum.Draft,
+        ],
+        government_user.organization_id,
+    )
 
 
 @pytest.mark.anyio

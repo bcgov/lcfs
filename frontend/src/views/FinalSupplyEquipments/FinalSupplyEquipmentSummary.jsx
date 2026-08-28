@@ -34,7 +34,8 @@ export const FinalSupplyEquipmentSummary = ({
     paginationOptions,
     {},
     organizationId,
-    'summary'
+    'summary',
+    'vw_fse_base'
   )
   const { data: fseData, isLoading, isError, refetch } = queryData
 

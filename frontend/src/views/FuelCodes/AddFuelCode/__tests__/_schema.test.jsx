@@ -94,10 +94,23 @@ describe('fuelCodeColDefs', () => {
       loadingColumnDefs.find((col) => col.field === 'feedstock')
         .cellEditorParams.options
     ).toEqual([])
+    const formerCompanyCol = loadingColumnDefs.find(
+      (col) => col.field === 'formerCompany'
+    )
+    expect(formerCompanyCol.cellEditorParams({ api: {} }).queryKey).toBe(
+      'former-company-search'
+    )
+    expect(formerCompanyCol.cellEditorParams({ api: {} }).optionLabel).toBe(
+      'label'
+    )
+    expect(formerCompanyCol.cellEditorParams({ api: {} }).valueKey).toBe(
+      'value'
+    )
     expect(
-      loadingColumnDefs.find((col) => col.field === 'formerCompany')
-        .cellEditorParams.options
-    ).toEqual([])
+      formerCompanyCol.cellEditorParams({ api: {} }).groupBy({
+        source: 'organization'
+      })
+    ).toBe('Organizations')
     expect(
       loadingColumnDefs
         .find((col) => col.field === 'prefix')
