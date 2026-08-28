@@ -1,5 +1,6 @@
 from lcfs.db.base import BaseModel, Auditable, Versioning
 from sqlalchemy import (
+    and_,
     Column,
     Double,
     Integer,
@@ -11,7 +12,7 @@ from sqlalchemy import (
     select,
     event,
 )
-from sqlalchemy.orm import relationship, Session
+from sqlalchemy.orm import foreign, relationship, Session
 import enum
 
 
@@ -30,6 +31,12 @@ charging_equipment_intended_use_association = Table(
         primary_key=True,
     ),
     Column(
+        "charging_equipment_version",
+        Integer,
+        primary_key=True,
+        nullable=False,
+    ),
+    Column(
         "end_use_type_id",
         Integer,
         ForeignKey("end_use_type.end_use_type_id"),
@@ -45,6 +52,12 @@ charging_equipment_intended_user_association = Table(
         Integer,
         ForeignKey("charging_equipment.charging_equipment_id", ondelete="CASCADE"),
         primary_key=True,
+    ),
+    Column(
+        "charging_equipment_version",
+        Integer,
+        primary_key=True,
+        nullable=False,
     ),
     Column(
         "end_user_type_id",
@@ -153,10 +166,38 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     intended_uses = relationship(
         "EndUseType",
         secondary=charging_equipment_intended_use_association,
+        primaryjoin=lambda: and_(
+            ChargingEquipment.charging_equipment_id
+            == foreign(
+                charging_equipment_intended_use_association.c.charging_equipment_id
+            ),
+            ChargingEquipment.version
+            == foreign(
+                charging_equipment_intended_use_association.c.charging_equipment_version
+            ),
+        ),
+        secondaryjoin=(
+            "EndUseType.end_use_type_id == "
+            "foreign(charging_equipment_intended_use_association.c.end_use_type_id)"
+        ),
     )
     intended_users = relationship(
         "EndUserType",
         secondary=charging_equipment_intended_user_association,
+        primaryjoin=lambda: and_(
+            ChargingEquipment.charging_equipment_id
+            == foreign(
+                charging_equipment_intended_user_association.c.charging_equipment_id
+            ),
+            ChargingEquipment.version
+            == foreign(
+                charging_equipment_intended_user_association.c.charging_equipment_version
+            ),
+        ),
+        secondaryjoin=(
+            "EndUserType.end_user_type_id == "
+            "foreign(charging_equipment_intended_user_association.c.end_user_type_id)"
+        ),
     )
     compliance_associations = relationship(
         "ComplianceReportChargingEquipment",

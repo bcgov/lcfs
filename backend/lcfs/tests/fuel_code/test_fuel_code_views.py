@@ -277,6 +277,36 @@ async def test_search_fuel_code_success(
         mock_search_fuel_code.assert_called_once_with("AB001", None, False)
 
 
+@pytest.mark.anyio
+async def test_search_former_company_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.search_former_company"
+    ) as mock_search_former_company:
+        set_user_role(RoleEnum.GOVERNMENT)
+        mock_search_former_company.return_value = [
+            {
+                "label": "Acme Fuels",
+                "value": "Acme Fuels",
+                "source": "organization",
+                "organizationId": 7,
+            }
+        ]
+
+        response = await client.get(
+            "/api/fuel-codes/search", params={"formerCompany": "Ac"}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+        assert result[0]["source"] == "organization"
+        assert result[0]["organizationId"] == 7
+        mock_search_former_company.assert_called_once_with("Ac")
+
+
 # get_fuel_codes (POST /list)
 @pytest.mark.anyio
 async def test_get_fuel_codes_success(
