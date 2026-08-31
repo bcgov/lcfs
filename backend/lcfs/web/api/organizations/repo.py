@@ -943,6 +943,18 @@ class OrganizationsRepository:
                 ComplianceReportSummary.low_carbon_penalty_override.label(
                     "low_carbon_penalty_override"
                 ),
+                ComplianceReportSummary.line_11_invoice_sent.label(
+                    "line_11_invoice_sent"
+                ),
+                ComplianceReportSummary.line_11_payment_received.label(
+                    "line_11_payment_received"
+                ),
+                ComplianceReportSummary.line_21_invoice_sent.label(
+                    "line_21_invoice_sent"
+                ),
+                ComplianceReportSummary.line_21_payment_received.label(
+                    "line_21_payment_received"
+                ),
             )
             .join(
                 ComplianceReportSummary,

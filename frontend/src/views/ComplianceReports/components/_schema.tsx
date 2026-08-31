@@ -576,7 +576,8 @@ export const lowCarbonColumns = (
 
 export const nonComplianceColumns = (
   t: (key: string) => string,
-  editable: boolean = false
+  editable: boolean = false,
+  statusEditable: boolean = editable
 ): SummaryColumn[] => [
   {
     id: 'description',
@@ -590,6 +591,28 @@ export const nonComplianceColumns = (
     width: '150px',
     editable: editable,
     editableCells: editable ? [0, 1] : []
+  },
+  {
+    id: 'invoiceSent',
+    label: t('report:summaryLabels.invoiceSent', {
+      defaultValue: 'Invoice sent'
+    }),
+    align: 'center',
+    width: '160px',
+    type: 'booleanRadio',
+    editable: statusEditable,
+    editableCells: statusEditable ? [0, 1] : []
+  },
+  {
+    id: 'paymentReceived',
+    label: t('report:summaryLabels.paymentReceived', {
+      defaultValue: 'Payment received'
+    }),
+    align: 'center',
+    width: '190px',
+    type: 'booleanRadio',
+    editable: statusEditable,
+    editableCells: statusEditable ? [0, 1] : []
   }
 ]
 

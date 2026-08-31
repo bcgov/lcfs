@@ -424,6 +424,8 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
     max_gasoline: Optional[float] = None
     max_diesel: Optional[float] = None
     max_jet_fuel: Optional[float] = None
+    invoice_sent: Optional[bool] = None
+    payment_received: Optional[bool] = None
 
 
 class ComplianceReportSummarySchema(BaseSchema):

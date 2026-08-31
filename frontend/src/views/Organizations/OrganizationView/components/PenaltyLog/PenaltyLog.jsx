@@ -107,6 +107,45 @@ const processDiscretionaryData = (rawPenaltyLogs, yearLabels) => {
   return yearLabels.map((year) => sums.get(year) ?? 0)
 }
 
+const buildAutomaticPenaltyRows = (yearlyPenalties) =>
+  yearlyPenalties.flatMap((item) => {
+    const year = Number(item.complianceYear)
+    const dueDate = Number.isFinite(year) ? `${year + 1}-03-31` : ''
+    const rows = []
+
+    if (item.autoRenewable > 0) {
+      rows.push({
+        id: `automatic-renewable-${item.compliancePeriodId}`,
+        penaltyLogId: `automatic-renewable-${item.compliancePeriodId}`,
+        complianceYear: item.complianceYear,
+        description:
+          'Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)',
+        penaltyAmount: item.autoRenewable,
+        dueDate,
+        invoiceSent: !!item.renewableInvoiceSent,
+        paymentReceived: !!item.renewablePaymentReceived,
+        source: 'automatic'
+      })
+    }
+
+    if (item.autoLowCarbon > 0) {
+      rows.push({
+        id: `automatic-low-carbon-${item.compliancePeriodId}`,
+        penaltyLogId: `automatic-low-carbon-${item.compliancePeriodId}`,
+        complianceYear: item.complianceYear,
+        description:
+          'Low carbon fuel target non-compliance penalty total (Line 21)',
+        penaltyAmount: item.autoLowCarbon,
+        dueDate,
+        invoiceSent: !!item.lowCarbonInvoiceSent,
+        paymentReceived: !!item.lowCarbonPaymentReceived,
+        source: 'automatic'
+      })
+    }
+
+    return rows
+  })
+
 export const PenaltyLog = () => {
   const { t } = useTranslation(['org'])
   const theme = useTheme()
@@ -144,6 +183,11 @@ export const PenaltyLog = () => {
   const yearlyPenalties = useMemo(
     () => processYearlyPenalties(rawYearlyPenalties, allYears),
     [allYears, rawYearlyPenalties]
+  )
+
+  const automaticPenaltyRows = useMemo(
+    () => buildAutomaticPenaltyRows(rawYearlyPenalties),
+    [rawYearlyPenalties]
   )
 
   const penaltyTotals = useMemo(
@@ -230,7 +274,10 @@ export const PenaltyLog = () => {
           penaltyMixOption={penaltyMixOption}
         />
       </Stack>
-      <PenaltyHistoryGrid organizationId={organizationId} />
+      <PenaltyHistoryGrid
+        organizationId={organizationId}
+        automaticPenaltyRows={automaticPenaltyRows}
+      />
     </BCBox>
   )
 }

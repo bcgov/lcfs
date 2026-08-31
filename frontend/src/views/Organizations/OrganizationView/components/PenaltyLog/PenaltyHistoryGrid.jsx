@@ -17,7 +17,10 @@ import { ROUTES, buildPath } from '@/routes/routes'
 import { penaltyLogColumnDefs } from './_schema'
 
 // Separate component for penalty history grid
-export const PenaltyHistoryGrid = ({ organizationId }) => {
+export const PenaltyHistoryGrid = ({
+  organizationId,
+  automaticPenaltyRows = []
+}) => {
   const { t } = useTranslation(['org'])
   const navigate = useNavigate()
   const penaltyLogGridRef = useRef(null)
@@ -32,6 +35,43 @@ export const PenaltyHistoryGrid = ({ organizationId }) => {
       enabled: !!organizationId
     }
   )
+
+  const penaltyHistoryQuery = useMemo(() => {
+    const manualRows =
+      penaltyLogsQuery.data?.penaltyLogs?.map((row) => ({
+        ...row,
+        id: row.penaltyLogId,
+        description: row.description ?? row.contraventionType,
+        dueDate: row.dueDate ?? '',
+        invoiceSent: row.invoiceSent,
+        paymentReceived: row.paymentReceived,
+        source: row.source ?? 'manual'
+      })) ?? []
+
+    const penaltyLogs = [...automaticPenaltyRows, ...manualRows].sort(
+      (a, b) => {
+        const yearCompare = String(b.complianceYear ?? '').localeCompare(
+          String(a.complianceYear ?? '')
+        )
+        if (yearCompare !== 0) return yearCompare
+        return String(a.description ?? '').localeCompare(
+          String(b.description ?? '')
+        )
+      }
+    )
+
+    return {
+      ...penaltyLogsQuery,
+      data: {
+        ...(penaltyLogsQuery.data ?? {}),
+        penaltyLogs,
+        pagination: {
+          ...(penaltyLogsQuery.data?.pagination ?? {}),
+          total: penaltyLogs.length
+        }
+      }
+    }
+  }, [automaticPenaltyRows, penaltyLogsQuery])
 
   const getPenaltyRowId = useCallback((params) => {
     const identifier =
@@ -108,7 +148,7 @@ export const PenaltyHistoryGrid = ({ organizationId }) => {
           gridRef={penaltyLogGridRef}
           columnDefs={penaltyLogColumnDefs}
           defaultColDef={penaltyLogDefaultColDef}
-          queryData={penaltyLogsQuery}
+          queryData={penaltyHistoryQuery}
           dataKey="penaltyLogs"
           paginationOptions={paginationOptions}
           onPaginationChange={handlePaginationChange}

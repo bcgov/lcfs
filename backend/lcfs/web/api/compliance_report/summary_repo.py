@@ -285,9 +285,9 @@ class ComplianceReportSummaryRepository:
         # Skip updating calculated penalty columns when penalty override is enabled
         # to preserve original calculated values
         penalty_override_enabled = getattr(summary, "penalty_override_enabled", False)
+        non_compliance_summary = summary.non_compliance_penalty_summary
 
         if not penalty_override_enabled:
-            non_compliance_summary = summary.non_compliance_penalty_summary
             for row in non_compliance_summary:
                 if row.line == 11:
                     summary_obj.line_11_fossil_derived_base_fuel_total = row.total_value
@@ -295,6 +295,14 @@ class ComplianceReportSummaryRepository:
                     summary_obj.line_21_non_compliance_penalty_payable = row.total_value
                 elif row.line is None:  # Total row
                     summary_obj.total_non_compliance_penalty_payable = row.total_value
+
+        for row in non_compliance_summary:
+            if row.line == 11:
+                summary_obj.line_11_invoice_sent = bool(row.invoice_sent)
+                summary_obj.line_11_payment_received = bool(row.payment_received)
+            elif row.line == 21:
+                summary_obj.line_21_invoice_sent = bool(row.invoice_sent)
+                summary_obj.line_21_payment_received = bool(row.payment_received)
 
         # Update penalty override fields - only for 2024 reports and later
         if compliance_year and compliance_year >= 2024:

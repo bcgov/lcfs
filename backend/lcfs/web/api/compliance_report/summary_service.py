@@ -212,6 +212,11 @@ class ComplianceReportSummaryService:
         )
 
         for column in inspector.mapper.column_attrs:
+            if column.key.endswith("_invoice_sent") or column.key.endswith(
+                "_payment_received"
+            ):
+                continue
+
             line = self._extract_line_number(column.key)
 
             if (
@@ -319,6 +324,13 @@ class ComplianceReportSummaryService:
 
         value = float(getattr(summary_obj, column_key) or 0)
         existing_element.total_value += value
+        if line in (11, 21):
+            existing_element.invoice_sent = bool(
+                getattr(summary_obj, f"line_{line}_invoice_sent", False)
+            )
+            existing_element.payment_received = bool(
+                getattr(summary_obj, f"line_{line}_payment_received", False)
+            )
 
     def _get_or_create_summary_row(
         self,

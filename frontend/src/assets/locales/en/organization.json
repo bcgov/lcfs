@@ -170,6 +170,7 @@
     "addPenaltyBtn": "Add/Edit discretionary penalties",
     "columns": {
       "complianceYear": "Compliance year",
+      "description": "Description",
       "contraventionType": "Continuous or single contravention",
       "offenceHistory": "History of offences",
       "deliberate": "Whether contravention was deliberate",
@@ -177,7 +178,10 @@
       "economicBenefitDerived": "Economic benefit derived from contravention",
       "effortsToPreventRecurrence": "Efforts to prevent reccurrence",
       "notes": "Any additonal factors (notes)",
-      "penaltyAmount": "Amount of penalty ($CAD)"
+      "penaltyAmount": "Amount of penalty ($CAD)",
+      "dueDate": "Due date",
+      "invoiced": "Invoiced",
+      "paid": "Paid"
     },
     "metrics": {
       "totalPenalties": "Total penalties",

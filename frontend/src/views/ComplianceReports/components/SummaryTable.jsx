@@ -15,7 +15,9 @@ import {
   Input,
   InputAdornment,
   CircularProgress,
-  Tooltip
+  Radio,
+  RadioGroup,
+  FormControlLabel
 } from '@mui/material'
 
 const SummaryTable = ({
@@ -137,10 +139,18 @@ const SummaryTable = ({
     }
 
     // Apply constraints validation
-    if (value !== '' && constraints.max !== undefined && parseInt(value) > constraints.max) {
+    if (
+      value !== '' &&
+      constraints.max !== undefined &&
+      parseInt(value) > constraints.max
+    ) {
       value = constraints.max
     }
-    if (value !== '' && constraints.min !== undefined && parseInt(value) < constraints.min) {
+    if (
+      value !== '' &&
+      constraints.min !== undefined &&
+      parseInt(value) < constraints.min
+    ) {
       value = constraints.min
     }
 
@@ -159,7 +169,9 @@ const SummaryTable = ({
 
         // If user enters a non-zero value in Line 7, zero out Line 9 in same column
         if (lineNumber === 7 && numericValue !== 0) {
-          const line9Index = newData.findIndex(row => parseInt(row?.line) === 9)
+          const line9Index = newData.findIndex(
+            (row) => parseInt(row?.line) === 9
+          )
           if (line9Index !== -1) {
             newData[line9Index] = { ...newData[line9Index], [columnId]: 0 }
           }
@@ -167,7 +179,9 @@ const SummaryTable = ({
 
         // If user enters a non-zero value in Line 9, zero out Line 7 in same column
         if (lineNumber === 9 && numericValue !== 0) {
-          const line7Index = newData.findIndex(row => parseInt(row?.line) === 7)
+          const line7Index = newData.findIndex(
+            (row) => parseInt(row?.line) === 7
+          )
           if (line7Index !== -1) {
             newData[line7Index] = { ...newData[line7Index], [columnId]: 0 }
           }
@@ -177,6 +191,15 @@ const SummaryTable = ({
       return newData
     })
     setEditingCell({ rowIndex, columnId })
+  }
+
+  const handleBooleanCellChange = (rowIndex, columnId, value) => {
+    const booleanValue = value === 'true'
+    const newData = data.map((row, index) =>
+      index === rowIndex ? { ...row, [columnId]: booleanValue } : row
+    )
+    setData(newData)
+    onCellEditStopped?.(newData, { rowIndex, columnId })
   }
 
   const handleCellFocus = (rowIndex, columnId) => {
@@ -207,7 +230,9 @@ const SummaryTable = ({
         setData((prevData) => {
           const newData = [...prevData]
           const numValue =
-            currentValue === '' || currentValue === 0 ? 0 : parseFloat(currentValue) || 0
+            currentValue === '' || currentValue === 0
+              ? 0
+              : parseFloat(currentValue) || 0
           // All editable fields are rounded to integers
           newData[rowIndex][columnId] = Math.floor(numValue)
           return newData
@@ -241,7 +266,11 @@ const SummaryTable = ({
     }
   }
 
-  const lineNumberTooltip = (lineNumber, isGreyedByYear = false, isExempted = false) => {
+  const lineNumberTooltip = (
+    lineNumber,
+    isGreyedByYear = false,
+    isExempted = false
+  ) => {
     if (isExempted) {
       return 'Exempted — not applicable'
     }
@@ -307,202 +336,262 @@ const SummaryTable = ({
               {columns.map((column, colIndex) => {
                 const isGreyedByYear = isLineGreyedByYear(row)
                 const isExempted = isLineExempted(row)
-                const isGreyedOrLocked = isCellLocked(rowIndex, row) || isGreyedByYear || isExempted
+                const isGreyedOrLocked =
+                  isCellLocked(rowIndex, row) || isGreyedByYear || isExempted
                 return (
-                <TableCell
-                  key={column.id}
-                  align={column.align || 'left'}
-                  title={
-                    isGreyedOrLocked
-                      ? lineNumberTooltip(parseInt(row.line), isGreyedByYear, isExempted)
-                      : undefined
-                  }
-                  sx={{
-                    borderBottom:
-                      rowIndex === data.length - 1
-                        ? 'none'
-                        : '1px solid #495057',
-                    borderRight:
-                      colIndex < columns.length - 1
-                        ? '1px solid #495057'
-                        : 'none',
-                    maxWidth: column.maxWidth || 'none',
-                    width: column.width || 'auto',
-                    padding: isCellEditable(rowIndex, column.id)
-                      ? 0
-                      : undefined,
-                    backgroundColor:
-                      isGreyedOrLocked &&
-                      column.id !== 'line' &&
-                      column.id !== 'description'
-                        ? '#f5f5f5'
+                  <TableCell
+                    key={column.id}
+                    align={column.align || 'left'}
+                    title={
+                      isGreyedOrLocked
+                        ? lineNumberTooltip(
+                            parseInt(row.line),
+                            isGreyedByYear,
+                            isExempted
+                          )
+                        : undefined
+                    }
+                    sx={{
+                      borderBottom:
+                        rowIndex === data.length - 1
+                          ? 'none'
+                          : '1px solid #495057',
+                      borderRight:
+                        colIndex < columns.length - 1
+                          ? '1px solid #495057'
+                          : 'none',
+                      maxWidth: column.maxWidth || 'none',
+                      width: column.width || 'auto',
+                      padding: isCellEditable(rowIndex, column.id)
+                        ? 0
                         : undefined,
-                    opacity:
-                      isGreyedOrLocked &&
-                      column.id !== 'line' &&
-                      column.id !== 'description'
-                        ? 0.7
-                        : 1
-                  }}
-                >
-                  {isCellEditable(rowIndex, column.id) && !isCellLocked(rowIndex, row) ? (
-                    <div
-                      style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%'
-                      }}
-                    >
-                      <Input
-                        value={formatNumberWithCommas({ value: row[column.id] })}
-                        onChange={(e) =>
-                          handleCellChange(e, rowIndex, column.id)
+                      backgroundColor:
+                        isGreyedOrLocked &&
+                        column.id !== 'line' &&
+                        column.id !== 'description'
+                          ? '#f5f5f5'
+                          : undefined,
+                      opacity:
+                        isGreyedOrLocked &&
+                        column.id !== 'line' &&
+                        column.id !== 'description'
+                          ? 0.7
+                          : 1
+                    }}
+                  >
+                    {column.type === 'booleanRadio' && row.line ? (
+                      <RadioGroup
+                        row
+                        value={row[column.id] ? 'true' : 'false'}
+                        onChange={(event) =>
+                          handleBooleanCellChange(
+                            rowIndex,
+                            column.id,
+                            event.target.value
+                          )
                         }
-                        onFocus={() => handleCellFocus(rowIndex, column.id)}
-                        onBlur={() => handleBlur(rowIndex, column.id)}
-                        onKeyDown={(e) => handleKeyDown(e, rowIndex, column.id)}
-                        type="text"
-                        inputProps={{
-                          inputMode:
-                            column.editable &&
-                            column.editableCells &&
-                            column.editableCells.includes(rowIndex)
-                              ? 'decimal'
-                              : 'numeric',
-                          pattern:
-                            column.editable &&
-                            column.editableCells &&
-                            column.editableCells.includes(rowIndex)
-                              ? '[0-9]*\\.?[0-9]*'
-                              : '[0-9]*',
-                          ...getCellConstraints(rowIndex, column.id),
-                          ...props.inputProps
-                        }}
-                        startAdornment={
-                          column.editable &&
-                          column.editableCells &&
-                          column.editableCells.includes(rowIndex) &&
-                          row.format === 'currency' ? (
-                            <InputAdornment position="start">$</InputAdornment>
-                          ) : null
-                        }
-                        endAdornment={null}
                         sx={{
+                          justifyContent: 'center',
+                          flexWrap: 'nowrap',
+                          '& .MuiFormControlLabel-root': {
+                            mr: 1,
+                            whiteSpace: 'nowrap'
+                          }
+                        }}
+                      >
+                        <FormControlLabel
+                          value="true"
+                          control={
+                            <Radio
+                              size="small"
+                              disabled={!isCellEditable(rowIndex, column.id)}
+                            />
+                          }
+                          label="Yes"
+                        />
+                        <FormControlLabel
+                          value="false"
+                          control={
+                            <Radio
+                              size="small"
+                              disabled={!isCellEditable(rowIndex, column.id)}
+                            />
+                          }
+                          label="No"
+                        />
+                      </RadioGroup>
+                    ) : isCellEditable(rowIndex, column.id) &&
+                      !isCellLocked(rowIndex, row) ? (
+                      <div
+                        style={{
+                          position: 'relative',
                           width: '100%',
-                          height: '100%',
-                          padding: '6px',
-                          paddingLeft: isCellSaving(rowIndex, column.id)
-                            ? column.editable &&
+                          height: '100%'
+                        }}
+                      >
+                        <Input
+                          value={formatNumberWithCommas({
+                            value: row[column.id]
+                          })}
+                          onChange={(e) =>
+                            handleCellChange(e, rowIndex, column.id)
+                          }
+                          onFocus={() => handleCellFocus(rowIndex, column.id)}
+                          onBlur={() => handleBlur(rowIndex, column.id)}
+                          onKeyDown={(e) =>
+                            handleKeyDown(e, rowIndex, column.id)
+                          }
+                          type="text"
+                          inputProps={{
+                            inputMode:
+                              column.editable &&
                               column.editableCells &&
-                              column.editableCells.includes(rowIndex) &&
-                              row.format === 'currency'
-                              ? '60px'
-                              : '40px'
-                            : column.editable &&
+                              column.editableCells.includes(rowIndex)
+                                ? 'decimal'
+                                : 'numeric',
+                            pattern:
+                              column.editable &&
+                              column.editableCells &&
+                              column.editableCells.includes(rowIndex)
+                                ? '[0-9]*\\.?[0-9]*'
+                                : '[0-9]*',
+                            ...getCellConstraints(rowIndex, column.id),
+                            ...props.inputProps
+                          }}
+                          startAdornment={
+                            column.editable &&
+                            column.editableCells &&
+                            column.editableCells.includes(rowIndex) &&
+                            row.format === 'currency' ? (
+                              <InputAdornment position="start">
+                                $
+                              </InputAdornment>
+                            ) : null
+                          }
+                          endAdornment={null}
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            padding: '6px',
+                            paddingLeft: isCellSaving(rowIndex, column.id)
+                              ? column.editable &&
                                 column.editableCells &&
                                 column.editableCells.includes(rowIndex) &&
                                 row.format === 'currency'
-                              ? '30px'
-                              : '6px',
-                          borderRadius: '8px',
-                          fontSize: '1rem',
-                          border: '1px solid #495057',
-                          backgroundColor: '#fff',
-                          '& .MuiInputBase-input': {
-                            textAlign: column.align || 'left'
-                          }
-                        }}
-                        disableUnderline
-                      />
-                      {isCellSaving(rowIndex, column.id) && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left:
-                              column.editable &&
-                              column.editableCells &&
-                              column.editableCells.includes(rowIndex) &&
-                              row.format === 'currency'
-                                ? '35px'
-                                : '12px', // Adjust for $ sign
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            zIndex: 10,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            pointerEvents: 'none'
+                                ? '60px'
+                                : '40px'
+                              : column.editable &&
+                                  column.editableCells &&
+                                  column.editableCells.includes(rowIndex) &&
+                                  row.format === 'currency'
+                                ? '30px'
+                                : '6px',
+                            borderRadius: '8px',
+                            fontSize: '1rem',
+                            border: '1px solid #495057',
+                            backgroundColor: '#fff',
+                            '& .MuiInputBase-input': {
+                              textAlign: column.align || 'left'
+                            }
                           }}
-                        >
-                          <CircularProgress
-                            size={18}
-                            color="primary"
-                            sx={{
+                          disableUnderline
+                        />
+                        {isCellSaving(rowIndex, column.id) && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              left:
+                                column.editable &&
+                                column.editableCells &&
+                                column.editableCells.includes(rowIndex) &&
+                                row.format === 'currency'
+                                  ? '35px'
+                                  : '12px', // Adjust for $ sign
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              zIndex: 10,
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
+                              pointerEvents: 'none'
                             }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <span
-                      style={{
-                        fontWeight:
-                          column.bold ||
-                          (column.id === 'description' && !row.line) ||
-                          row.bold
-                            ? 'bold'
-                            : 'normal',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: 'block'
-                      }}
-                    >
-                      {(() => {
-                        // Hide values for greyed-out rows (except line number and description)
-                        if (
-                          (isGreyedByYear || isExempted) &&
-                          column.id !== 'line' &&
-                          column.id !== 'description'
-                        ) {
-                          return ''
-                        }
+                          >
+                            <CircularProgress
+                              size={18}
+                              color="primary"
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span
+                        style={{
+                          fontWeight:
+                            column.bold ||
+                            (column.id === 'description' && !row.line) ||
+                            row.bold
+                              ? 'bold'
+                              : 'normal',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: 'block'
+                        }}
+                      >
+                        {(() => {
+                          // Hide values for greyed-out rows (except line number and description)
+                          if (
+                            (isGreyedByYear || isExempted) &&
+                            column.id !== 'line' &&
+                            column.id !== 'description'
+                          ) {
+                            return ''
+                          }
 
-                        const rawValue =
-                          row[column.id] !== undefined &&
-                          row[column.id] !== null
-                            ? row[column.id]
-                            : 0
-                        const shouldFormat =
-                          row.format &&
-                          colIndex !== 0 &&
-                          column.id !== 'description' &&
-                          column.id !== 'line'
+                          const rawValue =
+                            row[column.id] !== undefined &&
+                            row[column.id] !== null
+                              ? row[column.id]
+                              : 0
+                          const shouldFormat =
+                            row.format &&
+                            colIndex !== 0 &&
+                            column.id !== 'description' &&
+                            column.id !== 'line' &&
+                            column.type !== 'booleanRadio'
 
-                        if (shouldFormat) {
-                          const numericValue =
-                            typeof rawValue === 'number'
-                              ? rawValue
-                              : Number(rawValue)
+                          if (column.type === 'booleanRadio') {
+                            return ''
+                          }
 
-                          const maxDecimals = row.format === 'currency' ? 2 : 0
+                          if (shouldFormat) {
+                            const numericValue =
+                              typeof rawValue === 'number'
+                                ? rawValue
+                                : Number(rawValue)
 
-                          return rowFormatters[row.format](
-                            Number.isFinite(numericValue) ? numericValue : 0,
-                            useParenthesis,
-                            maxDecimals
-                          )
-                        }
+                            const maxDecimals =
+                              row.format === 'currency' ? 2 : 0
 
-                        return rawValue
-                      })()}
-                    </span>
-                  )}
-                </TableCell>
-              )})}
+                            return rowFormatters[row.format](
+                              Number.isFinite(numericValue) ? numericValue : 0,
+                              useParenthesis,
+                              maxDecimals
+                            )
+                          }
+
+                          return rawValue
+                        })()}
+                      </span>
+                    )}
+                  </TableCell>
+                )
+              })}
             </TableRow>
           ))}
         </TableBody>

@@ -96,23 +96,39 @@ class SummarySheetExporter(SheetExporter, SheetExporterSupport):
             )
             ws.add_table(tab)
 
-        ws.append(["", "", ""])
-        self._add_centered_title(ws, PENALTY_SUMMARY_TITLE, 3)
+        ws.append(["", "", "", "", ""])
+        self._add_centered_title(ws, PENALTY_SUMMARY_TITLE, 5)
 
         header_row = ws.max_row + 1
-        append_and_bold(["Line", "Description", "Total Value"])
+        append_and_bold(
+            ["Line", "Description", "Total Value", "Invoice sent", "Payment received"]
+        )
 
         for line in summary.non_compliance_penalty_summary:
-            row = ["", line.description, line.total_value]
+            row = [
+                "",
+                line.description,
+                line.total_value,
+                (
+                    "Yes"
+                    if line.invoice_sent
+                    else ("No" if line.invoice_sent is not None else "")
+                ),
+                (
+                    "Yes"
+                    if line.payment_received
+                    else ("No" if line.payment_received is not None else "")
+                ),
+            ]
             ws.append(row)
-            cell = ws.cell(row=ws.max_row, column=len(row))
+            cell = ws.cell(row=ws.max_row, column=3)
             cell.number_format = '"$"#,##0.00'
 
         end_row = ws.max_row
         if end_row > header_row:
             tab = Table(
                 displayName="PenaltyTbl",
-                ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
+                ref=f"A{header_row}:{get_column_letter(5)}{end_row}",
             )
             tab.tableStyleInfo = TableStyleInfo(
                 name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False

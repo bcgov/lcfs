@@ -121,6 +121,14 @@ class OrganizationPenaltyService:
                     auto_renewable=renewable_penalty,
                     auto_low_carbon=low_carbon_penalty,
                     total_automatic=total_automatic,
+                    renewable_invoice_sent=bool(row.get("line_11_invoice_sent")),
+                    renewable_payment_received=bool(
+                        row.get("line_11_payment_received")
+                    ),
+                    low_carbon_invoice_sent=bool(row.get("line_21_invoice_sent")),
+                    low_carbon_payment_received=bool(
+                        row.get("line_21_payment_received")
+                    ),
                 )
             )
 

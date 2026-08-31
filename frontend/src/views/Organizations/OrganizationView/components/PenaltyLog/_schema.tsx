@@ -39,69 +39,38 @@ export const penaltyLogColumnDefs = [
     headerName: i18n.t('org:penaltyLog.columns.complianceYear'),
     field: 'complianceYear',
     filter: 'agTextColumnFilter',
-    minWidth: 180
+    minWidth: 140
   },
   {
-    headerName: i18n.t('org:penaltyLog.columns.contraventionType'),
-    field: 'contraventionType',
-    floatingFilterComponent: BCSelectFloatingFilter,
-    floatingFilterComponentParams: {
-      optionsQuery: () => ({
-        data: [
-          { label: 'Single contravention' },
-          { label: 'Continuous contravention' }
-        ],
-        isLoading: false
-      })
-    },
-    minWidth: 320
-  },
-  {
-    headerName: i18n.t('org:penaltyLog.columns.offenceHistory'),
-    field: 'offenceHistory',
-    minWidth: 190,
-    filter: 'agSetColumnFilter',
-    valueFormatter: booleanValueFormatter
-  },
-  {
-    headerName: i18n.t('org:penaltyLog.columns.deliberate'),
-    field: 'deliberate',
-    minWidth: 340,
-    filter: 'agSetColumnFilter',
-    valueFormatter: booleanValueFormatter
-  },
-  {
-    headerName: i18n.t('org:penaltyLog.columns.effortsToCorrect'),
-    field: 'effortsToCorrect',
-    minWidth: 230,
-    filter: 'agSetColumnFilter',
-    valueFormatter: booleanValueFormatter
-  },
-  {
-    headerName: i18n.t('org:penaltyLog.columns.economicBenefitDerived'),
-    field: 'economicBenefitDerived',
-    minWidth: 390,
-    filter: 'agSetColumnFilter',
-    valueFormatter: booleanValueFormatter
-  },
-  {
-    headerName: i18n.t('org:penaltyLog.columns.effortsToPreventRecurrence'),
-    field: 'effortsToPreventRecurrence',
-    minWidth: 280,
-    filter: 'agSetColumnFilter',
-    valueFormatter: booleanValueFormatter
-  },
-  {
-    headerName: i18n.t('org:penaltyLog.columns.notes'),
-    field: 'notes',
-    minWidth: 400
+    headerName: i18n.t('org:penaltyLog.columns.description'),
+    field: 'description',
+    minWidth: 420
   },
   {
     headerName: i18n.t('org:penaltyLog.columns.penaltyAmount'),
     field: 'penaltyAmount',
     valueFormatter: ({ value }) =>
       value === null || value === undefined ? '' : currencyFormatter(value),
-    minWidth: 260
+    minWidth: 180
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.dueDate'),
+    field: 'dueDate',
+    minWidth: 160
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.invoiced'),
+    field: 'invoiceSent',
+    minWidth: 160,
+    filter: 'agSetColumnFilter',
+    valueFormatter: booleanValueFormatter
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.paid'),
+    field: 'paymentReceived',
+    minWidth: 160,
+    filter: 'agSetColumnFilter',
+    valueFormatter: booleanValueFormatter
   }
 ]
 

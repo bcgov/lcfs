@@ -380,6 +380,10 @@ class PenaltyYearlySummarySchema(BaseSchema):
     auto_renewable: float
     auto_low_carbon: float
     total_automatic: float
+    renewable_invoice_sent: bool = False
+    renewable_payment_received: bool = False
+    low_carbon_invoice_sent: bool = False
+    low_carbon_payment_received: bool = False
 
 
 class PenaltyTotalsSchema(BaseSchema):

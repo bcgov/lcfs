@@ -46,7 +46,8 @@ const shouldHideRenewableSummary = (renewableFuelTargetSummary) => {
 
   if (!line3 || !line9) return false
 
-  const isZeroOrNull = (value) => value === null || value === undefined || value === 0
+  const isZeroOrNull = (value) =>
+    value === null || value === undefined || value === 0
 
   const line3AllZero =
     isZeroOrNull(line3.gasoline) &&
@@ -170,10 +171,14 @@ const ComplianceReportSummary = ({
       const updatedData = {
         ...summaryData,
         nonCompliancePenaltySummary: data,
-        renewablePenaltyOverride: renewablePenaltyValue,
-        lowCarbonPenaltyOverride: lowCarbonPenaltyValue,
-        penaltyOverrideDate: new Date().toISOString(),
-        penaltyOverrideUser: currentUser?.userProfileId
+        ...(penaltyOverrideEnabled
+          ? {
+              renewablePenaltyOverride: renewablePenaltyValue,
+              lowCarbonPenaltyOverride: lowCarbonPenaltyValue,
+              penaltyOverrideDate: new Date().toISOString(),
+              penaltyOverrideUser: currentUser?.userProfileId
+            }
+          : {})
       }
 
       if (cellInfo) {
@@ -182,7 +187,12 @@ const ComplianceReportSummary = ({
       setSummaryData(updatedData)
       updateComplianceReportSummary(updatedData)
     },
-    [summaryData, updateComplianceReportSummary, currentUser]
+    [
+      summaryData,
+      updateComplianceReportSummary,
+      currentUser,
+      penaltyOverrideEnabled
+    ]
   )
 
   // Computed data for non-compliance penalty summary based on override state
@@ -304,11 +314,7 @@ const ComplianceReportSummary = ({
                   summaryData?.renewableFuelTargetSummary
                 ) ? (
                   <Box sx={{ mb: 3 }}>
-                    <BCTypography
-                      variant="h6"
-                      color="primary"
-                      sx={{ mb: 1 }}
-                    >
+                    <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
                       {t('report:renewableFuelTargetSummary')}
                     </BCTypography>
                     <BCTypography
@@ -349,9 +355,7 @@ const ComplianceReportSummary = ({
                     lines6And8Locked={summaryData?.lines6And8Locked}
                     savingCellKey={savingCellKey}
                     tableType="renewable"
-                    exemptedLines={
-                      isRenewableFuelExempted ? [4, 11] : []
-                    }
+                    exemptedLines={isRenewableFuelExempted ? [4, 11] : []}
                   />
                 )}
                 <SummaryTable
@@ -361,18 +365,20 @@ const ComplianceReportSummary = ({
                   data={lowCarbonDisplayData}
                   width={'80.65%'}
                   compliancePeriodYear={compliancePeriodYear}
-                  exemptedLines={
-                    isLowCarbonFuelExempted ? [18, 20, 21] : []
-                  }
+                  exemptedLines={isLowCarbonFuelExempted ? [18, 20, 21] : []}
                 />
                 <SummaryTable
                   data-test="non-compliance-summary"
                   title={t('report:nonCompliancePenaltySummary')}
-                  columns={nonComplianceColumns(t, penaltyOverrideEnabled)}
+                  columns={nonComplianceColumns(
+                    t,
+                    penaltyOverrideEnabled,
+                    isGovernmentUser
+                  )}
                   data={nonCompliancePenaltyDisplayData}
                   width={'80.65%'}
                   onCellEditStopped={
-                    penaltyOverrideEnabled
+                    isGovernmentUser || penaltyOverrideEnabled
                       ? handlePenaltyOverrideCellEdit
                       : undefined
                   }
