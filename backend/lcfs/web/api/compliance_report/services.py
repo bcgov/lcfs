@@ -708,6 +708,7 @@ class ComplianceReportServices:
         }
 
         analyst_only_statuses_regular = {
+            ComplianceReportStatusEnum.Analyst_adjustment.value,
             ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
         }
 

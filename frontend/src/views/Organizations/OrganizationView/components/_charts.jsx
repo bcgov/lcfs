@@ -16,10 +16,33 @@ export const PENALTY_CHART_LABELS = {
   totalPenalties: 'Total penalties'
 }
 
-export const useStackedBarOption = (data) => {
-  return getStandardChartOptions({
+const compactCurrencyFormatter = new Intl.NumberFormat('en-CA', {
+  style: 'currency',
+  currency: 'CAD',
+  notation: 'compact',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})
+
+const formatAxisTooltip = (params) => {
+  if (!params?.length) return ''
+
+  const year = params[0].axisValueLabel ?? params[0].axisValue ?? ''
+  const values = params.map(
+    ({ marker = '', seriesName, value }) =>
+      `${marker}${seriesName}: ${currencyFormatter(value)}`
+  )
+
+  return [year, ...values].join('<br/>')
+}
+
+const formatItemTooltip = ({ marker = '', name, value, percent }) =>
+  `${marker}${name}: ${currencyFormatter(value)} (${percent}%)`
+
+export const useStackedBarOption = (data, theme) => {
+    return getStandardChartOptions({
     color: [BC_CHART_COLORS.green, BC_CHART_COLORS.teal],
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', formatter: formatAxisTooltip },
     legend: { top: 0, type: 'scroll' },
     grid: { ...BC_CHART_GRID, top: 48, bottom: 44 },
     xAxis: {
@@ -41,7 +64,7 @@ export const useStackedBarOption = (data) => {
       },
       axisLabel: {
         ...BC_CHART_AXIS_LABEL,
-        formatter: (val) => (val >= 1000 ? `${val / 1000}k` : val)
+        formatter: (value) => compactCurrencyFormatter.format(value)
       }
     },
     series: [
@@ -72,7 +95,7 @@ export const usePenaltyMixOption = (totals, theme) => {
       BC_CHART_COLORS.teal,
       BC_CHART_COLORS.purple
     ],
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    tooltip: { trigger: 'item', formatter: formatItemTooltip },
     legend: { orient: 'horizontal', bottom: 0 },
     series: [
       {
