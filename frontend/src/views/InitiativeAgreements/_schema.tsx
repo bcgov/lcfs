@@ -172,6 +172,17 @@ export const designatedActionColDefs = (t, initiativeAgreementId): ColDef[] => [
     filterParams: TEXT_FILTER_PARAMS
   },
   {
+    // Same source as the detail page's status chip, so the two can never
+    // disagree (#4926). Sorting runs on the status's display_order server
+    // side: workflow progression, not alphabet.
+    colId: 'currentStatus',
+    field: 'currentStatus',
+    headerName: t('initiativeAgreement:actions.columns.status'),
+    minWidth: 170,
+    filter: false,
+    valueGetter: ({ data }) => data?.currentStatus?.status || ''
+  },
+  {
     colId: 'assignedAnalyst',
     field: 'assignedAnalyst',
     headerName: t('initiativeAgreement:actions.columns.assignedAnalyst'),

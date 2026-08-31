@@ -36,14 +36,16 @@ IDIR_DIRECTOR = [RoleEnum.DIRECTOR, RoleEnum.GOVERNMENT]
 
 
 async def _seed_action(dbsession, agreement, number, name, credits=1000, **overrides):
-    action = DesignatedAction(
-        initiative_agreement_id=agreement.initiative_agreement_id,
-        action_number=number,
-        name=name,
-        credit_allocation=credits,
-        current_status_id=await _action_status_id(dbsession, "Not started"),
-        **overrides,
-    )
+    # Overrides win over the defaults, so a test can seed any status.
+    fields = {
+        "initiative_agreement_id": agreement.initiative_agreement_id,
+        "action_number": number,
+        "name": name,
+        "credit_allocation": credits,
+        "current_status_id": await _action_status_id(dbsession, "Not started"),
+    }
+    fields.update(overrides)
+    action = DesignatedAction(**fields)
     dbsession.add(action)
     await dbsession.flush()
     return action
@@ -817,3 +819,40 @@ async def test_a_proponent_cannot_correct_an_action(
     )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_grid_carries_and_sorts_the_current_status(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The status column sorts by workflow progression, not alphabet (#4926).
+
+    'Approved' sorts after 'Not started' even though the alphabet says
+    otherwise — an analyst sorting by status is scanning workload order.
+    """
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26STAT1")
+    await _seed_action(
+        dbsession,
+        agreement,
+        1,
+        "Already approved",
+        current_status_id=await _action_status_id(dbsession, "Approved"),
+    )
+    await _seed_action(dbsession, agreement, 2, "Still not started")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _list_url(fastapi_app, agreement),
+        json={
+            **PAGINATION_BODY,
+            "sortOrders": [{"field": "currentStatus", "direction": "asc"}],
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    rows = response.json()["designatedActions"]
+    assert [r["currentStatus"]["status"] for r in rows] == [
+        "Not started",
+        "Approved",
+    ]

@@ -83,6 +83,10 @@ DA_LIST_FIELD_COLUMNS = {
     "update_date": DesignatedAction.update_date,
     # The floating select filter sends the analyst's user_profile_id.
     "assigned_analyst": DesignatedAction.assigned_analyst_id,
+    # Sorted by workflow progression, not alphabet: 'Not started' before
+    # 'Underway' before 'Approved' is what an analyst scanning workload
+    # means by sorted.
+    "current_status": DesignatedActionStatus.display_order,
 }
 
 DA_DATE_FIELDS = {"update_date"}
@@ -508,6 +512,11 @@ class InitiativeAgreementRepository:
                     DesignatedAction.group_uuid == latest.c.group_uuid,
                     DesignatedAction.version == latest.c.max_version,
                 ),
+            )
+            .join(
+                DesignatedActionStatus,
+                DesignatedAction.current_status_id
+                == DesignatedActionStatus.designated_action_status_id,
             )
             .where(
                 DesignatedAction.initiative_agreement_id == initiative_agreement_id,

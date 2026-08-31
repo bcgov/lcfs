@@ -57,7 +57,8 @@
       "assignedAnalyst": "Assigned analyst",
       "lastComment": "Last comment",
       "creditsToBeIssued": "Compliance units to be issued",
-      "lastUpdated": "Last updated"
+      "lastUpdated": "Last updated",
+      "status": "Current status"
     },
     "upToCredits": "up to {{count}}",
     "noActionsFound": "No designated actions found",
