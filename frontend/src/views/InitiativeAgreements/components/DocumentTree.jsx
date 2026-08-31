@@ -261,6 +261,7 @@ const FolderLabel = ({
   folder,
   invalid,
   renaming,
+  dragDisabled,
   uploadingCount,
   onCommitRename,
   onCancelRename,
@@ -277,7 +278,10 @@ const FolderLabel = ({
     isDragging
   } = useDraggable({
     id: folderDragId(folder.folderId),
-    disabled: folder.isSystem
+    // Nesting under another folder is the only thing folder-drag does, so
+    // when subfolders are off the handle is inert rather than a drag that
+    // could only ever be refused.
+    disabled: folder.isSystem || dragDisabled
   })
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: folderDragId(folder.folderId),
@@ -351,7 +355,11 @@ const FolderLabel = ({
         aria-label={t('initiativeAgreement:folders.folderDragHandle', {
           name: folder.name
         })}
-        sx={{ cursor: 'grab', color: 'primary.main', fontWeight: 700 }}
+        sx={{
+          cursor: dragDisabled ? 'default' : 'grab',
+          color: 'primary.main',
+          fontWeight: 700
+        }}
       >
         {folder.name}
       </BCTypography>
@@ -412,7 +420,17 @@ const RootDropZone = ({ visible, label }) => {
   )
 }
 
-export const DocumentTree = ({ parentType, parentID, title, headerAction }) => {
+// allowSubfolders defaults off: the PO wants a single level of folders
+// for now. The nesting machinery underneath (depth walking, path-shell
+// restore) is built and stays; turning nesting back on is this prop plus
+// the backend's per-parent depth constant.
+export const DocumentTree = ({
+  parentType,
+  parentID,
+  title,
+  headerAction,
+  allowSubfolders = false
+}) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const { data: tree, isLoading } = useDocumentTree(parentType, parentID)
   const downloadDocument = useDownloadDocument(parentType, parentID)
@@ -684,6 +702,7 @@ export const DocumentTree = ({ parentType, parentID, title, headerAction }) => {
         <FolderLabel
           folder={folder}
           invalid={dragState?.invalid?.has(folder.folderId) ?? false}
+          dragDisabled={!allowSubfolders}
           renaming={renamingId === folder.folderId}
           onCommitRename={(value) => commitRename(folder.folderId, value)}
           onCancelRename={() => setRenamingId(null)}
@@ -940,20 +959,22 @@ export const DocumentTree = ({ parentType, parentID, title, headerAction }) => {
           '& .MuiTypography-root': { fontSize: '0.875rem' }
         }}
       >
-        <MenuItem
-          data-test="menu-new-subfolder"
-          onClick={() => {
-            setCreating({ parentFolderId: menu.folder.folderId })
-            closeMenu()
-          }}
-        >
-          <ListItemIcon>
-            <CreateNewFolderOutlinedIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>
-            {t('initiativeAgreement:folders.newSubfolder')}
-          </ListItemText>
-        </MenuItem>
+        {allowSubfolders && (
+          <MenuItem
+            data-test="menu-new-subfolder"
+            onClick={() => {
+              setCreating({ parentFolderId: menu.folder.folderId })
+              closeMenu()
+            }}
+          >
+            <ListItemIcon>
+              <CreateNewFolderOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>
+              {t('initiativeAgreement:folders.newSubfolder')}
+            </ListItemText>
+          </MenuItem>
+        )}
         <MenuItem
           data-test="menu-upload-here"
           onClick={() => {

@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, Request
 from lcfs.db.models.document import DocumentFolder
 from lcfs.web.api.document_folder.constants import (
     FOLDER_ENABLED_PARENT_TYPES,
-    MAX_FOLDER_DEPTH,
+    max_folder_depth,
 )
 from lcfs.web.api.document_folder.repo import DocumentFolderRepository
 from lcfs.web.api.document_folder.schema import (
@@ -94,6 +94,7 @@ class DocumentFolderServices:
 
         Depth 0 means the root; a folder placed there sits at depth 1.
         """
+        cap = max_folder_depth(parent_type)
         depth = 0
         current = new_parent_id
         while current is not None:
@@ -104,13 +105,17 @@ class DocumentFolderServices:
                 )
             folder = await self._get_scoped_folder(current, parent_type, parent_id)
             depth += 1
-            if depth > MAX_FOLDER_DEPTH:
+            if depth > cap:
                 break
             current = folder.parent_folder_id
-        if depth >= MAX_FOLDER_DEPTH:
+        if depth >= cap:
             raise HTTPException(
                 status_code=400,
-                detail=f"Folders may nest at most {MAX_FOLDER_DEPTH} levels deep.",
+                detail=(
+                    "Folders cannot be nested here."
+                    if cap == 1
+                    else f"Folders may nest at most {cap} levels deep."
+                ),
             )
         return depth
 
@@ -130,14 +135,23 @@ class DocumentFolderServices:
             # Already in the bin; deleting twice is not an error, but it
             # must not overwrite who removed it or when.
             return
+        username = getattr(user, "keycloak_username", None)
         document.deleted_date = datetime.now(timezone.utc)
-        document.deleted_by = getattr(user, "keycloak_username", None)
+        document.deleted_by = username
+        document.update_user = username
         # The placement row stays, so restoring returns it to its folder.
         await self.repo.db.flush()
+        logger.info(
+            "document_soft_deleted",
+            document_id=document_id,
+            parent_type=parent_type,
+            parent_id=parent_id,
+            by=username,
+        )
 
     @service_handler
     async def restore_document(
-        self, parent_type: str, parent_id: int, document_id: int
+        self, parent_type: str, parent_id: int, document_id: int, user=None
     ) -> None:
         document = await self.repo.get_document_for_parent(document_id, parent_id)
         if document is None:
@@ -170,10 +184,19 @@ class DocumentFolderServices:
                 folder.deleted_date = None
                 folder.deleted_by = None
                 folder.deleted_group_uuid = None
+        username = getattr(user, "keycloak_username", None)
         document.deleted_date = None
         document.deleted_by = None
         document.deleted_group_uuid = None
+        document.update_user = username or document.update_user
         await self.repo.db.flush()
+        logger.info(
+            "document_restored",
+            document_id=document_id,
+            parent_type=parent_type,
+            parent_id=parent_id,
+            by=username,
+        )
 
     async def _free_sibling_name(
         self,
@@ -238,7 +261,7 @@ class DocumentFolderServices:
 
     @service_handler
     async def restore_folder(
-        self, parent_type: str, parent_id: int, folder_id: int
+        self, parent_type: str, parent_id: int, folder_id: int, user=None
     ) -> None:
         """Bring a folder back where it was, with what was inside it.
 
@@ -298,6 +321,15 @@ class DocumentFolderServices:
             document.deleted_group_uuid = None
 
         await self.repo.db.flush()
+        logger.info(
+            "folder_restored",
+            folder_id=folder_id,
+            parent_type=parent_type,
+            parent_id=parent_id,
+            folders_restored=len(restoring),
+            documents_restored=len(documents),
+            by=getattr(user, "keycloak_username", None),
+        )
 
     @service_handler
     async def get_deleted_documents(
@@ -555,7 +587,17 @@ class DocumentFolderServices:
                 document.deleted_date = now
                 document.deleted_by = username
                 document.deleted_group_uuid = group_uuid
+                document.update_user = username
             await self.repo.db.flush()
+            logger.info(
+                "folder_cascade_deleted",
+                folder_id=folder_id,
+                parent_type=parent_type,
+                parent_id=parent_id,
+                group_uuid=group_uuid,
+                documents_deleted=len(documents),
+                by=username,
+            )
         else:
             raise HTTPException(
                 status_code=400,

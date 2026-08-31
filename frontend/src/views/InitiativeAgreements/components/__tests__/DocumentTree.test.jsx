@@ -254,10 +254,25 @@ describe('DocumentTree', () => {
     expect(mockDelete).toHaveBeenCalledWith({ folderId: 12 })
   })
 
-  it('creates a subfolder under the menu folder', () => {
+  it('offers no subfolder option by default — one level, per the PO', () => {
     render(<DocumentTree parentType="designatedAction" parentID="9" />, {
       wrapper
     })
+
+    fireEvent.click(screen.getByTestId('folder-menu-12'))
+
+    expect(screen.queryByTestId('menu-new-subfolder')).not.toBeInTheDocument()
+  })
+
+  it('creates a subfolder under the menu folder when nesting is allowed', () => {
+    render(
+      <DocumentTree
+        parentType="designatedAction"
+        parentID="9"
+        allowSubfolders
+      />,
+      { wrapper }
+    )
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
     fireEvent.click(screen.getByTestId('menu-new-subfolder'))

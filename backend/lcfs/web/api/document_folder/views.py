@@ -130,7 +130,7 @@ async def restore_document(
     await _validate_parent_access(
         parent_type, parent_id, service, document_service, ia_validate
     )
-    await service.restore_document(parent_type, parent_id, document_id)
+    await service.restore_document(parent_type, parent_id, document_id, request.user)
 
 
 @router.post(
@@ -244,4 +244,4 @@ async def restore_document_folder(
     await _validate_parent_access(
         parent_type, parent_id, service, document_service, ia_validate
     )
-    await service.restore_folder(parent_type, parent_id, folder_id)
+    await service.restore_folder(parent_type, parent_id, folder_id, request.user)

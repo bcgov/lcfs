@@ -50,6 +50,24 @@ async def _seed_document(dbsession, action, name="evidence.pdf"):
     return document
 
 
+@pytest.fixture
+def nested_folders_allowed(monkeypatch):
+    """Lift the one-level product cap for tests of the nesting machinery.
+
+    The PO currently allows a single level of folders on designated
+    actions. The machinery underneath — depth walking, cycle detection,
+    path-shell restore — is built for nesting, and these tests keep it
+    honest for the day the cap is lifted.
+    """
+    from lcfs.web.api.document_folder import constants
+
+    monkeypatch.setitem(
+        constants.FOLDER_MAX_DEPTH_BY_PARENT,
+        "designatedAction",
+        constants.MAX_FOLDER_DEPTH,
+    )
+
+
 def _tree_url(fastapi_app, action):
     return fastapi_app.url_path_for(
         "get_document_folder_tree",
@@ -96,7 +114,11 @@ async def test_folders_are_refused_for_every_other_parent_type(
 
 @pytest.mark.anyio
 async def test_folder_crud_and_tree_shape(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    nested_folders_allowed,
 ):
     action = await _seed_da(dbsession)
     placed = await _seed_document(dbsession, action, "permit.pdf")
@@ -158,7 +180,11 @@ async def test_sibling_names_are_case_insensitively_unique(
 
 @pytest.mark.anyio
 async def test_cycles_and_depth_are_rejected(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    nested_folders_allowed,
 ):
     action = await _seed_da(dbsession, "IA-26FLD3")
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
@@ -226,7 +252,11 @@ async def test_system_folders_reject_mutation(
 
 @pytest.mark.anyio
 async def test_delete_reparents_by_default_and_cascades_on_request(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    nested_folders_allowed,
 ):
     action = await _seed_da(dbsession, "IA-26FLD5")
     document = await _seed_document(dbsession, action)
@@ -669,7 +699,11 @@ async def _build_nest(client, fastapi_app, action, dbsession):
 
 @pytest.mark.anyio
 async def test_restoring_a_folder_brings_its_files_back_in_place(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    nested_folders_allowed,
 ):
     action = await _seed_da(dbsession, "IA-26RST1")
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
@@ -692,7 +726,11 @@ async def test_restoring_a_folder_brings_its_files_back_in_place(
 
 @pytest.mark.anyio
 async def test_restoring_a_subfolder_rebuilds_only_its_path(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    nested_folders_allowed,
 ):
     """The heart of it: A is deleted whole, then only C is restored.
 
@@ -727,7 +765,11 @@ async def test_restoring_a_subfolder_rebuilds_only_its_path(
 
 @pytest.mark.anyio
 async def test_restoring_a_parent_leaves_separately_deleted_children_alone(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    nested_folders_allowed,
 ):
     """C was removed on its own, before A. Restoring A must not undo that.
 
@@ -778,7 +820,11 @@ async def test_an_empty_folder_is_not_worth_a_bin_row(
 
 @pytest.mark.anyio
 async def test_a_restored_folder_yields_a_name_a_live_sibling_took(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    nested_folders_allowed,
 ):
     """Nothing is ever purged, so the old name cannot simply be reclaimed.
 
@@ -810,7 +856,11 @@ async def test_a_restored_folder_yields_a_name_a_live_sibling_took(
 
 @pytest.mark.anyio
 async def test_restoring_a_file_rebuilds_the_folder_it_lived_in(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    nested_folders_allowed,
 ):
     """A lone file follows the same rule as a folder: it goes back where
     it was, not to the root."""
@@ -841,7 +891,11 @@ async def test_restoring_a_file_rebuilds_the_folder_it_lived_in(
 
 @pytest.mark.anyio
 async def test_reparent_delete_still_puts_nothing_in_the_bin(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    nested_folders_allowed,
 ):
     """The two strategies stay genuine opposites."""
     action = await _seed_da(dbsession, "IA-26RST7")
@@ -882,3 +936,53 @@ async def test_tree_carries_the_display_name_and_uploader_org(
     assert row["displayName"] == "Signed permit.pdf"
     # Present in the payload even when the uploader has no organization.
     assert "uploadingOrganizationCode" in row
+
+
+# ---------------------------------------------------------------------------
+# The product cap: one level of folders on designated actions, for now.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_designated_actions_allow_a_single_folder_level(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The PO wants folders at the root only — no subfolders, for now.
+
+    The cap is a per-parent-type constant, not removed machinery: lifting
+    it later is one number, and the nesting tests above still exercise
+    the deeper logic under a raised cap.
+    """
+    action = await _seed_da(dbsession, "IA-26DPTH1")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    root = await _create_folder(client, fastapi_app, action, "Permits")
+    assert root.status_code == status.HTTP_201_CREATED
+    root_id = root.json()["folderId"]
+
+    nested = await _create_folder(
+        client, fastapi_app, action, "2026", parent_folder_id=root_id
+    )
+    assert nested.status_code == status.HTTP_400_BAD_REQUEST
+    assert "nested" in nested.json()["detail"].lower()
+
+
+@pytest.mark.anyio
+async def test_a_folder_cannot_be_moved_into_another(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Creation is not the only way to nest; moving must refuse too."""
+    action = await _seed_da(dbsession, "IA-26DPTH2")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    first = (await _create_folder(client, fastapi_app, action, "Permits")).json()
+    second = (await _create_folder(client, fastapi_app, action, "Reports")).json()
+
+    update_url = fastapi_app.url_path_for(
+        "update_document_folder",
+        parent_type="designatedAction",
+        parent_id=action.designated_action_id,
+        folder_id=second["folderId"],
+    )
+    moved = await client.put(update_url, json={"parentFolderId": first["folderId"]})
+    assert moved.status_code == status.HTTP_400_BAD_REQUEST
