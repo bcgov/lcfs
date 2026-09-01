@@ -73,6 +73,7 @@ class FSESheetExporter(TabularSheetExporter):
                     ),
                     compliance_report_id=cid,
                     mode="summary",
+                    source="vw_fse_base",
                 )
             )
             if total > len(reporting_rows):
@@ -84,6 +85,7 @@ class FSESheetExporter(TabularSheetExporter):
                         ),
                         compliance_report_id=cid,
                         mode="summary",
+                        source="vw_fse_base",
                     )
                 )[0]
         else:
