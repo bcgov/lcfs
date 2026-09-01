@@ -317,7 +317,8 @@ const ORG_TYPE_COLOR_MAP: Record<string, BCBadgeColor> = {
   aggregator: 'warning',
   fuel_producer: 'success',
   exempted_supplier: 'secondary',
-  initiative_agreement_holder: 'primary'
+  initiative_agreement_holder: 'primary',
+  credit_trader: 'smoky'
 }
 
 const renderOrgTypeBadge = (
@@ -347,10 +348,13 @@ export const OrgTypeRenderer: RendererWithFilterPill = (
   props: RendererProps
 ): ReactElement => {
   const location = useLocation()
-  const typeKey = props.data?.orgType?.orgType
-  const label =
-    props.value || getOrgTypeDisplayLabel(props.data?.orgType) || '—'
-  const badgeColor = ORG_TYPE_COLOR_MAP[typeKey] || 'dark'
+  // Multi-type organizations (#4565): one badge per type, falling back to the
+  // legacy single type when the list is absent.
+  const orgTypes = props.data?.orgTypes?.length
+    ? props.data.orgTypes
+    : props.data?.orgType
+      ? [props.data.orgType]
+      : []
 
   const badge = (
     <BCBox sx={{ width: '100%', height: '100%' }}>
@@ -358,10 +362,21 @@ export const OrgTypeRenderer: RendererWithFilterPill = (
         mt={1}
         sx={{
           display: 'flex',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: 0.5
         }}
       >
-        {renderOrgTypeBadge(label, badgeColor)}
+        {orgTypes.length > 0
+          ? orgTypes.map((type: any) => (
+              <BCBox key={type?.organizationTypeId ?? type?.orgType}>
+                {renderOrgTypeBadge(
+                  getOrgTypeDisplayLabel(type) || '—',
+                  ORG_TYPE_COLOR_MAP[type?.orgType] || 'dark'
+                )}
+              </BCBox>
+            ))
+          : renderOrgTypeBadge(props.value || '—', 'dark')}
       </BCBox>
     </BCBox>
   )
