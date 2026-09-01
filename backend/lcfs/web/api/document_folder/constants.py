@@ -12,11 +12,12 @@ FOLDER_ENABLED_PARENT_TYPES = frozenset({"designatedAction"})
 # One level below the cap is still creatable; easier to relax than impose.
 MAX_FOLDER_DEPTH = 5
 
-# Product-owner overrides, by parent type. Designated actions allow a
-# single level for now - folders at the root, no subfolders - so the cap
-# is 1 there. Relaxing it later is this one number; the deeper machinery
-# (path restore, depth walking) is already built and tested for nesting.
-FOLDER_MAX_DEPTH_BY_PARENT = {"designatedAction": 1}
+# Product overrides, by parent type. Empty right now: the business area
+# asked for subfolders on designated actions (2026-09-01), lifting the
+# earlier one-level cap, so every surface runs at MAX_FOLDER_DEPTH. The
+# lever stays because capping a surface again — or capping a new surface
+# from day one — should be one entry here, not a code change.
+FOLDER_MAX_DEPTH_BY_PARENT = {}
 
 
 def max_folder_depth(parent_type: str) -> int:

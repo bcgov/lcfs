@@ -279,6 +279,9 @@ const DesignatedActionDetailBase = () => {
               <DocumentTree
                 parentType={PARENT_TYPE}
                 parentID={designatedActionId}
+                // Subfolders turned on at the business area's request
+                // (2026-09-01), superseding the earlier one-level cap.
+                allowSubfolders
                 title={t('initiativeAgreement:actionDetail.documents')}
                 headerAction={
                   // Upload stays IDIR-side, like the API.

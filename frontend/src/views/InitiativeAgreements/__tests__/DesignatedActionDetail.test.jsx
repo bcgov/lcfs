@@ -58,8 +58,11 @@ vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
 vi.mock('../components/DocumentTree', () => ({
   // The tree owns the section's card and header, so the page's own
   // controls reach the screen through it.
-  DocumentTree: ({ title, headerAction }) => (
-    <div data-test="document-tree">
+  DocumentTree: ({ title, headerAction, allowSubfolders }) => (
+    <div
+      data-test="document-tree"
+      data-allow-subfolders={allowSubfolders ? 'true' : 'false'}
+    >
       <span>{title}</span>
       {headerAction}
     </div>
@@ -178,6 +181,16 @@ describe('DesignatedActionDetail', () => {
   it('renders the folder tree in the documents section', () => {
     render(<DesignatedActionDetail />, { wrapper })
     expect(screen.getByTestId('document-tree')).toBeInTheDocument()
+  })
+
+  it('turns subfolders on, per the business area (2026-09-01)', () => {
+    render(<DesignatedActionDetail />, { wrapper })
+    // The tree defaults nesting off; this page is where the product
+    // decision to allow it lives.
+    expect(screen.getByTestId('document-tree')).toHaveAttribute(
+      'data-allow-subfolders',
+      'true'
+    )
   })
 
   it('renders the evidence of completion section', () => {
