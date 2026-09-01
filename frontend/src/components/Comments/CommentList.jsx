@@ -15,6 +15,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCModal from '@/components/BCModal'
+import { sanitizeCommentHtml } from '@/utils/sanitizeCommentHtml'
 
 const CommentList = ({
   comments,
@@ -536,7 +537,9 @@ const CommentList = ({
 
                   <div
                     className="comment-content"
-                    dangerouslySetInnerHTML={{ __html: comment.comment }}
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeCommentHtml(comment.comment)
+                    }}
                   />
                   {(comment.documents || []).length > 0 && (
                     <BCBox

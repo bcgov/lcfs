@@ -15,7 +15,7 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import CommentForm from '@/components/Comments/CommentForm'
 
-import { sanitizeAndHighlightCommentHtml } from './sanitize'
+import { sanitizeAndHighlightCommentHtml } from '@/utils/sanitizeCommentHtml'
 import { formatCommentDateTime, isCommentEdited } from './dateUtils'
 
 const ENTITY_TYPE_CONFIG = {
