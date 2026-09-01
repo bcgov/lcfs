@@ -54,12 +54,26 @@ class DeletedDocumentSchema(BaseSchema):
     restore_folder_name: Optional[str] = None
 
 
-class DeletedFolderSchema(BaseSchema):
-    """A folder in the bin.
+class DeletedFolderDocumentSchema(BaseSchema):
+    """One file a folder restore would bring back."""
 
-    Only folders that directly held a file are listed. A deleted empty
-    folder is not worth a row — nothing was lost with it, and it comes
-    back on its own if something beneath it is restored.
+    document_id: int
+    file_name: str
+    file_size: int
+    # Folders between the listed folder and the file, joined with " / ";
+    # empty when the file sat directly in it.
+    relative_path: str = ""
+
+
+class DeletedFolderSchema(BaseSchema):
+    """A folder in the bin: one row per thing somebody deleted.
+
+    Listed folders are the roots of their deletion — a folder whose
+    parent went to the bin in the same delete is part of its parent's
+    row, not a row of its own, so deleting a three-deep tree shows one
+    entry rather than three. A root whose subtree holds no file gets no
+    row: nothing was lost with it, and it comes back on its own if
+    something beneath it is restored.
     """
 
     folder_id: int
@@ -67,7 +81,11 @@ class DeletedFolderSchema(BaseSchema):
     # The path it will return to, outermost first, so the panel can show
     # where a restore will put it.
     path: List[str] = []
+    # Everything the restore brings back, counted and listed across the
+    # whole subtree — the question the row answers is "what do I get
+    # back", not "what was directly inside".
     document_count: int = 0
+    documents: List[DeletedFolderDocumentSchema] = []
     deleted_date: Optional[datetime] = None
     deleted_by: Optional[str] = None
     deleted_by_name: Optional[str] = None

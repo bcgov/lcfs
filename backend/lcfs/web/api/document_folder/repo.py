@@ -287,31 +287,6 @@ class DocumentFolderRepository:
         return list(result.scalars().all())
 
     @repo_handler
-    async def count_documents_per_folder(
-        self, folder_ids: Sequence[int], group_uuid: str
-    ) -> Dict[int, int]:
-        """How many binned documents each folder directly holds."""
-        if not folder_ids:
-            return {}
-        result = await self.db.execute(
-            select(
-                DocumentFolderItem.folder_id,
-                func.count(Document.document_id),
-            )
-            .join(
-                Document,
-                Document.document_id == DocumentFolderItem.document_id,
-            )
-            .where(
-                DocumentFolderItem.folder_id.in_(folder_ids),
-                Document.deleted_date.isnot(None),
-                Document.deleted_group_uuid == group_uuid,
-            )
-            .group_by(DocumentFolderItem.folder_id)
-        )
-        return {row[0]: row[1] for row in result.all()}
-
-    @repo_handler
     async def get_uploading_organization_codes(self, usernames) -> Dict[str, str]:
         """Map uploader usernames to their organization's code.
 

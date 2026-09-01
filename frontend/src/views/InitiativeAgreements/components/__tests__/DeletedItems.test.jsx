@@ -167,6 +167,26 @@ describe('DeletedItems folders', () => {
             name: 'Permits',
             path: ['Evidence', '2026'],
             documentCount: 3,
+            documents: [
+              {
+                documentId: 1,
+                fileName: 'permit.pdf',
+                fileSize: 1024,
+                relativePath: ''
+              },
+              {
+                documentId: 2,
+                fileName: 'site-plan.pdf',
+                fileSize: 2048,
+                relativePath: 'Drawings'
+              },
+              {
+                documentId: 3,
+                fileName: 'elevation.pdf',
+                fileSize: 4096,
+                relativePath: 'Drawings / North'
+              }
+            ],
             deletedDate: '2026-08-20T00:00:00Z',
             deletedBy: 'LCFS1_bat',
             deletedByName: 'Bat Analyst'
@@ -224,6 +244,30 @@ describe('DeletedItems folders', () => {
     // A folder restore is its own operation; it must not be routed
     // through the single-document restore.
     expect(mockRestore).not.toHaveBeenCalled()
+  })
+
+  it('previews what a folder restore brings back, on request', () => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+    open()
+
+    // Closed by default: the row is a summary, the list is detail.
+    expect(
+      screen.queryByTestId('deleted-folder-files-12')
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('toggle-folder-files-12'))
+
+    const list = screen.getByTestId('deleted-folder-files-12')
+    expect(list).toHaveTextContent('permit.pdf')
+    // Nested files show where under the folder they will land.
+    expect(list).toHaveTextContent('Drawings / site-plan.pdf')
+    expect(list).toHaveTextContent('Drawings / North / elevation.pdf')
+    expect(screen.getByTestId('toggle-folder-files-12')).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
   })
 
   it('is not empty when only folders are in the bin', () => {

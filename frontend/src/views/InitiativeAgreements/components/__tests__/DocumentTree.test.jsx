@@ -243,7 +243,7 @@ describe('DocumentTree', () => {
     expect(mockUpdate).toHaveBeenCalledWith({ folderId: 12, name: 'Approvals' })
   })
 
-  it('deletes a folder with the default reparent strategy', () => {
+  it('asks before sending a folder and its files to the bin', () => {
     render(<DocumentTree parentType="designatedAction" parentID="9" />, {
       wrapper
     })
@@ -251,7 +251,25 @@ describe('DocumentTree', () => {
     fireEvent.click(screen.getByTestId('folder-menu-12'))
     fireEvent.click(screen.getByTestId('menu-delete'))
 
-    expect(mockDelete).toHaveBeenCalledWith({ folderId: 12 })
+    // Nothing leaves until it is confirmed; the body names the folder and
+    // says how many files go with it. (The translation mock drops
+    // interpolations, so the key is what renders.)
+    expect(mockDelete).not.toHaveBeenCalled()
+    expect(screen.getByTestId('confirm-delete-folder-body')).toHaveTextContent(
+      'confirmDeleteFolderBody'
+    )
+
+    fireEvent.click(
+      screen.getByText('initiativeAgreement:folders.confirmDelete')
+    )
+
+    // Cascade, never reparent: the folder and its files go to the bin as
+    // one unit, rather than the files scattering up a level and the
+    // folder being destroyed with no way back.
+    expect(mockDelete).toHaveBeenCalledWith({
+      folderId: 12,
+      strategy: 'cascade'
+    })
   })
 
   it('offers no subfolder option by default — one level, per the PO', () => {

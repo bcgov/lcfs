@@ -23,6 +23,15 @@ import { timezoneFormatter } from '@/utils/formatters'
 export const DeletedItems = ({ parentType, parentID }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [expanded, setExpanded] = useState(false)
+  // Folder rows can open to show what a restore would bring back.
+  const [openFolders, setOpenFolders] = useState(() => new Set())
+  const toggleFolder = (folderId) =>
+    setOpenFolders((current) => {
+      const next = new Set(current)
+      if (next.has(folderId)) next.delete(folderId)
+      else next.add(folderId)
+      return next
+    })
   const { data } = useDeletedDocuments(parentType, parentID)
   const { mutate: restore } = useRestoreDocument(parentType, parentID)
   const { mutate: restoreFolder } = useRestoreFolder(parentType, parentID)
@@ -162,6 +171,66 @@ export const DeletedItems = ({ parentType, parentID }) => {
                   name: folder.name
                 }),
                 () => restoreFolder(folder.folderId)
+              )}
+              {folder.documents?.length > 0 && (
+                <>
+                  <BCTypography
+                    component="button"
+                    type="button"
+                    variant="subtitle2"
+                    color="link"
+                    data-test={`toggle-folder-files-${folder.folderId}`}
+                    aria-expanded={openFolders.has(folder.folderId)}
+                    aria-controls={`deleted-folder-files-${folder.folderId}`}
+                    onClick={() => toggleFolder(folder.folderId)}
+                    sx={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      font: 'inherit',
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    {openFolders.has(folder.folderId)
+                      ? t('initiativeAgreement:folders.hideFolderFiles')
+                      : t('initiativeAgreement:folders.showFolderFiles', {
+                          count: folder.documents.length
+                        })}
+                  </BCTypography>
+                  {openFolders.has(folder.folderId) && (
+                    <Box
+                      component="ul"
+                      id={`deleted-folder-files-${folder.folderId}`}
+                      data-test={`deleted-folder-files-${folder.folderId}`}
+                      sx={{
+                        flexBasis: '100%',
+                        m: 0,
+                        pl: 4,
+                        listStyle: 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 0.25
+                      }}
+                    >
+                      {folder.documents.map((document) => (
+                        <BCTypography
+                          component="li"
+                          variant="subtitle2"
+                          color="text.secondary"
+                          key={document.documentId}
+                        >
+                          {document.relativePath
+                            ? `${document.relativePath} / `
+                            : ''}
+                          {document.fileName}
+                          {' · '}
+                          {prettyBytes(document.fileSize ?? 0)}
+                        </BCTypography>
+                      ))}
+                    </Box>
+                  )}
+                </>
               )}
             </Box>
           ))}

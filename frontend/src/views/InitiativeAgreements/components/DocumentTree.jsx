@@ -453,6 +453,9 @@ export const DocumentTree = ({
   // Deleting is reversible — the file goes to the bin — but it still
   // disappears from the tree, so it asks first.
   const [pendingDelete, setPendingDelete] = useState(null)
+  // Deleting a folder sends it and everything in it to the bin as one
+  // restorable unit, so the confirmation says how much is going.
+  const [pendingFolderDelete, setPendingFolderDelete] = useState(null)
   const [selectedItems, setSelectedItems] = useState([])
   const [expandedItems, setExpandedItems] = useState([])
   const seededExpansion = useRef(false)
@@ -902,6 +905,41 @@ export const DocumentTree = ({
       </Paper>
 
       <BCModal
+        open={!!pendingFolderDelete}
+        onClose={() => setPendingFolderDelete(null)}
+        data={{
+          title: t('initiativeAgreement:folders.confirmDeleteFolderTitle'),
+          primaryButtonText: t('initiativeAgreement:folders.confirmDelete'),
+          primaryButtonAction: () => {
+            // Cascade, never reparent: reparent scatters the files up a
+            // level and destroys the folder with no way back, which is
+            // not what "delete" means once a bin exists.
+            deleteFolder({
+              folderId: pendingFolderDelete.folderId,
+              strategy: 'cascade'
+            })
+            setPendingFolderDelete(null)
+          },
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <BCTypography
+              variant="body4"
+              data-test="confirm-delete-folder-body"
+            >
+              {pendingFolderDelete?.count
+                ? t('initiativeAgreement:folders.confirmDeleteFolderBody', {
+                    name: pendingFolderDelete?.name ?? '',
+                    count: pendingFolderDelete?.count ?? 0
+                  })
+                : t('initiativeAgreement:folders.confirmDeleteFolderEmpty', {
+                    name: pendingFolderDelete?.name ?? ''
+                  })}
+            </BCTypography>
+          )
+        }}
+      />
+
+      <BCModal
         open={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
         data={{
@@ -1004,7 +1042,11 @@ export const DocumentTree = ({
         <MenuItem
           data-test="menu-delete"
           onClick={() => {
-            deleteFolder({ folderId: menu.folder.folderId })
+            setPendingFolderDelete({
+              folderId: menu.folder.folderId,
+              name: menu.folder.name,
+              count: menu.folder.documentCount ?? 0
+            })
             closeMenu()
           }}
         >

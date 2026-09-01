@@ -12,6 +12,7 @@ from lcfs.web.api.document_folder.constants import (
 )
 from lcfs.web.api.document_folder.repo import DocumentFolderRepository
 from lcfs.web.api.document_folder.schema import (
+    DeletedFolderDocumentSchema,
     DeletedFolderSchema,
     DeletedDocumentSchema,
     DeletedDocumentsSchema,
@@ -346,9 +347,13 @@ class DocumentFolderServices:
             + [f.deleted_by for f in all_folders_for_names if f.deleted_date]
         )
 
-        # Folders in the bin that directly held a file. A deleted empty
-        # folder gets no row: nothing was lost with it, and it comes back
-        # by itself when something beneath it is restored.
+        # One row per thing somebody deleted: the root folder of each
+        # delete, with everything the restore would bring back counted
+        # and listed across its subtree. A folder whose parent went to
+        # the bin in the same delete belongs to its parent's row. A root
+        # with no file beneath it gets no row: nothing was lost with it,
+        # and it comes back by itself when something beneath it is
+        # restored.
         folders = await self.repo.get_all_folders_including_deleted(
             parent_type, parent_id
         )
@@ -357,15 +362,45 @@ class DocumentFolderServices:
         folder_rows = []
         listed_folder_ids = set()
         for folder in binned:
-            if not folder.deleted_group_uuid:
+            group = folder.deleted_group_uuid
+            if not group:
                 continue
-            counts = await self.repo.count_documents_per_folder(
-                [folder.folder_id], folder.deleted_group_uuid
+            parent = by_id.get(folder.parent_folder_id)
+            if parent is not None and parent.deleted_group_uuid == group:
+                # Rides with its parent's row.
+                continue
+            subtree = [
+                fid
+                for fid in self._subtree_ids(folder.folder_id, folders)
+                if fid in by_id and by_id[fid].deleted_group_uuid == group
+            ]
+            docs = await self.repo.get_deleted_documents_in_folders(subtree, group)
+            if not docs:
+                continue
+            listed_folder_ids.update(subtree)
+            placements = await self.repo.get_placements(subtree)
+
+            def relative_path(document_id):
+                # Folders between this row's folder and the file.
+                names = []
+                cursor = by_id.get(placements.get(document_id))
+                while cursor is not None and cursor.folder_id != folder.folder_id:
+                    names.append(cursor.name)
+                    cursor = by_id.get(cursor.parent_folder_id)
+                return " / ".join(reversed(names))
+
+            preview = sorted(
+                (
+                    DeletedFolderDocumentSchema(
+                        document_id=d.document_id,
+                        file_name=d.display_name or d.file_name,
+                        file_size=d.file_size,
+                        relative_path=relative_path(d.document_id),
+                    )
+                    for d in docs
+                ),
+                key=lambda row: (row.relative_path, row.file_name.lower()),
             )
-            count = counts.get(folder.folder_id, 0)
-            if not count:
-                continue
-            listed_folder_ids.add(folder.folder_id)
             # Outermost first, so the panel can show where it returns to.
             path = []
             cursor = (
@@ -385,7 +420,8 @@ class DocumentFolderServices:
                     folder_id=folder.folder_id,
                     name=folder.name,
                     path=list(reversed(path)),
-                    document_count=count,
+                    document_count=len(preview),
+                    documents=preview,
                     deleted_date=folder.deleted_date,
                     deleted_by=folder.deleted_by,
                     deleted_by_name=names.get(folder.deleted_by),

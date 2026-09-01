@@ -143,7 +143,14 @@
     "binFileCount_other": "{{count}} files",
     "restoreFolderLabel": "Restore folder {{name}} and its files",
     "restoreFileLabel": "Restore {{name}}",
-    "title": "Evidence submissions"
+    "title": "Evidence submissions",
+    "confirmDeleteFolderTitle": "Move this folder to deleted items?",
+    "confirmDeleteFolderBody": "{{name}} and the {{count}} file inside it leave the folder tree and move to deleted items, where they are kept together. You can restore the folder, with its files, at any time.",
+    "confirmDeleteFolderBody_other": "{{name}} and the {{count}} files inside it leave the folder tree and move to deleted items, where they are kept together. You can restore the folder, with its files, at any time.",
+    "confirmDeleteFolderEmpty": "{{name}} has no files in it. It leaves the folder tree; nothing else is affected.",
+    "showFolderFiles": "Show {{count}} file",
+    "showFolderFiles_other": "Show {{count}} files",
+    "hideFolderFiles": "Hide files"
   },
   "evidence": {
     "sectionTitle": "Evidence of completion of designated action:",

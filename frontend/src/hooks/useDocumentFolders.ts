@@ -136,6 +136,7 @@ export const useDeleteFolder = (
   parentID: number | string
 ) => {
   const client = useApiService()
+  const queryClient = useQueryClient()
   const invalidate = useInvalidateTree(parentType, parentID)
   return useMutation({
     mutationFn: async ({
@@ -152,7 +153,14 @@ export const useDeleteFolder = (
           parentID
         ).replace(':folderId', String(folderId))}?strategy=${strategy}`
       ),
-    onSuccess: invalidate
+    onSuccess: () => {
+      invalidate()
+      // A cascade lands the folder in the bin, so the bin must refetch
+      // too or the row appears only on the next page load.
+      queryClient.invalidateQueries({
+        queryKey: deletedKey(parentType, parentID)
+      })
+    }
   })
 }
 

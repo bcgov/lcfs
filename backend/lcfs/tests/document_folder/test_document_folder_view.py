@@ -909,3 +909,34 @@ async def test_tree_carries_the_display_name_and_uploader_org(
     assert row["displayName"] == "Signed permit.pdf"
     # Present in the payload even when the uploader has no organization.
     assert "uploadingOrganizationCode" in row
+
+
+@pytest.mark.anyio
+async def test_the_bin_shows_one_row_per_deleted_folder_with_its_contents(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Deleting A (A > B > C(file), A > D(file)) is one thing somebody
+    did, so the bin shows one row for it: A, counting and listing every
+    file a restore brings back, with each file's path beneath A. B, C and
+    D ride with A rather than getting rows of their own.
+    """
+    action = await _seed_da(dbsession, "IA-26BIN1")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    a, _b, _c, _d, _in_c, _in_d = await _build_nest(
+        client, fastapi_app, action, dbsession
+    )
+
+    await client.delete(
+        f"{_folder_delete_url(fastapi_app, action, a['folderId'])}?strategy=cascade"
+    )
+
+    deleted = (await client.get(_deleted_url(fastapi_app, action))).json()
+    assert [f["name"] for f in deleted["folders"]] == ["A"]
+    row = deleted["folders"][0]
+    assert row["documentCount"] == 2
+    assert [(d["relativePath"], d["fileName"]) for d in row["documents"]] == [
+        ("B / C", "in-c.pdf"),
+        ("D", "in-d.pdf"),
+    ]
+    # Those files come back with the folder, so they are not listed twice.
+    assert deleted["documents"] == []
