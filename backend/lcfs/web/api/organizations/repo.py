@@ -4,7 +4,7 @@ from lcfs.db.base import BaseModel
 from lcfs.db.models.transaction import Transaction
 from lcfs.web.api.transaction.schema import TransactionActionEnum
 import structlog
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import joinedload
@@ -25,9 +25,16 @@ from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
 )
 from lcfs.db.models.organization.OrganizationType import OrganizationType
+from lcfs.db.models.organization.OrganizationTypeAssociation import (
+    OrganizationTypeAssociation,
+)
+from lcfs.db.models.organization.OrganizationAvailableRole import (
+    OrganizationAvailableRole,
+)
 from lcfs.db.models.organization.OrganizationEarlyIssuanceByYear import (
     OrganizationEarlyIssuanceByYear,
 )
+from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.organization.CreditMarketAuditLog import CreditMarketAuditLog
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
@@ -49,9 +56,6 @@ from lcfs.web.api.base import (
     validate_pagination,
 )
 
-if TYPE_CHECKING:
-    from lcfs.db.models.user.UserProfile import UserProfile
-
 from .schema import (
     OrganizationSchema,
     OrganizationStatusSchema,
@@ -68,6 +72,7 @@ ORG_TYPE_SHORT_LABELS = {
     "fuel_producer": "Producer",
     "exempted_supplier": "Exempted",
     "initiative_agreement_holder": "IA Holder",
+    "credit_trader": "Credit Transfer",
 }
 
 
@@ -101,13 +106,33 @@ class OrganizationsRepository:
         """
         Fetch organization_id, name, status, and their reserved and available balances.
         """
+        type_rows = await self.db.execute(
+            select(
+                OrganizationTypeAssociation.organization_id,
+                OrganizationType.org_type,
+                OrganizationType.description,
+            )
+            .join(
+                OrganizationType,
+                OrganizationTypeAssociation.organization_type_id
+                == OrganizationType.organization_type_id,
+            )
+            .order_by(
+                OrganizationTypeAssociation.organization_id,
+                OrganizationType.display_order,
+            )
+        )
+        type_labels: Dict[int, List[str]] = {}
+        for org_id, org_type, org_description in type_rows:
+            type_labels.setdefault(org_id, []).append(
+                get_short_org_type_label(org_type, org_description)
+            )
+
         result = await self.db.execute(
             select(
                 Organization.organization_id,
                 Organization.name,
                 OrganizationStatus.status,
-                OrganizationType.org_type,
-                OrganizationType.description,
                 func.abs(
                     func.sum(
                         case(
@@ -142,17 +167,10 @@ class OrganizationsRepository:
                 Organization.organization_status_id
                 == OrganizationStatus.organization_status_id,
             )
-            .outerjoin(
-                OrganizationType,
-                Organization.organization_type_id
-                == OrganizationType.organization_type_id,
-            )
             .group_by(
                 Organization.organization_id,
                 Organization.name,
                 OrganizationStatus.status,
-                OrganizationType.org_type,
-                OrganizationType.description,
             )
             .order_by(Organization.organization_id)
         )
@@ -162,10 +180,10 @@ class OrganizationsRepository:
                 name,
                 int(total_balance or 0),
                 int(reserved_balance or 0),
-                get_short_org_type_label(org_type, org_description),
+                ", ".join(type_labels.get(org_id, [])),
                 status.value,
             ]
-            for org_id, name, status, org_type, org_description, reserved_balance, total_balance in result
+            for org_id, name, status, reserved_balance, total_balance in result
         ]
 
     @repo_handler
@@ -387,6 +405,7 @@ class OrganizationsRepository:
                 **{column.name: getattr(organization, column.name) for column in organization.__table__.columns},
                 "has_early_issuance": has_early_issuance,
                 "org_type": organization.org_type,
+                "org_types": organization.org_types,
                 "org_status": organization.org_status
             }
             
@@ -431,6 +450,135 @@ class OrganizationsRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
+    async def get_organization_types_by_ids(
+        self, type_ids: List[int]
+    ) -> List[OrganizationType]:
+        """
+        Get organization types matching the given ids.
+        """
+        result = await self.db.execute(
+            select(OrganizationType).where(
+                OrganizationType.organization_type_id.in_(type_ids)
+            )
+        )
+        return result.scalars().all()
+
+    @repo_handler
+    async def set_organization_types(
+        self, organization_id: int, type_ids: List[int]
+    ) -> None:
+        """
+        Replace the organization's type associations with the given set.
+        """
+        await self.db.execute(
+            delete(OrganizationTypeAssociation)
+            .where(
+                OrganizationTypeAssociation.organization_id == organization_id,
+                OrganizationTypeAssociation.organization_type_id.not_in(type_ids),
+            )
+            .execution_options(synchronize_session=False)
+        )
+        existing_result = await self.db.execute(
+            select(OrganizationTypeAssociation.organization_type_id).where(
+                OrganizationTypeAssociation.organization_id == organization_id
+            )
+        )
+        existing = set(existing_result.scalars().all())
+        for type_id in type_ids:
+            if type_id not in existing:
+                self.db.add(
+                    OrganizationTypeAssociation(
+                        organization_id=organization_id,
+                        organization_type_id=type_id,
+                    )
+                )
+        await self.db.flush()
+
+    @repo_handler
+    async def get_available_role_ids(self, organization_id: int) -> set:
+        """
+        Get the role ids currently available to the organization's users.
+        """
+        result = await self.db.execute(
+            select(OrganizationAvailableRole.role_id).where(
+                OrganizationAvailableRole.organization_id == organization_id
+            )
+        )
+        return set(result.scalars().all())
+
+    @repo_handler
+    async def set_available_roles(
+        self, organization_id: int, role_ids: List[int]
+    ) -> None:
+        """
+        Replace the organization's available-role set with the given role ids.
+        """
+        await self.db.execute(
+            delete(OrganizationAvailableRole)
+            .where(
+                OrganizationAvailableRole.organization_id == organization_id,
+                OrganizationAvailableRole.role_id.not_in(role_ids),
+            )
+            .execution_options(synchronize_session=False)
+        )
+        existing_result = await self.db.execute(
+            select(OrganizationAvailableRole.role_id).where(
+                OrganizationAvailableRole.organization_id == organization_id
+            )
+        )
+        existing = set(existing_result.scalars().all())
+        for role_id in role_ids:
+            if role_id not in existing:
+                self.db.add(
+                    OrganizationAvailableRole(
+                        organization_id=organization_id, role_id=role_id
+                    )
+                )
+        await self.db.flush()
+
+    @repo_handler
+    async def get_role_ids_by_enums(self, role_enums: List[RoleEnum]) -> Dict:
+        """
+        Map RoleEnum members to their role ids.
+        """
+        result = await self.db.execute(
+            select(Role.role_id, Role.name).where(Role.name.in_(role_enums))
+        )
+        return {name: role_id for role_id, name in result.all()}
+
+    @repo_handler
+    async def delete_user_roles_for_org(
+        self, organization_id: int, role_ids: List[int]
+    ) -> List[tuple]:
+        """
+        Remove the given roles from every user of the organization.
+        Returns the affected (user_profile_id, role_id) pairs so callers can
+        clean up per-user state such as notification subscriptions.
+        """
+        if not role_ids:
+            return []
+        # Imported here to avoid a circular import: UserProfile pulls in the
+        # organizations schema module at import time.
+        from lcfs.db.models.user.UserProfile import UserProfile
+        from lcfs.db.models.user.UserRole import UserRole
+
+        org_users = select(UserProfile.user_profile_id).where(
+            UserProfile.organization_id == organization_id
+        )
+        result = await self.db.execute(
+            delete(UserRole)
+            .where(
+                UserRole.user_profile_id.in_(org_users),
+                UserRole.role_id.in_(role_ids),
+            )
+            .returning(UserRole.user_profile_id, UserRole.role_id)
+            .execution_options(synchronize_session=False)
+        )
+        affected = [(row[0], row[1]) for row in result.all()]
+        await self.db.flush()
+        return affected
+
+    @repo_handler
     async def get_organization_names(
         self,
         conditions=None,
@@ -459,7 +607,12 @@ class OrganizationsRepository:
         )
 
         if normalized_org_type != "all":
-            query = query.filter(OrganizationType.org_type == normalized_org_type)
+            # Has-type semantics: an organization matches if any of its types match.
+            query = query.filter(
+                Organization.org_types.any(
+                    OrganizationType.org_type == normalized_org_type
+                )
+            )
 
         if conditions:
             query = query.filter(*conditions)
@@ -510,6 +663,7 @@ class OrganizationsRepository:
                     "reserved_balance": org.reserved_balance,
                     "status": org.org_status,
                     "org_type": org_type_value,
+                    "org_types": [t.org_type for t in org.org_types],
                 }
             )
 
@@ -522,7 +676,8 @@ class OrganizationsRepository:
         Only returns organizations with type 'fuel_supplier'.
         """
         # Add fuel supplier type filter to existing conditions
-        fuel_supplier_condition = Organization.org_type.has(
+        # (has-type semantics across the organization's types)
+        fuel_supplier_condition = Organization.org_types.any(
             OrganizationType.org_type == "fuel_supplier"
         )
         all_conditions = conditions + [fuel_supplier_condition]
