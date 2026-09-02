@@ -93,16 +93,14 @@ class OrganizationPenaltyService:
                 )
 
             renewable_penalty = (
-                _to_float(row.get("renewable_penalty_override"))
+                _to_float(row.get("renewable_penalty_override") or 0)
                 if penalty_override_enabled
-                and row.get("renewable_penalty_override") is not None
                 else _to_float(line_11_penalty)
             )
 
             low_carbon_penalty = (
-                _to_float(row.get("low_carbon_penalty_override"))
+                _to_float(row.get("low_carbon_penalty_override") or 0)
                 if penalty_override_enabled
-                and row.get("low_carbon_penalty_override") is not None
                 else _to_float(row.get("line_21_penalty_payable"))
             )
 
@@ -124,6 +122,12 @@ class OrganizationPenaltyService:
                 PenaltyYearlySummarySchema(
                     compliance_period_id=row.get("compliance_period_id"),
                     compliance_year=compliance_year,
+                    report_status=(
+                        row.get("report_status").value
+                        if hasattr(row.get("report_status"), "value")
+                        else row.get("report_status")
+                    ),
+                    assessed_date=row.get("assessed_date"),
                     auto_renewable=renewable_penalty,
                     auto_low_carbon=low_carbon_penalty,
                     total_automatic=total_automatic,

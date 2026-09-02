@@ -253,8 +253,12 @@ const ComplianceReportSummary = ({
 
       updateComplianceReportPenaltyStatus({
         line: Number(row.line),
-        invoiceSent: !!row.invoiceSent,
-        paymentReceived: !!row.paymentReceived
+        ...(cellInfo?.columnId === 'invoiceSent'
+          ? { invoiceSent: !!row.invoiceSent }
+          : {}),
+        ...(cellInfo?.columnId === 'paymentReceived'
+          ? { paymentReceived: !!row.paymentReceived }
+          : {})
       })
     },
     [summaryData, updateComplianceReportPenaltyStatus]
@@ -297,6 +301,19 @@ const ComplianceReportSummary = ({
       return row
     })
   }, [summaryData, penaltyOverrideEnabled])
+
+  const penaltyStatusEditableCells = useMemo(
+    () =>
+      (nonCompliancePenaltyDisplayData ?? []).reduce((indexes, row, index) => {
+        if (row?.line && Number(row.totalValue) > 0) indexes.push(index)
+        return indexes
+      }, []),
+    [nonCompliancePenaltyDisplayData]
+  )
+  const showPenaltyStatusColumns =
+    isGovernmentUser &&
+    currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT &&
+    penaltyStatusEditableCells.length > 0
 
   // When low carbon fuel is exempted, override line 22 to show line 17's value
   // (no credit change applied) instead of the stale calculated value
@@ -438,8 +455,9 @@ const ComplianceReportSummary = ({
                   columns={nonComplianceColumns(
                     t,
                     penaltyOverrideEnabled,
-                    isGovernmentUser,
-                    isGovernmentUser
+                    showPenaltyStatusColumns,
+                    showPenaltyStatusColumns,
+                    penaltyStatusEditableCells
                   )}
                   data={nonCompliancePenaltyDisplayData}
                   width={'80.65%'}
@@ -449,7 +467,9 @@ const ComplianceReportSummary = ({
                       : undefined
                   }
                   onBooleanCellEditStopped={
-                    isGovernmentUser ? handlePenaltyStatusCellEdit : undefined
+                    showPenaltyStatusColumns
+                      ? handlePenaltyStatusCellEdit
+                      : undefined
                   }
                   savingCellKey={savingCellKey}
                   tableType="penalty"

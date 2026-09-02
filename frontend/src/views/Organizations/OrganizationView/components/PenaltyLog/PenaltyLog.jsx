@@ -112,17 +112,15 @@ const processDiscretionaryData = (rawPenaltyLogs, yearLabels) => {
 
 export const buildAutomaticPenaltyRows = (yearlyPenalties) =>
   yearlyPenalties.flatMap((item) => {
-    const year = Number(item.complianceYear)
-    const dueDate = Number.isFinite(year) ? `${year + 1}-03-31` : ''
+    const dueDate =
+      item.reportStatus === 'Assessed' && item.assessedDate
+        ? String(item.assessedDate).split('T')[0]
+        : ''
     const rows = []
     const autoRenewable = Number(item.autoRenewable ?? 0)
     const autoLowCarbon = Number(item.autoLowCarbon ?? 0)
 
-    if (
-      autoRenewable > 0 ||
-      item.renewableInvoiceSent ||
-      item.renewablePaymentReceived
-    ) {
+    if (autoRenewable > 0) {
       rows.push({
         id: `automatic-renewable-${item.compliancePeriodId}`,
         penaltyLogId: `automatic-renewable-${item.compliancePeriodId}`,
@@ -137,11 +135,7 @@ export const buildAutomaticPenaltyRows = (yearlyPenalties) =>
       })
     }
 
-    if (
-      autoLowCarbon > 0 ||
-      item.lowCarbonInvoiceSent ||
-      item.lowCarbonPaymentReceived
-    ) {
+    if (autoLowCarbon > 0) {
       rows.push({
         id: `automatic-low-carbon-${item.compliancePeriodId}`,
         penaltyLogId: `automatic-low-carbon-${item.compliancePeriodId}`,
@@ -270,10 +264,12 @@ export const PenaltyLog = () => {
         </BCAlert>
       )}
       <Stack spacing={2} sx={{ width: '100%' }}>
-        <AutomaticPenaltyLogGrid
-          automaticPenaltyRows={automaticPenaltyRows}
-          loading={analyticsLoading}
-        />
+        {currentUser?.isGovernmentUser && (
+          <AutomaticPenaltyLogGrid
+            automaticPenaltyRows={automaticPenaltyRows}
+            loading={analyticsLoading}
+          />
+        )}
         <Grid container spacing={2}>
           <Grid item xs={12} md={4} ml={-2}>
             <MetricCardsSection

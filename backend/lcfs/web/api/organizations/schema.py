@@ -377,6 +377,8 @@ class CreditMarketAuditLogListResponseSchema(BaseSchema):
 class PenaltyYearlySummarySchema(BaseSchema):
     compliance_period_id: int
     compliance_year: Optional[Union[int, str]] = None
+    report_status: Optional[str] = None
+    assessed_date: Optional[datetime] = None
     auto_renewable: float
     auto_low_carbon: float
     total_automatic: float

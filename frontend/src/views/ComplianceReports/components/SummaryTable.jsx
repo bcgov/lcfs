@@ -385,7 +385,10 @@ const SummaryTable = ({
                           : 1
                     }}
                   >
-                    {column.type === 'booleanRadio' && row.line ? (
+                    {column.type === 'booleanRadio' &&
+                    row.line &&
+                    row[column.id] !== null &&
+                    row[column.id] !== undefined ? (
                       <div style={{ position: 'relative' }}>
                         <RadioGroup
                           row

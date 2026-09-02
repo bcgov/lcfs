@@ -578,7 +578,8 @@ export const nonComplianceColumns = (
   t: (key: string) => string,
   editable: boolean = false,
   statusEditable: boolean = editable,
-  showStatusColumns: boolean = true
+  showStatusColumns: boolean = true,
+  statusEditableCells: number[] = [0, 1]
 ): SummaryColumn[] => [
   {
     id: 'description',
@@ -604,7 +605,7 @@ export const nonComplianceColumns = (
           width: '160px',
           type: 'booleanRadio',
           editable: statusEditable,
-          editableCells: statusEditable ? [0, 1] : []
+          editableCells: statusEditable ? statusEditableCells : []
         },
         {
           id: 'paymentReceived',
@@ -615,7 +616,7 @@ export const nonComplianceColumns = (
           width: '190px',
           type: 'booleanRadio',
           editable: statusEditable,
-          editableCells: statusEditable ? [0, 1] : []
+          editableCells: statusEditable ? statusEditableCells : []
         }
       ]
     : [])
