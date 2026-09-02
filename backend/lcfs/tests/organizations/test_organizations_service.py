@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 import unittest
+from datetime import datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 from lcfs.web.api.organizations.services import OrganizationsService
@@ -348,6 +349,54 @@ async def test_get_penalty_analytics_uses_persisted_line_11_total(
     assert result.yearly_penalties[0].total_automatic == pytest.approx(18000.0)
     assert result.totals.auto_renewable == pytest.approx(18000.0)
     assert result.totals.total == pytest.approx(18000.0)
+
+
+@pytest.mark.anyio
+async def test_get_penalty_analytics_includes_assessment_details(
+    penalty_service, mock_repo
+):
+    assessed_date = datetime(2026, 4, 15, 17, 30, tzinfo=timezone.utc)
+    summaries = [
+        {
+            "compliance_period_id": 1,
+            "compliance_year": "2025",
+            "report_status": "Assessed",
+            "assessed_date": assessed_date,
+            "line_11_penalty_payable": 18000.0,
+            "line_21_penalty_payable": 0.0,
+            "penalty_override_enabled": False,
+        }
+    ]
+    mock_repo.get_penalty_analytics_data = AsyncMock(return_value=(summaries, []))
+
+    result = await penalty_service.get_penalty_analytics(organization_id=123)
+
+    assert result.yearly_penalties[0].report_status == "Assessed"
+    assert result.yearly_penalties[0].assessed_date == assessed_date
+
+
+@pytest.mark.anyio
+async def test_get_penalty_analytics_uses_zero_for_empty_enabled_overrides(
+    penalty_service, mock_repo
+):
+    summaries = [
+        {
+            "compliance_period_id": 1,
+            "compliance_year": "2025",
+            "line_11_penalty_payable": 18000.0,
+            "line_21_penalty_payable": 12500.0,
+            "penalty_override_enabled": True,
+            "renewable_penalty_override": None,
+            "low_carbon_penalty_override": None,
+        }
+    ]
+    mock_repo.get_penalty_analytics_data = AsyncMock(return_value=(summaries, []))
+
+    result = await penalty_service.get_penalty_analytics(organization_id=123)
+
+    assert result.yearly_penalties[0].auto_renewable == 0
+    assert result.yearly_penalties[0].auto_low_carbon == 0
+    assert result.yearly_penalties[0].total_automatic == 0
 
 
 @pytest.mark.anyio

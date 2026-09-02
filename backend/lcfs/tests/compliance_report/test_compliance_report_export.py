@@ -345,6 +345,30 @@ async def test_summary_export_includes_penalty_status_columns_for_positive_gover
 
 
 @pytest.mark.anyio
+async def test_summary_export_hides_penalty_status_before_submission():
+    wb = Workbook()
+    await SummarySheetExporter().export_to_workbook(
+        wb,
+        Mock(),
+        is_government=True,
+        summary=_summary_with_penalties(
+            ComplianceReportSummaryRowSchema(
+                line=11,
+                description="Renewable fuel target penalty",
+                total_value=100,
+                invoice_sent=None,
+                payment_received=None,
+            )
+        ),
+    )
+
+    rows = _worksheet_rows(wb["Summary"])
+
+    assert all("Invoice sent" not in row for row in rows)
+    assert all("Payment received" not in row for row in rows)
+
+
+@pytest.mark.anyio
 async def test_summary_export_omits_zero_line_11_and_21_penalty_rows():
     wb = Workbook()
     await SummarySheetExporter().export_to_workbook(

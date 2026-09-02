@@ -31,6 +31,7 @@ from lcfs.db.models.organization.OrganizationEarlyIssuanceByYear import (
 from lcfs.db.models.organization.CreditMarketAuditLog import CreditMarketAuditLog
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
@@ -908,7 +909,9 @@ class OrganizationsRepository:
                 .label("row_number"),
             ).where(
                 ComplianceReportListView.organization_id == organization_id,
-                ComplianceReportListView.is_latest.is_(True),
+                ComplianceReportListView.report_status.is_not(None),
+                ComplianceReportListView.report_status
+                != ComplianceReportStatusEnum.Draft,
             )
         ).cte("latest_reports")
 
@@ -916,6 +919,24 @@ class OrganizationsRepository:
             select(
                 latest_reports_cte.c.compliance_period_id,
                 latest_reports_cte.c.compliance_year,
+                latest_reports_cte.c.report_status,
+                (
+                    select(ComplianceReportHistory.create_date)
+                    .join(
+                        ComplianceReportStatus,
+                        ComplianceReportStatus.compliance_report_status_id
+                        == ComplianceReportHistory.status_id,
+                    )
+                    .where(
+                        ComplianceReportHistory.compliance_report_id
+                        == latest_reports_cte.c.report_id,
+                        ComplianceReportStatus.status
+                        == ComplianceReportStatusEnum.Assessed,
+                    )
+                    .order_by(ComplianceReportHistory.create_date.desc())
+                    .limit(1)
+                    .scalar_subquery()
+                ).label("assessed_date"),
                 ComplianceReportSummary.line_11_non_compliance_penalty_gasoline.label(
                     "line_11_penalty_gasoline"
                 ),

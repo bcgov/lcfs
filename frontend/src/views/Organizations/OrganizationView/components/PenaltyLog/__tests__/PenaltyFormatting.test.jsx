@@ -178,6 +178,8 @@ describe('organization dashboard penalty formatting', () => {
       {
         compliancePeriodId: 1,
         complianceYear: 2025,
+        reportStatus: 'Assessed',
+        assessedDate: '2026-04-15T17:30:00Z',
         autoRenewable: 125,
         autoLowCarbon: 250,
         renewableInvoiceSent: false,
@@ -191,17 +193,49 @@ describe('organization dashboard penalty formatting', () => {
       {
         id: 'automatic-renewable-1',
         penaltyAmount: 125,
-        dueDate: '2026-03-31',
+        dueDate: '2026-04-15',
         invoiceSent: false,
         paymentReceived: false
       },
       {
         id: 'automatic-low-carbon-1',
         penaltyAmount: 250,
-        dueDate: '2026-03-31',
+        dueDate: '2026-04-15',
         invoiceSent: false,
         paymentReceived: false
       }
     ])
+  })
+
+  it('leaves the automatic penalty due date blank until the report is assessed', () => {
+    const [row] = buildAutomaticPenaltyRows([
+      {
+        compliancePeriodId: 1,
+        complianceYear: 2025,
+        reportStatus: 'Submitted',
+        assessedDate: null,
+        autoRenewable: 125,
+        autoLowCarbon: 0
+      }
+    ])
+
+    expect(row.dueDate).toBe('')
+  })
+
+  it('excludes automatic penalty rows whose amount is not positive', () => {
+    const rows = buildAutomaticPenaltyRows([
+      {
+        compliancePeriodId: 1,
+        complianceYear: 2025,
+        reportStatus: 'Assessed',
+        assessedDate: '2026-04-15T17:30:00Z',
+        autoRenewable: 0,
+        autoLowCarbon: 0,
+        renewableInvoiceSent: true,
+        lowCarbonPaymentReceived: true
+      }
+    ])
+
+    expect(rows).toEqual([])
   })
 })

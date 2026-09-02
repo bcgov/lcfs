@@ -552,6 +552,41 @@ class ComplianceReportSummaryService:
             raise ServiceException(
                 "Penalty status can only be updated for lines 11 or 21."
             )
+        if status_data.invoice_sent is None and status_data.payment_received is None:
+            raise ServiceException("A penalty status field is required.")
+
+        compliance_report = await self.cr_repo.get_compliance_report_by_id(report_id)
+        if not compliance_report:
+            raise DataNotFoundException("Compliance report not found.")
+        if (
+            not compliance_report.current_status
+            or compliance_report.current_status.status
+            == ComplianceReportStatusEnum.Draft
+        ):
+            raise ServiceException(
+                "Penalty status can only be updated after the report is submitted."
+            )
+
+        summary_model = compliance_report.summary
+        if not summary_model:
+            raise DataNotFoundException("Compliance report summary not found.")
+
+        if status_data.line == 11:
+            penalty_amount = (
+                summary_model.renewable_penalty_override or 0
+                if summary_model.penalty_override_enabled
+                else summary_model.line_11_fossil_derived_base_fuel_total
+            )
+        else:
+            penalty_amount = (
+                summary_model.low_carbon_penalty_override or 0
+                if summary_model.penalty_override_enabled
+                else summary_model.line_21_non_compliance_penalty_payable
+            )
+        if not penalty_amount or penalty_amount <= 0:
+            raise ServiceException(
+                "Penalty status can only be updated when the amount payable is greater than zero."
+            )
 
         summary = await self.repo.update_penalty_status(
             report_id,
@@ -663,7 +698,12 @@ class ComplianceReportSummaryService:
                 or await self._should_lock_lines_7_and_9(compliance_report)
             )
             locked_summary.lines_6_and_8_locked = True
-            return self._filter_penalty_status(locked_summary, include_penalty_status)
+            return self._filter_penalty_status(
+                locked_summary,
+                self._can_show_penalty_status(
+                    compliance_report, include_penalty_status
+                ),
+            )
 
         compliance_period_start = compliance_report.compliance_period.effective_date
         compliance_period_end = compliance_report.compliance_period.expiration_date
@@ -932,21 +972,44 @@ class ComplianceReportSummaryService:
                 f"Report has changed, updating summary for report {compliance_report.compliance_report_id}"
             )
             await self.repo.save_compliance_report_summary(summary)
-            return self._filter_penalty_status(summary, include_penalty_status)
+            return self._filter_penalty_status(
+                summary,
+                self._can_show_penalty_status(
+                    compliance_report, include_penalty_status
+                ),
+            )
 
-        return self._filter_penalty_status(existing_summary, include_penalty_status)
+        return self._filter_penalty_status(
+            existing_summary,
+            self._can_show_penalty_status(compliance_report, include_penalty_status),
+        )
+
+    @staticmethod
+    def _can_show_penalty_status(
+        compliance_report: ComplianceReport, include_penalty_status: bool
+    ) -> bool:
+        return bool(
+            include_penalty_status
+            and compliance_report.current_status
+            and compliance_report.current_status.status
+            != ComplianceReportStatusEnum.Draft
+        )
 
     def _filter_penalty_status(
         self,
         summary: ComplianceReportSummarySchema,
         include_penalty_status: bool,
     ) -> ComplianceReportSummarySchema:
-        if include_penalty_status:
-            return summary
-
         for row in summary.non_compliance_penalty_summary or []:
-            row.invoice_sent = None
-            row.payment_received = None
+            penalty_amount = row.total_value
+            if summary.penalty_override_enabled:
+                if row.line == 11:
+                    penalty_amount = summary.renewable_penalty_override or 0
+                elif row.line == 21:
+                    penalty_amount = summary.low_carbon_penalty_override or 0
+            if not include_penalty_status or not penalty_amount or penalty_amount <= 0:
+                row.invoice_sent = None
+                row.payment_received = None
 
         return summary
 

@@ -105,7 +105,14 @@ class SummarySheetExporter(SheetExporter, SheetExporterSupport):
             line.line in (11, 21) and (line.total_value or 0) > 0
             for line in penalty_lines
         )
-        include_penalty_status = is_government and has_payable_penalty
+        has_penalty_status = any(
+            line.line in (11, 21)
+            and (line.invoice_sent is not None or line.payment_received is not None)
+            for line in penalty_lines
+        )
+        include_penalty_status = (
+            is_government and has_payable_penalty and has_penalty_status
+        )
 
         penalty_column_count = 5 if include_penalty_status else 3
         ws.append([""] * penalty_column_count)
