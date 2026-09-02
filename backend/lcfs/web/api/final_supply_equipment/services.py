@@ -1,4 +1,3 @@
-import math
 import re
 from datetime import date, datetime
 from typing import List, Sequence
@@ -13,6 +12,7 @@ from lcfs.db.models.compliance import (
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import (
+    calculate_total_pages,
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
@@ -145,7 +145,7 @@ class FinalSupplyEquipmentServices:
                 page=pagination.page,
                 size=pagination.size,
                 total=total_count,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
             final_supply_equipments=[
                 await self.map_to_schema(fse) for fse in final_supply_equipments
@@ -590,7 +590,7 @@ class FinalSupplyEquipmentServices:
                 page=pagination.page,
                 size=pagination.size,
                 total=total,
-                total_pages=math.ceil(total / pagination.size),
+                total_pages=calculate_total_pages(total, pagination.size),
             ),
             "hasChargingEquipment": has_equipment,
         }
