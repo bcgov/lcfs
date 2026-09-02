@@ -36,22 +36,6 @@ const buildLocalPenaltyQuery = (rows, paginationOptions) => ({
   isError: false
 })
 
-const useMinWidthBasedColumnDefs = (columnDefs) =>
-  useMemo(
-    () =>
-      columnDefs.map((columnDef) => {
-        if (columnDef.width != null || !Number.isFinite(columnDef.minWidth)) {
-          return columnDef
-        }
-
-        return {
-          ...columnDef,
-          width: columnDef.minWidth
-        }
-      }),
-    [columnDefs]
-  )
-
 export const AutomaticPenaltyLogGrid = ({
   automaticPenaltyRows = [],
   loading = false
@@ -99,7 +83,6 @@ export const AutomaticPenaltyLogGrid = ({
     }),
     []
   )
-  const columnDefs = useMinWidthBasedColumnDefs(penaltyLogColumnDefs)
   const columnState = useMemo(() => [], [])
 
   const handlePaginationChange = useCallback((newPagination) => {
@@ -118,18 +101,18 @@ export const AutomaticPenaltyLogGrid = ({
             sx={{ width: '100%' }}
           >
             <BCBox>
-              <BCTypography variant="caption" color="text">
-                Total penalties
+              <BCTypography variant="body2" color="text" component="span">
+                Total penalties:{' '}
               </BCTypography>
-              <BCTypography variant="h6" color="primary">
+              <BCTypography variant="h6" color="primary" component="span">
                 {totals.totalPenalties}
               </BCTypography>
             </BCBox>
             <BCBox>
-              <BCTypography variant="caption" color="text">
-                Invoiced:
+              <BCTypography variant="body2" color="text" component="span">
+                Invoiced:{' '}
               </BCTypography>
-              <BCTypography variant="h6" color="primary">
+              <BCTypography variant="h6" color="primary" component="span">
                 {totals.invoiced}
               </BCTypography>
             </BCBox>
@@ -138,7 +121,7 @@ export const AutomaticPenaltyLogGrid = ({
             <BCGridViewer
               gridKey="automatic-penalty-log-history"
               gridRef={automaticPenaltyGridRef}
-              columnDefs={columnDefs}
+              columnDefs={penaltyLogColumnDefs}
               columnState={columnState}
               defaultColDef={automaticPenaltyDefaultColDef}
               queryData={automaticPenaltyQuery}
@@ -225,9 +208,6 @@ export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
     }),
     []
   )
-  const columnDefs = useMinWidthBasedColumnDefs(
-    discretionaryPenaltyLogColumnDefs
-  )
   const columnState = useMemo(() => [], [])
 
   const handleClearFilters = useCallback(() => {
@@ -284,7 +264,7 @@ export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
         <BCGridViewer
           gridKey="penalty-log-history"
           gridRef={penaltyLogGridRef}
-          columnDefs={columnDefs}
+          columnDefs={discretionaryPenaltyLogColumnDefs}
           columnState={columnState}
           defaultColDef={penaltyLogDefaultColDef}
           queryData={discretionaryPenaltyLogsQuery}

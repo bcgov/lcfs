@@ -264,12 +264,10 @@ export const PenaltyLog = () => {
         </BCAlert>
       )}
       <Stack spacing={2} sx={{ width: '100%' }}>
-        {currentUser?.isGovernmentUser && (
-          <AutomaticPenaltyLogGrid
-            automaticPenaltyRows={automaticPenaltyRows}
-            loading={analyticsLoading}
-          />
-        )}
+        <AutomaticPenaltyLogGrid
+          automaticPenaltyRows={automaticPenaltyRows}
+          loading={analyticsLoading}
+        />
         <Grid container spacing={2}>
           <Grid item xs={12} md={4} ml={-2}>
             <MetricCardsSection

@@ -44,7 +44,8 @@ export const penaltyLogColumnDefs = [
   {
     headerName: i18n.t('org:penaltyLog.columns.description'),
     field: 'description',
-    minWidth: 380
+    flex:2,
+    minWidth: 420
   },
   {
     headerName: i18n.t('org:penaltyLog.columns.penaltyAmount'),
@@ -56,6 +57,7 @@ export const penaltyLogColumnDefs = [
   {
     headerName: i18n.t('org:penaltyLog.columns.dueDate'),
     field: 'dueDate',
+    filter: false,
     minWidth: 160
   },
   {
