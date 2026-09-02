@@ -844,7 +844,7 @@ async def test_get_compliance_report_summary_with_penalty_override_fields(
         assert "penaltyOverrideEnabled" in response_data
         assert "renewablePenaltyOverride" in response_data
         assert "lowCarbonPenaltyOverride" in response_data
-        assert "penaltyOverrideDate" in response_data
+        assert "penaltyOverrideDate" not in response_data
         assert "penaltyOverrideUser" in response_data
 
         assert response_data["penaltyOverrideEnabled"] is True
