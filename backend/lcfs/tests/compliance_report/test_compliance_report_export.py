@@ -2,12 +2,14 @@ import pytest
 import io
 from unittest.mock import AsyncMock, Mock
 from openpyxl import load_workbook
+from openpyxl.workbook import Workbook
 from starlette.responses import StreamingResponse
 
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
 from lcfs.db.models import Organization, CompliancePeriod
 from lcfs.web.api.compliance_report.export import ComplianceReportExporter
+from lcfs.web.api.compliance_report.sheet_exporters.summary import SummarySheetExporter
 from lcfs.web.api.compliance_report.schema import (
     FUEL_SUPPLY_COLUMNS,
     FUEL_SUPPLY_QUARTERLY_COLUMNS,
@@ -19,6 +21,8 @@ from lcfs.web.api.compliance_report.schema import (
     OTHER_USES_COLUMNS,
     FSE_EXPORT_COLUMNS,
     ExportColumn,
+    ComplianceReportSummaryRowSchema,
+    ComplianceReportSummarySchema,
 )
 
 
@@ -270,6 +274,106 @@ def compliance_report_exporter(
         summary_service=mock_summary_service,
     )
     return exporter
+
+
+def _summary_with_penalties(*penalty_rows):
+    return ComplianceReportSummarySchema(
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=list(penalty_rows),
+    )
+
+
+def _worksheet_rows(ws):
+    return [row for row in ws.iter_rows(values_only=True)]
+
+
+@pytest.mark.anyio
+async def test_summary_export_excludes_penalty_status_columns_for_bceid_users():
+    wb = Workbook()
+    await SummarySheetExporter().export_to_workbook(
+        wb,
+        Mock(),
+        is_government=False,
+        summary=_summary_with_penalties(
+            ComplianceReportSummaryRowSchema(
+                line=11,
+                description="Renewable fuel target penalty",
+                total_value=100,
+                invoice_sent=True,
+                payment_received=False,
+            ),
+            ComplianceReportSummaryRowSchema(
+                line=21,
+                description="Low carbon fuel target penalty",
+                total_value=200,
+                invoice_sent=True,
+                payment_received=True,
+            ),
+        ),
+    )
+
+    rows = _worksheet_rows(wb["Summary"])
+
+    assert ("Line", "Description", "Total Value", None, None) in rows
+    assert all("Invoice sent" not in row for row in rows)
+    assert all("Payment received" not in row for row in rows)
+
+
+@pytest.mark.anyio
+async def test_summary_export_includes_penalty_status_columns_for_positive_government_penalties():
+    wb = Workbook()
+    await SummarySheetExporter().export_to_workbook(
+        wb,
+        Mock(),
+        is_government=True,
+        summary=_summary_with_penalties(
+            ComplianceReportSummaryRowSchema(
+                line=11,
+                description="Renewable fuel target penalty",
+                total_value=100,
+                invoice_sent=True,
+                payment_received=False,
+            )
+        ),
+    )
+
+    rows = _worksheet_rows(wb["Summary"])
+
+    assert ("Line", "Description", "Total Value", "Invoice sent", "Payment received") in rows
+    assert ("", "Renewable fuel target penalty", 100, "Yes", "No") in rows
+
+
+@pytest.mark.anyio
+async def test_summary_export_omits_zero_line_11_and_21_penalty_rows():
+    wb = Workbook()
+    await SummarySheetExporter().export_to_workbook(
+        wb,
+        Mock(),
+        is_government=True,
+        summary=_summary_with_penalties(
+            ComplianceReportSummaryRowSchema(
+                line=11,
+                description="Renewable fuel target penalty",
+                total_value=0,
+            ),
+            ComplianceReportSummaryRowSchema(
+                line=21,
+                description="Low carbon fuel target penalty",
+                total_value=0,
+            ),
+            ComplianceReportSummaryRowSchema(
+                line=None,
+                description="Total non-compliance penalty payable",
+                total_value=0,
+            ),
+        ),
+    )
+
+    descriptions = [row[1] for row in _worksheet_rows(wb["Summary"])]
+
+    assert "Renewable fuel target penalty" not in descriptions
+    assert "Low carbon fuel target penalty" not in descriptions
 
 
 class TestComplianceReportExporter:

@@ -26,6 +26,7 @@ const SummaryTable = ({
   columns,
   data: initialData,
   onCellEditStopped,
+  onBooleanCellEditStopped,
   useParenthesis = false,
   width = '100%',
   savingCellKey = null,
@@ -199,7 +200,12 @@ const SummaryTable = ({
       index === rowIndex ? { ...row, [columnId]: booleanValue } : row
     )
     setData(newData)
-    onCellEditStopped?.(newData, { rowIndex, columnId })
+    const cellInfo = { rowIndex, columnId }
+    if (onBooleanCellEditStopped) {
+      onBooleanCellEditStopped(newData, cellInfo)
+    } else {
+      onCellEditStopped?.(newData, cellInfo)
+    }
   }
 
   const handleCellFocus = (rowIndex, columnId) => {
@@ -380,46 +386,60 @@ const SummaryTable = ({
                     }}
                   >
                     {column.type === 'booleanRadio' && row.line ? (
-                      <RadioGroup
-                        row
-                        value={row[column.id] ? 'true' : 'false'}
-                        onChange={(event) =>
-                          handleBooleanCellChange(
-                            rowIndex,
-                            column.id,
-                            event.target.value
-                          )
-                        }
-                        sx={{
-                          justifyContent: 'center',
-                          flexWrap: 'nowrap',
-                          '& .MuiFormControlLabel-root': {
-                            mr: 1,
-                            whiteSpace: 'nowrap'
+                      <div style={{ position: 'relative' }}>
+                        <RadioGroup
+                          row
+                          value={row[column.id] ? 'true' : 'false'}
+                          onChange={(event) =>
+                            handleBooleanCellChange(
+                              rowIndex,
+                              column.id,
+                              event.target.value
+                            )
                           }
-                        }}
-                      >
-                        <FormControlLabel
-                          value="true"
-                          control={
-                            <Radio
-                              size="small"
-                              disabled={!isCellEditable(rowIndex, column.id)}
-                            />
-                          }
-                          label="Yes"
-                        />
-                        <FormControlLabel
-                          value="false"
-                          control={
-                            <Radio
-                              size="small"
-                              disabled={!isCellEditable(rowIndex, column.id)}
-                            />
-                          }
-                          label="No"
-                        />
-                      </RadioGroup>
+                          sx={{
+                            justifyContent: 'center',
+                            flexWrap: 'nowrap',
+                            '& .MuiFormControlLabel-root': {
+                              mr: 1,
+                              whiteSpace: 'nowrap'
+                            }
+                          }}
+                        >
+                          <FormControlLabel
+                            value="true"
+                            control={
+                              <Radio
+                                size="small"
+                                disabled={!isCellEditable(rowIndex, column.id)}
+                              />
+                            }
+                            label="Yes"
+                          />
+                          <FormControlLabel
+                            value="false"
+                            control={
+                              <Radio
+                                size="small"
+                                disabled={!isCellEditable(rowIndex, column.id)}
+                              />
+                            }
+                            label="No"
+                          />
+                        </RadioGroup>
+                        {isCellSaving(rowIndex, column.id) && (
+                          <CircularProgress
+                            size={18}
+                            color="primary"
+                            sx={{
+                              position: 'absolute',
+                              right: 2,
+                              top: '50%',
+                              transform: 'translateY(-50%)'
+                            }}
+                          />
+                        )}
+                      </div>
                     ) : isCellEditable(rowIndex, column.id) &&
                       !isCellLocked(rowIndex, row) ? (
                       <div

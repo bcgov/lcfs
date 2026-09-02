@@ -25,6 +25,9 @@ from lcfs.db.models import (
     FuelSupply,
 )
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportPenaltyStatusHistory import (
+    ComplianceReportPenaltyStatusHistory,
+)
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.transfer import TransferHistory
 from lcfs.web.api.compliance_report.schema import (
@@ -32,7 +35,7 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.core.decorators import repo_handler
-from lcfs.web.exception.exceptions import ServiceException
+from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 logger = structlog.get_logger(__name__)
 
@@ -296,14 +299,6 @@ class ComplianceReportSummaryRepository:
                 elif row.line is None:  # Total row
                     summary_obj.total_non_compliance_penalty_payable = row.total_value
 
-        for row in non_compliance_summary:
-            if row.line == 11:
-                summary_obj.line_11_invoice_sent = bool(row.invoice_sent)
-                summary_obj.line_11_payment_received = bool(row.payment_received)
-            elif row.line == 21:
-                summary_obj.line_21_invoice_sent = bool(row.invoice_sent)
-                summary_obj.line_21_payment_received = bool(row.payment_received)
-
         # Update penalty override fields - only for 2024 reports and later
         if compliance_year and compliance_year >= 2024:
             if hasattr(summary, "penalty_override_enabled"):
@@ -343,6 +338,90 @@ class ComplianceReportSummaryRepository:
             summary_obj.total_non_compliance_penalty_payable = (
                 line_11_total + line_21_total
             )
+
+        self.db.add(summary_obj)
+        await self.db.flush()
+        await self.db.refresh(summary_obj)
+        return summary_obj
+
+    @repo_handler
+    async def update_penalty_status(
+        self,
+        report_id: int,
+        line: int,
+        invoice_sent: bool | None = None,
+        payment_received: bool | None = None,
+        user=None,
+    ) -> ComplianceReportSummary:
+        summary_obj = await self.get_summary_by_report_id(report_id)
+        if not summary_obj:
+            raise DataNotFoundException("Compliance report summary not found.")
+
+        report = await self.db.scalar(
+            select(ComplianceReport).where(
+                ComplianceReport.compliance_report_id == report_id
+            )
+        )
+        if not report:
+            raise DataNotFoundException("Compliance report not found.")
+
+        user_profile_id = getattr(user, "user_profile_id", None)
+        display_name = " ".join(
+            value
+            for value in [
+                getattr(user, "first_name", None),
+                getattr(user, "last_name", None),
+            ]
+            if value
+        ) or getattr(user, "keycloak_username", None)
+
+        def record_change(field_name: str, previous_value: bool, new_value: bool):
+            if previous_value == new_value:
+                return
+            self.db.add(
+                ComplianceReportPenaltyStatusHistory(
+                    summary_id=summary_obj.summary_id,
+                    compliance_report_group_uuid=report.compliance_report_group_uuid,
+                    version=report.version,
+                    line=line,
+                    field_name=field_name,
+                    previous_value=previous_value,
+                    new_value=new_value,
+                    user_profile_id=user_profile_id,
+                    display_name=display_name,
+                )
+            )
+
+        if line == 11:
+            if invoice_sent is not None:
+                record_change(
+                    "invoice_sent",
+                    bool(summary_obj.line_11_invoice_sent),
+                    invoice_sent,
+                )
+                summary_obj.line_11_invoice_sent = invoice_sent
+            if payment_received is not None:
+                record_change(
+                    "payment_received",
+                    bool(summary_obj.line_11_payment_received),
+                    payment_received,
+                )
+                summary_obj.line_11_payment_received = payment_received
+        elif line == 21:
+            if invoice_sent is not None:
+                record_change(
+                    "invoice_sent",
+                    bool(summary_obj.line_21_invoice_sent),
+                    invoice_sent,
+                )
+                summary_obj.line_21_invoice_sent = invoice_sent
+            if payment_received is not None:
+                record_change(
+                    "payment_received",
+                    bool(summary_obj.line_21_payment_received),
+                    payment_received,
+                )
+                summary_obj.line_21_payment_received = payment_received
 
         self.db.add(summary_obj)
         await self.db.flush()

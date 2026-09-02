@@ -889,13 +889,14 @@ class OrganizationsRepository:
         Retrieve compliance report penalty summary data and discretionary penalties
         for a given organization.
         """
-        assessed_reports_cte = (
+        latest_reports_cte = (
             select(
                 ComplianceReportListView.compliance_report_id.label("report_id"),
                 ComplianceReportListView.compliance_period_id.label(
                     "compliance_period_id"
                 ),
                 ComplianceReportListView.compliance_period.label("compliance_year"),
+                ComplianceReportListView.report_status.label("report_status"),
                 func.row_number()
                 .over(
                     partition_by=ComplianceReportListView.compliance_period_id,
@@ -908,20 +909,13 @@ class OrganizationsRepository:
             ).where(
                 ComplianceReportListView.organization_id == organization_id,
                 ComplianceReportListView.is_latest.is_(True),
-                ComplianceReportListView.report_status.in_(
-                    [
-                        ComplianceReportStatusEnum.Submitted,
-                        ComplianceReportStatusEnum.Assessed,
-                        ComplianceReportStatusEnum.Exempted,
-                    ]
-                ),
             )
-        ).cte("assessed_reports")
+        ).cte("latest_reports")
 
         summary_query = (
             select(
-                assessed_reports_cte.c.compliance_period_id,
-                assessed_reports_cte.c.compliance_year,
+                latest_reports_cte.c.compliance_period_id,
+                latest_reports_cte.c.compliance_year,
                 ComplianceReportSummary.line_11_non_compliance_penalty_gasoline.label(
                     "line_11_penalty_gasoline"
                 ),
@@ -930,6 +924,9 @@ class OrganizationsRepository:
                 ),
                 ComplianceReportSummary.line_11_non_compliance_penalty_jet_fuel.label(
                     "line_11_penalty_jet_fuel"
+                ),
+                ComplianceReportSummary.line_11_fossil_derived_base_fuel_total.label(
+                    "line_11_penalty_payable"
                 ),
                 ComplianceReportSummary.line_21_non_compliance_penalty_payable.label(
                     "line_21_penalty_payable"
@@ -959,10 +956,29 @@ class OrganizationsRepository:
             .join(
                 ComplianceReportSummary,
                 ComplianceReportSummary.compliance_report_id
-                == assessed_reports_cte.c.report_id,
+                == latest_reports_cte.c.report_id,
             )
-            .where(assessed_reports_cte.c.row_number == 1)
-            .order_by(assessed_reports_cte.c.compliance_year.asc())
+            .where(latest_reports_cte.c.row_number == 1)
+            .where(
+                or_(
+                    latest_reports_cte.c.report_status.in_(
+                        [
+                            ComplianceReportStatusEnum.Submitted,
+                            ComplianceReportStatusEnum.Assessed,
+                            ComplianceReportStatusEnum.Exempted,
+                        ]
+                    ),
+                    ComplianceReportSummary.line_11_fossil_derived_base_fuel_total
+                    > 0,
+                    ComplianceReportSummary.line_21_non_compliance_penalty_payable
+                    > 0,
+                    ComplianceReportSummary.line_11_invoice_sent.is_(True),
+                    ComplianceReportSummary.line_11_payment_received.is_(True),
+                    ComplianceReportSummary.line_21_invoice_sent.is_(True),
+                    ComplianceReportSummary.line_21_payment_received.is_(True),
+                )
+            )
+            .order_by(latest_reports_cte.c.compliance_year.asc())
         )
 
         summaries = (await self.db.execute(summary_query)).mappings().all()

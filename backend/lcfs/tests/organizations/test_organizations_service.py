@@ -322,6 +322,64 @@ async def test_get_penalty_analytics_aggregates_values(
 
 
 @pytest.mark.anyio
+async def test_get_penalty_analytics_uses_persisted_line_11_total(
+    penalty_service, mock_repo
+):
+    summaries = [
+        {
+            "compliance_period_id": 1,
+            "compliance_year": "2025",
+            "line_11_penalty_gasoline": 0.0,
+            "line_11_penalty_diesel": 0.0,
+            "line_11_penalty_jet_fuel": 0.0,
+            "line_11_penalty_payable": 18000.0,
+            "line_21_penalty_payable": 0.0,
+            "penalty_override_enabled": False,
+            "renewable_penalty_override": None,
+            "low_carbon_penalty_override": None,
+        }
+    ]
+
+    mock_repo.get_penalty_analytics_data = AsyncMock(return_value=(summaries, []))
+
+    result = await penalty_service.get_penalty_analytics(organization_id=123)
+
+    assert result.yearly_penalties[0].auto_renewable == pytest.approx(18000.0)
+    assert result.yearly_penalties[0].total_automatic == pytest.approx(18000.0)
+    assert result.totals.auto_renewable == pytest.approx(18000.0)
+    assert result.totals.total == pytest.approx(18000.0)
+
+
+@pytest.mark.anyio
+async def test_get_penalty_analytics_uses_line_21_penalty_payable(
+    penalty_service, mock_repo
+):
+    summaries = [
+        {
+            "compliance_period_id": 1,
+            "compliance_year": "2025",
+            "line_11_penalty_gasoline": 0.0,
+            "line_11_penalty_diesel": 0.0,
+            "line_11_penalty_jet_fuel": 0.0,
+            "line_11_penalty_payable": 0.0,
+            "line_21_penalty_payable": 12500.0,
+            "penalty_override_enabled": False,
+            "renewable_penalty_override": None,
+            "low_carbon_penalty_override": None,
+        }
+    ]
+
+    mock_repo.get_penalty_analytics_data = AsyncMock(return_value=(summaries, []))
+
+    result = await penalty_service.get_penalty_analytics(organization_id=123)
+
+    assert result.yearly_penalties[0].auto_low_carbon == pytest.approx(12500.0)
+    assert result.yearly_penalties[0].total_automatic == pytest.approx(12500.0)
+    assert result.totals.auto_low_carbon == pytest.approx(12500.0)
+    assert result.totals.total == pytest.approx(12500.0)
+
+
+@pytest.mark.anyio
 async def test_get_penalty_logs_paginated(penalty_service, mock_repo):
     pagination = PaginationRequestSchema(page=2, size=5, filters=[], sort_orders=[])
 

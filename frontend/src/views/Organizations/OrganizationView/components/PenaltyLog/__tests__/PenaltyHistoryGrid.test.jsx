@@ -4,7 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
-import { PenaltyHistoryGrid } from '../PenaltyHistoryGrid'
+import {
+  AutomaticPenaltyLogGrid,
+  PenaltyHistoryGrid
+} from '../PenaltyGrids'
+
+const mockBCGridViewer = vi.hoisted(() => vi.fn())
 
 // Mock hooks
 const mockNavigate = vi.fn()
@@ -19,6 +24,7 @@ vi.mock('react-router-dom', async () => {
 const mockT = vi.fn((key, options) => {
   const translations = {
     'org:penaltyLog.history': 'Penalty history',
+    'org:penaltyLog.discretionaryPenalties': 'Penalty history',
     'org:penaltyLog.addPenaltyBtn': 'Add/Edit discretionary penalties'
   }
   return translations[key] || options?.defaultValue || key
@@ -69,19 +75,31 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock BCGridViewer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: ({ columnDefs, queryData }) => (
-    <div data-testid="bc-grid-viewer">
-      <div data-testid="column-count">{columnDefs?.length || 0}</div>
-      <div data-testid="data-loaded">
-        {queryData?.data?.penaltyLogs?.length || 0}
+  BCGridViewer: (props) => {
+    mockBCGridViewer(props)
+    return (
+      <div data-testid="bc-grid-viewer">
+        <div data-testid="column-count">{props.columnDefs?.length || 0}</div>
+        <div data-testid="data-loaded">
+          {props.queryData?.data?.penaltyLogs?.length || 0}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 }))
 
 // Mock Role component
 vi.mock('@/components/Role', () => ({
   Role: ({ children, roles }) => <div data-testid="role-wrapper">{children}</div>
+}))
+
+vi.mock('@/components/BCButton', () => ({
+  __esModule: true,
+  default: ({ children, onClick, ...props }) => (
+    <button onClick={onClick} {...props}>
+      {children}
+    </button>
+  )
 }))
 
 // Mock ClearFiltersButton
@@ -227,6 +245,91 @@ describe('PenaltyHistoryGrid - Component Functionality', () => {
 
     expect(container).toBeTruthy()
     expect(screen.getByText('Penalty history')).toBeInTheDocument()
+  })
+
+  it('should pass minWidth-based widths to avoid equal flex distribution', () => {
+    renderComponent()
+
+    const gridProps = mockBCGridViewer.mock.calls.find(
+      ([props]) => props.gridKey === 'penalty-log-history'
+    )?.[0]
+
+    expect(gridProps).toBeDefined()
+    expect(gridProps.columnState).toEqual([])
+    expect(gridProps.columnDefs.every((columnDef) => !columnDef.flex)).toBe(
+      true
+    )
+    expect(
+      gridProps.columnDefs.every(
+        (columnDef) => columnDef.width === columnDef.minWidth
+      )
+    ).toBe(true)
+  })
+})
+
+describe('AutomaticPenaltyLogGrid - Grid Sizing', () => {
+  let queryClient
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false }
+      }
+    })
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    queryClient.clear()
+  })
+
+  const renderComponent = (automaticPenaltyRows = []) => {
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={theme}>
+          <MemoryRouter>
+            <AutomaticPenaltyLogGrid
+              automaticPenaltyRows={automaticPenaltyRows}
+            />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>
+    )
+  }
+
+  it('should pass minWidth-based widths to avoid equal flex distribution', () => {
+    renderComponent()
+
+    const gridProps = mockBCGridViewer.mock.calls.find(
+      ([props]) => props.gridKey === 'automatic-penalty-log-history'
+    )?.[0]
+
+    expect(gridProps).toBeDefined()
+    expect(gridProps.columnState).toEqual([])
+    expect(gridProps.columnDefs.every((columnDef) => !columnDef.flex)).toBe(
+      true
+    )
+    expect(
+      gridProps.columnDefs.every(
+        (columnDef) => columnDef.width === columnDef.minWidth
+      )
+    ).toBe(true)
+  })
+
+  it('counts total automatic penalty rows and invoiced rows', () => {
+    renderComponent([
+      { penaltyLogId: 'auto-1', penaltyAmount: 100, invoiceSent: true },
+      { penaltyLogId: 'auto-2', penaltyAmount: 200, invoiceSent: false },
+      { penaltyLogId: 'auto-3', penaltyAmount: 300, invoiceSent: true }
+    ])
+
+    expect(screen.getByText('Total penalties')).toBeInTheDocument()
+    expect(screen.getByText('Invoiced:')).toBeInTheDocument()
+    expect(screen.getAllByText('3').length).toBeGreaterThan(0)
+    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(screen.queryByText('$600.00')).not.toBeInTheDocument()
+    expect(screen.queryByText('$400.00')).not.toBeInTheDocument()
   })
 })
 

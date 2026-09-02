@@ -196,7 +196,7 @@ export const useGetComplianceReportSummary = (
   const client = useApiService()
 
   const {
-    staleTime = DEFAULT_STALE_TIME,
+    staleTime = 0,
     gcTime = DEFAULT_CACHE_TIME,
     enabled = true,
     ...restOptions
@@ -316,8 +316,71 @@ export const useUpdateComplianceReportSummary = (
       return await client.put(path, data)
     },
     onSuccess: (data, variables, context) => {
+      queryClient.setQueryData(
+        ['compliance-report-summary', reportID],
+        data?.data
+      )
+      queryClient.invalidateQueries({
+        queryKey: ['compliance-report-summary', reportID],
+        refetchType: 'active'
+      })
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
       queryClient.invalidateQueries({
         queryKey: ['compliance-report-summary', reportID]
+      })
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useUpdateComplianceReportPenaltyStatus = (
+  reportID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      if (!reportID) {
+        throw new Error('Report ID is required')
+      }
+      const path = apiRoutes.updateComplianceReportPenaltyStatus.replace(
+        ':reportID',
+        String(reportID ?? '')
+      )
+      return await client.put(path, data)
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.setQueryData(
+        ['compliance-report-summary', reportID],
+        (old) => {
+          if (!old) return old
+
+          const updatedStatus = data?.data
+
+          return {
+            ...old,
+            nonCompliancePenaltySummary: old.nonCompliancePenaltySummary?.map(
+              (row: any) =>
+                Number(row.line) === Number(updatedStatus?.line)
+                  ? {
+                      ...row,
+                      invoiceSent: updatedStatus.invoiceSent,
+                      paymentReceived: updatedStatus.paymentReceived
+                    }
+                  : row
+            )
+          }
+        }
+      )
+      queryClient.invalidateQueries({
+        queryKey: ['organization-penalty-analytics']
       })
       onSuccess?.(data, variables, context)
     },

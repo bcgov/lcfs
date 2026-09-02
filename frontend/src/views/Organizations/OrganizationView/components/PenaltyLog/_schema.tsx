@@ -39,12 +39,12 @@ export const penaltyLogColumnDefs = [
     headerName: i18n.t('org:penaltyLog.columns.complianceYear'),
     field: 'complianceYear',
     filter: 'agTextColumnFilter',
-    minWidth: 140
+    minWidth: 200
   },
   {
     headerName: i18n.t('org:penaltyLog.columns.description'),
     field: 'description',
-    minWidth: 420
+    minWidth: 380
   },
   {
     headerName: i18n.t('org:penaltyLog.columns.penaltyAmount'),
@@ -61,16 +61,89 @@ export const penaltyLogColumnDefs = [
   {
     headerName: i18n.t('org:penaltyLog.columns.invoiced'),
     field: 'invoiceSent',
-    minWidth: 160,
-    filter: 'agSetColumnFilter',
+    minWidth: 120,
     valueFormatter: booleanValueFormatter
   },
   {
     headerName: i18n.t('org:penaltyLog.columns.paid'),
     field: 'paymentReceived',
-    minWidth: 160,
-    filter: 'agSetColumnFilter',
+    minWidth: 120,
     valueFormatter: booleanValueFormatter
+  }
+]
+
+export const discretionaryPenaltyLogColumnDefs = [
+  {
+    headerName: i18n.t('org:penaltyLog.columns.compliancePeriod', {
+      defaultValue: 'Compliance period'
+    }),
+    field: 'complianceYear',
+    filter: 'agTextColumnFilter',
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.contraventionType', {
+      defaultValue: 'Contravention type'
+    }),
+    field: 'contraventionType',
+    filter: 'agTextColumnFilter',
+    minWidth: 320
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.penaltyAmount', {
+      defaultValue: 'Penalty amount (CAD)'
+    }),
+    field: 'penaltyAmount',
+    valueFormatter: ({ value }) =>
+      value === null || value === undefined ? '' : currencyFormatter(value),
+    minWidth: 250
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.offenceHistory', {
+      defaultValue: 'History of offences'
+    }),
+    field: 'offenceHistory',
+    valueFormatter: booleanValueFormatter,
+    minWidth: 190
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.deliberate', {
+      defaultValue: 'Deliberate contravention'
+    }),
+    field: 'deliberate',
+    valueFormatter: booleanValueFormatter,
+    minWidth: 350
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.effortsToCorrect', {
+      defaultValue: 'Efforts to correct'
+    }),
+    field: 'effortsToCorrect',
+    valueFormatter: booleanValueFormatter,
+    minWidth: 220
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.economicBenefitDerived', {
+      defaultValue: 'Economic benefit derived'
+    }),
+    field: 'economicBenefitDerived',
+    valueFormatter: booleanValueFormatter,
+    minWidth: 400
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.effortsToPreventRecurrence', {
+      defaultValue: 'Efforts to prevent recurrence'
+    }),
+    field: 'effortsToPreventRecurrence',
+    valueFormatter: booleanValueFormatter,
+    minWidth: 280
+  },
+  {
+    headerName: i18n.t('org:penaltyLog.columns.notes', {
+      defaultValue: 'Notes'
+    }),
+    field: 'notes',
+    minWidth: 360
   }
 ]
 

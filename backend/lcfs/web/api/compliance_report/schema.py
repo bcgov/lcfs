@@ -426,6 +426,8 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
     max_jet_fuel: Optional[float] = None
     invoice_sent: Optional[bool] = None
     payment_received: Optional[bool] = None
+    penalty_status_updated_by: Optional[str] = None
+    penalty_status_updated_at: Optional[datetime] = None
 
 
 class ComplianceReportSummarySchema(BaseSchema):
@@ -468,6 +470,18 @@ class ComplianceReportSummaryUpdateSchema(BaseSchema):
     low_carbon_penalty_override: Optional[float] = None
     penalty_override_date: Optional[datetime] = None
     penalty_override_user: Optional[int] = None
+
+
+class ComplianceReportPenaltyStatusUpdateSchema(BaseSchema):
+    line: int
+    invoice_sent: Optional[bool] = None
+    payment_received: Optional[bool] = None
+
+
+class ComplianceReportPenaltyStatusSchema(BaseSchema):
+    line: int
+    invoice_sent: bool
+    payment_received: bool
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):

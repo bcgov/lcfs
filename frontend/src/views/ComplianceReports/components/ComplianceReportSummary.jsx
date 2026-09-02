@@ -19,6 +19,7 @@ import {
 } from './_schema'
 import {
   useGetComplianceReportSummary,
+  useUpdateComplianceReportPenaltyStatus,
   useUpdateComplianceReportSummary
 } from '@/hooks/useComplianceReports'
 import BCTypography from '@/components/BCTypography'
@@ -104,10 +105,44 @@ const ComplianceReportSummary = ({
   const { data, isLoading, isError, error, isFetching } =
     useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
-    useUpdateComplianceReportSummary(data?.complianceReportId, {
+    useUpdateComplianceReportSummary(reportID, {
       onSuccess: (response) => {
         setSummaryData(response.data)
         setSavingCellKey(null)
+      },
+      onError: (error) => {
+        setSavingCellKey(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    })
+  const { mutate: updateComplianceReportPenaltyStatus } =
+    useUpdateComplianceReportPenaltyStatus(reportID, {
+      onSuccess: (response) => {
+        setSummaryData((currentSummary) => {
+          if (!currentSummary) return currentSummary
+
+          return {
+            ...currentSummary,
+            nonCompliancePenaltySummary:
+              currentSummary.nonCompliancePenaltySummary?.map((row) =>
+                Number(row.line) === Number(response.data?.line)
+                  ? {
+                      ...row,
+                      invoiceSent: response.data.invoiceSent,
+                      paymentReceived: response.data.paymentReceived
+                    }
+                  : row
+              )
+          }
+        })
+        setSavingCellKey(null)
+        alertRef.current?.triggerAlert({
+          message: 'Penalty status updated.',
+          severity: 'success'
+        })
       },
       onError: (error) => {
         setSavingCellKey(null)
@@ -193,6 +228,36 @@ const ComplianceReportSummary = ({
       currentUser,
       penaltyOverrideEnabled
     ]
+  )
+
+  const handlePenaltyStatusCellEdit = useCallback(
+    (data, cellInfo = null) => {
+      const updatedData = {
+        ...summaryData,
+        nonCompliancePenaltySummary: data
+      }
+      const row = data[cellInfo?.rowIndex]
+
+      setSummaryData(updatedData)
+
+      if (!row?.line) return
+
+      if (cellInfo) {
+        setSavingCellKey(`penalty_${cellInfo.rowIndex}_${cellInfo.columnId}`)
+      }
+
+      alertRef.current?.triggerAlert({
+        message: 'Updating penalty status...',
+        severity: 'pending'
+      })
+
+      updateComplianceReportPenaltyStatus({
+        line: Number(row.line),
+        invoiceSent: !!row.invoiceSent,
+        paymentReceived: !!row.paymentReceived
+      })
+    },
+    [summaryData, updateComplianceReportPenaltyStatus]
   )
 
   // Computed data for non-compliance penalty summary based on override state
@@ -373,6 +438,7 @@ const ComplianceReportSummary = ({
                   columns={nonComplianceColumns(
                     t,
                     penaltyOverrideEnabled,
+                    isGovernmentUser,
                     isGovernmentUser
                   )}
                   data={nonCompliancePenaltyDisplayData}
@@ -381,6 +447,9 @@ const ComplianceReportSummary = ({
                     isGovernmentUser || penaltyOverrideEnabled
                       ? handlePenaltyOverrideCellEdit
                       : undefined
+                  }
+                  onBooleanCellEditStopped={
+                    isGovernmentUser ? handlePenaltyStatusCellEdit : undefined
                   }
                   savingCellKey={savingCellKey}
                   tableType="penalty"
