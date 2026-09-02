@@ -422,11 +422,15 @@ async def test_get_compliance_report_summary_success(
         assert response.status_code == 200
 
         expected_response = json.loads(
-            mock_compliance_report_summary.json(by_alias=True)
+            mock_compliance_report_summary.model_dump_json(
+                by_alias=True, exclude_none=True
+            )
         )
 
         assert response.json() == expected_response
-        mock_calculate_compliance_report_summary.assert_called_once_with(1)
+        mock_calculate_compliance_report_summary.assert_called_once_with(
+            1, include_penalty_status=False
+        )
         mock_validate_organization_access.assert_called_once_with(1)
 
 
@@ -510,11 +514,15 @@ async def test_update_compliance_report_summary_success(
         assert response.status_code == 200
 
         expected_response = json.loads(
-            mock_compliance_report_summary.json(by_alias=True)
+            mock_compliance_report_summary.model_dump_json(
+                by_alias=True, exclude_none=True
+            )
         )
 
         assert response.json() == expected_response
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, include_penalty_status=False
+        )
         mock_validate_organization_access.assert_called_once_with(1)
 
 
@@ -622,7 +630,9 @@ async def test_update_compliance_report_summary_with_penalty_override_director_r
         response = await client.put(url, json=payload)
 
         assert response.status_code == 200
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, include_penalty_status=True
+        )
         mock_validate_organization_access.assert_called_once_with(1)
 
 
@@ -670,7 +680,9 @@ async def test_update_compliance_report_summary_penalty_override_non_director_al
         # Currently the API allows any authorized user to set penalty override values
         # Role-based restrictions may be implemented in future PRs
         assert response.status_code == 200
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, include_penalty_status=False
+        )
 
 
 @pytest.mark.anyio
@@ -715,7 +727,9 @@ async def test_update_compliance_report_summary_penalty_override_disabled(
         response = await client.put(url, json=payload)
 
         assert response.status_code == 200
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, include_penalty_status=True
+        )
 
 
 @pytest.mark.anyio
@@ -759,7 +773,9 @@ async def test_update_compliance_report_summary_penalty_override_zero_values(
         response = await client.put(url, json=payload)
 
         assert response.status_code == 200
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, include_penalty_status=True
+        )
 
 
 @pytest.mark.anyio
@@ -835,6 +851,9 @@ async def test_get_compliance_report_summary_with_penalty_override_fields(
         assert response_data["renewablePenaltyOverride"] == 1500.75
         assert response_data["lowCarbonPenaltyOverride"] == 750.50
         assert response_data["penaltyOverrideUser"] == 123
+        mock_get_compliance_report_summary.assert_called_once_with(
+            1, include_penalty_status=True
+        )
 
 
 # update_compliance_report
