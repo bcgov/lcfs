@@ -571,18 +571,17 @@ class ComplianceReportSummaryService:
         if not summary_model:
             raise DataNotFoundException("Compliance report summary not found.")
 
-        if status_data.line == 11:
+        if summary_model.penalty_override_enabled:
             penalty_amount = (
-                summary_model.renewable_penalty_override or 0
-                if summary_model.penalty_override_enabled
-                else summary_model.line_11_fossil_derived_base_fuel_total
+                summary_model.renewable_penalty_override
+                if status_data.line == 11
+                else summary_model.low_carbon_penalty_override
             )
+            penalty_amount = penalty_amount or 0
+        elif status_data.line == 11:
+            penalty_amount = summary_model.line_11_fossil_derived_base_fuel_total
         else:
-            penalty_amount = (
-                summary_model.low_carbon_penalty_override or 0
-                if summary_model.penalty_override_enabled
-                else summary_model.line_21_non_compliance_penalty_payable
-            )
+            penalty_amount = summary_model.line_21_non_compliance_penalty_payable
         if not penalty_amount or penalty_amount <= 0:
             raise ServiceException(
                 "Penalty status can only be updated when the amount payable is greater than zero."

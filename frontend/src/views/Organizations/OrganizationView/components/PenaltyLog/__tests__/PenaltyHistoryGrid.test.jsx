@@ -4,10 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
-import {
-  AutomaticPenaltyLogGrid,
-  PenaltyHistoryGrid
-} from '../PenaltyGrids'
+import { AutomaticPenaltyLogGrid, PenaltyHistoryGrid } from '../PenaltyGrids'
 
 const mockBCGridViewer = vi.hoisted(() => vi.fn())
 
@@ -90,7 +87,9 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock Role component
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => <div data-testid="role-wrapper">{children}</div>
+  Role: ({ children, roles }) => (
+    <div data-testid="role-wrapper">{children}</div>
+  )
 }))
 
 vi.mock('@/components/BCButton', () => ({
@@ -143,7 +142,9 @@ describe('PenaltyHistoryGrid - Button Label', () => {
   it('should render the button with correct label "Add/Edit discretionary penalties"', () => {
     renderComponent()
 
-    expect(screen.getByText('Add/Edit discretionary penalties')).toBeInTheDocument()
+    expect(
+      screen.getByText('Add/Edit discretionary penalties')
+    ).toBeInTheDocument()
   })
 
   it('should use the translation key "org:penaltyLog.addPenaltyBtn"', () => {
@@ -159,7 +160,9 @@ describe('PenaltyHistoryGrid - Button Label', () => {
     expect(button).toBeInTheDocument()
     fireEvent.click(button)
 
-    expect(mockNavigate).toHaveBeenCalledWith('/organizations/456/penalty-log/manage')
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/organizations/456/penalty-log/manage'
+    )
   })
 
   it('should not navigate if organizationId is not provided', () => {
@@ -247,7 +250,7 @@ describe('PenaltyHistoryGrid - Component Functionality', () => {
     expect(screen.getByText('Penalty history')).toBeInTheDocument()
   })
 
-  it('should pass minWidth-based widths to avoid equal flex distribution', () => {
+  it('should pass minimum widths without flex sizing', () => {
     renderComponent()
 
     const gridProps = mockBCGridViewer.mock.calls.find(
@@ -260,9 +263,7 @@ describe('PenaltyHistoryGrid - Component Functionality', () => {
       true
     )
     expect(
-      gridProps.columnDefs.every(
-        (columnDef) => columnDef.width === columnDef.minWidth
-      )
+      gridProps.columnDefs.every((columnDef) => columnDef.minWidth > 0)
     ).toBe(true)
   })
 })
@@ -298,7 +299,7 @@ describe('AutomaticPenaltyLogGrid - Grid Sizing', () => {
     )
   }
 
-  it('should pass minWidth-based widths to avoid equal flex distribution', () => {
+  it('should allow the description column to expand', () => {
     renderComponent()
 
     const gridProps = mockBCGridViewer.mock.calls.find(
@@ -307,13 +308,13 @@ describe('AutomaticPenaltyLogGrid - Grid Sizing', () => {
 
     expect(gridProps).toBeDefined()
     expect(gridProps.columnState).toEqual([])
-    expect(gridProps.columnDefs.every((columnDef) => !columnDef.flex)).toBe(
-      true
-    )
     expect(
-      gridProps.columnDefs.every(
-        (columnDef) => columnDef.width === columnDef.minWidth
+      gridProps.columnDefs.find(
+        (columnDef) => columnDef.field === 'description'
       )
+    ).toMatchObject({ flex: 2, minWidth: 420 })
+    expect(
+      gridProps.columnDefs.every((columnDef) => columnDef.minWidth > 0)
     ).toBe(true)
   })
 
@@ -324,7 +325,7 @@ describe('AutomaticPenaltyLogGrid - Grid Sizing', () => {
       { penaltyLogId: 'auto-3', penaltyAmount: 300, invoiceSent: true }
     ])
 
-    expect(screen.getByText('Total penalties')).toBeInTheDocument()
+    expect(screen.getByText('Total penalties:')).toBeInTheDocument()
     expect(screen.getByText('Invoiced:')).toBeInTheDocument()
     expect(screen.getAllByText('3').length).toBeGreaterThan(0)
     expect(screen.getByText('2')).toBeInTheDocument()
@@ -363,11 +364,16 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   }
 
   it('should handle empty penalty logs', async () => {
-    const { useOrganizationPenaltyLogs } = await import('@/hooks/useOrganization')
+    const { useOrganizationPenaltyLogs } = await import(
+      '@/hooks/useOrganization'
+    )
     const mockHook = vi.mocked(useOrganizationPenaltyLogs)
 
     mockHook.mockReturnValue({
-      data: { penaltyLogs: [], pagination: { total: 0, page: 1, size: 10, totalPages: 0 } },
+      data: {
+        penaltyLogs: [],
+        pagination: { total: 0, page: 1, size: 10, totalPages: 0 }
+      },
       isLoading: false,
       refetch: vi.fn()
     })
@@ -379,7 +385,9 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   })
 
   it('should handle loading state', async () => {
-    const { useOrganizationPenaltyLogs } = await import('@/hooks/useOrganization')
+    const { useOrganizationPenaltyLogs } = await import(
+      '@/hooks/useOrganization'
+    )
     const mockHook = vi.mocked(useOrganizationPenaltyLogs)
 
     mockHook.mockReturnValue({

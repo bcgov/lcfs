@@ -44,7 +44,7 @@ export const penaltyLogColumnDefs = [
   {
     headerName: i18n.t('org:penaltyLog.columns.description'),
     field: 'description',
-    flex:2,
+    flex: 2,
     minWidth: 420
   },
   {
