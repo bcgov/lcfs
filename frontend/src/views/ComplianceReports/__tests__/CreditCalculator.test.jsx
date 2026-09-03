@@ -41,8 +41,12 @@ const mockT = vi.fn((key, options) => {
     'report:endUse': 'End Use',
     'report:ciLabel': 'Determining carbon intensity',
     'report:customCiOption': 'Custom CI',
+    'report:customCiLabel': 'Custom CI',
     'report:fuelCodeLabel': 'Fuel code',
     'report:qtySuppliedLabel': 'Quantity supplied',
+    'report:clearCalculator': 'Clear',
+    'report:copyCalculation': 'Copy',
+    'report:copiedCalculation': 'Copied!',
     'report:formulaBefore2024':
       'Compliance units = (TCI * EER - RCI) * EC / 1,000,000',
     'report:formulaAfter2024':
@@ -270,7 +274,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
     })
 
     it('displays loading state when compliance periods are loading', () => {
@@ -295,10 +299,16 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText('Compliance Year')).toBeInTheDocument()
-      expect(screen.getByText('Select Fuel Type')).toBeInTheDocument()
-      expect(screen.getByText('End Use')).toBeInTheDocument()
-      expect(screen.getByText('Quantity supplied')).toBeInTheDocument()
+      expect(
+        screen.getByText(mockT('report:complianceYear'))
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(mockT('report:selectFuelType'))
+      ).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:endUse'))).toBeInTheDocument()
+      expect(
+        screen.getByText(mockT('report:qtySuppliedLabel'))
+      ).toBeInTheDocument()
     })
   })
 
@@ -311,10 +321,16 @@ describe('CreditCalculator', () => {
       )
 
       // Test that key form elements are present (tests renderError indirectly)
-      expect(screen.getByText('Compliance Year')).toBeInTheDocument()
-      expect(screen.getByText('Select Fuel Type')).toBeInTheDocument()
-      expect(screen.getByText('End Use')).toBeInTheDocument()
-      expect(screen.getByText('Quantity supplied')).toBeInTheDocument()
+      expect(
+        screen.getByText(mockT('report:complianceYear'))
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(mockT('report:selectFuelType'))
+      ).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:endUse'))).toBeInTheDocument()
+      expect(
+        screen.getByText(mockT('report:qtySuppliedLabel'))
+      ).toBeInTheDocument()
     })
   })
 
@@ -326,7 +342,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const clearButton = screen.getByText('Clear')
+      const clearButton = screen.getByText(mockT('report:clearCalculator'))
       fireEvent.click(clearButton)
 
       // Form should be reset - test by checking default state
@@ -342,12 +358,14 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const copyButton = screen.getByText('Copy')
+      const copyButton = screen.getByText(mockT('report:copyCalculation'))
       fireEvent.click(copyButton)
 
       await waitFor(() => {
         expect(vi.mocked(copyToClipboard)).toHaveBeenCalled()
-        expect(screen.getByText('Copied!')).toBeInTheDocument()
+        expect(
+          screen.getByText(mockT('report:copiedCalculation'))
+        ).toBeInTheDocument()
       })
     })
 
@@ -360,13 +378,15 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const copyButton = screen.getByText('Copy')
+      const copyButton = screen.getByText(mockT('report:copyCalculation'))
       fireEvent.click(copyButton)
 
       await waitFor(() => {
         expect(vi.mocked(copyToClipboard)).toHaveBeenCalled()
         // Should still show Copy text on failure
-        expect(screen.getByText('Copy')).toBeInTheDocument()
+        expect(
+          screen.getByText(mockT('report:copyCalculation'))
+        ).toBeInTheDocument()
       })
     })
 
@@ -380,7 +400,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const copyButton = screen.getByText('Copy')
+      const copyButton = screen.getByText(mockT('report:copyCalculation'))
       fireEvent.click(copyButton)
 
       await waitFor(() => {
@@ -408,7 +428,7 @@ describe('CreditCalculator', () => {
       )
 
       // Test that component renders without crashing when no data
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
     })
 
     it('handles compliance periods data correctly', () => {
@@ -432,7 +452,7 @@ describe('CreditCalculator', () => {
       )
 
       // Test that periods data is handled
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
     })
 
     it('handles fallback values when no calculated data', () => {
@@ -445,7 +465,7 @@ describe('CreditCalculator', () => {
       )
 
       // Test that component renders without crashing when no calculated data
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
     })
 
     it('formats calculated data correctly', async () => {
@@ -551,7 +571,7 @@ describe('CreditCalculator', () => {
       render(<TestWrapperWithYear />)
 
       // Should render the component
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
     })
 
     it('disables fuel code dropdown based on provision selection', () => {
@@ -575,7 +595,7 @@ describe('CreditCalculator', () => {
 
       render(<TestWrapperWithProvision />)
 
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
     })
 
     it('enables fuel code dropdown for fuel code provisions', () => {
@@ -599,7 +619,7 @@ describe('CreditCalculator', () => {
 
       render(<TestWrapperWithFuelCode />)
 
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
     })
   })
 
@@ -653,9 +673,9 @@ describe('CreditCalculator', () => {
       const endUseOption = await screen.findByTestId('Transportation')
       await clickAndVerify(endUseOption)
 
-      const customOptionRadio = (await screen.findAllByText('Custom CI')).find(
-        (element) => element.getAttribute('role') === 'radio'
-      )
+      const customOptionRadio = (
+        await screen.findAllByText(mockT('report:customCiOption'))
+      ).find((element) => element.getAttribute('role') === 'radio')
 
       expect(customOptionRadio).toBeDefined()
       await clickAndVerify(customOptionRadio)
@@ -901,7 +921,7 @@ describe('CreditCalculator', () => {
 
       render(<TestWrapper2024 />)
 
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
     })
 
     it('displays the post-2024 formula when applicable', () => {
@@ -937,8 +957,10 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
-      expect(screen.getByText('Compliance Year')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(mockT('report:complianceYear'))
+      ).toBeInTheDocument()
     })
   })
 
@@ -956,7 +978,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
 
       vi.restoreAllMocks()
     })
@@ -970,7 +992,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
     })
 
     it('handles different data states', () => {
@@ -981,7 +1003,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
     })
 
     it('displays copy success state temporarily', async () => {
@@ -993,11 +1015,13 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const copyButton = screen.getByText('Copy')
+      const copyButton = screen.getByText(mockT('report:copyCalculation'))
       fireEvent.click(copyButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Copied!')).toBeInTheDocument()
+        expect(
+          screen.getByText(mockT('report:copiedCalculation'))
+        ).toBeInTheDocument()
       })
     })
   })
