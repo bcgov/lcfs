@@ -519,17 +519,14 @@ class OrganizationsRepository:
     async def get_externally_registered_organizations(self, conditions):
         """
         Get all externally registered organizations from the database.
-        Only returns organizations with type 'fuel_supplier'.
-        """
-        # Add fuel supplier type filter to existing conditions
-        fuel_supplier_condition = Organization.org_type.has(
-            OrganizationType.org_type == "fuel_supplier"
-        )
-        all_conditions = conditions + [fuel_supplier_condition]
 
+        Organizations are filtered by registration status only. Transfers are
+        not restricted by organization type, so credit traders and other
+        non-fuel-supplier types must appear as eligible counterparties.
+        """
         query = (
             select(Organization)
-            .where(and_(*all_conditions))
+            .where(and_(*conditions))
             .options(
                 joinedload(Organization.org_type),
                 joinedload(Organization.org_status),

@@ -111,4 +111,28 @@ describe('LookupTable schema', () => {
     ).toBe('38.65')
     expect(eerColumn.valueFormatter({ value: 1 })).toBe('1.00')
   })
+
+  it('uses the controlled select floating filter for categorical columns', () => {
+    const columnSetFilterFields = [
+      'fuelType',
+      'fuelCategory',
+      'endUse',
+      'determiningCarbonIntensity'
+    ]
+
+    columnSetFilterFields.forEach((field) => {
+      const column = lookupTableColumnDefs.find((col) => col.field === field)
+      expect(column.filter).toBe('agTextColumnFilter')
+      expect(column.floatingFilter).toBe(true)
+      expect(column.floatingFilterComponent?.displayName).toBe(
+        'BCSelectFloatingFilter'
+      )
+      expect(column.floatingFilterComponentParams.initialFilterType).toBe(
+        'equals'
+      )
+      expect(column.floatingFilterComponentParams.valueKey).toBe('name')
+      expect(column.floatingFilterComponentParams.labelKey).toBe('name')
+      expect(column.filterParams.filterOptions).toEqual(['equals'])
+    })
+  })
 })

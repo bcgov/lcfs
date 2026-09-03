@@ -1,5 +1,4 @@
 import BCBox from '@/components/BCBox'
-import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/routes/routes'
 import { AppBar, Tab, Tabs } from '@mui/material'
 import { PropTypes } from 'prop-types'
@@ -47,15 +46,15 @@ export function CalculatorMenu({ tabIndex }) {
   const tabs = useMemo(
     () => [
       {
-        label: 'Compliance unit calculator',
+        label: t('common:publicDashboard.links.calculator'),
         content: <CreditCalculator />
       },
       {
-        label: 'Calculation data',
+        label: t('common:publicDashboard.links.calculationData'),
         content: <LookupTableView />
       }
     ],
-    []
+    [t]
   )
 
   const handleSetTabValue = (event, newValue) => {
@@ -63,39 +62,34 @@ export function CalculatorMenu({ tabIndex }) {
   }
 
   return (
-    <BCBox>
-      <BCBox sx={{ mt: 2, bgcolor: 'background.paper' }}>
-        <AppBar
-          position="static"
-          sx={{
-            boxShadow: 'none',
-            border: 'none',
-            backgroundColor: 'transparent'
-          }}
-        >
+    <BCBox sx={{ bgcolor: 'background.paper', pb: { xs: 4, md: 8 } }}>
+      <BCBox
+        component="header"
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          mb: 3
+        }}
+      >
+        <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
           <Tabs
             value={tabIndex}
             onChange={handleSetTabValue}
-            aria-label="Calculator tabs"
+            aria-label={t('common:publicCalculator.tabsAriaLabel')}
             variant="scrollable"
             scrollButtons="auto"
             sx={{
-              borderBottom: '1px solid #D8D8D8',
+              backgroundColor: 'rgba(0, 0, 0, 0.08)',
               width: 'fit-content',
-              maxWidth: { xs: '100%', md: '50%', lg: '40%' },
-              '& .MuiTabs-indicator': {
-                backgroundColor: '#003366',
-                height: '3px'
-              },
+              maxWidth: '100%',
               '& .MuiTab-root': {
                 minWidth: 'auto',
-                paddingX: 3,
-                whiteSpace: 'nowrap',
-                textTransform: 'none',
-                fontSize: '15px',
-                fontWeight: 600,
-                color: '#565656',
-                '&.Mui-selected': { color: '#003366', fontWeight: 700 }
+                minHeight: 36,
+                paddingX: 2,
+                paddingY: 0.75,
+                marginX: 0.25,
+                whiteSpace: 'nowrap'
               },
               '& .MuiTabs-flexContainer': {
                 flexWrap: 'nowrap'
@@ -107,21 +101,13 @@ export function CalculatorMenu({ tabIndex }) {
             ))}
           </Tabs>
         </AppBar>
-
-        {tabIndex === 1 && (
-          <BCTypography variant="h5" mb={4} mt={4} color="primary">
-            Calculation data
-          </BCTypography>
-        )}
-
-        <BCBox sx={{ mt: tabIndex === 0 ? 8 : 2 }}>
-          {tabs.map((tab, idx) => (
-            <TabPanel key={idx} value={tabIndex} index={idx}>
-              {tab.content}
-            </TabPanel>
-          ))}
-        </BCBox>
       </BCBox>
+
+      {tabs.map((tab, idx) => (
+        <TabPanel key={idx} value={tabIndex} index={idx}>
+          {tab.content}
+        </TabPanel>
+      ))}
     </BCBox>
   )
 }

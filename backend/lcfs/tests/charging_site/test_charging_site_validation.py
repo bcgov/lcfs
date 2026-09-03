@@ -427,6 +427,95 @@ class TestChargingSiteValidation:
         assert "own organization" in exc_info.value.detail.lower()
 
     @pytest.mark.anyio
+    @pytest.mark.parametrize("cleared_name", [None, "", "   "])
+    async def test_update_allows_clearing_allocating_org(
+        self, validation, mock_request, mock_charging_site, cleared_name
+    ):
+        """
+        Issue #4977: clearing the allocating organization must pass validation,
+        including for a site that currently holds the user's own org name.
+        """
+        mock_request.user.organization.organization_id = 1
+        mock_request.user.organization.name = "Acme Corp"
+        mock_charging_site.allocating_organization_id = 1
+        mock_charging_site.allocating_organization_name = "Acme Corp"
+        validation.cs_repo.get_charging_site_by_id.return_value = mock_charging_site
+
+        update_schema = ChargingSiteCreateSchema(
+            organization_id=1,
+            site_name="Test Site",
+            street_address="1 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.28,
+            longitude=-123.12,
+            allocating_organization_id=None,
+            allocating_organization_name=cleared_name,
+            intended_users=[],
+        )
+
+        result = await validation.charging_site_delete_update_access(
+            1, 1, update_schema
+        )
+        assert result is True
+
+    @pytest.mark.anyio
+    async def test_create_allows_blank_allocating_org(self, validation, mock_request):
+        """The allocating organization is optional on create."""
+        mock_request.user.organization.organization_id = 1
+        mock_request.user.organization.name = "Acme Corp"
+        validation.cs_repo.charging_site_name_exists.return_value = False
+
+        schema = ChargingSiteCreateSchema(
+            organization_id=1,
+            site_name="Site A",
+            street_address="1 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.28,
+            longitude=-123.12,
+            allocating_organization_name="",
+            intended_users=[],
+        )
+
+        result = await validation.charging_site_create_access(1, schema)
+        assert result is True
+
+    def test_blank_allocating_org_name_normalises_to_none_but_stays_set(self):
+        """
+        A blank name is stored as None, and still counts as explicitly set so
+        the update path clears the stored value instead of leaving it alone.
+        """
+        schema = ChargingSiteCreateSchema(
+            organization_id=1,
+            site_name="Site A",
+            street_address="1 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.28,
+            longitude=-123.12,
+            allocating_organization_name="   ",
+        )
+
+        assert schema.allocating_organization_name is None
+        dumped = schema.model_dump(exclude_unset=True)
+        assert "allocating_organization_name" in dumped
+        assert dumped["allocating_organization_name"] is None
+
+        omitted = ChargingSiteCreateSchema(
+            organization_id=1,
+            site_name="Site A",
+            street_address="1 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.28,
+            longitude=-123.12,
+        )
+        assert "allocating_organization_name" not in omitted.model_dump(
+            exclude_unset=True
+        )
+
+    @pytest.mark.anyio
     async def test_create_allows_different_org_as_allocating_org(
         self, validation, mock_request
     ):

@@ -48,7 +48,8 @@ def checkDuplicateQuery = "SELECT COUNT(*) FROM organization WHERE organization_
 
 // SQL queries to fetch the status and type IDs from the destination database
 def getStatusIdQuery = "SELECT organization_status_id FROM organization_status WHERE status = ?::org_status_enum"
-def getTypeIdQuery = "SELECT organization_type_id FROM organization_type WHERE org_type = ?::org_type_enum"
+// org_type is plain VARCHAR — the org_type_enum type was dropped by migration 2f5a7b9c1d2e1
+def getTypeIdQuery = "SELECT organization_type_id FROM organization_type WHERE org_type = ?"
 
 // SQL query to check if an organization code already exists
 def checkOrganizationCodeQuery = "SELECT COUNT(*) FROM organization WHERE organization_code = ?"
@@ -59,6 +60,16 @@ def insertOrganizationSQL = """
         effective_status, organization_id, organization_code, name, operating_name, email, phone, edrms_record, organization_status_id, organization_type_id, organization_address_id, organization_attorney_address_id, records_address
     ) VALUES (true, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (organization_id) DO NOTHING
+"""
+
+// Organization types are many-to-many once the organization_type_association
+// table exists (issue #4565); organization.organization_type_id stays
+// dual-written, so the plain insert above remains valid either way.
+def checkAssociationTableQuery = "SELECT to_regclass('organization_type_association')"
+def insertTypeAssociationSQL = """
+    INSERT INTO organization_type_association (organization_id, organization_type_id)
+    VALUES (?, ?)
+    ON CONFLICT DO NOTHING
 """
 
 // Fetch connections to both the source and destination databases
@@ -95,6 +106,14 @@ try {
     PreparedStatement statusStmt = destinationConn.prepareStatement(getStatusIdQuery)
     PreparedStatement typeStmt = destinationConn.prepareStatement(getTypeIdQuery)
     PreparedStatement checkDuplicateStmt = destinationConn.prepareStatement(checkDuplicateQuery)
+
+    // Detect whether the #4565 organization_type_association table exists yet
+    boolean hasTypeAssociationTable = false
+    PreparedStatement checkAssocTableStmt = destinationConn.prepareStatement(checkAssociationTableQuery)
+    ResultSet assocTableResult = checkAssocTableStmt.executeQuery()
+    if (assocTableResult.next()) {
+        hasTypeAssociationTable = assocTableResult.getString(1) != null
+    }
 
     // Prepare the SQL insert statements for organization_address and organization_attorney_address
     def insertAddressSQL = """
@@ -260,6 +279,14 @@ try {
         }
         insertOrgStmt.setString(12, recordsAddress)
         insertOrgStmt.executeUpdate()
+
+        // Mirror the single type into the many-to-many association (#4565)
+        if (hasTypeAssociationTable) {
+            PreparedStatement insertAssocStmt = destinationConn.prepareStatement(insertTypeAssociationSQL)
+            insertAssocStmt.setInt(1, organizationId)
+            insertAssocStmt.setInt(2, orgTypeId)
+            insertAssocStmt.executeUpdate()
+        }
     }
 
 } catch (Exception e) {
