@@ -79,13 +79,15 @@ export const FILTER_KEYS = {
   COMPLIANCE_REPORT_GRID: 'compliance-reports-grid-filter',
   TRANSACTIONS_GRID: 'transactions-grid-filter',
   FUEL_CODES_GRID: 'fuel-codes-grid-filter',
-  CI_APPLICATIONS_GRID: 'ci-applications-grid-filter'
+  CI_APPLICATIONS_GRID: 'ci-applications-grid-filter',
+  INITIATIVE_AGREEMENTS_GRID: 'initiative-agreements-grid-filter'
 } as const
 
 export const MAX_FILE_SIZE_BYTES = 52428800 // 50MB
 
 export const DOCUMENT_RENAME_ENABLED_PARENT_TYPES: readonly string[] = [
-  'ci_application'
+  'ci_application',
+  'designatedAction'
 ]
 
 export const isDocumentRenameEnabled = (parentType?: string | null): boolean =>
@@ -108,20 +110,34 @@ const createFileTypeConfig = (
   }
 })
 
+// What the document endpoint accepts, for every parent type. Mirrors the
+// backend's ALLOWED_MIME_TYPES / ALLOWED_FILE_TYPES: the server is the
+// authority and rejects anything else with a 400, so these exist to say
+// no before a doomed upload rather than instead of the server's check.
+const UPLOAD_MIME_TYPES = [
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv',
+  'text/plain'
+]
+const UPLOAD_TYPES_DESCRIPTION =
+  'PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT'
+
 // File upload constants for compliance reports
 export const COMPLIANCE_REPORT_FILE_TYPES = createFileTypeConfig(
-  [
-    'application/pdf',
-    'image/png',
-    'image/jpeg',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/csv',
-    'text/plain'
-  ],
-  'PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT'
+  UPLOAD_MIME_TYPES,
+  UPLOAD_TYPES_DESCRIPTION
+)
+
+// The same allow-list, named for the document tree that also uses it.
+export const DOCUMENT_FILE_TYPES = createFileTypeConfig(
+  UPLOAD_MIME_TYPES,
+  UPLOAD_TYPES_DESCRIPTION
 )
 
 // File upload constants for schedule imports

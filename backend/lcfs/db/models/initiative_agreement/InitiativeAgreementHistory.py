@@ -31,7 +31,7 @@ class InitiativeAgreementHistory(BaseModel, Auditable, EffectiveDates):
     display_name = Column(
         String(255),
         comment="Display name for the initiative agreement history record",
-        nullable=True
+        nullable=True,
     )
     initiative_agreement = relationship("InitiativeAgreement", back_populates="history")
     initiative_agreement_status = relationship("InitiativeAgreementStatus")
