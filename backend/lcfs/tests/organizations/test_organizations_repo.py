@@ -208,6 +208,59 @@ async def test_search_organizations_with_valid_query(organizations_repo, add_mod
 
 
 @pytest.mark.anyio
+async def test_get_externally_registered_organizations_includes_non_fuel_suppliers(
+    organizations_repo, add_models
+):
+    """Transfer counterparties are not restricted by organization type."""
+    credit_trader = Organization(
+        organization_id=101,
+        name="Test Credit Trader",
+        operating_name="Test Credit Trader",
+        organization_type_id=6,  # Credit trader type ID
+        organization_status_id=2,  # Registered
+    )
+    await add_models([credit_trader])
+
+    conditions = [
+        Organization.org_status.has(status="Registered"),
+        Organization.organization_id != 1,
+    ]
+    results = await organizations_repo.get_externally_registered_organizations(
+        conditions
+    )
+
+    assert 101 in [
+        org.organization_id for org in results
+    ], "Expected the registered credit trader to be an eligible counterparty"
+
+
+@pytest.mark.anyio
+async def test_get_externally_registered_organizations_excludes_unregistered(
+    organizations_repo, add_models
+):
+    unregistered = Organization(
+        organization_id=102,
+        name="Test Unregistered Supplier",
+        operating_name="Test Unregistered Supplier",
+        organization_type_id=1,  # Fuel supplier type ID
+        organization_status_id=1,  # Unregistered
+    )
+    await add_models([unregistered])
+
+    conditions = [
+        Organization.org_status.has(status="Registered"),
+        Organization.organization_id != 1,
+    ]
+    results = await organizations_repo.get_externally_registered_organizations(
+        conditions
+    )
+
+    org_ids = [org.organization_id for org in results]
+    assert 102 not in org_ids, "Expected unregistered organizations to be excluded"
+    assert 1 not in org_ids, "Expected the requesting organization to be excluded"
+
+
+@pytest.mark.anyio
 async def test_search_organizations_with_empty_query(organizations_repo):
     # Perform the search with an empty query
     results = await organizations_repo.search_organizations_by_name("")
