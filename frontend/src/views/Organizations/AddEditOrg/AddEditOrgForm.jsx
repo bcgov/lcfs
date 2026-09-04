@@ -300,7 +300,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       recordsAddress: data.recordsAddress || '',
       hasEarlyIssuance: data.hasEarlyIssuance === 'yes',
       organizationStatusId: parseInt(data.orgRegForTransfers),
-      organizationTypeIds: data.orgTypeIds.map((id) => parseInt(id)),
+      organizationTypeIds: (data.orgTypeIds || []).map((id) => parseInt(id)),
       availableRoles: data.availableRoles || [],
       creditTradingEnabled: data.orgCreditTradingEnabled === 'yes',
       address: {

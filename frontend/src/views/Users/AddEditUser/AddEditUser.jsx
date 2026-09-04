@@ -306,7 +306,7 @@ export const AddEditUser = ({
           ? [
               ...data.adminRole,
               ...(data.readOnly === ''
-                ? data.bceidRoles.filter(
+                ? (data.bceidRoles || []).filter(
                     (role) =>
                       allowedBceidRoles == null ||
                       allowedBceidRoles.includes(role)

@@ -31,7 +31,9 @@ const mockHandleSubmit = vi.fn((fn) => (event) => {
     orgPostalCodeZipCode: 'V6B3K9',
     orgRegForTransfers: '1',
     hasEarlyIssuance: 'no',
-    orgEDRMSRecord: 'EDRMS-123'
+    orgEDRMSRecord: 'EDRMS-123',
+    orgTypeIds: ['1'],
+    availableRoles: ['Compliance Reporting']
   })
 })
 
