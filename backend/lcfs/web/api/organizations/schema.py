@@ -352,6 +352,14 @@ class OrganizationCreditMarketListingSchema(BaseSchema):
     credit_market_contact_phone: Optional[str] = None
 
 
+class CreditMarketAuditChangeSchema(BaseSchema):
+    """A single field change recorded in a credit market audit entry."""
+
+    field: str
+    old_value: Optional[Union[str, int, bool]] = None
+    new_value: Optional[Union[str, int, bool]] = None
+
+
 class CreditMarketAuditLogItemSchema(BaseSchema):
     credit_market_audit_log_id: int
     organization_name: str
@@ -360,6 +368,9 @@ class CreditMarketAuditLogItemSchema(BaseSchema):
     contact_person: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+    display_in_credit_market: bool = False
+    action: Optional[str] = None
+    changes: List[CreditMarketAuditChangeSchema] = []
     changed_by: Optional[str] = None
     uploaded_date: Optional[datetime] = None
 
