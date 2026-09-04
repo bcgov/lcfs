@@ -3103,6 +3103,53 @@ async def test_line_15_16_zero_when_no_assessed_report_for_supplemental(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("compliance_year", ["2024", "2025"])
+async def test_locked_supplemental_summary_recomputes_carry_forward_when_no_assessed_report(
+    compliance_report_summary_service,
+    mock_repo,
+    compliance_year,
+):
+    """
+    Locked supplemental reports without an assessed same-period baseline should
+    not display previous-version issued units as Line 15/16 carry-forward.
+
+    This covers historical/migrated records such as CR2772 where the final
+    transaction was created for the correct issuance, but the stored summary
+    still showed Line 15 = current issuance and Line 20 = 0.
+    """
+    summary = make_summary(locked=True)
+    summary.summary_id = 1
+    summary.compliance_report_id = 2772
+    summary.line_15_banked_units_used = 212
+    summary.line_16_banked_units_remaining = 0
+    summary.line_17_non_banked_units_used = 1000
+    summary.line_18_units_to_be_banked = 212
+    summary.line_19_units_to_be_exported = 0
+    summary.line_20_surplus_deficit_units = 0
+    summary.line_21_non_compliance_penalty_payable = 0
+    summary.line_22_compliance_units_issued = 1000
+
+    report = make_report(1, ComplianceReportStatusEnum.Assessed, compliance_year)
+    report.summary = summary
+    report.compliance_report_id = 2772
+
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
+    mock_repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
+
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(
+            report_id=2772
+        )
+    )
+
+    line_values = _get_line_values(result.low_carbon_fuel_target_summary)
+    assert line_values[15] == 0
+    assert line_values[16] == 0
+    assert line_values[20] == 212
+    assert line_values[22] == 1212
+
+
+@pytest.mark.anyio
 async def test_line_15_16_uses_assessed_report_values(
     compliance_report_summary_service,
     mock_repo,
