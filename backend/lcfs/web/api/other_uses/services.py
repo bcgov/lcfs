@@ -1,4 +1,3 @@
-import math
 import structlog
 import uuid
 from fastapi import Depends, HTTPException, status, Request
@@ -6,7 +5,7 @@ from typing import Optional
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.base import calculate_total_pages, PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
@@ -182,7 +181,7 @@ class OtherUsesServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
             other_uses=other_uses,
         )
