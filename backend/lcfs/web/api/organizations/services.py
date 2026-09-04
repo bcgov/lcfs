@@ -19,6 +19,8 @@ from lcfs.db.models.organization.OrganizationStatus import (
 from lcfs.db.models.organization.OrganizationType import OrganizationType
 from lcfs.db.models.transaction import Transaction
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.user.role_domains import ORG_CONTROLLABLE_ROLES
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import (
     calculate_total_pages,
@@ -28,6 +30,7 @@ from lcfs.web.api.base import (
     get_field_for_filter,
     validate_pagination,
 )
+from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -54,15 +57,81 @@ class OrganizationsService:
         request: Request = None,
         repo: OrganizationsRepository = Depends(OrganizationsRepository),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
+        notification_service: NotificationService = Depends(NotificationService),
     ) -> None:
         self.request = (request,)
         self.repo = repo
         self.transaction_repo = transaction_repo
+        self.notification_service = notification_service
 
-    async def _requires_bceid(self, organization_type_id: int) -> bool:
-        """Check if organization type requires BCeID."""
-        org_type = await self.repo.get_organization_type(organization_type_id)
-        return org_type.is_bceid_user if org_type else True
+    async def _get_org_types(self, organization_type_ids: List[int]):
+        """Resolve organization type ids, raising on unknown ids."""
+        org_types = await self.repo.get_organization_types_by_ids(
+            organization_type_ids
+        )
+        missing = set(organization_type_ids) - {
+            t.organization_type_id for t in org_types
+        }
+        if missing:
+            raise ValueError(f"Unknown organization type id(s): {sorted(missing)}")
+        return org_types
+
+    @staticmethod
+    def _requires_bceid(org_types) -> bool:
+        """An organization requires BCeID if any of its types is a BCeID type."""
+        return any(t.is_bceid_user for t in org_types)
+
+    @staticmethod
+    def _primary_type_id(org_types) -> int:
+        """Primary type (lowest display order) dual-written to the legacy FK."""
+        return min(
+            org_types,
+            key=lambda t: (
+                t.display_order if t.display_order is not None else 999,
+                t.organization_type_id,
+            ),
+        ).organization_type_id
+
+    async def _apply_available_role_changes(
+        self, organization_id: int, available_role_names: List[str]
+    ) -> None:
+        """Persist the organization's available-role set and auto-remove
+        withdrawn roles from the organization's users (#4565).
+
+        IA Signer rides on IA Proponent: withdrawing IA Proponent also strips
+        IA Signer from users, though IA Signer itself is never stored in the
+        available-role table.
+        """
+        role_id_map = await self.repo.get_role_ids_by_enums(
+            list(ORG_CONTROLLABLE_ROLES | {RoleEnum.IA_SIGNER})
+        )
+        new_ids = {role_id_map[RoleEnum(name)] for name in available_role_names}
+        old_ids = await self.repo.get_available_role_ids(organization_id)
+
+        await self.repo.set_available_roles(organization_id, list(new_ids))
+
+        removed_ids = old_ids - new_ids
+        if not removed_ids:
+            return
+        if role_id_map.get(RoleEnum.IA_PROPONENT) in removed_ids:
+            removed_ids.add(role_id_map[RoleEnum.IA_SIGNER])
+
+        affected = await self.repo.delete_user_roles_for_org(
+            organization_id, list(removed_ids)
+        )
+        id_to_enum = {role_id: enum for enum, role_id in role_id_map.items()}
+        for user_profile_id, role_id in affected:
+            role_enum = id_to_enum.get(role_id)
+            if role_enum:
+                await self.notification_service.delete_subscriptions_for_user_role(
+                    user_profile_id, role_enum
+                )
+        logger.info(
+            "Removed org-unavailable roles from users",
+            organization_id=organization_id,
+            removed_role_ids=sorted(removed_ids),
+            affected_assignments=len(affected),
+        )
 
     def apply_organization_filters(self, pagination, conditions):
         """
@@ -111,8 +180,15 @@ class OrganizationsService:
                 continue
 
             if field_name == "org_type":
-                field = get_field_for_filter(OrganizationType, "org_type")
-            elif field_name == "status":
+                # Has-type semantics across the organization's types (#4565)
+                conditions.append(
+                    Organization.org_types.any(
+                        OrganizationType.org_type == filter_value
+                    )
+                )
+                continue
+
+            if field_name == "status":
                 field = get_field_for_filter(OrganizationStatus, "status")
             else:
                 field = get_field_for_filter(Organization, field_name)
@@ -166,9 +242,8 @@ class OrganizationsService:
         self, organization_data: OrganizationCreateSchema, user=None
     ):
         """handles creating an organization"""
-        requires_bceid = await self._requires_bceid(
-            organization_data.organization_type_id
-        )
+        org_types = await self._get_org_types(organization_data.organization_type_ids)
+        requires_bceid = self._requires_bceid(org_types)
 
         org_address = None
         org_attorney_address = None
@@ -213,12 +288,20 @@ class OrganizationsService:
             contact_name=organization_data.contact_name,
             edrms_record=organization_data.edrms_record,
             organization_status_id=organization_data.organization_status_id,
-            organization_type_id=organization_data.organization_type_id,
+            organization_type_id=self._primary_type_id(org_types),
             org_address=org_address,
             org_attorney_address=org_attorney_address,
         )
 
         created_organization = await self.repo.create_organization(org_model)
+
+        await self.repo.set_organization_types(
+            created_organization.organization_id,
+            organization_data.organization_type_ids,
+        )
+        await self._apply_available_role_changes(
+            created_organization.organization_id, organization_data.available_roles
+        )
 
         if (
             hasattr(organization_data, "has_early_issuance")
@@ -252,9 +335,8 @@ class OrganizationsService:
         if not organization:
             raise DataNotFoundException("Organization not found")
 
-        requires_bceid = await self._requires_bceid(
-            organization_data.organization_type_id
-        )
+        org_types = await self._get_org_types(organization_data.organization_type_ids)
+        requires_bceid = self._requires_bceid(org_types)
 
         if (
             hasattr(organization_data, "has_early_issuance")
@@ -277,10 +359,15 @@ class OrganizationsService:
                 )
 
         for key, value in organization_data.dict().items():
-            if key == "has_early_issuance":
+            # Association-backed fields are persisted separately below;
+            # available_roles would otherwise collide with the viewonly
+            # relationship of the same name.
+            if key in ("has_early_issuance", "organization_type_ids", "available_roles"):
                 continue
             if hasattr(organization, key):
                 setattr(organization, key, value)
+
+        organization.organization_type_id = self._primary_type_id(org_types)
 
         if (
             not requires_bceid
@@ -353,6 +440,15 @@ class OrganizationsService:
                         setattr(org_attorney_address, key, value)
 
         updated_organization = await self.repo.update_organization(organization)
+
+        await self.repo.set_organization_types(
+            organization_id, organization_data.organization_type_ids
+        )
+        await self._apply_available_role_changes(
+            organization_id, organization_data.available_roles
+        )
+
+        await FastAPICache.clear()
         return updated_organization
 
     @service_handler
@@ -478,6 +574,7 @@ class OrganizationsService:
                 reserved_balance=org["reserved_balance"],
                 org_status=org["status"],
                 org_type=org.get("org_type"),
+                org_types=org.get("org_types"),
             )
             for org in organization_data
         ]

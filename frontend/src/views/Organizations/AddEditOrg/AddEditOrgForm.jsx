@@ -35,10 +35,23 @@ import Loading from '@/components/Loading'
 import { ROUTES } from '@/routes/routes'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
-import { AddressAutocomplete } from '@/components/BCForm/index.js'
+import {
+  AddressAutocomplete,
+  BCFormCheckbox
+} from '@/components/BCForm/index.js'
+import { roles } from '@/constants/roles'
 import colors from '@/themes/base/colors'
 import { getCurrentEarlyIssuanceYear } from '@/constants/common'
 import ReferenceCompareBox from './ReferenceCompareBox'
+
+// Org-controllable roles assignable to BCeID users (#4565); labels follow the
+// wireframe wording ("Credit transfer" gates the Transfer role).
+const availableRoleOptions = [
+  { value: roles.compliance_reporting, label: 'Compliance reporting' },
+  { value: roles.transfers, label: 'Credit transfer' },
+  { value: roles.ci_applicant, label: 'CI applicant' },
+  { value: roles.ia_proponent, label: 'IA proponent' }
+]
 
 // Component for adding a new organization
 export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
@@ -72,8 +85,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   const [sameAsLegalName, setSameAsLegalName] = useState(false)
   const [sameAsServiceAddress, setSameAsServiceAddress] = useState(false)
 
-  // State for tracking organization type and validation requirements
-  const [selectedOrgType, setSelectedOrgType] = useState(null)
+  // State for tracking validation requirements from the selected org types
   const [requiresBCeID, setRequiresBCeID] = useState(true)
 
   // useForm hook setup with React Hook Form - validation handled in onSubmit
@@ -86,7 +98,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       orgEmailAddress: '',
       orgPhoneNumber: '',
       orgContactName: '',
-      orgType: '1',
+      orgTypeIds: ['1'],
+      availableRoles: [],
       orgRegForTransfers: '',
       orgStreetAddress: '',
       orgCity: '',
@@ -117,42 +130,33 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     control
   } = methods
 
-  // Watch the organization type field for changes
-  const watchedOrgType = watch('orgType')
+  // Watch the organization type selections for changes
+  const watchedOrgTypeIds = watch('orgTypeIds')
 
-  // Effect to handle organization type changes and update validation requirements
+  // Effect to handle organization type changes and update validation
+  // requirements: BCeID rules apply when ANY selected type is a BCeID type.
   useEffect(() => {
-    if (watchedOrgType && orgTypes && orgTypes.length > 0) {
-      const selectedType = orgTypes.find(
-        (type) => type.organizationTypeId === parseInt(watchedOrgType)
+    if (watchedOrgTypeIds && orgTypes && orgTypes.length > 0) {
+      const selectedTypes = orgTypes.filter((type) =>
+        watchedOrgTypeIds.includes(type.organizationTypeId.toString())
       )
+      const newRequiresBCeID =
+        selectedTypes.length === 0 ||
+        selectedTypes.some((type) => type.isBceidUser)
+      setRequiresBCeID(newRequiresBCeID)
 
-      if (selectedType) {
-        setSelectedOrgType(watchedOrgType)
-        const newRequiresBCeID = selectedType.isBceidUser
-        setRequiresBCeID(newRequiresBCeID)
-
-        // Handle validation when switching organization types
-        if (!newRequiresBCeID) {
-          // For non-BCeID types, clear errors for fields that are now optional
-          methods.clearErrors([
-            'orgPhoneNumber',
-            'orgStreetAddress',
-            'orgCity',
-            'orgPostalCodeZipCode'
-          ])
-        }
+      // Handle validation when switching organization types
+      if (!newRequiresBCeID) {
+        // For non-BCeID types, clear errors for fields that are now optional
+        methods.clearErrors([
+          'orgPhoneNumber',
+          'orgStreetAddress',
+          'orgCity',
+          'orgPostalCodeZipCode'
+        ])
       }
     }
-  }, [watchedOrgType, orgTypes])
-
-  // Initialize organization type for new organizations
-  useEffect(() => {
-    if (!orgID && orgTypes && orgTypes.length > 0) {
-      setSelectedOrgType('1')
-      setRequiresBCeID(true)
-    }
-  }, [orgTypes, orgID])
+  }, [watchedOrgTypeIds, orgTypes])
 
   useEffect(() => {
     if (isFetched && data) {
@@ -175,10 +179,14 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         orgEDRMSRecord: data.edrmsRecord,
         recordsAddress: data.recordsAddress || '',
         hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
-        orgType:
-          data.organizationTypeId?.toString() ||
-          data.orgType?.organizationTypeId?.toString() ||
-          '1',
+        orgTypeIds: data.orgTypes?.length
+          ? data.orgTypes.map((type) => type.organizationTypeId.toString())
+          : [
+              data.organizationTypeId?.toString() ||
+                data.orgType?.organizationTypeId?.toString() ||
+                '1'
+            ],
+        availableRoles: data.availableRoles || [],
         orgRegForTransfers:
           data.orgStatus.organizationStatusId === 2 ? '2' : '1',
         orgStreetAddress: data.orgAddress?.streetAddress || '',
@@ -197,24 +205,6 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
 
       setSameAsLegalName(shouldSyncNames)
       setSameAsServiceAddress(shouldSyncAddress)
-
-      // Set initial organization type state for editing
-      const orgTypeId =
-        data.organizationTypeId?.toString() ||
-        data.orgType?.organizationTypeId?.toString() ||
-        '1'
-
-      setSelectedOrgType(orgTypeId)
-
-      // Set initial BCeID requirement based on org type
-      if (orgTypes && orgTypes.length > 0) {
-        const selectedType = orgTypes.find(
-          (type) => type.organizationTypeId === parseInt(orgTypeId)
-        )
-        if (selectedType) {
-          setRequiresBCeID(selectedType.isBceidUser)
-        }
-      }
     }
   }, [isFetched, data, reset, orgTypes])
 
@@ -269,7 +259,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   const validateConditionalFields = async (data) => {
     const validationSchema = createValidationSchema(
       orgTypes || [],
-      data.orgType
+      data.orgTypeIds
     )
     try {
       await validationSchema.validate(data, { abortEarly: false })
@@ -310,7 +300,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       recordsAddress: data.recordsAddress || '',
       hasEarlyIssuance: data.hasEarlyIssuance === 'yes',
       organizationStatusId: parseInt(data.orgRegForTransfers),
-      organizationTypeId: parseInt(data.orgType),
+      organizationTypeIds: (data.orgTypeIds || []).map((id) => parseInt(id)),
+      availableRoles: data.availableRoles || [],
       creditTradingEnabled: data.orgCreditTradingEnabled === 'yes',
       address: {
         name: data.orgOperatingName,
@@ -648,54 +639,29 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               }}
             >
               <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <Box mb={2}>
-                  <FormControl fullWidth>
-                    <Grid container>
-                      <Grid item xs={6}>
-                        <FormLabel id="orgType" sx={{ pb: 1 }}>
-                          <BCTypography variant="body4">
-                            {t('org:orgTypeLabel')}:
-                          </BCTypography>
-                        </FormLabel>
-                      </Grid>
-                      <Grid item xs={6} mt={0.5}>
-                        <Controller
-                          control={control}
-                          name="orgType"
-                          defaultValue="1"
-                          render={({ field }) => (
-                            <TextField
-                              id="orgType"
-                              name="orgType"
-                              data-test="orgType"
-                              select
-                              fullWidth
-                              variant="outlined"
-                              SelectProps={{ native: true }}
-                              {...field}
-                              error={!!errors.orgType}
-                              helperText={errors.orgType?.message}
-                            >
-                              {(orgTypes || []).map((t) => {
-                                const suffix = t.isBceidUser
-                                  ? ' (BCeID user)'
-                                  : ' (non-BCeID user)'
-                                const label = `${t.description || t.orgType}${suffix}`
-                                return (
-                                  <option
-                                    key={t.organizationTypeId}
-                                    value={t.organizationTypeId}
-                                  >
-                                    {label}
-                                  </option>
-                                )
-                              })}
-                            </TextField>
-                          )}
-                        />
-                      </Grid>
+                <Box mb={2} data-test="orgTypeSection">
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <BCFormCheckbox
+                        form={methods}
+                        name="orgTypeIds"
+                        label={`${t('org:orgTypeLabel')}:`}
+                        options={(orgTypes || []).map((type) => ({
+                          value: type.organizationTypeId.toString(),
+                          label: type.description || type.orgType
+                        }))}
+                      />
+                      {renderError('orgTypeIds')}
                     </Grid>
-                  </FormControl>
+                    <Grid item xs={12} sm={6}>
+                      <BCFormCheckbox
+                        form={methods}
+                        name="availableRoles"
+                        label={`${t('org:rolesAvailableLabel')}:`}
+                        options={availableRoleOptions}
+                      />
+                    </Grid>
+                  </Grid>
                 </Box>
                 <Box mb={2}>
                   <FormControl fullWidth>

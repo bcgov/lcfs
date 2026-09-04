@@ -41,14 +41,23 @@ export const OrganizationProfile = ({
 
           <BCTypography variant="body4">
             <strong>{t('org:orgTypeLabel')}:</strong>{' '}
-            {orgData?.orgType?.description || orgData?.orgType?.orgType}
-            {orgData?.orgType?.isBceidUser === true
-              ? ' (BCeID user)'
-              : orgData?.orgType?.isBceidUser === false
-                ? ' (non-BCeID user)'
-                : ''}
+            {(orgData?.orgTypes?.length
+              ? orgData.orgTypes
+              : orgData?.orgType
+                ? [orgData.orgType]
+                : []
+            )
+              .map((type) => type.description || type.orgType)
+              .join(', ')}
           </BCTypography>
-          
+
+          <BCTypography variant="body4">
+            <strong>{t('org:rolesAvailableLabel')}:</strong>{' '}
+            {orgData?.availableRoles?.length
+              ? orgData.availableRoles.join(', ')
+              : '—'}
+          </BCTypography>
+
           {orgData?.contactName && (
             <BCTypography variant="body4">
               <strong>{t('org:contactNameLabel')}:</strong>{' '}

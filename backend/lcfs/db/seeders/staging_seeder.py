@@ -14,6 +14,9 @@ from lcfs.db.seeders.staging.test_organization_attorney_address_seeder import (
 )
 from lcfs.db.seeders.staging.test_user_profile_seeder import seed_test_user_profiles
 from lcfs.db.seeders.staging.test_user_role_seeder import seed_test_user_roles
+from lcfs.db.seeders.org_association_seeder import (
+    seed_org_type_and_available_role_associations,
+)
 from lcfs.db.seeders.staging.test_transaction_seeder import seed_test_transactions
 from lcfs.db.seeders.staging.test_transfer_seeder import seed_test_transfers
 from lcfs.db.seeders.staging.test_compliance_report_seeder import (
@@ -126,6 +129,7 @@ async def seed_staging(session: AsyncSession):
     # Seed user-related entities
     await seed_test_user_profiles(session)
     await seed_test_user_roles(session)
+    await seed_org_type_and_available_role_associations(session)
     await seed_test_transactions(session)
 
     # Seed fuel codes before fuel supplies (dependency)

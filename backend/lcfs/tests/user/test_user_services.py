@@ -65,12 +65,15 @@ async def test_create_user_idir_government_subscription_created():
     fake_notification_service.add_subscriptions_for_notification_types = AsyncMock()
     fake_notification_service.add_subscriptions_for_user_role = AsyncMock()
 
+    user_create = MagicMock()
+    user_create.organization_id = None
+
     with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
         service = UserServices()
         service.repo = fake_repo
         service.notification_service = fake_notification_service
 
-        await service.create_user(MagicMock())
+        await service.create_user(user_create)
 
         fake_notification_service.add_subscriptions_for_notification_types.assert_awaited_once_with(
             fake_user.user_profile_id,
@@ -91,17 +94,22 @@ async def test_create_user_bceid_government_subscription_created():
     fake_repo = MagicMock()
     fake_repo.create_user = AsyncMock(return_value=fake_user)
     fake_repo.get_user_by_id = AsyncMock(return_value=fake_user)
+    fake_repo.get_organization_available_roles = AsyncMock(return_value=set())
 
     fake_notification_service = MagicMock()
     fake_notification_service.add_subscriptions_for_notification_types = AsyncMock()
     fake_notification_service.add_subscriptions_for_user_role = AsyncMock()
+
+    user_create = MagicMock()
+    user_create.organization_id = 42
+    user_create.roles = [RoleEnum.SUPPLIER.value]
 
     with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
         service = UserServices()
         service.repo = fake_repo
         service.notification_service = fake_notification_service
 
-        await service.create_user(MagicMock())
+        await service.create_user(user_create)
 
         fake_notification_service.add_subscriptions_for_notification_types.assert_awaited_once_with(
             fake_user.user_profile_id,
@@ -115,6 +123,7 @@ async def test_create_user_bceid_government_subscription_created():
 async def test_update_user_inactive_to_active_adds_government_subscription():
     fake_user = MagicMock()
     fake_user.user_profile_id = 30
+    fake_user.organization = None
     fake_user.is_active = False
     fake_user.is_government = True
     fake_user.role_names = [RoleEnum.ANALYST, RoleEnum.GOVERNMENT]
@@ -157,6 +166,7 @@ async def test_update_user_inactive_to_active_adds_government_subscription():
 async def test_update_user_idir_role_added_adds_government_subscription():
     fake_user = MagicMock()
     fake_user.user_profile_id = 40
+    fake_user.organization = None
     fake_user.is_active = True
     fake_user.is_government = True
     fake_user.role_names = [RoleEnum.GOVERNMENT]
@@ -199,6 +209,7 @@ async def test_update_user_idir_role_added_adds_government_subscription():
 async def test_update_user_idir_role_removed_deletes_subscriptions():
     fake_user = MagicMock()
     fake_user.user_profile_id = 50
+    fake_user.organization = None
     fake_user.is_active = True
     fake_user.is_government = True
     fake_user.role_names = [RoleEnum.GOVERNMENT, RoleEnum.ANALYST]
@@ -256,6 +267,7 @@ async def test_update_user_ci_applicant_role_removed_deletes_subscriptions():
     fake_repo = MagicMock()
     fake_repo.get_user_by_id = AsyncMock(return_value=fake_user)
     fake_repo.update_user = AsyncMock(return_value=updated_user)
+    fake_repo.get_organization_available_roles = AsyncMock(return_value=set())
 
     fake_notification_service = MagicMock()
     fake_notification_service.add_subscriptions_for_notification_types = AsyncMock()
@@ -266,13 +278,16 @@ async def test_update_user_ci_applicant_role_removed_deletes_subscriptions():
     fake_request.user = MagicMock()
     fake_request.user.is_government = True
 
+    user_create = MagicMock()
+    user_create.roles = [RoleEnum.SUPPLIER.value]
+
     with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
         service = UserServices()
         service.repo = fake_repo
         service.notification_service = fake_notification_service
         service.request = fake_request
 
-        await service.update_user(MagicMock(), 51)
+        await service.update_user(user_create, 51)
 
         fake_notification_service.delete_subscriptions_for_user_role.assert_awaited_once_with(
             updated_user.user_profile_id, RoleEnum.CI_APPLICANT
@@ -302,6 +317,98 @@ async def test_remove_user_not_safe():
 
 
 # ---------------------------------------------------------------------------
+# Organization available-role validation (#4565)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_create_user_rejects_role_not_available_to_org():
+    fake_repo = MagicMock()
+    fake_repo.get_organization_available_roles = AsyncMock(return_value=set())
+
+    user_create = MagicMock()
+    user_create.organization_id = 42
+    user_create.roles = [RoleEnum.SUPPLIER.value, RoleEnum.CI_APPLICANT.value]
+
+    service = UserServices()
+    service.repo = fake_repo
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_user(user_create)
+
+    assert exc_info.value.status_code == 400
+    assert RoleEnum.CI_APPLICANT.value in exc_info.value.detail
+
+
+@pytest.mark.anyio
+async def test_create_user_rejects_government_role_for_org_user():
+    fake_repo = MagicMock()
+    fake_repo.get_organization_available_roles = AsyncMock(return_value=set())
+
+    user_create = MagicMock()
+    user_create.organization_id = 42
+    user_create.roles = [RoleEnum.SUPPLIER.value, RoleEnum.ANALYST.value]
+
+    service = UserServices()
+    service.repo = fake_repo
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_user(user_create)
+
+    assert exc_info.value.status_code == 400
+    assert RoleEnum.ANALYST.value in exc_info.value.detail
+
+
+@pytest.mark.anyio
+async def test_create_user_always_available_roles_pass_with_empty_availability():
+    fake_user = MagicMock()
+    fake_user.user_profile_id = 60
+    fake_user.is_active = False
+
+    fake_repo = MagicMock()
+    fake_repo.create_user = AsyncMock(return_value=fake_user)
+    fake_repo.get_user_by_id = AsyncMock(return_value=fake_user)
+    fake_repo.get_organization_available_roles = AsyncMock(return_value=set())
+
+    user_create = MagicMock()
+    user_create.organization_id = 42
+    user_create.roles = [
+        RoleEnum.SUPPLIER.value,
+        RoleEnum.MANAGE_USERS.value,
+        RoleEnum.SIGNING_AUTHORITY.value,
+        RoleEnum.READ_ONLY.value,
+    ]
+
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        service = UserServices()
+        service.repo = fake_repo
+        service.notification_service = MagicMock()
+
+        result = await service.create_user(user_create)
+
+    assert result == "User created successfully"
+
+
+@pytest.mark.anyio
+async def test_update_user_rejects_role_not_available_to_org():
+    current_user = _bceid_user_without_ia_signer()
+    updated = _updated_user_stub([RoleEnum.SUPPLIER])
+    service, fake_repo = _make_update_service(
+        current_user, updated, is_government_caller=True
+    )
+    # Org only offers IA Proponent (set in _make_update_service)
+    user_create = MagicMock()
+    user_create.roles = [RoleEnum.SUPPLIER.value, RoleEnum.TRANSFER.value]
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_user(user_create, 99)
+
+    assert exc_info.value.status_code == 400
+    assert RoleEnum.TRANSFER.value in exc_info.value.detail
+    fake_repo.update_user.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
 # IA Signer role guard in update_user
 # ---------------------------------------------------------------------------
 
@@ -311,6 +418,9 @@ def _make_update_service(fake_user, updated_user, is_government_caller: bool):
     fake_repo = MagicMock()
     fake_repo.get_user_by_id = AsyncMock(return_value=fake_user)
     fake_repo.update_user = AsyncMock(return_value=updated_user)
+    fake_repo.get_organization_available_roles = AsyncMock(
+        return_value={RoleEnum.IA_PROPONENT}
+    )
 
     fake_notification_service = MagicMock()
     fake_notification_service.add_subscriptions_for_notification_types = AsyncMock()

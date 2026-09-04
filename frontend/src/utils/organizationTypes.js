@@ -4,7 +4,7 @@ export const ORG_TYPE_LABELS = {
   fuel_producer: 'Producer',
   exempted_supplier: 'Exempted',
   initiative_agreement_holder: 'IA Holder',
-  credit_trader: 'Credit Trader'
+  credit_trader: 'Credit Transfer'
 }
 
 const normalizeOrgTypeKey = (orgType) => {
@@ -14,6 +14,13 @@ const normalizeOrgTypeKey = (orgType) => {
   }
   return (orgType.orgType || orgType.org_type || '').toLowerCase()
 }
+
+// Joined label for an organization's full type list (#4565 multi-type orgs)
+export const getOrgTypesDisplayLabel = (orgTypes) =>
+  (orgTypes || [])
+    .map(getOrgTypeDisplayLabel)
+    .filter(Boolean)
+    .join(', ')
 
 export const getOrgTypeDisplayLabel = (orgType) => {
   const key = normalizeOrgTypeKey(orgType)

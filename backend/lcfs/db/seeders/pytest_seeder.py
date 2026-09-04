@@ -11,6 +11,9 @@ from lcfs.db.seeders.pytest.pytest_organization_seeder import seed_pytest_organi
 from lcfs.db.seeders.pytest.pytest_user_profile_seeder import seed_pytest_user_profiles
 from lcfs.db.seeders.pytest.pytest_user_role_seeder import seed_pytest_user_roles
 from lcfs.db.seeders.pytest.pytest_transaction_seeder import seed_pytest_transactions
+from lcfs.db.seeders.org_association_seeder import (
+    seed_org_type_and_available_role_associations,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -43,6 +46,7 @@ async def seed_pytest(session: AsyncSession):
     await seed_pytest_organizations(session)
     await seed_pytest_user_profiles(session)
     await seed_pytest_user_roles(session)
+    await seed_org_type_and_available_role_associations(session)
     await seed_pytest_transactions(session)
     await seed_pytest_admin_adjustments(session)
     await seed_charging_power_output(session)

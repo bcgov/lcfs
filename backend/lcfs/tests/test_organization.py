@@ -81,7 +81,8 @@ async def test_create_organization_success(
         "phone": "0000000000",
         "edrmsRecord": "EDRMS123",
         "organizationStatusId": 2,
-        "organizationTypeId": 1,  # Fuel supplier
+        "organizationTypeIds": [1],  # Fuel supplier
+        "availableRoles": ["Compliance Reporting", "Transfer"],
         "hasEarlyIssuance": False,
         "address": {
             "name": "Test Operating name",
@@ -139,7 +140,7 @@ async def test_create_organization_with_different_types(
             "phone": f"000000000{i}",
             "edrmsRecord": f"EDRMS{i}",
             "organizationStatusId": 2,
-            "organizationTypeId": test_case["type_id"],
+            "organizationTypeIds": [test_case["type_id"]],
             "hasEarlyIssuance": False,
             "address": {
                 "name": f"Test Org Type {test_case['type_id']} Op",
@@ -191,7 +192,7 @@ async def test_create_organization_invalid_type(
         "phone": "0000000000",
         "edrmsRecord": "EDRMS999",
         "organizationStatusId": 2,
-        "organizationTypeId": 999,  # Invalid organization type ID
+        "organizationTypeIds": [999],  # Invalid organization type ID
         "hasEarlyIssuance": False,
         "address": {
             "name": "Test Invalid Type Op",
@@ -235,7 +236,7 @@ async def test_update_organization_success(
         "phone": "1111111111",
         "edrmsRecord": "EDRMS123",
         "organizationStatusId": 2,
-        "organizationTypeId": 1,
+        "organizationTypeIds": [1],
         "hasEarlyIssuance": False,
         # Include credit market fields with safe default values
         "creditTradingEnabled": False,
@@ -290,7 +291,7 @@ async def test_update_organization_failure(
         "phone": "0000000000",
         "edrmsRecord": "EDRMS123",
         "organizationStatusId": 2,
-        "organizationTypeId": 1,
+        "organizationTypeIds": [1],
         "hasEarlyIssuance": False,
         "address": {
             "name": "Test Operating name",
@@ -462,7 +463,7 @@ async def test_create_organization_unauthorized(
         "phone": "1234567890",
         "edrmsRecord": "EDRMS123",
         "organizationStatusId": 1,
-        "organizationTypeId": 1,
+        "organizationTypeIds": [1],
         "hasEarlyIssuance": False,
         "address": {
             "name": "Test Address",
