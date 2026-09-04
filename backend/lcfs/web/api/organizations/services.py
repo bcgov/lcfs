@@ -32,6 +32,12 @@ from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
+from .credit_market_audit import (
+    CREDIT_MARKET_FIELDS,
+    credit_market_audit_action,
+    credit_market_snapshot,
+    diff_credit_market_snapshots,
+)
 from .repo import OrganizationsRepository
 from .schema import (
     AllocationAgreementAnalyticsResponseSchema,
@@ -276,11 +282,26 @@ class OrganizationsService:
                     user,
                 )
 
+        # Credit market listing fields are owned by the credit market endpoints.
+        # The generic organization edit form never sends them, so applying the
+        # schema defaults here would silently wipe a BCeID user's listing (and
+        # bypass the credit market audit log). Only apply them when the caller
+        # explicitly provided them, and audit those changes like any other.
+        explicitly_set = organization_data.model_fields_set
+        credit_market_before = credit_market_snapshot(organization)
+
         for key, value in organization_data.dict().items():
             if key == "has_early_issuance":
                 continue
+            if key in CREDIT_MARKET_FIELDS and key not in explicitly_set:
+                continue
             if hasattr(organization, key):
                 setattr(organization, key, value)
+
+        credit_market_after = credit_market_snapshot(organization)
+        credit_market_action = credit_market_audit_action(
+            credit_market_before, credit_market_after
+        )
 
         if (
             not requires_bceid
@@ -353,6 +374,17 @@ class OrganizationsService:
                         setattr(org_attorney_address, key, value)
 
         updated_organization = await self.repo.update_organization(organization)
+
+        if credit_market_action:
+            await self.repo.create_credit_market_audit_log(
+                organization=updated_organization,
+                changed_by=getattr(user, "keycloak_username", None),
+                action=credit_market_action,
+                changes=diff_credit_market_snapshots(
+                    credit_market_before, credit_market_after
+                ),
+            )
+
         return updated_organization
 
     @service_handler

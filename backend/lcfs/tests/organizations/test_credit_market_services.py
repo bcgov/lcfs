@@ -687,6 +687,13 @@ class TestCreditMarketServices:
         mock_repo.create_credit_market_audit_log.assert_awaited_once_with(
             organization=updated_org,
             changed_by="bceid.user",
+            action="Updated",
+            changes={
+                "credit_market_contact_name": {
+                    "from": "John Doe",
+                    "to": "Changed Name",
+                }
+            },
         )
 
     @pytest.mark.anyio
@@ -709,13 +716,13 @@ class TestCreditMarketServices:
         mock_repo.create_credit_market_audit_log.assert_not_called()
 
     @pytest.mark.anyio
-    async def test_update_does_not_create_credit_market_audit_log_when_display_disabled(
+    async def test_update_creates_credit_market_audit_log_when_display_disabled(
         self,
         credit_market_service,
         mock_repo,
         sample_organization,
     ):
-        """No audit entry is recorded when organization is not displayed in market."""
+        """Changes made while the listing is hidden are still audited."""
         sample_organization.display_in_credit_market = False
         mock_repo.get_organization.return_value = sample_organization
         credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
@@ -742,7 +749,186 @@ class TestCreditMarketServices:
             user=user,
         )
 
-        mock_repo.create_credit_market_audit_log.assert_not_called()
+        mock_repo.create_credit_market_audit_log.assert_awaited_once()
+        kwargs = mock_repo.create_credit_market_audit_log.await_args.kwargs
+        assert kwargs["action"] == "Updated"
+        assert kwargs["changes"] == {
+            "credit_market_contact_name": {"from": "John Doe", "to": "Changed Name"}
+        }
+
+    @pytest.mark.anyio
+    async def test_update_logs_removal_from_market(
+        self,
+        credit_market_service,
+        mock_repo,
+        sample_organization,
+    ):
+        """Removing a listing from the market is recorded as a Removed entry."""
+        mock_repo.get_organization.return_value = sample_organization
+        credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
+
+        updated_org = Organization()
+        updated_org.organization_id = 1
+        updated_org.name = "Test Organization"
+        updated_org.credit_market_contact_name = "John Doe"
+        updated_org.credit_market_contact_email = "john@test.com"
+        updated_org.credit_market_contact_phone = "555-1234"
+        updated_org.credit_market_is_seller = False
+        updated_org.credit_market_is_buyer = False
+        updated_org.credits_to_sell = 0
+        updated_org.display_in_credit_market = False
+        mock_repo.update_organization.return_value = updated_org
+
+        user = MagicMock()
+        user.keycloak_username = "bceid.user"
+
+        await credit_market_service.update_organization_credit_market_details(
+            1,
+            {
+                "display_in_credit_market": False,
+                "credit_market_is_seller": False,
+                "credits_to_sell": 0,
+            },
+            user=user,
+        )
+
+        mock_repo.create_credit_market_audit_log.assert_awaited_once_with(
+            organization=updated_org,
+            changed_by="bceid.user",
+            action="Removed",
+            changes={
+                "credit_market_is_seller": {"from": True, "to": False},
+                "credits_to_sell": {"from": 100, "to": 0},
+                "display_in_credit_market": {"from": True, "to": False},
+            },
+        )
+
+    @pytest.mark.anyio
+    async def test_update_logs_addition_to_market(
+        self,
+        credit_market_service,
+        mock_repo,
+        sample_organization,
+    ):
+        """Adding a listing to the market is recorded as an Added entry."""
+        sample_organization.display_in_credit_market = False
+        mock_repo.get_organization.return_value = sample_organization
+        credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
+
+        updated_org = Organization()
+        updated_org.organization_id = 1
+        updated_org.name = "Test Organization"
+        updated_org.credit_market_contact_name = "John Doe"
+        updated_org.credit_market_contact_email = "john@test.com"
+        updated_org.credit_market_contact_phone = "555-1234"
+        updated_org.credit_market_is_seller = True
+        updated_org.credit_market_is_buyer = False
+        updated_org.credits_to_sell = 100
+        updated_org.display_in_credit_market = True
+        mock_repo.update_organization.return_value = updated_org
+
+        user = MagicMock()
+        user.keycloak_username = "bceid.user"
+
+        await credit_market_service.update_organization_credit_market_details(
+            1,
+            {"display_in_credit_market": True},
+            user=user,
+        )
+
+        mock_repo.create_credit_market_audit_log.assert_awaited_once_with(
+            organization=updated_org,
+            changed_by="bceid.user",
+            action="Added",
+            changes={"display_in_credit_market": {"from": False, "to": True}},
+        )
+
+    @pytest.mark.anyio
+    async def test_get_credit_market_audit_logs_paginated_maps_action_and_changes(
+        self,
+        credit_market_service,
+        mock_repo,
+    ):
+        """Paginated audit logs expose the action and an ordered field-level diff."""
+        pagination = PaginationRequestSchema(
+            page=1, size=10, sort_orders=[], filters=[]
+        )
+
+        log_entry = CreditMarketAuditLog()
+        log_entry.credit_market_audit_log_id = 100
+        log_entry.credits_to_sell = 0
+        log_entry.credit_market_is_seller = False
+        log_entry.credit_market_is_buyer = False
+        log_entry.display_in_credit_market = False
+        log_entry.action = "Removed"
+        log_entry.changes = {
+            "display_in_credit_market": {"from": True, "to": False},
+            "credits_to_sell": {"from": 250, "to": 0},
+        }
+        log_entry.contact_person = "Jane Doe"
+        log_entry.phone = None
+        log_entry.email = None
+        log_entry.changed_by = "bceid.jane"
+        log_entry.create_date = None
+        log_entry.organization = MagicMock()
+        log_entry.organization.name = "Org"
+
+        mock_repo.get_credit_market_audit_logs_paginated.return_value = (
+            [log_entry],
+            1,
+        )
+
+        result = await credit_market_service.get_credit_market_audit_logs_paginated(
+            pagination
+        )
+
+        row = result.credit_market_audit_logs[0]
+        assert row.action == "Removed"
+        assert row.display_in_credit_market is False
+        assert row.role_in_market is None
+        assert [(c.field, c.old_value, c.new_value) for c in row.changes] == [
+            ("credits_to_sell", 250, 0),
+            ("display_in_credit_market", True, False),
+        ]
+
+    @pytest.mark.anyio
+    async def test_get_credit_market_audit_logs_paginated_legacy_rows_have_no_changes(
+        self,
+        credit_market_service,
+        mock_repo,
+    ):
+        """Rows written before the diff column existed still serialize cleanly."""
+        pagination = PaginationRequestSchema(
+            page=1, size=10, sort_orders=[], filters=[]
+        )
+
+        log_entry = CreditMarketAuditLog()
+        log_entry.credit_market_audit_log_id = 1
+        log_entry.credits_to_sell = 10
+        log_entry.credit_market_is_seller = True
+        log_entry.credit_market_is_buyer = True
+        log_entry.display_in_credit_market = True
+        log_entry.action = None
+        log_entry.changes = None
+        log_entry.contact_person = "Legacy"
+        log_entry.changed_by = "legacy.user"
+        log_entry.create_date = None
+        log_entry.organization = None
+
+        mock_repo.get_credit_market_audit_logs_paginated.return_value = (
+            [log_entry],
+            1,
+        )
+
+        result = await credit_market_service.get_credit_market_audit_logs_paginated(
+            pagination
+        )
+
+        row = result.credit_market_audit_logs[0]
+        assert row.action is None
+        assert row.changes == []
+        assert row.role_in_market == "Seller, Buyer"
+        assert row.organization_name == ""
 
     @pytest.mark.anyio
     async def test_get_credit_market_audit_logs_paginated_maps_org_name(

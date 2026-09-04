@@ -566,6 +566,96 @@ async def test_update_organization_with_early_issuance_change(
     )
 
 
+def _listed_organization():
+    """An organization with an active credit market listing."""
+    org = MagicMock(
+        organization_id=1,
+        organization_address_id=1,
+        organization_attorney_address_id=1,
+    )
+    org.credit_market_contact_name = "Jane Seller"
+    org.credit_market_contact_email = "jane@seller.com"
+    org.credit_market_contact_phone = "6045550000"
+    org.credit_market_is_seller = True
+    org.credit_market_is_buyer = False
+    org.credits_to_sell = 250
+    org.display_in_credit_market = True
+    return org
+
+
+def _prepare_update_repo(mock_repo, organization):
+    mock_repo.get_organization = AsyncMock(return_value=organization)
+    mock_repo.get_organization_address = AsyncMock(return_value=MagicMock())
+    mock_repo.get_organization_attorney_address = AsyncMock(return_value=MagicMock())
+    mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_repo.update_organization = AsyncMock(return_value=organization)
+    mock_repo.create_credit_market_audit_log = AsyncMock()
+    mock_repo.get_organization_type = AsyncMock(
+        return_value=MagicMock(is_bceid_user=False)
+    )
+
+
+@pytest.mark.anyio
+async def test_update_organization_preserves_credit_market_listing(
+    organizations_service, mock_repo
+):
+    """The generic org edit must not wipe listing fields it was not given."""
+    organization = _listed_organization()
+    _prepare_update_repo(mock_repo, organization)
+
+    update_data = OrganizationUpdateSchema(
+        name="Renamed Org",
+        email="org@example.com",
+        has_early_issuance=False,
+        organization_type_id=1,
+    )
+
+    await organizations_service.update_organization(1, update_data, user=MagicMock())
+
+    assert organization.name == "Renamed Org"
+    assert organization.credit_market_contact_name == "Jane Seller"
+    assert organization.credit_market_contact_email == "jane@seller.com"
+    assert organization.credit_market_contact_phone == "6045550000"
+    assert organization.credit_market_is_seller is True
+    assert organization.credits_to_sell == 250
+    assert organization.display_in_credit_market is True
+    mock_repo.create_credit_market_audit_log.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_organization_audits_explicit_credit_market_change(
+    organizations_service, mock_repo
+):
+    """Listing fields explicitly sent through the org edit are applied and audited."""
+    organization = _listed_organization()
+    _prepare_update_repo(mock_repo, organization)
+
+    update_data = OrganizationUpdateSchema(
+        has_early_issuance=False,
+        organization_type_id=1,
+        display_in_credit_market=False,
+        credits_to_sell=0,
+    )
+    user = MagicMock()
+    user.keycloak_username = "idir.user"
+
+    await organizations_service.update_organization(1, update_data, user=user)
+
+    assert organization.display_in_credit_market is False
+    assert organization.credits_to_sell == 0
+    assert organization.credit_market_contact_name == "Jane Seller"
+    mock_repo.create_credit_market_audit_log.assert_awaited_once_with(
+        organization=organization,
+        changed_by="idir.user",
+        action="Removed",
+        changes={
+            "credits_to_sell": {"from": 250, "to": 0},
+            "display_in_credit_market": {"from": True, "to": False},
+        },
+    )
+
+
 @pytest.mark.anyio
 async def test_apply_organization_filters_with_early_issuance(organizations_service):
     """Test applying organization filters with early issuance."""
