@@ -1,10 +1,9 @@
-import math
 import structlog
 from fastapi import Depends, Request, HTTPException, status
 
 from lcfs.db.models import FuelSupply
 from lcfs.db.base import ActionTypeEnum
-from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.base import calculate_total_pages, PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
@@ -357,7 +356,7 @@ class FuelSupplyServices:
                 size=pagination.size,
                 total=total_count,
                 total_pages=(
-                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
+                    calculate_total_pages(total_count, pagination.size)
                 ),
             ),
             fuel_supplies=[self.map_entity_to_schema(fs) for fs in fuel_supplies],
@@ -441,7 +440,7 @@ class FuelSupplyServices:
                 size=pagination.size,
                 total=total_count,
                 total_pages=(
-                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
+                    calculate_total_pages(total_count, pagination.size)
                 ),
             ),
         )
