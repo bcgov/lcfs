@@ -26,6 +26,12 @@ import {
 } from '@/hooks/useChargingSite'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
+// Sent even when blank so the backend can clear them (see onCellEditingStopped).
+const ALLOCATING_ORG_FIELDS = [
+  'allocatingOrganizationId',
+  'allocatingOrganizationName'
+]
+
 export const AddEditChargingSite = ({
   isEditMode = false,
   setIsEditMode,
@@ -139,17 +145,22 @@ export const AddEditChargingSite = ({
         severity: 'pending'
       })
 
-      // clean up any null or empty string values, but preserve allocatingOrganizationId
-      // even when null (to properly clear it when user enters free text)
+      // Clean up null / empty values so unset fields are omitted from the
+      // payload. The allocating organization fields are the exception: the
+      // backend treats a missing key as "unchanged", so a cleared value must
+      // be sent explicitly as null or the old value silently survives.
       const updatedData = {
         ...Object.entries(params.node.data)
           .filter(([key, value]) => {
-            // Always include allocatingOrganizationId (even when null) to properly clear it
-            if (key === 'allocatingOrganizationId') return true
+            if (ALLOCATING_ORG_FIELDS.includes(key)) return true
             return value !== null && value !== '' && value !== undefined
           })
           .reduce((acc, [key, value]) => {
-            acc[key] = value
+            acc[key] = ALLOCATING_ORG_FIELDS.includes(key)
+              ? value === '' || value === undefined
+                ? null
+                : value
+              : value
             return acc
           }, {}),
         currentStatus:

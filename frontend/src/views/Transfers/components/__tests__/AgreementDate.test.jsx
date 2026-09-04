@@ -40,7 +40,7 @@ describe('AgreementDate Component', () => {
       const translations = {
         'transfer:agrDateLabel': 'Agreement date (required)',
         'transfer:agrDateDescText':
-          'Date on which the written agreement for the transfer was reached between the organizations:',
+          'Enter the date on which the consideration and credit transfer terms were agreed upon by the parties, as required for reporting under section 18(b)(ii) of the Low Carbon Fuels (General) Regulation.',
         'transfer:agrDateHeader': 'Agreement date:'
       }
       return translations[key] || key
@@ -68,7 +68,7 @@ describe('AgreementDate Component', () => {
       expect(screen.getByText('Agreement date (required)')).toBeInTheDocument()
       expect(
         screen.getByText(
-          'Date on which the written agreement for the transfer was reached between the organizations:'
+          'Enter the date on which the consideration and credit transfer terms were agreed upon by the parties, as required for reporting under section 18(b)(ii) of the Low Carbon Fuels (General) Regulation.'
         )
       ).toBeInTheDocument()
     })

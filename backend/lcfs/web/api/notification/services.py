@@ -1,4 +1,3 @@
-import math
 import json
 from typing import List, Optional
 from lcfs.db.models.notification import (
@@ -7,6 +6,7 @@ from lcfs.db.models.notification import (
     ChannelEnum,
 )
 from lcfs.web.api.base import (
+    calculate_total_pages,
     AudienceType,
     NotificationTypeEnum,
     PaginationRequestSchema,
@@ -71,7 +71,7 @@ class NotificationService:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
             notifications=[
                 NotificationMessageSchema.model_validate(notification)

@@ -1,7 +1,6 @@
 import asyncio
 from datetime import date, datetime, timezone
 from typing import List, Optional
-import math
 import uuid
 
 from lcfs.db.base import ActionTypeEnum
@@ -15,6 +14,7 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.base import (
+    calculate_total_pages,
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
@@ -133,7 +133,7 @@ class FuelCodeServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
         )
 
@@ -289,7 +289,7 @@ class FuelCodeServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
             fuel_codes=[
                 FuelCodeBaseSchema.model_validate(fuel_code) for fuel_code in fuel_codes
