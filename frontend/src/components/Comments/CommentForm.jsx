@@ -188,7 +188,10 @@ const CommentForm = ({
   // Toolbar config is memoized so Quill doesn't reinitialize each render. The
   // custom "attach" button triggers the hidden file input via its handler.
   const quillModules = useMemo(() => {
-    const container = [['bold', 'italic'], [{ list: 'bullet' }, { list: 'ordered' }]]
+    const container = [
+      ['bold', 'italic'],
+      [{ list: 'bullet' }, { list: 'ordered' }]
+    ]
     if (attachmentsEnabled) {
       container.push(['attach'])
     }
@@ -206,7 +209,8 @@ const CommentForm = ({
   }, [attachmentsEnabled])
 
   const isCommentEmpty = !commentText || commentText.trim() === ''
-  const showVisibilityUnderTitle = showVisibilityToggle && visibilityAlign === 'left'
+  const showVisibilityUnderTitle =
+    showVisibilityToggle && visibilityAlign === 'left'
 
   return (
     <>
@@ -214,7 +218,9 @@ const CommentForm = ({
         styles={{
           '.ql-editor': {
             minHeight: '75px',
-            backgroundColor: '#fff'
+            backgroundColor: '#fff',
+            fontSize: '1rem',
+            lineHeight: 1.5
           },
           '.ql-toolbar.ql-snow': {
             border: 'none !important',

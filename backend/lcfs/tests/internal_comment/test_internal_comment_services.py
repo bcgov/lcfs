@@ -380,6 +380,7 @@ def _build_service_with_user_roles(role_names):
     service.repo.get_category_id_by_name = AsyncMock(return_value=99)
     service.repo.get_entity_org_and_year = AsyncMock(return_value=(7, 2025))
     service.repo.get_comments_for_organization = AsyncMock()
+    service.repo.get_latest_organization_comment_id = AsyncMock(return_value=None)
     # Most comments are not Company Overview notes; tests that need the
     # organization-comment path override this.
     service.repo.is_organization_comment = AsyncMock(return_value=False)
@@ -579,6 +580,38 @@ async def test_create_organization_comment_is_forced_internal():
     assert created_comment_arg.visibility == CommentVisibilityEnum.INTERNAL
     # Internal comments still need an audience scope, resolved from the role.
     assert created_comment_arg.audience_scope == AudienceScopeEnum.ANALYST
+
+
+@pytest.mark.anyio
+async def test_create_organization_comment_updates_existing_shared_statement():
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_latest_organization_comment_id.return_value = 101
+    service.repo.update_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=101,
+        comment="Updated overview",
+        audience_scope="Analyst",
+        visibility="Internal",
+        create_user="firstuser",
+        create_date=None,
+        update_date=None,
+        update_user="mockuser",
+        update_full_name="Mock User",
+        full_name="First User",
+        documents=[],
+    )
+    payload = InternalCommentCreateSchema(
+        entity_type=EntityTypeEnum.ORGANIZATION,
+        entity_id=7,
+        comment="Updated overview",
+        visibility=CommentVisibilityEnum.INTERNAL,
+    )
+
+    result = await service.create_internal_comment(payload)
+
+    service.repo.create_internal_comment.assert_not_called()
+    service.repo.update_internal_comment.assert_awaited_once()
+    assert result.internal_comment_id == 101
+    assert result.comment == "Updated overview"
 
 
 @pytest.mark.anyio
@@ -938,6 +971,34 @@ async def test_get_organization_comments_can_edit_false_for_other_user():
 
     result = await service.get_organization_comments(organization_id=5)
     assert result.comments[0].can_edit is False
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_can_edit_true_for_shared_company_overview():
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+    row = {
+        "internal_comment_id": 3,
+        "comment": "x",
+        "plain_text_comment": "x",
+        "organization_id": 5,
+        "organization_name": "Org",
+        "compliance_year": None,
+        "visibility": "Internal",
+        "audience_scope": "Analyst",
+        "create_user": "someone-else",
+        "create_date": None,
+        "update_date": None,
+        "update_user": None,
+        "update_full_name": None,
+        "category": "Company Overview",
+        "full_name": "Other User",
+        "entity_type": "Organization",
+        "entity_id": 5,
+    }
+    service.repo.get_comments_for_organization.return_value = ([row], 1)
+
+    result = await service.get_organization_comments(organization_id=5)
+    assert result.comments[0].can_edit is True
 
 
 # ======================================================================
