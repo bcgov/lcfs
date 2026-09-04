@@ -576,6 +576,10 @@ class OrganizationsRepository:
         )
         affected = [(row[0], row[1]) for row in result.all()]
         await self.db.flush()
+        # The bulk delete bypasses the ORM (synchronize_session=False), so any
+        # UserProfile/UserRole already loaded in this session would still show
+        # the removed roles. Expire them so later reads re-query.
+        self.db.expire_all()
         return affected
 
     @repo_handler
@@ -673,18 +677,14 @@ class OrganizationsRepository:
     async def get_externally_registered_organizations(self, conditions):
         """
         Get all externally registered organizations from the database.
-        Only returns organizations with type 'fuel_supplier'.
-        """
-        # Add fuel supplier type filter to existing conditions
-        # (has-type semantics across the organization's types)
-        fuel_supplier_condition = Organization.org_types.any(
-            OrganizationType.org_type == "fuel_supplier"
-        )
-        all_conditions = conditions + [fuel_supplier_condition]
 
+        Organizations are filtered by registration status only. Transfers are
+        not restricted by organization type, so credit traders and other
+        non-fuel-supplier types must appear as eligible counterparties.
+        """
         query = (
             select(Organization)
-            .where(and_(*all_conditions))
+            .where(and_(*conditions))
             .options(
                 joinedload(Organization.org_type),
                 joinedload(Organization.org_status),

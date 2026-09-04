@@ -194,6 +194,18 @@ describe('chargingSiteColDefs', () => {
       expect(data.allocatingOrganizationName).toBe('Custom Org Name')
     })
 
+    it('valueSetter with empty string clears both id and name to null', () => {
+      // Clearing the cell must not leave '' behind - the save payload drops
+      // empty strings, which would make the clear invisible to the backend.
+      const data = {
+        allocatingOrganizationId: 99,
+        allocatingOrganizationName: 'Old Org'
+      }
+      col.valueSetter({ newValue: '', data })
+      expect(data.allocatingOrganizationId).toBeNull()
+      expect(data.allocatingOrganizationName).toBeNull()
+    })
+
     it('valueSetter returns true', () => {
       const result = col.valueSetter({ newValue: 'test', data: {} })
       expect(result).toBe(true)
