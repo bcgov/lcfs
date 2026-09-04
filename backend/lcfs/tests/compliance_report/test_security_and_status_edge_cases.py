@@ -488,6 +488,96 @@ class TestReportLifecycleAndTransactions:
         )
         assert v0_transaction.transaction_action == TransactionActionEnum.Reserved
 
+    async def test_reassessment_lifecycle_leaves_assessed_transaction_untouched(
+        self,
+        compliance_report_service,
+        setup_report_mocks,
+        mock_trxn_repo,
+        mock_snapshot_service,
+        mock_fse_services,
+        mock_document_service,
+        mock_internal_comment_service,
+    ):
+        """
+        A reassessment supersedes an *Assessed* report whose transaction is a
+        finalized Adjustment (the issued units are already in the ledger).
+        Creating the reassessment must not release it, and deleting the
+        reassessment must not "reinstate" it to Reserved: either would remove
+        the issued units from the organization's balance.
+        """
+        v0_report, v0_transaction, v1_report, user = setup_report_mocks
+        v0_report.current_status.status = ComplianceReportStatusEnum.Assessed
+        v0_transaction.transaction_action = TransactionActionEnum.Adjustment
+
+        # --- Step 1: Create the reassessment ---
+        await compliance_report_service.create_analyst_adjustment_report(
+            existing_report_id=v0_report.compliance_report_id, user=user
+        )
+
+        mock_trxn_repo.release_transaction.assert_not_called()
+        assert v0_transaction.transaction_action == TransactionActionEnum.Adjustment
+
+        # --- Step 2: Delete the reassessment ---
+        await compliance_report_service.delete_compliance_report(
+            report_id=v1_report.compliance_report_id, user=user
+        )
+
+        mock_trxn_repo.reinstate_transaction.assert_not_called()
+        assert v0_transaction.transaction_action == TransactionActionEnum.Adjustment
+
+    async def test_reassessment_never_releases_finalized_report_transaction(
+        self,
+        compliance_report_service,
+        setup_report_mocks,
+        mock_trxn_repo,
+        mock_snapshot_service,
+        mock_fse_services,
+        mock_document_service,
+        mock_internal_comment_service,
+    ):
+        """
+        Even if an Assessed report's transaction is (wrongly) sitting in
+        Reserved, creating a reassessment must not release it. A finalized
+        report never holds a supersedable reserve, so releasing would
+        permanently drop the units from the ledger.
+        """
+        v0_report, v0_transaction, v1_report, user = setup_report_mocks
+        v0_report.current_status.status = ComplianceReportStatusEnum.Assessed
+        assert v0_transaction.transaction_action == TransactionActionEnum.Reserved
+
+        await compliance_report_service.create_analyst_adjustment_report(
+            existing_report_id=v0_report.compliance_report_id, user=user
+        )
+
+        mock_trxn_repo.release_transaction.assert_not_called()
+        assert v0_transaction.transaction_action == TransactionActionEnum.Reserved
+
+    async def test_delete_adjustment_only_reinstates_released_transaction(
+        self,
+        compliance_report_service,
+        setup_report_mocks,
+        mock_trxn_repo,
+        mock_snapshot_service,
+        mock_fse_services,
+        mock_document_service,
+        mock_internal_comment_service,
+    ):
+        """
+        Deleting a government adjustment reinstates the previous report's
+        transaction only when that transaction was actually released. A
+        Submitted report whose reserve was never released is left alone.
+        """
+        v0_report, v0_transaction, v1_report, user = setup_report_mocks
+        assert v0_report.current_status.status == ComplianceReportStatusEnum.Submitted
+        assert v0_transaction.transaction_action == TransactionActionEnum.Reserved
+
+        await compliance_report_service.delete_compliance_report(
+            report_id=v1_report.compliance_report_id, user=user
+        )
+
+        mock_trxn_repo.reinstate_transaction.assert_not_called()
+        assert v0_transaction.transaction_action == TransactionActionEnum.Reserved
+
 
 @pytest.mark.anyio
 class TestPerformanceAndScalabilityEdgeCases:
