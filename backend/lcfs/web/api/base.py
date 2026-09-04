@@ -9,6 +9,7 @@ from fastapi_cache import FastAPICache
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
+import math
 import structlog
 import re
 
@@ -71,11 +72,25 @@ class FilterModel(BaseSchema):
 
 
 class PaginationRequestSchema(BaseSchema):
+    # `size` of 0 is a deliberate "return everything" sentinel used by the
+    # export paths, so 0 stays valid - but a negative size is a negative
+    # LIMIT, which Postgres rejects.
     page: int = Field(default=1, alias="page")
-    size: int = Field(default=10, alias="size")
+    size: int = Field(default=10, alias="size", ge=0)
     sort_orders: List[SortOrder] = Field(default=[], alias="sortOrders")
     filters: List[FilterModel] = Field(default=[], alias="filters")
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+
+    @field_validator("page")
+    @classmethod
+    def clamp_page(cls, value: int) -> int:
+        """
+        `page` is 1-based; anything lower yields a negative OFFSET, which
+        Postgres rejects. Several repos already clamp this themselves, and the
+        frontend sends page=0 on at least one live path, so clamp rather than
+        reject - a 422 here would break existing callers.
+        """
+        return max(value, 1)
 
 
 class PaginationResponseSchema(BaseSchema):
@@ -84,6 +99,18 @@ class PaginationResponseSchema(BaseSchema):
     size: int
     total_pages: int
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+
+
+def calculate_total_pages(total: int, size: int) -> int:
+    """
+    Page count for a result set, safe for the size=0 "return everything"
+    sentinel - dividing by it raises ZeroDivisionError.
+    """
+    if not total:
+        return 0
+    if size <= 0:
+        return 1
+    return math.ceil(total / size)
 
 
 @deprecated("Use Pagination Request and Response schemas instead")

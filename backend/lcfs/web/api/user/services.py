@@ -1,5 +1,4 @@
 import io
-import math
 from datetime import datetime, timezone
 import structlog
 from typing import List
@@ -14,6 +13,7 @@ from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import (
+    calculate_total_pages,
     FilterModel,
     NotificationTypeEnum,
     PaginationRequestSchema,
@@ -171,7 +171,7 @@ class UserServices:
                 page=pagination.page,
                 size=pagination.size,
                 total_pages=(
-                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
+                    calculate_total_pages(total_count, pagination.size)
                 ),
             ),
             users=users,
@@ -482,7 +482,7 @@ class UserServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
         )
 
@@ -516,7 +516,7 @@ class UserServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
         )
 
@@ -546,7 +546,7 @@ class UserServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
         )
 
