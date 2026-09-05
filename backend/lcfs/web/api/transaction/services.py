@@ -1,8 +1,7 @@
 import io
 import logging
-import zoneinfo
-from datetime import datetime, timezone
-from typing import List, Dict, Union
+from datetime import datetime, timezone, date
+from typing import List, Dict, Union, Optional
 from fastapi import Depends
 from fastapi.responses import StreamingResponse
 from math import ceil
@@ -47,17 +46,15 @@ class TransactionsService:
         self.repo = repo
 
     @staticmethod
-    def _to_pacific(dt):
-        """Convert a naive-UTC or aware datetime to America/Vancouver."""
-        from datetime import date as date_type
-
-        # MV columns cast to ::date return date objects, not datetime
-        if isinstance(dt, date_type) and not isinstance(dt, datetime):
-            return dt
-        pacific = zoneinfo.ZoneInfo("America/Vancouver")
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(pacific)
+    def _export_date(value) -> Optional[date]:
+        """Return a plain date for Excel without timezone conversion."""
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        return None
 
     def apply_transaction_filters(self, pagination, conditions):
         """
@@ -296,21 +293,9 @@ class TransactionsService:
                     result.price_per_unit,
                     result.category,
                     masked_status,
-                    (
-                        result.transaction_effective_date.strftime("%Y-%m-%d")
-                        if result.transaction_effective_date
-                        else None
-                    ),
-                    (
-                        self._to_pacific(result.recorded_date).strftime("%Y-%m-%d")
-                        if result.recorded_date
-                        else None
-                    ),
-                    (
-                        self._to_pacific(result.approved_date).strftime("%Y-%m-%d")
-                        if result.approved_date
-                        else None
-                    ),
+                    self._export_date(result.transaction_effective_date),
+                    self._export_date(result.recorded_date),
+                    self._export_date(result.approved_date),
                     result.from_org_comment,
                     result.to_org_comment,
                     result.government_comment,

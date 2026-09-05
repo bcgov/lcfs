@@ -2,7 +2,8 @@ import {
   redOutlinedButton, 
   outlinedButton, 
   containedButton, 
-  buttonClusterConfigFn 
+  buttonClusterConfigFn,
+  formatTransferDate
 } from '../buttonConfigs'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
@@ -31,6 +32,11 @@ vi.mock('./components', () => ({
 
 describe('buttonConfigs', () => {
   describe('Helper Functions', () => {
+    it('should format transfer dates without UTC conversion', () => {
+      expect(formatTransferDate(new Date(2024, 0, 1))).toBe('2024-01-01')
+      expect(formatTransferDate('2024-01-01T08:00:00Z')).toBe('2024-01-01')
+    })
+
     it('should create redOutlinedButton with correct config', () => {
       const result = redOutlinedButton('Test Label', 'testIcon')
       

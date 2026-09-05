@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import date, datetime
 from math import ceil
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from starlette.responses import StreamingResponse
@@ -124,58 +124,12 @@ async def test_export_transactions(transactions_service):
     assert "Government Comment" in content_str
 
 
-# -- _to_pacific / recorded-date export tests ----------------------------------
-
-
-class TestToPacific:
-    """Unit tests for TransactionsService._to_pacific."""
-
-    def test_naive_utc_before_midnight_stays_same_day(self):
-        """7 AM UTC on Feb 10 = 11 PM PST on Feb 9 — should roll back a day."""
-        dt = datetime(2026, 2, 10, 7, 0, 0)  # naive, treated as UTC
-        result = TransactionsService._to_pacific(dt)
-        assert result.strftime("%Y-%m-%d") == "2026-02-09"
-
-    def test_naive_utc_after_8am_stays_same_day(self):
-        """8 AM UTC on Feb 10 = midnight PST on Feb 10 — same calendar day."""
-        dt = datetime(2026, 2, 10, 8, 0, 0)
-        result = TransactionsService._to_pacific(dt)
-        assert result.strftime("%Y-%m-%d") == "2026-02-10"
-
-    def test_naive_utc_midnight_rolls_back(self):
-        """Midnight UTC on Feb 11 = 4 PM PST on Feb 10."""
-        dt = datetime(2026, 2, 11, 0, 0, 0)
-        result = TransactionsService._to_pacific(dt)
-        assert result.strftime("%Y-%m-%d") == "2026-02-10"
-
-    def test_aware_utc_midnight_rolls_back(self):
-        """Same as above but with an explicit UTC tzinfo."""
-        dt = datetime(2026, 2, 11, 0, 0, 0, tzinfo=timezone.utc)
-        result = TransactionsService._to_pacific(dt)
-        assert result.strftime("%Y-%m-%d") == "2026-02-10"
-
-    def test_naive_utc_late_afternoon_pacific(self):
-        """11:59 PM UTC on Feb 10 = 3:59 PM PST on Feb 10 — same day."""
-        dt = datetime(2026, 2, 10, 23, 59, 0)
-        result = TransactionsService._to_pacific(dt)
-        assert result.strftime("%Y-%m-%d") == "2026-02-10"
-
-    def test_pdt_summer_offset(self):
-        """During PDT (UTC-7): 6:59 AM UTC on Jul 15 = 11:59 PM PDT on Jul 14."""
-        dt = datetime(2026, 7, 15, 6, 59, 0)
-        result = TransactionsService._to_pacific(dt)
-        assert result.strftime("%Y-%m-%d") == "2026-07-14"
-
-    def test_pdt_summer_after_7am(self):
-        """During PDT (UTC-7): 7 AM UTC on Jul 15 = midnight PDT on Jul 15."""
-        dt = datetime(2026, 7, 15, 7, 0, 0)
-        result = TransactionsService._to_pacific(dt)
-        assert result.strftime("%Y-%m-%d") == "2026-07-15"
+# -- export date tests ---------------------------------------------------------
 
 
 @pytest.mark.anyio
 async def test_export_recorded_date_utc_midnight(transactions_service):
-    """A transfer recorded at midnight UTC should export as the previous Pacific day."""
+    """The transaction MV already emits Vancouver-local dates for export."""
     mock_transactions = [
         MagicMock(
             transaction_type="Transfer",
@@ -188,7 +142,6 @@ async def test_export_recorded_date_utc_midnight(transactions_service):
             category="A",
             status="Recorded",
             transaction_effective_date=datetime(2026, 2, 10, 8, 0, 0),
-            # Midnight UTC Feb 11 = 4 PM PST Feb 10
             recorded_date=datetime(2026, 2, 11, 0, 0, 0),
             approved_date=None,
             from_org_comment=None,
@@ -208,13 +161,54 @@ async def test_export_recorded_date_utc_midnight(transactions_service):
         content += chunk
     content_str = content.decode("utf-8")
 
-    # recorded_date should show Feb 10 (Pacific), not Feb 11 (UTC)
     lines = content_str.strip().split("\n")
     data_line = lines[1]  # first data row after header
-    assert "2026-02-10" in data_line
-    # Make sure Feb 11 does NOT appear as the recorded date
-    # (effective date is also 2026-02-10 so only that date should appear)
-    assert "2026-02-11" not in data_line
+    assert "2026-02-11" in data_line
+
+
+@pytest.mark.anyio
+async def test_export_transactions_writes_transaction_mv_dates_as_excel_dates(
+    transactions_service,
+):
+    mock_transactions = [
+        MagicMock(
+            transaction_type="Transfer",
+            transaction_id=99,
+            compliance_period="2026",
+            from_organization="Org X",
+            to_organization="Org Y",
+            quantity=4338,
+            price_per_unit=189.40,
+            category="A",
+            status="Recorded",
+            transaction_effective_date=date(2026, 2, 11),
+            recorded_date=datetime(2026, 2, 11, 0, 0),
+            approved_date=datetime(2026, 7, 15, 6, 59),
+            from_org_comment=None,
+            to_org_comment=None,
+            government_comment=None,
+        )
+    ]
+    transactions_service.repo.get_transactions_paginated.return_value = (
+        mock_transactions,
+        1,
+    )
+
+    with patch(
+        "lcfs.web.api.transaction.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.transaction.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        await transactions_service.export_transactions(export_format="xlsx")
+
+    row = mock_add_sheet.call_args.kwargs["rows"][0]
+    assert row[9:12] == [
+        date(2026, 2, 11),
+        date(2026, 2, 11),
+        date(2026, 7, 15),
+    ]
+    assert all(not isinstance(value, datetime) for value in row[9:12])
 
 
 # A government export scoped to an organisation must not go through the
