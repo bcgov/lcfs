@@ -1,5 +1,8 @@
 import { currencyFormatter } from '@/utils/formatters'
 
+export const AUTO_RENEWABLE_PENALTY_LABEL = 'Renewable fuel target penalty'
+export const AUTO_LOW_CARBON_PENALTY_LABEL = 'Low carbon fuel target penalty'
+
 const compactCurrencyFormatter = new Intl.NumberFormat('en-CA', {
   style: 'currency',
   currency: 'CAD',
@@ -41,14 +44,14 @@ export const useStackedBarOption = (data, theme) => {
     },
     series: [
       {
-        name: 'Auto renewable',
+        name: AUTO_RENEWABLE_PENALTY_LABEL,
         type: 'bar',
         stack: 'total',
         emphasis: { focus: 'series' },
         data: data.map((item) => item.autoRenewable)
       },
       {
-        name: 'Auto low carbon',
+        name: AUTO_LOW_CARBON_PENALTY_LABEL,
         type: 'bar',
         stack: 'total',
         emphasis: { focus: 'series' },
@@ -77,8 +80,8 @@ export const usePenaltyMixOption = (totals, theme) => {
         },
         label: { show: true, formatter: '{b}: {d}%' },
         data: [
-          { value: totals.autoRenewable, name: 'Auto renewable' },
-          { value: totals.autoLowCarbon, name: 'Auto low carbon' },
+          { value: totals.autoRenewable, name: AUTO_RENEWABLE_PENALTY_LABEL },
+          { value: totals.autoLowCarbon, name: AUTO_LOW_CARBON_PENALTY_LABEL },
           { value: totals.discretionary, name: 'Discretionary' }
         ]
       }

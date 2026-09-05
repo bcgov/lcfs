@@ -249,7 +249,7 @@ async def test_get_reports_paginated_sort_by_assigned_analyst(
 
 
 @pytest.mark.anyio
-async def test_get_reports_paginated_keeps_analyst_adjustment_visible_for_supplier(
+async def test_get_reports_paginated_excludes_analyst_adjustment_for_supplier(
     compliance_report_repo, monkeypatch
 ):
     pagination = PaginationRequestSchema(
@@ -273,7 +273,10 @@ async def test_get_reports_paginated_keeps_analyst_adjustment_visible_for_suppli
 
     await compliance_report_repo.get_reports_paginated(pagination, supplier_user)
 
-    latest_visible_query.assert_awaited_once_with([], supplier_user.organization_id)
+    latest_visible_query.assert_awaited_once_with(
+        [ComplianceReportStatusEnum.Analyst_adjustment],
+        supplier_user.organization_id,
+    )
 
 
 @pytest.mark.anyio

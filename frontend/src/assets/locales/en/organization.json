@@ -167,9 +167,12 @@
   "snapshotTitle": "Organization information from compliance report",
   "penaltyLog": {
     "history": "Penalty history",
+    "autoPenalties": "Automatic penalties",
+    "discretionaryPenalties": "Discretionary penalties",
     "addPenaltyBtn": "Add/Edit discretionary penalties",
     "columns": {
       "complianceYear": "Compliance year",
+      "description": "Description",
       "contraventionType": "Continuous or single contravention",
       "offenceHistory": "History of offences",
       "deliberate": "Whether contravention was deliberate",
@@ -177,12 +180,15 @@
       "economicBenefitDerived": "Economic benefit derived from contravention",
       "effortsToPreventRecurrence": "Efforts to prevent reccurrence",
       "notes": "Any additonal factors (notes)",
-      "penaltyAmount": "Amount of penalty ($CAD)"
+      "penaltyAmount": "Amount ($CAD)",
+      "dueDate": "Due date",
+      "invoiced": "Invoiced",
+      "paid": "Paid"
     },
     "metrics": {
       "totalPenalties": "Total penalties",
       "totalAuto": "Total automatic",
-      "totalSubtitle": "Auto renewable + auto low carbon",
+      "totalSubtitle": "Renewable fuel target + low carbon fuel target",
       "autoPenalties": "Automatic penalties",
       "discretionaryPenalty": "Discretionary penalty",
       "totalPenaltiesTrend": "Total penalties trend",
@@ -191,8 +197,8 @@
       "discretionary": "Discretionary",
       "discretionarySubtitle": "Assessed by director",
       "discretionaryPenaltiesTrend": "Discretionary penalties trend",
-      "autoRenewable": "Auto renewable",
-      "autoLowCarbon": "Auto low carbon"
+      "autoRenewable": "Renewable fuel target penalty",
+      "autoLowCarbon": "Low carbon fuel target penalty"
     },
     "manageTitle": "Confer discretionary penalty",
     "saveReturn": "Save & return",

@@ -31,7 +31,10 @@ import {
   PenaltySummaryTable,
   StackedBarChart
 } from './PenaltyComponents'
-import { PenaltyHistoryGrid } from './PenaltyHistoryGrid'
+import {
+  AutomaticPenaltyLogGrid,
+  DiscretionaryPenaltyLogGrid
+} from './PenaltyGrids'
 
 echarts.use([
   BarChart,
@@ -107,6 +110,49 @@ const processDiscretionaryData = (rawPenaltyLogs, yearLabels) => {
   return yearLabels.map((year) => sums.get(year) ?? 0)
 }
 
+export const buildAutomaticPenaltyRows = (yearlyPenalties) =>
+  yearlyPenalties.flatMap((item) => {
+    const dueDate =
+      item.reportStatus === 'Assessed' && item.assessedDate
+        ? String(item.assessedDate).split('T')[0]
+        : ''
+    const rows = []
+    const autoRenewable = Number(item.autoRenewable ?? 0)
+    const autoLowCarbon = Number(item.autoLowCarbon ?? 0)
+
+    if (autoRenewable > 0) {
+      rows.push({
+        id: `automatic-renewable-${item.compliancePeriodId}`,
+        penaltyLogId: `automatic-renewable-${item.compliancePeriodId}`,
+        complianceYear: item.complianceYear,
+        description:
+          'Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)',
+        penaltyAmount: autoRenewable,
+        dueDate,
+        invoiceSent: !!item.renewableInvoiceSent,
+        paymentReceived: !!item.renewablePaymentReceived,
+        source: 'automatic'
+      })
+    }
+
+    if (autoLowCarbon > 0) {
+      rows.push({
+        id: `automatic-low-carbon-${item.compliancePeriodId}`,
+        penaltyLogId: `automatic-low-carbon-${item.compliancePeriodId}`,
+        complianceYear: item.complianceYear,
+        description:
+          'Low carbon fuel target non-compliance penalty total (Line 21)',
+        penaltyAmount: autoLowCarbon,
+        dueDate,
+        invoiceSent: !!item.lowCarbonInvoiceSent,
+        paymentReceived: !!item.lowCarbonPaymentReceived,
+        source: 'automatic'
+      })
+    }
+
+    return rows
+  })
+
 export const PenaltyLog = () => {
   const { t } = useTranslation(['org'])
   const theme = useTheme()
@@ -146,6 +192,11 @@ export const PenaltyLog = () => {
     [allYears, rawYearlyPenalties]
   )
 
+  const automaticPenaltyRows = useMemo(
+    () => buildAutomaticPenaltyRows(rawYearlyPenalties),
+    [rawYearlyPenalties]
+  )
+
   const penaltyTotals = useMemo(
     () => processPenaltyTotals(rawTotals),
     [rawTotals]
@@ -156,7 +207,7 @@ export const PenaltyLog = () => {
   const sparklineData = useMemo(
     () => ({
       total: yearlyPenalties.map((item) => item.totalAutomatic),
-      automatic: yearlyPenalties.map((item) => item.autoRenewable),
+      automatic: yearlyPenalties.map((item) => item.totalAutomatic),
       discretionary: processDiscretionaryData(rawPenaltyLogs, yearLabels)
     }),
     [yearlyPenalties, rawPenaltyLogs, yearLabels]
@@ -213,6 +264,10 @@ export const PenaltyLog = () => {
         </BCAlert>
       )}
       <Stack spacing={2} sx={{ width: '100%' }}>
+        <AutomaticPenaltyLogGrid
+          automaticPenaltyRows={automaticPenaltyRows}
+          loading={analyticsLoading}
+        />
         <Grid container spacing={2}>
           <Grid item xs={12} md={4} ml={-2}>
             <MetricCardsSection
@@ -230,7 +285,7 @@ export const PenaltyLog = () => {
           penaltyMixOption={penaltyMixOption}
         />
       </Stack>
-      <PenaltyHistoryGrid organizationId={organizationId} />
+      <DiscretionaryPenaltyLogGrid organizationId={organizationId} />
     </BCBox>
   )
 }

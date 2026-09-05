@@ -25,6 +25,8 @@ from lcfs.web.api.compliance_report.constants import (
 )
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportPenaltyStatusSchema,
+    ComplianceReportPenaltyStatusUpdateSchema,
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
     ComplianceReportSummaryUpdateSchema,
@@ -45,6 +47,7 @@ from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.exception.exceptions import ServiceException
 
 logger = structlog.get_logger(__name__)
 
@@ -212,6 +215,11 @@ class ComplianceReportSummaryService:
         )
 
         for column in inspector.mapper.column_attrs:
+            if column.key.endswith("_invoice_sent") or column.key.endswith(
+                "_payment_received"
+            ):
+                continue
+
             line = self._extract_line_number(column.key)
 
             if (
@@ -251,7 +259,8 @@ class ComplianceReportSummaryService:
             default_descriptions=RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
             summary_obj=summary_obj,
             special_description_func=(
-                self._line_4_special_description if line == 4
+                self._line_4_special_description
+                if line == 4
                 else (self._renewable_special_description if line in [6, 8] else None)
             ),
         )
@@ -290,11 +299,7 @@ class ComplianceReportSummaryService:
         summary.low_carbon_fuel_target_summary.append(
             ComplianceReportSummaryRowSchema(
                 line=line,
-                format=(
-                    FORMATS.CURRENCY.value
-                    if line == 21
-                    else FORMATS.NUMBER.value
-                ),
+                format=(FORMATS.CURRENCY.value if line == 21 else FORMATS.NUMBER.value),
                 description=desc,
                 field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["field"],
                 value=int(getattr(summary_obj, column_key) or 0),
@@ -319,6 +324,13 @@ class ComplianceReportSummaryService:
 
         value = float(getattr(summary_obj, column_key) or 0)
         existing_element.total_value += value
+        if line in (11, 21):
+            existing_element.invoice_sent = bool(
+                getattr(summary_obj, f"line_{line}_invoice_sent", False)
+            )
+            existing_element.payment_received = bool(
+                getattr(summary_obj, f"line_{line}_payment_received", False)
+            )
 
     def _get_or_create_summary_row(
         self,
@@ -384,7 +396,10 @@ class ComplianceReportSummaryService:
         gasoline_cap = int(
             (
                 Decimal(
-                    str(summary_obj.line_4_eligible_renewable_fuel_required_gasoline or 0)
+                    str(
+                        summary_obj.line_4_eligible_renewable_fuel_required_gasoline
+                        or 0
+                    )
                 )
                 * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
@@ -400,7 +415,10 @@ class ComplianceReportSummaryService:
         jet_fuel_cap = int(
             (
                 Decimal(
-                    str(summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel or 0)
+                    str(
+                        summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel
+                        or 0
+                    )
                 )
                 * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
@@ -411,9 +429,7 @@ class ComplianceReportSummaryService:
             "{:,}".format(jet_fuel_cap),
         )
 
-    def _non_compliance_special_description(
-        self, line, summary_obj, descriptions_dict
-    ):
+    def _non_compliance_special_description(self, line, summary_obj, descriptions_dict):
         base_desc = descriptions_dict[line].get("description")
         penalty_value = (
             getattr(summary_obj, "line_21_non_compliance_penalty_payable", 0) or 0
@@ -508,6 +524,7 @@ class ComplianceReportSummaryService:
         self,
         report_id: int,
         summary_data: ComplianceReportSummaryUpdateSchema,
+        include_penalty_status: bool = True,
     ) -> ComplianceReportSummarySchema:
         """Autosave compliance report summary details for a specific summary by ID."""
         compliance_report = await self.cr_repo.get_compliance_report_by_id(report_id)
@@ -517,15 +534,91 @@ class ComplianceReportSummaryService:
 
         await self.repo.save_compliance_report_summary(summary_data, compliance_year)
 
-        # Expire the compliance report and its summary so the recalculation
-        # below picks up freshly persisted Line 6/8 values rather than the
-        # cached versions in SQLAlchemy's identity map.
-        sync_session = self.repo.db.sync_session
-        if compliance_report.summary:
-            sync_session.expire(compliance_report.summary)
-        sync_session.expire(compliance_report)
+        self._clear_compliance_report_summary_cache(compliance_report)
 
-        return await self.calculate_compliance_report_summary(report_id)
+        return await self.calculate_compliance_report_summary(
+            report_id, include_penalty_status=include_penalty_status
+        )
+
+    @service_handler
+    async def update_penalty_status(
+        self,
+        report_id: int,
+        status_data: ComplianceReportPenaltyStatusUpdateSchema,
+        user=None,
+    ) -> ComplianceReportPenaltyStatusSchema:
+        """Update IDIR-only invoice/payment status on summary penalty rows."""
+        if status_data.line not in (11, 21):
+            raise ServiceException(
+                "Penalty status can only be updated for lines 11 or 21."
+            )
+        if status_data.invoice_sent is None and status_data.payment_received is None:
+            raise ServiceException("A penalty status field is required.")
+
+        compliance_report = await self.cr_repo.get_compliance_report_by_id(report_id)
+        if not compliance_report:
+            raise DataNotFoundException("Compliance report not found.")
+        if (
+            not compliance_report.current_status
+            or compliance_report.current_status.status
+            == ComplianceReportStatusEnum.Draft
+        ):
+            raise ServiceException(
+                "Penalty status can only be updated after the report is submitted."
+            )
+
+        summary_model = compliance_report.summary
+        if not summary_model:
+            raise DataNotFoundException("Compliance report summary not found.")
+
+        if summary_model.penalty_override_enabled:
+            penalty_amount = (
+                summary_model.renewable_penalty_override
+                if status_data.line == 11
+                else summary_model.low_carbon_penalty_override
+            )
+            penalty_amount = penalty_amount or 0
+        elif status_data.line == 11:
+            penalty_amount = summary_model.line_11_fossil_derived_base_fuel_total
+        else:
+            penalty_amount = summary_model.line_21_non_compliance_penalty_payable
+        if not penalty_amount or penalty_amount <= 0:
+            raise ServiceException(
+                "Penalty status can only be updated when the amount payable is greater than zero."
+            )
+
+        summary = await self.repo.update_penalty_status(
+            report_id,
+            status_data.line,
+            invoice_sent=status_data.invoice_sent,
+            payment_received=status_data.payment_received,
+            user=user,
+        )
+
+        return ComplianceReportPenaltyStatusSchema(
+            line=status_data.line,
+            invoice_sent=bool(
+                getattr(summary, f"line_{status_data.line}_invoice_sent")
+            ),
+            payment_received=bool(
+                getattr(summary, f"line_{status_data.line}_payment_received")
+            ),
+        )
+
+    def _clear_compliance_report_summary_cache(
+        self, compliance_report: ComplianceReport | None
+    ) -> None:
+        """Clear SQLAlchemy's cached report/summary state before recalculation."""
+        if not compliance_report:
+            return
+
+        sync_session = self.repo.db.sync_session
+        state = inspect(compliance_report)
+
+        if "summary" not in state.unloaded and compliance_report.summary:
+            sync_session.expire(compliance_report.summary)
+
+        sync_session.expire(compliance_report)
 
     def _is_eligible_renewable(self, record, compliance_year) -> bool:
         return RenewableFuelTargetCalculator.is_eligible_renewable(
@@ -534,7 +627,7 @@ class ComplianceReportSummaryService:
 
     @service_handler
     async def calculate_compliance_report_summary(
-        self, report_id: int
+        self, report_id: int, include_penalty_status: bool = True
     ) -> ComplianceReportSummarySchema:
         """Recalculate transient summary fields and persist when changed."""
         compliance_report = await self.cr_repo.get_compliance_report_by_id(report_id)
@@ -604,7 +697,12 @@ class ComplianceReportSummaryService:
                 or await self._should_lock_lines_7_and_9(compliance_report)
             )
             locked_summary.lines_6_and_8_locked = True
-            return locked_summary
+            return self._filter_penalty_status(
+                locked_summary,
+                self._can_show_penalty_status(
+                    compliance_report, include_penalty_status
+                ),
+            )
 
         compliance_period_start = compliance_report.compliance_period.effective_date
         compliance_period_end = compliance_report.compliance_period.expiration_date
@@ -629,12 +727,8 @@ class ComplianceReportSummaryService:
             current_line_7_gasoline = (
                 summary_model.line_7_previously_retained_gasoline or 0
             )
-            current_line_7_diesel = (
-                summary_model.line_7_previously_retained_diesel or 0
-            )
-            current_line_7_jet = (
-                summary_model.line_7_previously_retained_jet_fuel or 0
-            )
+            current_line_7_diesel = summary_model.line_7_previously_retained_diesel or 0
+            current_line_7_jet = summary_model.line_7_previously_retained_jet_fuel or 0
 
             if current_line_7_gasoline == 0 and previous_retained["gasoline"]:
                 current_line_7_gasoline = previous_retained["gasoline"]
@@ -656,9 +750,7 @@ class ComplianceReportSummaryService:
             current_line_9_gasoline = (
                 summary_model.line_9_obligation_added_gasoline or 0
             )
-            current_line_9_diesel = (
-                summary_model.line_9_obligation_added_diesel or 0
-            )
+            current_line_9_diesel = summary_model.line_9_obligation_added_diesel or 0
             current_line_9_jet = summary_model.line_9_obligation_added_jet_fuel or 0
 
             if current_line_9_gasoline == 0 and previous_obligation["gasoline"]:
@@ -864,6 +956,7 @@ class ComplianceReportSummaryService:
             can_sign,
             early_issuance_summary,
         )
+        self._apply_stored_penalty_status(summary, summary_model)
 
         self._apply_exemption_overrides(summary, compliance_report)
 
@@ -878,9 +971,59 @@ class ComplianceReportSummaryService:
                 f"Report has changed, updating summary for report {compliance_report.compliance_report_id}"
             )
             await self.repo.save_compliance_report_summary(summary)
-            return summary
+            return self._filter_penalty_status(
+                summary,
+                self._can_show_penalty_status(
+                    compliance_report, include_penalty_status
+                ),
+            )
 
-        return existing_summary
+        return self._filter_penalty_status(
+            existing_summary,
+            self._can_show_penalty_status(compliance_report, include_penalty_status),
+        )
+
+    @staticmethod
+    def _can_show_penalty_status(
+        compliance_report: ComplianceReport, include_penalty_status: bool
+    ) -> bool:
+        return bool(
+            include_penalty_status
+            and compliance_report.current_status
+            and compliance_report.current_status.status
+            != ComplianceReportStatusEnum.Draft
+        )
+
+    def _filter_penalty_status(
+        self,
+        summary: ComplianceReportSummarySchema,
+        include_penalty_status: bool,
+    ) -> ComplianceReportSummarySchema:
+        for row in summary.non_compliance_penalty_summary or []:
+            penalty_amount = row.total_value
+            if summary.penalty_override_enabled:
+                if row.line == 11:
+                    penalty_amount = summary.renewable_penalty_override or 0
+                elif row.line == 21:
+                    penalty_amount = summary.low_carbon_penalty_override or 0
+            if not include_penalty_status or not penalty_amount or penalty_amount <= 0:
+                row.invoice_sent = None
+                row.payment_received = None
+
+        return summary
+
+    def _apply_stored_penalty_status(
+        self,
+        summary: ComplianceReportSummarySchema,
+        summary_model: ComplianceReportSummary,
+    ) -> None:
+        for row in summary.non_compliance_penalty_summary or []:
+            if row.line == 11:
+                row.invoice_sent = bool(summary_model.line_11_invoice_sent)
+                row.payment_received = bool(summary_model.line_11_payment_received)
+            elif row.line == 21:
+                row.invoice_sent = bool(summary_model.line_21_invoice_sent)
+                row.payment_received = bool(summary_model.line_21_payment_received)
 
     async def calculate_early_issuance_summary(self, compliance_report):
         early_issuance_summary = None
@@ -1031,8 +1174,10 @@ class ComplianceReportSummaryService:
     async def calculate_quarterly_fuel_supply_compliance_units(
         self, report: ComplianceReport
     ) -> list[int]:
-        return await self._compliance_units_calculator().calculate_quarterly_fuel_supply(
-            report
+        return (
+            await self._compliance_units_calculator().calculate_quarterly_fuel_supply(
+                report
+            )
         )
 
     @service_handler

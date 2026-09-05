@@ -58,7 +58,7 @@ class OrganizationPenaltyService:
 
     @service_handler
     async def get_penalty_analytics(
-        self, organization_id: int
+        self, organization_id: int, include_penalty_status: bool = True
     ) -> PenaltyAnalyticsResponseSchema:
         """
         Assemble penalty analytics data for the organization, combining automatic
@@ -84,19 +84,23 @@ class OrganizationPenaltyService:
         for row in summaries:
             penalty_override_enabled = bool(row.get("penalty_override_enabled"))
 
+            line_11_penalty = row.get("line_11_penalty_payable")
+            if line_11_penalty is None:
+                line_11_penalty = (
+                    _to_float(row.get("line_11_penalty_gasoline"))
+                    + _to_float(row.get("line_11_penalty_diesel"))
+                    + _to_float(row.get("line_11_penalty_jet_fuel"))
+                )
+
             renewable_penalty = (
-                _to_float(row.get("renewable_penalty_override"))
+                _to_float(row.get("renewable_penalty_override") or 0)
                 if penalty_override_enabled
-                and row.get("renewable_penalty_override") is not None
-                else _to_float(row.get("line_11_penalty_gasoline"))
-                + _to_float(row.get("line_11_penalty_diesel"))
-                + _to_float(row.get("line_11_penalty_jet_fuel"))
+                else _to_float(line_11_penalty)
             )
 
             low_carbon_penalty = (
-                _to_float(row.get("low_carbon_penalty_override"))
+                _to_float(row.get("low_carbon_penalty_override") or 0)
                 if penalty_override_enabled
-                and row.get("low_carbon_penalty_override") is not None
                 else _to_float(row.get("line_21_penalty_payable"))
             )
 
@@ -118,9 +122,35 @@ class OrganizationPenaltyService:
                 PenaltyYearlySummarySchema(
                     compliance_period_id=row.get("compliance_period_id"),
                     compliance_year=compliance_year,
+                    report_status=(
+                        row.get("report_status").value
+                        if hasattr(row.get("report_status"), "value")
+                        else row.get("report_status")
+                    ),
+                    assessed_date=row.get("assessed_date"),
                     auto_renewable=renewable_penalty,
                     auto_low_carbon=low_carbon_penalty,
                     total_automatic=total_automatic,
+                    renewable_invoice_sent=(
+                        bool(row.get("line_11_invoice_sent"))
+                        if include_penalty_status
+                        else None
+                    ),
+                    renewable_payment_received=(
+                        bool(row.get("line_11_payment_received"))
+                        if include_penalty_status
+                        else None
+                    ),
+                    low_carbon_invoice_sent=(
+                        bool(row.get("line_21_invoice_sent"))
+                        if include_penalty_status
+                        else None
+                    ),
+                    low_carbon_payment_received=(
+                        bool(row.get("line_21_payment_received"))
+                        if include_penalty_status
+                        else None
+                    ),
                 )
             )
 

@@ -96,8 +96,12 @@ export const PenaltySummaryTable = ({
           <TableHead>
             <TableRow>
               <TableCell>Year</TableCell>
-              <TableCell>Auto renewable</TableCell>
-              <TableCell>Auto low carbon</TableCell>
+              <TableCell>
+                {i18n.t('org:penaltyLog.metrics.autoRenewable')}
+              </TableCell>
+              <TableCell>
+                {i18n.t('org:penaltyLog.metrics.autoLowCarbon')}
+              </TableCell>
               <TableCell>Total automatic</TableCell>
             </TableRow>
           </TableHead>
