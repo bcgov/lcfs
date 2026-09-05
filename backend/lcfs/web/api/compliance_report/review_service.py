@@ -12,7 +12,10 @@ from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
+from lcfs.db.models.compliance.ComplianceReport import (
+    QuantityUnitsEnum,
+    SupplementalInitiatorType,
+)
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -217,6 +220,8 @@ class ComplianceReportReviewService:
         findings = []
         findings.extend(self._administrative_findings(report, compliance_year))
         findings.extend(self._schedule_findings(schedule_records))
+        findings.extend(self._notional_transfer_findings(schedule_records))
+        findings.extend(self._fuel_supply_fse_cross_check_findings(schedule_records, fse_summary))
         findings.extend(
             self._fuel_code_findings(schedule_records, compliance_year=compliance_year)
         )
@@ -230,6 +235,46 @@ class ComplianceReportReviewService:
             findings.extend(
                 self._historical_variance_findings(
                     current_chart_totals, prior_year_snapshots[0][1]
+                )
+            )
+            findings.extend(
+                self._zero_value_narrative_findings(
+                    current_chart_totals,
+                    prior_year_snapshots[0][1],
+                )
+            )
+            findings.extend(
+                self._large_supply_drop_findings(
+                    report,
+                    current_chart_totals,
+                    prior_year_snapshots[0][1],
+                )
+            )
+            findings.extend(
+                self._other_uses_variance_findings(
+                    schedule_records,
+                    current_chart_totals,
+                    prior_year_snapshots[0][1],
+                )
+            )
+            findings.extend(
+                self._fuel_mix_shift_findings(
+                    current_chart_totals,
+                    prior_year_snapshots[0][1],
+                )
+            )
+            findings.extend(
+                self._correlation_findings(
+                    current_chart_totals,
+                    prior_year_snapshots[0][1],
+                    fse_summary,
+                    prior_fse_summary,
+                )
+            )
+            findings.extend(
+                self._historical_presence_gap_findings(
+                    current_chart_totals,
+                    prior_year_snapshots,
                 )
             )
 
@@ -573,18 +618,29 @@ class ComplianceReportReviewService:
                 )
             )
 
-        if not records["notional_transfers"] and not records["fuel_exports"]:
+        if not records["notional_transfers"]:
             findings.append(
                 self._finding(
                     "Notional transfers and exports",
                     "informational",
-                    "No notional transfers or exports reported",
-                    "The effective report data does not include active notional transfers or fuel exports.",
-                    "Notional transfers and fuel exports",
+                    "Confirmed no notional transfers reported",
+                    "The effective report data does not include active notional transfers for this reporting period.",
+                    "Notional transfers",
                     [
                         self._metric("Notional transfers", 0),
-                        self._metric("Fuel exports", 0),
                     ],
+                    None,
+                )
+            )
+        if not records["fuel_exports"]:
+            findings.append(
+                self._finding(
+                    "Notional transfers and exports",
+                    "informational",
+                    "Confirmed no exports out of BC reported",
+                    "The effective report data does not include active fuel exports for this reporting period.",
+                    "Fuel exports",
+                    [self._metric("Fuel exports", 0)],
                     None,
                 )
             )
@@ -604,12 +660,18 @@ class ComplianceReportReviewService:
             ("other_uses", "Out-of-province consumption", "Other uses reported"),
         ]:
             if records[key]:
+                detail = {
+                    "allocation_agreements": "Allocation agreements are reported in the effective data and should reconcile to fuel supply quantities and counterparty information.",
+                    "notional_transfers": "Notional transfers are reported in the effective data and should be reviewed against counterparty evidence and compliance-period support.",
+                    "fuel_exports": "Fuel exports are reported in the effective data and should reconcile to export quantities, timing, and supporting documentation.",
+                    "other_uses": "Other uses are reported in the effective data and should be assessed against business activity, expected use, and any supporting rationale.",
+                }[key]
                 findings.append(
                     self._finding(
                         area,
                         "review",
                         title,
-                        "This section has active records and should be included in manual reconciliation.",
+                        detail,
                         self._source_label(key),
                         [self._metric("Active records", len(records[key]))],
                         "Do the reported volumes reconcile to related schedules, counterparties, and supporting rationale?",
@@ -617,6 +679,42 @@ class ComplianceReportReviewService:
                 )
 
         return findings
+
+    def _notional_transfer_findings(
+        self, records: dict[str, list]
+    ) -> list[ComplianceReportReviewFindingSchema]:
+        rows = records["notional_transfers"]
+        if not rows:
+            return []
+
+        transferred_quantity = sum(
+            self._number(getattr(row, "quantity", 0))
+            for row in rows
+            if getattr(getattr(row, "received_or_transferred", None), "value", None)
+            == "Transferred"
+        )
+        received_quantity = sum(
+            self._number(getattr(row, "quantity", 0))
+            for row in rows
+            if getattr(getattr(row, "received_or_transferred", None), "value", None)
+            == "Received"
+        )
+        return [
+            self._finding(
+                "Notional transfers and exports",
+                "review",
+                "Notional transfer evidence needs timing review",
+                "Notional transfers were reported. The schedule amounts can be summarized deterministically, but agreement timing and evidentiary validity still need manual review against supporting documents.",
+                "Notional transfers",
+                [
+                    self._metric("Transferred quantity", transferred_quantity, units="reported units"),
+                    self._metric("Received quantity", received_quantity, units="reported units"),
+                    self._metric("Active transfer records", len(rows)),
+                ],
+                "Do the supporting notional transfer documents align to the correct compliance period and pre-deadline evidence requirements?",
+                confidence="medium",
+            )
+        ]
 
     def _fuel_code_findings(
         self, records: dict[str, list], compliance_year: int | None
@@ -686,6 +784,49 @@ class ComplianceReportReviewService:
 
         return findings
 
+    def _fuel_supply_fse_cross_check_findings(
+        self,
+        records: dict[str, list],
+        fse_summary: dict | None,
+    ) -> list[ComplianceReportReviewFindingSchema]:
+        fuel_supply_kwh = self._fuel_supply_total_kwh(records["fuel_supplies"])
+        fse_total_kwh = self._number((fse_summary or {}).get("total_kwh", 0))
+
+        if fuel_supply_kwh <= 0 or fse_total_kwh <= 0:
+            return []
+
+        if fuel_supply_kwh == fse_total_kwh:
+            return []
+
+        delta = fuel_supply_kwh - fse_total_kwh
+        percent_change = self._percent_change(fuel_supply_kwh, fse_total_kwh)
+        severity = (
+            "concern"
+            if abs(delta) >= 1000
+            or (percent_change is not None and abs(percent_change) >= 1)
+            else "review"
+        )
+        return [
+            self._finding(
+                "Fuel supply and FSE cross-check",
+                severity,
+                "Fuel supply and FSE kWh do not align",
+                "The total kWh reported in fuel supply does not match the total kWh reported in the FSE schedule.",
+                "Fuel supply and FSE reporting views",
+                [
+                    self._metric(
+                        "Fuel supply total kWh",
+                        round(fuel_supply_kwh, 2),
+                        comparison_value=round(fse_total_kwh, 2),
+                        delta=round(delta, 2),
+                        percent_change=percent_change,
+                        units="kWh",
+                    )
+                ],
+                "Do the electricity totals align between the fuel supply and FSE sections, and if not, what explains the mismatch?",
+            )
+        ]
+
     def _fse_findings(
         self,
         fse_summary: dict | None,
@@ -694,17 +835,6 @@ class ComplianceReportReviewService:
     ) -> list[ComplianceReportReviewFindingSchema]:
         findings = []
         if not fse_summary or not fse_summary.get("equipment_count"):
-            findings.append(
-                self._finding(
-                    "Electricity/FSE",
-                    "informational",
-                    "No FSE data reported",
-                    "The deterministic pre-screen did not find FSE reporting rows in the grid-backed row set for this report.",
-                    "FSE reporting view",
-                    [self._metric("FSE count", 0)],
-                    None,
-                )
-            )
             return findings
 
         equipment_count = fse_summary["equipment_count"]
@@ -832,6 +962,39 @@ class ComplianceReportReviewService:
                 )
             )
 
+        average_kwh_per_fse = (
+            round(total_kwh / equipment_count, 2) if equipment_count else 0
+        )
+        if average_kwh_per_fse < 1000:
+            prior_average_kwh_per_fse = None
+            if prior_fse_summary and prior_fse_summary.get("equipment_count"):
+                prior_average_kwh_per_fse = round(
+                    self._number(prior_fse_summary.get("total_kwh", 0))
+                    / self._number(prior_fse_summary.get("equipment_count", 1)),
+                    2,
+                )
+            findings.append(
+                self._finding(
+                    "Electricity/FSE",
+                    "review",
+                    "Low FSE charge volume needs rationale",
+                    "Reported kWh usage per FSE is below the low-volume threshold and should be supported by evidence or an operational explanation.",
+                    "FSE reporting view",
+                    [
+                        self._metric(
+                            "Average kWh per FSE",
+                            average_kwh_per_fse,
+                            comparison_value=prior_average_kwh_per_fse,
+                            units="kWh/FSE",
+                        ),
+                        self._metric("FSE count", equipment_count),
+                        self._metric("Total kWh", round(total_kwh, 2), units="kWh"),
+                    ],
+                    "Is there supporting rationale or evidence for the low charge volume, such as low utilization, neglected sites, or partial-year activity?",
+                    confidence="medium",
+                )
+            )
+
         if prior_fse_summary and prior_fse_summary.get("equipment_count"):
             prior_kwh = prior_fse_summary.get("total_kwh", 0)
             percent_change = self._percent_change(total_kwh, prior_kwh)
@@ -904,6 +1067,33 @@ class ComplianceReportReviewService:
         self, records: dict[str, list]
     ) -> list[ComplianceReportReviewFindingSchema]:
         findings = []
+        missing_phone_rows = [
+            row
+            for row in records["allocation_agreements"]
+            if not (getattr(row, "transaction_partner_phone", None) or "").strip()
+        ]
+        if missing_phone_rows:
+            findings.append(
+                self._finding(
+                    "Allocations and transfers",
+                    "concern",
+                    "Allocation agreement contact details incomplete",
+                    "One or more allocation agreements do not include a transaction partner phone number in the effective report data.",
+                    "Allocation agreements",
+                    [
+                        self._metric(
+                            "Allocation agreements missing phone",
+                            len(missing_phone_rows),
+                        ),
+                        self._metric(
+                            "Total allocation agreements",
+                            len(records["allocation_agreements"]),
+                        ),
+                    ],
+                    "Do the allocation agreements include the required counterparty contact details, including phone number?",
+                )
+            )
+
         supplied_by_fuel = self._sum_by_fuel_category(
             records["fuel_supplies"], "quantity"
         )
@@ -1008,7 +1198,12 @@ class ComplianceReportReviewService:
                         "Historical variance",
                         "review",
                         f"Material year-over-year change in {fuel_type}",
-                        "The effective schedule total changed materially compared with the prior-year assessed report.",
+                        (
+                            f"{self._source_label(key)} for {fuel_type} changed by "
+                            f"{abs(round(percent_change, 1)) if percent_change is not None else round(abs(delta), 2)}"
+                            f"{'%' if percent_change is not None else ' reported units'} "
+                            f"compared with the prior-year assessed report and should be explained."
+                        ),
                         self._source_label(key),
                         [
                             self._metric(
@@ -1064,6 +1259,412 @@ class ComplianceReportReviewService:
             )
         ]
 
+    def _correlation_findings(
+        self,
+        current_totals: dict[str, dict[str, float]],
+        prior_totals: dict[str, dict[str, float]],
+        current_fse_summary: dict | None,
+        prior_fse_summary: dict | None,
+    ) -> list[ComplianceReportReviewFindingSchema]:
+        if not current_fse_summary or not prior_fse_summary:
+            return []
+
+        current_fse_count = self._number(current_fse_summary.get("equipment_count", 0))
+        prior_fse_count = self._number(prior_fse_summary.get("equipment_count", 0))
+        if current_fse_count <= 0 or prior_fse_count <= 0:
+            return []
+
+        current_supply = sum(current_totals.get("fuel_supplies", {}).values())
+        prior_supply = sum(prior_totals.get("fuel_supplies", {}).values())
+        supply_delta = current_supply - prior_supply
+        supply_percent = self._percent_change(current_supply, prior_supply)
+        if not self._is_material(supply_delta, supply_percent):
+            return []
+
+        fse_count_delta = current_fse_count - prior_fse_count
+        fse_count_percent = self._percent_change(current_fse_count, prior_fse_count)
+
+        current_kwh = self._number(current_fse_summary.get("total_kwh", 0))
+        prior_kwh = self._number(prior_fse_summary.get("total_kwh", 0))
+        kwh_delta = current_kwh - prior_kwh
+        kwh_percent = self._percent_change(current_kwh, prior_kwh)
+
+        same_direction = (
+            supply_delta != 0
+            and fse_count_delta != 0
+            and (supply_delta > 0) == (fse_count_delta > 0)
+        )
+
+        if same_direction:
+            severity = "informational"
+            title = "Fuel supply variance aligns with FSE trend"
+            detail = (
+                "Fuel supply and FSE counts moved in the same direction compared "
+                "with the prior-year assessed report, which is more consistent "
+                "with a broader operational trend than an isolated reporting issue."
+            )
+            follow_up = (
+                "Does the reported growth or contraction have supporting business "
+                "context, and do the related FSE details remain internally coherent?"
+            )
+        else:
+            severity = "review"
+            title = "Fuel supply variance does not align with FSE trend"
+            detail = (
+                "Fuel supply changed materially, but the FSE trend did not move in "
+                "parallel. This may still be valid, but it needs analyst review."
+            )
+            follow_up = (
+                "What explains the supply movement, and is there supporting context "
+                "for the weaker or opposite FSE trend?"
+            )
+
+        return [
+            self._finding(
+                "Correlative variance analysis",
+                severity,
+                title,
+                detail,
+                "Fuel supply and FSE reporting views",
+                [
+                    self._metric(
+                        "Total fuel supply",
+                        current_supply,
+                        comparison_value=prior_supply,
+                        delta=supply_delta,
+                        percent_change=supply_percent,
+                        units="reported units",
+                    ),
+                    self._metric(
+                        "FSE count",
+                        current_fse_count,
+                        comparison_value=prior_fse_count,
+                        delta=fse_count_delta,
+                        percent_change=fse_count_percent,
+                        units="count",
+                    ),
+                    self._metric(
+                        "Total FSE kWh usage",
+                        current_kwh,
+                        comparison_value=prior_kwh,
+                        delta=kwh_delta,
+                        percent_change=kwh_percent,
+                        units="kWh",
+                    ),
+                ],
+                follow_up,
+            )
+        ]
+
+    def _historical_presence_gap_findings(
+        self,
+        current_totals: dict[str, dict[str, float]],
+        prior_year_snapshots: list[tuple[object, dict[str, dict[str, float]]]],
+    ) -> list[ComplianceReportReviewFindingSchema]:
+        if len(prior_year_snapshots) < 2:
+            return []
+
+        current_supply = current_totals.get("fuel_supplies", {})
+        all_labels = set(current_supply)
+        for _, snapshot in prior_year_snapshots:
+            all_labels.update(snapshot.get("fuel_supplies", {}))
+
+        findings = []
+        for label in sorted(all_labels):
+            current_value = current_supply.get(label, 0)
+            if current_value != 0:
+                continue
+
+            positive_streak = []
+            for prior_report, snapshot in prior_year_snapshots:
+                prior_value = snapshot.get("fuel_supplies", {}).get(label, 0)
+                if prior_value > 0:
+                    positive_streak.append(
+                        (
+                            str(prior_report.compliance_period.description),
+                            prior_value,
+                        )
+                    )
+                else:
+                    break
+
+            if len(positive_streak) < 2:
+                continue
+
+            most_recent_year, most_recent_value = positive_streak[0]
+            findings.append(
+                self._finding(
+                    "Historical presence gap",
+                    "concern",
+                    f"{label} is no longer reported",
+                    "This fuel category and type was reported in consecutive prior assessed periods but is absent from the current effective report data.",
+                    "Fuel supply",
+                    [
+                        self._metric(
+                            "Current quantity", current_value, units="reported units"
+                        ),
+                        self._metric(
+                            f"Most recent prior quantity ({most_recent_year})",
+                            most_recent_value,
+                            units="reported units",
+                        ),
+                        self._metric(
+                            "Consecutive prior years with reported volume",
+                            len(positive_streak),
+                            units="years",
+                        ),
+                    ],
+                    "Was this fuel intentionally not supplied this year, or is a historically reported fuel now missing from the effective data?",
+                )
+            )
+
+        return findings
+
+    def _other_uses_variance_findings(
+        self,
+        records: dict[str, list],
+        current_totals: dict[str, dict[str, float]],
+        prior_totals: dict[str, dict[str, float]],
+    ) -> list[ComplianceReportReviewFindingSchema]:
+        current_other_uses = current_totals.get("other_uses", {})
+        prior_other_uses = prior_totals.get("other_uses", {})
+        findings = []
+
+        for fuel_label in sorted(set(current_other_uses) | set(prior_other_uses)):
+            current_value = current_other_uses.get(fuel_label, 0)
+            prior_value = prior_other_uses.get(fuel_label, 0)
+            delta = current_value - prior_value
+            percent_change = self._percent_change(current_value, prior_value)
+            if percent_change is None or abs(percent_change) < 20 or abs(delta) == 0:
+                continue
+
+            matching_rows = [
+                row
+                for row in records["other_uses"]
+                if self._fuel_label(row) == fuel_label
+            ]
+            rationale_count = sum(
+                1 for row in matching_rows if (getattr(row, "rationale", None) or "").strip()
+            )
+            direction = "increase" if delta > 0 else "decrease"
+            detail = (
+                f"{fuel_label} for other uses shows a {abs(round(percent_change, 1))}% year-over-year {direction}. "
+                + (
+                    f"Supplier rationale is captured on {rationale_count} record(s)."
+                    if rationale_count
+                    else "No supplier rationale is captured in the schedule rows."
+                )
+            )
+            findings.append(
+                self._finding(
+                    "Out-of-province consumption",
+                    "review",
+                    f"Other uses variance needs explanation for {fuel_label}",
+                    detail,
+                    "Other uses",
+                    [
+                        self._metric(
+                            fuel_label,
+                            current_value,
+                            comparison_value=prior_value,
+                            delta=delta,
+                            percent_change=percent_change,
+                            units="reported units",
+                        ),
+                        self._metric("Rows with rationale", rationale_count),
+                    ],
+                    "What operational change explains the movement in other uses, and is that explanation supported by the supplier evidence?",
+                    confidence="medium",
+                )
+            )
+
+        return findings
+
+    def _zero_value_narrative_findings(
+        self,
+        current_totals: dict[str, dict[str, float]],
+        prior_totals: dict[str, dict[str, float]],
+    ) -> list[ComplianceReportReviewFindingSchema]:
+        findings = []
+        for key in ("fuel_exports", "notional_transfers", "other_uses"):
+            current_total = self._schedule_total(current_totals, key)
+            prior_total = self._schedule_total(prior_totals, key)
+            if current_total != 0:
+                continue
+
+            if prior_total == 0:
+                findings.append(
+                    self._finding(
+                        self._negative_confirmation_area(key),
+                        "informational",
+                        self._negative_confirmation_title(key, historical=False),
+                        self._negative_confirmation_detail(key, historical=False),
+                        self._source_label(key),
+                        [self._metric(self._source_label(key), 0, units="reported units")],
+                        None,
+                    )
+                )
+            else:
+                findings.append(
+                    self._finding(
+                        self._negative_confirmation_area(key),
+                        "review",
+                        self._negative_confirmation_title(key, historical=True),
+                        self._negative_confirmation_detail(key, historical=True),
+                        self._source_label(key),
+                        [
+                            self._metric(
+                                self._source_label(key),
+                                current_total,
+                                comparison_value=prior_total,
+                                delta=current_total - prior_total,
+                                percent_change=self._percent_change(
+                                    current_total, prior_total
+                                ),
+                                units="reported units",
+                            )
+                        ],
+                        f"What explains the cessation of reported {self._source_label(key).lower()} activity compared with the prior assessed report?",
+                        confidence="medium",
+                    )
+                )
+
+        return findings
+
+    def _large_supply_drop_findings(
+        self,
+        report,
+        current_totals: dict[str, dict[str, float]],
+        prior_totals: dict[str, dict[str, float]],
+    ) -> list[ComplianceReportReviewFindingSchema]:
+        current_supply = self._schedule_total(current_totals, "fuel_supplies")
+        prior_supply = self._schedule_total(prior_totals, "fuel_supplies")
+        percent_change = self._percent_change(current_supply, prior_supply)
+        if percent_change is None or percent_change > -50:
+            return []
+
+        rationale = self._report_rationale_reference(
+            report,
+            [
+                "reporting responsibility",
+                "supply agreement",
+                "sourced from",
+                "wholesaler",
+                "retailer",
+            ],
+        )
+        detail = (
+            f"A significant {abs(round(percent_change, 1))}% year-over-year decrease in total fuel supply was detected. "
+            + (
+                f"This appears to be documented in the available report text: {rationale}."
+                if rationale
+                else "No reporting-responsibility rationale was found in the available report data. Follow-up inquiry is required."
+            )
+        )
+        return [
+            self._finding(
+                "Historical variance",
+                "concern" if not rationale else "review",
+                "Critical supply decrease requires reporting-responsibility review",
+                detail,
+                "Fuel supply",
+                [
+                    self._metric(
+                        "Total fuel supply",
+                        current_supply,
+                        comparison_value=prior_supply,
+                        delta=current_supply - prior_supply,
+                        percent_change=percent_change,
+                        units="reported units",
+                    )
+                ],
+                (
+                    "Does the supply decrease reflect a documented shift in reporting responsibility or supply agreements?"
+                    if not rationale
+                    else None
+                ),
+                confidence="medium",
+            )
+        ]
+
+    def _fuel_mix_shift_findings(
+        self,
+        current_totals: dict[str, dict[str, float]],
+        prior_totals: dict[str, dict[str, float]],
+    ) -> list[ComplianceReportReviewFindingSchema]:
+        current_supply = current_totals.get("fuel_supplies", {})
+        prior_supply = prior_totals.get("fuel_supplies", {})
+
+        hdrd_label = next(
+            (
+                label
+                for label in current_supply.keys() | prior_supply.keys()
+                if "hdrd" in label.lower()
+            ),
+            None,
+        )
+        fossil_diesel_label = next(
+            (
+                label
+                for label in current_supply.keys() | prior_supply.keys()
+                if "fossil" in label.lower() and "diesel" in label.lower()
+            ),
+            None,
+        )
+        if not hdrd_label or not fossil_diesel_label:
+            return []
+
+        hdrd_current = current_supply.get(hdrd_label, 0)
+        hdrd_prior = prior_supply.get(hdrd_label, 0)
+        fossil_current = current_supply.get(fossil_diesel_label, 0)
+        fossil_prior = prior_supply.get(fossil_diesel_label, 0)
+
+        hdrd_percent = self._percent_change(hdrd_current, hdrd_prior)
+        fossil_percent = self._percent_change(fossil_current, fossil_prior)
+        if (
+            hdrd_percent is None
+            or fossil_percent is None
+            or hdrd_percent <= 0
+            or fossil_percent >= 0
+            or not self._is_material(hdrd_current - hdrd_prior, hdrd_percent)
+            or not self._is_material(fossil_current - fossil_prior, fossil_percent)
+        ):
+            return []
+
+        return [
+            self._finding(
+                "Fuel code validation",
+                "review",
+                "Fuel mix indicates a possible blending shift",
+                (
+                    f"The report shows a {abs(round(hdrd_percent, 1))}% increase in {hdrd_label} "
+                    f"alongside a {abs(round(fossil_percent, 1))}% decrease in {fossil_diesel_label}. "
+                    "This is consistent with a possible blending shift and should be reviewed against lower carbon fuel target expectations."
+                ),
+                "Fuel supply",
+                [
+                    self._metric(
+                        hdrd_label,
+                        hdrd_current,
+                        comparison_value=hdrd_prior,
+                        delta=hdrd_current - hdrd_prior,
+                        percent_change=hdrd_percent,
+                        units="reported units",
+                    ),
+                    self._metric(
+                        fossil_diesel_label,
+                        fossil_current,
+                        comparison_value=fossil_prior,
+                        delta=fossil_current - fossil_prior,
+                        percent_change=fossil_percent,
+                        units="reported units",
+                    ),
+                ],
+                "Does the fuel mix change reflect an intentional blending strategy supported by the lower carbon fuel target summary?",
+                confidence="medium",
+            )
+        ]
+
     def _build_chart_data(
         self,
         current_records: dict[str, list],
@@ -1086,6 +1687,22 @@ class ComplianceReportReviewService:
             prior_report.compliance_report_id: prior_summary
             for prior_report, prior_summary in prior_fse_snapshots
         }
+        historical.extend(
+            self._build_supply_fse_trend_series(
+                current_chart_totals,
+                prior_year_snapshots,
+                fse_summary,
+                prior_fse_snapshots,
+                current_label,
+            )
+        )
+        historical.extend(
+            self._build_fuel_presence_heatmap_series(
+                current_chart_totals,
+                prior_year_snapshots,
+                current_label,
+            )
+        )
         for prior_report, prior_totals in prior_year_snapshots:
             prior_label = str(prior_report.compliance_period.description)
             for key in self._schedule_keys():
@@ -1198,16 +1815,20 @@ class ComplianceReportReviewService:
     ) -> list[ComplianceReportReviewComparisonSeriesSchema]:
         series = []
 
+        current_total_kwh = self._number(current.get("total_kwh", 0))
+        prior_total_kwh = self._number(prior.get("total_kwh", 0))
         current_utilization = current.get("avg_capacity_utilization_percent")
         prior_utilization = prior.get("avg_capacity_utilization_percent")
-        usage_points = [
-            self._comparison_point(
-                "Total kWh usage",
-                current.get("total_kwh", 0),
-                prior.get("total_kwh", 0),
-                units="kWh",
+        usage_points = []
+        if current_total_kwh > 0 or prior_total_kwh > 0:
+            usage_points.append(
+                self._comparison_point(
+                    "Total kWh usage",
+                    current_total_kwh,
+                    prior_total_kwh,
+                    units="kWh",
+                )
             )
-        ]
         if current_utilization is not None or prior_utilization is not None:
             usage_points.append(
                 self._comparison_point(
@@ -1264,6 +1885,86 @@ class ComplianceReportReviewService:
                 )
             )
 
+        return series
+
+    def _build_supply_fse_trend_series(
+        self,
+        current_chart_totals: dict[str, dict[str, float]],
+        prior_year_snapshots: list[tuple[object, dict[str, dict[str, float]]]],
+        current_fse_summary: dict | None,
+        prior_fse_snapshots: list[tuple[object, dict]],
+        current_label: str,
+    ) -> list[ComplianceReportReviewComparisonSeriesSchema]:
+        if not current_fse_summary:
+            return []
+
+        prior_fse_by_report_id = {
+            prior_report.compliance_report_id: prior_summary
+            for prior_report, prior_summary in prior_fse_snapshots
+        }
+        current_supply = sum(current_chart_totals.get("fuel_supplies", {}).values())
+        current_fse_count = self._number(current_fse_summary.get("equipment_count", 0))
+        if current_fse_count <= 0:
+            return []
+
+        series = []
+        for prior_report, prior_totals in prior_year_snapshots:
+            prior_fse_summary = prior_fse_by_report_id.get(
+                prior_report.compliance_report_id
+            )
+            if (
+                not prior_fse_summary
+                or self._number(prior_fse_summary.get("equipment_count", 0)) <= 0
+            ):
+                continue
+
+            series.append(
+                ComplianceReportReviewComparisonSeriesSchema(
+                    title="Fuel supply and FSE count trend",
+                    current_label=current_label,
+                    comparison_label=str(prior_report.compliance_period.description),
+                    points=[
+                        self._comparison_point(
+                            "Total fuel supply",
+                            current_supply,
+                            sum(prior_totals.get("fuel_supplies", {}).values()),
+                            units="reported units",
+                        ),
+                        self._comparison_point(
+                            "FSE count",
+                            current_fse_count,
+                            self._number(prior_fse_summary.get("equipment_count", 0)),
+                            units="count",
+                        ),
+                    ],
+                )
+            )
+
+        return series
+
+    def _build_fuel_presence_heatmap_series(
+        self,
+        current_chart_totals: dict[str, dict[str, float]],
+        prior_year_snapshots: list[tuple[object, dict[str, dict[str, float]]]],
+        current_label: str,
+    ) -> list[ComplianceReportReviewComparisonSeriesSchema]:
+        current_supply = current_chart_totals.get("fuel_supplies", {})
+        series = []
+        for prior_report, prior_totals in prior_year_snapshots:
+            points = self._comparison_points(
+                current_supply,
+                prior_totals.get("fuel_supplies", {}),
+                units="reported units",
+            )
+            if points:
+                series.append(
+                    ComplianceReportReviewComparisonSeriesSchema(
+                        title="Fuel supply presence by fuel category and type",
+                        current_label=current_label,
+                        comparison_label=str(prior_report.compliance_period.description),
+                        points=points,
+                    )
+                )
         return series
 
     def _comparison_points(
@@ -1364,11 +2065,94 @@ class ComplianceReportReviewService:
             if has_prior_year_baseline
             else "No prior-year assessed comparison was available."
         )
+        highlights = self._summary_highlights(findings)
         if concern_count:
-            return f"Deterministic pre-screen found {concern_count} concern(s) and {review_count} review item(s). {baseline}"
+            intro = (
+                f"Deterministic pre-screen found {concern_count} concern(s) and "
+                f"{review_count} review item(s)."
+            )
+            return " ".join([intro, *highlights, baseline]).strip()
         if review_count:
-            return f"Deterministic pre-screen found {review_count} item(s) for analyst review. {baseline}"
-        return f"Deterministic pre-screen did not find material concerns using the current rule set. {baseline}"
+            intro = (
+                f"Deterministic pre-screen found {review_count} item(s) for analyst review."
+            )
+            return " ".join([intro, *highlights, baseline]).strip()
+        if highlights:
+            return " ".join([*highlights, baseline]).strip()
+        return (
+            "Deterministic pre-screen did not find material concerns using the "
+            f"current rule set. {baseline}"
+        )
+
+    def _summary_highlights(
+        self, findings: list[ComplianceReportReviewFindingSchema]
+    ) -> list[str]:
+        priority = {"concern": 0, "review": 1, "informational": 2}
+        seen_areas = set()
+        highlights = []
+        for finding in sorted(findings, key=lambda item: priority[item.severity]):
+            if finding.review_area in seen_areas:
+                continue
+            if not finding.detail:
+                continue
+            seen_areas.add(finding.review_area)
+            highlights.append(finding.detail)
+            if len(highlights) == 3:
+                break
+        return highlights
+
+    def _negative_confirmation_area(self, key: str) -> str:
+        return {
+            "fuel_exports": "Notional transfers and exports",
+            "notional_transfers": "Notional transfers and exports",
+            "other_uses": "Out-of-province consumption",
+        }.get(key, self._source_label(key))
+
+    def _negative_confirmation_title(self, key: str, historical: bool) -> str:
+        if historical:
+            return {
+                "fuel_exports": "No exports reported this year",
+                "notional_transfers": "No notional transfers reported this year",
+                "other_uses": "No other uses reported this year",
+            }.get(key, f"No {self._source_label(key).lower()} reported this year")
+        return {
+            "fuel_exports": "Confirmed no reportable exports",
+            "notional_transfers": "Confirmed no reportable notional transfers",
+            "other_uses": "Confirmed no reportable other uses",
+        }.get(key, f"Confirmed no {self._source_label(key).lower()} reported")
+
+    def _negative_confirmation_detail(self, key: str, historical: bool) -> str:
+        if historical:
+            return (
+                f"No {self._source_label(key).lower()} were reported in the current effective data, "
+                "which differs from the prior assessed report. No rationale was found in the available data."
+            )
+        return (
+            f"The current effective data does not include reportable {self._source_label(key).lower()} "
+            "and this is consistent with the prior assessed report."
+        )
+
+    def _schedule_total(
+        self, totals: dict[str, dict[str, float]], key: str
+    ) -> float:
+        return sum(totals.get(key, {}).values())
+
+    def _report_rationale_reference(
+        self, report, keywords: list[str]
+    ) -> str | None:
+        text_sources = [
+            getattr(report, "supplemental_note", None),
+            getattr(report, "assessment_statement", None),
+            getattr(report, "nickname", None),
+        ]
+        for text in text_sources:
+            if not text:
+                continue
+            lowered = text.lower()
+            for keyword in keywords:
+                if keyword in lowered:
+                    return str(text).strip()
+        return None
 
     def _schedule_keys(self) -> list[str]:
         return [
@@ -1415,15 +2199,18 @@ class ComplianceReportReviewService:
     ) -> dict[str, float]:
         totals = defaultdict(float)
         for row in rows:
-            fuel_category = getattr(
-                getattr(row, "fuel_category", None), "category", None
+            totals[self._fuel_label(row)] += self._number(
+                getattr(row, quantity_field, 0)
             )
-            fuel_type = getattr(getattr(row, "fuel_type", None), "fuel_type", None)
-            key = str(fuel_category or "Unknown fuel category")
-            if fuel_type:
-                key = f"{key} - {fuel_type}"
-            totals[key] += self._number(getattr(row, quantity_field, 0))
         return dict(totals)
+
+    def _fuel_label(self, row) -> str:
+        fuel_category = getattr(getattr(row, "fuel_category", None), "category", None)
+        fuel_type = getattr(getattr(row, "fuel_type", None), "fuel_type", None)
+        key = str(fuel_category or "Unknown fuel category")
+        if fuel_type:
+            key = f"{key} - {fuel_type}"
+        return key
 
     def _summary_row_value(self, rows, line_number: int) -> float | None:
         row = next((item for item in rows if item.line == line_number), None)
@@ -1535,6 +2322,16 @@ class ComplianceReportReviewService:
         if isinstance(value, Decimal):
             return float(value)
         return float(value)
+
+    def _fuel_supply_total_kwh(self, rows: Iterable) -> float:
+        total = 0.0
+        for row in rows:
+            units = getattr(row, "units", None)
+            unit_value = getattr(units, "value", units)
+            if unit_value != QuantityUnitsEnum.Kilowatt_hour.value:
+                continue
+            total += self._number(getattr(row, "quantity", 0))
+        return total
 
     def _magnitude_gap(self, current_value, comparison_value) -> float:
         return abs(abs(self._number(current_value)) - abs(self._number(comparison_value)))
