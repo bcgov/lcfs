@@ -91,6 +91,19 @@ class ChargingSiteCreateSchema(BaseSchema):
     notes: Optional[str] = None
     deleted: Optional[bool] = None
 
+    @field_validator("allocating_organization_name")
+    @classmethod
+    def blank_allocating_organization_name_is_none(cls, v):
+        """
+        A blank name means "no allocating organization". Normalise it to None
+        so clearing the field stores NULL rather than an empty string, while
+        still counting as an explicit value under exclude_unset.
+        """
+        if isinstance(v, str):
+            v = v.strip()
+            return v or None
+        return v
+
     @field_validator("latitude")
     @classmethod
     def validate_latitude(cls, v):

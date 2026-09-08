@@ -1,9 +1,9 @@
-import math
 
 import structlog
 from fastapi import Depends, HTTPException, Request, status
 
 from lcfs.web.api.base import (
+    calculate_total_pages,
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
@@ -306,7 +306,7 @@ class FuelExportServices:
                 size=pagination.size,
                 total=total_count,
                 total_pages=(
-                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
+                    calculate_total_pages(total_count, pagination.size)
                 ),
             ),
             fuel_exports=[FuelExportSchema.model_validate(fs) for fs in fuel_exports],
