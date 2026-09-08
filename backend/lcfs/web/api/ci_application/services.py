@@ -1583,9 +1583,6 @@ class CIApplicationServices:
         # Renewal iterations are scoped to the caller's organization for
         # supplier/CI-applicant users; government callers pass None (all).
         fuel_codes = await self.repo.get_approved_fuel_codes(organization_id)
-
-        # Predictive-text options for the free-text feedstock / feedstock
-        # region fields — same source data used by AddEditFuelCode (#4961).
         field_options_results = await self.fuel_repo.get_fuel_code_field_options()
         feedstock_values = set()
         feedstock_region_values = set()

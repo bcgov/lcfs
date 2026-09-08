@@ -184,9 +184,6 @@ class CITableOptionsSchema(BaseSchema):
     fuel_types: List[FuelTypeOptionSchema] = []
     transport_modes: List[str] = []
     fuel_codes: List[FuelCodeOptionSchema] = []
-    # Predictive-text suggestions for free-text fields (e.g. feedstock,
-    # feedstock_region), sourced from previously entered fuel code values —
-    # mirrors the fuel code table's fieldOptions (#4961).
     field_options: Dict[str, List[str]] = {}
 
 
