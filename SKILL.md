@@ -127,5 +127,6 @@ ETL compose exposes:
 - Prefer established domain patterns over new abstractions.
 - Do not edit generated, cache, binary, or data-dump files unless the task specifically requires it.
 - Do not commit local config or secrets such as `frontend/cypress.env.json`, `.env`, database dumps, or OpenShift tokens.
+- Do not introduce official or real company names in tests, fixtures, snapshots, seed data, docs, UI copy, or other text in changed files. Use clearly fictional names such as `Example Fuel Co`, `Sample Energy Ltd`, or domain-neutral labels instead.
 - For compliance calculations, report states, credit ledger behavior, and migrations, inspect existing tests and wiki docs before changing logic; these areas have high business risk.
 - When touching a backend API and frontend consumer together, update route/schema/service/hook/view/test contracts consistently.

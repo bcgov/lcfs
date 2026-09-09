@@ -17,7 +17,6 @@ import { analystReviewAssistantName, robotVariants } from './constants'
 import { ReviewCharts } from './ReviewCharts'
 import { ReviewSections } from './ReviewSections'
 import { RobotAvatar } from './RobotAvatar'
-import { useTypewriter } from './useTypewriter'
 import {
   getAddressedStorageKey,
   getFindingId,

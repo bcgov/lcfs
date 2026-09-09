@@ -84,6 +84,7 @@ class ComplianceReportReviewService:
         compliance_year = self._to_int(report.compliance_period.description)
         prior_year_report = None
         prior_year_snapshots = []
+        prior_year_record_snapshots = []
         prior_fse_snapshots = []
         prior_reports = []
         if compliance_year:
@@ -135,6 +136,19 @@ class ComplianceReportReviewService:
                         prior_report,
                         analytics_totals_by_report.get(
                             prior_report.compliance_report_id, {}
+                        ),
+                    )
+                )
+                prior_year_record_snapshots.append(
+                    (
+                        prior_report,
+                        await self._timed(
+                            "get_prior_schedule_records",
+                            self._get_schedule_records(
+                                prior_report.compliance_report_id
+                            ),
+                            compliance_report_id=prior_report.compliance_report_id,
+                            current_report_id=compliance_report_id,
                         ),
                     )
                 )
@@ -202,6 +216,7 @@ class ComplianceReportReviewService:
             schedule_records,
             current_chart_totals,
             prior_year_snapshots,
+            prior_year_record_snapshots,
             previous_version_records,
             current_summary,
             previous_version_summary,
@@ -221,7 +236,9 @@ class ComplianceReportReviewService:
         findings.extend(self._administrative_findings(report, compliance_year))
         findings.extend(self._schedule_findings(schedule_records))
         findings.extend(self._notional_transfer_findings(schedule_records))
-        findings.extend(self._fuel_supply_fse_cross_check_findings(schedule_records, fse_summary))
+        findings.extend(
+            self._fuel_supply_fse_cross_check_findings(schedule_records, fse_summary)
+        )
         findings.extend(
             self._fuel_code_findings(schedule_records, compliance_year=compliance_year)
         )
@@ -265,8 +282,8 @@ class ComplianceReportReviewService:
             )
             findings.extend(
                 self._correlation_findings(
-                    current_chart_totals,
-                    prior_year_snapshots[0][1],
+                    schedule_records,
+                    prior_year_record_snapshots[0][1],
                     fse_summary,
                     prior_fse_summary,
                 )
@@ -707,8 +724,14 @@ class ComplianceReportReviewService:
                 "Notional transfers were reported. The schedule amounts can be summarized deterministically, but agreement timing and evidentiary validity still need manual review against supporting documents.",
                 "Notional transfers",
                 [
-                    self._metric("Transferred quantity", transferred_quantity, units="reported units"),
-                    self._metric("Received quantity", received_quantity, units="reported units"),
+                    self._metric(
+                        "Transferred quantity",
+                        transferred_quantity,
+                        units="reported units",
+                    ),
+                    self._metric(
+                        "Received quantity", received_quantity, units="reported units"
+                    ),
                     self._metric("Active transfer records", len(rows)),
                 ],
                 "Do the supporting notional transfer documents align to the correct compliance period and pre-deadline evidence requirements?",
@@ -845,7 +868,10 @@ class ComplianceReportReviewService:
         total_kwh = fse_summary["total_kwh"]
         avg_utilization = fse_summary["avg_capacity_utilization_percent"]
 
-        if active_count == equipment_count and active_full_year_count == equipment_count:
+        if (
+            active_count == equipment_count
+            and active_full_year_count == equipment_count
+        ):
             findings.append(
                 self._finding(
                     "Electricity/FSE",
@@ -1261,8 +1287,8 @@ class ComplianceReportReviewService:
 
     def _correlation_findings(
         self,
-        current_totals: dict[str, dict[str, float]],
-        prior_totals: dict[str, dict[str, float]],
+        current_records: dict[str, list],
+        prior_records: dict[str, list],
         current_fse_summary: dict | None,
         prior_fse_summary: dict | None,
     ) -> list[ComplianceReportReviewFindingSchema]:
@@ -1274,8 +1300,12 @@ class ComplianceReportReviewService:
         if current_fse_count <= 0 or prior_fse_count <= 0:
             return []
 
-        current_supply = sum(current_totals.get("fuel_supplies", {}).values())
-        prior_supply = sum(prior_totals.get("fuel_supplies", {}).values())
+        current_supply = self._fuel_supply_total_energy(
+            current_records.get("fuel_supplies", [])
+        )
+        prior_supply = self._fuel_supply_total_energy(
+            prior_records.get("fuel_supplies", [])
+        )
         supply_delta = current_supply - prior_supply
         supply_percent = self._percent_change(current_supply, prior_supply)
         if not self._is_material(supply_delta, supply_percent):
@@ -1328,12 +1358,12 @@ class ComplianceReportReviewService:
                 "Fuel supply and FSE reporting views",
                 [
                     self._metric(
-                        "Total fuel supply",
+                        "Total fuel supply energy",
                         current_supply,
                         comparison_value=prior_supply,
                         delta=supply_delta,
                         percent_change=supply_percent,
-                        units="reported units",
+                        units="energy content",
                     ),
                     self._metric(
                         "FSE count",
@@ -1444,7 +1474,9 @@ class ComplianceReportReviewService:
                 if self._fuel_label(row) == fuel_label
             ]
             rationale_count = sum(
-                1 for row in matching_rows if (getattr(row, "rationale", None) or "").strip()
+                1
+                for row in matching_rows
+                if (getattr(row, "rationale", None) or "").strip()
             )
             direction = "increase" if delta > 0 else "decrease"
             detail = (
@@ -1500,7 +1532,11 @@ class ComplianceReportReviewService:
                         self._negative_confirmation_title(key, historical=False),
                         self._negative_confirmation_detail(key, historical=False),
                         self._source_label(key),
-                        [self._metric(self._source_label(key), 0, units="reported units")],
+                        [
+                            self._metric(
+                                self._source_label(key), 0, units="reported units"
+                            )
+                        ],
                         None,
                     )
                 )
@@ -1670,6 +1706,7 @@ class ComplianceReportReviewService:
         current_records: dict[str, list],
         current_chart_totals: dict[str, dict[str, float]],
         prior_year_snapshots: list[tuple[object, dict[str, dict]]],
+        prior_year_record_snapshots: list[tuple[object, dict[str, list]]],
         previous_version_records: dict[str, list] | None,
         current_summary,
         previous_summary,
@@ -1689,8 +1726,9 @@ class ComplianceReportReviewService:
         }
         historical.extend(
             self._build_supply_fse_trend_series(
-                current_chart_totals,
+                current_records,
                 prior_year_snapshots,
+                prior_year_record_snapshots,
                 fse_summary,
                 prior_fse_snapshots,
                 current_label,
@@ -1889,8 +1927,9 @@ class ComplianceReportReviewService:
 
     def _build_supply_fse_trend_series(
         self,
-        current_chart_totals: dict[str, dict[str, float]],
+        current_records: dict[str, list],
         prior_year_snapshots: list[tuple[object, dict[str, dict[str, float]]]],
+        prior_year_record_snapshots: list[tuple[object, dict[str, list]]],
         current_fse_summary: dict | None,
         prior_fse_snapshots: list[tuple[object, dict]],
         current_label: str,
@@ -1902,9 +1941,15 @@ class ComplianceReportReviewService:
             prior_report.compliance_report_id: prior_summary
             for prior_report, prior_summary in prior_fse_snapshots
         }
-        current_supply = sum(current_chart_totals.get("fuel_supplies", {}).values())
+        prior_records_by_report_id = {
+            prior_report.compliance_report_id: prior_records
+            for prior_report, prior_records in prior_year_record_snapshots
+        }
+        current_supply = self._fuel_supply_total_energy(
+            current_records.get("fuel_supplies", [])
+        )
         current_fse_count = self._number(current_fse_summary.get("equipment_count", 0))
-        if current_fse_count <= 0:
+        if current_fse_count <= 0 or current_supply <= 0:
             return []
 
         series = []
@@ -1917,6 +1962,14 @@ class ComplianceReportReviewService:
                 or self._number(prior_fse_summary.get("equipment_count", 0)) <= 0
             ):
                 continue
+            prior_records = prior_records_by_report_id.get(
+                prior_report.compliance_report_id, {}
+            )
+            prior_supply = self._fuel_supply_total_energy(
+                prior_records.get("fuel_supplies", [])
+            )
+            if prior_supply <= 0:
+                continue
 
             series.append(
                 ComplianceReportReviewComparisonSeriesSchema(
@@ -1925,10 +1978,10 @@ class ComplianceReportReviewService:
                     comparison_label=str(prior_report.compliance_period.description),
                     points=[
                         self._comparison_point(
-                            "Total fuel supply",
+                            "Total fuel supply energy",
                             current_supply,
-                            sum(prior_totals.get("fuel_supplies", {}).values()),
-                            units="reported units",
+                            prior_supply,
+                            units="energy content",
                         ),
                         self._comparison_point(
                             "FSE count",
@@ -1961,7 +2014,9 @@ class ComplianceReportReviewService:
                     ComplianceReportReviewComparisonSeriesSchema(
                         title="Fuel supply presence by fuel category and type",
                         current_label=current_label,
-                        comparison_label=str(prior_report.compliance_period.description),
+                        comparison_label=str(
+                            prior_report.compliance_period.description
+                        ),
                         points=points,
                     )
                 )
@@ -2073,9 +2128,7 @@ class ComplianceReportReviewService:
             )
             return " ".join([intro, *highlights, baseline]).strip()
         if review_count:
-            intro = (
-                f"Deterministic pre-screen found {review_count} item(s) for analyst review."
-            )
+            intro = f"Deterministic pre-screen found {review_count} item(s) for analyst review."
             return " ".join([intro, *highlights, baseline]).strip()
         if highlights:
             return " ".join([*highlights, baseline]).strip()
@@ -2132,14 +2185,10 @@ class ComplianceReportReviewService:
             "and this is consistent with the prior assessed report."
         )
 
-    def _schedule_total(
-        self, totals: dict[str, dict[str, float]], key: str
-    ) -> float:
+    def _schedule_total(self, totals: dict[str, dict[str, float]], key: str) -> float:
         return sum(totals.get(key, {}).values())
 
-    def _report_rationale_reference(
-        self, report, keywords: list[str]
-    ) -> str | None:
+    def _report_rationale_reference(self, report, keywords: list[str]) -> str | None:
         text_sources = [
             getattr(report, "supplemental_note", None),
             getattr(report, "assessment_statement", None),
@@ -2323,6 +2372,34 @@ class ComplianceReportReviewService:
             return float(value)
         return float(value)
 
+    def _fuel_supply_quantity(self, row) -> float:
+        quantity = self._number(getattr(row, "quantity", 0))
+        if quantity > 0:
+            return quantity
+        return sum(
+            self._number(getattr(row, field, 0))
+            for field in ("q1_quantity", "q2_quantity", "q3_quantity", "q4_quantity")
+        )
+
+    def _fuel_supply_total_energy(self, rows: Iterable) -> float:
+        total = 0.0
+        for row in rows:
+            energy = self._number(getattr(row, "energy", 0))
+            if energy > 0:
+                total += energy
+                continue
+
+            energy_density = self._number(getattr(row, "energy_density", 0))
+            if energy_density > 0:
+                total += energy_density * self._fuel_supply_quantity(row)
+                continue
+
+            units = getattr(row, "units", None)
+            unit_value = getattr(units, "value", units)
+            if unit_value == QuantityUnitsEnum.Kilowatt_hour.value:
+                total += self._fuel_supply_quantity(row)
+        return total
+
     def _fuel_supply_total_kwh(self, rows: Iterable) -> float:
         total = 0.0
         for row in rows:
@@ -2330,11 +2407,13 @@ class ComplianceReportReviewService:
             unit_value = getattr(units, "value", units)
             if unit_value != QuantityUnitsEnum.Kilowatt_hour.value:
                 continue
-            total += self._number(getattr(row, "quantity", 0))
+            total += self._fuel_supply_quantity(row)
         return total
 
     def _magnitude_gap(self, current_value, comparison_value) -> float:
-        return abs(abs(self._number(current_value)) - abs(self._number(comparison_value)))
+        return abs(
+            abs(self._number(current_value)) - abs(self._number(comparison_value))
+        )
 
     def _to_int(self, value) -> int | None:
         try:

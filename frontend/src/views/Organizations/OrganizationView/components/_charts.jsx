@@ -39,8 +39,11 @@ const formatAxisTooltip = (params) => {
 const formatItemTooltip = ({ marker = '', name, value, percent }) =>
   `${marker}${name}: ${currencyFormatter(value)} (${percent}%)`
 
+const formatCompactNumber = (value) =>
+  value >= 1000 ? `${value / 1000}k` : value
+
 export const useStackedBarOption = (data, theme) => {
-    return getStandardChartOptions({
+  return getStandardChartOptions({
     color: [BC_CHART_COLORS.green, BC_CHART_COLORS.teal],
     tooltip: { trigger: 'axis', formatter: formatAxisTooltip },
     legend: { top: 0, type: 'scroll' },
@@ -127,7 +130,19 @@ export const usePenaltyMixOption = (totals, theme) => {
   })
 }
 
-export const useSparklineOption = (labels, data, seriesName = 'Series') => {
+export const useSparklineOption = (
+  labels,
+  data,
+  seriesName = 'Series',
+  { formatCurrency = false } = {}
+) => {
+  const tooltipValueFormatter = formatCurrency
+    ? currencyFormatter
+    : (value) => value
+  const axisValueFormatter = formatCurrency
+    ? (value) => compactCurrencyFormatter.format(value)
+    : formatCompactNumber
+
   return getStandardChartOptions({
     color: [BC_CHART_COLORS.blue],
     tooltip: {
@@ -136,7 +151,9 @@ export const useSparklineOption = (labels, data, seriesName = 'Series') => {
       formatter: (params) => {
         if (!params?.length) return ''
         const point = params[0]
-        return `${point.marker}${point.axisValue}: ${currencyFormatter(point.data)}`
+        return `${point.marker}${point.axisValue}: ${tooltipValueFormatter(
+          point.data
+        )}`
       }
     },
     grid: { left: 40, right: 8, top: 8, bottom: 22, containLabel: true },
@@ -155,7 +172,7 @@ export const useSparklineOption = (labels, data, seriesName = 'Series') => {
       axisLabel: {
         ...BC_CHART_AXIS_LABEL,
         fontSize: 10,
-        formatter: (val) => (val >= 1000 ? `${val / 1000}k` : val)
+        formatter: axisValueFormatter
       },
       splitLine: { lineStyle: { color: BC_CHART_COLORS.gridLine } }
     },

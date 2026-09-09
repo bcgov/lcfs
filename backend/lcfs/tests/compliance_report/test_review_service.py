@@ -208,8 +208,8 @@ def test_correlation_findings_identify_aligned_supply_and_fse_trends():
     service = _service()
 
     findings = service._correlation_findings(
-        {"fuel_supplies": {"Diesel - HDRD": 1_400_000}},
-        {"fuel_supplies": {"Diesel - HDRD": 1_000_000}},
+        {"fuel_supplies": [SimpleNamespace(energy=1_400_000)]},
+        {"fuel_supplies": [SimpleNamespace(energy=1_000_000)]},
         {"equipment_count": 12, "total_kwh": 180_000},
         {"equipment_count": 10, "total_kwh": 150_000},
     )
@@ -219,16 +219,50 @@ def test_correlation_findings_identify_aligned_supply_and_fse_trends():
     assert findings[0].severity == "informational"
     assert findings[0].title == "Fuel supply variance aligns with FSE trend"
     evidence = {metric.label: metric for metric in findings[0].evidence}
-    assert evidence["Total fuel supply"].delta == 400_000
+    assert evidence["Total fuel supply energy"].delta == 400_000
     assert evidence["FSE count"].delta == 2
+
+
+def test_correlation_findings_use_energy_not_mixed_raw_quantities():
+    service = _service()
+
+    findings = service._correlation_findings(
+        {
+            "fuel_supplies": [
+                SimpleNamespace(
+                    units=QuantityUnitsEnum.Litres,
+                    quantity=10_000,
+                    energy_density=35,
+                ),
+                SimpleNamespace(
+                    units=QuantityUnitsEnum.Kilowatt_hour,
+                    quantity=50_000,
+                    energy=50_000,
+                ),
+            ]
+        },
+        {
+            "fuel_supplies": [
+                SimpleNamespace(
+                    units=QuantityUnitsEnum.Kilograms,
+                    quantity=100_000,
+                    energy_density=4,
+                )
+            ]
+        },
+        {"equipment_count": 12, "total_kwh": 180_000},
+        {"equipment_count": 10, "total_kwh": 150_000},
+    )
+
+    assert findings == []
 
 
 def test_correlation_findings_skip_when_current_report_has_no_fse_count():
     service = _service()
 
     findings = service._correlation_findings(
-        {"fuel_supplies": {"Diesel - HDRD": 1_400_000}},
-        {"fuel_supplies": {"Diesel - HDRD": 1_000_000}},
+        {"fuel_supplies": [SimpleNamespace(energy=1_400_000)]},
+        {"fuel_supplies": [SimpleNamespace(energy=1_000_000)]},
         {"equipment_count": 0, "total_kwh": 0},
         {"equipment_count": 10, "total_kwh": 150_000},
     )
@@ -240,8 +274,8 @@ def test_correlation_findings_skip_when_prior_report_has_no_fse_count():
     service = _service()
 
     findings = service._correlation_findings(
-        {"fuel_supplies": {"Diesel - HDRD": 1_400_000}},
-        {"fuel_supplies": {"Diesel - HDRD": 1_000_000}},
+        {"fuel_supplies": [SimpleNamespace(energy=1_400_000)]},
+        {"fuel_supplies": [SimpleNamespace(energy=1_000_000)]},
         {"equipment_count": 12, "total_kwh": 180_000},
         {"equipment_count": 0, "total_kwh": 0},
     )
@@ -253,7 +287,7 @@ def test_supply_fse_trend_series_skip_when_current_report_has_no_fse_count():
     service = _service()
 
     series = service._build_supply_fse_trend_series(
-        {"fuel_supplies": {"Diesel - HDRD": 1_400_000}},
+        {"fuel_supplies": [SimpleNamespace(energy=1_400_000)]},
         [
             (
                 SimpleNamespace(
@@ -261,6 +295,15 @@ def test_supply_fse_trend_series_skip_when_current_report_has_no_fse_count():
                     compliance_period=SimpleNamespace(description="2024"),
                 ),
                 {"fuel_supplies": {"Diesel - HDRD": 1_000_000}},
+            )
+        ],
+        [
+            (
+                SimpleNamespace(
+                    compliance_report_id=200,
+                    compliance_period=SimpleNamespace(description="2024"),
+                ),
+                {"fuel_supplies": [SimpleNamespace(energy=1_000_000)]},
             )
         ],
         {"equipment_count": 0, "total_kwh": 0},
@@ -283,7 +326,7 @@ def test_supply_fse_trend_series_skip_when_prior_report_has_no_fse_count():
     service = _service()
 
     series = service._build_supply_fse_trend_series(
-        {"fuel_supplies": {"Diesel - HDRD": 1_400_000}},
+        {"fuel_supplies": [SimpleNamespace(energy=1_400_000)]},
         [
             (
                 SimpleNamespace(
@@ -291,6 +334,15 @@ def test_supply_fse_trend_series_skip_when_prior_report_has_no_fse_count():
                     compliance_period=SimpleNamespace(description="2024"),
                 ),
                 {"fuel_supplies": {"Diesel - HDRD": 1_000_000}},
+            )
+        ],
+        [
+            (
+                SimpleNamespace(
+                    compliance_report_id=200,
+                    compliance_period=SimpleNamespace(description="2024"),
+                ),
+                {"fuel_supplies": [SimpleNamespace(energy=1_000_000)]},
             )
         ],
         {"equipment_count": 12, "total_kwh": 180_000},
@@ -420,7 +472,9 @@ def test_build_summary_includes_analyst_style_highlights():
     )
 
     assert "found 1 item(s) for analyst review" in summary
-    assert "Diesel - HDRD for other uses shows a 64.0% year-over-year increase." in summary
+    assert (
+        "Diesel - HDRD for other uses shows a 64.0% year-over-year increase." in summary
+    )
     assert "Prior-year assessed comparison was available." in summary
 
 
@@ -464,7 +518,9 @@ def test_zero_value_narratives_flag_cessation_against_prior_year():
 
     assert len(findings) == 3
     export_finding = next(
-        finding for finding in findings if finding.title == "No exports reported this year"
+        finding
+        for finding in findings
+        if finding.title == "No exports reported this year"
     )
     assert export_finding.severity == "review"
     assert "No rationale was found in the available data." in export_finding.detail
@@ -475,7 +531,7 @@ def test_large_supply_drop_findings_reference_available_rationale_text():
 
     findings = service._large_supply_drop_findings(
         SimpleNamespace(
-            supplemental_note="Shell Canada took over reporting responsibility under the new supply agreement."
+            supplemental_note="LCFS Org 1 took over reporting responsibility under the new supply agreement."
         ),
         {"fuel_supplies": {"Diesel - HDRD": 100}},
         {"fuel_supplies": {"Diesel - HDRD": 1000}},
@@ -490,7 +546,9 @@ def test_large_supply_drop_findings_require_follow_up_without_rationale():
     service = _service()
 
     findings = service._large_supply_drop_findings(
-        SimpleNamespace(supplemental_note=None, assessment_statement=None, nickname=None),
+        SimpleNamespace(
+            supplemental_note=None, assessment_statement=None, nickname=None
+        ),
         {"fuel_supplies": {"Diesel - HDRD": 100}},
         {"fuel_supplies": {"Diesel - HDRD": 1000}},
     )
@@ -530,15 +588,11 @@ def test_historical_presence_gap_flags_fuel_missing_after_two_prior_years():
         {"fuel_supplies": {}},
         [
             (
-                SimpleNamespace(
-                    compliance_period=SimpleNamespace(description="2024")
-                ),
+                SimpleNamespace(compliance_period=SimpleNamespace(description="2024")),
                 {"fuel_supplies": {"Gasoline - Ethanol": 250_000}},
             ),
             (
-                SimpleNamespace(
-                    compliance_period=SimpleNamespace(description="2023")
-                ),
+                SimpleNamespace(compliance_period=SimpleNamespace(description="2023")),
                 {"fuel_supplies": {"Gasoline - Ethanol": 175_000}},
             ),
         ],
