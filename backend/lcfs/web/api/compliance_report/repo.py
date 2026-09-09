@@ -19,7 +19,7 @@ from sqlalchemy import (
     bindparam,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased, joinedload, selectinload
+from sqlalchemy.orm import aliased, contains_eager, joinedload, selectinload
 from typing import List, Optional, TypedDict, Type, Sequence
 
 from lcfs.db.base import ActionTypeEnum
@@ -50,7 +50,6 @@ from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.fuel.FuelCode import FuelCode
-from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.web.api.base import (
@@ -82,23 +81,17 @@ class ComplianceReportRepository:
 
     def _get_base_report_options(self, include_transaction: bool = True):
         """
-        Get common joinedload options for compliance reports.
+        Get common eager-load options for compliance reports.
+
+        Many-to-one relationships are joined; the ``history`` collection is
+        loaded with a separate IN query (see ``_get_history_load_option``).
 
         Args:
             include_transaction: Whether to include transaction relationship (default: True)
         """
         options = [
-            joinedload(ComplianceReport.organization),
-            joinedload(ComplianceReport.compliance_period),
-            joinedload(ComplianceReport.current_status),
-            joinedload(ComplianceReport.summary),
-            joinedload(ComplianceReport.history).joinedload(
-                ComplianceReportHistory.status
-            ),
-            joinedload(ComplianceReport.history)
-            .joinedload(ComplianceReportHistory.user_profile)
-            .joinedload(UserProfile.organization),
-            joinedload(ComplianceReport.assigned_analyst),
+            *self._get_minimal_report_options(),
+            self._get_history_load_option(),
         ]
 
         if include_transaction:
@@ -106,9 +99,32 @@ class ComplianceReportRepository:
 
         return options
 
+    @staticmethod
+    def _get_history_load_option():
+        """
+        Load ``history`` with a second SELECT ... WHERE compliance_report_id IN (...)
+        instead of a LEFT OUTER JOIN on the report query.
+
+        ``history`` is the only collection on the report loaders. Joining it
+        repeated every report row (including the ~100-column summary) once per
+        history entry, and combined with the joined schedule collections in the
+        changelog query it produced a cartesian product. The many-to-one hops
+        off each history row cannot fan out, so they stay joined inside the
+        second query.
+        """
+        return selectinload(ComplianceReport.history).options(
+            joinedload(ComplianceReportHistory.status),
+            joinedload(ComplianceReportHistory.user_profile).joinedload(
+                UserProfile.organization
+            ),
+        )
+
     def _get_minimal_report_options(self):
         """
         Get minimal joinedload options for basic compliance report queries.
+
+        Every relationship here is many-to-one or one-to-one, so joining them
+        cannot multiply the report rows.
         """
         return [
             joinedload(ComplianceReport.organization),
@@ -236,11 +252,15 @@ class ComplianceReportRepository:
             (
                 await self.db.execute(
                     select(ComplianceReport)
+                    # compliance_period and current_status are joined below
+                    # for the WHERE clause, so load them from those joins
+                    # rather than adding a second aliased copy of each table.
                     .options(
                         joinedload(ComplianceReport.organization),
-                        joinedload(ComplianceReport.compliance_period),
-                        joinedload(ComplianceReport.current_status),
+                        contains_eager(ComplianceReport.compliance_period),
+                        contains_eager(ComplianceReport.current_status),
                         joinedload(ComplianceReport.summary),
+                        joinedload(ComplianceReport.assigned_analyst),
                     )
                     .join(
                         CompliancePeriod,
@@ -248,19 +268,9 @@ class ComplianceReportRepository:
                         == CompliancePeriod.compliance_period_id,
                     )
                     .join(
-                        Organization,
-                        ComplianceReport.organization_id
-                        == Organization.organization_id,
-                    )
-                    .join(
                         ComplianceReportStatus,
                         ComplianceReport.current_status_id
                         == ComplianceReportStatus.compliance_report_status_id,
-                    )
-                    .outerjoin(
-                        ComplianceReportSummary,
-                        ComplianceReport.compliance_report_id
-                        == ComplianceReportSummary.compliance_report_id,
                     )
                     .where(and_(*where_conditions))
                     .order_by(ComplianceReport.version.desc())
@@ -808,18 +818,10 @@ class ComplianceReportRepository:
         result = await self.db.execute(
             select(ComplianceReport)
             .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.organization_snapshot),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history)
-                .joinedload(ComplianceReportHistory.user_profile)
-                .joinedload(UserProfile.organization),
-                joinedload(ComplianceReport.transaction),
+                *self._get_base_report_options(),
+                # organization_snapshot is a collection on the model; keep it
+                # out of the joined query so it cannot multiply rows.
+                selectinload(ComplianceReport.organization_snapshot),
             )
             .where(ComplianceReport.compliance_report_id == report_id)
         )
@@ -1790,28 +1792,21 @@ class ComplianceReportRepository:
                 select(ComplianceReport)
                 .where(and_(*query_conditions))
                 .options(
-                    joinedload(ComplianceReport.organization),
-                    joinedload(ComplianceReport.compliance_period),
-                    joinedload(ComplianceReport.current_status),
-                    joinedload(ComplianceReport.summary),
-                    joinedload(ComplianceReport.history).joinedload(
-                        ComplianceReportHistory.status
-                    ),
-                    joinedload(ComplianceReport.history)
-                    .joinedload(ComplianceReportHistory.user_profile)
-                    .joinedload(UserProfile.organization),
-                    joinedload(ComplianceReport.transaction),
-                    # Load the base schedule relationships first
+                    *self._get_base_report_options(),
+                    # Each schedule collection is loaded with its own IN query.
+                    # Joining it alongside history multiplied the row count by
+                    # (history entries x schedule rows) per report. The
+                    # sub-relationships are many-to-one and stay joined inside
+                    # that IN query.
                     *[
-                        joinedload(getattr(ComplianceReport, rel))
-                        for rel in schedule_relationships
-                    ],
-                    # Then load their sub-relationships
-                    *[
-                        joinedload(getattr(ComplianceReport, rel)).joinedload(
-                            getattr(model, sub_rel)
+                        selectinload(getattr(ComplianceReport, rel)).options(
+                            *[
+                                joinedload(getattr(model, sub_rel))
+                                for parent_rel, sub_rel in relationships
+                                if parent_rel == rel
+                            ]
                         )
-                        for rel, sub_rel in relationships
+                        for rel in schedule_relationships
                     ],
                 )
                 .order_by(ComplianceReport.version.desc())
