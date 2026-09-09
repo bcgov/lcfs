@@ -8,7 +8,10 @@ import {
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
 import { useOrganizationListStatuses } from '@/hooks/useOrganizations'
 import { useOrganizationTypes } from '@/hooks/useOrganization'
-import { getOrgTypeDisplayLabel } from '@/utils/organizationTypes'
+import {
+  getOrgTypeDisplayLabel,
+  getOrgTypesDisplayLabel
+} from '@/utils/organizationTypes'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 
 const useOrganizationTypeFilterOptions = () => {
@@ -47,8 +50,14 @@ export const organizationsColDefs = (t) => [
     field: 'orgType',
     headerName: t('org:orgColLabels.orgType'),
     minWidth: 220,
-    valueGetter: (params) => getOrgTypeDisplayLabel(params.data.orgType),
-    filterValueGetter: (params) => params.data?.orgType?.orgType ?? '',
+    valueGetter: (params) =>
+      params.data.orgTypes?.length
+        ? getOrgTypesDisplayLabel(params.data.orgTypes)
+        : getOrgTypeDisplayLabel(params.data.orgType),
+    filterValueGetter: (params) =>
+      params.data?.orgTypes?.map((type) => type.orgType).join(',') ??
+      params.data?.orgType?.orgType ??
+      '',
     cellRenderer: OrgTypeRenderer,
     cellClass: 'vertical-middle',
     filter: true,

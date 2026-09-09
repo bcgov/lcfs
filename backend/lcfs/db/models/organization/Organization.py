@@ -148,6 +148,21 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     org_type = relationship(
         "OrganizationType", back_populates="organizations", lazy="joined"
     )
+    # Many-to-many org types (#4565). organization_type_id remains dual-written
+    # with the primary type until reporting views stop projecting the FK.
+    org_types = relationship(
+        "OrganizationType",
+        secondary="organization_type_association",
+        lazy="selectin",
+        order_by="OrganizationType.display_order",
+        viewonly=True,
+    )
+    available_roles = relationship(
+        "Role",
+        secondary="organization_available_role",
+        lazy="selectin",
+        viewonly=True,
+    )
     org_status = relationship(
         "OrganizationStatus", back_populates="organizations", lazy="joined"
     )

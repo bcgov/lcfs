@@ -3,18 +3,26 @@ import { Controller } from 'react-hook-form'
 import { BCFormCheckbox } from '@/components/BCForm'
 import { CustomLabel } from '@/components/BCForm/CustomLabel'
 import { roles } from '@/constants/roles'
-import { bceidRoleOptions, iaSignerOption } from '../_schema'
+import {
+  allowedBceidRoleValues,
+  bceidRoleOptions,
+  iaSignerOption
+} from '../_schema'
 
 export const BCeIDSpecificRoleFields = ({
   form,
   disabled,
   t,
-  isGovernmentUser = false
+  isGovernmentUser = false,
+  availableRoles = null
 }) => {
   const { control, watch } = form
   const bceidRoles = watch('bceidRoles')
   const hasProponent = bceidRoles?.includes(roles.ia_proponent.toLowerCase())
   const signerOpt = iaSignerOption(t)
+  const allowed = allowedBceidRoleValues(availableRoles)
+  const signerAvailable =
+    allowed == null || allowed.includes(roles.ia_signer.toLowerCase())
 
   return (
     <Box>
@@ -22,15 +30,16 @@ export const BCeIDSpecificRoleFields = ({
         form={form}
         name="bceidRoles"
         label={t('admin:Roles')}
-        options={bceidRoleOptions(t)}
+        options={bceidRoleOptions(t, availableRoles)}
         disabled={disabled}
       />
 
       {/*
        * IA Signer is indented under IA Proponent and disabled unless IA Proponent
-       * is checked — only government (IDIR) users can assign this role.
+       * is checked — only government (IDIR) users can assign this role, and only
+       * when IA Proponent is available to the organization.
        */}
-      {isGovernmentUser && (
+      {isGovernmentUser && signerAvailable && (
         <FormControl component="fieldset" sx={{ ml: 4, mt: -0.5 }}>
           <FormControlLabel
             sx={{ marginY: 1 }}

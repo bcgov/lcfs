@@ -27,6 +27,7 @@
   "contactNameLabel": "Contact name/BCeID account manager",
   "contactNameLabelOptional": "Contact name/BCeID account manager (optional)",
   "orgTypeLabel": "Organization type",
+  "rolesAvailableLabel": "Roles available",
   "regTrnLabel": "Registered for transfers",
   "registeredTransferYes": "Yes — A registered organization is able to transfer compliance units.",
   "registeredTransferNo": "No — An organization must be registered to transfer compliance units.",

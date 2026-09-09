@@ -68,7 +68,12 @@ describe('Add Organization Test Suite', () => {
       cy.get('#orgOperatingName').type('Operating name')
       cy.get('#orgEmailAddress').type('abc@domain.com')
       cy.get('#orgPhoneNumber').type('12345678')
-      cy.getByDataTest('orgSupplierType1').click()
+      // Fuel supplier is pre-selected; add a second org type (#4565)
+      cy.get('[id="1"]').should('be.checked')
+      cy.contains('label', 'Aggregator').click()
+      // Enable roles for the organization's BCeID users
+      cy.contains('label', 'Compliance reporting').click()
+      cy.contains('label', 'Credit transfer').click()
       cy.getByDataTest('orgRegForTransfers2').click()
       cy.getByDataTest('hasEarlyIssuanceNo').click()
       cy.get('#orgEDRMSRecord').type('12345')

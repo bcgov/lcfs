@@ -54,7 +54,16 @@ vi.mock('../_schema', () => ({
     header: 'IA Signer',
     text: 'ia signer desc',
     value: 'ia signer'
-  }))
+  })),
+  // Mirrors the real semantics: null availableRoles = no filtering; IA Signer
+  // is allowed only when IA Proponent is available.
+  allowedBceidRoleValues: vi.fn((availableRoles) =>
+    availableRoles == null
+      ? null
+      : availableRoles.includes('IA Proponent')
+        ? ['manage users', 'signing authority', 'ia proponent', 'ia signer']
+        : ['manage users', 'signing authority']
+  )
 }))
 
 vi.mock('@/constants/roles', () => ({
@@ -197,8 +206,46 @@ describe('BCeIDSpecificRoleFields', () => {
     expect(iaSignerOption).toHaveBeenCalledWith(t)
   })
 
-  it('calls bceidRoleOptions with the translation function', () => {
+  it('calls bceidRoleOptions with the translation function and availability', () => {
     render(<BCeIDSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
-    expect(bceidRoleOptions).toHaveBeenCalledWith(t)
+    expect(bceidRoleOptions).toHaveBeenCalledWith(t, null)
+  })
+
+  it('passes the org availableRoles through to bceidRoleOptions', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm()}
+        disabled={false}
+        t={t}
+        availableRoles={['Transfer']}
+      />
+    )
+    expect(bceidRoleOptions).toHaveBeenCalledWith(t, ['Transfer'])
+  })
+
+  it('hides IA Signer when IA Proponent is not available to the org', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm(['ia proponent'])}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+        availableRoles={['Transfer']}
+      />
+    )
+    expect(screen.queryByTestId('ia-signer-checkbox')).not.toBeInTheDocument()
+  })
+
+  it('shows IA Signer when IA Proponent is available to the org', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm(['ia proponent'])}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+        availableRoles={['IA Proponent']}
+      />
+    )
+    expect(screen.getByTestId('ia-signer-checkbox')).toBeInTheDocument()
   })
 })

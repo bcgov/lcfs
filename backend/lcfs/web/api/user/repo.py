@@ -31,6 +31,9 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatus,
 )
 from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.organization.OrganizationAvailableRole import (
+    OrganizationAvailableRole,
+)
 from lcfs.db.models.transfer.TransferHistory import TransferHistory
 from lcfs.db.models.transfer.TransferStatus import TransferStatus
 from lcfs.db.models.user import UserLoginHistory
@@ -114,6 +117,22 @@ class UserRepository:
             db_user_role = UserRole(role=role)
             return db_user_role
         return None
+
+    @repo_handler
+    async def get_organization_available_roles(self, organization_id: int) -> set:
+        """
+        Roles the organization has been granted for assignment to its BCeID
+        users (#4565), as RoleEnum members.
+        """
+        result = await self.db.execute(
+            select(Role.name)
+            .join(
+                OrganizationAvailableRole,
+                OrganizationAvailableRole.role_id == Role.role_id,
+            )
+            .where(OrganizationAvailableRole.organization_id == organization_id)
+        )
+        return set(result.scalars().all())
 
     async def update_idir_roles(self, user, new_roles, existing_roles_set):
         COMPLIANCE_DIR_GROUP = {
@@ -541,23 +560,27 @@ class UserRepository:
             role_enum for role_enum in RoleEnum if role_enum.value.lower() in roles
         ]
 
-        if db_user_profile.is_active:
-            for role_name in role_enum_members:
-                role_result = await self.db.execute(
-                    select(Role).filter(Role.name == role_name)
+        # no_autoflush: the profile (and its pending UserRole links) is not in
+        # the session yet, so an autoflush from these lookup queries would
+        # trip the "Object not in session" warning.
+        with self.db.no_autoflush:
+            if db_user_profile.is_active:
+                for role_name in role_enum_members:
+                    role_result = await self.db.execute(
+                        select(Role).filter(Role.name == role_name)
+                    )
+                    role = role_result.scalar_one_or_none()
+                    if role:
+                        db_user_role = UserRole(role=role)
+                        db_user_profile.user_roles.append(db_user_role)
+            if db_user_profile.organization_id:
+                org_result = await self.db.execute(
+                    select(Organization).filter(
+                        Organization.organization_id == db_user_profile.organization_id
+                    )
                 )
-                role = role_result.scalar_one_or_none()
-                if role:
-                    db_user_role = UserRole(role=role)
-                    db_user_profile.user_roles.append(db_user_role)
-        if db_user_profile.organization_id:
-            org_result = await self.db.execute(
-                select(Organization).filter(
-                    Organization.organization_id == db_user_profile.organization_id
-                )
-            )
-            org = org_result.scalar_one_or_none()
-            db_user_profile.organization = org
+                org = org_result.scalar_one_or_none()
+                db_user_profile.organization = org
         self.db.add(db_user_profile)
         await self.db.flush()
         return db_user_profile

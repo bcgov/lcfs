@@ -3,6 +3,7 @@ from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from decimal import Decimal
 
+from lcfs.db.models.user.role_domains import ORG_CONTROLLABLE_ROLES
 from lcfs.web.api.base import BaseSchema
 from pydantic import field_validator
 from lcfs.web.api.base import PaginationResponseSchema
@@ -29,6 +30,44 @@ class OrganizationTypeBase(BaseSchema):
 
 class OrganizationTypeSchema(OrganizationTypeBase):
     pass
+
+
+ORG_CONTROLLABLE_ROLE_VALUES = {role.value for role in ORG_CONTROLLABLE_ROLES}
+
+
+class OrganizationTypesAndRolesMixin(BaseSchema):
+    """Shared multi-type + available-roles fields for org create/update (#4565)."""
+
+    organization_type_ids: List[int]
+    available_roles: List[str] = []
+
+    @field_validator("organization_type_ids")
+    @classmethod
+    def _at_least_one_type(cls, value):
+        if not value:
+            raise ValueError("At least one organization type is required.")
+        return list(dict.fromkeys(value))
+
+    @field_validator("available_roles")
+    @classmethod
+    def _controllable_roles_only(cls, value):
+        if not value:
+            return []
+        canonical = {v.lower(): v for v in ORG_CONTROLLABLE_ROLE_VALUES}
+        normalized: List[str] = []
+        invalid: List[str] = []
+        for role in value:
+            match = canonical.get(str(role).lower())
+            if match is None:
+                invalid.append(str(role))
+            elif match not in normalized:
+                normalized.append(match)
+        if invalid:
+            raise ValueError(
+                "Roles not controllable per organization: "
+                + ", ".join(sorted(invalid))
+            )
+        return normalized
 
 
 # --------------------------------------
@@ -141,7 +180,7 @@ class OrganizationBase(BaseSchema):
     total_balance: Optional[int] = None
     reserved_balance: Optional[int] = None
     organization_status_id: int
-    organization_type_id: int
+    organization_type_id: Optional[int] = None
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
@@ -155,6 +194,7 @@ class OrganizationSchema(OrganizationBase):
     organization_address_id: Optional[int] = None
     organization_attorney_address_id: Optional[int] = None
     org_type: Optional[OrganizationTypeSchema] = None
+    org_types: Optional[List[OrganizationTypeSchema]] = None
     org_status: Optional[OrganizationStatusSchema] = None
 
 
@@ -163,7 +203,7 @@ class OrganizationListSchema(BaseSchema):
     organizations: List[OrganizationSchema]
 
 
-class OrganizationCreateSchema(BaseSchema):
+class OrganizationCreateSchema(OrganizationTypesAndRolesMixin):
     name: str
     operating_name: str
     email: Optional[str] = None
@@ -172,7 +212,6 @@ class OrganizationCreateSchema(BaseSchema):
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     organization_status_id: int
-    organization_type_id: int
     records_address: Optional[str] = None
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
@@ -186,7 +225,7 @@ class OrganizationCreateSchema(BaseSchema):
 
 
 # Schema for non-BCeID organization types
-class NonBCeIDOrganizationCreateSchema(BaseSchema):
+class NonBCeIDOrganizationCreateSchema(OrganizationTypesAndRolesMixin):
     name: str
     operating_name: str
     email: Optional[str] = None
@@ -195,7 +234,6 @@ class NonBCeIDOrganizationCreateSchema(BaseSchema):
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     organization_status_id: int
-    organization_type_id: int
     records_address: Optional[str] = None
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
@@ -212,7 +250,7 @@ class NonBCeIDOrganizationCreateSchema(BaseSchema):
     )
 
 
-class OrganizationUpdateSchema(BaseSchema):
+class OrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
     name: Optional[str] = None
     operating_name: Optional[str] = None
     email: Optional[str] = None
@@ -221,7 +259,6 @@ class OrganizationUpdateSchema(BaseSchema):
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     organization_status_id: Optional[int] = None
-    organization_type_id: int
     records_address: Optional[str] = None
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
@@ -235,7 +272,7 @@ class OrganizationUpdateSchema(BaseSchema):
 
 
 # Update schema for non-BCeID organization types with relaxed validation
-class NonBCeIDOrganizationUpdateSchema(BaseSchema):
+class NonBCeIDOrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
     name: Optional[str] = None
     operating_name: Optional[str] = None
     email: Optional[str] = None
@@ -244,7 +281,6 @@ class NonBCeIDOrganizationUpdateSchema(BaseSchema):
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     organization_status_id: Optional[int] = None
-    organization_type_id: int
     records_address: Optional[str] = None
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
@@ -282,9 +318,26 @@ class OrganizationResponseSchema(BaseSchema):
     organization_type_id: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = None
     org_type: Optional[OrganizationTypeSchema] = None
+    org_types: Optional[List[OrganizationTypeSchema]] = None
+    available_roles: List[str] = []
     records_address: Optional[str] = None
     org_address: Optional[OrganizationAddressSchema] = None
     org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = None
+
+    @field_validator("available_roles", mode="before")
+    @classmethod
+    def _flatten_available_roles(cls, value):
+        """Accept Role ORM objects (org.available_roles) or plain strings."""
+        if not value:
+            return []
+        flattened = []
+        for item in value:
+            name = getattr(item, "name", None)
+            if name is not None:
+                flattened.append(getattr(name, "value", str(name)))
+            elif isinstance(item, str):
+                flattened.append(item)
+        return flattened
 
 
 class OrganizationSummaryResponseSchema(BaseSchema):
@@ -295,6 +348,7 @@ class OrganizationSummaryResponseSchema(BaseSchema):
     reserved_balance: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = None
     org_type: Optional[str] = None
+    org_types: Optional[List[str]] = None
 
     @field_validator("org_type", mode="before")
     @classmethod
@@ -307,6 +361,22 @@ class OrganizationSummaryResponseSchema(BaseSchema):
         if isinstance(extracted, str):
             return extracted
         return None
+
+    @field_validator("org_types", mode="before")
+    @classmethod
+    def _normalize_org_types(cls, value):
+        """Accept OrganizationType ORM objects or plain type-key strings."""
+        if not value:
+            return None
+        normalized = []
+        for item in value:
+            if isinstance(item, str):
+                normalized.append(item)
+            else:
+                extracted = getattr(item, "org_type", None)
+                if isinstance(extracted, str):
+                    normalized.append(extracted)
+        return normalized or None
 
 
 class OrganizationCreateResponseSchema(BaseSchema):

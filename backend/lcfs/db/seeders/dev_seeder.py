@@ -26,6 +26,9 @@ from lcfs.db.seeders.dev.feedstock_fuel_transfer_mode_seeder import (
 from lcfs.db.seeders.dev.notification_channel_subscription_seeder import (
     seed_notification_channel_subscriptions,
 )
+from lcfs.db.seeders.org_association_seeder import (
+    seed_org_type_and_available_role_associations,
+)
 from lcfs.db.seeders.seed_charging_power_output import seed_charging_power_output
 from lcfs.db.seeders.staging.test_allocation_agreement_seeder import (
     seed_test_allocation_agreements,
@@ -120,6 +123,7 @@ async def seed_dev(session: AsyncSession):
     # Seed user-related entities
     await seed_user_profiles(session)
     await seed_user_roles(session)
+    await seed_org_type_and_available_role_associations(session)
     # seed transactions and adjustments
     await seed_test_transactions(session)
     await seed_admin_adjustments(session)
