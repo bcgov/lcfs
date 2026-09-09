@@ -24,6 +24,7 @@ from lcfs.web.api.base import (
     calculate_total_pages,
     PaginationRequestSchema,
     PaginationResponseSchema,
+    PaginatedQueryBuilder,
     apply_filter_conditions,
     get_field_for_filter,
     validate_pagination,
@@ -75,53 +76,51 @@ class OrganizationsService:
         Returns:
             List[Organization]: The list of organizations after applying the filters.
         """
-        for filter in pagination.filters:
-            filter_value = filter.filter
-            filter_option = filter.type
-            filter_type = filter.filter_type
-
-            field_name = filter.field
-            if field_name == "hasEarlyIssuance":
-                field_name = "has_early_issuance"
-
-            if field_name == "has_early_issuance":
-                early_issuance_field = self.repo.get_early_issuance_field()
-                conditions.append(
-                    apply_filter_conditions(
-                        early_issuance_field, filter_value, filter_option, filter_type
-                    )
-                )
-                continue
-
-            if field_name == "registration_status":
-                if isinstance(filter_value, bool):
-                    is_registered = filter_value
-                elif isinstance(filter_value, str):
-                    is_registered = filter_value.lower() == "true"
-                else:
-                    continue
-
-                field = get_field_for_filter(OrganizationStatus, "status")
-                if is_registered:
-                    conditions.append(field == "Registered")
-                else:
-                    conditions.append(
-                        field.in_(["Unregistered", "Suspended", "Canceled"])
-                    )
-                continue
-
-            if field_name == "org_type":
-                field = get_field_for_filter(OrganizationType, "org_type")
-            elif field_name == "status":
-                field = get_field_for_filter(OrganizationStatus, "status")
-            else:
-                field = get_field_for_filter(Organization, field_name)
-
-            conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
-            )
-
+        builder = PaginatedQueryBuilder(
+            Organization,
+            field_map={"hasEarlyIssuance": "has_early_issuance"},
+            custom_filters={
+                "has_early_issuance": self._early_issuance_filter,
+                "registration_status": self._registration_status_filter,
+                "org_type": lambda f: apply_filter_conditions(
+                    get_field_for_filter(OrganizationType, "org_type"),
+                    f.filter,
+                    f.type,
+                    f.filter_type,
+                ),
+                "status": lambda f: apply_filter_conditions(
+                    get_field_for_filter(OrganizationStatus, "status"),
+                    f.filter,
+                    f.type,
+                    f.filter_type,
+                ),
+            },
+        )
+        conditions.extend(builder.build_conditions(pagination.filters))
         return None
+
+    def _early_issuance_filter(self, filter_model):
+        early_issuance_field = self.repo.get_early_issuance_field()
+        return apply_filter_conditions(
+            early_issuance_field,
+            filter_model.filter,
+            filter_model.type,
+            filter_model.filter_type,
+        )
+
+    def _registration_status_filter(self, filter_model):
+        filter_value = filter_model.filter
+        if isinstance(filter_value, bool):
+            is_registered = filter_value
+        elif isinstance(filter_value, str):
+            is_registered = filter_value.lower() == "true"
+        else:
+            return None
+
+        field = get_field_for_filter(OrganizationStatus, "status")
+        if is_registered:
+            return field == "Registered"
+        return field.in_(["Unregistered", "Suspended", "Canceled"])
 
     @service_handler
     async def export_organizations(self) -> StreamingResponse:

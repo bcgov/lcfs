@@ -42,7 +42,7 @@ from lcfs.db.models.notification.NotificationChannelSubscription import (
 )
 from lcfs.web.api.base import (
     PaginationRequestSchema,
-    camel_to_snake,
+    PaginatedQueryBuilder,
     apply_filter_conditions,
     get_field_for_filter,
 )
@@ -70,42 +70,34 @@ class UserRepository:
         return bool(ORG_BOUND_TEST_USER_RE.match(username))
 
     def apply_filters(self, pagination, conditions, full_name):
-        role_filter_present = False
-        for filter in pagination.filters:
-            filter_value = filter.filter
-            filter_option = filter.type
-            filter_type = filter.filter_type
+        def _role_filter(filter_model):
+            return Role.name.in_(
+                [RoleEnum(role.strip()) for role in filter_model.filter.split(",")]
+            )
 
-            if filter.field == "role":
-                role_filter_present = True
-                conditions.append(
-                    Role.name.in_(
-                        [RoleEnum(role.strip()) for role in filter_value.split(",")]
-                    )
-                )
-            elif filter.field == "is_active":
-                filter_value = True if filter_value == "Active" else False
-                filter_option = "true" if filter_value else "false"
-                field = get_field_for_filter(UserProfile, "is_active")
-                conditions.append(
-                    apply_filter_conditions(
-                        field,
-                        filter_value,
-                        filter_option,
-                        filter_type,
-                    )
-                )
-            elif filter.field == "first_name":
-                name_filter = full_name.ilike(f"%{filter_value}%")
-                conditions.append(name_filter)
-            else:
-                field = get_field_for_filter(UserProfile, filter.field)
-                conditions.append(
-                    apply_filter_conditions(
-                        field, filter_value, filter_option, filter_type
-                    )
-                )
-        return role_filter_present
+        def _is_active_filter(filter_model):
+            is_active = filter_model.filter == "Active"
+            field = get_field_for_filter(UserProfile, "is_active")
+            return apply_filter_conditions(
+                field,
+                is_active,
+                "true" if is_active else "false",
+                filter_model.filter_type,
+            )
+
+        def _first_name_filter(filter_model):
+            return full_name.ilike(f"%{filter_model.filter}%")
+
+        builder = PaginatedQueryBuilder(
+            UserProfile,
+            custom_filters={
+                "role": _role_filter,
+                "is_active": _is_active_filter,
+                "first_name": _first_name_filter,
+            },
+        )
+        conditions.extend(builder.build_conditions(pagination.filters))
+        return any(f.field == "role" for f in pagination.filters)
 
     async def find_user_role(self, role_name):
         role_result = await self.db.execute(select(Role).filter(Role.name == role_name))
@@ -750,38 +742,20 @@ class UserRepository:
         Returns:
             Tuple: List of activities and total count.
         """
-        # Apply filters from pagination
-        if pagination.filters:
-            for filter in pagination.filters:
-                field_name = camel_to_snake(filter.field)
-                field = getattr(combined_query.c, field_name, None)
-                if field is not None:
-                    condition = apply_filter_conditions(
-                        field, filter.filter, filter.type, filter.filter_type
-                    )
-                    if condition is not None:
-                        conditions.append(condition)
+        # Apply filters from pagination, silently skipping any field not
+        # present on the unioned activity query.
+        builder = PaginatedQueryBuilder(combined_query.c)
+        known_fields = set(combined_query.c.keys())
+        relevant_filters = [f for f in pagination.filters if f.field in known_fields]
+        conditions.extend(builder.build_conditions(relevant_filters))
 
-        # Apply ordering
-        order_by_clauses = []
-        if pagination.sort_orders:
-            for sort_order in pagination.sort_orders:
-                field_name = camel_to_snake(sort_order.field)
-                field = getattr(combined_query.c, field_name, None)
-                if field is not None:
-                    order = asc(field) if sort_order.direction == "asc" else desc(field)
-                    order_by_clauses.append(order)
-        else:
-            # Default ordering by timestamp descending
-            order_by_clauses.append(desc(combined_query.c.create_date))
-
-        # Build the final query with conditions, ordering, and pagination
-        final_query = (
-            select(combined_query)
-            .where(and_(*conditions))
-            .order_by(*order_by_clauses)
-            .offset((pagination.page - 1) * pagination.size)
-            .limit(pagination.size)
+        final_query = builder.apply_sorting(
+            select(combined_query).where(and_(*conditions)),
+            pagination.sort_orders,
+            default_field="create_date",
+        )
+        final_query = final_query.offset((pagination.page - 1) * pagination.size).limit(
+            pagination.size
         )
 
         # Execute the query
@@ -835,41 +809,24 @@ class UserRepository:
         Returns:
             Tuple: The modified query and conditions.
         """
-        conditions = []
-        if pagination.filters and len(pagination.filters) > 0:
-            for filter in pagination.filters:
-                filter_value = filter.filter
-                filter_option = filter.type
-                filter_type = filter.filter_type
-                if filter.field == "is_login_successful":
-                    filter_option = "true" if filter_value == "Success" else "false"
-                    field = get_field_for_filter(
-                        UserLoginHistory, "is_login_successful"
-                    )
-                elif filter.field is not None:
-                    field = get_field_for_filter(UserLoginHistory, filter.field)
-                if field is not None:
-                    condition = apply_filter_conditions(
-                        field, filter_value, filter_option, filter_type
-                    )
-                    if condition is not None:
-                        conditions.append(condition)
+
+        def _is_login_successful_filter(filter_model):
+            field = get_field_for_filter(UserLoginHistory, "is_login_successful")
+            filter_option = "true" if filter_model.filter == "Success" else "false"
+            return apply_filter_conditions(
+                field, filter_model.filter, filter_option, filter_model.filter_type
+            )
+
+        builder = PaginatedQueryBuilder(
+            UserLoginHistory,
+            custom_filters={"is_login_successful": _is_login_successful_filter},
+        )
+        conditions = builder.build_conditions(pagination.filters)
 
         query = query.where(and_(*conditions))
-        # Apply ordering
-        order_by_clauses = []
-        if pagination.sort_orders and len(pagination.sort_orders) > 0:
-            for sort_order in pagination.sort_orders:
-                field = get_field_for_filter(UserLoginHistory, sort_order.field)
-                if field is not None:
-                    sort_order = (
-                        asc(field) if sort_order.direction == "asc" else desc(field)
-                    )
-                    order_by_clauses.append(sort_order)
-        else:
-            # Default ordering by timestamp descending
-            order_by_clauses.append(desc(UserLoginHistory.create_date))
-        return query.order_by(*order_by_clauses)
+        return builder.apply_sorting(
+            query, pagination.sort_orders, default_field="create_date"
+        )
 
     @repo_handler
     async def get_all_user_login_history_paginated(

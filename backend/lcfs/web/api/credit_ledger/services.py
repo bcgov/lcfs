@@ -14,8 +14,7 @@ from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
     validate_pagination,
-    get_field_for_filter,
-    apply_filter_conditions,
+    PaginatedQueryBuilder,
     SortOrder,
 )
 from .schema import (
@@ -177,12 +176,8 @@ class CreditLedgerService:
     def _apply_filters(
         self, pagination: PaginationRequestSchema, conditions: List[any]
     ) -> None:
-        for f in pagination.filters:
-            field = get_field_for_filter(CreditLedgerView, f.field)
-            filter_val = f.filter
-            conditions.append(
-                apply_filter_conditions(field, filter_val, f.type, f.filter_type)
-            )
+        builder = PaginatedQueryBuilder(CreditLedgerView)
+        conditions.extend(builder.build_conditions(pagination.filters))
 
     @service_handler
     async def get_ledger_paginated(

@@ -60,7 +60,7 @@ from lcfs.web.api.base import (
     PaginationRequestSchema,
     get_field_for_filter,
     apply_filter_conditions,
-    paginate_with_window_count,
+    PaginatedQueryBuilder,
 )
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeCloneSchema,
@@ -777,50 +777,35 @@ class FuelCodeRepository:
                 )
             )
 
-        for filter in pagination.filters:
-
-            filter_value = filter.filter
-            if filter.filter_type == "date":
-                if filter.type == "inRange":
-                    filter_value = [filter.date_from, filter.date_to]
-                else:
-                    filter_value = filter.date_from
-
-            filter_option = filter.type
-            filter_type = filter.filter_type
-
-            # Handle transport mode filters - these are array fields in the view
-            if filter.field in [
-                "feedstock_fuel_transport_modes",
-                "finished_fuel_transport_modes",
-            ]:
-                field = get_field_for_filter(FuelCodeListView, filter.field)
-                conditions.append(field.any(filter_value))
-                continue
-            else:
-                # Use the view field directly
-                field = get_field_for_filter(FuelCodeListView, filter.field)
-
-            conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
+        def _transport_mode_filter(filter_model):
+            # Array fields in the view - use ANY() instead of equality/like.
+            filter_value = filter_model.filter
+            if filter_model.filter_type == "date":
+                filter_value = (
+                    [filter_model.date_from, filter_model.date_to]
+                    if filter_model.type == "inRange"
+                    else filter_model.date_from
+                )
+            return get_field_for_filter(FuelCodeListView, filter_model.field).any(
+                filter_value
             )
 
-        # setup pagination
-        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
-        limit = pagination.size
+        builder = PaginatedQueryBuilder(
+            FuelCodeListView,
+            custom_filters={
+                "feedstock_fuel_transport_modes": _transport_mode_filter,
+                "finished_fuel_transport_modes": _transport_mode_filter,
+            },
+        )
+        conditions.extend(builder.build_conditions(pagination.filters))
 
-        # Construct the base query with conditions
         base_query = query.where(and_(*conditions))
+        base_query = builder.apply_sorting(
+            base_query, pagination.sort_orders, secondary_field="last_updated"
+        )
 
-        # Apply sorting to the main query
-        for order in pagination.sort_orders:
-            direction = asc if order.direction == "asc" else desc
-            field = getattr(FuelCodeListView, order.field)
-            base_query = base_query.order_by(direction(field))
-        base_query = base_query.order_by(desc(FuelCodeListView.last_updated))
-
-        fuel_codes, total_count = await paginate_with_window_count(
-            self.db, base_query, offset, limit
+        fuel_codes, total_count = await builder.paginate(
+            self.db, base_query, pagination
         )
         fuel_codes = await self._with_transport_mode_distances(fuel_codes)
         return fuel_codes, total_count
