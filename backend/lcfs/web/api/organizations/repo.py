@@ -520,17 +520,14 @@ class OrganizationsRepository:
     async def get_externally_registered_organizations(self, conditions):
         """
         Get all externally registered organizations from the database.
-        Only returns organizations with type 'fuel_supplier'.
-        """
-        # Add fuel supplier type filter to existing conditions
-        fuel_supplier_condition = Organization.org_type.has(
-            OrganizationType.org_type == "fuel_supplier"
-        )
-        all_conditions = conditions + [fuel_supplier_condition]
 
+        Organizations are filtered by registration status only. Transfers are
+        not restricted by organization type, so credit traders and other
+        non-fuel-supplier types must appear as eligible counterparties.
+        """
         query = (
             select(Organization)
-            .where(and_(*all_conditions))
+            .where(and_(*conditions))
             .options(
                 joinedload(Organization.org_type),
                 joinedload(Organization.org_status),
@@ -775,19 +772,29 @@ class OrganizationsRepository:
 
     @repo_handler
     async def create_credit_market_audit_log(
-        self, organization: Organization, changed_by: str | None
+        self,
+        organization: Organization,
+        changed_by: str | None,
+        action: str | None = None,
+        changes: dict | None = None,
     ) -> CreditMarketAuditLog:
         """
         Create a credit market audit snapshot entry for the organization.
+
+        ``action`` classifies the change (Added / Updated / Removed) and
+        ``changes`` holds the field-level diff ``{field: {"from": .., "to": ..}}``.
         """
         entry = CreditMarketAuditLog(
             organization_id=organization.organization_id,
             credits_to_sell=organization.credits_to_sell or 0,
             credit_market_is_seller=organization.credit_market_is_seller or False,
             credit_market_is_buyer=organization.credit_market_is_buyer or False,
+            display_in_credit_market=organization.display_in_credit_market or False,
             contact_person=organization.credit_market_contact_name,
             phone=organization.credit_market_contact_phone,
             email=organization.credit_market_contact_email,
+            action=action,
+            changes=changes,
             changed_by=changed_by,
         )
         self.db.add(entry)
@@ -824,6 +831,7 @@ class OrganizationsRepository:
             "phone": CreditMarketAuditLog.phone,
             "email": CreditMarketAuditLog.email,
             "changed_by": CreditMarketAuditLog.changed_by,
+            "action": CreditMarketAuditLog.action,
             "uploaded_date": CreditMarketAuditLog.create_date,
         }
 

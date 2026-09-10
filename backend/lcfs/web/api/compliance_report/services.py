@@ -3,7 +3,6 @@ from collections import defaultdict
 
 import copy
 from datetime import datetime, timezone
-import math
 from lcfs.db.base import ActionTypeEnum
 import structlog
 import uuid
@@ -24,7 +23,7 @@ from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.user import UserProfile
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.base import PaginationResponseSchema
+from lcfs.web.api.base import calculate_total_pages, PaginationResponseSchema
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.dtos import (
     ChangelogFuelSuppliesDTO,
@@ -693,7 +692,7 @@ class ComplianceReportServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
             reports=reports,
         )
