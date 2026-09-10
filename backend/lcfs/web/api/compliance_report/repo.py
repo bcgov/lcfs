@@ -946,13 +946,26 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def get_supporting_document_count(self, compliance_report_id: int) -> int:
+        related_report_ids = await self.get_related_compliance_report_ids(
+            compliance_report_id
+        )
+        if not related_report_ids:
+            return 0
+
         return (
             await self.db.scalar(
-                select(func.count())
+                select(
+                    func.count(
+                        func.distinct(
+                            compliance_report_document_association.c.document_id
+                        )
+                    )
+                )
                 .select_from(compliance_report_document_association)
                 .where(
-                    compliance_report_document_association.c.compliance_report_id
-                    == compliance_report_id
+                    compliance_report_document_association.c.compliance_report_id.in_(
+                        related_report_ids
+                    )
                 )
             )
         ) or 0
