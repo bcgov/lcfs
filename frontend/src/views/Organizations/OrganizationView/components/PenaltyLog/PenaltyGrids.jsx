@@ -20,21 +20,26 @@ import {
   penaltyLogColumnDefs
 } from './_schema'
 
-const buildLocalPenaltyQuery = (rows, paginationOptions) => ({
-  data: {
-    penaltyLogs: rows,
-    pagination: {
-      total: rows.length,
-      page: paginationOptions.page,
-      size: paginationOptions.size,
-      totalPages: paginationOptions.size
-        ? Math.max(1, Math.ceil(rows.length / paginationOptions.size))
-        : 1
-    }
-  },
-  isLoading: false,
-  isError: false
-})
+const buildLocalPenaltyQuery = (rows, paginationOptions) => {
+  const page = paginationOptions.page || 1
+  const size = paginationOptions.size || rows.length
+  const startIndex = size ? (page - 1) * size : 0
+  const endIndex = size ? startIndex + size : rows.length
+
+  return {
+    data: {
+      penaltyLogs: rows.slice(startIndex, endIndex),
+      pagination: {
+        total: rows.length,
+        page,
+        size,
+        totalPages: size ? Math.max(1, Math.ceil(rows.length / size)) : 1
+      }
+    },
+    isLoading: false,
+    isError: false
+  }
+}
 
 export const AutomaticPenaltyLogGrid = ({
   automaticPenaltyRows = [],

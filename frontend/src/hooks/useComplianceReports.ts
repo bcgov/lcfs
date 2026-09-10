@@ -196,7 +196,7 @@ export const useGetComplianceReportSummary = (
   const client = useApiService()
 
   const {
-    staleTime = 0,
+    staleTime = DEFAULT_STALE_TIME,
     gcTime = DEFAULT_CACHE_TIME,
     enabled = true,
     ...restOptions

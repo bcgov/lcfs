@@ -385,14 +385,16 @@ const SummaryTable = ({
                           : 1
                     }}
                   >
-                    {column.type === 'booleanRadio' &&
-                    row.line &&
-                    row[column.id] !== null &&
-                    row[column.id] !== undefined ? (
+                    {column.type === 'booleanRadio' ? (
                       <div style={{ position: 'relative' }}>
                         <RadioGroup
                           row
-                          value={row[column.id] ? 'true' : 'false'}
+                          value={
+                            row[column.id] === null ||
+                            row[column.id] === undefined
+                              ? ''
+                              : String(row[column.id])
+                          }
                           onChange={(event) =>
                             handleBooleanCellChange(
                               rowIndex,

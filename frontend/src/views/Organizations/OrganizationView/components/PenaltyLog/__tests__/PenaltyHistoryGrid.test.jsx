@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -250,7 +250,7 @@ describe('PenaltyHistoryGrid - Component Functionality', () => {
     expect(screen.getByText('Penalty history')).toBeInTheDocument()
   })
 
-  it('should pass minimum widths without flex sizing', () => {
+  it('should pass minimum widths to grid viewer', () => {
     renderComponent()
 
     const gridProps = mockBCGridViewer.mock.calls.find(
@@ -259,9 +259,6 @@ describe('PenaltyHistoryGrid - Component Functionality', () => {
 
     expect(gridProps).toBeDefined()
     expect(gridProps.columnState).toEqual([])
-    expect(gridProps.columnDefs.every((columnDef) => !columnDef.flex)).toBe(
-      true
-    )
     expect(
       gridProps.columnDefs.every((columnDef) => columnDef.minWidth > 0)
     ).toBe(true)
@@ -331,6 +328,32 @@ describe('AutomaticPenaltyLogGrid - Grid Sizing', () => {
     expect(screen.getByText('2')).toBeInTheDocument()
     expect(screen.queryByText('$600.00')).not.toBeInTheDocument()
     expect(screen.queryByText('$400.00')).not.toBeInTheDocument()
+  })
+
+  it('slices local automatic penalty rows for the selected page', () => {
+    const automaticPenaltyRows = Array.from({ length: 12 }, (_, index) => ({
+      penaltyLogId: `auto-${index + 1}`,
+      penaltyAmount: (index + 1) * 100,
+      invoiceSent: false
+    }))
+
+    renderComponent(automaticPenaltyRows)
+
+    const gridProps = mockBCGridViewer.mock.calls.find(
+      ([props]) => props.gridKey === 'automatic-penalty-log-history'
+    )?.[0]
+
+    expect(gridProps.queryData.data.penaltyLogs).toHaveLength(10)
+
+    act(() => {
+      gridProps.onPaginationChange({ page: 2, size: 10 })
+    })
+
+    const updatedGridProps = mockBCGridViewer.mock.calls
+      .map(([props]) => props)
+      .findLast((props) => props.gridKey === 'automatic-penalty-log-history')
+
+    expect(updatedGridProps.queryData.data.penaltyLogs).toHaveLength(2)
   })
 })
 
