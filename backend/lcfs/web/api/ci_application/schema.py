@@ -184,6 +184,7 @@ class CITableOptionsSchema(BaseSchema):
     fuel_types: List[FuelTypeOptionSchema] = []
     transport_modes: List[str] = []
     fuel_codes: List[FuelCodeOptionSchema] = []
+    field_options: Dict[str, List[str]] = {}
 
 
 # ---------------------------------------------------------------------------
