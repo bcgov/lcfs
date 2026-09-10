@@ -228,6 +228,28 @@ class ComplianceReportSummaryService:
             if penalty_units < 0
             else 0
         )
+        line_11_total = next(
+            (
+                row.total_value or 0
+                for row in summary.non_compliance_penalty_summary or []
+                if row.line == 11
+            ),
+            0,
+        )
+        total_penalty = line_11_total + line_21
+
+        already_normalized = (
+            int(summary_obj.line_15_banked_units_used or 0) == 0
+            and int(summary_obj.line_16_banked_units_remaining or 0) == 0
+            and int(summary_obj.line_20_surplus_deficit_units or 0) == line_20
+            and int(summary_obj.line_21_non_compliance_penalty_payable or 0)
+            == line_21
+            and int(summary_obj.line_22_compliance_units_issued or 0) == line_22
+            and float(summary_obj.total_non_compliance_penalty_payable or 0)
+            == float(total_penalty)
+        )
+        if already_normalized:
+            return
 
         summary_obj.line_15_banked_units_used = 0
         summary_obj.line_16_banked_units_remaining = 0
@@ -245,15 +267,7 @@ class ComplianceReportSummaryService:
                 "description"
             ].format(units="{:,}".format(penalty_units * -1), rate=penalty_rate)
 
-        line_11_total = next(
-            (
-                row.total_value or 0
-                for row in summary.non_compliance_penalty_summary or []
-                if row.line == 11
-            ),
-            0,
-        )
-        summary_obj.total_non_compliance_penalty_payable = line_11_total + line_21
+        summary_obj.total_non_compliance_penalty_payable = total_penalty
         self.repo.db.add(summary_obj)
         await self.repo.db.flush()
 
@@ -261,7 +275,7 @@ class ComplianceReportSummaryService:
             if row.line == 21:
                 row.total_value = line_21
             elif row.line is None:
-                row.total_value = line_11_total + line_21
+                row.total_value = total_penalty
 
     def convert_summary_to_dict(
         self,
