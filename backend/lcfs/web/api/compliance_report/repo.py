@@ -210,8 +210,8 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def get_assessed_compliance_report_by_period(
-        self, organization_id: int, period: int, exclude_report_id: int = None
-    ):
+        self, organization_id: int, period: int, exclude_report_id: int | None = None
+    ) -> ComplianceReport | None:
         """
         Identify and retrieve the latest assessed compliance report of an organization for the given compliance period
         """
@@ -227,7 +227,7 @@ class ComplianceReportRepository:
         ]
 
         # Exclude the current report to avoid circular reference
-        if exclude_report_id:
+        if exclude_report_id is not None:
             where_conditions.append(
                 ComplianceReport.compliance_report_id != exclude_report_id
             )
@@ -279,8 +279,8 @@ class ComplianceReportRepository:
         organization_id: int,
         period: int,
         before_version: int,
-        exclude_report_id: int = None,
-    ):
+        exclude_report_id: int | None = None,
+    ) -> ComplianceReport | None:
         """
         Retrieve the latest assessed/exempted report in the same report group
         before the current version.
@@ -302,7 +302,7 @@ class ComplianceReportRepository:
             ),
         ]
 
-        if exclude_report_id:
+        if exclude_report_id is not None:
             where_conditions.append(
                 ComplianceReport.compliance_report_id != exclude_report_id
             )
