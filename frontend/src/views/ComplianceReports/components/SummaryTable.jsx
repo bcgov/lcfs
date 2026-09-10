@@ -344,6 +344,7 @@ const SummaryTable = ({
                 const isExempted = isLineExempted(row)
                 const isGreyedOrLocked =
                   isCellLocked(rowIndex, row) || isGreyedByYear || isExempted
+                const isEditableCell = isCellEditable(rowIndex, column.id)
                 return (
                   <TableCell
                     key={column.id}
@@ -395,13 +396,14 @@ const SummaryTable = ({
                               ? ''
                               : String(row[column.id])
                           }
-                          onChange={(event) =>
+                          onChange={(event) => {
+                            if (!isEditableCell || isGreyedOrLocked) return
                             handleBooleanCellChange(
                               rowIndex,
                               column.id,
                               event.target.value
                             )
-                          }
+                          }}
                           sx={{
                             justifyContent: 'center',
                             flexWrap: 'nowrap',
@@ -416,7 +418,7 @@ const SummaryTable = ({
                             control={
                               <Radio
                                 size="small"
-                                disabled={!isCellEditable(rowIndex, column.id)}
+                                disabled={!isEditableCell || isGreyedOrLocked}
                               />
                             }
                             label="Yes"
@@ -426,7 +428,7 @@ const SummaryTable = ({
                             control={
                               <Radio
                                 size="small"
-                                disabled={!isCellEditable(rowIndex, column.id)}
+                                disabled={!isEditableCell || isGreyedOrLocked}
                               />
                             }
                             label="No"
@@ -445,8 +447,7 @@ const SummaryTable = ({
                           />
                         )}
                       </div>
-                    ) : isCellEditable(rowIndex, column.id) &&
-                      !isCellLocked(rowIndex, row) ? (
+                    ) : isEditableCell && !isCellLocked(rowIndex, row) ? (
                       <div
                         style={{
                           position: 'relative',

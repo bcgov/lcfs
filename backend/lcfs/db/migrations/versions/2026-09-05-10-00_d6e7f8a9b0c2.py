@@ -1,7 +1,7 @@
 """Add invoice and payment status to compliance report penalties
 
 Revision ID: d6e7f8a9b0c2
-Revises: c8d9e0f1a2b3
+Revises: d9e0f1a2b3c4
 Create Date: 2026-08-31 10:00:00.000000
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "d6e7f8a9b0c2"
-down_revision = "c8d9e0f1a2b3"
+down_revision = "d9e0f1a2b3c4"
 branch_labels = None
 depends_on = None
 
