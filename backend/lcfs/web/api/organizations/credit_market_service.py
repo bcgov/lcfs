@@ -1,6 +1,6 @@
 import json
 import math
-from typing import Dict
+from typing import Dict, List
 
 import structlog
 from fastapi import Depends
@@ -25,8 +25,15 @@ from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
+from .credit_market_audit import (
+    CREDIT_MARKET_FIELDS,
+    credit_market_audit_action,
+    credit_market_snapshot,
+    diff_credit_market_snapshots,
+)
 from .repo import OrganizationsRepository
 from .schema import (
+    CreditMarketAuditChangeSchema,
     CreditMarketAuditLogItemSchema,
     CreditMarketAuditLogListResponseSchema,
     OrganizationCreditMarketListingSchema,
@@ -50,15 +57,22 @@ class OrganizationCreditMarketService:
     @staticmethod
     def _credit_market_snapshot(organization: Organization) -> Dict[str, object]:
         """Build a normalized snapshot for credit market change detection."""
-        return {
-            "credit_market_contact_name": organization.credit_market_contact_name,
-            "credit_market_contact_email": organization.credit_market_contact_email,
-            "credit_market_contact_phone": organization.credit_market_contact_phone,
-            "credit_market_is_seller": bool(organization.credit_market_is_seller),
-            "credit_market_is_buyer": bool(organization.credit_market_is_buyer),
-            "credits_to_sell": int(organization.credits_to_sell or 0),
-            "display_in_credit_market": bool(organization.display_in_credit_market),
-        }
+        return credit_market_snapshot(organization)
+
+    @staticmethod
+    def _audit_changes(changes: Dict | None) -> List[CreditMarketAuditChangeSchema]:
+        """Flatten the stored {field: {from, to}} diff into an ordered list."""
+        if not changes:
+            return []
+        return [
+            CreditMarketAuditChangeSchema(
+                field=field,
+                old_value=changes[field].get("from"),
+                new_value=changes[field].get("to"),
+            )
+            for field in CREDIT_MARKET_FIELDS
+            if field in changes
+        ]
 
     @staticmethod
     def _role_in_market(is_seller: bool, is_buyer: bool) -> str | None:
@@ -100,15 +114,7 @@ class OrganizationCreditMarketService:
         was_displayed_in_market = organization.display_in_credit_market or False
         old_credits_to_sell = organization.credits_to_sell or 0
 
-        allowed_fields = {
-            "credit_market_contact_name",
-            "credit_market_contact_email",
-            "credit_market_contact_phone",
-            "credit_market_is_seller",
-            "credit_market_is_buyer",
-            "credits_to_sell",
-            "display_in_credit_market",
-        }
+        allowed_fields = set(CREDIT_MARKET_FIELDS)
 
         for key, value in credit_market_data.items():
             if key in allowed_fields and hasattr(organization, key):
@@ -132,14 +138,18 @@ class OrganizationCreditMarketService:
         updated_organization = await self.repo.update_organization(organization)
         after_snapshot = self._credit_market_snapshot(updated_organization)
 
-        if before_snapshot != after_snapshot and bool(
-            updated_organization.display_in_credit_market
-        ):
+        # Every change to the listing is audited, including changes made while
+        # the listing is hidden and the act of removing it from the market.
+        action = credit_market_audit_action(before_snapshot, after_snapshot)
+        if action:
             changed_by = (
                 user.keycloak_username if user else updated_organization.update_user
             )
             await self.repo.create_credit_market_audit_log(
-                organization=updated_organization, changed_by=changed_by
+                organization=updated_organization,
+                changed_by=changed_by,
+                action=action,
+                changes=diff_credit_market_snapshots(before_snapshot, after_snapshot),
             )
 
         is_now_displayed = updated_organization.display_in_credit_market or False
@@ -243,6 +253,9 @@ class OrganizationCreditMarketService:
                 contact_person=entry.contact_person,
                 phone=entry.phone,
                 email=entry.email,
+                display_in_credit_market=bool(entry.display_in_credit_market),
+                action=entry.action,
+                changes=self._audit_changes(entry.changes),
                 changed_by=entry.changed_by,
                 uploaded_date=entry.create_date,
             )
