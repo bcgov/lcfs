@@ -95,13 +95,17 @@ vi.mock('@/views/Admin/AdminMenu', () => ({
   )),
   AuditLog: vi.fn(() => <div data-test="audit-log">AuditLog Component</div>),
   LoginScreenBackground: vi.fn(() => (
-    <div data-test="login-screen-background">LoginScreenBackground Component</div>
+    <div data-test="login-screen-background">
+      LoginScreenBackground Component
+    </div>
   )),
   ReleaseNotesAdmin: vi.fn(() => (
     <div data-test="release-notes-admin">ReleaseNotesAdmin Component</div>
   )),
   SeededUserAssociation: vi.fn(() => (
-    <div data-test="seeded-user-association">SeededUserAssociation Component</div>
+    <div data-test="seeded-user-association">
+      SeededUserAssociation Component
+    </div>
   ))
 }))
 
@@ -190,6 +194,17 @@ describe('AdminMenu Component', () => {
           'aria-controls',
           `full-width-admin-tabs-${index}`
         )
+      })
+    })
+
+    it('marks only the active tab as aria-selected and keyboard focusable', () => {
+      const { container } = render(<AdminMenu />)
+
+      const tabs = container.querySelectorAll('[data-test="tab"]')
+      tabs.forEach((tab, index) => {
+        const expectedSelected = String(index === 0)
+        expect(tab).toHaveAttribute('aria-selected', expectedSelected)
+        expect(tab).toHaveAttribute('tabIndex', index === 0 ? '0' : '-1')
       })
     })
   })
