@@ -16,6 +16,13 @@ import ReactECharts from 'echarts-for-react'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import {
+  BC_CHART_AXIS_LABEL,
+  BC_CHART_CATEGORY_AXIS_LABEL,
+  BC_CHART_COLORS,
+  BC_CHART_GRID,
+  BC_CHART_PALETTE
+} from '@/components/charts/chartStyles'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useOrganizationFuelSupply } from '@/hooks/useFuelSupply'
@@ -37,42 +44,19 @@ import {
 const GRID_KEY = 'organization-supply-history'
 const YEAR_FILTER_STORAGE_KEY = `${GRID_KEY}-year-filter`
 const CHART_COLORS = {
-  green: '#009E73',
-  orange: '#D55E00',
-  blue: '#0072B2',
-  sky: '#56B4E9',
-  yellow: '#F0E442',
-  purple: '#CC79A7',
-  vermillion: '#E69F00',
-  neutralText: '#405074'
+  green: BC_CHART_COLORS.green,
+  orange: BC_CHART_COLORS.orange,
+  blue: BC_CHART_COLORS.blue,
+  sky: BC_CHART_COLORS.teal,
+  yellow: BC_CHART_COLORS.orange,
+  purple: BC_CHART_COLORS.purple,
+  vermillion: BC_CHART_COLORS.magenta,
+  neutralText: BC_CHART_COLORS.text
 }
-const CHART_PALETTE = [
-  CHART_COLORS.blue,
-  CHART_COLORS.green,
-  CHART_COLORS.orange,
-  CHART_COLORS.sky,
-  CHART_COLORS.purple,
-  CHART_COLORS.vermillion,
-  '#332288',
-  '#88CCEE'
-]
-const CHART_GRID = {
-  left: 64,
-  right: 24,
-  top: 56,
-  bottom: 56,
-  containLabel: true
-}
-const CHART_AXIS_LABEL = {
-  color: '#5f6675',
-  hideOverlap: true
-}
-const CHART_CATEGORY_AXIS_LABEL = {
-  ...CHART_AXIS_LABEL,
-  show: true,
-  interval: 0,
-  margin: 10
-}
+const CHART_PALETTE = BC_CHART_PALETTE
+const CHART_GRID = BC_CHART_GRID
+const CHART_AXIS_LABEL = BC_CHART_AXIS_LABEL
+const CHART_CATEGORY_AXIS_LABEL = BC_CHART_CATEGORY_AXIS_LABEL
 
 const getStoredYearRange = () => {
   if (typeof window === 'undefined') {
