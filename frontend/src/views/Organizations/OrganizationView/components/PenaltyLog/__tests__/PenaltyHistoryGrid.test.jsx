@@ -61,7 +61,7 @@ const mockPenaltyLogs = {
       notes: 'Another test'
     }
   ],
-  pagination: { total: 2, page: 1, size: 10, totalPages: 1 }
+  pagination: { total: 12, page: 1, size: 2, totalPages: 6 }
 }
 
 vi.mock('@/hooks/useOrganization', () => ({
@@ -264,6 +264,22 @@ describe('PenaltyHistoryGrid - Component Functionality', () => {
     expect(
       gridProps.columnDefs.every((columnDef) => columnDef.minWidth > 0)
     ).toBe(true)
+  })
+
+  it('preserves server pagination metadata for discretionary penalties', () => {
+    renderComponent()
+
+    const gridProps = mockBCGridViewer.mock.calls.find(
+      ([props]) => props.gridKey === 'penalty-log-history'
+    )?.[0]
+
+    expect(gridProps.queryData.data.penaltyLogs).toHaveLength(2)
+    expect(gridProps.queryData.data.pagination).toEqual({
+      total: 12,
+      page: 1,
+      size: 2,
+      totalPages: 6
+    })
   })
 })
 

@@ -20,6 +20,10 @@ import {
   penaltyLogColumnDefs
 } from './_schema'
 
+const initialPaginationOptions = {
+  ...defaultInitialPagination
+}
+
 const buildLocalPenaltyQuery = (rows, paginationOptions) => {
   const page = paginationOptions.page || 1
   const size = paginationOptions.size || rows.length
@@ -150,12 +154,12 @@ export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
   const navigate = useNavigate()
   const penaltyLogGridRef = useRef(null)
   const [paginationOptions, setPaginationOptions] = useState(
-    defaultInitialPagination
+    initialPaginationOptions
   )
 
   const penaltyLogsQuery = useOrganizationPenaltyLogs(
     organizationId,
-    paginationOptions,
+    { ...paginationOptions },
     {
       enabled: !!organizationId
     }
@@ -173,25 +177,11 @@ export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
         source: row.source ?? 'manual'
       })) ?? []
 
-    const penaltyLogs = manualRows.sort((a, b) => {
-      const yearCompare = String(b.complianceYear ?? '').localeCompare(
-        String(a.complianceYear ?? '')
-      )
-      if (yearCompare !== 0) return yearCompare
-      return String(a.description ?? '').localeCompare(
-        String(b.description ?? '')
-      )
-    })
-
     return {
       ...penaltyLogsQuery,
       data: {
         ...(penaltyLogsQuery.data ?? {}),
-        penaltyLogs,
-        pagination: {
-          ...(penaltyLogsQuery.data?.pagination ?? {}),
-          total: penaltyLogs.length
-        }
+        penaltyLogs: manualRows
       }
     }
   }, [penaltyLogsQuery])
@@ -221,11 +211,11 @@ export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
     } catch (e) {
       // no-op
     }
-    setPaginationOptions({ ...defaultInitialPagination })
+    setPaginationOptions({ ...initialPaginationOptions })
   }, [])
 
   const handlePaginationChange = useCallback((newPagination) => {
-    setPaginationOptions((prev) => ({ ...prev, ...newPagination }))
+    setPaginationOptions(newPagination)
   }, [])
 
   return (
