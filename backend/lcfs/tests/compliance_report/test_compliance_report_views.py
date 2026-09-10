@@ -10,6 +10,7 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
+    ComplianceReportPenaltyStatusSchema,
     ComplianceReportYearNavigationItemSchema,
     ComplianceReportYearNavigationSchema,
     ChainedComplianceReportSchema,
@@ -582,6 +583,76 @@ async def test_update_compliance_report_summary_not_found(
         response = await client.put(url, json=payload)
 
         assert response.status_code == 404  # Not Found
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("line", [11, 21])
+async def test_update_compliance_report_penalty_status_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, line
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportSummaryService.update_penalty_status"
+    ) as mock_update_penalty_status, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access:
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+
+        mock_validate_organization_access.return_value = MagicMock()
+        mock_update_penalty_status.return_value = ComplianceReportPenaltyStatusSchema(
+            line=line,
+            invoice_sent=True,
+            payment_received=False,
+        )
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report_penalty_status", report_id=1
+        )
+        payload = {
+            "line": line,
+            "invoiceSent": True,
+            "paymentReceived": False,
+        }
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "line": line,
+            "invoiceSent": True,
+            "paymentReceived": False,
+        }
+        mock_validate_organization_access.assert_called_once_with(1)
+        mock_update_penalty_status.assert_called_once()
+        args, kwargs = mock_update_penalty_status.call_args
+        assert args[0] == 1
+        assert args[1].line == line
+        assert args[1].invoice_sent is True
+        assert args[1].payment_received is False
+        assert kwargs["user"] is not None
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_penalty_status_forbidden_for_supplier(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportSummaryService.update_penalty_status"
+    ) as mock_update_penalty_status:
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report_penalty_status", report_id=1
+        )
+        payload = {
+            "line": 21,
+            "invoiceSent": True,
+            "paymentReceived": True,
+        }
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 403
+        mock_update_penalty_status.assert_not_called()
 
 
 # Penalty Override Tests

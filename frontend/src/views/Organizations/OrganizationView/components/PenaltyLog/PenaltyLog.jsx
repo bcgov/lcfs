@@ -110,7 +110,12 @@ const processDiscretionaryData = (rawPenaltyLogs, yearLabels) => {
   return yearLabels.map((year) => sums.get(year) ?? 0)
 }
 
-export const buildAutomaticPenaltyRows = (yearlyPenalties) =>
+const defaultTranslate = (key) => key
+
+export const buildAutomaticPenaltyRows = (
+  yearlyPenalties,
+  t = defaultTranslate
+) =>
   yearlyPenalties.flatMap((item) => {
     const dueDate =
       item.reportStatus === 'Assessed' && item.assessedDate
@@ -125,12 +130,11 @@ export const buildAutomaticPenaltyRows = (yearlyPenalties) =>
         id: `automatic-renewable-${item.compliancePeriodId}`,
         penaltyLogId: `automatic-renewable-${item.compliancePeriodId}`,
         complianceYear: item.complianceYear,
-        description:
-          'Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)',
+        description: t('org:penaltyLog.automaticDescriptions.renewable'),
         penaltyAmount: autoRenewable,
         dueDate,
-        invoiceSent: !!item.renewableInvoiceSent,
-        paymentReceived: !!item.renewablePaymentReceived,
+        invoiceSent: item.renewableInvoiceSent ?? null,
+        paymentReceived: item.renewablePaymentReceived ?? null,
         source: 'automatic'
       })
     }
@@ -140,12 +144,11 @@ export const buildAutomaticPenaltyRows = (yearlyPenalties) =>
         id: `automatic-low-carbon-${item.compliancePeriodId}`,
         penaltyLogId: `automatic-low-carbon-${item.compliancePeriodId}`,
         complianceYear: item.complianceYear,
-        description:
-          'Low carbon fuel target non-compliance penalty total (Line 21)',
+        description: t('org:penaltyLog.automaticDescriptions.lowCarbon'),
         penaltyAmount: autoLowCarbon,
         dueDate,
-        invoiceSent: !!item.lowCarbonInvoiceSent,
-        paymentReceived: !!item.lowCarbonPaymentReceived,
+        invoiceSent: item.lowCarbonInvoiceSent ?? null,
+        paymentReceived: item.lowCarbonPaymentReceived ?? null,
         source: 'automatic'
       })
     }
@@ -193,8 +196,8 @@ export const PenaltyLog = () => {
   )
 
   const automaticPenaltyRows = useMemo(
-    () => buildAutomaticPenaltyRows(rawYearlyPenalties),
-    [rawYearlyPenalties]
+    () => buildAutomaticPenaltyRows(rawYearlyPenalties, t),
+    [rawYearlyPenalties, t]
   )
 
   const penaltyTotals = useMemo(

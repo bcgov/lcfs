@@ -200,6 +200,10 @@
       "autoRenewable": "Renewable fuel target penalty",
       "autoLowCarbon": "Low carbon fuel target penalty"
     },
+    "automaticDescriptions": {
+      "renewable": "Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)",
+      "lowCarbon": "Low carbon fuel target non-compliance penalty total (Line 21)"
+    },
     "manageTitle": "Confer discretionary penalty",
     "saveReturn": "Save & return",
     "noOrganizationSelected": "Select an organization to view penalty analytics.",

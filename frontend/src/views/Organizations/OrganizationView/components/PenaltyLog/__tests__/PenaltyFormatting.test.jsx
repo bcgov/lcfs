@@ -59,6 +59,14 @@ const theme = {
   }
 }
 
+const t = (key) =>
+  ({
+    'org:penaltyLog.automaticDescriptions.renewable':
+      'Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)',
+    'org:penaltyLog.automaticDescriptions.lowCarbon':
+      'Low carbon fuel target non-compliance penalty total (Line 21)'
+  })[key] ?? key
+
 describe('organization dashboard penalty formatting', () => {
   it('formats every metric card value with two decimal places', () => {
     render(
@@ -174,24 +182,29 @@ describe('organization dashboard penalty formatting', () => {
   })
 
   it('builds automatic penalty rows from positive summary amounts without requiring status flags', () => {
-    const rows = buildAutomaticPenaltyRows([
-      {
-        compliancePeriodId: 1,
-        complianceYear: 2025,
-        reportStatus: 'Assessed',
-        assessedDate: '2026-04-15T17:30:00Z',
-        autoRenewable: 125,
-        autoLowCarbon: 250,
-        renewableInvoiceSent: false,
-        renewablePaymentReceived: false,
-        lowCarbonInvoiceSent: false,
-        lowCarbonPaymentReceived: false
-      }
-    ])
+    const rows = buildAutomaticPenaltyRows(
+      [
+        {
+          compliancePeriodId: 1,
+          complianceYear: 2025,
+          reportStatus: 'Assessed',
+          assessedDate: '2026-04-15T17:30:00Z',
+          autoRenewable: 125,
+          autoLowCarbon: 250,
+          renewableInvoiceSent: false,
+          renewablePaymentReceived: false,
+          lowCarbonInvoiceSent: false,
+          lowCarbonPaymentReceived: false
+        }
+      ],
+      t
+    )
 
     expect(rows).toMatchObject([
       {
         id: 'automatic-renewable-1',
+        description:
+          'Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)',
         penaltyAmount: 125,
         dueDate: '2026-04-15',
         invoiceSent: false,
@@ -199,6 +212,7 @@ describe('organization dashboard penalty formatting', () => {
       },
       {
         id: 'automatic-low-carbon-1',
+        description: 'Low carbon fuel target non-compliance penalty total (Line 21)',
         penaltyAmount: 250,
         dueDate: '2026-04-15',
         invoiceSent: false,
@@ -220,6 +234,32 @@ describe('organization dashboard penalty formatting', () => {
     ])
 
     expect(row.dueDate).toBe('')
+  })
+
+  it('preserves unavailable automatic penalty status fields as null', () => {
+    const rows = buildAutomaticPenaltyRows([
+      {
+        compliancePeriodId: 1,
+        complianceYear: 2025,
+        reportStatus: 'Assessed',
+        assessedDate: '2026-04-15T17:30:00Z',
+        autoRenewable: 125,
+        autoLowCarbon: 250
+      }
+    ])
+
+    expect(rows).toMatchObject([
+      {
+        id: 'automatic-renewable-1',
+        invoiceSent: null,
+        paymentReceived: null
+      },
+      {
+        id: 'automatic-low-carbon-1',
+        invoiceSent: null,
+        paymentReceived: null
+      }
+    ])
   })
 
   it('excludes automatic penalty rows whose amount is not positive', () => {

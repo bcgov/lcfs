@@ -107,7 +107,7 @@ export const AutomaticPenaltyLogGrid = ({
           >
             <BCBox>
               <BCTypography variant="body2" color="text" component="span">
-                Total penalties:{' '}
+                {t('org:penaltyLog.metrics.totalPenalties')}:{' '}
               </BCTypography>
               <BCTypography variant="h6" color="primary" component="span">
                 {totals.totalPenalties}
@@ -115,7 +115,7 @@ export const AutomaticPenaltyLogGrid = ({
             </BCBox>
             <BCBox>
               <BCTypography variant="body2" color="text" component="span">
-                Invoiced:{' '}
+                {t('org:penaltyLog.columns.invoiced')}:{' '}
               </BCTypography>
               <BCTypography variant="h6" color="primary" component="span">
                 {totals.invoiced}

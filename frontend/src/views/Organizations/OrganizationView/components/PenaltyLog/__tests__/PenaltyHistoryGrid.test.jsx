@@ -22,7 +22,9 @@ const mockT = vi.fn((key, options) => {
   const translations = {
     'org:penaltyLog.history': 'Penalty history',
     'org:penaltyLog.discretionaryPenalties': 'Penalty history',
-    'org:penaltyLog.addPenaltyBtn': 'Add/Edit discretionary penalties'
+    'org:penaltyLog.addPenaltyBtn': 'Add/Edit discretionary penalties',
+    'org:penaltyLog.metrics.totalPenalties': 'Total penalties',
+    'org:penaltyLog.columns.invoiced': 'Invoiced'
   }
   return translations[key] || options?.defaultValue || key
 })
