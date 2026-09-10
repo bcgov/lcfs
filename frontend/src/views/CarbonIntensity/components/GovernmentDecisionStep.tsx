@@ -301,12 +301,12 @@ export const GovernmentDecisionStep = ({
       await request
     } catch (err: any) {
       if (state.pending === request) state.dirty = true
-      setError(
+      const message =
         err?.response?.data?.detail ||
-          err?.message ||
-          'Failed to save risk assessment.'
-      )
-      throw err
+        err?.message ||
+        'Failed to save risk assessment.'
+      setError(message)
+      throw new Error(message)
     }
   }, [])
 

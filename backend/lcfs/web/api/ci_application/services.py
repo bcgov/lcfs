@@ -1968,13 +1968,11 @@ class CIApplicationServices:
             )
 
     def _reset_government_workflow_review(self, ci_application: CIApplication) -> None:
-        if (
-            ci_application.verification_2_risk_assessment is not None
-            or ci_application.verification_2_priority_score is not None
-        ):
+        if ci_application.verification_2_risk_assessment is not None:
             ci_application.preliminary_risk_assessment = (
                 ci_application.verification_2_risk_assessment
             )
+        if ci_application.verification_2_priority_score is not None:
             ci_application.priority_score = ci_application.verification_2_priority_score
         ci_application.verification_1_user_id = None
         ci_application.verification_1_date = None
