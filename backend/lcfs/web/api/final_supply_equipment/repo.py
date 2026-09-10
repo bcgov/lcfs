@@ -47,6 +47,7 @@ from lcfs.db.models.compliance.ChargingSite import (
     latest_charging_site_version_subquery,
 )
 from lcfs.web.api.base import apply_filter_conditions, get_field_for_filter
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
     FinalSupplyEquipmentRegNumber,
 )
@@ -95,44 +96,38 @@ class FinalSupplyEquipmentRepository:
         """
         latest_sites = latest_charging_site_version_subquery()
 
-        return (
-            select(
-                ChargingEquipment.group_uuid.label("group_uuid"),
-                ChargingEquipment.charging_equipment_id.label("charging_equipment_id"),
-                ChargingEquipment.version.label("charging_equipment_version"),
-                func.row_number()
-                .over(
-                    partition_by=ChargingEquipment.group_uuid,
-                    order_by=(
-                        desc(ChargingEquipment.version),
-                        desc(ChargingEquipment.charging_equipment_id),
-                    ),
-                )
-                .label("row_number"),
-            )
-            .join(
-                ChargingSite,
-                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
-            )
-            .join(
-                latest_sites,
-                and_(
-                    ChargingSite.group_uuid == latest_sites.c.group_uuid,
-                    ChargingSite.version == latest_sites.c.latest_version,
+        return VersioningQueryHelper.latest_version_ranking_subquery(
+            ChargingEquipment,
+            id_column=ChargingEquipment.charging_equipment_id,
+            id_label="charging_equipment_id",
+            include_version=True,
+            version_label="charging_equipment_version",
+            extra_order_by=[
+                desc(ChargingEquipment.version),
+                desc(ChargingEquipment.charging_equipment_id),
+            ],
+            additional_joins=[
+                (
+                    ChargingSite,
+                    ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
                 ),
-            )
-            .join(
-                ChargingEquipmentStatus,
-                ChargingEquipment.status_id
-                == ChargingEquipmentStatus.charging_equipment_status_id,
-            )
-            .where(
-                and_(
-                    ChargingSite.organization_id == organization_id,
-                    ChargingEquipmentStatus.status != "Decommissioned",
-                )
-            )
-            .subquery()
+                (
+                    latest_sites,
+                    and_(
+                        ChargingSite.group_uuid == latest_sites.c.group_uuid,
+                        ChargingSite.version == latest_sites.c.latest_version,
+                    ),
+                ),
+                (
+                    ChargingEquipmentStatus,
+                    ChargingEquipment.status_id
+                    == ChargingEquipmentStatus.charging_equipment_status_id,
+                ),
+            ],
+            where_clauses=[
+                ChargingSite.organization_id == organization_id,
+                ChargingEquipmentStatus.status != "Decommissioned",
+            ],
         )
 
     @repo_handler

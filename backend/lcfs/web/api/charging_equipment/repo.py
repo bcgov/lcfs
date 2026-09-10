@@ -36,6 +36,7 @@ from lcfs.web.api.base import (
     get_field_for_filter,
     apply_filter_conditions,
 )
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -65,30 +66,19 @@ class ChargingEquipmentRepository:
         When prefer_validated is True, prioritize non Draft/Updated statuses for IDIR users.
         """
         status_alias = aliased(ChargingEquipmentStatus)
-        order_by = [ChargingEquipment.version.desc()]
-        if prefer_validated:
-            status_priority = case(
-                (status_alias.status.in_(("Draft", "Updated")), 1),
-                else_=0,
-            )
-            order_by = [status_priority.asc(), ChargingEquipment.version.desc()]
-
-        ranked_subquery = (
-            select(
-                ChargingEquipment.charging_equipment_id.label("ce_id"),
-                func.row_number()
-                .over(
-                    partition_by=ChargingEquipment.group_uuid,
-                    order_by=order_by,
-                )
-                .label("rn"),
-            )
-            .join(
-                status_alias,
+        ranked_subquery = VersioningQueryHelper.latest_version_ranking_subquery(
+            ChargingEquipment,
+            id_column=ChargingEquipment.charging_equipment_id,
+            id_label="ce_id",
+            include_version=False,
+            status_alias=status_alias,
+            status_join_condition=(
                 ChargingEquipment.status_id
-                == status_alias.charging_equipment_status_id,
-            )
-            .subquery()
+                == status_alias.charging_equipment_status_id
+            ),
+            status_field=status_alias.status,
+            prefer_validated=prefer_validated,
+            row_number_label="rn",
         )
 
         return (

@@ -15,6 +15,7 @@ from lcfs.db.models.compliance.NotionalTransfer import (
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.notional_transfer.schema import NotionalTransferSchema
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -105,15 +106,11 @@ class NotionalTransferRepository:
                 ]
             )
 
-        valid_notional_transfers_select = (
-            select(
-                NotionalTransfer.group_uuid,
-                func.max(NotionalTransfer.version).label("max_version"),
-            )
-            .where(*conditions)
-            .group_by(NotionalTransfer.group_uuid)
+        valid_notional_transfers_subq = VersioningQueryHelper.latest_version_subquery(
+            NotionalTransfer,
+            version_label="max_version",
+            where_clauses=conditions,
         )
-        valid_notional_transfers_subq = valid_notional_transfers_select.subquery()
 
         notional_transfers_select = (
             select(NotionalTransfer)

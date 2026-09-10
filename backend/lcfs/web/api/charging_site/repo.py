@@ -32,6 +32,7 @@ from lcfs.web.api.base import (
     PaginationRequestSchema,
     apply_filter_conditions,
 )
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 
 
 logger = structlog.get_logger(__name__)
@@ -71,35 +72,23 @@ class ChargingSiteRepository:
 
     def _site_version_subquery(self, government_visible: bool = False):
         if not government_visible:
-            latest_versions = latest_charging_site_version_subquery()
-            return select(
-                latest_versions.c.group_uuid,
-                latest_versions.c.latest_version.label("selected_version"),
-            ).subquery()
+            return VersioningQueryHelper.latest_version_subquery(
+                ChargingSite,
+                version_label="selected_version",
+            )
 
         status_alias = aliased(ChargingSiteStatus)
-        return (
-            select(
-                ChargingSite.group_uuid.label("group_uuid"),
-                ChargingSite.version.label("selected_version"),
-                func.row_number()
-                .over(
-                    partition_by=ChargingSite.group_uuid,
-                    order_by=(
-                        case(
-                            (status_alias.status.in_(("Draft", "Updated")), 1),
-                            else_=0,
-                        ).asc(),
-                        ChargingSite.version.desc(),
-                    ),
-                )
-                .label("rn"),
-            )
-            .join(
-                status_alias,
-                ChargingSite.status_id == status_alias.charging_site_status_id,
-            )
-            .subquery()
+        return VersioningQueryHelper.latest_version_ranking_subquery(
+            ChargingSite,
+            status_alias=status_alias,
+            status_join_condition=(
+                ChargingSite.status_id == status_alias.charging_site_status_id
+            ),
+            status_field=status_alias.status,
+            prefer_validated=True,
+            include_version=True,
+            version_label="selected_version",
+            row_number_label="rn",
         )
 
     def _apply_latest_version_filter(self, stmt, government_visible: bool = False):

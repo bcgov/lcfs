@@ -31,6 +31,7 @@ from lcfs.db.models.fuel import (
 )
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -392,28 +393,11 @@ class FuelExportRepository:
         # We check the latest version rather than any version because
         # ETL-migrated TFRS supplemental chains can have DELETE followed
         # by UPDATE on the same group_uuid (not possible in modern LCFS).
-        latest_version_per_group = (
-            select(
-                FuelExport.group_uuid,
-                func.max(FuelExport.version).label("max_version"),
-            )
-            .where(FuelExport.compliance_report_id.in_(compliance_reports_select))
-            .group_by(FuelExport.group_uuid)
-        ).subquery()
-
-        deleted_groups = (
-            select(FuelExport.group_uuid)
-            .join(
-                latest_version_per_group,
-                and_(
-                    FuelExport.group_uuid
-                    == latest_version_per_group.c.group_uuid,
-                    FuelExport.version
-                    == latest_version_per_group.c.max_version,
-                ),
-            )
-            .where(FuelExport.action_type == ActionTypeEnum.DELETE)
-            .distinct()
+        deleted_groups = VersioningQueryHelper.deleted_groups_subquery(
+            FuelExport,
+            where_clauses=[
+                FuelExport.compliance_report_id.in_(compliance_reports_select)
+            ],
         )
 
         # Build query conditions
@@ -434,16 +418,11 @@ class FuelExportRepository:
             conditions.extend([~FuelExport.group_uuid.in_(deleted_groups)])
 
         # Get the latest version of each record
-        valid_fuel_exports_select = (
-            select(
-                FuelExport.group_uuid,
-                func.max(FuelExport.version).label("max_version"),
-            )
-            .where(*conditions)
-            .group_by(FuelExport.group_uuid)
+        valid_fuel_exports_subq = VersioningQueryHelper.latest_version_subquery(
+            FuelExport,
+            version_label="max_version",
+            where_clauses=conditions,
         )
-
-        valid_fuel_exports_subq = valid_fuel_exports_select.subquery()
 
         # Get the actual records with their related data
         query = (
