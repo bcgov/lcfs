@@ -237,6 +237,11 @@ class ComplianceReportSummaryService:
             0,
         )
         total_penalty = line_11_total + line_21
+        currency_tolerance = Decimal("0.005")
+        stored_total_penalty = Decimal(
+            str(summary_obj.total_non_compliance_penalty_payable or 0)
+        )
+        expected_total_penalty = Decimal(str(total_penalty or 0))
 
         already_normalized = (
             int(summary_obj.line_15_banked_units_used or 0) == 0
@@ -245,8 +250,8 @@ class ComplianceReportSummaryService:
             and int(summary_obj.line_21_non_compliance_penalty_payable or 0)
             == line_21
             and int(summary_obj.line_22_compliance_units_issued or 0) == line_22
-            and float(summary_obj.total_non_compliance_penalty_payable or 0)
-            == float(total_penalty)
+            and abs(stored_total_penalty - expected_total_penalty)
+            < currency_tolerance
         )
         if already_normalized:
             return

@@ -3243,7 +3243,7 @@ async def test_locked_supplemental_normalization_skips_flush_when_already_correc
     summary.line_20_surplus_deficit_units = -200
     summary.line_21_non_compliance_penalty_payable = 30000
     summary.line_22_compliance_units_issued = 0
-    summary.total_non_compliance_penalty_payable = 30025
+    summary.total_non_compliance_penalty_payable = 30025.000000000004
 
     report = make_report(1, ComplianceReportStatusEnum.Assessed, "2024")
     report.summary = summary
@@ -3273,7 +3273,7 @@ async def test_locked_supplemental_normalization_skips_flush_when_already_correc
     assert low_carbon_values[21] == 30000
     assert low_carbon_values[22] == 0
     assert penalty_values[21] == 30000
-    assert penalty_values[None] == 30025
+    assert penalty_values[None] == pytest.approx(30025)
     compliance_report_summary_service.repo.db.add.assert_not_called()
     compliance_report_summary_service.repo.db.flush.assert_not_awaited()
 

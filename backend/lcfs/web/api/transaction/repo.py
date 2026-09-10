@@ -703,8 +703,8 @@ class TransactionRepository:
             tzinfo=vancouver_timezone,
         )
 
-        result = await self.db.scalar(
-            select(func.coalesce(func.sum(Transaction.compliance_units), 0))
+        distinct_transactions = (
+            select(Transaction.transaction_id, Transaction.compliance_units)
             .select_from(Transaction)
             .join(
                 ComplianceReport,
@@ -721,6 +721,12 @@ class TransactionRepository:
                     Transaction.update_date > compliance_period_end_local,
                 )
             )
+            .group_by(Transaction.transaction_id, Transaction.compliance_units)
+            .subquery()
+        )
+
+        result = await self.db.scalar(
+            select(func.coalesce(func.sum(distinct_transactions.c.compliance_units), 0))
         )
         return int(result or 0)
 
