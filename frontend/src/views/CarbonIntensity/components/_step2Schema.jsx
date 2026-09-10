@@ -191,6 +191,8 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
   const fuelTypes = optionsData?.fuelTypes || []
   const transportModes = optionsData?.transportModes || []
   const fuelCodes = optionsData?.fuelCodes || []
+  const feedstockOptions = optionsData?.fieldOptions?.feedstock || []
+  const feedstockRegionOptions = optionsData?.fieldOptions?.feedstockRegion || []
 
   const fuelCodeById = new Map(fuelCodes.map((fc) => [fc.fuelCodeId, fc]))
 
@@ -441,7 +443,16 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       headerName: i18n.t('carbonIntensity:step2.feedstock'),
       headerComponent: canEdit ? RequiredHeader : undefined,
       editable: lockedOnRenewal,
-      cellEditor: 'agTextCellEditor',
+      cellEditor: AutocompleteCellEditor,
+      suppressKeyboardEvent,
+      cellEditorParams: {
+        noLabel: true,
+        options: feedstockOptions,
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: true,
+        openOnFocus: true
+      },
       cellRenderer: renderTextPlaceholder,
       minWidth: 220
     },
@@ -450,7 +461,16 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       headerName: i18n.t('carbonIntensity:step2.feedstockRegion'),
       headerComponent: canEdit ? RequiredHeader : undefined,
       editable: lockedOnRenewal,
-      cellEditor: 'agTextCellEditor',
+      cellEditor: AutocompleteCellEditor,
+      suppressKeyboardEvent,
+      cellEditorParams: {
+        noLabel: true,
+        options: feedstockRegionOptions,
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: true,
+        openOnFocus: true
+      },
       cellRenderer: renderTextPlaceholder,
       minWidth: 220
     },
