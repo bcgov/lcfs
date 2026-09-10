@@ -5,10 +5,10 @@ import type { ReviewChartData } from '../types'
 
 const chartProps: any[] = []
 
-vi.mock('echarts-for-react', () => ({
-  default: (props: any) => {
+vi.mock('@/components/charts/BCResponsiveEchart', () => ({
+  BCResponsiveEChart: (props: any) => {
     chartProps.push(props)
-    return <div data-test="echarts" />
+    return <div data-test="echarts" role="img" aria-label={props.ariaLabel} />
   }
 }))
 
@@ -49,8 +49,10 @@ describe('ReviewCharts', () => {
     render(<ReviewCharts chartData={chartData} />)
 
     expect(
-      screen.getByText(/FSE kWh usage and capacity utilization/)
+      screen.getByLabelText(/FSE kWh usage and capacity utilization/i)
     ).toBeInTheDocument()
+    expect(screen.getByText('Total kWh usage')).toBeInTheDocument()
+    expect(screen.getByText('Average capacity utilization')).toBeInTheDocument()
 
     const fseOption = chartProps[0].option
     expect(fseOption.yAxis).toHaveLength(2)
@@ -94,7 +96,9 @@ describe('ReviewCharts', () => {
 
     render(<ReviewCharts chartData={chartData} />)
 
-    expect(screen.getByText(/Fuel supply by fuel code/)).toBeInTheDocument()
+    expect(
+      screen.getByLabelText(/Fuel supply by fuel code/i)
+    ).toBeInTheDocument()
     expect(screen.getByLabelText('Compliance year')).toBeInTheDocument()
     expect(screen.getByLabelText('Fuel type')).toBeInTheDocument()
 
@@ -128,7 +132,7 @@ describe('ReviewCharts', () => {
     render(<ReviewCharts chartData={chartData} />)
 
     expect(
-      screen.getByText('Compliance units by fuel category, type, and schedule')
+      screen.getByLabelText(/Compliance units by fuel category, type, and schedule/i)
     ).toBeInTheDocument()
 
     const option = chartProps[0].option
@@ -144,6 +148,105 @@ describe('ReviewCharts', () => {
           name: 'Allocation agreements',
           stack: 'compliance-units',
           data: [40]
+        })
+      ])
+    )
+  })
+
+  it('renders the supply and FSE correlation trend as a dual-axis chart', () => {
+    const chartData: ReviewChartData = {
+      historicalVariance: [
+        {
+          title: 'Fuel supply and FSE count trend',
+          currentLabel: '2025',
+          comparisonLabel: '2024',
+          points: [
+            {
+              label: 'Total fuel supply',
+              currentValue: 1400000,
+              comparisonValue: 1000000,
+              delta: 400000,
+              percentChange: 40,
+              units: 'reported units'
+            },
+            {
+              label: 'FSE count',
+              currentValue: 12,
+              comparisonValue: 10,
+              delta: 2,
+              percentChange: 20,
+              units: 'count'
+            }
+          ]
+        }
+      ]
+    }
+
+    render(<ReviewCharts chartData={chartData} />)
+
+    expect(
+      screen.getByLabelText(/Fuel supply and FSE count trend/i)
+    ).toBeInTheDocument()
+
+    const option = chartProps[0].option
+    expect(option.yAxis).toHaveLength(2)
+    expect(option.yAxis[0].name).toBe('Supply volume')
+    expect(option.yAxis[1].name).toBe('FSE count')
+    expect(option.series).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Total fuel supply',
+          yAxisIndex: 0,
+          data: [1000000, 1400000]
+        }),
+        expect.objectContaining({
+          name: 'FSE count',
+          yAxisIndex: 1,
+          data: [10, 12]
+        })
+      ])
+    )
+  })
+
+  it('renders the fuel presence matrix as a heatmap', () => {
+    const chartData: ReviewChartData = {
+      historicalVariance: [
+        {
+          title: 'Fuel supply presence by fuel category and type',
+          currentLabel: '2025',
+          comparisonLabel: '2024',
+          points: [
+            {
+              label: 'Gasoline - Ethanol',
+              currentValue: 0,
+              comparisonValue: 100,
+              delta: -100,
+              percentChange: -100,
+              units: 'reported units'
+            }
+          ]
+        }
+      ]
+    }
+
+    render(<ReviewCharts chartData={chartData} />)
+
+    expect(
+      screen.getByLabelText(/Fuel supply presence by fuel category and type/i)
+    ).toBeInTheDocument()
+
+    const option = chartProps[0].option
+    expect(option.series[0].type).toBe('heatmap')
+    expect(option.visualMap.text).toEqual(['Higher volume', 'Missing'])
+    expect(option.visualMap.dimension).toBe(3)
+    expect(option.visualMap.max).toBeCloseTo(Math.log10(101))
+    expect(option.series[0].data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: [0, 0, 100, Math.log10(101)]
+        }),
+        expect.objectContaining({
+          value: [1, 0, 0, 0]
         })
       ])
     )
