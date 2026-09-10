@@ -120,6 +120,13 @@ ETL compose exposes:
 - Run formatting/linting commands for the touched area when practical.
 - If a command cannot run because dependencies, containers, credentials, or services are missing, state that clearly and include the exact command attempted.
 
+## Issue and PR Context
+
+- When working on a PR branch, identify the issue ticket referenced by the PR title, body, branch name, or linked GitHub issue before assessing whether changes satisfy the requirement.
+- Use that issue ticket as the source of truth for expected behavior, edge cases, impacted years, auditability concerns, and acceptance criteria.
+- When addressing review feedback, verify the implementation against both the PR comments and the referenced issue ticket. Prefer fixing core persisted data and domain logic over response-only shims when the issue describes incorrect stored calculations, balances, transactions, or audit history.
+- Add or update tests for the issue's concrete reproduction path and any reviewer-raised edge cases, such as later versions in a report chain, prior assessed baselines, penalty totals, or year-specific behavior.
+
 ## Agent behavior in this repo
 
 - Keep edits narrowly scoped to the requested feature or bug.
