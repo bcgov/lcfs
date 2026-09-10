@@ -273,6 +273,76 @@ class ComplianceReportRepository:
         return result
 
     @repo_handler
+    async def get_prior_assessed_compliance_report_in_group(
+        self,
+        compliance_report_group_uuid: str,
+        organization_id: int,
+        period: int,
+        before_version: int,
+        exclude_report_id: int = None,
+    ):
+        """
+        Retrieve the latest assessed/exempted report in the same report group
+        before the current version.
+
+        This avoids treating a later assessed supplemental as the assessment
+        baseline for an earlier locked report in the same chain.
+        """
+        where_conditions = [
+            ComplianceReport.compliance_report_group_uuid
+            == compliance_report_group_uuid,
+            ComplianceReport.organization_id == organization_id,
+            CompliancePeriod.description == str(period),
+            ComplianceReport.version < before_version,
+            ComplianceReportStatus.status.in_(
+                [
+                    ComplianceReportStatusEnum.Assessed,
+                    ComplianceReportStatusEnum.Exempted,
+                ]
+            ),
+        ]
+
+        if exclude_report_id:
+            where_conditions.append(
+                ComplianceReport.compliance_report_id != exclude_report_id
+            )
+
+        result = (
+            (
+                await self.db.execute(
+                    select(ComplianceReport)
+                    .options(
+                        joinedload(ComplianceReport.organization),
+                        joinedload(ComplianceReport.compliance_period),
+                        joinedload(ComplianceReport.current_status),
+                        joinedload(ComplianceReport.summary),
+                    )
+                    .join(
+                        CompliancePeriod,
+                        ComplianceReport.compliance_period_id
+                        == CompliancePeriod.compliance_period_id,
+                    )
+                    .join(
+                        ComplianceReportStatus,
+                        ComplianceReport.current_status_id
+                        == ComplianceReportStatus.compliance_report_status_id,
+                    )
+                    .outerjoin(
+                        ComplianceReportSummary,
+                        ComplianceReport.compliance_report_id
+                        == ComplianceReportSummary.compliance_report_id,
+                    )
+                    .where(and_(*where_conditions))
+                    .order_by(ComplianceReport.version.desc())
+                )
+            )
+            .unique()
+            .scalars()
+            .first()
+        )
+        return result
+
+    @repo_handler
     async def get_previous_assessed_compliance_reports(
         self, organization_id: int, current_period: int, limit: int | None = None
     ) -> list[ComplianceReport]:
