@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import BCTypography from '@/components/BCTypography'
-import SupplierBalance from './SupplierBalance' // Adjust the import path as necessary
+import SupplierBalance from './SupplierBalance'
 import { NavLink } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import BCBox from '@/components/BCBox'

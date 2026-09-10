@@ -72,8 +72,7 @@ const MenuBar = ({ routes, data }: MenuBarProps) => {
         py={1}
         flexDirection="row"
       >
-        {data.menuRightPart &&
-          React.cloneElement(data.menuRightPart, { data })}
+        {data.menuRightPart && React.cloneElement(data.menuRightPart, { data })}
       </BCBox>
     </Toolbar>
   )

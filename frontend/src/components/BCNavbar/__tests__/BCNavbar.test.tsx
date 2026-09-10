@@ -51,14 +51,11 @@ const TestWrapper = ({
 }
 
 const renderNavbar = (initialPath = '/') => {
-  return render(
-    <BCNavbar routes={sampleRoutes} />,
-    {
-      wrapper: ({ children }) => (
-        <TestWrapper initialEntries={[initialPath]}>{children}</TestWrapper>
-      )
-    }
-  )
+  return render(<BCNavbar routes={sampleRoutes} />, {
+    wrapper: ({ children }) => (
+      <TestWrapper initialEntries={[initialPath]}>{children}</TestWrapper>
+    )
+  })
 }
 
 describe('BCNavbar', () => {
@@ -175,10 +172,9 @@ describe('BCNavbar', () => {
     })
 
     it('renders without beta flag when disabled', () => {
-      render(
-        <BCNavbar beta={false} routes={sampleRoutes} />,
-        { wrapper: TestWrapper }
-      )
+      render(<BCNavbar beta={false} routes={sampleRoutes} />, {
+        wrapper: TestWrapper
+      })
 
       expect(screen.getByTestId('bc-navbar')).toBeInTheDocument()
     })
@@ -206,14 +202,24 @@ describe('BCNavbar', () => {
 
       expect(screen.getByTestId('menu-right')).toBeInTheDocument()
     })
+
+    it('renders a utility in the global header', () => {
+      render(
+        <BCNavbar
+          routes={sampleRoutes}
+          headerUtilityPart={<div data-test="header-utility">Search</div>}
+        />,
+        { wrapper: TestWrapper }
+      )
+
+      expect(screen.getByTestId('header-utility')).toBeInTheDocument()
+    })
   })
 
   describe('icons', () => {
     it('renders route with icon', () => {
       render(
-        <BCNavbar
-          routes={[{ icon: 'home', name: 'Home', route: '/' }]}
-        />,
+        <BCNavbar routes={[{ icon: 'home', name: 'Home', route: '/' }]} />,
         { wrapper: TestWrapper }
       )
 
@@ -221,12 +227,9 @@ describe('BCNavbar', () => {
     })
 
     it('renders route without icon', () => {
-      render(
-        <BCNavbar
-          routes={[{ name: 'No Icon', route: '/no-icon' }]}
-        />,
-        { wrapper: TestWrapper }
-      )
+      render(<BCNavbar routes={[{ name: 'No Icon', route: '/no-icon' }]} />, {
+        wrapper: TestWrapper
+      })
 
       expect(screen.getByText('No Icon')).toBeInTheDocument()
     })
