@@ -212,12 +212,20 @@ class ComplianceReportSummaryService:
             return
 
         line_17 = int(summary_obj.line_17_non_banked_units_used or 0)
-        line_18 = int(summary_obj.line_18_units_to_be_banked or 0)
-        line_19 = int(summary_obj.line_19_units_to_be_exported or 0)
-        line_20 = int(line_18 or 0) + int(line_19 or 0)
-        assessed_balance = line_17 + deferred_prior_issuance + line_20
-        line_22 = max(assessed_balance, 0)
-        penalty_units = min(assessed_balance, 0)
+        is_low_carbon_exempted = (
+            getattr(compliance_report, "is_low_carbon_fuel_exempted", False) is True
+        )
+        if is_low_carbon_exempted:
+            line_20 = 0
+            line_22 = max(line_17, 0)
+            penalty_units = 0
+        else:
+            line_18 = int(summary_obj.line_18_units_to_be_banked or 0)
+            line_19 = int(summary_obj.line_19_units_to_be_exported or 0)
+            line_20 = int(line_18 or 0) + int(line_19 or 0)
+            assessed_balance = line_17 + deferred_prior_issuance + line_20
+            line_22 = max(assessed_balance, 0)
+            penalty_units = min(assessed_balance, 0)
         penalty_rate = get_low_carbon_penalty_rate(compliance_year)
         line_21 = (
             int(
@@ -237,6 +245,10 @@ class ComplianceReportSummaryService:
             0,
         )
         total_penalty = line_11_total + line_21
+        if compliance_year >= 2024 and summary_obj.penalty_override_enabled:
+            renewable_override = summary_obj.renewable_penalty_override or 0
+            low_carbon_override = summary_obj.low_carbon_penalty_override or 0
+            total_penalty = renewable_override + low_carbon_override
         currency_tolerance = Decimal("0.005")
         stored_total_penalty = Decimal(
             str(summary_obj.total_non_compliance_penalty_payable or 0)
