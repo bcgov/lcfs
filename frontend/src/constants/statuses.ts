@@ -84,6 +84,17 @@ export function getAllFuelCodeStatuses(): FuelCodeStatus[] {
   return Object.values(FUEL_CODE_STATUSES)
 }
 
+// Controlled values for fuel_code.co_processed; must match
+// CoProcessedEnumSchema in the backend.
+export const CO_PROCESSED_OPTIONS = [
+  'No',
+  'Yes - DHT',
+  'Yes - FCC',
+  'Yes - Other'
+] as const
+
+export type CoProcessedOption = (typeof CO_PROCESSED_OPTIONS)[number]
+
 export const CI_APPLICATION_STATUSES = {
   DRAFT: 'Draft',
   SUBMITTED: 'Submitted',
