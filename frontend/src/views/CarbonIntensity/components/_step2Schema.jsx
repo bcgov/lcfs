@@ -192,7 +192,8 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
   const transportModes = optionsData?.transportModes || []
   const fuelCodes = optionsData?.fuelCodes || []
   const feedstockOptions = optionsData?.fieldOptions?.feedstock || []
-  const feedstockRegionOptions = optionsData?.fieldOptions?.feedstockRegion || []
+  const feedstockRegionOptions =
+    optionsData?.fieldOptions?.feedstockRegion || []
 
   const fuelCodeById = new Map(fuelCodes.map((fc) => [fc.fuelCodeId, fc]))
 
@@ -209,8 +210,8 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         enableDelete: canEdit
       }),
       pinned: 'left',
-      maxWidth: 120,
-      minWidth: 120,
+      maxWidth: 200,
+      minWidth: 200,
       editable: false,
       suppressKeyboardEvent,
       filter: false
@@ -247,7 +248,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         }
         return true
       },
-      minWidth: 160
+      minWidth: 230
     },
     {
       field: 'fuelCodeTypeId',
@@ -274,7 +275,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         params.data.fuelCodeTypeId = match.pathwayFuelCodeTypeId
         return true
       },
-      minWidth: 225
+      minWidth: 280
     },
     {
       field: 'designData',
@@ -291,9 +292,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       },
       suppressKeyboardEvent,
       cellRenderer: (params) =>
-        params.value || (
-          <BCTypography variant="body4">Select</BCTypography>
-        ),
+        params.value || <BCTypography variant="body4">Select</BCTypography>,
       valueGetter: (params) => boolToYesNo(params.data?.designData),
       valueSetter: (params) => {
         const value = yesNoToBool(params.newValue)
@@ -301,7 +300,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         params.data.designData = value
         return true
       },
-      minWidth: 150
+      minWidth: 170
     },
     {
       field: 'operatingDataFrom',
@@ -314,7 +313,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
           {params.value || 'YYYY-MM-DD'}
         </BCTypography>
       ),
-      minWidth: 250
+      minWidth: 360
     },
     {
       field: 'operatingDataTo',
@@ -327,7 +326,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
           {params.value || 'YYYY-MM-DD'}
         </BCTypography>
       ),
-      minWidth: 230
+      minWidth: 330
     },
     {
       field: 'fuelCodeId',
@@ -391,7 +390,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         Object.assign(params.data, applyFuelCodeAutofill(params.data, match))
         return true
       },
-      minWidth: 200
+      minWidth: 230
     },
     {
       field: 'proposedCi',
@@ -405,7 +404,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       type: 'numericColumn',
       cellRenderer: renderNumberPlaceholder,
       cellStyle: cellErrorStyle,
-      minWidth: 195
+      minWidth: 280
     },
     {
       field: 'fuelTypeId',
@@ -472,7 +471,7 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
         openOnFocus: true
       },
       cellRenderer: renderTextPlaceholder,
-      minWidth: 220
+      minWidth: 230
     },
     {
       field: 'feedstockTransportMode',
@@ -564,19 +563,19 @@ export const ciApplicationPathwaySummaryColDefs = ({
       field: 'applicationTypeId',
       headerName: i18n.t('carbonIntensity:step2.applicationType'),
       valueGetter: ({ data }) => applicationTypeLabel(data),
-      minWidth: 160
+      minWidth: 190
     },
     {
       field: 'fuelCodeTypeId',
       headerName: i18n.t('carbonIntensity:step2.proposedFuelCodeType'),
       valueGetter: ({ data }) => fuelCodeTypeLabel(data),
-      minWidth: 220
+      minWidth: 240
     },
     {
       field: 'designData',
       headerName: i18n.t('carbonIntensity:step2.designData'),
       valueGetter: ({ data }) => boolToYesNo(data?.designData),
-      minWidth: 140
+      minWidth: 150
     },
     {
       field: 'operatingDataFrom',
@@ -587,25 +586,25 @@ export const ciApplicationPathwaySummaryColDefs = ({
             data?.operating_data_from ||
             proposedFuelCodeEffectiveDate
         ),
-      minWidth: 200
+      minWidth: 300
     },
     {
       field: 'operatingDataTo',
       headerName: i18n.t('carbonIntensity:step2.operatingDataTo'),
       valueGetter: ({ data }) =>
         formatSummaryDate(data?.operatingDataTo || data?.operating_data_to),
-      minWidth: 200
+      minWidth: 280
     },
     {
       field: 'fuelCodeId',
       headerName: i18n.t('carbonIntensity:step2.fuelCodeIteration'),
       valueGetter: ({ data }) => fuelCodeLabel(data) || '—',
-      minWidth: 200
+      minWidth: 210
     },
     {
       field: 'proposedCi',
       headerName: i18n.t('carbonIntensity:step2.proposedCi'),
-      minWidth: 180
+      minWidth: 300
     },
     {
       field: 'fuelTypeId',
@@ -684,7 +683,9 @@ export const defaultColDef = {
   filter: false,
   floatingFilter: false,
   sortable: false,
-  singleClickEdit: true
+  singleClickEdit: true,
+  wrapHeaderText: true,
+  autoHeaderHeight: true
 }
 
 /**
