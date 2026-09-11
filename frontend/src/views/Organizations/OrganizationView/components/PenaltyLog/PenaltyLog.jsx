@@ -226,7 +226,7 @@ export const PenaltyLog = () => {
     [yearlyPenalties, rawPenaltyLogs, yearLabels]
   )
 
-  const stackedBarOption = useStackedBarOption(yearlyPenalties)
+  const stackedBarOption = useStackedBarOption(yearlyPenalties, theme)
   const penaltyMixOption = usePenaltyMixOption(penaltyTotals, theme)
 
   const sparklineOptions = useMemo(
@@ -235,22 +235,22 @@ export const PenaltyLog = () => {
         yearLabels,
         sparklineData.total,
         t('org:penaltyLog.totalPenalties'),
-        { formatCurrency: true }
+        { formatCurrency: true, theme }
       ),
       automatic: useSparklineOption(
         yearLabels,
         sparklineData.automatic,
         t('org:penaltyLog.autoPenalties'),
-        { formatCurrency: true }
+        { formatCurrency: true, theme }
       ),
       discretionary: useSparklineOption(
         yearLabels,
         sparklineData.discretionary,
         t('org:penaltyLog.discretionaryPenalties'),
-        { formatCurrency: true }
+        { formatCurrency: true, theme }
       )
     }),
-    [yearLabels, sparklineData, t]
+    [yearLabels, sparklineData, t, theme]
   )
 
   if (analyticsLoading || currentUserLoading) {

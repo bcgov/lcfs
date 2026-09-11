@@ -74,7 +74,8 @@ class OrganizationPenaltyService:
             return float(value)
 
         summaries, penalty_logs = await self.repo.get_penalty_analytics_data(
-            organization_id
+            organization_id,
+            include_government_reports=include_penalty_status,
         )
 
         yearly_penalties: List[PenaltyYearlySummarySchema] = []

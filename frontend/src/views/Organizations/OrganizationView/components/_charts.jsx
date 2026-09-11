@@ -45,9 +45,18 @@ const formatItemTooltip = ({ marker = '', name, value, percent }) =>
 const formatCompactNumber = (value) =>
   value >= 1000 ? `${value / 1000}k` : value
 
-export const useStackedBarOption = (data) => {
+const getPaletteColor = (palette, key, fallbackKey) =>
+  palette?.[key]?.main ?? palette?.[fallbackKey]?.main
+
+export const useStackedBarOption = (data, theme) => {
+  const palette = theme?.palette
+  const chartColors = [
+    getPaletteColor(palette, 'primary'),
+    getPaletteColor(palette, 'info')
+  ].filter(Boolean)
+
   return getStandardChartOptions({
-    color: [BC_CHART_COLORS.green, BC_CHART_COLORS.teal],
+    ...(chartColors.length ? { color: chartColors } : {}),
     tooltip: { trigger: 'axis', formatter: formatAxisTooltip },
     legend: { top: 0, type: 'scroll' },
     grid: { ...BC_CHART_GRID, top: 48, bottom: 44 },
@@ -93,15 +102,24 @@ export const useStackedBarOption = (data) => {
 }
 
 export const usePenaltyMixOption = (totals, theme) => {
-  const palette = theme.palette
+  const palette = theme?.palette
+  const white =
+    palette?.common?.white ?? palette?.white?.main ?? palette?.background?.paper
+  const black =
+    palette?.common?.black ?? palette?.black?.main ?? palette?.text?.main
   const penaltyMixColors = [
-    palette.primary.main,
-    palette.warning.main,
-    palette.success.main
+    getPaletteColor(palette, 'primary'),
+    getPaletteColor(palette, 'warning'),
+    getPaletteColor(palette, 'success', 'info')
+  ].filter(Boolean)
+  const labelColors = [
+    white,
+    black ?? getPaletteColor(palette, 'primary'),
+    white
   ]
 
   return getStandardChartOptions({
-    color: penaltyMixColors,
+    ...(penaltyMixColors.length ? { color: penaltyMixColors } : {}),
     tooltip: { trigger: 'item', formatter: formatItemTooltip },
     legend: {
       type: 'scroll',
@@ -123,14 +141,14 @@ export const usePenaltyMixOption = (totals, theme) => {
         center: ['68%', '50%'],
         avoidLabelOverlap: true,
         itemStyle: {
-          borderColor: palette.background.paper,
+          borderColor: palette?.background?.paper,
           borderWidth: 2
         },
         label: {
           show: true,
           position: 'inside',
           formatter: '{d}%',
-          color: '#ffffff',
+          color: white,
           fontWeight: 'bold'
         },
         labelLine: { show: false },
@@ -147,17 +165,17 @@ export const usePenaltyMixOption = (totals, theme) => {
           {
             value: totals.autoRenewable,
             name: PENALTY_CHART_LABELS.automaticRenewableFuelPenalty,
-            label: { color: palette.common.white }
+            label: { color: labelColors[0] }
           },
           {
             value: totals.autoLowCarbon,
             name: PENALTY_CHART_LABELS.automaticLowCarbonFuelPenalty,
-            label: { color: palette.common.black }
+            label: { color: labelColors[1] }
           },
           {
             value: totals.discretionary,
             name: PENALTY_CHART_LABELS.discretionaryPenalty,
-            label: { color: palette.common.white }
+            label: { color: labelColors[2] }
           }
         ]
       }
@@ -169,8 +187,10 @@ export const useSparklineOption = (
   labels,
   data,
   seriesName = 'Series',
-  { formatCurrency = false } = {}
+  { formatCurrency = false, theme } = {}
 ) => {
+  const palette = theme?.palette
+  const lineColor = getPaletteColor(palette, 'info', 'primary')
   const tooltipValueFormatter = formatCurrency
     ? currencyFormatter
     : (value) => value
@@ -179,7 +199,7 @@ export const useSparklineOption = (
     : formatCompactNumber
 
   return getStandardChartOptions({
-    color: [BC_CHART_COLORS.blue],
+    ...(lineColor ? { color: [lineColor] } : {}),
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'line' },

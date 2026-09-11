@@ -893,11 +893,32 @@ class OrganizationsRepository:
         return await self.db.scalar(query)
 
     @repo_handler
-    async def get_penalty_analytics_data(self, organization_id: int):
+    async def get_penalty_analytics_data(
+        self, organization_id: int, include_government_reports: bool = False
+    ):
         """
         Retrieve compliance report penalty summary data and discretionary penalties
         for a given organization.
         """
+        visible_report_status_conditions = [
+            ComplianceReportListView.report_status.is_not(None)
+        ]
+        if include_government_reports:
+            visible_report_status_conditions.append(
+                ComplianceReportListView.report_status
+                != ComplianceReportStatusEnum.Draft
+            )
+        else:
+            visible_report_status_conditions.append(
+                ComplianceReportListView.report_status.in_(
+                    [
+                        ComplianceReportStatusEnum.Submitted,
+                        ComplianceReportStatusEnum.Assessed,
+                        ComplianceReportStatusEnum.Exempted,
+                    ]
+                )
+            )
+
         latest_reports_cte = (
             select(
                 ComplianceReportListView.compliance_report_id.label("report_id"),
@@ -917,9 +938,7 @@ class OrganizationsRepository:
                 .label("row_number"),
             ).where(
                 ComplianceReportListView.organization_id == organization_id,
-                ComplianceReportListView.report_status.is_not(None),
-                ComplianceReportListView.report_status
-                != ComplianceReportStatusEnum.Draft,
+                *visible_report_status_conditions,
             )
         ).cte("latest_reports")
 
