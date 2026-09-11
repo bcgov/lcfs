@@ -75,6 +75,15 @@ const toUpdatePayload = (row: any) => {
 const replaceRow = (rows: any[], nextRow: any) =>
   rows.map((row) => (row.id === nextRow.id ? nextRow : row))
 
+const mergeIncomingRows = (currentRows: any[], incomingRows: any[]) => {
+  const currentRowsById = new Map(currentRows.map((row) => [row.id, row]))
+
+  return incomingRows.map((incomingRow) => {
+    const currentRow = currentRowsById.get(incomingRow.id)
+    return currentRow?.modified ? currentRow : incomingRow
+  })
+}
+
 const formatFastApiDetail = (detail: any) => {
   if (!Array.isArray(detail)) return detail
   return detail
@@ -114,6 +123,8 @@ export const GeneratedFuelCodesSection = ({
   const { mutateAsync: updateGeneratedFuelCode } =
     useUpdateCIApplicationGeneratedFuelCode(ciApplicationId)
 
+  const previousCIApplicationId = useRef(ciApplicationId)
+  const rowDataRef = useRef<any[]>([])
   const [rowData, setRowData] = useState<any[]>([])
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [pendingUpdates, setPendingUpdates] = useState<Set<string>>(new Set())
@@ -121,9 +132,17 @@ export const GeneratedFuelCodesSection = ({
 
   useEffect(() => {
     const nextRows = (ciApplication?.generatedFuelCodes || []).map(toGridRow)
-    setRowData(nextRows)
-    setErrors(toErrorMap(nextRows))
-  }, [ciApplication])
+    const isSameApplication = previousCIApplicationId.current === ciApplicationId
+    previousCIApplicationId.current = ciApplicationId
+
+    const mergedRows = isSameApplication
+      ? mergeIncomingRows(rowDataRef.current, nextRows)
+      : nextRows
+
+    rowDataRef.current = mergedRows
+    setRowData(mergedRows)
+    setErrors(toErrorMap(mergedRows))
+  }, [ciApplication, ciApplicationId])
 
   const columnDefs = useMemo(() => {
     const baseDefs = fuelCodeColDefs(
@@ -195,7 +214,11 @@ export const GeneratedFuelCodesSection = ({
       modified: true
     }
     params.api.applyTransaction({ update: [updatedData] })
-    setRowData((prev) => replaceRow(prev, updatedData))
+    setRowData((prev) => {
+      const nextRows = replaceRow(prev, updatedData)
+      rowDataRef.current = nextRows
+      return nextRows
+    })
   }, [])
 
   const updateRowWithValidation = useCallback(
@@ -278,7 +301,11 @@ export const GeneratedFuelCodesSection = ({
 
       const finalRow = await updateRowWithValidation(pendingRow)
       params.node.updateData(finalRow)
-      setRowData((prev) => replaceRow(prev, finalRow))
+      setRowData((prev) => {
+        const nextRows = replaceRow(prev, finalRow)
+        rowDataRef.current = nextRows
+        return nextRows
+      })
     },
     [pendingUpdates, updateRowWithValidation]
   )

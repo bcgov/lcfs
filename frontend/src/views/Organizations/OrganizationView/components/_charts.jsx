@@ -1,46 +1,104 @@
 import { currencyFormatter } from '@/utils/formatters'
+import {
+  BC_CHART_AXIS_LABEL,
+  BC_CHART_CATEGORY_AXIS_LABEL,
+  BC_CHART_COLORS,
+  BC_CHART_GRID,
+  getStandardChartOptions,
+  getStandardLineSeriesStyle
+} from '@/components/charts/chartStyles'
+
+export const PENALTY_CHART_LABELS = {
+  automaticRenewableFuelPenalty: 'Automatic renewable fuel penalty',
+  automaticLowCarbonFuelPenalty: 'Automatic low carbon fuel penalty',
+  discretionaryPenalty: 'Discretionary penalty',
+  totalAutomaticPenalty: 'Total automatic penalty',
+  totalPenalties: 'Total penalties'
+}
+
+const compactCurrencyFormatter = new Intl.NumberFormat('en-CA', {
+  style: 'currency',
+  currency: 'CAD',
+  notation: 'compact',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})
+
+const formatAxisTooltip = (params) => {
+  if (!params?.length) return ''
+
+  const year = params[0].axisValueLabel ?? params[0].axisValue ?? ''
+  const values = params.map(
+    ({ marker = '', seriesName, value }) =>
+      `${marker}${seriesName}: ${currencyFormatter(value)}`
+  )
+
+  return [year, ...values].join('<br/>')
+}
+
+const formatItemTooltip = ({ marker = '', name, value, percent }) =>
+  `${marker}${name}: ${currencyFormatter(value)} (${percent}%)`
+
+const formatCompactNumber = (value) =>
+  value >= 1000 ? `${value / 1000}k` : value
 
 export const useStackedBarOption = (data, theme) => {
-  const primary = theme.palette.primary.main
-  const info = theme.palette.info.main
-
-  return {
-    color: [primary, info],
-    tooltip: { trigger: 'axis' },
-    legend: { top: 0 },
-    grid: { left: 16, right: 24, bottom: 8, top: 40, containLabel: true },
-    xAxis: { type: 'category', data: data.map((item) => item.year) },
+  return getStandardChartOptions({
+    color: [BC_CHART_COLORS.green, BC_CHART_COLORS.teal],
+    tooltip: { trigger: 'axis', formatter: formatAxisTooltip },
+    legend: { top: 0, type: 'scroll' },
+    grid: { ...BC_CHART_GRID, top: 48, bottom: 44 },
+    xAxis: {
+      type: 'category',
+      name: 'Compliance year',
+      nameGap: 28,
+      data: data.map((item) => item.year),
+      axisLabel: BC_CHART_CATEGORY_AXIS_LABEL
+    },
     yAxis: {
       type: 'value',
+      name: 'Penalty amount',
+      nameLocation: 'middle',
+      nameGap: 52,
+      nameRotate: 90,
+      nameTextStyle: {
+        color: BC_CHART_COLORS.text,
+        align: 'center'
+      },
       axisLabel: {
-        formatter: (val) => (val >= 1000 ? `${val / 1000}k` : val)
+        ...BC_CHART_AXIS_LABEL,
+        formatter: (value) => compactCurrencyFormatter.format(value)
       }
     },
     series: [
       {
-        name: 'Auto renewable',
+        name: PENALTY_CHART_LABELS.automaticRenewableFuelPenalty,
         type: 'bar',
         stack: 'total',
         emphasis: { focus: 'series' },
         data: data.map((item) => item.autoRenewable)
       },
       {
-        name: 'Auto low carbon',
+        name: PENALTY_CHART_LABELS.automaticLowCarbonFuelPenalty,
         type: 'bar',
         stack: 'total',
         emphasis: { focus: 'series' },
         data: data.map((item) => item.autoLowCarbon)
       }
     ]
-  }
+  })
 }
 
 export const usePenaltyMixOption = (totals, theme) => {
   const palette = theme.palette
 
-  return {
-    color: [palette.primary.main, palette.info.main, palette.warning.main],
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+  return getStandardChartOptions({
+    color: [
+      BC_CHART_COLORS.green,
+      BC_CHART_COLORS.teal,
+      BC_CHART_COLORS.purple
+    ],
+    tooltip: { trigger: 'item', formatter: formatItemTooltip },
     legend: { orient: 'horizontal', bottom: 0 },
     series: [
       {
@@ -54,49 +112,78 @@ export const usePenaltyMixOption = (totals, theme) => {
         },
         label: { show: true, formatter: '{b}: {d}%' },
         data: [
-          { value: totals.autoRenewable, name: 'Auto renewable' },
-          { value: totals.autoLowCarbon, name: 'Auto low carbon' },
-          { value: totals.discretionary, name: 'Discretionary' }
+          {
+            value: totals.autoRenewable,
+            name: PENALTY_CHART_LABELS.automaticRenewableFuelPenalty
+          },
+          {
+            value: totals.autoLowCarbon,
+            name: PENALTY_CHART_LABELS.automaticLowCarbonFuelPenalty
+          },
+          {
+            value: totals.discretionary,
+            name: PENALTY_CHART_LABELS.discretionaryPenalty
+          }
         ]
       }
     ]
-  }
+  })
 }
 
 export const useSparklineOption = (
   labels,
   data,
-  theme,
-  seriesName = 'Series'
+  seriesName = 'Series',
+  { formatCurrency = false } = {}
 ) => {
-  const primary = theme.palette.primary.main
+  const tooltipValueFormatter = formatCurrency
+    ? currencyFormatter
+    : (value) => value
+  const axisValueFormatter = formatCurrency
+    ? (value) => compactCurrencyFormatter.format(value)
+    : formatCompactNumber
 
-  return {
-    color: [primary],
+  return getStandardChartOptions({
+    color: [BC_CHART_COLORS.blue],
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'line' },
       formatter: (params) => {
         if (!params?.length) return ''
         const point = params[0]
-        return `${point.marker}${point.axisValue}: ${currencyFormatter(point.data)}`
+        return `${point.marker}${point.axisValue}: ${tooltipValueFormatter(
+          point.data
+        )}`
       }
     },
-    grid: { left: 0, right: 0, top: 4, bottom: 0 },
+    grid: { left: 40, right: 8, top: 8, bottom: 22, containLabel: true },
     xAxis: {
       type: 'category',
-      show: false,
-      data: labels
+      data: labels,
+      axisLabel: {
+        ...BC_CHART_AXIS_LABEL,
+        fontSize: 10
+      },
+      axisTick: { show: true },
+      axisLine: { show: true }
     },
-    yAxis: { type: 'value', show: false },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        ...BC_CHART_AXIS_LABEL,
+        fontSize: 10,
+        formatter: axisValueFormatter
+      },
+      splitLine: { lineStyle: { color: BC_CHART_COLORS.gridLine } }
+    },
     series: [
       {
         type: 'line',
         smooth: true,
-        symbol: 'none',
+        ...getStandardLineSeriesStyle(2),
         name: seriesName,
         data
       }
     ]
-  }
+  })
 }

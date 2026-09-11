@@ -1,7 +1,6 @@
 import asyncio
 from datetime import date, datetime, timezone
-from typing import Optional
-import math
+from typing import List, Optional
 import uuid
 
 from lcfs.db.base import ActionTypeEnum
@@ -15,6 +14,7 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.base import (
+    calculate_total_pages,
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
@@ -46,6 +46,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeBulletinRowSchema,
     VolumeDataPointSchema,
     ComplianceUnitsDataPointSchema,
+    CompanySearchOptionSchema,
 )
 from lcfs.web.core.decorators import service_handler
 
@@ -132,7 +133,7 @@ class FuelCodeServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
         )
 
@@ -155,6 +156,39 @@ class FuelCodeServices:
         seen = set(n.lower() for n in org_names)
         merged = list(org_names) + [n for n in fuel_code_names if n.lower() not in seen]
         return merged[:10]
+
+    @service_handler
+    async def search_former_company(self, former_company):
+        former_company_names, orgs = await asyncio.gather(
+            self.repo.get_distinct_former_company_names(former_company),
+            self.repo.get_organizations_like(former_company),
+        )
+        options: List[CompanySearchOptionSchema] = []
+        seen = set()
+        for org_id, name in orgs:
+            if not name or name.lower() in seen:
+                continue
+            seen.add(name.lower())
+            options.append(
+                CompanySearchOptionSchema(
+                    label=name,
+                    value=name,
+                    source="organization",
+                    organization_id=org_id,
+                )
+            )
+        for name in former_company_names:
+            if not name or name.lower() in seen:
+                continue
+            seen.add(name.lower())
+            options.append(
+                CompanySearchOptionSchema(
+                    label=name,
+                    value=name,
+                    source="former_company",
+                )
+            )
+        return options[:10]
 
     @service_handler
     async def search_contact_name(self, company, contact_name):
@@ -255,7 +289,7 @@ class FuelCodeServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
             fuel_codes=[
                 FuelCodeBaseSchema.model_validate(fuel_code) for fuel_code in fuel_codes

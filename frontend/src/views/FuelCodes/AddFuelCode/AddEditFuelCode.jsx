@@ -502,7 +502,9 @@ const AddEditFuelCodeBase = () => {
   )
 
   const handleSaveSuccess = useCallback(async () => {
-    await refetch()
+    if (fuelCodeID) {
+      await refetch()
+    }
     updateState({ isInEditMode: false, modalData: null })
     navigate(ROUTES.FUEL_CODES.LIST, {
       state: {
@@ -513,7 +515,7 @@ const AddEditFuelCodeBase = () => {
         severity: 'success'
       }
     })
-  }, [refetch, t, navigate, updateState])
+  }, [refetch, fuelCodeID, t, navigate, updateState])
 
   const handleDeleteFuelCode = useCallback(
     async (fuelCodeId, params) => {
@@ -989,7 +991,11 @@ const AddEditFuelCodeBase = () => {
     <>
       <Grid2 className="add-edit-fuel-code-container">
         <div className="header">
-          <BCTypography variant="h5" color="primary">
+          <BCTypography
+            variant="h5"
+            color="primary"
+            data-test="fuel-code-form-title"
+          >
             {computedValues.titleText}
           </BCTypography>
           {computedValues.showGuideText && isInEditMode && (
@@ -1049,6 +1055,7 @@ const AddEditFuelCodeBase = () => {
               }
               loading={state.isButtonOperationInProgress}
               onClick={button.handler}
+              data-test={button.id}
               disabled={
                 button.disabled ||
                 isUpdating ||

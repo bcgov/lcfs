@@ -474,9 +474,11 @@ async def test_get_fse_reporting_list_paginated_success(
     assert result["pagination"].total == 1
     assert result["finalSupplyEquipments"][0].status == "Submitted"
     mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(
-        1, pagination, 10, "current"
+        1, pagination, 10, "current", source="base_pref"
     )
-    mock_repo.get_total_kwh_usage_for_report.assert_awaited_once_with(1, 10, "current")
+    mock_repo.get_total_kwh_usage_for_report.assert_awaited_once_with(
+        1, 10, "current", source="base_pref"
+    )
 
 
 @pytest.mark.anyio
@@ -532,7 +534,9 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
     equipment = result["finalSupplyEquipments"][0]
     assert equipment.capacity_utilization_percent == 80
     assert equipment.power_output == 50
-    mock_repo.get_total_kwh_usage_for_report.assert_awaited_once_with(1, 10, "summary")
+    mock_repo.get_total_kwh_usage_for_report.assert_awaited_once_with(
+        1, 10, "summary", source="base_pref"
+    )
 
 
 @pytest.mark.anyio
@@ -557,6 +561,7 @@ async def test_get_fse_reporting_list_paginated_does_not_refresh_decommissioned_
         pagination,
         10,
         "all",
+        source="base_pref",
     )
 
 

@@ -16,6 +16,7 @@ from .FuelExport import FuelExport
 from .FuelSupply import FuelSupply
 from .FSEReportingBasePrefView import FSEReportingBasePrefView
 from .FSEReportingBaseView import FSEReportingBaseView
+from .VwFSEBaseView import VwFSEBaseView
 from .ChargingEquipment import ChargingEquipment
 from .ChargingEquipmentStatus import ChargingEquipmentStatus
 from .ComplianceReportChargingEquipment import ComplianceReportChargingEquipment
@@ -43,6 +44,7 @@ __all__ = [
     "FuelExport",
     "FSEReportingBaseView",
     "FSEReportingBasePrefView",
+    "VwFSEBaseView",
     "ChargingEquipment",
     "ChargingEquipmentStatus",
     "ComplianceReportChargingEquipment",

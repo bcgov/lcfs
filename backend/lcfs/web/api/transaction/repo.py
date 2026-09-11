@@ -703,8 +703,8 @@ class TransactionRepository:
             tzinfo=vancouver_timezone,
         )
 
-        result = await self.db.scalar(
-            select(func.coalesce(func.sum(Transaction.compliance_units), 0))
+        distinct_transactions = (
+            select(Transaction.transaction_id, Transaction.compliance_units)
             .select_from(Transaction)
             .join(
                 ComplianceReport,
@@ -721,6 +721,69 @@ class TransactionRepository:
                     Transaction.update_date > compliance_period_end_local,
                 )
             )
+            .group_by(Transaction.transaction_id, Transaction.compliance_units)
+            .subquery()
+        )
+
+        result = await self.db.scalar(
+            select(func.coalesce(func.sum(distinct_transactions.c.compliance_units), 0))
+        )
+        return int(result or 0)
+
+    @repo_handler
+    async def get_prior_group_adjustments_excluded_from_line_17(
+        self,
+        compliance_report_group_uuid: str,
+        organization_id: int,
+        exclude_report_id: int,
+        compliance_period: int,
+        before_version: int,
+    ) -> int:
+        """
+        Sum post-deadline Adjustment transactions in the same report group from
+        versions before the current report.
+
+        This is the locked-summary counterpart to
+        get_group_adjustments_excluded_from_line_17, with an explicit version
+        ceiling so later assessed supplementals are not pulled backward into an
+        earlier report's Line 22.
+        """
+        vancouver_timezone = zoneinfo.ZoneInfo("America/Vancouver")
+        compliance_period_end_local = datetime.strptime(
+            f"{str(compliance_period + 1)}-03-31", "%Y-%m-%d"
+        ).replace(
+            hour=23,
+            minute=59,
+            second=59,
+            microsecond=999999,
+            tzinfo=vancouver_timezone,
+        )
+
+        distinct_transactions = (
+            select(Transaction.transaction_id, Transaction.compliance_units)
+            .select_from(Transaction)
+            .join(
+                ComplianceReport,
+                Transaction.transaction_id == ComplianceReport.transaction_id,
+            )
+            .where(
+                and_(
+                    ComplianceReport.compliance_report_group_uuid
+                    == compliance_report_group_uuid,
+                    ComplianceReport.compliance_report_id != exclude_report_id,
+                    ComplianceReport.version < before_version,
+                    Transaction.organization_id == organization_id,
+                    Transaction.transaction_action
+                    == TransactionActionEnum.Adjustment,
+                    Transaction.update_date > compliance_period_end_local,
+                )
+            )
+            .group_by(Transaction.transaction_id, Transaction.compliance_units)
+            .subquery()
+        )
+
+        result = await self.db.scalar(
+            select(func.coalesce(func.sum(distinct_transactions.c.compliance_units), 0))
         )
         return int(result or 0)
 

@@ -198,6 +198,17 @@ describe('FinalSupplyEquipmentSummary', () => {
         COMPLIANCE_REPORT_STATUSES.DRAFT,
         false
       )
+      expect(mockUseGetFSEReportingList).toHaveBeenCalledWith(
+        'test-123',
+        expect.objectContaining({
+          page: expect.any(Number),
+          size: expect.any(Number)
+        }),
+        {},
+        undefined,
+        'summary',
+        'vw_fse_base'
+      )
     })
 
     it('renders with different status', () => {

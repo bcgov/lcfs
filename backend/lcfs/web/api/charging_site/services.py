@@ -13,6 +13,7 @@ from lcfs.db.models.compliance import (
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.organization import Organization
 from lcfs.web.api.base import (
+    calculate_total_pages,
     PaginationRequestSchema,
     PaginationResponseSchema,
     validate_pagination,
@@ -396,7 +397,7 @@ class ChargingSiteService:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
         )
 
