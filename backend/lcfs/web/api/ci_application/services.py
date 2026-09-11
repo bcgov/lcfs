@@ -1982,9 +1982,13 @@ class CIApplicationServices:
                 detail="Workflow actions can only be recorded on Submitted applications.",
             )
 
-    def _clear_government_workflow_review(self, ci_application: CIApplication) -> None:
-        ci_application.preliminary_risk_assessment = None
-        ci_application.priority_score = None
+    def _reset_government_workflow_review(self, ci_application: CIApplication) -> None:
+        if ci_application.verification_2_risk_assessment is not None:
+            ci_application.preliminary_risk_assessment = (
+                ci_application.verification_2_risk_assessment
+            )
+        if ci_application.verification_2_priority_score is not None:
+            ci_application.priority_score = ci_application.verification_2_priority_score
         ci_application.verification_1_user_id = None
         ci_application.verification_1_date = None
         ci_application.verification_2_user_id = None
@@ -2369,7 +2373,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
-        self._clear_government_workflow_review(ci_application)
+        self._reset_government_workflow_review(ci_application)
         ci_application.pathway_supplemental_edit_enabled = True
         ci_application.pathway_changes_requested_at = requested_at
         ci_application.pathway_changes_requested_by = user.keycloak_username
@@ -2414,7 +2418,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
-        self._clear_government_workflow_review(ci_application)
+        self._reset_government_workflow_review(ci_application)
         ci_application.document_upload_enabled = True
         ci_application.document_changes_requested_at = requested_at
         ci_application.document_changes_requested_by = user.keycloak_username
