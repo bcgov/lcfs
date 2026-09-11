@@ -390,6 +390,21 @@ describe('fuelCodeColDefs', () => {
     })
   })
 
+  describe('coProcessed field', () => {
+    it('is a closed dropdown of the four approved values', () => {
+      const col = columnDefs.find((c) => c.field === 'coProcessed')
+
+      expect(col.cellEditorParams.options).toEqual([
+        'No',
+        'Yes - DHT',
+        'Yes - FCC',
+        'Yes - Other'
+      ])
+      expect(col.cellEditorParams.freeSolo).toBe(false)
+      expect(col.cellEditorParams.multiple).toBe(false)
+    })
+  })
+
   describe('prefix field', () => {
     let prefixColumn
 
