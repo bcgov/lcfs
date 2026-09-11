@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
@@ -89,15 +89,15 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
 
   if (isError) {
     return (
-      <>
+      <Fragment>
         <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
         <BCTypography color="error">{t('report:errorRetrieving')}</BCTypography>
-      </>
+      </Fragment>
     )
   }
 
   return (
-    <>
+    <Fragment>
       <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
       <BCBox pl={2} pr={2}>
         <BCModal
@@ -177,6 +177,6 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
           </Fab>
         </Tooltip>
       </BCBox>
-    </>
+    </Fragment>
   )
 }

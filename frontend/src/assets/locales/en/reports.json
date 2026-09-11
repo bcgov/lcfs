@@ -271,6 +271,8 @@
     "value": "Value",
     "totalValue": "Total value",
     "units": "Units",
+    "invoiceSent": "Invoice sent",
+    "paymentReceived": "Payment received",
     "earlyIssuanceSummary": "Early issuance summary"
   },
   "summaryLoadingMsg": "Loading compliance report summary...",

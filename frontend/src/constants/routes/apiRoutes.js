@@ -131,6 +131,8 @@ export const apiRoutes = {
   getComplianceReportSummary: '/reports/:reportID/summary',
   getComplianceReportReviewSummary: '/reports/:reportID/review-summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
+  updateComplianceReportPenaltyStatus:
+    '/reports/:reportID/summary/penalty-status',
   exportComplianceReport: '/reports/:reportID/export',
   createSupplementalReport: '/reports/:reportID/supplemental',
   createAnalystAdjustment: '/reports/:reportID/adjustment',

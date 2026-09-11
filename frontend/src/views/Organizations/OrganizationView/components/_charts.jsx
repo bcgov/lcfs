@@ -16,6 +16,9 @@ export const PENALTY_CHART_LABELS = {
   totalPenalties: 'Total penalties'
 }
 
+export const AUTO_RENEWABLE_PENALTY_LABEL = 'Renewable fuel target penalty'
+export const AUTO_LOW_CARBON_PENALTY_LABEL = 'Low carbon fuel target penalty'
+
 const compactCurrencyFormatter = new Intl.NumberFormat('en-CA', {
   style: 'currency',
   currency: 'CAD',
@@ -42,9 +45,18 @@ const formatItemTooltip = ({ marker = '', name, value, percent }) =>
 const formatCompactNumber = (value) =>
   value >= 1000 ? `${value / 1000}k` : value
 
+const getPaletteColor = (palette, key, fallbackKey) =>
+  palette?.[key]?.main ?? palette?.[fallbackKey]?.main
+
 export const useStackedBarOption = (data, theme) => {
+  const palette = theme?.palette
+  const chartColors = [
+    getPaletteColor(palette, 'primary'),
+    getPaletteColor(palette, 'info')
+  ].filter(Boolean)
+
   return getStandardChartOptions({
-    color: [BC_CHART_COLORS.green, BC_CHART_COLORS.teal],
+    ...(chartColors.length ? { color: chartColors } : {}),
     tooltip: { trigger: 'axis', formatter: formatAxisTooltip },
     legend: { top: 0, type: 'scroll' },
     grid: { ...BC_CHART_GRID, top: 48, bottom: 44 },
@@ -90,39 +102,80 @@ export const useStackedBarOption = (data, theme) => {
 }
 
 export const usePenaltyMixOption = (totals, theme) => {
-  const palette = theme.palette
+  const palette = theme?.palette
+  const white =
+    palette?.common?.white ?? palette?.white?.main ?? palette?.background?.paper
+  const black =
+    palette?.common?.black ?? palette?.black?.main ?? palette?.text?.main
+  const penaltyMixColors = [
+    getPaletteColor(palette, 'primary'),
+    getPaletteColor(palette, 'warning'),
+    getPaletteColor(palette, 'success', 'info')
+  ].filter(Boolean)
+  const labelColors = [
+    white,
+    black ?? getPaletteColor(palette, 'primary'),
+    white
+  ]
 
   return getStandardChartOptions({
-    color: [
-      BC_CHART_COLORS.green,
-      BC_CHART_COLORS.teal,
-      BC_CHART_COLORS.purple
-    ],
+    ...(penaltyMixColors.length ? { color: penaltyMixColors } : {}),
     tooltip: { trigger: 'item', formatter: formatItemTooltip },
-    legend: { orient: 'horizontal', bottom: 0 },
+    legend: {
+      type: 'scroll',
+      orient: 'vertical',
+      left: 0,
+      top: 'middle',
+      itemGap: 12,
+      textStyle: {
+        color: BC_CHART_COLORS.text,
+        width: 150,
+        overflow: 'break'
+      }
+    },
     series: [
       {
         name: 'Penalty mix',
         type: 'pie',
-        radius: ['45%', '70%'],
+        radius: ['42%', '68%'],
+        center: ['68%', '50%'],
         avoidLabelOverlap: true,
         itemStyle: {
-          borderColor: palette.background.paper,
+          borderColor: palette?.background?.paper,
           borderWidth: 2
         },
-        label: { show: true, formatter: '{b}: {d}%' },
+        label: {
+          show: true,
+          position: 'inside',
+          formatter: '{d}%',
+          color: white,
+          fontWeight: 'bold'
+        },
+        labelLine: { show: false },
+        minShowLabelAngle: 8,
+        emphasis: {
+          label: {
+            show: true,
+            formatter: ({ value, percent }) =>
+              `${compactCurrencyFormatter.format(value)}\n${percent}%`,
+            fontWeight: 'bold'
+          }
+        },
         data: [
           {
             value: totals.autoRenewable,
-            name: PENALTY_CHART_LABELS.automaticRenewableFuelPenalty
+            name: PENALTY_CHART_LABELS.automaticRenewableFuelPenalty,
+            label: { color: labelColors[0] }
           },
           {
             value: totals.autoLowCarbon,
-            name: PENALTY_CHART_LABELS.automaticLowCarbonFuelPenalty
+            name: PENALTY_CHART_LABELS.automaticLowCarbonFuelPenalty,
+            label: { color: labelColors[1] }
           },
           {
             value: totals.discretionary,
-            name: PENALTY_CHART_LABELS.discretionaryPenalty
+            name: PENALTY_CHART_LABELS.discretionaryPenalty,
+            label: { color: labelColors[2] }
           }
         ]
       }
@@ -134,8 +187,10 @@ export const useSparklineOption = (
   labels,
   data,
   seriesName = 'Series',
-  { formatCurrency = false } = {}
+  { formatCurrency = false, theme } = {}
 ) => {
+  const palette = theme?.palette
+  const lineColor = getPaletteColor(palette, 'info', 'primary')
   const tooltipValueFormatter = formatCurrency
     ? currencyFormatter
     : (value) => value
@@ -144,7 +199,7 @@ export const useSparklineOption = (
     : formatCompactNumber
 
   return getStandardChartOptions({
-    color: [BC_CHART_COLORS.blue],
+    ...(lineColor ? { color: [lineColor] } : {}),
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'line' },

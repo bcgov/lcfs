@@ -12,6 +12,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatusEnum,
 )
 from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportPenaltyStatusUpdateSchema,
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
 )
@@ -23,6 +24,7 @@ from lcfs.web.api.notional_transfer.schema import (
     ReceivedOrTransferredEnumSchema,
 )
 from lcfs.tests.compliance_report.utils import make_summary, make_report
+from lcfs.web.exception.exceptions import ServiceException
 
 
 def _assert_repo_calls(
@@ -73,6 +75,41 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
     """Common assertions for renewable fuel summary tests."""
     assert len(result) == 11
     assert isinstance(result[0], ComplianceReportSummaryRowSchema)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("line", [11, 21])
+async def test_update_penalty_status_ignores_overrides_when_disabled(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_summary_repo,
+    line,
+):
+    summary = SimpleNamespace(
+        penalty_override_enabled=False,
+        renewable_penalty_override=1000,
+        low_carbon_penalty_override=1000,
+        line_11_fossil_derived_base_fuel_total=0,
+        line_21_non_compliance_penalty_payable=0,
+    )
+    mock_repo.get_compliance_report_by_id.return_value = SimpleNamespace(
+        current_status=SimpleNamespace(status=ComplianceReportStatusEnum.Assessed),
+        summary=summary,
+    )
+
+    with pytest.raises(
+        ServiceException,
+        match="amount payable is greater than zero",
+    ):
+        await compliance_report_summary_service.update_penalty_status(
+            1,
+            ComplianceReportPenaltyStatusUpdateSchema(
+                line=line,
+                invoice_sent=True,
+            ),
+        )
+
+    mock_summary_repo.update_penalty_status.assert_not_awaited()
 
 
 @pytest.mark.anyio
