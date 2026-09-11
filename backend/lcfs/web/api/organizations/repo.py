@@ -47,6 +47,7 @@ from lcfs.web.api.base import (
     apply_filter_conditions,
     apply_number_filter_conditions,
     validate_pagination,
+    PaginatedQueryBuilder,
 )
 
 if TYPE_CHECKING:
@@ -335,44 +336,26 @@ class OrganizationsRepository:
         total_count = await self.db.execute(count_query)
         total_count = total_count.unique().scalar_one_or_none()
 
-        # Sort the query results
-        for order in pagination.sort_orders:
-            sort_method = asc if order.direction == "asc" else desc
-
-            # Map frontend field names to backend field names
-            field_name = order.field
-            if field_name == "hasEarlyIssuance":
-                field_name = "has_early_issuance"
-
-            if field_name == "status":
-                # Sort by organization status description
-                query = query.order_by(sort_method(OrganizationStatus.status))
-            elif field_name == "org_type":
-                query = query.order_by(sort_method(OrganizationType.description))
-            elif field_name == "registrationStatus":
-                # Sort by whether the organization is registered (status == "Registered")
-                registration_case = case(
-                    (OrganizationStatus.status == "Registered", 1), else_=0
-                )
-                query = query.order_by(sort_method(registration_case))
-            elif field_name == "has_early_issuance":
-                # Sort by early issuance if the joins are available
-                if needs_early_issuance_joins:
-                    query = query.order_by(
-                        sort_method(OrganizationEarlyIssuanceByYear.has_early_issuance)
+        registration_case = case(
+            (OrganizationStatus.status == "Registered", 1), else_=0
+        )
+        builder = PaginatedQueryBuilder(
+            Organization,
+            field_map={"hasEarlyIssuance": "has_early_issuance"},
+            custom_sorts={
+                "status": OrganizationStatus.status,
+                "org_type": OrganizationType.description,
+                "registrationStatus": registration_case,
+                "has_early_issuance": (
+                    lambda order: (
+                        OrganizationEarlyIssuanceByYear.has_early_issuance
+                        if needs_early_issuance_joins
+                        else None
                     )
-                else:
-                    # Skip sorting by early issuance if no joins are available
-                    continue
-            else:
-                # Default sorting for other fields
-                if hasattr(Organization, field_name):
-                    query = query.order_by(
-                        sort_method(getattr(Organization, field_name))
-                    )
-                else:
-                    # Skip unknown fields
-                    continue
+                ),
+            },
+        )
+        query = builder.apply_sorting(query, pagination.sort_orders)
 
         results = await self.db.execute(query.offset(offset).limit(limit))
         organizations = results.scalars().all()
