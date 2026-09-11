@@ -20,6 +20,7 @@ from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -157,28 +158,11 @@ class OtherUsesRepository:
         # We check the latest version rather than any version because
         # ETL-migrated TFRS supplemental chains can have DELETE followed
         # by UPDATE on the same group_uuid (not possible in modern LCFS).
-        latest_version_per_group = (
-            select(
-                OtherUses.group_uuid,
-                func.max(OtherUses.version).label("max_version"),
-            )
-            .where(OtherUses.compliance_report_id.in_(compliance_reports_select))
-            .group_by(OtherUses.group_uuid)
-        ).subquery()
-
-        deleted_groups = (
-            select(OtherUses.group_uuid)
-            .join(
-                latest_version_per_group,
-                and_(
-                    OtherUses.group_uuid
-                    == latest_version_per_group.c.group_uuid,
-                    OtherUses.version
-                    == latest_version_per_group.c.max_version,
-                ),
-            )
-            .where(OtherUses.action_type == ActionTypeEnum.DELETE)
-            .distinct()
+        deleted_groups = VersioningQueryHelper.deleted_groups_subquery(
+            OtherUses,
+            where_clauses=[
+                OtherUses.compliance_report_id.in_(compliance_reports_select)
+            ],
         )
 
         # Build query conditions
@@ -199,17 +183,12 @@ class OtherUsesRepository:
             conditions.extend([~OtherUses.group_uuid.in_(deleted_groups)])
 
         # Get the latest version of each record
-        valid_other_uses_select = (
-            select(
-                OtherUses.group_uuid,
-                func.max(OtherUses.version).label("max_version"),
-            )
-            .where(*conditions)
-            .group_by(OtherUses.group_uuid)
-        )
-
         # Now create a subquery for use in the JOIN
-        valid_other_uses_subq = valid_other_uses_select.subquery()
+        valid_other_uses_subq = VersioningQueryHelper.latest_version_subquery(
+            OtherUses,
+            version_label="max_version",
+            where_clauses=conditions,
+        )
 
         # Get the actual records with their related data
         other_uses_select = (

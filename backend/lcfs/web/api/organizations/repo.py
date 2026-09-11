@@ -48,6 +48,7 @@ from lcfs.web.api.base import (
     apply_number_filter_conditions,
     validate_pagination,
 )
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 
 if TYPE_CHECKING:
     from lcfs.db.models.user.UserProfile import UserProfile
@@ -1246,47 +1247,29 @@ class OrganizationsRepository:
             )
         )
 
-        latest_version_per_group = (
-            select(
-                AllocationAgreement.group_uuid,
-                func.max(AllocationAgreement.version).label("max_version"),
-            )
-            .where(
+        # Get groups where the latest version is a DELETE.
+        # We check the latest version rather than any version because
+        # ETL-migrated TFRS supplemental chains can have DELETE followed
+        # by UPDATE on the same group_uuid (not possible in modern LCFS).
+        deleted_groups = VersioningQueryHelper.deleted_groups_subquery(
+            AllocationAgreement,
+            where_clauses=[
                 AllocationAgreement.compliance_report_id.in_(
                     compliance_reports_select
                 )
-            )
-            .group_by(AllocationAgreement.group_uuid)
-        ).subquery()
-
-        deleted_groups = (
-            select(AllocationAgreement.group_uuid)
-            .join(
-                latest_version_per_group,
-                and_(
-                    AllocationAgreement.group_uuid
-                    == latest_version_per_group.c.group_uuid,
-                    AllocationAgreement.version
-                    == latest_version_per_group.c.max_version,
-                ),
-            )
-            .where(AllocationAgreement.action_type == ActionTypeEnum.DELETE)
-            .distinct()
+            ],
         )
 
-        valid_agreements_subq = (
-            select(
-                AllocationAgreement.group_uuid,
-                func.max(AllocationAgreement.version).label("max_version"),
-            )
-            .where(
+        valid_agreements_subq = VersioningQueryHelper.latest_version_subquery(
+            AllocationAgreement,
+            version_label="max_version",
+            where_clauses=[
                 AllocationAgreement.compliance_report_id.in_(
                     compliance_reports_select
                 ),
                 ~AllocationAgreement.group_uuid.in_(deleted_groups),
-            )
-            .group_by(AllocationAgreement.group_uuid)
-        ).subquery()
+            ],
+        )
 
         query = (
             select(AllocationAgreement)
