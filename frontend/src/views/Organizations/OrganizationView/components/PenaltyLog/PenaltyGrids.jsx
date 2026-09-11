@@ -24,20 +24,90 @@ const initialPaginationOptions = {
   ...defaultInitialPagination
 }
 
+const normalizeSortDirection = (sort) => sort.direction ?? sort.sort
+
+const getFilterValue = (filter) => filter.filter ?? filter.value
+
+const applyLocalFilters = (rows, filters = []) =>
+  filters.reduce((filteredRows, filter) => {
+    const field = filter.field ?? filter.colId
+    const filterValue = getFilterValue(filter)
+
+    if (!field || filterValue === undefined || filterValue === null) {
+      return filteredRows
+    }
+
+    if (filter.filterType === 'set') {
+      const values = filter.values ?? filterValue
+      const acceptedValues = Array.isArray(values) ? values : [values]
+      return filteredRows.filter((row) =>
+        acceptedValues
+          .map((value) => String(value).toLowerCase())
+          .includes(String(row[field] ?? '').toLowerCase())
+      )
+    }
+
+    if ((filter.type ?? 'contains') !== 'contains' || filterValue === '') {
+      return filteredRows
+    }
+
+    return filteredRows.filter((row) =>
+      String(row[field] ?? '')
+        .toLowerCase()
+        .includes(String(filterValue).toLowerCase())
+    )
+  }, rows)
+
+const applyLocalSortOrders = (rows, sortOrders = []) =>
+  [...rows].sort((a, b) => {
+    for (const sort of sortOrders) {
+      const field = sort.field ?? sort.colId
+      const direction = normalizeSortDirection(sort)
+      if (!field || !direction) continue
+
+      const aValue = a[field]
+      const bValue = b[field]
+      let comparison = 0
+
+      if (aValue === null || aValue === undefined) comparison = -1
+      else if (bValue === null || bValue === undefined) comparison = 1
+      else if (typeof aValue === 'number' && typeof bValue === 'number') {
+        comparison = aValue - bValue
+      } else {
+        comparison = String(aValue).localeCompare(String(bValue), undefined, {
+          numeric: true,
+          sensitivity: 'base'
+        })
+      }
+
+      if (comparison !== 0) {
+        return direction === 'desc' ? -comparison : comparison
+      }
+    }
+
+    return 0
+  })
+
 const buildLocalPenaltyQuery = (rows, paginationOptions) => {
   const page = paginationOptions.page || 1
   const size = paginationOptions.size || rows.length
+  const filteredRows = applyLocalFilters(rows, paginationOptions.filters)
+  const sortedRows = applyLocalSortOrders(
+    filteredRows,
+    paginationOptions.sortOrders
+  )
+  const total = sortedRows.length
   const startIndex = size ? (page - 1) * size : 0
-  const endIndex = size ? startIndex + size : rows.length
+  const endIndex = size ? startIndex + size : total
 
   return {
     data: {
-      penaltyLogs: rows.slice(startIndex, endIndex),
+      penaltyLogs: sortedRows.slice(startIndex, endIndex),
       pagination: {
-        total: rows.length,
+        total,
         page,
         size,
-        totalPages: size ? Math.max(1, Math.ceil(rows.length / size)) : 1
+        totalPages: size ? Math.max(1, Math.ceil(total / size)) : 1
       }
     },
     isLoading: false,
