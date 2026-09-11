@@ -416,7 +416,9 @@ export const ApplicationSummary = ({
       sortable: false,
       filter: false,
       floatingFilter: false,
-      resizable: true
+      resizable: true,
+      wrapHeaderText: true,
+      autoHeaderHeight: true
     }),
     []
   )
