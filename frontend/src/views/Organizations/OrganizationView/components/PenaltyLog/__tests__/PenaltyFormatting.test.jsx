@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { MetricCardsSection, PenaltySummaryTable } from '../PenaltyComponents'
 import { buildAutomaticPenaltyRows } from '../PenaltyLog'
 import { penaltyLogColumnDefs, penaltyLogEditorColDefs } from '../_schema'
+import { processSparklineData } from '../PenaltyLog'
 import {
   usePenaltyMixOption,
   useSparklineOption,
@@ -140,14 +141,23 @@ describe('organization dashboard penalty formatting', () => {
       { autoRenewable: 123.45, autoLowCarbon: 200, discretionary: 50.1 },
       theme
     )
-    const sparklineOption = useSparklineOption([], [], theme)
+    const genericSparklineOption = useSparklineOption([], [])
+    const sparklineOption = useSparklineOption([], [], 'Series', {
+      formatCurrency: true
+    })
 
     const formatAxisLabel = stackedBarOption.yAxis.axisLabel.formatter
+    const formatGenericSparklineAxisLabel =
+      genericSparklineOption.yAxis.axisLabel.formatter
+    const formatSparklineAxisLabel = sparklineOption.yAxis.axisLabel.formatter
 
     expect(formatAxisLabel(999.5)).toBe('$999.50')
     expect(formatAxisLabel(1000)).toBe('$1.00K')
     expect(formatAxisLabel(24500)).toBe('$24.50K')
     expect(formatAxisLabel(24000000)).toBe('$24.00M')
+    expect(formatGenericSparklineAxisLabel(1000)).toBe('1k')
+    expect(formatSparklineAxisLabel(999.5)).toBe('$999.50')
+    expect(formatSparklineAxisLabel(1000)).toBe('$1.00K')
     expect(
       stackedBarOption.tooltip.formatter([
         {
@@ -179,6 +189,22 @@ describe('organization dashboard penalty formatting', () => {
         { marker: '', axisValue: '2025', data: 50.1 }
       ])
     ).toBe('2025: $50.10')
+  })
+
+  it('builds total sparkline values from automatic and discretionary penalties', () => {
+    const result = processSparklineData(
+      [
+        { complianceYear: 2024, penaltyAmount: 25 },
+        { complianceYear: '2024', penaltyAmount: '5.5' },
+        { complianceYear: 2025, penaltyAmount: 10 }
+      ],
+      ['2024', '2025', '2026'],
+      [{ totalAutomatic: 100 }, { totalAutomatic: 200 }, { totalAutomatic: 0 }]
+    )
+
+    expect(result.automatic).toEqual([100, 200, 0])
+    expect(result.discretionary).toEqual([30.5, 10, 0])
+    expect(result.total).toEqual([130.5, 210, 0])
   })
 
   it('builds automatic penalty rows from positive summary amounts without requiring status flags', () => {

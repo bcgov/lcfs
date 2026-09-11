@@ -15,7 +15,7 @@
   "steps": {
     "step1": "Application information",
     "step2": "Proposed fuel pathways",
-    "step3": "Documents & GHGenius template",
+    "step3": "Documents & GHGenius Inputs Template",
     "step4": "Sign & submit",
     "step5": "Government decision"
   },
@@ -25,7 +25,7 @@
     "city": "City",
     "provinceState": "Province/State",
     "country": "Country",
-    "facilityNameplate": "Facility nameplate capacity",
+    "facilityNameplate": "Facility nameplate capacity (per year)",
     "unitOfMeasure": "Unit of measure",
     "proposedFuelCodeEffective": "Proposed fuel code effective",
     "proposedFuelCodeEffectiveHelp": "(optional, if left blank, default is the date of application receipt by the Ministry)",
@@ -88,7 +88,7 @@
     "placeholder": "Enter"
   },
   "step3": {
-    "title": "Documents & GHGenius template",
+    "title": "Documents & GHGenius Inputs Template",
     "uploadedHeader": "Uploaded documents for application",
     "noDocuments": "No documents uploaded yet.",
     "supportingHeader": "Supporting documentation",
@@ -99,13 +99,13 @@
     "notUploaded": "(not uploaded)",
     "bullets": {
       "technicalReport": "Technical report (required)",
-      "ghgeniusTemplate": "GHGenius template (required)",
+      "ghgeniusTemplate": "GHGenius Inputs Template (required)",
       "notification": "Notification of representation agreement form (optional, required if applicable)",
       "other": "Other supporting documentation, enter brief description (optional)"
     },
     "otherPlaceholder": "Brief description of other supporting documentation included",
-    "ghgeniusHeader": "GHGenius template — Input & output tables",
-    "ghgeniusIntro": "Complete the required modelling input and output tables in the GHGenius Excel template, then upload the completed spreadsheet.",
+    "ghgeniusHeader": "GHGenius Inputs Template — Input & output tables",
+    "ghgeniusIntro": "Complete the required modelling input and output tables in the GHGenius Inputs Template, then upload the completed spreadsheet.",
     "uploadGHGenius": "Upload GHGenius model",
     "ghgeniusRequired": "GHGenius model upload is required.",
     "saveAndProceed": "Save & proceed",
@@ -123,7 +123,7 @@
   "step4": {
     "title": "Sign & submit",
     "summaryHeader": "Application information",
-    "documentsHeader": "Documents & GHGenius template",
+    "documentsHeader": "Documents & GHGenius Inputs Template",
     "pathwaysHeader": "Proposed fuel pathways",
     "signingAuthorityHeader": "Signing authority declaration",
     "signingAuthorityLabel": "Signing authority:",
@@ -228,7 +228,7 @@
     "header": "Application information",
     "referenceNumber": "Reference number:",
     "facilityLocation": "Fuel production facility location:",
-    "facilityCapacity": "Facility nameplate capacity:",
+    "facilityCapacity": "Facility nameplate capacity (per year):",
     "proposedEffectiveDate": "Proposed fuel code effective date:",
     "previousFuelCodeExpiryDate": "Previous fuel code expiry date:",
     "assignmentHistoryHeader": "Analyst assignment history",
@@ -245,7 +245,7 @@
     "titleLabel": "Title:",
     "emailLabel": "Email:",
     "consultantContactLabel": "Third party consultant contact:",
-    "documentsHeader": "Documents & GHGenius template",
+    "documentsHeader": "Documents & GHGenius Inputs Template",
     "pathwaysHeader": "Proposed fuel pathways",
     "editPathways": "Edit supplemental pathway changes",
     "pathwayChangelog": "Pathway changelog",
