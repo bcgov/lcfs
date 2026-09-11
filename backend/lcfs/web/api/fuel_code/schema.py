@@ -28,6 +28,7 @@ class CoProcessedEnumSchema(str, Enum):
     No = "No"
     YesDHT = "Yes - DHT"
     YesFCC = "Yes - FCC"
+    YesOther = "Yes - Other"
 
 
 def normalize_co_processed(value):
