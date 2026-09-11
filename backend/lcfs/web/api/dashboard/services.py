@@ -11,6 +11,7 @@ from lcfs.web.api.dashboard.schema import (
     FuelCodeCountsSchema,
     OrgFuelCodeCountsSchema,
     CIApplicationCountsSchema,
+    InitiativeAgreementCountsSchema,
 )
 
 logger = structlog.get_logger(__name__)
@@ -84,6 +85,15 @@ class DashboardServices:
         return OrgFuelCodeCountsSchema(
             draft=counts.get("draft", 0),
             submitted=counts.get("submitted", 0),
+        )
+
+    @service_handler
+    async def get_initiative_agreement_counts(self) -> InitiativeAgreementCountsSchema:
+        counts = await self.repo.get_initiative_agreement_counts()
+
+        return InitiativeAgreementCountsSchema(
+            draft=counts.get("Draft", 0),
+            underway=counts.get("Underway", 0),
         )
 
     @service_handler

@@ -153,7 +153,10 @@ export const ROUTES = {
   },
 
   INITIATIVE_AGREEMENTS: {
-    LIST: '/initiative-agreements'
+    LIST: '/initiative-agreements',
+    VIEW: '/initiative-agreements/:initiativeAgreementId',
+    ACTION_VIEW:
+      '/initiative-agreements/:initiativeAgreementId/designated-actions/:designatedActionId'
   },
 
   FORMS: {

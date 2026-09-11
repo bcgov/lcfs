@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import TIMESTAMP, Column, Integer, String
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
@@ -10,6 +10,9 @@ from lcfs.db.models.compliance.ComplianceReport import (
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     initiative_agreement_document_association,
+)
+from lcfs.db.models.initiative_agreement.DesignatedAction import (
+    designated_action_document_association,
 )
 from lcfs.db.models.compliance.ChargingSite import (
     charging_site_document_association,
@@ -41,6 +44,31 @@ class Document(BaseModel, Auditable):
     mime_type = Column(String, nullable=False)
     display_name = Column(String, nullable=True)
 
+    # --- Soft deletion (nothing is ever purged) ------------------------
+    # Only folder-enabled parents have a route that sets these; for every
+    # other surface they stay NULL and the read filter is inert.
+    deleted_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment=(
+            "When the document was removed from its parent's tree; NULL " "means live"
+        ),
+    )
+    deleted_by = Column(
+        String(500),
+        nullable=True,
+        comment="Username of whoever removed it, matching create_user",
+    )
+    deleted_group_uuid = Column(
+        String(36),
+        nullable=True,
+        index=True,
+        comment=(
+            "Set when the document went to the bin as part of a folder "
+            "delete; NULL when it was deleted on its own."
+        ),
+    )
+
     compliance_reports = relationship(
         "ComplianceReport",
         secondary=compliance_report_document_association,
@@ -53,6 +81,11 @@ class Document(BaseModel, Auditable):
         back_populates="documents",
     )
 
+    designated_actions = relationship(
+        "DesignatedAction",
+        secondary=designated_action_document_association,
+        back_populates="documents",
+    )
     admin_adjustments = relationship(
         "AdminAdjustment",
         secondary=admin_adjustment_document_association,

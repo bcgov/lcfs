@@ -15,6 +15,10 @@ vi.mock('@/utils/formatters', () => ({
   timezoneFormatter: vi.fn()
 }))
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key) => key })
+}))
+
 vi.mock('@/components/BCTypography', () => ({
   default: ({ children, onClick, ...props }) => (
     <span data-test="bc-typography" onClick={onClick} {...props}>
@@ -36,48 +40,52 @@ describe('SupportingDocumentSummary', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    
+
     // Setup default mock implementations
     const { useDownloadDocument } = await import('@/hooks/useDocuments.js')
     const { useCurrentUser } = await import('@/hooks/useCurrentUser')
     const { timezoneFormatter } = await import('@/utils/formatters')
-    
+
     vi.mocked(useDownloadDocument).mockReturnValue(mockDownloadDocument)
     vi.mocked(useCurrentUser).mockReturnValue({ hasRoles: mockHasRoles })
     vi.mocked(timezoneFormatter).mockImplementation(mockTimezoneFormatter)
-    
+
     mockTimezoneFormatter.mockReturnValue('2023-01-01 12:00')
   })
 
   it('renders main component with empty data', () => {
     render(<SupportingDocumentSummary {...defaultProps} />)
-    
+
     // Should render the empty list container but no document items
     expect(screen.queryByTestId('bc-typography')).not.toBeInTheDocument()
   })
 
   it('renders empty data array without items', () => {
     render(<SupportingDocumentSummary {...defaultProps} data={[]} />)
-    
+
     // Should render no document items
     expect(screen.queryByTestId('bc-typography')).not.toBeInTheDocument()
     expect(screen.queryByText(/test-file/)).not.toBeInTheDocument()
   })
 
   it('renders single document', () => {
-    const singleDocData = [{
-      documentId: 1,
-      fileName: 'test-document.pdf',
-      createDate: '2023-01-01T12:00:00Z',
-      createUser: 'Test User'
-    }]
-    
+    const singleDocData = [
+      {
+        documentId: 1,
+        fileName: 'test-document.pdf',
+        createDate: '2023-01-01T12:00:00Z',
+        createUser: 'Test User'
+      }
+    ]
+
     mockHasRoles.mockReturnValue(false)
 
     render(<SupportingDocumentSummary {...defaultProps} data={singleDocData} />)
-    
+
     expect(screen.getByText('test-document.pdf')).toBeInTheDocument()
-    expect(mockTimezoneFormatter).toHaveBeenCalledWith({ value: '2023-01-01T12:00:00Z' })
+    expect(mockTimezoneFormatter).toHaveBeenCalledWith({
+      value: '2023-01-01T12:00:00Z'
+    })
   })
 
   it('renders multiple documents', () => {
@@ -95,109 +103,185 @@ describe('SupportingDocumentSummary', () => {
         createUser: 'User 2'
       }
     ]
-    
+
     mockHasRoles.mockReturnValue(false)
 
-    render(<SupportingDocumentSummary {...defaultProps} data={multipleDocsData} />)
-    
+    render(
+      <SupportingDocumentSummary {...defaultProps} data={multipleDocsData} />
+    )
+
     expect(screen.getByText('document-1.pdf')).toBeInTheDocument()
     expect(screen.getByText('document-2.pdf')).toBeInTheDocument()
   })
 
   it('calls downloadDocument when file name is clicked', () => {
-    const docData = [{
-      documentId: 123,
-      fileName: 'clickable-document.pdf',
-      createDate: '2023-01-01T12:00:00Z'
-    }]
-    
+    const docData = [
+      {
+        documentId: 123,
+        fileName: 'clickable-document.pdf',
+        createDate: '2023-01-01T12:00:00Z'
+      }
+    ]
+
     render(<SupportingDocumentSummary {...defaultProps} data={docData} />)
-    
+
     const fileName = screen.getByText('clickable-document.pdf')
     fireEvent.click(fileName)
-    
+
     expect(mockDownloadDocument).toHaveBeenCalledWith(123)
   })
 
   it('formats timezone correctly', () => {
-    const docData = [{
-      documentId: 1,
-      fileName: 'test.pdf',
-      createDate: '2023-06-15T14:30:00Z'
-    }]
-    
+    const docData = [
+      {
+        documentId: 1,
+        fileName: 'test.pdf',
+        createDate: '2023-06-15T14:30:00Z'
+      }
+    ]
+
     mockTimezoneFormatter.mockReturnValue('Jun 15, 2023 2:30 PM')
 
     render(<SupportingDocumentSummary {...defaultProps} data={docData} />)
-    
-    expect(mockTimezoneFormatter).toHaveBeenCalledWith({ value: '2023-06-15T14:30:00Z' })
+
+    expect(mockTimezoneFormatter).toHaveBeenCalledWith({
+      value: '2023-06-15T14:30:00Z'
+    })
     expect(screen.getByText(/Jun 15, 2023 2:30 PM/)).toBeInTheDocument()
   })
 
   it('displays createUser when user does not have Supplier role', () => {
-    const docData = [{
-      documentId: 1,
-      fileName: 'test.pdf',
-      createDate: '2023-01-01T12:00:00Z',
-      createUser: 'John Doe'
-    }]
-    
+    const docData = [
+      {
+        documentId: 1,
+        fileName: 'test.pdf',
+        createDate: '2023-01-01T12:00:00Z',
+        createUser: 'John Doe'
+      }
+    ]
+
     mockHasRoles.mockReturnValue(false) // Not a supplier
 
     render(<SupportingDocumentSummary {...defaultProps} data={docData} />)
-    
+
     expect(screen.getByText(/- John Doe/)).toBeInTheDocument()
   })
 
   it('hides createUser when user has Supplier role', () => {
-    const docData = [{
-      documentId: 1,
-      fileName: 'test.pdf',
-      createDate: '2023-01-01T12:00:00Z',
-      createUser: 'John Doe'
-    }]
-    
+    const docData = [
+      {
+        documentId: 1,
+        fileName: 'test.pdf',
+        createDate: '2023-01-01T12:00:00Z',
+        createUser: 'John Doe'
+      }
+    ]
+
     mockHasRoles.mockReturnValue(true) // Is a supplier
 
     render(<SupportingDocumentSummary {...defaultProps} data={docData} />)
-    
+
     expect(screen.queryByText(/- John Doe/)).not.toBeInTheDocument()
   })
 
   it('handles missing createUser gracefully', () => {
-    const docData = [{
-      documentId: 1,
-      fileName: 'test.pdf',
-      createDate: '2023-01-01T12:00:00Z'
-      // No createUser property
-    }]
-    
+    const docData = [
+      {
+        documentId: 1,
+        fileName: 'test.pdf',
+        createDate: '2023-01-01T12:00:00Z'
+        // No createUser property
+      }
+    ]
+
     mockHasRoles.mockReturnValue(false)
 
     render(<SupportingDocumentSummary {...defaultProps} data={docData} />)
-    
-    // Should only display timestamp, not user info 
+
+    // Should only display timestamp, not user info
     const timestampElement = screen.getByText('- 2023-01-01 12:00')
     expect(timestampElement).toBeInTheDocument()
     expect(screen.getByText('test.pdf')).toBeInTheDocument()
-    
+
     // The text content should not include additional user info beyond the timestamp
     expect(timestampElement.textContent).toBe('- 2023-01-01 12:00')
   })
 
   it('calls useDownloadDocument hook with correct parameters', async () => {
     const { useDownloadDocument } = await import('@/hooks/useDocuments.js')
-    
-    render(<SupportingDocumentSummary parentID={456} parentType="compliance-report" data={[]} />)
-    
+
+    render(
+      <SupportingDocumentSummary
+        parentID={456}
+        parentType="compliance-report"
+        data={[]}
+      />
+    )
+
     expect(useDownloadDocument).toHaveBeenCalledWith('compliance-report', 456)
   })
 
   it('calls useCurrentUser hook', async () => {
     const { useCurrentUser } = await import('@/hooks/useCurrentUser')
-    
+
     render(<SupportingDocumentSummary {...defaultProps} />)
-    
+
     expect(useCurrentUser).toHaveBeenCalled()
+  })
+})
+describe('SupportingDocumentSummary detailed mode', () => {
+  const detailedFile = {
+    documentId: 9,
+    fileName: 'signed-agreement.pdf',
+    fileSize: 1000000,
+    createDate: '2026-06-01T00:00:00Z',
+    createUser: 'LCFS1_bat',
+    uploadingOrganizationCode: 'BETZ'
+  }
+
+  beforeEach(async () => {
+    const { useDownloadDocument } = await import('@/hooks/useDocuments.js')
+    const { useCurrentUser } = await import('@/hooks/useCurrentUser')
+    const { timezoneFormatter } = await import('@/utils/formatters')
+    vi.mocked(useDownloadDocument).mockReturnValue(vi.fn())
+    vi.mocked(useCurrentUser).mockReturnValue({ hasRoles: () => false })
+    vi.mocked(timezoneFormatter).mockReturnValue('2026-06-01 12:00')
+  })
+
+  it('shows size and uploading organization code when detailed', () => {
+    render(
+      <SupportingDocumentSummary
+        parentID={5}
+        parentType="initiativeAgreement"
+        data={[detailedFile]}
+        detailed
+      />
+    )
+    expect(screen.getByText(/1 MB/)).toBeInTheDocument()
+    expect(screen.getByText(/BETZ/)).toBeInTheDocument()
+  })
+
+  it('labels government uploads when the uploader has no organization', () => {
+    render(
+      <SupportingDocumentSummary
+        parentID={5}
+        parentType="initiativeAgreement"
+        data={[{ ...detailedFile, uploadingOrganizationCode: null }]}
+        detailed
+      />
+    )
+    expect(screen.getByText(/gov/)).toBeInTheDocument()
+  })
+
+  it('keeps the compact line for existing callers', () => {
+    render(
+      <SupportingDocumentSummary
+        parentID={5}
+        parentType="compliance_report"
+        data={[detailedFile]}
+      />
+    )
+    expect(screen.queryByText(/1 MB/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/BETZ/)).not.toBeInTheDocument()
   })
 })

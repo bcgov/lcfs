@@ -97,6 +97,11 @@ def initiative_agreement_service_mock():
 
 
 @pytest.fixture
+def initiative_agreement_repo_mock():
+    return AsyncMock()
+
+
+@pytest.fixture
 def document_service(
     db_mock,
     clamav_service_mock,
@@ -105,6 +110,7 @@ def document_service(
     fuel_supply_repo_mock,
     admin_adjustment_service_mock,
     initiative_agreement_service_mock,
+    initiative_agreement_repo_mock,
 ):
     return DocumentService(
         db=db_mock,
@@ -114,6 +120,7 @@ def document_service(
         fuel_supply_repo=fuel_supply_repo_mock,
         admin_adjustment_service=admin_adjustment_service_mock,
         initiative_agreement_service=initiative_agreement_service_mock,
+        initiative_agreement_repo=initiative_agreement_repo_mock,
     )
 
 
@@ -284,7 +291,9 @@ async def test_upload_file_sha256_mismatch_fallback(
     db_mock.get.return_value = compliance_report_mock
     db_mock.refresh = AsyncMock(side_effect=lambda x: x)
 
-    error_response = {"Error": {"Code": "XAmzContentSHA256Mismatch", "Message": "mismatch"}}
+    error_response = {
+        "Error": {"Code": "XAmzContentSHA256Mismatch", "Message": "mismatch"}
+    }
     document_service.s3_client.upload_fileobj.side_effect = ClientError(
         error_response, "PutObject"
     )
@@ -405,7 +414,9 @@ async def test_verify_initiative_agreement_access_government_success(
     document_service, user_government, initiative_agreement_mock
 ):
     # Setup
-    document_service.initiative_agreement_service.get_initiative_agreement.return_value = (
+    # Read through the repository: the legacy response schema rejects
+    # agreement-management records, which have no award-era fields.
+    document_service.initiative_agreement_repo.get_initiative_agreement_by_id.return_value = (
         initiative_agreement_mock
     )
 
@@ -413,7 +424,7 @@ async def test_verify_initiative_agreement_access_government_success(
     await document_service._verify_initiative_agreement_access(1, user_government)
 
     # Assert - No exception raised
-    document_service.initiative_agreement_service.get_initiative_agreement.assert_called_once_with(
+    document_service.initiative_agreement_repo.get_initiative_agreement_by_id.assert_called_once_with(
         1
     )
 
@@ -423,7 +434,7 @@ async def test_verify_initiative_agreement_access_supplier_failure(
     document_service, user_supplier, initiative_agreement_mock
 ):
     # Setup
-    document_service.initiative_agreement_service.get_initiative_agreement.return_value = (
+    document_service.initiative_agreement_repo.get_initiative_agreement_by_id.return_value = (
         initiative_agreement_mock
     )
 
@@ -680,9 +691,7 @@ async def test_rename_file_rejects_invalid_characters(
 
 
 @pytest.mark.anyio
-async def test_rename_file_rejects_empty_name(
-    document_service, document_mock, db_mock
-):
+async def test_rename_file_rejects_empty_name(document_service, document_mock, db_mock):
     mock_associated_document(db_mock, document_mock)
     document_service.get_by_id_and_type = AsyncMock(return_value=[])
 
@@ -705,9 +714,7 @@ async def test_rename_file_rejects_duplicate_display_name(
     document_service.get_by_id_and_type = AsyncMock(return_value=[sibling])
 
     with pytest.raises(HTTPException) as exc_info:
-        await document_service.rename_file(
-            1, 5, "ci_application", "existing name.pdf"
-        )
+        await document_service.rename_file(1, 5, "ci_application", "existing name.pdf")
 
     assert exc_info.value.status_code == 400
     assert "already exists" in exc_info.value.detail

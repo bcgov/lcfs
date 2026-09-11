@@ -18,6 +18,7 @@ class BaseConfig:
 class EntityTypeEnum(str, Enum):
     TRANSFER = "Transfer"
     INITIATIVE_AGREEMENT = "initiativeAgreement"
+    DESIGNATED_ACTION = "designatedAction"
     ADMIN_ADJUSTMENT = "administrativeAdjustment"
     ASSESSMENT = "Assessment"
     COMPLIANCE_REPORT = "complianceReport"
