@@ -66,7 +66,9 @@ export const StackedBarChart = ({ stackedBarOption }) => (
           justifyContent="space-between"
           alignItems="center"
         >
-          <BCTypography variant="h6">Automatic penalties by year</BCTypography>
+          <BCTypography variant="h6">
+            Automatic fuel penalties by compliance year
+          </BCTypography>
           <BCTypography variant="caption" color="text">
             Stacked view
           </BCTypography>
@@ -74,7 +76,7 @@ export const StackedBarChart = ({ stackedBarOption }) => (
         <BCResponsiveEChart
           option={stackedBarOption}
           height={320}
-          ariaLabel="Automatic penalties stacked bar chart"
+          ariaLabel="Automatic renewable fuel penalty and automatic low carbon fuel penalty stacked bar chart by compliance year"
         />
       </Stack>
     </CardContent>
@@ -96,8 +98,8 @@ export const PenaltySummaryTable = ({
           <TableHead>
             <TableRow>
               <TableCell>Year</TableCell>
-              <TableCell>Auto renewable</TableCell>
-              <TableCell>Auto low carbon</TableCell>
+              <TableCell>Automatic renewable fuel penalty</TableCell>
+              <TableCell>Automatic low carbon fuel penalty</TableCell>
               <TableCell>Total automatic</TableCell>
             </TableRow>
           </TableHead>
@@ -120,7 +122,7 @@ export const PenaltySummaryTable = ({
           <Grid item xs={12} sm={3}>
             <Stack spacing={0.5}>
               <BCTypography variant="caption" color="text">
-                {i18n.t('org:penaltyLog.metrics.autoRenewable')}
+                {i18n.t('org:penaltyLog.metrics.automaticRenewableFuelPenalty')}
               </BCTypography>
               <BCTypography variant="subtitle1" fontWeight="medium">
                 {currencyFormatter(penaltyTotals.autoRenewable)}
@@ -130,7 +132,7 @@ export const PenaltySummaryTable = ({
           <Grid item xs={12} sm={3}>
             <Stack spacing={0.5}>
               <BCTypography variant="caption" color="text">
-                {i18n.t('org:penaltyLog.metrics.autoLowCarbon')}
+                {i18n.t('org:penaltyLog.metrics.automaticLowCarbonFuelPenalty')}
               </BCTypography>
               <BCTypography variant="subtitle1" fontWeight="medium">
                 {currencyFormatter(penaltyTotals.autoLowCarbon)}
@@ -163,11 +165,13 @@ export const PenaltySummaryTable = ({
             <Card sx={{ height: '100%', width: '100%', ...cardBorderSx }}>
               <CardContent>
                 <Stack spacing={2}>
-                  <BCTypography variant="h6">Penalty mix</BCTypography>
+                  <BCTypography variant="h6">
+                    Penalty mix by penalty type
+                  </BCTypography>
                   <BCResponsiveEChart
                     option={penaltyMixOption}
                     height={320}
-                    ariaLabel="Penalty mix donut chart"
+                    ariaLabel="Penalty mix donut chart by penalty type"
                   />
                 </Stack>
               </CardContent>
