@@ -46,9 +46,16 @@ vi.mock('@/components/Comments/CommentForm', () => ({
 }))
 
 vi.mock('../CommentLog/CommentRow', () => ({
-  CommentRow: ({ comment, onEdit, allowPublicVisibility }) => (
+  CommentRow: ({
+    comment,
+    onEdit,
+    allowPublicVisibility,
+    useLatestAttribution
+  }) => (
     <div data-test="comment-row">
+      <span data-test="comment-id">{comment.internalCommentId}</span>
       <span>{comment.comment}</span>
+      {useLatestAttribution && <div data-test="latest-attribution" />}
       {allowPublicVisibility && <div data-test="row-visibility-toggle" />}
       <button
         data-test={`edit-${comment.internalCommentId}`}
@@ -102,12 +109,24 @@ describe('CompanyOverviewComments (#4608)', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('renders existing comments through CommentRow', () => {
+  it('renders the most recently touched overview comment as the shared statement', () => {
     mockThread.mockReturnValue({
       data: {
         comments: [
-          { internalCommentId: 1, comment: '<p>Alpha</p>', canEdit: true },
-          { internalCommentId: 2, comment: '<p>Beta</p>', canEdit: false }
+          {
+            internalCommentId: 1,
+            comment: '<p>Alpha</p>',
+            canEdit: true,
+            createDate: '2026-01-01T00:00:00Z',
+            updateDate: null
+          },
+          {
+            internalCommentId: 2,
+            comment: '<p>Beta</p>',
+            canEdit: true,
+            createDate: '2026-01-02T00:00:00Z',
+            updateDate: '2026-01-03T00:00:00Z'
+          }
         ]
       },
       isLoading: false,
@@ -115,7 +134,10 @@ describe('CompanyOverviewComments (#4608)', () => {
     })
     renderCard(<CompanyOverviewComments organizationId={7} />)
     expect(screen.getByTestId('company-overview-list')).toBeInTheDocument()
-    expect(screen.getAllByTestId('comment-row')).toHaveLength(2)
+    expect(screen.getAllByTestId('comment-row')).toHaveLength(1)
+    expect(screen.getByTestId('comment-id')).toHaveTextContent('2')
+    expect(screen.getByTestId('latest-attribution')).toBeInTheDocument()
+    expect(screen.queryByTestId('company-overview-add')).not.toBeInTheDocument()
   })
 
   it('creates a comment via the create mutation', async () => {
