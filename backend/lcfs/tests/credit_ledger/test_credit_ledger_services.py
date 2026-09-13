@@ -113,8 +113,61 @@ async def test_export_transactions_generates_stream(credit_ledger_service, mock_
         assert mock_add_sheet.called
         _, kwargs = mock_add_sheet.call_args
         assert kwargs["rows"][0][3] == "Compliance Report – Supplemental 1"
+        assert kwargs["rows"][0][4] == date(2023, 12, 31)
         _, repo_kwargs = mock_repo.get_rows_paginated.call_args
         assert len(repo_kwargs["conditions"]) == 1
+
+
+@pytest.mark.anyio
+async def test_export_transactions_formats_update_date_in_pacific_timezone(
+    credit_ledger_service, mock_repo
+):
+    """
+    The legacy Credit Ledger UI formats updateDate in America/Vancouver. The
+    Excel export should write the same local calendar date as an Excel date,
+    not a raw UTC yyyy-mm-dd string.
+    """
+    mock_repo.get_rows_paginated.return_value = (
+        [
+            (
+                SimpleNamespace(
+                    transaction_type="Transfer",
+                    compliance_period="2026",
+                    organization_id=1,
+                    compliance_units=10,
+                    available_balance=25,
+                    update_date=datetime(2026, 2, 11, 0, 0, tzinfo=timezone.utc),
+                ),
+                None,
+            ),
+            (
+                SimpleNamespace(
+                    transaction_type="Transfer",
+                    compliance_period="2026",
+                    organization_id=1,
+                    compliance_units=20,
+                    available_balance=45,
+                    update_date=datetime(2026, 7, 15, 6, 59),
+                ),
+                None,
+            ),
+        ],
+        2,
+    )
+
+    with patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.build_spreadsheet",
+        return_value=b"dummy-bytes",
+    ), patch(
+        "lcfs.web.api.credit_ledger.services.SpreadsheetBuilder.add_sheet"
+    ) as mock_add_sheet:
+        await credit_ledger_service.export_transactions(
+            organization_id=1, export_format="xlsx"
+        )
+
+    dates = [row[4] for row in mock_add_sheet.call_args[1]["rows"]]
+    assert dates == [date(2026, 2, 10), date(2026, 7, 14)]
+    assert all(not isinstance(d, datetime) for d in dates)
 
 
 @pytest.mark.anyio

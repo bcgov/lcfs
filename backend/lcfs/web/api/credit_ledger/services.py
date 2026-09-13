@@ -3,6 +3,7 @@ from collections import defaultdict
 from datetime import datetime, timezone, date, time
 from math import ceil
 from typing import Optional, List
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends
 from fastapi.responses import StreamingResponse
@@ -110,15 +111,40 @@ def _display_transaction_id(transaction_type: str, transaction_id: int) -> str:
     return f"{_TYPE_ID_PREFIXES.get(transaction_type, '')}{transaction_id}"
 
 
-def _export_date(value) -> Optional[date]:
+_PACIFIC_TZ = ZoneInfo("America/Vancouver")
+
+
+def _to_pacific_date(value) -> Optional[date]:
     """
-    Reduce an effective date to a plain date for the spreadsheet.
+    Convert a UTC date/datetime to the Vancouver calendar date for export.
 
     openpyxl rejects tz-aware datetimes outright ("Excel does not support
     datetimes with timezones"), and the aggregate view emits a mix of date,
     naive and tz-aware values — so writing them through untouched fails the
-    whole export for any organization that happens to have one. The ledger
-    displays a date only, so nothing is lost by dropping the time.
+    whole export for any organization that happens to have one.
+
+    The UI formats backend UTC timestamps in America/Vancouver, and the Excel
+    download should preserve that same displayed calendar date. Naive datetimes
+    from the database are treated as UTC.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(_PACIFIC_TZ).date()
+    if isinstance(value, date):
+        return value
+    return None
+
+
+def _export_date(value) -> Optional[date]:
+    """
+    Reduce an effective date to a plain date for the period spreadsheet.
+
+    The period ledger UI displays effective_date as a date-only ISO value, so
+    this path keeps the source calendar date stable while still removing
+    timezone metadata that Excel cannot serialize.
     """
     if value is None:
         return None
@@ -484,7 +510,7 @@ class CreditLedgerService:
                     int(ledger_view.available_balance or 0),
                     int(ledger_view.compliance_units or 0),
                     transaction_type,
-                    ledger_view.update_date.strftime("%Y-%m-%d"),
+                    _to_pacific_date(ledger_view.update_date),
                 ]
             )
 
