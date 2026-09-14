@@ -20,6 +20,7 @@ from sqlalchemy import (
     extract,
     delete,
     join,
+    Date,
 )
 from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -378,6 +379,35 @@ class TransactionRepository:
 
         return available_balance
 
+    @staticmethod
+    def _transfer_effective_date(transfer):
+        """
+        Effective date of a transfer for period-cutoff comparisons.
+
+        Some recorded transfers (zero-dollar Category D, whose category is
+        assigned before the director records them) never had
+        transaction_effective_date stamped. Without a date the transfer is
+        indistinguishable from an undated historical transaction and gets
+        counted in every period's Line 17, even periods that ended before it
+        was recorded. Fall back to the Pacific date the transfer was recorded,
+        mirroring ComplianceReportSummaryRepository (Lines 12/13).
+
+        `transfer` may be the Transfer model or an alias of it.
+        """
+        recorded_date = (
+            select(func.min(TransferHistory.create_date))
+            .where(
+                TransferHistory.transfer_id == transfer.transfer_id,
+                TransferHistory.transfer_status_id == 6,  # Recorded
+            )
+            .correlate(transfer)
+            .scalar_subquery()
+        )
+        return func.coalesce(
+            transfer.transaction_effective_date,
+            func.cast(func.timezone("America/Vancouver", recorded_date), Date),
+        )
+
     @repo_handler
     async def calculate_line_17_available_balance_for_period(
         self, organization_id: int, compliance_period: int
@@ -432,7 +462,7 @@ class TransactionRepository:
                 case(
                     (
                         Transfer.from_transaction_id.isnot(None),
-                        Transfer.transaction_effective_date,
+                        self._transfer_effective_date(Transfer),
                     ),
                     else_=None,
                 ).label("transfer_from_effective_date"),
@@ -440,7 +470,7 @@ class TransactionRepository:
                 case(
                     (
                         TransferTo.to_transaction_id.isnot(None),
-                        TransferTo.transaction_effective_date,
+                        self._transfer_effective_date(TransferTo),
                     ),
                     else_=None,
                 ).label("transfer_to_effective_date"),
@@ -854,11 +884,20 @@ class TransactionRepository:
     @repo_handler
     async def reinstate_transaction(self, transaction_id: int) -> bool:
         """
-        Sets a transaction's action back to 'Reserved'. This is used when a
-        superseding report is deleted, putting the previous report back in play.
+        Sets a Released transaction's action back to 'Reserved'. This is used
+        when a superseding report is deleted, putting the previous report back
+        in play.
+
+        Only a Released transaction is reinstated. An Adjustment is a finalized
+        assessment result and must never be demoted to Reserved: positive
+        Reserved units are invisible to every balance calculation, so the
+        organization would silently lose the issued units.
         """
         transaction = await self.get_transaction_by_id(transaction_id)
-        if not transaction:
+        if (
+            not transaction
+            or transaction.transaction_action != TransactionActionEnum.Released
+        ):
             return False
         transaction.transaction_action = TransactionActionEnum.Reserved
         self.db.add(transaction)
