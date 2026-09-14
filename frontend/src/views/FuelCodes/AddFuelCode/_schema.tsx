@@ -11,13 +11,12 @@ import {
   TransportModeDistanceCellEditor
 } from '@/components/BCDataGrid/components'
 import { apiRoutes } from '@/constants/routes'
+import { CO_PROCESSED_OPTIONS } from '@/constants/statuses'
 import i18n from '@/i18n'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import BCTypography from '@/components/BCTypography'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { numberFormatter } from '@/utils/formatters'
-
-const CO_PROCESSED_OPTIONS = ['No', 'Yes - DHT', 'Yes - FCC']
 
 const getFieldOptions = (optionsData?: OptionsData) => ({
   feedstock: optionsData?.fieldOptions?.feedstock || [],
