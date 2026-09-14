@@ -145,8 +145,10 @@ def upgrade() -> None:
             nullable=True,
             comment="The user who last updated this record in the database.",
         ),
-        sa.ForeignKeyConstraint(
-            ["summary_id"], ["compliance_report_summary.summary_id"]
+sa.ForeignKeyConstraint(
+            ["summary_id"],
+            ["compliance_report_summary.summary_id"],
+            ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(["user_profile_id"], ["user_profile.user_profile_id"]),
         sa.PrimaryKeyConstraint("penalty_status_history_id"),
