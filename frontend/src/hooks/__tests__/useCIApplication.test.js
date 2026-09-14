@@ -360,8 +360,8 @@ describe('useCIApplication hooks', () => {
       )
     })
 
-    it('does not restore a stale PUT when a newer autosave is already queued', async () => {
-      const stale = {
+    it('serializes PUTs so the latest autosave owns the final cache state', async () => {
+      const first = {
         ciApplicationId: 12,
         preliminaryRiskAssessment: 'Low',
         priorityScore: 10
@@ -396,10 +396,9 @@ describe('useCIApplication hooks', () => {
         preliminaryRiskAssessment: 'High',
         priorityScore: 20
       })
-      // Let the second mutate mark itself pending before the first PUT resolves.
       await Promise.resolve()
 
-      resolveFirst({ data: stale })
+      resolveFirst({ data: first })
 
       await waitFor(() => expect(mockPut).toHaveBeenCalledTimes(2))
       expect(mockPut).toHaveBeenLastCalledWith(
@@ -410,9 +409,42 @@ describe('useCIApplication hooks', () => {
         ['ci-application', '12'],
         latest
       )
-      expect(mockSetQueryData).not.toHaveBeenCalledWith(
+      expect(mockSetQueryData).toHaveBeenCalledWith(
         ['ci-application', '12'],
-        stale
+        first
+      )
+    })
+
+    it('continues with the latest queued autosave after an earlier PUT fails', async () => {
+      const latest = {
+        ciApplicationId: 12,
+        preliminaryRiskAssessment: 'High',
+        priorityScore: 20
+      }
+      mockPut
+        .mockRejectedValueOnce(new Error('temporary failure'))
+        .mockResolvedValueOnce({ data: latest })
+
+      const { result } = renderHook(
+        () => useUpdateCIApplicationRiskAssessment(12),
+        { wrapper }
+      )
+
+      result.current.mutate({
+        preliminaryRiskAssessment: 'Low',
+        priorityScore: 10
+      })
+      result.current.mutate({
+        preliminaryRiskAssessment: 'High',
+        priorityScore: 20
+      })
+
+      await waitFor(() => expect(mockPut).toHaveBeenCalledTimes(2))
+      await waitFor(() =>
+        expect(mockSetQueryData).toHaveBeenLastCalledWith(
+          ['ci-application', '12'],
+          latest
+        )
       )
     })
   })
