@@ -107,6 +107,20 @@ const processDiscretionaryData = (rawPenaltyLogs, yearLabels) => {
   return yearLabels.map((year) => sums.get(year) ?? 0)
 }
 
+export const processSparklineData = (
+  rawPenaltyLogs,
+  yearLabels,
+  yearlyPenalties
+) => {
+  const discretionary = processDiscretionaryData(rawPenaltyLogs, yearLabels)
+  const automatic = yearlyPenalties.map((item) => item.totalAutomatic)
+  return {
+    total: automatic.map((amount, index) => amount + discretionary[index]),
+    automatic,
+    discretionary
+  }
+}
+
 export const PenaltyLog = () => {
   const { t } = useTranslation(['org'])
   const theme = useTheme()
@@ -154,15 +168,11 @@ export const PenaltyLog = () => {
   const yearLabels = allYears
 
   const sparklineData = useMemo(
-    () => ({
-      total: yearlyPenalties.map((item) => item.totalAutomatic),
-      automatic: yearlyPenalties.map((item) => item.autoRenewable),
-      discretionary: processDiscretionaryData(rawPenaltyLogs, yearLabels)
-    }),
+    () => processSparklineData(rawPenaltyLogs, yearLabels, yearlyPenalties),
     [yearlyPenalties, rawPenaltyLogs, yearLabels]
   )
 
-  const stackedBarOption = useStackedBarOption(yearlyPenalties, theme)
+  const stackedBarOption = useStackedBarOption(yearlyPenalties)
   const penaltyMixOption = usePenaltyMixOption(penaltyTotals, theme)
 
   const sparklineOptions = useMemo(
@@ -170,23 +180,23 @@ export const PenaltyLog = () => {
       total: useSparklineOption(
         yearLabels,
         sparklineData.total,
-        theme,
-        t('org:penaltyLog.totalPenalties')
+        t('org:penaltyLog.totalPenalties'),
+        { formatCurrency: true }
       ),
       automatic: useSparklineOption(
         yearLabels,
         sparklineData.automatic,
-        theme,
-        t('org:penaltyLog.autoPenalties')
+        t('org:penaltyLog.autoPenalties'),
+        { formatCurrency: true }
       ),
       discretionary: useSparklineOption(
         yearLabels,
         sparklineData.discretionary,
-        theme,
-        t('org:penaltyLog.discretionaryPenalties')
+        t('org:penaltyLog.discretionaryPenalties'),
+        { formatCurrency: true }
       )
     }),
-    [yearLabels, sparklineData, theme]
+    [yearLabels, sparklineData, t]
   )
 
   if (analyticsLoading || currentUserLoading) {

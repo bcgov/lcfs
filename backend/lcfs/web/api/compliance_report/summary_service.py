@@ -162,6 +162,138 @@ class ComplianceReportSummaryService:
         )
         return prev_compliance_report is not None
 
+    async def _normalize_locked_supplemental_without_assessed_baseline(
+        self,
+        summary_obj: ComplianceReportSummary,
+        summary: ComplianceReportSummarySchema,
+        compliance_report: ComplianceReport,
+    ) -> None:
+        """Correct stale low-carbon carry-forward rows for locked supplementals.
+
+        Some historical/government-initiated supplementals can exist even when
+        the original same-period report was never assessed. In that case there
+        are no previously issued units to carry forward, so stored Line 15/16
+        values from the prior submitted version must not affect the displayed
+        balance.
+        """
+        report_version = getattr(compliance_report, "version", None)
+        if not isinstance(report_version, int) or report_version <= 0:
+            return
+        if not compliance_report.compliance_report_group_uuid:
+            return
+
+        assessed_report = await self.cr_repo.get_prior_assessed_compliance_report_in_group(
+            compliance_report.compliance_report_group_uuid,
+            compliance_report.organization_id,
+            int(compliance_report.compliance_period.description),
+            report_version,
+            compliance_report.compliance_report_id,
+        )
+        if assessed_report:
+            return
+
+        compliance_year = int(compliance_report.compliance_period.description)
+        deferred_prior_issuance = int(
+            await self.trxn_repo.get_prior_group_adjustments_excluded_from_line_17(
+                compliance_report.compliance_report_group_uuid,
+                compliance_report.organization_id,
+                compliance_report.compliance_report_id,
+                compliance_year,
+                report_version,
+            )
+        )
+
+        rows_by_line = {
+            int(row.line): row
+            for row in summary.low_carbon_fuel_target_summary or []
+            if row.line is not None
+        }
+        if not rows_by_line:
+            return
+
+        line_17 = int(summary_obj.line_17_non_banked_units_used or 0)
+        is_low_carbon_exempted = (
+            getattr(compliance_report, "is_low_carbon_fuel_exempted", False) is True
+        )
+        if is_low_carbon_exempted:
+            line_20 = 0
+            line_22 = max(line_17, 0)
+            penalty_units = 0
+        else:
+            line_18 = int(summary_obj.line_18_units_to_be_banked or 0)
+            line_19 = int(summary_obj.line_19_units_to_be_exported or 0)
+            line_20 = int(line_18 or 0) + int(line_19 or 0)
+            assessed_balance = line_17 + deferred_prior_issuance + line_20
+            line_22 = max(assessed_balance, 0)
+            penalty_units = min(assessed_balance, 0)
+        penalty_rate = get_low_carbon_penalty_rate(compliance_year)
+        line_21 = (
+            int(
+                (
+                    Decimal(str(penalty_units)) * Decimal(str(-penalty_rate))
+                ).max(Decimal("0"))
+            )
+            if penalty_units < 0
+            else 0
+        )
+        line_11_total = next(
+            (
+                row.total_value or 0
+                for row in summary.non_compliance_penalty_summary or []
+                if row.line == 11
+            ),
+            0,
+        )
+        total_penalty = line_11_total + line_21
+        if compliance_year >= 2024 and summary_obj.penalty_override_enabled:
+            renewable_override = summary_obj.renewable_penalty_override or 0
+            low_carbon_override = summary_obj.low_carbon_penalty_override or 0
+            total_penalty = renewable_override + low_carbon_override
+        currency_tolerance = Decimal("0.005")
+        stored_total_penalty = Decimal(
+            str(summary_obj.total_non_compliance_penalty_payable or 0)
+        )
+        expected_total_penalty = Decimal(str(total_penalty or 0))
+
+        already_normalized = (
+            int(summary_obj.line_15_banked_units_used or 0) == 0
+            and int(summary_obj.line_16_banked_units_remaining or 0) == 0
+            and int(summary_obj.line_20_surplus_deficit_units or 0) == line_20
+            and int(summary_obj.line_21_non_compliance_penalty_payable or 0)
+            == line_21
+            and int(summary_obj.line_22_compliance_units_issued or 0) == line_22
+            and abs(stored_total_penalty - expected_total_penalty)
+            < currency_tolerance
+        )
+        if already_normalized:
+            return
+
+        summary_obj.line_15_banked_units_used = 0
+        summary_obj.line_16_banked_units_remaining = 0
+        summary_obj.line_20_surplus_deficit_units = line_20
+        summary_obj.line_21_non_compliance_penalty_payable = line_21
+        summary_obj.line_22_compliance_units_issued = line_22
+
+        for line, value in ((15, 0), (16, 0), (20, line_20), (22, line_22)):
+            if line in rows_by_line:
+                rows_by_line[line].value = value
+
+        if 21 in rows_by_line:
+            rows_by_line[21].value = line_21
+            rows_by_line[21].description = LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[21][
+                "description"
+            ].format(units="{:,}".format(penalty_units * -1), rate=penalty_rate)
+
+        summary_obj.total_non_compliance_penalty_payable = total_penalty
+        self.repo.db.add(summary_obj)
+        await self.repo.db.flush()
+
+        for row in summary.non_compliance_penalty_summary or []:
+            if row.line == 21:
+                row.total_value = line_21
+            elif row.line is None:
+                row.total_value = total_penalty
+
     def convert_summary_to_dict(
         self,
         summary_obj: ComplianceReportSummary,
@@ -603,6 +735,10 @@ class ComplianceReportSummaryService:
                 locked_summary.lines_7_and_9_locked
                 or await self._should_lock_lines_7_and_9(compliance_report)
             )
+            await self._normalize_locked_supplemental_without_assessed_baseline(
+                compliance_report.summary, locked_summary, compliance_report
+            )
+            self._apply_exemption_overrides(locked_summary, compliance_report)
             locked_summary.lines_6_and_8_locked = True
             return locked_summary
 
