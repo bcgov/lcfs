@@ -863,10 +863,36 @@ class ComplianceReportServices:
 
         return history_masked_report
 
+    @staticmethod
+    def _is_finalized_report(report) -> bool:
+        """
+        True when the report's assessment is final (Assessed / Exempted).
+
+        A finalized report owns an Adjustment transaction that is part of the
+        organization's ledger. Superseding it with a reassessment must never
+        release, reserve or otherwise touch that transaction: the reassessment
+        reports its change *relative* to the assessment (Lines 15 and 20).
+        Works for both ORM models (enum status) and chain schemas (str status).
+        """
+        status = getattr(getattr(report, "current_status", None), "status", None)
+        if isinstance(status, ComplianceReportStatusEnum):
+            status = status.value
+        return status in (
+            ComplianceReportStatusEnum.Assessed.value,
+            ComplianceReportStatusEnum.Exempted.value,
+        )
+
     async def _reinstate_previous_transaction(self, report: ComplianceReport):
         """
         Finds the previous report in the chain and reinstates its transaction.
         This is used when a superseding report (e.g. analyst adjustment) is deleted.
+
+        Only a transaction that was *released* when the superseding report was
+        created (the previous report was Submitted and holding a Reserved
+        transaction) is put back into play. A previous report that is already
+        Assessed / Exempted owns a finalized Adjustment transaction that was
+        never released; flipping it to Reserved would silently remove the
+        issued units from the organization's balance.
         """
         if report.version == 0:
             return  # Nothing to reinstate
@@ -878,7 +904,24 @@ class ComplianceReportServices:
             (r for r in report_chain if r.version == report.version - 1), None
         )
 
-        if previous_report and previous_report.transaction_id:
+        if not previous_report or not previous_report.transaction_id:
+            return
+
+        if self._is_finalized_report(previous_report):
+            logger.info(
+                "Skipping transaction reinstatement: previous report is finalized",
+                previous_report_id=previous_report.compliance_report_id,
+                transaction_id=previous_report.transaction_id,
+            )
+            return
+
+        transaction = await self.transaction_repo.get_transaction_by_id(
+            previous_report.transaction_id
+        )
+        if (
+            transaction
+            and transaction.transaction_action == TransactionActionEnum.Released
+        ):
             await self.transaction_repo.reinstate_transaction(
                 previous_report.transaction_id
             )
@@ -886,22 +929,31 @@ class ComplianceReportServices:
     async def _release_superseded_transaction(self, current_report: ComplianceReport):
         """
         Release the transaction associated with the current report when it's being superseded
-        by a government initiated supplemental report.
+        by a government initiated supplemental report or analyst adjustment.
+
+        Only a Submitted report holds a Reserved transaction that must be
+        released. An Assessed / Exempted report's transaction is a finalized
+        Adjustment and is left untouched (see _is_finalized_report).
         """
-        if current_report.transaction_id:
-            # Get the full transaction to check its status
-            transaction = await self.transaction_repo.get_transaction_by_id(
+        if not current_report.transaction_id:
+            return
+
+        if self._is_finalized_report(current_report):
+            return
+
+        # Get the full transaction to check its status
+        transaction = await self.transaction_repo.get_transaction_by_id(
+            current_report.transaction_id
+        )
+
+        # Release the transaction if it's currently Reserved
+        if (
+            transaction
+            and transaction.transaction_action == TransactionActionEnum.Reserved
+        ):
+            await self.transaction_repo.release_transaction(
                 current_report.transaction_id
             )
-
-            # Release the transaction if it's currently Reserved
-            if (
-                transaction
-                and transaction.transaction_action == TransactionActionEnum.Reserved
-            ):
-                await self.transaction_repo.release_transaction(
-                    current_report.transaction_id
-                )
 
     def _mask_report_status_for_history(
         self, report: ComplianceReportBaseSchema, user: UserProfile

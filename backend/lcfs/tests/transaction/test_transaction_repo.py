@@ -1086,3 +1086,137 @@ async def test_delete_transaction_success(dbsession, transaction_repo):
     # Verify the ComplianceReport has been updated.
     updated_report = await dbsession.get(ComplianceReport, 2000)
     assert updated_report.transaction_id is None
+
+
+@pytest.mark.anyio
+async def test_reinstate_transaction_reinstates_released(
+    dbsession, transaction_repo, mock_transactions
+):
+    """A transaction released when a superseding report was created goes back
+    to Reserved when that superseding report is deleted."""
+    await transaction_repo.release_transaction(4)
+
+    success = await transaction_repo.reinstate_transaction(4)
+
+    assert success
+    updated_transaction = await dbsession.get(Transaction, 4)
+    assert updated_transaction.transaction_action == TransactionActionEnum.Reserved
+
+
+@pytest.mark.anyio
+async def test_reinstate_transaction_never_demotes_adjustment(
+    dbsession, transaction_repo, mock_transactions
+):
+    """An Adjustment is a finalized assessment result. Reinstating it to
+    Reserved would hide the issued units from every balance calculation."""
+    success = await transaction_repo.reinstate_transaction(5)
+
+    assert success is False
+    updated_transaction = await dbsession.get(Transaction, 5)
+    assert updated_transaction.transaction_action == TransactionActionEnum.Adjustment
+
+
+@pytest.mark.anyio
+async def test_calculate_line_17_transfer_without_effective_date_uses_recorded_date(
+    dbsession, transaction_repo
+):
+    """
+    A recorded transfer that never had transaction_effective_date stamped
+    (zero-dollar Category D) must be dated by the day it was recorded, not
+    treated as an undated historical transaction that hits every period.
+
+    Scenario: 100 units on hand from a historical assessment; a 60-unit
+    transfer out recorded on June 10, 2025 with no effective date.
+    - 2024 (period ends Mar 31, 2025): transfer is after the period -> 100
+    - 2025 (period ends Mar 31, 2026): transfer is inside the period -> 40
+    The receiving organization mirrors this: 0 for 2024, 60 for 2025.
+    """
+    from datetime import datetime, timezone
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+    from lcfs.db.models.transfer import Transfer, TransferHistory
+    from lcfs.db.models import Organization, OrganizationAddress
+
+    from_org_id, to_org_id = 6001, 6002
+    for org_id in (from_org_id, to_org_id):
+        dbsession.add(
+            Organization(
+                organization_id=org_id,
+                name=f"Test Company {org_id}",
+                operating_name=f"Test Co. {org_id}",
+                org_address=OrganizationAddress(
+                    street_address="123 Null Date St",
+                    city="Test City",
+                    province_state="Test Province",
+                    country="Test Country",
+                    postalCode_zipCode="T3ST 6Z1",
+                ),
+            )
+        )
+
+    # Historical credits, no parent entity
+    dbsession.add(
+        Transaction(
+            transaction_id=6001,
+            organization_id=from_org_id,
+            compliance_units=100,
+            transaction_action=TransactionActionEnum.Adjustment,
+            create_date=datetime(2023, 6, 1),
+            update_date=datetime(2023, 6, 1),
+        )
+    )
+    # Both sides of the transfer, recorded June 10, 2025
+    dbsession.add(
+        Transaction(
+            transaction_id=6002,
+            organization_id=from_org_id,
+            compliance_units=-60,
+            transaction_action=TransactionActionEnum.Adjustment,
+            create_date=datetime(2025, 6, 10),
+            update_date=datetime(2025, 6, 10),
+        )
+    )
+    dbsession.add(
+        Transaction(
+            transaction_id=6003,
+            organization_id=to_org_id,
+            compliance_units=60,
+            transaction_action=TransactionActionEnum.Adjustment,
+            create_date=datetime(2025, 6, 10),
+            update_date=datetime(2025, 6, 10),
+        )
+    )
+    await dbsession.flush()
+
+    transfer = Transfer(
+        transfer_id=96001,
+        from_organization_id=from_org_id,
+        to_organization_id=to_org_id,
+        from_transaction_id=6002,
+        to_transaction_id=6003,
+        agreement_date=datetime(2025, 6, 1),
+        transaction_effective_date=None,
+        current_status_id=6,  # Recorded
+        quantity=60,
+        price_per_unit=0,
+    )
+    dbsession.add(transfer)
+    await dbsession.flush()
+    dbsession.add(
+        TransferHistory(
+            transfer_history_id=96001,
+            transfer_id=transfer.transfer_id,
+            transfer_status_id=6,  # Recorded
+            create_date=datetime(2025, 6, 10, 19, 0, tzinfo=timezone.utc),
+        )
+    )
+    await dbsession.commit()
+
+    line_17 = transaction_repo.calculate_line_17_available_balance_for_period
+
+    assert await line_17(from_org_id, 2024) == 100
+    assert await line_17(from_org_id, 2025) == 40
+    assert await line_17(to_org_id, 2024) == 0
+    assert await line_17(to_org_id, 2025) == 60
