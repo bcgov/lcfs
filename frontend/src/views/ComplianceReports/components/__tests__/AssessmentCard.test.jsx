@@ -14,9 +14,13 @@ const mockTriggerAlert = vi.fn()
 const mockSetModalData = vi.fn()
 
 // Mock external dependencies
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => mockNavigate
-}))
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate
+  }
+})
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -185,9 +189,8 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 // Setup default imports
-const { useOrganizationSnapshot } = await import(
-  '@/hooks/useOrganizationSnapshot.js'
-)
+const { useOrganizationSnapshot } =
+  await import('@/hooks/useOrganizationSnapshot.js')
 const { useReportOpenings } = await import('@/hooks/useReportOpenings')
 
 describe('AssessmentCard', () => {

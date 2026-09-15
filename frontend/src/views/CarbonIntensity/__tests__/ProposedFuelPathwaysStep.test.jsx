@@ -196,7 +196,13 @@ describe('ProposedFuelPathwaysStep', () => {
     await waitFor(() => expect(onSave).not.toHaveBeenCalled())
   })
 
-  it('shows the operating date range message when operational dates are missing', async () => {
+  test('shows the operating date range message when operational dates are missing', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn()
     const onValidationError = vi.fn()
     const operationalMissingDates = {
@@ -229,7 +235,7 @@ describe('ProposedFuelPathwaysStep', () => {
         onSave={onSave}
         onValidationError={onValidationError}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
     fireEvent.click(screen.getByTestId('ci-step2-save-btn'))
     await waitFor(() => {

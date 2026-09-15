@@ -160,10 +160,16 @@ describe('ReportsMenu - FSE / charging-sites tab visibility', () => {
     expect(screen.getByTestId('outlet')).toBeInTheDocument()
   })
 
-  it('links the selected tab to a tabpanel for the compliance reports route', () => {
+  test('links the selected tab to a tabpanel for the compliance reports route', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = ['Government', 'Analyst']
     mockLocation.pathname = '/compliance-reporting'
-    render(<ReportsMenu />, { wrapper })
+    render(<ReportsMenu />, [query, theme, localization, router])
 
     const selectedTab = screen.getByRole('tab', {
       name: 'tabs.complianceReporting'
@@ -175,10 +181,16 @@ describe('ReportsMenu - FSE / charging-sites tab visibility', () => {
     expect(panel).toHaveAttribute('aria-labelledby', selectedTab.id)
   })
 
-  it('keeps the parent tab selected and announced on nested fse routes', () => {
+  test('keeps the parent tab selected and announced on nested fse routes', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = ['Government', 'Analyst']
     mockLocation.pathname = '/compliance-reporting/fse/123'
-    render(<ReportsMenu />, { wrapper })
+    render(<ReportsMenu />, [query, theme, localization, router])
 
     const selectedTab = screen.getByRole('tab', {
       name: 'tabs.fseIndex'

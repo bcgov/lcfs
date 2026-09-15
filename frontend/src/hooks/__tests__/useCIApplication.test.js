@@ -355,7 +355,10 @@ describe('useCIApplication hooks', () => {
   })
 
   describe('useUpdateCIApplicationRiskAssessment', () => {
-    it('PUTs /ci-applications/:id/risk-assessment and updates caches', async () => {
+    test('PUTs /ci-applications/:id/risk-assessment and updates caches', async ({
+      renderHook,
+      query
+    }) => {
       const saved = {
         ciApplicationId: 12,
         preliminaryRiskAssessment: 'Low',
@@ -365,7 +368,7 @@ describe('useCIApplication hooks', () => {
 
       const { result } = renderHook(
         () => useUpdateCIApplicationRiskAssessment(12),
-        { wrapper }
+        [query]
       )
       const out = await result.current.mutateAsync({
         preliminaryRiskAssessment: 'Low',
@@ -383,7 +386,10 @@ describe('useCIApplication hooks', () => {
       )
     })
 
-    it('serializes PUTs so the latest autosave owns the final cache state', async () => {
+    test('serializes PUTs so the latest autosave owns the final cache state', async ({
+      renderHook,
+      query
+    }) => {
       const first = {
         ciApplicationId: 12,
         preliminaryRiskAssessment: 'Low',
@@ -406,7 +412,7 @@ describe('useCIApplication hooks', () => {
 
       const { result } = renderHook(
         () => useUpdateCIApplicationRiskAssessment(12),
-        { wrapper }
+        [query]
       )
 
       result.current.mutate({
@@ -438,7 +444,10 @@ describe('useCIApplication hooks', () => {
       )
     })
 
-    it('continues with the latest queued autosave after an earlier PUT fails', async () => {
+    test('continues with the latest queued autosave after an earlier PUT fails', async ({
+      renderHook,
+      query
+    }) => {
       const latest = {
         ciApplicationId: 12,
         preliminaryRiskAssessment: 'High',
@@ -450,7 +459,7 @@ describe('useCIApplication hooks', () => {
 
       const { result } = renderHook(
         () => useUpdateCIApplicationRiskAssessment(12),
-        { wrapper }
+        [query]
       )
 
       result.current.mutate({

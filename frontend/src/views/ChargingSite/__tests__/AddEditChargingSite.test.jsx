@@ -279,7 +279,13 @@ describe('AddEditChargingSite', () => {
     )
   })
 
-  it('sends a cleared allocating organization as explicit nulls', async () => {
+  test('sends a cleared allocating organization as explicit nulls', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     // The backend treats a missing key as "unchanged", so clearing the field
     // must reach it as null rather than being stripped with the other blanks.
     render(
@@ -288,7 +294,7 @@ describe('AddEditChargingSite', () => {
         isEditMode={true}
         data={{ chargingSiteId: 123, siteName: 'Site A' }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     fireEvent.click(screen.getByText('Clear Allocating Org'))
