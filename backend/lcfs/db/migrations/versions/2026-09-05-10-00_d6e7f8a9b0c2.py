@@ -8,7 +8,6 @@ Create Date: 2026-08-31 10:00:00.000000
 from alembic import op
 import sqlalchemy as sa
 
-
 revision = "d6e7f8a9b0c2"
 down_revision = "d9e0f1a2b3c4"
 branch_labels = None
@@ -145,7 +144,7 @@ def upgrade() -> None:
             nullable=True,
             comment="The user who last updated this record in the database.",
         ),
-sa.ForeignKeyConstraint(
+        sa.ForeignKeyConstraint(
             ["summary_id"],
             ["compliance_report_summary.summary_id"],
             ondelete="CASCADE",
