@@ -233,7 +233,24 @@
       "unknown": "Activity",
       "detailsEdited": "Details edited"
     },
-    "changed": "{{field}}: {{from}} → {{to}}"
+    "changed": "{{field}}: {{from}} → {{to}}",
+    "groups": {
+      "evidenceReview": "Evidence review",
+      "workflow": "Workflow",
+      "assignment": "Assignment",
+      "recordChanges": "Record changes",
+      "other": "Other activity"
+    },
+    "expandEntry": "Show details",
+    "requirementChanged": "Requirement {{number}}: {{title}}",
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "evaluation": "Evaluation",
+      "name": "Name",
+      "credit_allocation": "Compliance units to be issued",
+      "specified_date": "Date for completion"
+    }
   },
   "create": {
     "button": "New initiative agreement",
