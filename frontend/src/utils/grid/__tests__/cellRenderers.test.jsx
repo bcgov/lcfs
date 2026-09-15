@@ -127,6 +127,30 @@ describe('OrgTypeRenderer', () => {
       '/organizations/99'
     )
   })
+
+  it('renders one chip per organization type with overflow (#4565)', () => {
+    render(
+      <MemoryRouter initialEntries={['/organizations']}>
+        <OrgTypeRenderer
+          data={{
+            orgTypes: [
+              { orgType: 'fuel_supplier' },
+              { orgType: 'credit_trader' },
+              { orgType: 'aggregator' }
+            ]
+          }}
+          node={{ id: '7' }}
+          colDef={{}}
+        />
+      </MemoryRouter>
+    )
+    // jsdom reports no width, so the renderer falls back to its 200px
+    // budget: two chips fit and the rest collapse into an overflow count.
+    expect(screen.getByText(/Supplier/)).toBeInTheDocument()
+    expect(screen.getByText(/Credit Transfer/)).toBeInTheDocument()
+    expect(screen.getByText(/\+1/)).toBeInTheDocument()
+    expect(screen.queryByText(/Aggregator/)).toBeNull()
+  })
 })
 
 describe('CommonArrayRenderer', () => {

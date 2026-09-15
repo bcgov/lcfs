@@ -265,6 +265,11 @@ describe('AddEditUser', () => {
       isFetched: true
     })
 
+    vi.mocked(organizationUserHooks.useOrganization).mockReturnValue({
+      data: undefined,
+      isLoading: false
+    })
+
     // Mock the new hooks
     vi.mocked(userHooks.useUpdateUser).mockReturnValue({
       mutate: mockUpdateUser,
