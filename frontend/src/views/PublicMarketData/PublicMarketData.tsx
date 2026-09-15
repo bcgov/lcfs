@@ -27,6 +27,7 @@ const LINK = '#1A5A96'
 const DARK = '#313132'
 const MUTED = '#565656'
 const BORDER = '#D8D8D8'
+const PDF_MAX_TABLE_ROWS = 15
 
 type ReportKey = 'monthly' | 'quarterly' | 'annual'
 type Granularity = 'month' | 'quarter' | 'year'
@@ -137,6 +138,7 @@ const CardShell = ({
 }) => (
   <BCBox
     data-test={dataTest}
+    className="pdf-avoid-break"
     sx={{
       border: `1px solid ${BORDER}`,
       borderRadius: '4px',
@@ -837,6 +839,12 @@ export const PublicMarketData = () => {
     setIsExportingPdf(true)
     try {
       const node = reportRef.current
+      // Ranges (in cloned-document CSS px, relative to the report root) of
+      // elements that must never be split across a PDF page boundary, plus
+      // the cloned root's own box so we can convert those px into canvas px.
+      let atomicRangesPx: { top: number; bottom: number }[] = []
+      let clonedRootWidthPx = 0
+
       const canvas = await html2canvas(node, {
         scale: 2,
         useCORS: true,
@@ -867,6 +875,31 @@ export const PublicMarketData = () => {
               el.style.maxHeight = 'none'
               el.style.overflow = 'visible'
             })
+          // Keep only the most recent rows per table in the PDF export so
+          // long history tables don't balloon the document.
+          clonedDoc
+            .querySelectorAll<HTMLElement>('.print-table tbody')
+            .forEach((tbody) => {
+              const rows = Array.from(tbody.querySelectorAll('tr'))
+              rows.slice(PDF_MAX_TABLE_ROWS).forEach((row) => row.remove())
+            })
+
+          const clonedRoot = clonedDoc.querySelector<HTMLElement>(
+            '[data-pdf-root="true"]'
+          )
+          if (clonedRoot) {
+            const rootRect = clonedRoot.getBoundingClientRect()
+            clonedRootWidthPx = rootRect.width
+            atomicRangesPx = Array.from(
+              clonedRoot.querySelectorAll<HTMLElement>('.pdf-avoid-break')
+            ).map((el) => {
+              const rect = el.getBoundingClientRect()
+              return {
+                top: rect.top - rootRect.top,
+                bottom: rect.bottom - rootRect.top
+              }
+            })
+          }
         }
       })
 
@@ -880,13 +913,38 @@ export const PublicMarketData = () => {
       const pxPerMm = canvas.width / contentWidthMm
       const pageHeightPx = Math.floor(contentHeightMm * pxPerMm)
 
+      // Convert the atomic element ranges from cloned-document CSS px into
+      // canvas px so they can be compared against the slicing cursor below.
+      const canvasScale = clonedRootWidthPx
+        ? canvas.width / clonedRootWidthPx
+        : 1
+      const atomicRangesCanvasPx = atomicRangesPx.map((r) => ({
+        top: r.top * canvasScale,
+        bottom: r.bottom * canvasScale
+      }))
+
       let renderedPx = 0
       let pageIndex = 0
       while (renderedPx < canvas.height) {
-        const sliceHeightPx = Math.min(
-          pageHeightPx,
-          canvas.height - renderedPx
+        let sliceHeightPx = Math.min(pageHeightPx, canvas.height - renderedPx)
+        let candidateEnd = renderedPx + sliceHeightPx
+
+        // If this natural page break would cut through the middle of an
+        // atomic block (a chart card, KPI card, etc.) that both starts on
+        // this page and fits entirely within one page, move the break up
+        // to just before that block instead of slicing through it.
+        const breaking = atomicRangesCanvasPx.find(
+          (r) =>
+            r.top > renderedPx &&
+            r.top < candidateEnd &&
+            r.bottom > candidateEnd &&
+            r.bottom - r.top <= pageHeightPx
         )
+        if (breaking && breaking.top > renderedPx) {
+          candidateEnd = breaking.top
+          sliceHeightPx = candidateEnd - renderedPx
+        }
+
         const pageCanvas = document.createElement('canvas')
         pageCanvas.width = canvas.width
         pageCanvas.height = sliceHeightPx
@@ -1054,6 +1112,7 @@ export const PublicMarketData = () => {
       `}</style>
       <BCBox
         ref={reportRef}
+        data-pdf-root="true"
         sx={{
           maxWidth: 1380,
           mx: 'auto',
@@ -1401,57 +1460,59 @@ export const PublicMarketData = () => {
             />
           </CardShell>
         </BCBox>
-        <BCBox
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2,
-            flexWrap: 'wrap',
-            mb: 2
-          }}
-        >
-          <BCBox>
-            <BCTypography
-              variant="h3"
-              sx={{ fontSize: 20, fontWeight: 700, color: DARK }}
-            >
-              {t('publicDashboard.marketData.chartTitle')}
-            </BCTypography>
-            <BCTypography sx={{ fontSize: 13.5, color: MUTED }}>
-              {t('publicDashboard.marketData.chartSubtitle')}
-            </BCTypography>
-          </BCBox>
-          <ToggleButtonGroup
-            className="no-print"
-            size="small"
-            exclusive
-            value={gran}
-            onChange={(_, v) => v && setGran(v)}
-            data-test="granularity-toggle"
+        <BCBox className="pdf-avoid-break">
+          <BCBox
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+              flexWrap: 'wrap',
+              mb: 2
+            }}
           >
-            <ToggleButton value="month">
-              {t('publicDashboard.marketData.granularity.month')}
-            </ToggleButton>
-            <ToggleButton value="quarter">
-              {t('publicDashboard.marketData.granularity.quarter')}
-            </ToggleButton>
-            <ToggleButton value="year">
-              {t('publicDashboard.marketData.granularity.year')}
-            </ToggleButton>
-          </ToggleButtonGroup>
+            <BCBox>
+              <BCTypography
+                variant="h3"
+                sx={{ fontSize: 20, fontWeight: 700, color: DARK }}
+              >
+                {t('publicDashboard.marketData.chartTitle')}
+              </BCTypography>
+              <BCTypography sx={{ fontSize: 13.5, color: MUTED }}>
+                {t('publicDashboard.marketData.chartSubtitle')}
+              </BCTypography>
+            </BCBox>
+            <ToggleButtonGroup
+              className="no-print"
+              size="small"
+              exclusive
+              value={gran}
+              onChange={(_, v) => v && setGran(v)}
+              data-test="granularity-toggle"
+            >
+              <ToggleButton value="month">
+                {t('publicDashboard.marketData.granularity.month')}
+              </ToggleButton>
+              <ToggleButton value="quarter">
+                {t('publicDashboard.marketData.granularity.quarter')}
+              </ToggleButton>
+              <ToggleButton value="year">
+                {t('publicDashboard.marketData.granularity.year')}
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </BCBox>
+          {series.length > 0 ? (
+            <ReactECharts
+              ref={mainChartRef}
+              option={chartOption}
+              style={{ height: 380 }}
+            />
+          ) : (
+            <BCTypography sx={{ fontSize: 14, color: MUTED, py: 4 }}>
+              {t('publicDashboard.marketData.tables.noData')}
+            </BCTypography>
+          )}
         </BCBox>
-        {series.length > 0 ? (
-          <ReactECharts
-            ref={mainChartRef}
-            option={chartOption}
-            style={{ height: 380 }}
-          />
-        ) : (
-          <BCTypography sx={{ fontSize: 14, color: MUTED, py: 4 }}>
-            {t('publicDashboard.marketData.tables.noData')}
-          </BCTypography>
-        )}
       </ReportSection>
 
       <ReportSection
