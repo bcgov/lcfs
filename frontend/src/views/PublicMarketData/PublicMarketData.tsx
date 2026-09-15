@@ -910,7 +910,7 @@ export const PublicMarketData = () => {
         </BCBox>
       </ReportSection>
 
-      {totalCreditsIssued != null && totalCreditsIssued > 0 && (
+      {/* {totalCreditsIssued != null && totalCreditsIssued > 0 && (
         <BCBox
           data-test="impact-callout"
           sx={{
@@ -950,7 +950,7 @@ export const PublicMarketData = () => {
             </BCTypography>
           </BCBox>
         </BCBox>
-      )}
+      )} */}
 
       <ReportSection
         title={t('publicDashboard.marketData.sections.activityAndStatistics')}
