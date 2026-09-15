@@ -1583,6 +1583,20 @@ class CIApplicationServices:
         # Renewal iterations are scoped to the caller's organization for
         # supplier/CI-applicant users; government callers pass None (all).
         fuel_codes = await self.repo.get_approved_fuel_codes(organization_id)
+        field_options_results = await self.fuel_repo.get_fuel_code_field_options()
+        feedstock_values = set()
+        feedstock_region_values = set()
+        for row in field_options_results:
+            mapping = row._mapping
+            if mapping.get("feedstock"):
+                feedstock_values.add(mapping["feedstock"])
+            if mapping.get("feedstock_location"):
+                feedstock_region_values.add(mapping["feedstock_location"])
+        field_options = {
+            "feedstock": sorted(feedstock_values),
+            "feedstock_region": sorted(feedstock_region_values),
+        }
+
         return CITableOptionsSchema(
             statuses=[CIApplicationStatusSchema.model_validate(s) for s in statuses],
             # Facility nameplate capacity is a physical quantity — use the same
@@ -1603,6 +1617,7 @@ class CIApplicationServices:
             ],
             transport_modes=[tm.transport_mode for tm in transport_modes],
             fuel_codes=[_to_fuel_code_option(fc) for fc in fuel_codes],
+            field_options=field_options,
         )
 
     # ------------------------------------------------------------------
@@ -1967,9 +1982,13 @@ class CIApplicationServices:
                 detail="Workflow actions can only be recorded on Submitted applications.",
             )
 
-    def _clear_government_workflow_review(self, ci_application: CIApplication) -> None:
-        ci_application.preliminary_risk_assessment = None
-        ci_application.priority_score = None
+    def _reset_government_workflow_review(self, ci_application: CIApplication) -> None:
+        if ci_application.verification_2_risk_assessment is not None:
+            ci_application.preliminary_risk_assessment = (
+                ci_application.verification_2_risk_assessment
+            )
+        if ci_application.verification_2_priority_score is not None:
+            ci_application.priority_score = ci_application.verification_2_priority_score
         ci_application.verification_1_user_id = None
         ci_application.verification_1_date = None
         ci_application.verification_2_user_id = None
@@ -2354,7 +2373,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
-        self._clear_government_workflow_review(ci_application)
+        self._reset_government_workflow_review(ci_application)
         ci_application.pathway_supplemental_edit_enabled = True
         ci_application.pathway_changes_requested_at = requested_at
         ci_application.pathway_changes_requested_by = user.keycloak_username
@@ -2399,7 +2418,7 @@ class CIApplicationServices:
         self._require_submitted_workflow(ci_application)
 
         requested_at = datetime.now(timezone.utc)
-        self._clear_government_workflow_review(ci_application)
+        self._reset_government_workflow_review(ci_application)
         ci_application.document_upload_enabled = True
         ci_application.document_changes_requested_at = requested_at
         ci_application.document_changes_requested_by = user.keycloak_username
