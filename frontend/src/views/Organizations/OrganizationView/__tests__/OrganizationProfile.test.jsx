@@ -154,7 +154,11 @@ vi.mock('@/constants/roles', () => ({
   roles: {
     government: 'government',
     supplier: 'supplier',
-    analyst: 'analyst'
+    analyst: 'analyst',
+    transfers: 'Transfer',
+    compliance_reporting: 'Compliance Reporting',
+    ci_applicant: 'CI Applicant',
+    ia_proponent: 'IA Proponent'
   }
 }))
 
@@ -805,7 +809,7 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Organization Type Rendering', () => {
-    test('shows organization type with BCeID suffix when applicable', ({
+    test('shows the legacy single organization type without a BCeID suffix', ({
       render
     }) => {
       const orgDataWithType = {
@@ -824,15 +828,21 @@ describe('OrganizationProfile Component', () => {
         []
       )
 
-      expect(screen.getByText('Fuel Supplier (BCeID user)')).toBeInTheDocument()
+      expect(screen.getByText('Fuel Supplier')).toBeInTheDocument()
+      expect(
+        screen.queryByText(/\(BCeID user\)/, { exact: false })
+      ).not.toBeInTheDocument()
     })
 
-    test('shows organization type with non-BCeID suffix when applicable', ({
+    test('lists all organization types for multi-type orgs (#4565)', ({
       render
     }) => {
-      const orgDataWithType = {
+      const orgDataWithTypes = {
         ...mockOrgData,
-        orgType: { description: 'Government', isBceidUser: false }
+        orgTypes: [
+          { description: 'Fuel supplier', orgType: 'fuel_supplier' },
+          { description: 'Credit transfer', orgType: 'credit_trader' }
+        ]
       }
 
       render(
@@ -840,14 +850,38 @@ describe('OrganizationProfile Component', () => {
           hasRoles={mockHasRoles}
           isCurrentUserLoading={false}
           orgID={mockOrgID}
-          orgData={orgDataWithType}
+          orgData={orgDataWithTypes}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
         []
       )
 
       expect(
-        screen.getByText('Government (non-BCeID user)')
+        screen.getByText('Fuel supplier, Credit transfer')
+      ).toBeInTheDocument()
+    })
+
+    test('shows the roles available to the organization (#4565)', ({
+      render
+    }) => {
+      const orgDataWithRoles = {
+        ...mockOrgData,
+        availableRoles: ['Transfer', 'Compliance Reporting']
+      }
+
+      render(
+        <OrganizationProfile
+          hasRoles={mockHasRoles}
+          isCurrentUserLoading={false}
+          orgID={mockOrgID}
+          orgData={orgDataWithRoles}
+          orgBalanceInfo={mockOrgBalanceInfo}
+        />,
+        []
+      )
+
+      expect(
+        screen.getByText('Compliance reporting, Credit transfer')
       ).toBeInTheDocument()
     })
   })

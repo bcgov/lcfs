@@ -31,7 +31,9 @@ const mockHandleSubmit = vi.fn((fn) => (event) => {
     orgPostalCodeZipCode: 'V6B3K9',
     orgRegForTransfers: '1',
     hasEarlyIssuance: 'no',
-    orgEDRMSRecord: 'EDRMS-123'
+    orgEDRMSRecord: 'EDRMS-123',
+    orgTypeIds: ['1'],
+    availableRoles: ['Compliance Reporting']
   })
 })
 
@@ -82,6 +84,7 @@ vi.mock('react-hook-form', () => ({
     trigger: mockTrigger,
     reset: mockReset,
     setError: mockSetError,
+    clearErrors: vi.fn(),
     control: {}
   }),
   Controller: React.forwardRef(({ name, control, render }, ref) => (
@@ -155,7 +158,38 @@ vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
       value={props.value || ''}
       onChange={(e) => props.onChange && props.onChange(e.target.value)}
     />
-  ))
+  )),
+  BCFormCheckbox: ({ name, label, options }) => (
+    <div
+      data-test={`${name}-checkbox-group`}
+      data-testid={`${name}-checkbox-group`}
+    >
+      <span>{label}</span>
+      {(options || []).map((option) => (
+        <label key={option.value}>
+          <input type="checkbox" value={option.value} readOnly />
+          {option.label}
+        </label>
+      ))}
+    </div>
+  )
+}))
+
+vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
+  BCFormCheckbox: ({ name, label, options }) => (
+    <div
+      data-test={`${name}-checkbox-group`}
+      data-testid={`${name}-checkbox-group`}
+    >
+      <span>{label}</span>
+      {(options || []).map((option) => (
+        <label key={option.value}>
+          <input type="checkbox" value={option.value} readOnly />
+          {option.label}
+        </label>
+      ))}
+    </div>
+  )
 }))
 
 vi.mock('../ReferenceCompareBox', () => ({
@@ -578,44 +612,46 @@ describe('AddEditOrgForm Component', () => {
     })
   })
 
-  describe('Organization Type Dropdown', () => {
-    it('renders organization type dropdown with all options', () => {
+  describe('Organization Type Checkboxes', () => {
+    it('renders the organization type checkbox group with all options', () => {
       render(
         <Wrapper>
           <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
-      // Check that the organization type controller is rendered
-      expect(screen.getByTestId('controller-orgType')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('orgTypeIds-checkbox-group')
+      ).toBeInTheDocument()
+      expect(screen.getByText('Fuel supplier')).toBeInTheDocument()
+      expect(screen.getByText('Aggregator')).toBeInTheDocument()
     })
 
-    it('shows BCeID and non-BCeID user indicators in options', () => {
+    it('does not append BCeID suffixes to the option labels', () => {
       render(
         <Wrapper>
           <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
-      // The Controller component should be present with orgType name
-      const controller = screen.getByTestId('controller-orgType')
-      expect(controller).toBeInTheDocument()
-
-      // Verify the form field is accessible
-      const orgTypeField = screen.getByTestId('orgType')
-      expect(orgTypeField).toBeInTheDocument()
+      expect(screen.queryByText(/\(BCeID user\)/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/\(non-BCeID user\)/)).not.toBeInTheDocument()
     })
 
-    it('defaults to fuel supplier selection', () => {
+    it('renders the roles available checkbox group with the four org-controllable roles', () => {
       render(
         <Wrapper>
           <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
-      // Verify the default value is set correctly
-      const controller = screen.getByTestId('controller-orgType')
-      expect(controller).toBeInTheDocument()
+      expect(
+        screen.getByTestId('availableRoles-checkbox-group')
+      ).toBeInTheDocument()
+      expect(screen.getByText('Compliance reporting')).toBeInTheDocument()
+      expect(screen.getByText('Credit transfer')).toBeInTheDocument()
+      expect(screen.getByText('CI applicant')).toBeInTheDocument()
+      expect(screen.getByText('IA proponent')).toBeInTheDocument()
     })
 
     it('handles organization type loading state', () => {
@@ -631,8 +667,10 @@ describe('AddEditOrgForm Component', () => {
         </Wrapper>
       )
 
-      // Should still render the controller even when loading
-      expect(screen.getByTestId('controller-orgType')).toBeInTheDocument()
+      // Should still render the (empty) checkbox group even when loading
+      expect(
+        screen.getByTestId('orgTypeIds-checkbox-group')
+      ).toBeInTheDocument()
     })
 
     it('handles organization type error state', () => {
@@ -648,8 +686,10 @@ describe('AddEditOrgForm Component', () => {
         </Wrapper>
       )
 
-      // Should still render the controller even when there's an error
-      expect(screen.getByTestId('controller-orgType')).toBeInTheDocument()
+      // Should still render the checkbox group even when there's an error
+      expect(
+        screen.getByTestId('orgTypeIds-checkbox-group')
+      ).toBeInTheDocument()
     })
 
     it('populates form correctly in edit mode with organization type', async () => {
@@ -683,15 +723,80 @@ describe('AddEditOrgForm Component', () => {
       })
     })
 
-    it('validates organization type requirement', () => {
-      const mockFormState = { errors: {} }
-      // Set up form errors for orgType
-      Object.assign(mockFormState, {
-        errors: {
-          orgType: {
-            message: 'Organization type is required.'
-          }
-        }
+    it('suggests a type’s typical roles when the analyst checks it (#4565)', () => {
+      let typeIds = ['1']
+      mockWatch.mockImplementation((field) => {
+        if (field === 'orgTypeIds') return typeIds
+        if (field === 'availableRoles') return []
+        return ''
+      })
+      const { rerender } = render(
+        <Wrapper>
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+        </Wrapper>
+      )
+      mockSetValue.mockClear()
+
+      // Analyst checks Fuel producer (id 3)
+      typeIds = ['1', '3']
+      rerender(
+        <Wrapper>
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+        </Wrapper>
+      )
+
+      expect(mockSetValue).toHaveBeenCalledWith(
+        'availableRoles',
+        ['CI Applicant'],
+        { shouldDirty: true }
+      )
+    })
+
+    it('does not change roles when a type is unchecked', () => {
+      let typeIds = ['1', '3']
+      mockWatch.mockImplementation((field) => {
+        if (field === 'orgTypeIds') return typeIds
+        if (field === 'availableRoles') return ['CI Applicant']
+        return ''
+      })
+      const { rerender } = render(
+        <Wrapper>
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+        </Wrapper>
+      )
+      mockSetValue.mockClear()
+
+      typeIds = ['1']
+      rerender(
+        <Wrapper>
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+        </Wrapper>
+      )
+
+      expect(mockSetValue).not.toHaveBeenCalledWith(
+        'availableRoles',
+        expect.anything(),
+        expect.anything()
+      )
+    })
+
+    it('does not suggest roles while hydrating an existing organization', () => {
+      useParams.mockReturnValue({ orgID: '123' })
+      useOrganization.mockReturnValue({
+        data: {
+          name: 'Existing Org',
+          operatingName: 'Existing Org',
+          email: 'existing@example.com',
+          orgTypes: [{ organizationTypeId: 3, orgType: 'fuel_producer' }],
+          availableRoles: [],
+          orgStatus: { organizationStatusId: 2 }
+        },
+        isFetched: true
+      })
+      mockWatch.mockImplementation((field) => {
+        if (field === 'orgTypeIds') return ['3']
+        if (field === 'availableRoles') return []
+        return ''
       })
 
       render(
@@ -700,8 +805,29 @@ describe('AddEditOrgForm Component', () => {
         </Wrapper>
       )
 
-      const controller = screen.getByTestId('controller-orgType')
-      expect(controller).toBeInTheDocument()
+      // The analyst deliberately left CI applicant unchecked on this org;
+      // loading it must not re-suggest the role.
+      expect(mockSetValue).not.toHaveBeenCalledWith(
+        'availableRoles',
+        expect.anything(),
+        expect.anything()
+      )
+      expect(mockReset).toHaveBeenCalled()
+    })
+
+    it('renders both checkbox groups side by side', () => {
+      render(
+        <Wrapper>
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+        </Wrapper>
+      )
+
+      expect(
+        screen.getByTestId('orgTypeIds-checkbox-group')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByTestId('availableRoles-checkbox-group')
+      ).toBeInTheDocument()
     })
   })
 })

@@ -8,7 +8,10 @@ import {
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useOrganizationListStatuses } from '@/hooks/useOrganizations'
 import { useOrganizationTypes } from '@/hooks/useOrganization'
-import { getOrgTypeDisplayLabel } from '@/utils/organizationTypes'
+import {
+  getOrgTypeDisplayLabel,
+  getOrgTypesDisplayLabel
+} from '@/utils/organizationTypes'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 
 const useOrganizationTypeFilterOptions = () => {
@@ -47,7 +50,15 @@ export const organizationsColDefs = (t) => [
     field: 'orgType',
     headerName: t('org:orgColLabels.orgType'),
     minWidth: 220,
-    valueGetter: (params) => getOrgTypeDisplayLabel(params.data.orgType),
+    valueGetter: (params) =>
+      params.data.orgTypes?.length
+        ? getOrgTypesDisplayLabel(params.data.orgTypes)
+        : getOrgTypeDisplayLabel(params.data.orgType),
+    // Filtering is applied server-side (BCGridViewer forwards the filter
+    // model to /organizations/, which matches any of an organization's
+    // types), so this only feeds the grid's local row value: use the
+    // primary type rather than a comma-joined list an equals filter would
+    // never match.
     filterValueGetter: (params) => params.data?.orgType?.orgType ?? '',
     cellRenderer: OrgTypeRenderer,
     cellClass: 'vertical-middle',
