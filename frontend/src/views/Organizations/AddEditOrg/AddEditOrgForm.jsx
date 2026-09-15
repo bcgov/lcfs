@@ -39,7 +39,11 @@ import {
   AddressAutocomplete,
   BCFormCheckbox
 } from '@/components/BCForm/index.js'
-import { orgAvailableRoleOptions } from '@/constants/organizationRoles'
+import {
+  orgAvailableRoleOptions,
+  orgTypeDefaultRoles,
+  suggestedRolesForTypes
+} from '@/constants/organizationRoles'
 import colors from '@/themes/base/colors'
 import { getCurrentEarlyIssuanceYear } from '@/constants/common'
 import ReferenceCompareBox from './ReferenceCompareBox'
@@ -90,7 +94,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       orgPhoneNumber: '',
       orgContactName: '',
       orgTypeIds: ['1'],
-      availableRoles: [],
+      availableRoles: orgTypeDefaultRoles.fuel_supplier,
       orgRegForTransfers: '',
       orgStreetAddress: '',
       orgCity: '',
@@ -149,6 +153,38 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     }
   }, [watchedOrgTypeIds, orgTypes])
 
+  // When the analyst checks an organization type, suggest its typical roles
+  // by adding them to "Roles available". Only reacts to types newly checked
+  // since the last observation, so hydrating an existing organization (or
+  // unchecking a type) never changes the role selection.
+  const prevOrgTypeIdsRef = useRef(null)
+  useEffect(() => {
+    if (!watchedOrgTypeIds || !orgTypes || orgTypes.length === 0) {
+      return
+    }
+    const previous = prevOrgTypeIdsRef.current
+    prevOrgTypeIdsRef.current = watchedOrgTypeIds
+    if (previous === null) {
+      return
+    }
+    const newlyChecked = watchedOrgTypeIds.filter(
+      (id) => !previous.includes(id)
+    )
+    if (newlyChecked.length === 0) {
+      return
+    }
+    const newKeys = orgTypes
+      .filter((type) => newlyChecked.includes(type.organizationTypeId.toString()))
+      .map((type) => type.orgType)
+    const currentRoles = watch('availableRoles') || []
+    const additions = suggestedRolesForTypes(newKeys, currentRoles)
+    if (additions.length > 0) {
+      setValue('availableRoles', [...currentRoles, ...additions], {
+        shouldDirty: true
+      })
+    }
+  }, [watchedOrgTypeIds, orgTypes, watch, setValue])
+
   useEffect(() => {
     if (isFetched && data) {
       const shouldSyncNames = data.name === data.operatingName
@@ -161,6 +197,15 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         data.orgAddress?.postalcodeZipcode ===
           data.orgAttorneyAddress?.postalcodeZipcode
 
+      const hydratedOrgTypeIds = data.orgTypes?.length
+        ? data.orgTypes.map((type) => type.organizationTypeId.toString())
+        : [
+            data.organizationTypeId?.toString() ||
+              data.orgType?.organizationTypeId?.toString() ||
+              '1'
+          ]
+      prevOrgTypeIdsRef.current = hydratedOrgTypeIds
+
       reset({
         orgLegalName: data.name,
         orgOperatingName: data.operatingName,
@@ -170,13 +215,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         orgEDRMSRecord: data.edrmsRecord,
         recordsAddress: data.recordsAddress || '',
         hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
-        orgTypeIds: data.orgTypes?.length
-          ? data.orgTypes.map((type) => type.organizationTypeId.toString())
-          : [
-              data.organizationTypeId?.toString() ||
-                data.orgType?.organizationTypeId?.toString() ||
-                '1'
-            ],
+        orgTypeIds: hydratedOrgTypeIds,
         availableRoles: data.availableRoles || [],
         orgRegForTransfers:
           data.orgStatus.organizationStatusId === 2 ? '2' : '1',

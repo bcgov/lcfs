@@ -84,6 +84,7 @@ vi.mock('react-hook-form', () => ({
     trigger: mockTrigger,
     reset: mockReset,
     setError: mockSetError,
+    clearErrors: vi.fn(),
     control: {}
   }),
   Controller: React.forwardRef(({ name, control, render }, ref) => (
@@ -682,6 +683,98 @@ describe('AddEditOrgForm Component', () => {
         // Verify reset was called with correct organization type
         expect(mockReset).toHaveBeenCalled()
       })
+    })
+
+    it('suggests a type’s typical roles when the analyst checks it (#4565)', () => {
+      let typeIds = ['1']
+      mockWatch.mockImplementation((field) => {
+        if (field === 'orgTypeIds') return typeIds
+        if (field === 'availableRoles') return []
+        return ''
+      })
+      const { rerender } = render(
+        <Wrapper>
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+        </Wrapper>
+      )
+      mockSetValue.mockClear()
+
+      // Analyst checks Fuel producer (id 3)
+      typeIds = ['1', '3']
+      rerender(
+        <Wrapper>
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+        </Wrapper>
+      )
+
+      expect(mockSetValue).toHaveBeenCalledWith(
+        'availableRoles',
+        ['CI Applicant'],
+        { shouldDirty: true }
+      )
+    })
+
+    it('does not change roles when a type is unchecked', () => {
+      let typeIds = ['1', '3']
+      mockWatch.mockImplementation((field) => {
+        if (field === 'orgTypeIds') return typeIds
+        if (field === 'availableRoles') return ['CI Applicant']
+        return ''
+      })
+      const { rerender } = render(
+        <Wrapper>
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+        </Wrapper>
+      )
+      mockSetValue.mockClear()
+
+      typeIds = ['1']
+      rerender(
+        <Wrapper>
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+        </Wrapper>
+      )
+
+      expect(mockSetValue).not.toHaveBeenCalledWith(
+        'availableRoles',
+        expect.anything(),
+        expect.anything()
+      )
+    })
+
+    it('does not suggest roles while hydrating an existing organization', () => {
+      useParams.mockReturnValue({ orgID: '123' })
+      useOrganization.mockReturnValue({
+        data: {
+          name: 'Existing Org',
+          operatingName: 'Existing Org',
+          email: 'existing@example.com',
+          orgTypes: [{ organizationTypeId: 3, orgType: 'fuel_producer' }],
+          availableRoles: [],
+          orgStatus: { organizationStatusId: 2 }
+        },
+        isFetched: true
+      })
+      mockWatch.mockImplementation((field) => {
+        if (field === 'orgTypeIds') return ['3']
+        if (field === 'availableRoles') return []
+        return ''
+      })
+
+      render(
+        <Wrapper>
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+        </Wrapper>
+      )
+
+      // The analyst deliberately left CI applicant unchecked on this org;
+      // loading it must not re-suggest the role.
+      expect(mockSetValue).not.toHaveBeenCalledWith(
+        'availableRoles',
+        expect.anything(),
+        expect.anything()
+      )
+      expect(mockReset).toHaveBeenCalled()
     })
 
     it('renders both checkbox groups side by side', () => {

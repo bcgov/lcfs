@@ -344,54 +344,54 @@ const renderOrgTypeBadge = (
   />
 )
 
+const renderOrgTypeChip = (text: string, color: BCBadgeColor): ReactElement => (
+  <BCBadge
+    key={text}
+    badgeContent={text}
+    color={color}
+    variant="contained"
+    sx={{
+      '& .MuiBadge-badge': {
+        fontWeight: 'regular',
+        textTransform: 'capitalize',
+        fontSize: '0.85rem',
+        padding: '0.4em 0.6em'
+      },
+      margin: '2px'
+    }}
+  />
+)
+
 export const OrgTypeRenderer: RendererWithFilterPill = (
   props: RendererProps
 ): ReactElement => {
-  const location = useLocation()
-  // Multi-type organizations (#4565): one badge per type, falling back to the
+  // Multi-type organizations (#4565): one chip per type with overflow, the
+  // same treatment RoleRenderer gives the Users table. Falls back to the
   // legacy single type when the list is absent.
-  const orgTypes = props.data?.orgTypes?.length
+  const orgTypes: any[] = props.data?.orgTypes?.length
     ? props.data.orgTypes
     : props.data?.orgType
       ? [props.data.orgType]
       : []
-
-  const badge = (
-    <BCBox sx={{ width: '100%', height: '100%' }}>
-      <BCBox
-        mt={1}
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          gap: 0.5
-        }}
-      >
-        {orgTypes.length > 0
-          ? orgTypes.map((type: any) => (
-              <BCBox key={type?.organizationTypeId ?? type?.orgType}>
-                {renderOrgTypeBadge(
-                  getOrgTypeDisplayLabel(type) || '—',
-                  ORG_TYPE_COLOR_MAP[type?.orgType] || 'dark'
-                )}
-              </BCBox>
-            ))
-          : renderOrgTypeBadge(props.value || '—', 'dark')}
-      </BCBox>
-    </BCBox>
-  )
-
-  if (!props.node?.id) {
-    return badge
-  }
+  const colorByLabel: Record<string, BCBadgeColor> = {}
+  const labels = orgTypes.map((type) => {
+    const label = getOrgTypeDisplayLabel(type) || '—'
+    colorByLabel[label] = ORG_TYPE_COLOR_MAP[type?.orgType] || 'dark'
+    return label
+  })
+  const value = labels.length > 0 ? labels : [props.value || '—']
 
   return (
-    <Link
-      to={`${location.pathname}/${props.node.id}`}
-      style={{ color: '#000' }}
-    >
-      {badge}
-    </Link>
+    <GenericChipRenderer
+      {...props}
+      value={value}
+      renderChip={(chip) =>
+        renderOrgTypeChip(chip.text, colorByLabel[chip.text] || 'dark')
+      }
+      renderOverflowChip={(count) =>
+        count > 0 ? renderOrgTypeChip(`+${count}`, 'dark') : null
+      }
+    />
   )
 }
 
