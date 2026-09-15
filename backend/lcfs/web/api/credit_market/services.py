@@ -34,10 +34,9 @@ MIN_PARTICIPANTS = 3
 
 
 def _publishable(row) -> bool:
-    return (
-        (row.transfers or 0) >= MIN_TRANSFERS
-        and (row.distinct_sellers or 0) >= MIN_PARTICIPANTS
-    )
+    return (row.transfers or 0) >= MIN_TRANSFERS and (
+        row.distinct_sellers or 0
+    ) >= MIN_PARTICIPANTS
 
 
 def _period_label(period: datetime, interval: str) -> str:
@@ -61,9 +60,7 @@ def _to_int(value):
 
 
 class CreditMarketServices:
-    def __init__(
-        self, repo: CreditMarketRepository = Depends(CreditMarketRepository)
-    ):
+    def __init__(self, repo: CreditMarketRepository = Depends(CreditMarketRepository)):
         self.repo = repo
 
     @service_handler
@@ -148,6 +145,7 @@ class CreditMarketServices:
         monthly_rows = await self.repo.get_report_periods("month")
         quarterly_rows = await self.repo.get_report_periods("quarter")
         annual_rows = await self.repo.get_report_periods("year")
+        a1_monthly_rows = await self.repo.get_report_a1_periods("month")
         all_time_row = await self.repo.get_report_all_time()
 
         def to_periods(rows, interval):
@@ -157,6 +155,8 @@ class CreditMarketServices:
                     transfers=_to_int(r.transfers),
                     volume=_to_int(r.volume),
                     weighted_avg_price=_to_float(r.wavg),
+                    min_price=_to_float(getattr(r, "min_price", None)),
+                    max_price=_to_float(getattr(r, "max_price", None)),
                     transfer_value=_to_float(r.transfer_value) or 0.0,
                 )
                 for r in rows
@@ -164,13 +164,24 @@ class CreditMarketServices:
             ]
 
         pub_monthly = [r for r in monthly_rows if _publishable(r)]
+        pub_a1_monthly = [r for r in a1_monthly_rows if _publishable(r)]
         kpis = self._build_report_kpis(pub_monthly)
+        ytd_kpis = self._build_ytd_report_kpis(pub_monthly)
+        a1_kpis = self._build_report_kpis(pub_a1_monthly, compare_to="previous_month")
 
         all_time = MarketReportAllTimeSchema(
             transfers=_to_int(all_time_row.transfers) if all_time_row else 0,
             volume=_to_int(all_time_row.volume) if all_time_row else 0,
-            weighted_avg_price=(
-                _to_float(all_time_row.wavg) if all_time_row else None
+            weighted_avg_price=(_to_float(all_time_row.wavg) if all_time_row else None),
+            min_price=(
+                _to_float(getattr(all_time_row, "min_price", None))
+                if all_time_row
+                else None
+            ),
+            max_price=(
+                _to_float(getattr(all_time_row, "max_price", None))
+                if all_time_row
+                else None
             ),
             transfer_value=(
                 _to_float(all_time_row.transfer_value) if all_time_row else 0.0
@@ -180,15 +191,20 @@ class CreditMarketServices:
 
         return PublicMarketReportSchema(
             monthly=to_periods(monthly_rows, "month"),
+            a1_monthly=to_periods(a1_monthly_rows, "month"),
             quarterly=to_periods(quarterly_rows, "quarter"),
             annual=to_periods(annual_rows, "year"),
             all_time=all_time,
             kpis=kpis,
+            ytd_kpis=ytd_kpis,
+            a1_kpis=a1_kpis,
             min_transfers=MIN_TRANSFERS,
             min_participants=MIN_PARTICIPANTS,
         )
 
-    def _build_report_kpis(self, pub_monthly) -> MarketReportKpiSchema:
+    def _build_report_kpis(
+        self, pub_monthly, compare_to: str = "previous_year"
+    ) -> MarketReportKpiSchema:
         empty = MetricDeltaSchema()
         if not pub_monthly:
             return MarketReportKpiSchema(
@@ -200,7 +216,15 @@ class CreditMarketServices:
 
         by_ym = {(r.period.year, r.period.month): r for r in pub_monthly}
         latest = pub_monthly[-1]
-        prior = by_ym.get((latest.period.year - 1, latest.period.month))
+        if compare_to == "previous_month":
+            prior_year = latest.period.year
+            prior_month = latest.period.month - 1
+            if prior_month == 0:
+                prior_year -= 1
+                prior_month = 12
+            prior = by_ym.get((prior_year, prior_month))
+        else:
+            prior = by_ym.get((latest.period.year - 1, latest.period.month))
 
         def delta(current, prior_value) -> MetricDeltaSchema:
             cur = _to_float(current)
@@ -217,6 +241,63 @@ class CreditMarketServices:
             transfers=delta(latest.transfers, prior.transfers if prior else None),
             volume=delta(latest.volume, prior.volume if prior else None),
             weighted_avg_price=delta(latest.wavg, prior.wavg if prior else None),
+        )
+
+    def _build_ytd_report_kpis(self, pub_monthly) -> MarketReportKpiSchema:
+        empty = MetricDeltaSchema()
+        if not pub_monthly:
+            return MarketReportKpiSchema(
+                label_period=None,
+                transfers=empty,
+                volume=empty,
+                weighted_avg_price=empty,
+            )
+
+        latest = pub_monthly[-1]
+        current_year = latest.period.year
+        cutoff_month = latest.period.month
+        prior_year = current_year - 1
+
+        current_rows = [
+            r
+            for r in pub_monthly
+            if r.period.year == current_year and r.period.month <= cutoff_month
+        ]
+        prior_rows = [
+            r
+            for r in pub_monthly
+            if r.period.year == prior_year and r.period.month <= cutoff_month
+        ]
+
+        def sum_attr(rows, attr):
+            return sum(_to_float(getattr(r, attr, None)) or 0 for r in rows)
+
+        def ytd_wavg(rows):
+            volume = sum_attr(rows, "volume")
+            transfer_value = sum_attr(rows, "transfer_value")
+            return transfer_value / volume if volume else None
+
+        def delta(current, prior_value) -> MetricDeltaSchema:
+            cur = _to_float(current)
+            pri = _to_float(prior_value)
+            dpct = (
+                round((cur - pri) / pri * 100, 2)
+                if cur is not None and pri not in (None, 0)
+                else None
+            )
+            return MetricDeltaSchema(current=cur, prior=pri, delta_pct=dpct)
+
+        return MarketReportKpiSchema(
+            label_period=_period_label(latest.period, "month"),
+            transfers=delta(
+                sum_attr(current_rows, "transfers"),
+                sum_attr(prior_rows, "transfers") if prior_rows else None,
+            ),
+            volume=delta(
+                sum_attr(current_rows, "volume"),
+                sum_attr(prior_rows, "volume") if prior_rows else None,
+            ),
+            weighted_avg_price=delta(ytd_wavg(current_rows), ytd_wavg(prior_rows)),
         )
 
     async def _build_price_index(self, interval: str) -> List[PricePointSchema]:

@@ -11,6 +11,7 @@ import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 type RouteHandle = {
   title?: string
   hideBreadcrumb?: boolean
+  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
 }
 
 export const PublicPageLayout = () => {
@@ -20,6 +21,7 @@ export const PublicPageLayout = () => {
     | undefined
   const pageTitle = lastMatchHandle?.title || 'LCFS'
   const hideBreadcrumb = lastMatchHandle?.hideBreadcrumb ?? false
+  const maxWidth = lastMatchHandle?.maxWidth ?? 'lg'
 
   return (
     <BCBox display="flex" flexDirection="column" minHeight="100vh">
@@ -30,7 +32,7 @@ export const PublicPageLayout = () => {
       <PublicHeader />
 
       <Container
-        maxWidth="lg"
+        maxWidth={maxWidth}
         sx={{
           marginTop: hideBreadcrumb ? 0 : '1px',
           paddingX: '40px',
