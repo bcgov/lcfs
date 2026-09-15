@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Accordion,
   AccordionDetails,
@@ -465,6 +465,33 @@ export const PublicMarketData = () => {
   const overview = overviewData as PublicOverviewPayload | undefined
   const [gran, setGran] = useState<Granularity>('quarter')
   const reportRef = useRef<HTMLDivElement | null>(null)
+  const mainChartRef = useRef<ReactECharts | null>(null)
+  const annualAvgChartRef = useRef<ReactECharts | null>(null)
+  const transferPriceChartRef = useRef<ReactECharts | null>(null)
+  const tradeVolumeChartRef = useRef<ReactECharts | null>(null)
+
+  // Charts render at their on-screen container width; the browser doesn't
+  // automatically re-layout echarts canvases for the print stylesheet, so
+  // resize them explicitly around the print event to avoid clipped/blank
+  // charts in the printed/PDF output.
+  useEffect(() => {
+    const resizeCharts = () => {
+      ;[
+        mainChartRef,
+        annualAvgChartRef,
+        transferPriceChartRef,
+        tradeVolumeChartRef
+      ].forEach((ref) => {
+        ref.current?.getEchartsInstance().resize()
+      })
+    }
+    window.addEventListener('beforeprint', resizeCharts)
+    window.addEventListener('afterprint', resizeCharts)
+    return () => {
+      window.removeEventListener('beforeprint', resizeCharts)
+      window.removeEventListener('afterprint', resizeCharts)
+    }
+  }, [])
 
   const seriesKey: ReportKey = {
     month: 'monthly',
@@ -646,14 +673,15 @@ export const PublicMarketData = () => {
       },
       title: {
         text: t('publicDashboard.marketData.trendCharts.transferPriceTitle'),
+        top: 0,
         textStyle: { fontSize: 13, color: DARK }
       },
       legend: {
         data: priceSeries.map((s) => s.name),
-        top: 22,
+        top: 38,
         textStyle: { fontSize: 10 }
       },
-      grid: { left: '10%', right: '5%', top: '30%', bottom: '15%' },
+      grid: { left: '10%', right: '5%', top: '42%', bottom: '15%' },
       xAxis: {
         type: 'category',
         data: annualRows.map((p) => p.period),
@@ -910,36 +938,45 @@ export const PublicMarketData = () => {
   }
 
   return (
-    <BCBox
-      ref={reportRef}
-      sx={{
-        maxWidth: 1380,
-        mx: 'auto',
-        px: 0,
-        py: { xs: 1, md: 2 },
-        '@media print': {
-          maxWidth: 'none',
-          px: 0,
-          py: 0,
-          '& .no-print': { display: 'none !important' },
-          '& section': {
-            breakInside: 'avoid',
-            boxShadow: 'none',
-            borderColor: '#BDBDBD'
-          },
-          '& .print-expand .MuiCollapse-root': {
-            height: 'auto !important',
-            visibility: 'visible !important'
-          },
-          '& .print-expand .MuiCollapse-wrapper': {
-            display: 'block !important'
-          },
-          '& .print-table': {
-            maxHeight: 'none !important',
-            overflow: 'visible !important'
+    <>
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 12mm 10mm;
           }
         }
-      }}
+      `}</style>
+      <BCBox
+        ref={reportRef}
+        sx={{
+          maxWidth: 1380,
+          mx: 'auto',
+          px: 0,
+          py: { xs: 1, md: 2 },
+          '@media print': {
+            maxWidth: 'none',
+            px: 0,
+            py: 0,
+            '& .no-print': { display: 'none !important' },
+            '& section': {
+              breakInside: 'avoid',
+              boxShadow: 'none',
+              borderColor: '#BDBDBD'
+            },
+            '& .MuiCollapse-root': {
+              height: 'auto !important',
+              visibility: 'visible !important'
+            },
+            '& .MuiCollapse-wrapper': {
+              display: 'block !important'
+            },
+            '& .print-table': {
+              maxHeight: 'none !important',
+              overflow: 'visible !important'
+            }
+          }
+        }}
     >
       <BCBox
         sx={{
@@ -1269,12 +1306,14 @@ export const PublicMarketData = () => {
         >
           <CardShell dataTest="annual-average-price-chart">
             <ReactECharts
+              ref={annualAvgChartRef}
               option={annualAverageChartOption}
               style={{ height: 250 }}
             />
           </CardShell>
           <CardShell dataTest="transfer-price-trend-chart">
             <ReactECharts
+              ref={transferPriceChartRef}
               option={transferPriceChartOption}
               style={{ height: 250 }}
             />
@@ -1284,6 +1323,7 @@ export const PublicMarketData = () => {
             sx={{ gridColumn: { md: '1 / -1' } }}
           >
             <ReactECharts
+              ref={tradeVolumeChartRef}
               option={tradeVolumeChartOption}
               style={{ height: 250 }}
             />
@@ -1330,7 +1370,11 @@ export const PublicMarketData = () => {
           </ToggleButtonGroup>
         </BCBox>
         {series.length > 0 ? (
-          <ReactECharts option={chartOption} style={{ height: 380 }} />
+          <ReactECharts
+            ref={mainChartRef}
+            option={chartOption}
+            style={{ height: 380 }}
+          />
         ) : (
           <BCTypography sx={{ fontSize: 14, color: MUTED, py: 4 }}>
             {t('publicDashboard.marketData.tables.noData')}
@@ -1379,7 +1423,8 @@ export const PublicMarketData = () => {
           )
         })}
       </ReportSection>
-    </BCBox>
+      </BCBox>
+    </>
   )
 }
 
