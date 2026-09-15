@@ -10,7 +10,6 @@ import {
   ToggleButtonGroup
 } from '@mui/material'
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
-import EnergySavingsLeafOutlinedIcon from '@mui/icons-material/EnergySavingsLeafOutlined'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined'
 import ReactECharts from 'echarts-for-react'
@@ -435,7 +434,7 @@ const ReportSection = ({
     }}
   >
     <AccordionSummary
-      expandIcon={<ExpandMore />}
+      expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }}/>}
       sx={{
         minHeight: 58,
         px: { xs: 2, md: 3 },
@@ -1140,7 +1139,7 @@ export const PublicMarketData = () => {
         </BCBox>
       </ReportSection>
 
-      {totalCreditsIssued != null && totalCreditsIssued > 0 && (
+      {/* {totalCreditsIssued != null && totalCreditsIssued > 0 && (
         <BCBox
           data-test="impact-callout"
           sx={{
@@ -1180,7 +1179,7 @@ export const PublicMarketData = () => {
             </BCTypography>
           </BCBox>
         </BCBox>
-      )}
+      )} */}
 
       <ReportSection
         title={t('publicDashboard.marketData.sections.activityAndStatistics')}
