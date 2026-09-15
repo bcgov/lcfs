@@ -28,48 +28,61 @@ const REQUIRES_COMMENT = new Set([
   ACTION_REJECT
 ])
 
+// Where on the page each action belongs (#5080). Evidence decisions sit
+// beneath the review summary they act on; recommendation and approval
+// decisions close the page. Same component, rendered once per placement.
+export const PLACEMENT_EVIDENCE = 'evidence'
+export const PLACEMENT_DECISION = 'decision'
+
 const BUTTONS = [
   {
     action: ACTION_ACCEPT,
     labelKey: 'accept',
-    variant: 'outlined',
-    colour: 'primary'
+    variant: 'contained',
+    colour: 'primary',
+    placement: PLACEMENT_EVIDENCE
   },
   {
     action: ACTION_REQUEST_INFORMATION,
     labelKey: 'requestInformation',
     variant: 'outlined',
-    colour: 'error'
+    colour: 'error',
+    placement: PLACEMENT_EVIDENCE
   },
   {
     action: ACTION_RECOMMEND_TO_MANAGER,
     labelKey: 'recommendToManager',
     variant: 'contained',
-    colour: 'primary'
+    colour: 'primary',
+    placement: PLACEMENT_DECISION
   },
   {
     action: ACTION_RECOMMEND_TO_DIRECTOR,
     labelKey: 'recommendToDirector',
     variant: 'contained',
-    colour: 'primary'
+    colour: 'primary',
+    placement: PLACEMENT_DECISION
   },
   {
     action: ACTION_APPROVE,
     labelKey: 'approve',
     variant: 'contained',
-    colour: 'primary'
+    colour: 'primary',
+    placement: PLACEMENT_DECISION
   },
   {
     action: ACTION_RETURN,
     labelKey: 'return',
     variant: 'outlined',
-    colour: 'primary'
+    colour: 'primary',
+    placement: PLACEMENT_DECISION
   },
   {
     action: ACTION_REJECT,
     labelKey: 'reject',
     variant: 'outlined',
-    colour: 'error'
+    colour: 'error',
+    placement: PLACEMENT_DECISION
   }
 ]
 
@@ -79,6 +92,8 @@ export const DesignatedActionWorkflow = ({
   recommendedCredits,
   allEvidenceSatisfactory,
   hasRequirements = true,
+  // Omitted: every available action, as before the split.
+  placement,
   onChanged
 }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
@@ -125,9 +140,14 @@ export const DesignatedActionWorkflow = ({
     run(action)
   }
 
-  const visible = BUTTONS.filter((button) =>
-    availableActions.includes(button.action)
+  const visible = BUTTONS.filter(
+    (button) =>
+      availableActions.includes(button.action) &&
+      (!placement || button.placement === placement)
   )
+  // Nothing to offer here: render nothing rather than an empty block
+  // with its own margin.
+  if (visible.length === 0 && !error) return null
 
   // Accepting and recommending both need every requirement satisfactory;
   // showing that as a disabled button explains itself better than a
@@ -147,7 +167,14 @@ export const DesignatedActionWorkflow = ({
   }
 
   return (
-    <BCBox mt={3} data-test="designated-action-workflow">
+    <BCBox
+      mt={placement === PLACEMENT_EVIDENCE ? 2 : 3}
+      data-test={
+        placement
+          ? `designated-action-workflow-${placement}`
+          : 'designated-action-workflow'
+      }
+    >
       {error && (
         <BCTypography
           variant="body4"

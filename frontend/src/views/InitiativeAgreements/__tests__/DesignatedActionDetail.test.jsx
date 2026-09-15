@@ -71,7 +71,11 @@ vi.mock('../components/DocumentTree', () => ({
 }))
 
 vi.mock('../components/EvidenceOfCompletion', () => ({
-  EvidenceOfCompletion: () => <div data-test="evidence-of-completion" />
+  // The section takes the evidence decisions as a slot (#5080); the
+  // stub renders it so the page's wiring is observable.
+  EvidenceOfCompletion: ({ actions }) => (
+    <div data-test="evidence-of-completion">{actions}</div>
+  )
 }))
 
 vi.mock('../components/DesignatedActionHistoryPanel', () => ({
@@ -86,9 +90,11 @@ vi.mock('../components/EditDesignatedAction', () => ({
 
 const workflowProps = vi.fn()
 vi.mock('../components/DesignatedActionWorkflow', () => ({
+  PLACEMENT_EVIDENCE: 'evidence',
+  PLACEMENT_DECISION: 'decision',
   DesignatedActionWorkflow: (props) => {
     workflowProps(props)
-    return <div data-test="designated-action-workflow" />
+    return <div data-test={`designated-action-workflow-${props.placement}`} />
   }
 }))
 
@@ -202,16 +208,29 @@ describe('DesignatedActionDetail', () => {
   it('passes the available actions and evidence state to the workflow', () => {
     render(<DesignatedActionDetail />, { wrapper })
 
-    expect(screen.getByTestId('designated-action-workflow')).toBeInTheDocument()
-    expect(workflowProps).toHaveBeenCalledWith(
-      expect.objectContaining({
-        availableActions: ['accept_evidence', 'recommend_to_manager'],
-        allEvidenceSatisfactory: true,
-        // The amount is edited in the header now (#5079); the workflow
-        // only carries the saved value into the recommend action.
-        recommendedCredits: null
-      })
+    // Rendered twice (#5080): the evidence decisions inside the evidence
+    // section, the recommendation decisions after it. Both get the same
+    // facts.
+    const evidence = screen.getByTestId('designated-action-workflow-evidence')
+    expect(screen.getByTestId('evidence-of-completion')).toContainElement(
+      evidence
     )
+    const decision = screen.getByTestId('designated-action-workflow-decision')
+    expect(screen.getByTestId('evidence-of-completion')).not.toContainElement(
+      decision
+    )
+    for (const placement of ['evidence', 'decision']) {
+      expect(workflowProps).toHaveBeenCalledWith(
+        expect.objectContaining({
+          placement,
+          availableActions: ['accept_evidence', 'recommend_to_manager'],
+          allEvidenceSatisfactory: true,
+          // The amount is edited in the header now (#5079); the workflow
+          // only carries the saved value into the recommend action.
+          recommendedCredits: null
+        })
+      )
+    }
   })
 
   it('offers the edit control on the action card', () => {

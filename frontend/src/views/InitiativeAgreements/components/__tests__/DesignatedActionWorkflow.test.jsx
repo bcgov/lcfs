@@ -1,7 +1,11 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { DesignatedActionWorkflow } from '../DesignatedActionWorkflow'
+import {
+  DesignatedActionWorkflow,
+  PLACEMENT_DECISION,
+  PLACEMENT_EVIDENCE
+} from '../DesignatedActionWorkflow'
 import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('react-i18next', () => ({
@@ -26,6 +30,59 @@ const analystActions = [
 
 describe('DesignatedActionWorkflow', () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it('splits the actions by placement: evidence decisions and closing decisions', () => {
+    // The API offers everything an analyst may do; each placement shows
+    // only its share (#5080), and together they show all of it.
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory
+        placement={PLACEMENT_EVIDENCE}
+      />,
+      { wrapper }
+    )
+    expect(screen.getByTestId('workflow-accept_evidence')).toBeInTheDocument()
+    expect(
+      screen.getByTestId('workflow-request_information')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('workflow-recommend_to_manager')
+    ).not.toBeInTheDocument()
+    cleanup()
+
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory
+        placement={PLACEMENT_DECISION}
+      />,
+      { wrapper }
+    )
+    expect(
+      screen.getByTestId('workflow-recommend_to_manager')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('workflow-accept_evidence')
+    ).not.toBeInTheDocument()
+  })
+
+  it('renders nothing for a placement with no actions to offer', () => {
+    // A director has no evidence decisions; the evidence slot stays
+    // empty rather than showing an empty block.
+    const { container } = render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={['approve', 'reject', 'return']}
+        allEvidenceSatisfactory
+        placement={PLACEMENT_EVIDENCE}
+      />,
+      { wrapper }
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
 
   it('shows only the actions the API says are available', () => {
     render(

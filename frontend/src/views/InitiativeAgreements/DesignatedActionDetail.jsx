@@ -38,7 +38,11 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { DocumentTree } from './components/DocumentTree'
 import { EvidenceOfCompletion } from './components/EvidenceOfCompletion'
-import { DesignatedActionWorkflow } from './components/DesignatedActionWorkflow'
+import {
+  DesignatedActionWorkflow,
+  PLACEMENT_DECISION,
+  PLACEMENT_EVIDENCE
+} from './components/DesignatedActionWorkflow'
 import { EditDesignatedAction } from './components/EditDesignatedAction'
 import { DesignatedActionHistoryPanel } from './components/DesignatedActionHistoryPanel'
 
@@ -370,14 +374,28 @@ const DesignatedActionDetailBase = () => {
         }
       />
 
-      {/* Evidence of completion review (#4899). The Accept and Request
-          additional information buttons belong to the workflow story. */}
+      {/* Evidence of completion review (#4899), with the evidence
+          decisions beneath its summary (#5080). Which buttons appear
+          comes from the API, so the page cannot offer a transition the
+          server refuses. */}
       <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
-        <EvidenceOfCompletion designatedActionId={designatedActionId} />
+        <EvidenceOfCompletion
+          designatedActionId={designatedActionId}
+          actions={
+            <DesignatedActionWorkflow
+              designatedActionId={designatedActionId}
+              availableActions={action.availableActions}
+              recommendedCredits={action.recommendedCredits}
+              allEvidenceSatisfactory={allEvidenceSatisfactory}
+              hasRequirements={requirements.length > 0}
+              placement={PLACEMENT_EVIDENCE}
+              onChanged={refreshAction}
+            />
+          }
+        />
       </Role>
 
-      {/* Workflow actions (#4898). Which buttons appear comes from the
-          API, so the page cannot offer a transition the server refuses. */}
+      {/* The recommendation and approval decisions close the page. */}
       <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
         <DesignatedActionWorkflow
           designatedActionId={designatedActionId}
@@ -385,6 +403,7 @@ const DesignatedActionDetailBase = () => {
           recommendedCredits={action.recommendedCredits}
           allEvidenceSatisfactory={allEvidenceSatisfactory}
           hasRequirements={requirements.length > 0}
+          placement={PLACEMENT_DECISION}
           onChanged={refreshAction}
         />
       </Role>

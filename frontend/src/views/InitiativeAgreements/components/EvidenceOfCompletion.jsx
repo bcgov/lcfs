@@ -81,7 +81,12 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
       setDescription(requirement.description)
       setEvaluation(requirement.analystReview || '')
     }
-  }, [editing, requirement.title, requirement.description, requirement.analystReview])
+  }, [
+    editing,
+    requirement.title,
+    requirement.description,
+    requirement.analystReview
+  ])
 
   const outcome = requirement.reviewOutcome
   const heading = requirementHeading(requirement)
@@ -89,7 +94,9 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
   // Clicking the box that is already ticked returns the requirement to
   // unreviewed, which is how an analyst undoes a decision.
   const setOutcome = (next) => {
-    onSave(next === outcome ? { clearReviewOutcome: true } : { reviewOutcome: next })
+    onSave(
+      next === outcome ? { clearReviewOutcome: true } : { reviewOutcome: next }
+    )
     acknowledge()
   }
 
@@ -224,7 +231,9 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
           <TextField
             {...textFieldProps(
               `eoc-description-${requirement.evidenceRequirementId}`,
-              t('initiativeAgreement:evidence.descriptionFor', { name: heading })
+              t('initiativeAgreement:evidence.descriptionFor', {
+                name: heading
+              })
             )}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
@@ -267,7 +276,9 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
             )}
             value={evaluation}
             placeholder={
-              editing ? t('initiativeAgreement:evidence.evidencePlaceholder') : ''
+              editing
+                ? t('initiativeAgreement:evidence.evidencePlaceholder')
+                : ''
             }
             onChange={(event) => setEvaluation(event.target.value)}
           />
@@ -365,10 +376,15 @@ const ReviewSummary = ({ requirements }) => {
   return (
     <Paper
       variant="outlined"
-      sx={{ p: 2, maxWidth: 520 }}
+      sx={{ p: 2, maxWidth: 520, borderRadius: 1 }}
       data-test="eoc-review-summary"
     >
-      <BCTypography variant="h6" color="primary" mb={1}>
+      <BCTypography
+        variant="body4"
+        component="p"
+        color="primary"
+        sx={{ fontWeight: 700, m: 0, mb: 1.5 }}
+      >
         {t('initiativeAgreement:evidence.reviewSummary')}
       </BCTypography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -377,8 +393,10 @@ const ReviewSummary = ({ requirements }) => {
             key={requirement.evidenceRequirementId}
             sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
           >
-            {/* The icon carries the outcome, so it needs words: colour
-                and shape alone are not an accessible name. */}
+            {/* Two states, as the wireframe has it: satisfied, or still
+                outstanding. The icon carries the outcome, so it needs
+                words — colour and shape alone are not an accessible
+                name — and the words still say which kind of outstanding. */}
             {requirement.reviewOutcome === OUTCOME_SATISFACTORY ? (
               <CheckCircleIcon
                 fontSize="small"
@@ -388,11 +406,7 @@ const ReviewSummary = ({ requirements }) => {
             ) : (
               <ErrorIcon
                 fontSize="small"
-                color={
-                  requirement.reviewOutcome === OUTCOME_INFORMATION_REQUESTED
-                    ? 'warning'
-                    : 'disabled'
-                }
+                color="warning"
                 titleAccess={
                   requirement.reviewOutcome === OUTCOME_INFORMATION_REQUESTED
                     ? t('initiativeAgreement:evidence.requestInformation')
@@ -475,7 +489,11 @@ const AddRequirementModal = ({ open, onClose, onCreate, isPending }) => {
 
 export const EvidenceOfCompletion = ({
   designatedActionId,
-  canEdit = true
+  canEdit = true,
+  // The evidence decisions — accept, request information — rendered
+  // beneath the review summary they act on (#5080). The page owns them;
+  // this section only says where they go.
+  actions = null
 }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [expanded, setExpanded] = useState(true)
@@ -571,6 +589,8 @@ export const EvidenceOfCompletion = ({
                 </BCButton>
               </Role>
             </Box>
+
+            {actions && <Box data-test="eoc-review-actions">{actions}</Box>}
           </Box>
         )}
       </Collapse>
