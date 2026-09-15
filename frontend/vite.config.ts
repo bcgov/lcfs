@@ -6,6 +6,7 @@ import svgr from 'vite-plugin-svgr'
 import path from 'path'
 import { readFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
+import { availableParallelism } from 'node:os'
 
 const releaseNotesPath = fileURLToPath(
   new URL('./public/release-notes.json', import.meta.url)
@@ -13,6 +14,7 @@ const releaseNotesPath = fileURLToPath(
 const appVersion: string = existsSync(releaseNotesPath)
   ? (JSON.parse(readFileSync(releaseNotesPath, 'utf-8'))[0]?.version ?? '0.0.0')
   : '0.0.0'
+const workerCount = Math.max(1, Math.min(8, availableParallelism()))
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -36,8 +38,8 @@ export default defineConfig({
   test: {
     globals: true,
     pool: 'threads',
-    minWorkers: 8,
-    maxWorkers: 8,
+    minWorkers: workerCount,
+    maxWorkers: workerCount,
     silent: 'passed-only',
     coverage: {
       provider: 'v8',

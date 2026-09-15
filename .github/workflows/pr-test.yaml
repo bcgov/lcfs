@@ -483,10 +483,15 @@ jobs:
         run: echo "complete=true" >> $GITHUB_OUTPUT
 
   frontend-tests:
-    name: "Frontend Tests"
+    name: "Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})"
     needs: frontend-setup
     runs-on: ubuntu-latest
     if: needs.frontend-setup.outputs.setup-complete == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
     steps:
       - uses: actions/checkout@v6.0.2
         with:
@@ -519,22 +524,24 @@ jobs:
         id: frontend_tests
         run: |
           cd frontend
-          echo "=== Running full frontend test suite ==="
+          echo "=== Running frontend tests for shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} ==="
           npm run test:ci:memory
         env:
           CI: true
+          SHARD_INDEX: ${{ matrix.shardIndex }}
+          SHARD_TOTAL: ${{ matrix.shardTotal }}
 
       - name: Debug test failure details
         if: failure()
         run: |
           cd frontend
           echo "=== FRONTEND TEST FAILURE DEBUG ==="
-          echo "Failed full frontend test suite"
+          echo "Failed shard: ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}"
           echo "Memory settings: 8192MB (npm script)"
           echo "Environment: CI=$CI"
           echo ""
           echo "Getting detailed error information..."
-          node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=verbose || true
+          node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=verbose --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} || true
         env:
           CI: true
 
@@ -542,7 +549,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7.0.0
         with:
-          name: blob-report-full
+          name: blob-report-${{ matrix.shardIndex }}
           path: frontend/.vitest-reports/*
           include-hidden-files: true
           retention-days: 1
