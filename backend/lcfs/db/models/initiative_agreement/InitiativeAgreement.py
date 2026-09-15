@@ -151,6 +151,13 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     project_description = Column(
         Text, nullable=True, comment="Agreement brief / project summary"
     )
+    project_location = Column(
+        Text,
+        nullable=True,
+        comment=(
+            "Project location"
+        ),
+    )
     contact_name = Column(
         String(500), nullable=True, comment="Agreement contact person name"
     )
