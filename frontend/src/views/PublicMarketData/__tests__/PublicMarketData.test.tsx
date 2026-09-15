@@ -112,7 +112,6 @@ describe('PublicMarketData', () => {
 
   it('renders the CO2 impact band and report downloads', () => {
     render(<PublicMarketData />, { wrapper })
-    expect(screen.getByTestId('impact-callout')).toBeInTheDocument()
     expect(screen.getByTestId('annual-average-price-chart')).toBeInTheDocument()
     expect(screen.getByTestId('transfer-price-trend-chart')).toBeInTheDocument()
     expect(screen.getByTestId('trade-volume-chart')).toBeInTheDocument()

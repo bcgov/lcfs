@@ -15,12 +15,11 @@ import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined'
 import ReactECharts from 'echarts-for-react'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import {
-  useCreditMarketPublicReport,
-  useCreditMarketPublicOverview
-} from '@/hooks/useCreditMarket'
+import { useCreditMarketPublicReport } from '@/hooks/useCreditMarket'
 import BCButton from '@/components/BCButton'
 
 const NAVY = '#003366'
@@ -77,10 +76,6 @@ type PublicMarketReportPayload = {
   kpis: MarketReportKpis
   ytdKpis?: MarketReportKpis
   a1Kpis?: MarketReportKpis
-}
-
-type PublicOverviewPayload = {
-  totalCreditsIssued?: number
 }
 
 type DetailItem = {
@@ -459,10 +454,9 @@ const ReportSection = ({
 export const PublicMarketData = () => {
   const { t } = useTranslation()
   const { data: reportData, isLoading } = useCreditMarketPublicReport()
-  const { data: overviewData } = useCreditMarketPublicOverview('year')
   const data = reportData as PublicMarketReportPayload | undefined
-  const overview = overviewData as PublicOverviewPayload | undefined
   const [gran, setGran] = useState<Granularity>('quarter')
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
   const reportRef = useRef<HTMLDivElement | null>(null)
   const mainChartRef = useRef<ReactECharts | null>(null)
   const annualAvgChartRef = useRef<ReactECharts | null>(null)
@@ -521,9 +515,7 @@ export const PublicMarketData = () => {
     }))
   }, [data?.a1Monthly])
 
-  const totalCreditsIssued = overview?.totalCreditsIssued
-  const carsEquivalent =
-    totalCreditsIssued != null ? Math.round(totalCreditsIssued / 4.6) : null
+
 
   const chartOption = useMemo(() => {
     const priceName = t('publicDashboard.marketData.kpi.avgPrice')
@@ -840,8 +832,96 @@ export const PublicMarketData = () => {
     XLSX.writeFile(workbook, fileNameFor(key, 'xlsx'), { bookType: 'xlsx' })
   }
 
-  const downloadPdf = () => {
-    window.print()
+  const downloadPdf = async () => {
+    if (!reportRef.current || isExportingPdf) return
+    setIsExportingPdf(true)
+    try {
+      const node = reportRef.current
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        windowWidth: node.scrollWidth,
+        onclone: (clonedDoc) => {
+          // Export only the report itself: strip interactive/no-print chrome
+          // and force every accordion section fully open (regardless of its
+          // current on-screen expanded state) so the PDF always contains the
+          // complete report.
+          clonedDoc.querySelectorAll<HTMLElement>('.no-print').forEach((el) => {
+            el.style.display = 'none'
+          })
+          clonedDoc
+            .querySelectorAll<HTMLElement>('.MuiCollapse-root')
+            .forEach((el) => {
+              el.style.height = 'auto'
+              el.style.visibility = 'visible'
+            })
+          clonedDoc
+            .querySelectorAll<HTMLElement>('.MuiCollapse-wrapper')
+            .forEach((el) => {
+              el.style.display = 'block'
+            })
+          clonedDoc
+            .querySelectorAll<HTMLElement>('.print-table')
+            .forEach((el) => {
+              el.style.maxHeight = 'none'
+              el.style.overflow = 'visible'
+            })
+        }
+      })
+
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
+      const pageWidthMm = pdf.internal.pageSize.getWidth()
+      const pageHeightMm = pdf.internal.pageSize.getHeight()
+      const marginMm = 8
+      const contentWidthMm = pageWidthMm - marginMm * 2
+      const contentHeightMm = pageHeightMm - marginMm * 2
+
+      const pxPerMm = canvas.width / contentWidthMm
+      const pageHeightPx = Math.floor(contentHeightMm * pxPerMm)
+
+      let renderedPx = 0
+      let pageIndex = 0
+      while (renderedPx < canvas.height) {
+        const sliceHeightPx = Math.min(
+          pageHeightPx,
+          canvas.height - renderedPx
+        )
+        const pageCanvas = document.createElement('canvas')
+        pageCanvas.width = canvas.width
+        pageCanvas.height = sliceHeightPx
+        const ctx = pageCanvas.getContext('2d')
+        if (ctx) {
+          ctx.drawImage(
+            canvas,
+            0,
+            renderedPx,
+            canvas.width,
+            sliceHeightPx,
+            0,
+            0,
+            canvas.width,
+            sliceHeightPx
+          )
+        }
+        const sliceHeightMm = sliceHeightPx / pxPerMm
+        if (pageIndex > 0) pdf.addPage()
+        pdf.addImage(
+          pageCanvas.toDataURL('image/png'),
+          'PNG',
+          marginMm,
+          marginMm,
+          contentWidthMm,
+          sliceHeightMm
+        )
+        renderedPx += sliceHeightPx
+        pageIndex += 1
+      }
+
+      pdf.save(`lcfs-credit-market-report-${todayStamp()}.pdf`)
+    } finally {
+      setIsExportingPdf(false)
+    }
   }
 
   const reportTables = [
@@ -1044,8 +1124,15 @@ export const PublicMarketData = () => {
           <Button
             disableElevation
             onClick={downloadPdf}
+            disabled={isExportingPdf}
             data-test="download-pdf"
-            startIcon={<PictureAsPdfOutlinedIcon sx={{ fontSize: 18 }} />}
+            startIcon={
+              isExportingPdf ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <PictureAsPdfOutlinedIcon sx={{ fontSize: 18 }} />
+              )
+            }
             sx={{
               backgroundColor: '#fff',
               color: NAVY,
@@ -1059,7 +1146,9 @@ export const PublicMarketData = () => {
               '&:hover': { backgroundColor: '#F2F7FC' }
             }}
           >
-            {t('publicDashboard.marketData.downloadPdf')}
+            {isExportingPdf
+              ? t('publicDashboard.marketData.generatingPdf')
+              : t('publicDashboard.marketData.downloadPdf')}
           </Button>
         </BCBox>
       </BCBox>
@@ -1138,48 +1227,6 @@ export const PublicMarketData = () => {
           ))}
         </BCBox>
       </ReportSection>
-
-      {/* {totalCreditsIssued != null && totalCreditsIssued > 0 && (
-        <BCBox
-          data-test="impact-callout"
-          sx={{
-            backgroundColor: NAVY,
-            color: '#fff',
-            borderRadius: 2,
-            p: { xs: 2.5, md: 3 },
-            mb: 3,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2.5,
-            flexWrap: 'wrap'
-          }}
-        >
-          <EnergySavingsLeafOutlinedIcon sx={{ fontSize: 48, color: '#fff' }} />
-          <BCBox>
-            <BCTypography
-              variant="h2"
-              sx={{
-                fontSize: 40,
-                fontWeight: 700,
-                color: '#fff',
-                lineHeight: 1.1
-              }}
-            >
-              {compactFmt.format(totalCreditsIssued)}
-            </BCTypography>
-            <BCTypography sx={{ fontSize: 16, color: 'rgba(255,255,255,0.9)' }}>
-              {t('publicDashboard.impact.heading')}
-            </BCTypography>
-            <BCTypography
-              sx={{ fontSize: 13.5, color: 'rgba(255,255,255,0.8)', mt: 0.5 }}
-            >
-              {t('publicDashboard.impact.equivalent', {
-                cars: compactFmt.format(carsEquivalent ?? 0)
-              })}
-            </BCTypography>
-          </BCBox>
-        </BCBox>
-      )} */}
 
       <ReportSection
         title={t('publicDashboard.marketData.sections.activityAndStatistics')}

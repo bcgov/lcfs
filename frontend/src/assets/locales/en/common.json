@@ -89,6 +89,7 @@
       "aggregatedNote": "Aggregated · anonymized",
       "downloadExcel": "Download Excel",
       "downloadPdf": "Download PDF",
+      "generatingPdf": "Generating PDF…",
       "vsYearAgo": "vs {{period}}",
       "vsPreviousMonth": "vs. previous month: {{price}}",
       "sections": {
