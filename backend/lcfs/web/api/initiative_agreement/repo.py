@@ -1,8 +1,10 @@
+from datetime import date as date_type
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from fastapi import Depends
-from sqlalchemy import String, and_, asc, desc, func, select
+from sqlalchemy import Date as SADate
+from sqlalchemy import String, and_, asc, cast, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -92,6 +94,21 @@ DA_LIST_FIELD_COLUMNS = {
 DA_DATE_FIELDS = {"update_date"}
 
 
+def _parse_date(value: str) -> "date_type | None":
+    """
+    Parse an ISO-8601 date string (e.g. '2026-09-15' or '2026-09-15T00:00:00')
+    into a Python date object.  Returns None when the value is blank or
+    unparseable so callers can skip the filter rather than raise.
+    """
+    if not value:
+        return None
+    try:
+        # Accept both 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:MM:SS…'
+        return date_type.fromisoformat(str(value)[:10])
+    except (ValueError, TypeError):
+        return None
+
+
 def _build_list_filter(filter_model, columns=None, date_fields=None):
     """Translate one AG-Grid filter model into a SQLAlchemy condition."""
     columns = LIST_FIELD_COLUMNS if columns is None else columns
@@ -101,19 +118,22 @@ def _build_list_filter(filter_model, columns=None, date_fields=None):
         return None
 
     if filter_model.filter_type == "date" or filter_model.field in date_fields:
+        date_col = cast(column, SADate)
         if filter_model.type == "inRange":
-            return and_(
-                column >= filter_model.date_from, column <= filter_model.date_to
-            )
-        value = filter_model.date_from or filter_model.filter
+            date_from = _parse_date(filter_model.date_from)
+            date_to = _parse_date(filter_model.date_to)
+            if date_from is None or date_to is None:
+                return None
+            return and_(date_col >= date_from, date_col <= date_to)
+        value = _parse_date(filter_model.date_from or filter_model.filter)
         if value is None:
             return None
         if filter_model.type == "equals":
-            return column == value
+            return date_col == value
         if filter_model.type == "lessThan":
-            return column < value
+            return date_col < value
         if filter_model.type == "greaterThan":
-            return column > value
+            return date_col > value
         return None
 
     value = filter_model.filter
