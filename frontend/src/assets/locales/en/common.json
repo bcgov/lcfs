@@ -152,6 +152,18 @@
       },
       "chartTitle": "Price and volume over time",
       "chartSubtitle": "Volume-weighted average price per credit and credits traded",
+      "trendCharts": {
+        "annualAverageTitle": "Weighted Average Price A1 - annual trend line",
+        "transferPriceTitle": "Credit Transfer Price Trend",
+        "tradeVolumeTitle": "Credit Trade Volume",
+        "weightedAverage": "Weighted average",
+        "minimumPrice": "Min of Price Per Unit",
+        "maximumPrice": "Max of Price Per Unit",
+        "creditVolume": "Sum of Credit Quantity",
+        "month": "Month",
+        "transferDate": "Transfer Date",
+        "monthYear": "Month/Year"
+      },
       "granularity": {
         "month": "Monthly",
         "quarter": "Quarterly",

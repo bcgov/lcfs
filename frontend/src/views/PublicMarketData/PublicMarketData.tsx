@@ -475,6 +475,25 @@ export const PublicMarketData = () => {
   const kpis = data?.kpis
   const ytdKpis = data?.ytdKpis ?? kpis
   const allTime = data?.allTime
+  const a1AnnualRows = useMemo(() => {
+    const byYear = new Map<
+      string,
+      { volume: number; transferValue: number }
+    >()
+    for (const row of data?.a1Monthly ?? []) {
+      const year = row.period.slice(0, 4)
+      const current = byYear.get(year) ?? { volume: 0, transferValue: 0 }
+      current.volume += row.volume
+      current.transferValue += row.transferValue
+      byYear.set(year, current)
+    }
+    return Array.from(byYear, ([period, values]) => ({
+      period,
+      weightedAvgPrice: values.volume
+        ? values.transferValue / values.volume
+        : null
+    }))
+  }, [data?.a1Monthly])
 
   const totalCreditsIssued = overview?.totalCreditsIssued
   const carsEquivalent =
@@ -551,6 +570,154 @@ export const PublicMarketData = () => {
       ]
     }
   }, [series, t])
+
+  const annualAverageChartOption = useMemo(() => {
+    const annualRows = a1AnnualRows
+    const title = t(
+      'publicDashboard.marketData.trendCharts.annualAverageTitle'
+    )
+    return {
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params: TooltipParam[]) =>
+          `${params[0]?.axisValue ?? ''}<br/>${params
+            .map(
+              (p) =>
+                `${p.marker}${p.seriesName}: ${
+                  p.value == null ? '—' : price2Fmt.format(p.value)
+                }`
+            )
+            .join('<br/>')}`
+      },
+      title: { text: title, textStyle: { fontSize: 13, color: DARK } },
+      grid: { left: '10%', right: '5%', top: '20%', bottom: '15%' },
+      xAxis: { type: 'category', data: annualRows.map((p) => p.period) },
+      yAxis: {
+        type: 'value',
+        name: 'CA$',
+        axisLabel: { formatter: (value: number) => `CA$${value}` }
+      },
+      series: [
+        {
+          name: t('publicDashboard.marketData.trendCharts.weightedAverage'),
+          type: 'line',
+          smooth: false,
+          symbol: 'circle',
+          symbolSize: 6,
+          itemStyle: { color: '#4BA3E3' },
+          lineStyle: { color: '#4BA3E3', width: 2 },
+          data: annualRows.map((p) => p.weightedAvgPrice)
+        }
+      ]
+    }
+  }, [a1AnnualRows, t])
+
+  const transferPriceChartOption = useMemo(() => {
+    const annualRows = data?.annual ?? []
+    const priceSeries = [
+      {
+        name: t('publicDashboard.marketData.trendCharts.minimumPrice'),
+        color: '#9C7BC0',
+        values: annualRows.map((p) => p.minPrice)
+      },
+      {
+        name: t('publicDashboard.marketData.trendCharts.maximumPrice'),
+        color: '#E99B54',
+        values: annualRows.map((p) => p.maxPrice)
+      },
+      {
+        name: t('publicDashboard.marketData.trendCharts.weightedAverage'),
+        color: '#F2C94C',
+        values: annualRows.map((p) => p.weightedAvgPrice)
+      }
+    ]
+    return {
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params: TooltipParam[]) =>
+          `${params[0]?.axisValue ?? ''}<br/>${params
+            .map(
+              (p) =>
+                `${p.marker}${p.seriesName}: ${
+                  p.value == null ? '—' : price2Fmt.format(p.value)
+                }`
+            )
+            .join('<br/>')}`
+      },
+      title: {
+        text: t('publicDashboard.marketData.trendCharts.transferPriceTitle'),
+        textStyle: { fontSize: 13, color: DARK }
+      },
+      legend: {
+        data: priceSeries.map((s) => s.name),
+        top: 22,
+        textStyle: { fontSize: 10 }
+      },
+      grid: { left: '10%', right: '5%', top: '30%', bottom: '15%' },
+      xAxis: {
+        type: 'category',
+        data: annualRows.map((p) => p.period),
+        name: t('publicDashboard.marketData.trendCharts.transferDate')
+      },
+      yAxis: {
+        type: 'value',
+        name: 'CA$',
+        axisLabel: { formatter: (value: number) => `CA$${value}` }
+      },
+      series: priceSeries.map((s) => ({
+        name: s.name,
+        type: 'line',
+        symbol: 'circle',
+        symbolSize: 5,
+        connectNulls: true,
+        itemStyle: { color: s.color },
+        lineStyle: { color: s.color, width: 1.5 },
+        data: s.values
+      }))
+    }
+  }, [data?.annual, t])
+
+  const tradeVolumeChartOption = useMemo(() => {
+    const monthlyRows = data?.monthly ?? []
+    const visibleRows = monthlyRows.slice(-36)
+    return {
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params: TooltipParam[]) =>
+          `${params[0]?.axisValue ?? ''}<br/>${params
+            .map(
+              (p) =>
+                `${p.marker}${p.seriesName}: ${
+                  p.value == null ? '—' : intFmt.format(Math.round(p.value))
+                }`
+            )
+            .join('<br/>')}`
+      },
+      title: {
+        text: t('publicDashboard.marketData.trendCharts.tradeVolumeTitle'),
+        textStyle: { fontSize: 13, color: DARK }
+      },
+      grid: { left: '10%', right: '5%', top: '20%', bottom: '18%' },
+      xAxis: {
+        type: 'category',
+        data: visibleRows.map((p) => p.period),
+        name: t('publicDashboard.marketData.trendCharts.monthYear'),
+        axisLabel: { interval: 2 }
+      },
+      yAxis: {
+        type: 'value',
+        name: t('publicDashboard.marketData.trendCharts.creditVolume')
+      },
+      series: [
+        {
+          name: t('publicDashboard.marketData.trendCharts.creditVolume'),
+          type: 'bar',
+          itemStyle: { color: '#4BA3E3' },
+          data: visibleRows.map((p) => p.volume)
+        }
+      ]
+    }
+  }, [data?.monthly, t])
 
   const classificationItems = [
     {
@@ -910,7 +1077,7 @@ export const PublicMarketData = () => {
         </BCBox>
       </ReportSection>
 
-      {/* {totalCreditsIssued != null && totalCreditsIssued > 0 && (
+      {totalCreditsIssued != null && totalCreditsIssued > 0 && (
         <BCBox
           data-test="impact-callout"
           sx={{
@@ -950,7 +1117,7 @@ export const PublicMarketData = () => {
             </BCTypography>
           </BCBox>
         </BCBox>
-      )} */}
+      )}
 
       <ReportSection
         title={t('publicDashboard.marketData.sections.activityAndStatistics')}
@@ -1092,6 +1259,36 @@ export const PublicMarketData = () => {
           'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
         )}
       >
+        <BCBox
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+            gap: 1.5,
+            mb: 3
+          }}
+        >
+          <CardShell dataTest="annual-average-price-chart">
+            <ReactECharts
+              option={annualAverageChartOption}
+              style={{ height: 250 }}
+            />
+          </CardShell>
+          <CardShell dataTest="transfer-price-trend-chart">
+            <ReactECharts
+              option={transferPriceChartOption}
+              style={{ height: 250 }}
+            />
+          </CardShell>
+          <CardShell
+            dataTest="trade-volume-chart"
+            sx={{ gridColumn: { md: '1 / -1' } }}
+          >
+            <ReactECharts
+              option={tradeVolumeChartOption}
+              style={{ height: 250 }}
+            />
+          </CardShell>
+        </BCBox>
         <BCBox
           sx={{
             display: 'flex',
