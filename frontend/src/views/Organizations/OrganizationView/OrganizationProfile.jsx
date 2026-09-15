@@ -3,6 +3,7 @@ import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
+import { formatOrgAvailableRoles } from '@/constants/organizationRoles'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 import { useTranslation } from 'react-i18next'
 import { phoneNumberFormatter } from '@/utils/formatters'
@@ -41,17 +42,19 @@ export const OrganizationProfile = ({
 
           <BCTypography variant="body4">
             <strong>{t('org:orgTypeLabel')}:</strong>{' '}
-            {orgData?.orgType?.description || orgData?.orgType?.orgType}
-            {orgData?.orgType?.isBceidUser === true
-              ? ' (BCeID user)'
-              : orgData?.orgType?.isBceidUser === false
-                ? ' (non-BCeID user)'
-                : ''}
+            {(orgData?.orgTypes?.length
+              ? orgData.orgTypes
+              : orgData?.orgType
+                ? [orgData.orgType]
+                : []
+            )
+              .map((type) => type.description || type.orgType)
+              .join(', ')}
           </BCTypography>
 
           <BCTypography variant="body4">
-            <strong>{t('org:phoneNbrLabel')}:</strong>{' '}
-            {phoneNumberFormatter({ value: orgData?.phone })}
+            <strong>{t('org:rolesAvailableLabel')}:</strong>{' '}
+            {formatOrgAvailableRoles(orgData?.availableRoles) || '—'}
           </BCTypography>
 
           {orgData?.contactName && (
@@ -60,6 +63,10 @@ export const OrganizationProfile = ({
               {orgData.contactName}
             </BCTypography>
           )}
+          <BCTypography variant="body4">
+            <strong>{t('org:phoneNbrLabel')}:</strong>{' '}
+            {phoneNumberFormatter({ value: orgData?.phone })}
+          </BCTypography>
 
           <BCTypography variant="body4">
             <strong>{t('org:emailAddrLabel')}:</strong> {orgData?.email}

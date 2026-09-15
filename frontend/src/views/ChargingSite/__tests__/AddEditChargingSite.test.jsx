@@ -60,6 +60,33 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
       >
         Delete
       </button>
+      <button
+        onClick={() =>
+          props.onCellEditingStopped?.({
+            oldValue: 'Old Allocating Org',
+            newValue: '',
+            node: {
+              data: {
+                chargingSiteId: 123,
+                siteName: 'Site A',
+                streetAddress: '1 Main St',
+                city: 'Vancouver',
+                postalCode: 'V6B 1A1',
+                latitude: 49.28,
+                longitude: -123.12,
+                notes: '',
+                allocatingOrganizationId: null,
+                allocatingOrganizationName: '',
+                status: { status: 'Draft' }
+              },
+              updateData: vi.fn()
+            },
+            api: { autoSizeAllColumns: vi.fn() }
+          })
+        }
+      >
+        Clear Allocating Org
+      </button>
     </div>
   ))
 }))
@@ -189,5 +216,29 @@ describe('AddEditChargingSite', () => {
         })
       })
     )
+  })
+
+  it('sends a cleared allocating organization as explicit nulls', async () => {
+    // The backend treats a missing key as "unchanged", so clearing the field
+    // must reach it as null rather than being stripped with the other blanks.
+    render(
+      <AddEditChargingSite
+        {...mockProps}
+        isEditMode={true}
+        data={{ chargingSiteId: 123, siteName: 'Site A' }}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByText('Clear Allocating Org'))
+
+    await waitFor(() => expect(mockHandleScheduleSave).toHaveBeenCalled())
+    const { updatedData } = mockHandleScheduleSave.mock.calls[0][0]
+    expect(updatedData.allocatingOrganizationId).toBeNull()
+    expect(updatedData.allocatingOrganizationName).toBeNull()
+    expect(updatedData).toHaveProperty('allocatingOrganizationName')
+    // Other blank fields are still dropped from the payload.
+    expect(updatedData).not.toHaveProperty('notes')
+    expect(updatedData.siteName).toBe('Site A')
   })
 })

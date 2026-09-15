@@ -1,19 +1,28 @@
 import pytest
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+from sqlalchemy import select
 
 from lcfs.db.models.compliance import (
     CompliancePeriod,
     ComplianceReport,
+    ComplianceReportListView,
     ComplianceReportStatus,
     ComplianceReportHistory,
 )
-from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
+from lcfs.db.models.compliance.ComplianceReport import (
+    ReportingFrequency,
+    compliance_report_document_association,
+)
+from lcfs.db.models.document.Document import Document
 from lcfs.db.models.user import UserProfile
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     SortOrder,
 )
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportViewSchema,
@@ -108,6 +117,46 @@ async def test_get_compliance_report_not_found(compliance_report_repo):
     report = await compliance_report_repo.get_compliance_report_by_id(report_id=1000)
 
     assert report is None
+
+
+@pytest.mark.anyio
+async def test_get_supporting_document_count_includes_report_chain_documents(
+    dbsession,
+    compliance_report_repo,
+    compliance_reports,
+):
+    original_report = compliance_reports[0]
+    supplemental_report = ComplianceReport(
+        compliance_report_id=996,
+        compliance_period_id=original_report.compliance_period_id,
+        organization_id=original_report.organization_id,
+        nickname="supplemental",
+        reporting_frequency=original_report.reporting_frequency,
+        current_status_id=original_report.current_status_id,
+        compliance_report_group_uuid=original_report.compliance_report_group_uuid,
+        version=original_report.version + 1,
+    )
+    document = Document(
+        file_key="lcfs-docs/compliance_report/994/supporting.pdf",
+        file_name="supporting.pdf",
+        file_size=2048,
+        mime_type="application/pdf",
+    )
+    dbsession.add_all([supplemental_report, document])
+    await dbsession.flush()
+    await dbsession.execute(
+        compliance_report_document_association.insert().values(
+            compliance_report_id=original_report.compliance_report_id,
+            document_id=document.document_id,
+        )
+    )
+    await dbsession.commit()
+
+    count = await compliance_report_repo.get_supporting_document_count(
+        supplemental_report.compliance_report_id
+    )
+
+    assert count == 1
 
 
 @pytest.mark.anyio
@@ -241,6 +290,70 @@ async def test_get_reports_paginated_sort_by_assigned_analyst(
     assert len(reports) > 0
     assert isinstance(reports[0], ComplianceReportViewSchema)
     assert total_count >= len(reports)
+
+
+@pytest.mark.anyio
+async def test_get_reports_paginated_keeps_analyst_adjustment_visible_for_supplier(
+    compliance_report_repo, monkeypatch
+):
+    pagination = PaginationRequestSchema(
+        page=1,
+        size=10,
+        sort_orders=[],
+        filters=[],
+    )
+    supplier_user = SimpleNamespace(role_names=[RoleEnum.SUPPLIER], organization_id=1)
+
+    latest_visible_query = AsyncMock(return_value=select(ComplianceReportListView))
+    monkeypatch.setattr(
+        compliance_report_repo,
+        "get_latest_visible_reports_query",
+        latest_visible_query,
+    )
+    monkeypatch.setattr(
+        "lcfs.web.api.compliance_report.repo.paginate_with_window_count",
+        AsyncMock(return_value=([], 0)),
+    )
+
+    await compliance_report_repo.get_reports_paginated(pagination, supplier_user)
+
+    latest_visible_query.assert_awaited_once_with([], supplier_user.organization_id)
+
+
+@pytest.mark.anyio
+async def test_get_reports_paginated_excludes_analyst_adjustment_for_non_supplier_non_analyst(
+    compliance_report_repo, monkeypatch
+):
+    pagination = PaginationRequestSchema(
+        page=1,
+        size=10,
+        sort_orders=[],
+        filters=[],
+    )
+    government_user = SimpleNamespace(
+        role_names=[RoleEnum.GOVERNMENT], organization_id=None
+    )
+
+    latest_visible_query = AsyncMock(return_value=select(ComplianceReportListView))
+    monkeypatch.setattr(
+        compliance_report_repo,
+        "get_latest_visible_reports_query",
+        latest_visible_query,
+    )
+    monkeypatch.setattr(
+        "lcfs.web.api.compliance_report.repo.paginate_with_window_count",
+        AsyncMock(return_value=([], 0)),
+    )
+
+    await compliance_report_repo.get_reports_paginated(pagination, government_user)
+
+    latest_visible_query.assert_awaited_once_with(
+        [
+            ComplianceReportStatusEnum.Analyst_adjustment,
+            ComplianceReportStatusEnum.Draft,
+        ],
+        government_user.organization_id,
+    )
 
 
 @pytest.mark.anyio

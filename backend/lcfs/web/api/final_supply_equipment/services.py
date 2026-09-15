@@ -1,4 +1,3 @@
-import math
 import re
 from datetime import date, datetime
 from typing import List, Sequence
@@ -13,6 +12,7 @@ from lcfs.db.models.compliance import (
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import (
+    calculate_total_pages,
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
@@ -145,7 +145,7 @@ class FinalSupplyEquipmentServices:
                 page=pagination.page,
                 size=pagination.size,
                 total=total_count,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
             final_supply_equipments=[
                 await self.map_to_schema(fse) for fse in final_supply_equipments
@@ -539,6 +539,7 @@ class FinalSupplyEquipmentServices:
         pagination: PaginationRequestSchema,
         compliance_report_id: int = None,
         mode: str = "all",
+        source: str = "base_pref",
     ) -> dict:
         """
         Get paginated charging equipment with related charging site and FSE compliance reporting data
@@ -562,16 +563,23 @@ class FinalSupplyEquipmentServices:
         # query below (not a separate group-level aggregate, which could count
         # a different effective row set and diverge from the rows).
         total_kwh_usage = await self.repo.get_total_kwh_usage_for_report(
-            organization_id, report.compliance_report_id, mode
+            organization_id, report.compliance_report_id, mode, source=source
         )
 
         data, total = await self.repo.get_fse_reporting_list_paginated(
-            organization_id, pagination, report.compliance_report_id, mode
+            organization_id, pagination, report.compliance_report_id, mode, source=source
         )
 
         processed_data = []
         for item in data:
             row_dict = dict(item._mapping) if hasattr(item, "_mapping") else dict(item)
+            if source == "vw_fse_base":
+                row_dict["intended_uses"] = self._split_fse_base_text_list(
+                    row_dict.get("intended_uses")
+                )
+                row_dict["intended_users"] = self._split_fse_base_text_list(
+                    row_dict.get("intended_users")
+                )
             schemaData = FSEReportingSchema.model_validate(row_dict)
             processed_data.append(schemaData)
 
@@ -582,10 +590,18 @@ class FinalSupplyEquipmentServices:
                 page=pagination.page,
                 size=pagination.size,
                 total=total,
-                total_pages=math.ceil(total / pagination.size),
+                total_pages=calculate_total_pages(total, pagination.size),
             ),
             "hasChargingEquipment": has_equipment,
         }
+
+    @staticmethod
+    def _split_fse_base_text_list(value: str | list[str] | None) -> list[str]:
+        if isinstance(value, list):
+            return value
+        if not value:
+            return []
+        return [item.strip() for item in value.split(",") if item.strip()]
 
     @service_handler
     async def create_fse_reporting_batch(

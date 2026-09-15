@@ -1,5 +1,4 @@
 import io
-import math
 from datetime import datetime, timezone
 import structlog
 from typing import List
@@ -14,6 +13,7 @@ from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import (
+    calculate_total_pages,
     FilterModel,
     NotificationTypeEnum,
     PaginationRequestSchema,
@@ -34,6 +34,7 @@ from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.api.user.repo import UserRepository
 from fastapi_cache import FastAPICache
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.user.role_domains import allowed_roles_for_org
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.role.services import RoleServices
 from lcfs.settings import settings
@@ -171,7 +172,7 @@ class UserServices:
                 page=pagination.page,
                 size=pagination.size,
                 total_pages=(
-                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
+                    calculate_total_pages(total_count, pagination.size)
                 ),
             ),
             users=users,
@@ -241,6 +242,29 @@ class UserServices:
 
         return user_schema
 
+    async def _validate_roles_for_org(
+        self, roles: List[str], organization_id: int
+    ) -> None:
+        """Reject roles the organization has not been granted (#4565).
+
+        Always-available roles (Manage Users, Signing Authority, Read Only,
+        Supplier) pass regardless; org-controllable roles must be in the
+        organization's available-role set, and IA Signer requires IA Proponent
+        availability. Government roles are never valid for organization users.
+        """
+        if not organization_id or not roles:
+            return
+        requested = {r.lower() for r in roles}
+        requested_enums = {e for e in RoleEnum if e.value.lower() in requested}
+        available = await self.repo.get_organization_available_roles(organization_id)
+        invalid = requested_enums - allowed_roles_for_org(available)
+        if invalid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Role(s) not available for this organization: "
+                + ", ".join(sorted(e.value for e in invalid)),
+            )
+
     @service_handler
     async def create_user(self, user_create: UserCreateSchema) -> str:
         """
@@ -248,6 +272,11 @@ class UserServices:
         Other notifications are only auto-subscribed when
         AUTO_SUBSCRIBE_NOTIFICATIONS is True.
         """
+        if user_create.organization_id:
+            await self._validate_roles_for_org(
+                user_create.roles or [], user_create.organization_id
+            )
+
         user = await self.repo.create_user(user_create)
 
         user = await self.repo.get_user_by_id(user.user_profile_id)
@@ -301,6 +330,13 @@ class UserServices:
                     r for r in (user_create.roles or [])
                     if r.lower() != ia_signer_value_lower
                 ]
+
+        # Enforce the organization's available-role set (#4565). Runs after the
+        # IA Signer guard so a preserved assignment is validated too.
+        if user.organization:
+            await self._validate_roles_for_org(
+                user_create.roles or [], user.organization.organization_id
+            )
 
         # Snapshot old roles & active status
         old_roles = {RoleEnum(r) for r in user.role_names}
@@ -482,7 +518,7 @@ class UserServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
         )
 
@@ -516,7 +552,7 @@ class UserServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
         )
 
@@ -546,7 +582,7 @@ class UserServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
         )
 

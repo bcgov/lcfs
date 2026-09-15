@@ -258,9 +258,10 @@ export const chargingSiteColDefs = (
           data.allocatingOrganizationId = selectedOrg?.organizationId || null
           data.allocatingOrganizationName = selectedOrg?.name || null
         } else {
-          // If no match, only update the allocatingOrganizationName field
+          // Free text: no matched organization. An empty string means the
+          // user cleared the field, so store null rather than ''.
           data.allocatingOrganizationId = null
-          data.allocatingOrganizationName = selectedOrg
+          data.allocatingOrganizationName = selectedOrg || null
         }
 
         return true

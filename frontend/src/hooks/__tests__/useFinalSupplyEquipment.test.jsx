@@ -502,6 +502,34 @@ describe('useFinalSupplyEquipment', () => {
       )
     })
 
+    it('should include source in query params when provided', async () => {
+      const mockData = { fseReports: [], pagination: {} }
+      mockApiService.post.mockResolvedValue({ data: mockData })
+
+      const pagination = { page: 1, size: 10, filters: [], sort_orders: [] }
+      const { result } = renderHook(
+        () =>
+          useGetFSEReportingList(
+            123,
+            pagination,
+            {},
+            456,
+            'summary',
+            'vw_fse_base'
+          ),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockApiService.post).toHaveBeenCalledWith(
+        '/final-supply-equipments/reporting/list?organizationId=456&complianceReportId=123&mode=summary&source=vw_fse_base',
+        pagination
+      )
+    })
+
     it('should not fetch when organizationId is missing', () => {
       const pagination = { page: 1, size: 10, filters: [], sort_orders: [] }
       const { result } = renderHook(

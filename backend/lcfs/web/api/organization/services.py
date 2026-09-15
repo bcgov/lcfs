@@ -1,4 +1,3 @@
-import math
 import structlog
 from typing import List
 
@@ -11,6 +10,7 @@ from lcfs.web.api.user.repo import UserRepository
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.base import (
+    calculate_total_pages,
     FilterModel,
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -192,7 +192,7 @@ class OrganizationService:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
             users=users,
         )
@@ -227,6 +227,6 @@ class OrganizationService:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=calculate_total_pages(total_count, pagination.size),
             ),
         }

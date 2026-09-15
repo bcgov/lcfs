@@ -98,6 +98,50 @@ export const defaultSortModel: Array<{ colId: string; sort: string }> = [
   }
 ]
 
+// Labels for the listing fields that can appear in an audit entry's diff
+export const creditMarketAuditFieldLabels = (
+  t: (key: string, fallback?: string) => string
+): Record<string, string> => ({
+  credit_market_contact_name: t('creditMarket:contactName', 'Contact name'),
+  credit_market_contact_email: t('creditMarket:email', 'Email'),
+  credit_market_contact_phone: t('creditMarket:telephone', 'Telephone'),
+  credit_market_is_seller: t('creditMarket:seller', 'Seller'),
+  credit_market_is_buyer: t('creditMarket:buyer', 'Buyer'),
+  credits_to_sell: t('creditMarket:creditsToSell', 'Credits to sell'),
+  display_in_credit_market: t(
+    'creditMarket:displayInMarket',
+    'Display in credit trading market'
+  )
+})
+
+const formatAuditValue = (
+  value: unknown,
+  t: (key: string, fallback?: string) => string
+): string => {
+  if (value === null || value === undefined || value === '') {
+    return t('creditMarket:auditValueEmpty', '(blank)')
+  }
+  if (value === true) return t('creditMarket:auditValueYes', 'Yes')
+  if (value === false) return t('creditMarket:auditValueNo', 'No')
+  return String(value)
+}
+
+// Turn an audit entry's field-level diff into "Label: old → new" lines
+export const formatAuditChanges = (
+  changes: Array<{ field: string; oldValue?: unknown; newValue?: unknown }>,
+  t: (key: string, fallback?: string) => string
+): string[] => {
+  if (!Array.isArray(changes) || changes.length === 0) return []
+  const labels = creditMarketAuditFieldLabels(t)
+  return changes.map(
+    (change) =>
+      `${labels[change.field] ?? change.field}: ${formatAuditValue(
+        change.oldValue,
+        t
+      )} → ${formatAuditValue(change.newValue, t)}`
+  )
+}
+
 export const creditMarketAuditLogColDefs = (
   t: (key: string, fallback?: string) => string
 ): ColDef[] => [
@@ -109,6 +153,42 @@ export const creditMarketAuditLogColDefs = (
     sortable: true,
     filter: 'agTextColumnFilter',
     floatingFilter: true
+  },
+  {
+    headerName: t('creditMarket:action', 'Action'),
+    field: 'action',
+    flex: 1,
+    minWidth: 120,
+    sortable: true,
+    filter: 'agTextColumnFilter',
+    floatingFilter: true,
+    valueFormatter: (params) => params.value || 'N/A'
+  },
+  {
+    headerName: t('creditMarket:changes', 'Changes'),
+    field: 'changes',
+    flex: 2.5,
+    minWidth: 280,
+    sortable: false,
+    filter: false,
+    floatingFilter: false,
+    wrapText: true,
+    autoHeight: true,
+    valueGetter: (params) =>
+      formatAuditChanges(params.data?.changes, t).join('; '),
+    cellRenderer: (params) => {
+      const lines = formatAuditChanges(params.data?.changes, t)
+      if (lines.length === 0) {
+        return t('creditMarket:noChangeDetails', 'Not recorded')
+      }
+      return (
+        <div data-test="audit-changes">
+          {lines.map((line) => (
+            <div key={line}>{line}</div>
+          ))}
+        </div>
+      )
+    }
   },
   {
     headerName: t('creditMarket:creditsToSell', 'Credits to sell'),

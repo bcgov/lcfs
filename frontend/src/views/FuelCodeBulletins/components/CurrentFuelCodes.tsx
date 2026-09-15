@@ -96,7 +96,11 @@ export const CurrentFuelCodes = () => {
         </BCAlert>
       )}
 
-      <BCTypography variant="h5" color="primary">
+      <BCTypography
+        variant="h5"
+        color="primary"
+        data-test="current-fuel-codes-title"
+      >
         {isIdirView ? t('current.idirTitle') : t('current.title')}
       </BCTypography>
 

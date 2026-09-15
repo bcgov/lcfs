@@ -144,6 +144,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const isGovernmentUser = currentUser?.isGovernmentUser
   const isIdirUser =
     isGovernmentUser && !currentUser?.organization?.organizationId
+  const isAdminRole = hasRoles(roles.administrator)
   const currentStatus = reportData?.report?.currentStatus?.status
   const canEdit =
     (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT &&
@@ -849,7 +850,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           </BCTypography>
         </BCBox>
         <Stack direction="column" mt={2}>
-          {isDeterministicReportSummaryEnabled &&
+          {(isDeterministicReportSummaryEnabled || isAdminRole) &&
             isIdirUser &&
             !location.state?.newReport && (
               <BCBox

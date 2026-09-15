@@ -92,7 +92,11 @@ export const ArchivedFuelCodes = () => {
           {downloadError || error?.message || t('common.errorLoading')}
         </BCAlert>
       )}
-      <BCTypography variant="h5" color="primary">
+      <BCTypography
+        variant="h5"
+        color="primary"
+        data-test="archived-fuel-codes-title"
+      >
         {isIdirView ? t('archived.idirTitle') : t('archived.title')}
       </BCTypography>
 
