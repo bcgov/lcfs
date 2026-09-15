@@ -633,6 +633,14 @@ export const PublicMarketData = () => {
           symbolSize: 6,
           itemStyle: { color: '#4BA3E3' },
           lineStyle: { color: '#4BA3E3', width: 2 },
+          label: {
+            show: true,
+            position: 'top',
+            fontSize: 10,
+            color: DARK,
+            formatter: (p: { value: number | null }) =>
+              p.value == null ? '' : price2Fmt.format(p.value)
+          },
           data: annualRows.map((p) => p.weightedAvgPrice)
         }
       ]
@@ -700,6 +708,14 @@ export const PublicMarketData = () => {
         connectNulls: true,
         itemStyle: { color: s.color },
         lineStyle: { color: s.color, width: 1.5 },
+        label: {
+          show: true,
+          position: 'top',
+          fontSize: 9,
+          color: DARK,
+          formatter: (p: { value: number | null }) =>
+            p.value == null ? '' : price2Fmt.format(p.value)
+        },
         data: s.values
       }))
     }
@@ -741,6 +757,16 @@ export const PublicMarketData = () => {
           name: t('publicDashboard.marketData.trendCharts.creditVolume'),
           type: 'bar',
           itemStyle: { color: '#4BA3E3' },
+          label: {
+            show: true,
+            position: 'top',
+            fontSize: 9,
+            color: DARK,
+            formatter: (p: { value: number | null; dataIndex: number }) => {
+              if (p.value == null) return ''
+              return p.dataIndex % 3 === 0 ? compactFmt.format(p.value) : ''
+            }
+          },
           data: visibleRows.map((p) => p.volume)
         }
       ]
