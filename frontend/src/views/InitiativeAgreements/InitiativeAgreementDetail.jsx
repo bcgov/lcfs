@@ -170,6 +170,10 @@ const InitiativeAgreementDetailBase = () => {
                     label={t('initiativeAgreement:detail.endDate')}
                     value={dateFormatter({ value: agreement.agreementEndDate })}
                   />
+                  <LabelValue
+                    label={t('initiativeAgreement:detail.projectLocation')}
+                    value={agreement.projectLocation}
+                  />
                 </Stack>
               </Grid2>
             </Grid2>
