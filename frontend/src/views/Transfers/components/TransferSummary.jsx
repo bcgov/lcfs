@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { Stack } from '@mui/material'
+import Stack from '@mui/material/Stack'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import {

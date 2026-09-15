@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { Navbar } from '../Navbar'
-import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useMediaQuery, useTheme } from '@mui/material'
-import { wrapper } from '@/tests/utils/wrapper'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import useTheme from '@mui/material/styles/useTheme'
+import { test } from '@/tests/utils/fixtures'
 import { roles } from '@/constants/roles'
 
 vi.mock('@/hooks/useCurrentUser')
@@ -12,14 +13,8 @@ vi.mock('react-i18next', () => ({
     t: (key) => key
   })
 }))
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material')
-  return {
-    ...actual,
-    useTheme: vi.fn(),
-    useMediaQuery: vi.fn()
-  }
-})
+vi.mock('@mui/material/useMediaQuery', () => ({ default: vi.fn() }))
+vi.mock('@mui/material/styles/useTheme', () => ({ default: vi.fn() }))
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: vi.fn().mockReturnValue({
@@ -50,7 +45,7 @@ describe('Navbar', () => {
     ]
   }
 
-  beforeEach(() => {
+  test.beforeEach(() => {
     mockedUseCurrentUser.mockReturnValue({
       data: mockUser,
       hasRoles: (role) =>
@@ -69,13 +64,23 @@ describe('Navbar', () => {
     })
   })
 
-  it('renders correctly with the expected title', () => {
-    render(<Navbar />, { wrapper })
+  test('renders correctly with the expected title', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<Navbar />, [query, theme, router])
     expect(screen.getByTestId('bc-navbar')).toBeInTheDocument()
   })
 
-  it('displays the correct navigation menu items for government users', () => {
-    render(<Navbar />, { wrapper })
+  test('displays the correct navigation menu items for government users', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<Navbar />, [query, theme, router])
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Organizations')).toBeInTheDocument()
@@ -85,9 +90,14 @@ describe('Navbar', () => {
     expect(screen.getByText('Administration')).toBeInTheDocument() // Admin role allows this
   })
 
-  it('displays the correct navigation menu items for non-government users', () => {
+  test('displays the correct navigation menu items for non-government users', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockUser.isGovernmentUser = false
-    render(<Navbar />, { wrapper })
+    render(<Navbar />, [query, theme, router])
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.queryByText('Organizations')).not.toBeInTheDocument() // Should not be present
@@ -95,7 +105,12 @@ describe('Navbar', () => {
     expect(screen.getByText('Organization')).toBeInTheDocument()
   })
 
-  it('displays compliance reporting for non-government users with compliance reporting role', () => {
+  test('displays compliance reporting for non-government users with compliance reporting role', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockUser.isGovernmentUser = false
     mockUser.roles = [
       {
@@ -106,7 +121,7 @@ describe('Navbar', () => {
       }
     ]
 
-    render(<Navbar />, { wrapper })
+    render(<Navbar />, [query, theme, router])
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.queryByText('Organizations')).not.toBeInTheDocument() // Should not be present
@@ -115,8 +130,8 @@ describe('Navbar', () => {
     expect(screen.getByText('Organization')).toBeInTheDocument()
   })
 
-  it('renders logout component', () => {
-    render(<Navbar />, { wrapper })
+  test('renders logout component', ({ render, query, theme, router }) => {
+    render(<Navbar />, [query, theme, router])
     expect(screen.getByText('logout')).toBeInTheDocument() // Assuming Logout component has this text
   })
 
@@ -131,24 +146,32 @@ describe('Navbar', () => {
       })
     }
 
-    it.each([
+    test.for<[string, string, boolean]>([
       ['Director', roles.director, true],
       ['IA Analyst', roles.ia_analyst, true],
       ['IA Manager', roles.ia_manager, true],
       ['IA Proponent (BCeID)', roles.ia_proponent, false]
-    ])('shows tab for %s', (_, role, isGovernmentUser) => {
-      mockNavUser([role], isGovernmentUser)
-      render(<Navbar />, { wrapper })
-      expect(screen.getByText('InitiativeAgreements')).toBeInTheDocument()
-    })
+    ])(
+      'shows tab for %s',
+      ([, role, isGovernmentUser], { render, query, theme, router }) => {
+        mockNavUser([role], isGovernmentUser)
+        render(<Navbar />, [query, theme, router])
+        expect(screen.getByText('InitiativeAgreements')).toBeInTheDocument()
+      }
+    )
 
-    it.each([
+    test.for<[string, string, boolean]>([
       ['Analyst (IDIR)', roles.analyst, true],
       ['Compliance Reporting (BCeID)', roles.compliance_reporting, false]
-    ])('hides tab for %s', (_, role, isGovernmentUser) => {
-      mockNavUser([role], isGovernmentUser)
-      render(<Navbar />, { wrapper })
-      expect(screen.queryByText('InitiativeAgreements')).not.toBeInTheDocument()
-    })
+    ])(
+      'hides tab for %s',
+      ([, role, isGovernmentUser], { render, query, theme, router }) => {
+        mockNavUser([role], isGovernmentUser)
+        render(<Navbar />, [query, theme, router])
+        expect(
+          screen.queryByText('InitiativeAgreements')
+        ).not.toBeInTheDocument()
+      }
+    )
   })
 })

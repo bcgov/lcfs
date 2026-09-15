@@ -2,12 +2,10 @@
  * @file constants.js
  * @description Constants and configuration for FSE Map components
  */
-import {
-  Check as CheckIcon,
-  Schedule as PendingIcon,
-  Edit as DraftIcon,
-  Block as BlockIcon
-} from '@mui/icons-material'
+import CheckIcon from '@mui/icons-material/Check'
+import PendingIcon from '@mui/icons-material/Schedule'
+import DraftIcon from '@mui/icons-material/Edit'
+import BlockIcon from '@mui/icons-material/Block'
 
 /**
  * Theme configuration following BC Government design standards

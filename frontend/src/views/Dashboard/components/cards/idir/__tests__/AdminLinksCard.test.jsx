@@ -1,10 +1,10 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ROUTES } from '@/routes/routes'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock dependencies
 vi.mock('react-router-dom', () => ({
@@ -32,10 +32,10 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
   __esModule: true,
   default: ({ component, color, icon, title, content }) => (
-    <div 
+    <div
       data-test="bc-widget-card"
       data-component={component}
-      data-color={color} 
+      data-color={color}
       data-icon={icon}
     >
       <div data-test="widget-title">{title}</div>
@@ -47,7 +47,7 @@ vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
   default: ({ variant, component, color, sx, children }) => (
-    <span 
+    <span
       data-test="bc-typography"
       data-variant={variant}
       data-component={component}
@@ -59,14 +59,16 @@ vi.mock('@/components/BCTypography', () => ({
   )
 }))
 
-vi.mock('@mui/material', () => ({
-  List: ({ component, sx, children }) => (
+vi.mock('@mui/material/List', () => ({
+  default: ({ component, sx, children }) => (
     <div data-test="mui-list" data-component={component} style={sx}>
       {children}
     </div>
-  ),
-  ListItemButton: ({ component, alignItems, onClick, children }) => (
-    <button 
+  )
+}))
+vi.mock('@mui/material/ListItemButton', () => ({
+  default: ({ component, alignItems, onClick, children }) => (
+    <button
       data-test="mui-list-item-button"
       data-component={component}
       data-align-items={alignItems}
@@ -104,16 +106,18 @@ describe('AdminLinksCard Component', () => {
     )
   })
 
-  it('renders the component with correct structure', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('renders the component with correct structure', ({ render, query }) => {
+    render(<AdminLinksCard />, [query])
 
     expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
-    expect(screen.getByTestId('widget-title')).toHaveTextContent('Administration')
+    expect(screen.getByTestId('widget-title')).toHaveTextContent(
+      'Administration'
+    )
     expect(screen.getByTestId('mui-list')).toBeInTheDocument()
   })
 
-  it('renders all admin links correctly', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('renders all admin links correctly', ({ render, query }) => {
+    render(<AdminLinksCard />, [query])
 
     // Check all four admin links are rendered
     expect(screen.getByText('Manage Government Users')).toBeInTheDocument()
@@ -126,45 +130,62 @@ describe('AdminLinksCard Component', () => {
     expect(listItemButtons).toHaveLength(4)
   })
 
-  it('uses correct translation keys', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('uses correct translation keys', ({ render, query }) => {
+    render(<AdminLinksCard />, [query])
 
     expect(mockT).toHaveBeenCalledWith('dashboard:adminLinks.administration')
     expect(mockT).toHaveBeenCalledWith('dashboard:adminLinks.mngGovUsrsLabel')
     expect(mockT).toHaveBeenCalledWith('dashboard:adminLinks.addEditOrgsLabel')
     expect(mockT).toHaveBeenCalledWith('dashboard:adminLinks.usrActivity')
-    expect(mockT).toHaveBeenCalledWith('dashboard:adminLinks.loginScreenBackground')
+    expect(mockT).toHaveBeenCalledWith(
+      'dashboard:adminLinks.loginScreenBackground'
+    )
   })
 
-  it('navigates to admin users list when first link is clicked', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('navigates to admin users list when first link is clicked', ({
+    render,
+    query
+  }) => {
+    render(<AdminLinksCard />, [query])
 
-    const manageUsersButton = screen.getByText('Manage Government Users').closest('button')
+    const manageUsersButton = screen
+      .getByText('Manage Government Users')
+      .closest('button')
     fireEvent.click(manageUsersButton)
 
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ADMIN.USERS.LIST)
   })
 
-  it('navigates to organizations list when second link is clicked', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('navigates to organizations list when second link is clicked', ({
+    render,
+    query
+  }) => {
+    render(<AdminLinksCard />, [query])
 
-    const organizationsButton = screen.getByText('Add/Edit Organizations').closest('button')
+    const organizationsButton = screen
+      .getByText('Add/Edit Organizations')
+      .closest('button')
     fireEvent.click(organizationsButton)
 
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST)
   })
 
-  it('navigates to user activity when third link is clicked', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('navigates to user activity when third link is clicked', ({
+    render,
+    query
+  }) => {
+    render(<AdminLinksCard />, [query])
 
-    const userActivityButton = screen.getByText('User Activity').closest('button')
+    const userActivityButton = screen
+      .getByText('User Activity')
+      .closest('button')
     fireEvent.click(userActivityButton)
 
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ADMIN.USER_ACTIVITY)
   })
 
-  it('renders BCWidgetCard with correct props', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('renders BCWidgetCard with correct props', ({ render, query }) => {
+    render(<AdminLinksCard />, [query])
 
     const widgetCard = screen.getByTestId('bc-widget-card')
     expect(widgetCard).toHaveAttribute('data-component', 'div')
@@ -172,72 +193,89 @@ describe('AdminLinksCard Component', () => {
     expect(widgetCard).toHaveAttribute('data-icon', 'admin')
   })
 
-  it('renders List component with correct props', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('renders List component with correct props', ({ render, query }) => {
+    render(<AdminLinksCard />, [query])
 
     const list = screen.getByTestId('mui-list')
     expect(list).toHaveAttribute('data-component', 'div')
     expect(list).toHaveStyle({ maxWidth: '100%' })
   })
 
-  it('renders ListItemButton components with correct props', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('renders ListItemButton components with correct props', ({
+    render,
+    query
+  }) => {
+    render(<AdminLinksCard />, [query])
 
     const listItemButtons = screen.getAllByTestId('mui-list-item-button')
-    
-    listItemButtons.forEach(button => {
+
+    listItemButtons.forEach((button) => {
       expect(button).toHaveAttribute('data-component', 'a')
       expect(button).toHaveAttribute('data-align-items', 'flex-start')
     })
   })
 
-  it('renders BCTypography components with correct props', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('renders BCTypography components with correct props', ({
+    render,
+    query
+  }) => {
+    render(<AdminLinksCard />, [query])
 
     const typographyElements = screen.getAllByTestId('bc-typography')
-    
-    typographyElements.forEach(element => {
+
+    typographyElements.forEach((element) => {
       expect(element).toHaveAttribute('data-variant', 'subtitle2')
       expect(element).toHaveAttribute('data-component', 'p')
       expect(element).toHaveAttribute('data-color', 'link')
     })
   })
 
-  it('applies withRole HOC during component initialization', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('applies withRole HOC during component initialization', ({
+    render,
+    query
+  }) => {
+    render(<AdminLinksCard />, [query])
 
     // Component should render successfully, indicating withRole mock worked
     expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
   })
 
-  it('creates adminLinks array with useMemo hook', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('creates adminLinks array with useMemo hook', ({ render, query }) => {
+    render(<AdminLinksCard />, [query])
 
     // Verify that all expected links are present by checking navigation calls
     const buttons = screen.getAllByTestId('mui-list-item-button')
-    
+
     // Click each button to verify the routes are set up correctly
     fireEvent.click(buttons[0])
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ADMIN.USERS.LIST)
-    
+
     fireEvent.click(buttons[1])
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST)
-    
+
     fireEvent.click(buttons[2])
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ADMIN.USER_ACTIVITY)
 
     fireEvent.click(buttons[3])
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND)
+    expect(mockNavigate).toHaveBeenCalledWith(
+      ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND
+    )
   })
 
-  it('uses useTranslation hook with correct namespace', () => {
-    render(<AdminLinksCard />, { wrapper })
+  test('uses useTranslation hook with correct namespace', ({
+    render,
+    query
+  }) => {
+    render(<AdminLinksCard />, [query])
 
     expect(useTranslation).toHaveBeenCalledWith(['dashboard'])
   })
 
-  it('memoizes adminLinks based on translation function', () => {
-    const { rerender } = render(<AdminLinksCard />, { wrapper })
+  test('memoizes adminLinks based on translation function', ({
+    render,
+    query
+  }) => {
+    const { rerender } = render(<AdminLinksCard />, [query])
 
     // Reset mock to track calls from rerender
     mockT.mockClear()
@@ -250,10 +288,13 @@ describe('AdminLinksCard Component', () => {
   })
 
   describe('Role-based link visibility', () => {
-    it('hides the login screen background link from administrators without system admin', () => {
+    test('hides the login screen background link from administrators without system admin', ({
+      render,
+      query
+    }) => {
       mockHasRoles.mockImplementation((role) => role === roles.administrator)
 
-      render(<AdminLinksCard />, { wrapper })
+      render(<AdminLinksCard />, [query])
 
       expect(screen.getByText('Manage Government Users')).toBeInTheDocument()
       expect(screen.getByText('Add/Edit Organizations')).toBeInTheDocument()
@@ -266,10 +307,13 @@ describe('AdminLinksCard Component', () => {
       expect(listItemButtons).toHaveLength(3)
     })
 
-    it('shows only the login screen background link for system admins', () => {
+    test('shows only the login screen background link for system admins', ({
+      render,
+      query
+    }) => {
       mockHasRoles.mockImplementation((role) => role === roles.system_admin)
 
-      render(<AdminLinksCard />, { wrapper })
+      render(<AdminLinksCard />, [query])
 
       expect(
         screen.queryByText('Manage Government Users')
@@ -284,10 +328,13 @@ describe('AdminLinksCard Component', () => {
       expect(listItemButtons).toHaveLength(1)
     })
 
-    it('renders nothing for government users without admin privileges', () => {
+    test('renders nothing for government users without admin privileges', ({
+      render,
+      query
+    }) => {
       mockHasRoles.mockReturnValue(false)
 
-      const { container } = render(<AdminLinksCard />, { wrapper })
+      const { container } = render(<AdminLinksCard />, [query])
 
       expect(container).toBeEmptyDOMElement()
     })

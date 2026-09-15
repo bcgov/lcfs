@@ -35,10 +35,8 @@ import Loading from '@/components/Loading'
 import { ROUTES } from '@/routes/routes'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
-import {
-  AddressAutocomplete,
-  BCFormCheckbox
-} from '@/components/BCForm/index.js'
+import { AddressAutocomplete } from '@/components/BCForm/AddressAutocomplete'
+import { BCFormCheckbox } from '@/components/BCForm/BCFormCheckbox'
 import {
   orgAvailableRoleOptions,
   orgTypeDefaultRoles,
@@ -174,7 +172,9 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       return
     }
     const newKeys = orgTypes
-      .filter((type) => newlyChecked.includes(type.organizationTypeId.toString()))
+      .filter((type) =>
+        newlyChecked.includes(type.organizationTypeId.toString())
+      )
       .map((type) => type.orgType)
     const currentRoles = watch('availableRoles') || []
     const additions = suggestedRolesForTypes(newKeys, currentRoles)

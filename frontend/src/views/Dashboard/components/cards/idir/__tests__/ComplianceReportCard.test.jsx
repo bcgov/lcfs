@@ -1,9 +1,9 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { ComplianceReportCard } from '../ComplianceReportCard'
 import { useComplianceReportCounts } from '@/hooks/useDashboard'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
@@ -67,39 +67,51 @@ describe('ComplianceReportCard Component', () => {
     })
   })
 
-  it('renders loading state correctly', () => {
+  test('renders loading state correctly', ({ render, query, theme }) => {
     useComplianceReportCounts.mockReturnValue({
       data: null,
       isLoading: true
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
-    const loadingElement = screen.getByText('dashboard:complianceReports.loadingMessage')
+    const loadingElement = screen.getByText(
+      'dashboard:complianceReports.loadingMessage'
+    )
     expect(loadingElement).toBeInTheDocument()
   })
 
-  it('renders with counts data', () => {
+  test('renders with counts data', ({ render, query, theme }) => {
     useComplianceReportCounts.mockReturnValue({
       data: { pendingReviews: 5 },
       isLoading: false
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
-    expect(screen.getByText('dashboard:complianceReports.title')).toBeInTheDocument()
+    expect(
+      screen.getByText('dashboard:complianceReports.title')
+    ).toBeInTheDocument()
     expect(screen.getByText('5')).toBeInTheDocument()
-    expect(screen.getByText('dashboard:complianceReports.thereAre')).toBeInTheDocument()
-    expect(screen.getByText('dashboard:complianceReports.crInProgress')).toBeInTheDocument()
+    expect(
+      screen.getByText('dashboard:complianceReports.thereAre')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('dashboard:complianceReports.crInProgress')
+    ).toBeInTheDocument()
   })
 
-  it('navigates to reports page on link click with correct filter', () => {
+  test('navigates to reports page on link click with correct filter', ({
+    render,
+    query,
+    theme
+  }) => {
     useComplianceReportCounts.mockReturnValue({
       data: { pendingReviews: 5 },
       isLoading: false
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
     // Find and click the link
     const link = screen.getByText('dashboard:complianceReports.crInProgress')
@@ -126,35 +138,43 @@ describe('ComplianceReportCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.LIST)
   })
 
-  it('handles zero counts correctly', () => {
+  test('handles zero counts correctly', ({ render, query, theme }) => {
     useComplianceReportCounts.mockReturnValue({
       data: { pendingReviews: 0 },
       isLoading: false
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
     expect(screen.getByText('0')).toBeInTheDocument()
   })
 
-  it('handles null/undefined counts correctly', () => {
+  test('handles null/undefined counts correctly', ({
+    render,
+    query,
+    theme
+  }) => {
     useComplianceReportCounts.mockReturnValue({
       data: { pendingReviews: null },
       isLoading: false
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
     expect(screen.getByText('0')).toBeInTheDocument()
   })
 
-  it('navigates to calculator when calculator link is clicked', () => {
+  test('navigates to calculator when calculator link is clicked', ({
+    render,
+    query,
+    theme
+  }) => {
     useComplianceReportCounts.mockReturnValue({
       data: { pendingReviews: 3 },
       isLoading: false
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
     // Find calculator link by its text
     const calculatorLink = screen.getByText('report:calcTitle')
@@ -163,77 +183,105 @@ describe('ComplianceReportCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CREDIT_CALCULATOR)
   })
 
-  it('renders CountDisplay component correctly', () => {
+  test('renders CountDisplay component correctly', ({
+    render,
+    query,
+    theme
+  }) => {
     useComplianceReportCounts.mockReturnValue({
       data: { pendingReviews: 42 },
       isLoading: false
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
     const countElement = screen.getByText('42')
     expect(countElement).toBeInTheDocument()
   })
 
-  it('calls translation hook with correct keys', () => {
+  test('calls translation hook with correct keys', ({
+    render,
+    query,
+    theme
+  }) => {
     useComplianceReportCounts.mockReturnValue({
       data: { pendingReviews: 1 },
       isLoading: false
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
     expect(mockT).toHaveBeenCalledWith('dashboard:complianceReports.title')
     expect(mockT).toHaveBeenCalledWith('dashboard:complianceReports.thereAre')
-    expect(mockT).toHaveBeenCalledWith('dashboard:complianceReports.crInProgress')
+    expect(mockT).toHaveBeenCalledWith(
+      'dashboard:complianceReports.crInProgress'
+    )
     expect(mockT).toHaveBeenCalledWith('report:calcTitle')
   })
 
-  it('calls translation hook for loading message when loading', () => {
+  test('calls translation hook for loading message when loading', ({
+    render,
+    query,
+    theme
+  }) => {
     useComplianceReportCounts.mockReturnValue({
       data: null,
       isLoading: true
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
-    expect(mockT).toHaveBeenCalledWith('dashboard:complianceReports.loadingMessage')
+    expect(mockT).toHaveBeenCalledWith(
+      'dashboard:complianceReports.loadingMessage'
+    )
   })
 
-  it('calls useComplianceReportCounts hook', () => {
+  test('calls useComplianceReportCounts hook', ({ render, query, theme }) => {
     useComplianceReportCounts.mockReturnValue({
       data: { pendingReviews: 1 },
       isLoading: false
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
     expect(useComplianceReportCounts).toHaveBeenCalled()
   })
 
-  it('renders renderLinkWithCount function with count display', () => {
+  test('renders renderLinkWithCount function with count display', ({
+    render,
+    query,
+    theme
+  }) => {
     useComplianceReportCounts.mockReturnValue({
       data: { pendingReviews: 15 },
       isLoading: false
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
     // Test that both count and link text are rendered
     expect(screen.getByText('15')).toBeInTheDocument()
-    expect(screen.getByText('dashboard:complianceReports.crInProgress')).toBeInTheDocument()
+    expect(
+      screen.getByText('dashboard:complianceReports.crInProgress')
+    ).toBeInTheDocument()
   })
 
-  it('handles click on compliance reports link text', () => {
+  test('handles click on compliance reports link text', ({
+    render,
+    query,
+    theme
+  }) => {
     useComplianceReportCounts.mockReturnValue({
       data: { pendingReviews: 8 },
       isLoading: false
     })
 
-    render(<ComplianceReportCard />, { wrapper })
+    render(<ComplianceReportCard />, [query, theme])
 
     // Click the link text itself (not the list item)
-    const linkText = screen.getByText('dashboard:complianceReports.crInProgress')
+    const linkText = screen.getByText(
+      'dashboard:complianceReports.crInProgress'
+    )
     fireEvent.click(linkText)
 
     const expectedFilter = {

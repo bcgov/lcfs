@@ -4,19 +4,17 @@ import {
   formatNumberWithCommas,
   numberFormatter
 } from '@/utils/formatters'
-import {
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Input,
-  InputAdornment,
-  CircularProgress,
-  Tooltip
-} from '@mui/material'
+import Paper from '@mui/material/Paper'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import Input from '@mui/material/Input'
+import InputAdornment from '@mui/material/InputAdornment'
+import CircularProgress from '@mui/material/CircularProgress'
+import Tooltip from '@mui/material/Tooltip'
 
 const SummaryTable = ({
   title,
@@ -137,10 +135,18 @@ const SummaryTable = ({
     }
 
     // Apply constraints validation
-    if (value !== '' && constraints.max !== undefined && parseInt(value) > constraints.max) {
+    if (
+      value !== '' &&
+      constraints.max !== undefined &&
+      parseInt(value) > constraints.max
+    ) {
       value = constraints.max
     }
-    if (value !== '' && constraints.min !== undefined && parseInt(value) < constraints.min) {
+    if (
+      value !== '' &&
+      constraints.min !== undefined &&
+      parseInt(value) < constraints.min
+    ) {
       value = constraints.min
     }
 
@@ -159,7 +165,9 @@ const SummaryTable = ({
 
         // If user enters a non-zero value in Line 7, zero out Line 9 in same column
         if (lineNumber === 7 && numericValue !== 0) {
-          const line9Index = newData.findIndex(row => parseInt(row?.line) === 9)
+          const line9Index = newData.findIndex(
+            (row) => parseInt(row?.line) === 9
+          )
           if (line9Index !== -1) {
             newData[line9Index] = { ...newData[line9Index], [columnId]: 0 }
           }
@@ -167,7 +175,9 @@ const SummaryTable = ({
 
         // If user enters a non-zero value in Line 9, zero out Line 7 in same column
         if (lineNumber === 9 && numericValue !== 0) {
-          const line7Index = newData.findIndex(row => parseInt(row?.line) === 7)
+          const line7Index = newData.findIndex(
+            (row) => parseInt(row?.line) === 7
+          )
           if (line7Index !== -1) {
             newData[line7Index] = { ...newData[line7Index], [columnId]: 0 }
           }
@@ -207,7 +217,9 @@ const SummaryTable = ({
         setData((prevData) => {
           const newData = [...prevData]
           const numValue =
-            currentValue === '' || currentValue === 0 ? 0 : parseFloat(currentValue) || 0
+            currentValue === '' || currentValue === 0
+              ? 0
+              : parseFloat(currentValue) || 0
           // All editable fields are rounded to integers
           newData[rowIndex][columnId] = Math.floor(numValue)
           return newData
@@ -241,7 +253,11 @@ const SummaryTable = ({
     }
   }
 
-  const lineNumberTooltip = (lineNumber, isGreyedByYear = false, isExempted = false) => {
+  const lineNumberTooltip = (
+    lineNumber,
+    isGreyedByYear = false,
+    isExempted = false
+  ) => {
     if (isExempted) {
       return 'Exempted — not applicable'
     }
@@ -307,202 +323,216 @@ const SummaryTable = ({
               {columns.map((column, colIndex) => {
                 const isGreyedByYear = isLineGreyedByYear(row)
                 const isExempted = isLineExempted(row)
-                const isGreyedOrLocked = isCellLocked(rowIndex, row) || isGreyedByYear || isExempted
+                const isGreyedOrLocked =
+                  isCellLocked(rowIndex, row) || isGreyedByYear || isExempted
                 return (
-                <TableCell
-                  key={column.id}
-                  align={column.align || 'left'}
-                  title={
-                    isGreyedOrLocked
-                      ? lineNumberTooltip(parseInt(row.line), isGreyedByYear, isExempted)
-                      : undefined
-                  }
-                  sx={{
-                    borderBottom:
-                      rowIndex === data.length - 1
-                        ? 'none'
-                        : '1px solid #495057',
-                    borderRight:
-                      colIndex < columns.length - 1
-                        ? '1px solid #495057'
-                        : 'none',
-                    maxWidth: column.maxWidth || 'none',
-                    width: column.width || 'auto',
-                    padding: isCellEditable(rowIndex, column.id)
-                      ? 0
-                      : undefined,
-                    backgroundColor:
-                      isGreyedOrLocked &&
-                      column.id !== 'line' &&
-                      column.id !== 'description'
-                        ? '#f5f5f5'
+                  <TableCell
+                    key={column.id}
+                    align={column.align || 'left'}
+                    title={
+                      isGreyedOrLocked
+                        ? lineNumberTooltip(
+                            parseInt(row.line),
+                            isGreyedByYear,
+                            isExempted
+                          )
+                        : undefined
+                    }
+                    sx={{
+                      borderBottom:
+                        rowIndex === data.length - 1
+                          ? 'none'
+                          : '1px solid #495057',
+                      borderRight:
+                        colIndex < columns.length - 1
+                          ? '1px solid #495057'
+                          : 'none',
+                      maxWidth: column.maxWidth || 'none',
+                      width: column.width || 'auto',
+                      padding: isCellEditable(rowIndex, column.id)
+                        ? 0
                         : undefined,
-                    opacity:
-                      isGreyedOrLocked &&
-                      column.id !== 'line' &&
-                      column.id !== 'description'
-                        ? 0.7
-                        : 1
-                  }}
-                >
-                  {isCellEditable(rowIndex, column.id) && !isCellLocked(rowIndex, row) ? (
-                    <div
-                      style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%'
-                      }}
-                    >
-                      <Input
-                        value={formatNumberWithCommas({ value: row[column.id] })}
-                        onChange={(e) =>
-                          handleCellChange(e, rowIndex, column.id)
-                        }
-                        onFocus={() => handleCellFocus(rowIndex, column.id)}
-                        onBlur={() => handleBlur(rowIndex, column.id)}
-                        onKeyDown={(e) => handleKeyDown(e, rowIndex, column.id)}
-                        type="text"
-                        inputProps={{
-                          inputMode:
-                            column.editable &&
-                            column.editableCells &&
-                            column.editableCells.includes(rowIndex)
-                              ? 'decimal'
-                              : 'numeric',
-                          pattern:
-                            column.editable &&
-                            column.editableCells &&
-                            column.editableCells.includes(rowIndex)
-                              ? '[0-9]*\\.?[0-9]*'
-                              : '[0-9]*',
-                          ...getCellConstraints(rowIndex, column.id),
-                          ...props.inputProps
-                        }}
-                        startAdornment={
-                          column.editable &&
-                          column.editableCells &&
-                          column.editableCells.includes(rowIndex) &&
-                          row.format === 'currency' ? (
-                            <InputAdornment position="start">$</InputAdornment>
-                          ) : null
-                        }
-                        endAdornment={null}
-                        sx={{
+                      backgroundColor:
+                        isGreyedOrLocked &&
+                        column.id !== 'line' &&
+                        column.id !== 'description'
+                          ? '#f5f5f5'
+                          : undefined,
+                      opacity:
+                        isGreyedOrLocked &&
+                        column.id !== 'line' &&
+                        column.id !== 'description'
+                          ? 0.7
+                          : 1
+                    }}
+                  >
+                    {isCellEditable(rowIndex, column.id) &&
+                    !isCellLocked(rowIndex, row) ? (
+                      <div
+                        style={{
+                          position: 'relative',
                           width: '100%',
-                          height: '100%',
-                          padding: '6px',
-                          paddingLeft: isCellSaving(rowIndex, column.id)
-                            ? column.editable &&
+                          height: '100%'
+                        }}
+                      >
+                        <Input
+                          value={formatNumberWithCommas({
+                            value: row[column.id]
+                          })}
+                          onChange={(e) =>
+                            handleCellChange(e, rowIndex, column.id)
+                          }
+                          onFocus={() => handleCellFocus(rowIndex, column.id)}
+                          onBlur={() => handleBlur(rowIndex, column.id)}
+                          onKeyDown={(e) =>
+                            handleKeyDown(e, rowIndex, column.id)
+                          }
+                          type="text"
+                          inputProps={{
+                            inputMode:
+                              column.editable &&
                               column.editableCells &&
-                              column.editableCells.includes(rowIndex) &&
-                              row.format === 'currency'
-                              ? '60px'
-                              : '40px'
-                            : column.editable &&
+                              column.editableCells.includes(rowIndex)
+                                ? 'decimal'
+                                : 'numeric',
+                            pattern:
+                              column.editable &&
+                              column.editableCells &&
+                              column.editableCells.includes(rowIndex)
+                                ? '[0-9]*\\.?[0-9]*'
+                                : '[0-9]*',
+                            ...getCellConstraints(rowIndex, column.id),
+                            ...props.inputProps
+                          }}
+                          startAdornment={
+                            column.editable &&
+                            column.editableCells &&
+                            column.editableCells.includes(rowIndex) &&
+                            row.format === 'currency' ? (
+                              <InputAdornment position="start">
+                                $
+                              </InputAdornment>
+                            ) : null
+                          }
+                          endAdornment={null}
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            padding: '6px',
+                            paddingLeft: isCellSaving(rowIndex, column.id)
+                              ? column.editable &&
                                 column.editableCells &&
                                 column.editableCells.includes(rowIndex) &&
                                 row.format === 'currency'
-                              ? '30px'
-                              : '6px',
-                          borderRadius: '8px',
-                          fontSize: '1rem',
-                          border: '1px solid #495057',
-                          backgroundColor: '#fff',
-                          '& .MuiInputBase-input': {
-                            textAlign: column.align || 'left'
-                          }
-                        }}
-                        disableUnderline
-                      />
-                      {isCellSaving(rowIndex, column.id) && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left:
-                              column.editable &&
-                              column.editableCells &&
-                              column.editableCells.includes(rowIndex) &&
-                              row.format === 'currency'
-                                ? '35px'
-                                : '12px', // Adjust for $ sign
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            zIndex: 10,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            pointerEvents: 'none'
+                                ? '60px'
+                                : '40px'
+                              : column.editable &&
+                                  column.editableCells &&
+                                  column.editableCells.includes(rowIndex) &&
+                                  row.format === 'currency'
+                                ? '30px'
+                                : '6px',
+                            borderRadius: '8px',
+                            fontSize: '1rem',
+                            border: '1px solid #495057',
+                            backgroundColor: '#fff',
+                            '& .MuiInputBase-input': {
+                              textAlign: column.align || 'left'
+                            }
                           }}
-                        >
-                          <CircularProgress
-                            size={18}
-                            color="primary"
-                            sx={{
+                          disableUnderline
+                        />
+                        {isCellSaving(rowIndex, column.id) && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              left:
+                                column.editable &&
+                                column.editableCells &&
+                                column.editableCells.includes(rowIndex) &&
+                                row.format === 'currency'
+                                  ? '35px'
+                                  : '12px', // Adjust for $ sign
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              zIndex: 10,
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
+                              pointerEvents: 'none'
                             }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <span
-                      style={{
-                        fontWeight:
-                          column.bold ||
-                          (column.id === 'description' && !row.line) ||
-                          row.bold
-                            ? 'bold'
-                            : 'normal',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: 'block'
-                      }}
-                    >
-                      {(() => {
-                        // Hide values for greyed-out rows (except line number and description)
-                        if (
-                          (isGreyedByYear || isExempted) &&
-                          column.id !== 'line' &&
-                          column.id !== 'description'
-                        ) {
-                          return ''
-                        }
+                          >
+                            <CircularProgress
+                              size={18}
+                              color="primary"
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span
+                        style={{
+                          fontWeight:
+                            column.bold ||
+                            (column.id === 'description' && !row.line) ||
+                            row.bold
+                              ? 'bold'
+                              : 'normal',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: 'block'
+                        }}
+                      >
+                        {(() => {
+                          // Hide values for greyed-out rows (except line number and description)
+                          if (
+                            (isGreyedByYear || isExempted) &&
+                            column.id !== 'line' &&
+                            column.id !== 'description'
+                          ) {
+                            return ''
+                          }
 
-                        const rawValue =
-                          row[column.id] !== undefined &&
-                          row[column.id] !== null
-                            ? row[column.id]
-                            : 0
-                        const shouldFormat =
-                          row.format &&
-                          colIndex !== 0 &&
-                          column.id !== 'description' &&
-                          column.id !== 'line'
+                          const rawValue =
+                            row[column.id] !== undefined &&
+                            row[column.id] !== null
+                              ? row[column.id]
+                              : 0
+                          const shouldFormat =
+                            row.format &&
+                            colIndex !== 0 &&
+                            column.id !== 'description' &&
+                            column.id !== 'line'
 
-                        if (shouldFormat) {
-                          const numericValue =
-                            typeof rawValue === 'number'
-                              ? rawValue
-                              : Number(rawValue)
+                          if (shouldFormat) {
+                            const numericValue =
+                              typeof rawValue === 'number'
+                                ? rawValue
+                                : Number(rawValue)
 
-                          const maxDecimals = row.format === 'currency' ? 2 : 0
+                            const maxDecimals =
+                              row.format === 'currency' ? 2 : 0
 
-                          return rowFormatters[row.format](
-                            Number.isFinite(numericValue) ? numericValue : 0,
-                            useParenthesis,
-                            maxDecimals
-                          )
-                        }
+                            return rowFormatters[row.format](
+                              Number.isFinite(numericValue) ? numericValue : 0,
+                              useParenthesis,
+                              maxDecimals
+                            )
+                          }
 
-                        return rawValue
-                      })()}
-                    </span>
-                  )}
-                </TableCell>
-              )})}
+                          return rawValue
+                        })()}
+                      </span>
+                    )}
+                  </TableCell>
+                )
+              })}
             </TableRow>
           ))}
         </TableBody>

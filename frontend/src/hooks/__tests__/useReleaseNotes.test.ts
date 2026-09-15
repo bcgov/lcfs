@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useReleaseNotes, useUpdateReleaseNote } from '../useReleaseNotes'
 
 vi.mock('@/services/useApiService')
@@ -44,18 +44,24 @@ describe('useReleaseNotes', () => {
     } as any)
   })
 
-  it('returns the auto-generated release notes unmodified when there are no overrides', async () => {
+  test('returns the auto-generated release notes unmodified when there are no overrides', async ({
+    renderHook,
+    query
+  }) => {
     mockFetchBaseJson([mockRelease])
     mockGet.mockResolvedValue({ data: [] })
 
-    const { result } = renderHook(() => useReleaseNotes(), { wrapper })
+    const { result } = renderHook(() => useReleaseNotes(), [query])
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(result.current.data).toEqual([mockRelease])
   })
 
-  it('layers a System Admin override on top of the matching auto-generated release', async () => {
+  test('layers a System Admin override on top of the matching auto-generated release', async ({
+    renderHook,
+    query
+  }) => {
     mockFetchBaseJson([mockRelease])
     mockGet.mockResolvedValue({
       data: [
@@ -74,7 +80,7 @@ describe('useReleaseNotes', () => {
       ]
     })
 
-    const { result } = renderHook(() => useReleaseNotes(), { wrapper })
+    const { result } = renderHook(() => useReleaseNotes(), [query])
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
@@ -86,13 +92,16 @@ describe('useReleaseNotes', () => {
     expect(result.current.data?.[0].tag).toBe(mockRelease.tag)
   })
 
-  it('falls back to the auto-generated content for fields the override leaves null', async () => {
+  test('falls back to the auto-generated content for fields the override leaves null', async ({
+    renderHook,
+    query
+  }) => {
     mockFetchBaseJson([mockRelease])
     mockGet.mockResolvedValue({
       data: [{ version: '1.0.0', summary: 'Only the summary was edited.', sections: null }]
     })
 
-    const { result } = renderHook(() => useReleaseNotes(), { wrapper })
+    const { result } = renderHook(() => useReleaseNotes(), [query])
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
@@ -100,11 +109,14 @@ describe('useReleaseNotes', () => {
     expect(result.current.data?.[0].sections).toEqual(mockRelease.sections)
   })
 
-  it('still renders auto-generated notes even if fetching overrides fails', async () => {
+  test('still renders auto-generated notes even if fetching overrides fails', async ({
+    renderHook,
+    query
+  }) => {
     mockFetchBaseJson([mockRelease])
     mockGet.mockRejectedValue(new Error('network error'))
 
-    const { result } = renderHook(() => useReleaseNotes(), { wrapper })
+    const { result } = renderHook(() => useReleaseNotes(), [query])
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
@@ -112,11 +124,14 @@ describe('useReleaseNotes', () => {
     expect(result.current.data).toEqual([mockRelease])
   })
 
-  it('reports an error only when the auto-generated JSON itself fails to load', async () => {
+  test('reports an error only when the auto-generated JSON itself fails to load', async ({
+    renderHook,
+    query
+  }) => {
     mockFetchBaseJson({}, false)
     mockGet.mockResolvedValue({ data: [] })
 
-    const { result } = renderHook(() => useReleaseNotes(), { wrapper })
+    const { result } = renderHook(() => useReleaseNotes(), [query])
 
     await waitFor(() => expect(result.current.isError).toBe(true))
   })
@@ -130,12 +145,15 @@ describe('useUpdateReleaseNote', () => {
     vi.mocked(useApiService).mockReturnValue({ put: mockPut } as any)
   })
 
-  it('PUTs to the version-specific endpoint with summary and sections', async () => {
+  test('PUTs to the version-specific endpoint with summary and sections', async ({
+    renderHook,
+    query
+  }) => {
     mockPut.mockResolvedValue({
       data: { version: '1.0.0', summary: 'Edited', sections: mockRelease.sections }
     })
 
-    const { result } = renderHook(() => useUpdateReleaseNote(), { wrapper })
+    const { result } = renderHook(() => useUpdateReleaseNote(), [query])
 
     result.current.mutate({
       version: '1.0.0',

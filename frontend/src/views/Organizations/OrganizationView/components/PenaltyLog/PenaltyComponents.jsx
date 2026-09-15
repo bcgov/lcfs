@@ -2,18 +2,16 @@ import BCTypography from '@/components/BCTypography'
 import { BCMetricCard } from '@/components/charts/BCMetricCard'
 import { BCResponsiveEChart } from '@/components/charts/BCResponsiveEchart'
 import { currencyFormatter } from '@/utils/formatters'
-import {
-  Card,
-  CardContent,
-  Divider,
-  Grid,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow
-} from '@mui/material'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Divider from '@mui/material/Divider'
+import Grid from '@mui/material/Grid'
+import Stack from '@mui/material/Stack'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
 import {
   faGaugeHigh,
   faSackDollar,

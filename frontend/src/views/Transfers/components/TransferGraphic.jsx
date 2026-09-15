@@ -1,5 +1,7 @@
 import PropTypes from 'prop-types'
-import { useTheme, Box, Paper } from '@mui/material'
+import useTheme from '@mui/material/styles/useTheme'
+import Box from '@mui/material/Box'
+import Paper from '@mui/material/Paper'
 import BCTypography from '@/components/BCTypography'
 
 // MUI Icons
@@ -8,7 +10,9 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useParams } from 'react-router-dom'
 import { useTransfer } from '@/hooks/useTransfer'
-import { HorizontalRule, SyncAlt, TrendingFlat } from '@mui/icons-material'
+import HorizontalRule from '@mui/icons-material/HorizontalRule'
+import SyncAlt from '@mui/icons-material/SyncAlt'
+import TrendingFlat from '@mui/icons-material/TrendingFlat'
 
 export const TransferGraphic = () => {
   const theme = useTheme()

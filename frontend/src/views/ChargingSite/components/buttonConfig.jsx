@@ -1,4 +1,5 @@
-import { CheckBox, CheckBoxOutlineBlank } from '@mui/icons-material'
+import CheckBox from '@mui/icons-material/CheckBox'
+import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { roles, govRoles } from '@/constants/roles'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -97,8 +98,7 @@ class ButtonActionFactory {
 
   selectAllDraft() {
     const draftUpdatedEquipment = this.context.equipmentList.filter(
-      (e) =>
-        e.status.status === 'Draft' || e.status.status === 'Updated'
+      (e) => e.status.status === 'Draft' || e.status.status === 'Updated'
     )
     const draftUpdatedIds = draftUpdatedEquipment.map(
       (eq) => eq.chargingEquipmentId
@@ -294,11 +294,7 @@ const BUTTON_RULES = {
   // When equipment has mixed statuses or general view
   // TODO: Modify the rules as required based on workflow
   DEFAULT: {
-    [USER_TYPES.BCEID_USER]: [
-      'createFSE',
-      'selectAllDraft',
-      'clearFilters'
-    ],
+    [USER_TYPES.BCEID_USER]: ['createFSE', 'selectAllDraft', 'clearFilters'],
     [USER_TYPES.BCEID_MANAGER]: [
       'createFSE',
       'selectAllDraft',

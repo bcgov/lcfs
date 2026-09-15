@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
-import { DatePicker } from '@mui/x-date-pickers'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { DateEditor } from '../DateEditor'
 
 // Mock date-fns
@@ -28,7 +28,7 @@ vi.mock('date-fns', () => ({
 }))
 
 // Mock @mui/x-date-pickers
-vi.mock('@mui/x-date-pickers', () => ({
+vi.mock('@mui/x-date-pickers/DatePicker', () => ({
   DatePicker: vi.fn(
     ({
       value,
@@ -55,6 +55,7 @@ vi.mock('@mui/x-date-pickers', () => ({
         id,
         ...domProps
       } = restProps
+
       const inputValue = value
         ? [
             value.getFullYear(),

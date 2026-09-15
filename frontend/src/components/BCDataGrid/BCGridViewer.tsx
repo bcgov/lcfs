@@ -2,10 +2,8 @@
 import BCAlert, { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
-import {
-  AccessibleHeader,
-  BCPagination
-} from '@/components/BCDataGrid/components'
+import { AccessibleHeader } from '@/components/BCDataGrid/components/Renderers/AccessibleHeader'
+import { BCPagination } from '@/components/BCDataGrid/components/StatusBar/BCPagination'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
 import { FilterToolbar } from '@/components/FilterToolbar'
@@ -157,11 +155,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
           asArray = values
         } else if (typeof values === 'string' && values.includes(',')) {
           asArray = values.split(',')
-        } else if (
-          values !== undefined &&
-          values !== null &&
-          values !== ''
-        ) {
+        } else if (values !== undefined && values !== null && values !== '') {
           asArray = [values]
         } else {
           asArray = []
@@ -203,7 +197,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
 
       return Object.entries(filterModel).map(([field, filterConfig]) => {
         const baseFilter = { field }
-        
+
         if (filterConfig.filterType === 'set') {
           // For set filters, use the 'filter' array or 'values' array
           const values =
@@ -232,7 +226,6 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
           if (!sanitizedFilter) {
             return null
           }
-
           return {
             ...baseFilter,
             filterType: 'text',

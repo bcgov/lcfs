@@ -1,6 +1,7 @@
 import BCBox from '@/components/BCBox'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
-import { Divider, Toolbar } from '@mui/material'
+import Divider from '@mui/material/Divider'
+import Toolbar from '@mui/material/Toolbar'
 import React from 'react'
 import type {
   NavbarRoute,
@@ -72,8 +73,7 @@ const MenuBar = ({ routes, data }: MenuBarProps) => {
         py={1}
         flexDirection="row"
       >
-        {data.menuRightPart &&
-          React.cloneElement(data.menuRightPart, { data })}
+        {data.menuRightPart && React.cloneElement(data.menuRightPart, { data })}
       </BCBox>
     </Toolbar>
   )

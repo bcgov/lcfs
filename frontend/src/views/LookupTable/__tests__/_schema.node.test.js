@@ -1,4 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+vi.mock('@/components/BCDataGrid/components', () => {
+  const BCSelectFloatingFilter = () => null
+  BCSelectFloatingFilter.displayName = 'BCSelectFloatingFilter'
+  return { BCSelectFloatingFilter }
+})
+
 import { lookupTableColumnDefs, DEFAULT_QUANTITY } from '../_schema'
 
 describe('LookupTable schema', () => {

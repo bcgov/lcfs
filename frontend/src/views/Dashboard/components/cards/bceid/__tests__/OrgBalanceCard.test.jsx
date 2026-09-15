@@ -9,12 +9,14 @@ vi.mock('react-i18next', () => ({
     t: (key) => {
       const translations = {
         'dashboard:orgBalance.loading': 'Loading balance...',
-        'dashboard:orgBalance.unableToFetchBalanceDetails': 'Unable to fetch balance details',
+        'dashboard:orgBalance.unableToFetchBalanceDetails':
+          'Unable to fetch balance details',
         'dashboard:orgBalance.org': 'Organization',
         'dashboard:orgBalance.hasABalanceOf': 'has a balance of',
         'dashboard:orgBalance.complianceUnits': 'Compliance Units',
         'dashboard:orgBalance.inReserve': 'in reserve',
-        'dashboard:orgBalance.inReserveTooltip': 'Credits held in reserve for compliance'
+        'dashboard:orgBalance.inReserveTooltip':
+          'Credits held in reserve for compliance'
       }
       return translations[key] || key
     }
@@ -22,21 +24,52 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, component, gutterBottom, sx, ...domProps }) => <div data-test="bc-typography" {...domProps}>{children}</div>
+  default: ({
+    children,
+    variant,
+    component,
+    gutterBottom,
+    sx,
+    ...domProps
+  }) => (
+    <div data-test="bc-typography" {...domProps}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/Loading', () => ({
   default: ({ message }) => <div data-test="loading">{message}</div>
 }))
 
-vi.mock('@mui/material', () => ({
-  Box: ({ children, paddingTop, paddingBottom, flexDirection, alignItems, justifyContent, ...domProps }) => <div data-test="box" {...domProps}>{children}</div>,
-  Tooltip: ({ children, title }) => <div data-test="tooltip" title={title}>{children}</div>,
-  Fade: () => <div data-test="fade" />
+vi.mock('@mui/material/Box', () => ({
+  default: ({
+    children,
+    paddingTop,
+    paddingBottom,
+    flexDirection,
+    alignItems,
+    justifyContent,
+    ...domProps
+  }) => (
+    <div data-test="box" {...domProps}>
+      {children}
+    </div>
+  )
+}))
+vi.mock('@mui/material/Tooltip', () => ({
+  default: ({ children, title }) => (
+    <div data-test="tooltip" title={title}>
+      {children}
+    </div>
+  )
+}))
+vi.mock('@mui/material/Fade', () => ({
+  default: () => <div data-test="fade" />
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  Info: () => <div data-test="info-icon" />
+vi.mock('@mui/icons-material/Info', () => ({
+  default: () => <div data-test="info-icon" />
 }))
 
 describe('OrgBalanceCard', () => {
@@ -66,7 +99,7 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
+
     expect(screen.getByText('Loading balance...')).toBeInTheDocument()
   })
 
@@ -83,7 +116,7 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
+
     expect(screen.getByText('Loading balance...')).toBeInTheDocument()
   })
 
@@ -100,8 +133,10 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
-    expect(screen.getByText('Unable to fetch balance details')).toBeInTheDocument()
+
+    expect(
+      screen.getByText('Unable to fetch balance details')
+    ).toBeInTheDocument()
   })
 
   it('displays error message when balance fetch fails', () => {
@@ -117,8 +152,10 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
-    expect(screen.getByText('Unable to fetch balance details')).toBeInTheDocument()
+
+    expect(
+      screen.getByText('Unable to fetch balance details')
+    ).toBeInTheDocument()
   })
 
   it('displays error message when balance data is missing', () => {
@@ -134,8 +171,10 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
-    expect(screen.getByText('Unable to fetch balance details')).toBeInTheDocument()
+
+    expect(
+      screen.getByText('Unable to fetch balance details')
+    ).toBeInTheDocument()
   })
 
   it('displays organization balance with organization name', () => {
@@ -151,7 +190,7 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
+
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
     expect(screen.getByText('has a balance of')).toBeInTheDocument()
     expect(screen.getByText('1,500')).toBeInTheDocument()
@@ -172,7 +211,7 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
+
     expect(screen.getByText('Organization')).toBeInTheDocument()
     expect(screen.getByText('500')).toBeInTheDocument()
     expect(screen.getByText('(50 in reserve)')).toBeInTheDocument()
@@ -191,7 +230,7 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
+
     expect(screen.getByText('(150 in reserve)')).toBeInTheDocument()
   })
 
@@ -208,7 +247,7 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
+
     expect(screen.getByText('1,234,567')).toBeInTheDocument()
     expect(screen.getByText('(12,345 in reserve)')).toBeInTheDocument()
   })
@@ -226,8 +265,10 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
-    expect(screen.getByTitle('Credits held in reserve for compliance')).toBeInTheDocument()
+
+    expect(
+      screen.getByTitle('Credits held in reserve for compliance')
+    ).toBeInTheDocument()
   })
 
   it('renders info icon', () => {
@@ -243,7 +284,7 @@ describe('OrgBalanceCard', () => {
     })
 
     render(<OrgBalanceCard />)
-    
+
     expect(screen.getByTestId('info-icon')).toBeInTheDocument()
   })
 })

@@ -36,11 +36,13 @@ describe('Penalty Log Changes - Issue #3346', () => {
       })
 
       expect(filtered).toHaveLength(3)
-      expect(filtered.map(p => p.compliancePeriodId)).toEqual([1, 2, 3])
-      expect(filtered.every(p => {
-        const year = parseInt(p.description.match(/(\d{4})/)[1], 10)
-        return year <= currentYear
-      })).toBe(true)
+      expect(filtered.map((p) => p.compliancePeriodId)).toEqual([1, 2, 3])
+      expect(
+        filtered.every((p) => {
+          const year = parseInt(p.description.match(/(\d{4})/)[1], 10)
+          return year <= currentYear
+        })
+      ).toBe(true)
     })
 
     it('should include current year in filtered results', () => {
@@ -62,7 +64,7 @@ describe('Penalty Log Changes - Issue #3346', () => {
         { description: '2027 Compliance Period' }
       ]
 
-      futurePeriods.forEach(period => {
+      futurePeriods.forEach((period) => {
         const yearMatch = period.description.match(/(\d{4})/)
         const year = parseInt(yearMatch[1], 10)
         expect(year).toBeGreaterThan(currentYear)

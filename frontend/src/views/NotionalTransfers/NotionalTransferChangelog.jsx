@@ -7,7 +7,7 @@ import {
 } from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules'
 import colors from '@/themes/base/colors'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
@@ -173,8 +173,16 @@ export const NotionalTransferChangelog = () => {
                 gridKey={`notional-transfers-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false, parseInt(compliancePeriod), isEarlyIssuance)
-                    : changelogColDefs(true, parseInt(compliancePeriod), isEarlyIssuance)
+                    ? changelogCommonColDefs(
+                        false,
+                        parseInt(compliancePeriod),
+                        isEarlyIssuance
+                      )
+                    : changelogColDefs(
+                        true,
+                        parseInt(compliancePeriod),
+                        isEarlyIssuance
+                      )
                 }
                 queryData={queryData}
                 getRowId={getRowId}

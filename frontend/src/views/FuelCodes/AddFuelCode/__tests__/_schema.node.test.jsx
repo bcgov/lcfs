@@ -18,14 +18,33 @@ vi.mock('@/constants/routes', () => ({
   apiRoutes: { fuelCodeSearch: '/api/fuel-codes/search?' }
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  AsyncSuggestionEditor: () => null,
-  AutocompleteCellEditor: () => null,
-  DateEditor: () => null,
-  NumberEditor: () => null,
-  RequiredHeader: () => null,
-  TransportModeDistanceCellEditor: () => null
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor',
+  () => ({
+    AsyncSuggestionEditor: () => null
+  })
+)
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor',
+  () => ({
+    AutocompleteCellEditor: () => null
+  })
+)
+vi.mock('@/components/BCDataGrid/components/Editors/DateEditor', () => ({
+  DateEditor: () => null
 }))
+vi.mock('@/components/BCDataGrid/components/Editors/NumberEditor', () => ({
+  NumberEditor: () => null
+}))
+vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
+  RequiredHeader: () => null
+}))
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/TransportModeDistanceCellEditor',
+  () => ({
+    TransportModeDistanceCellEditor: () => null
+  })
+)
 
 vi.mock('@/utils/grid/eventHandlers', () => ({
   suppressKeyboardEvent: vi.fn()

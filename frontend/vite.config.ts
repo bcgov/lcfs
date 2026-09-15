@@ -6,6 +6,7 @@ import svgr from 'vite-plugin-svgr'
 import path from 'path'
 import { readFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
+import { availableParallelism } from 'node:os'
 
 const releaseNotesPath = fileURLToPath(
   new URL('./public/release-notes.json', import.meta.url)
@@ -13,6 +14,7 @@ const releaseNotesPath = fileURLToPath(
 const appVersion: string = existsSync(releaseNotesPath)
   ? (JSON.parse(readFileSync(releaseNotesPath, 'utf-8'))[0]?.version ?? '0.0.0')
   : '0.0.0'
+const workerCount = Math.max(1, Math.min(8, availableParallelism()))
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -35,10 +37,10 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom',
-    setupFiles: './testSetup.js',
-    // vitest 4 no longer excludes cypress/dist by default, so scope to src
-    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    pool: 'threads',
+    minWorkers: workerCount,
+    maxWorkers: workerCount,
+    silent: 'passed-only',
     coverage: {
       provider: 'v8',
       // thresholds: {
@@ -47,9 +49,8 @@ export default defineConfig({
       //   branches: 80,
       //   lines: 80
       // },
-      enabled: true,
       reporter: ['html'],
-      include: ['src'],
+      include: ['src/**/*.{js,jsx,ts,tsx}'],
       exclude: [
         'src/*.{jsx,js,tsx,ts}',
         'src/assets',
@@ -57,7 +58,28 @@ export default defineConfig({
         'src/themes',
         'src/tests'
       ]
-    }
+    },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          environment: 'node',
+          include: ['src/**/*.{node.test,node.spec}.{js,jsx,ts,tsx}'],
+          setupFiles: []
+        }
+      },
+      {
+        extends: true,
+        test: {
+          name: 'jsdom',
+          environment: 'jsdom',
+          include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+          exclude: ['src/**/*.{node.test,node.spec}.{js,jsx,ts,tsx}'],
+          setupFiles: './testSetup.js'
+        }
+      }
+    ]
   },
   optimizeDeps: {
     include: [

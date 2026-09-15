@@ -1,9 +1,9 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach, afterAll } from 'vitest'
+import { screen, fireEvent, cleanup } from '@testing-library/react'
+import { vi, describe, expect, beforeEach, afterAll } from 'vitest'
 import OrgFuelCodeCard from '../OrgFuelCodeCard'
 import { useOrgFuelCodeCounts } from '@/hooks/useDashboard'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { CONFIG } from '@/constants/config'
@@ -44,18 +44,22 @@ vi.mock('@/components/Loading', () => ({
   default: ({ message }) => <div data-test="loading">{message}</div>
 }))
 
-vi.mock('@mui/material', () => ({
-  Stack: ({ children, ...props }) => (
+vi.mock('@mui/material/Stack', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="stack" {...props}>
       {children}
     </div>
-  ),
-  List: ({ children, ...props }) => (
+  )
+}))
+vi.mock('@mui/material/List', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="list" {...props}>
       {children}
     </div>
-  ),
-  ListItemButton: ({ children, onClick, ...props }) => (
+  )
+}))
+vi.mock('@mui/material/ListItemButton', () => ({
+  default: ({ children, onClick, ...props }) => (
     <button data-test="list-item-button" onClick={onClick} {...props}>
       {children}
     </button>
@@ -80,24 +84,32 @@ describe('OrgFuelCodeCard Component', () => {
   })
 
   describe('Feature flag gating', () => {
-    it('renders nothing when the CI applications feature flag is off', () => {
+    test('renders nothing when the CI applications feature flag is off', ({
+      render,
+      query,
+      i18n
+    }) => {
       CONFIG.feature_flags.ciApplications = false
       useOrgFuelCodeCounts.mockReturnValue({
         data: { draft: 1, submitted: 0 },
         isLoading: false
       })
 
-      render(<OrgFuelCodeCard />, { wrapper })
+      render(<OrgFuelCodeCard />, [query, i18n])
 
       expect(screen.queryByText('Fuel codes')).not.toBeInTheDocument()
     })
   })
 
   describe('Loading state', () => {
-    it('renders loading message and title while loading', () => {
+    test('renders loading message and title while loading', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgFuelCodeCounts.mockReturnValue({ data: null, isLoading: true })
 
-      render(<OrgFuelCodeCard />, { wrapper })
+      render(<OrgFuelCodeCard />, [query, i18n])
 
       expect(screen.getByTestId('loading')).toBeInTheDocument()
       expect(screen.getByText(/Loading fuel codes card/)).toBeInTheDocument()
@@ -106,13 +118,17 @@ describe('OrgFuelCodeCard Component', () => {
   })
 
   describe('With applications', () => {
-    it('shows both counts and the "There are:" header', () => {
+    test('shows both counts and the "There are:" header', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgFuelCodeCounts.mockReturnValue({
         data: { draft: 2, submitted: 3 },
         isLoading: false
       })
 
-      render(<OrgFuelCodeCard />, { wrapper })
+      render(<OrgFuelCodeCard />, [query, i18n])
 
       expect(screen.getByText(/There are:/)).toBeInTheDocument()
       expect(screen.getByText('2')).toBeInTheDocument()
@@ -127,13 +143,17 @@ describe('OrgFuelCodeCard Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('hides the draft link when draft is 0 but shows submitted', () => {
+    test('hides the draft link when draft is 0 but shows submitted', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgFuelCodeCounts.mockReturnValue({
         data: { draft: 0, submitted: 1 },
         isLoading: false
       })
 
-      render(<OrgFuelCodeCard />, { wrapper })
+      render(<OrgFuelCodeCard />, [query, i18n])
 
       expect(
         screen.queryByText(/Carbon intensity application\(s\) in draft/)
@@ -145,13 +165,17 @@ describe('OrgFuelCodeCard Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('navigates to the CI applications list from the draft count link', () => {
+    test('navigates to the CI applications list from the draft count link', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgFuelCodeCounts.mockReturnValue({
         data: { draft: 2, submitted: 0 },
         isLoading: false
       })
 
-      render(<OrgFuelCodeCard />, { wrapper })
+      render(<OrgFuelCodeCard />, [query, i18n])
 
       fireEvent.click(
         screen.getByText(/Carbon intensity application\(s\) in draft/)
@@ -161,12 +185,15 @@ describe('OrgFuelCodeCard Component', () => {
   })
 
   describe('Empty state', () => {
-    it.each([{ draft: 0, submitted: 0 }, undefined, null, {}])(
-      'shows the no-applications message when there is nothing in progress (%o)',
-      (data) => {
+    test('shows the no-applications message when there is nothing in progress', ({
+      render,
+      query,
+      i18n
+    }) => {
+      for (const data of [{ draft: 0, submitted: 0 }, undefined, null, {}]) {
         useOrgFuelCodeCounts.mockReturnValue({ data, isLoading: false })
 
-        render(<OrgFuelCodeCard />, { wrapper })
+        render(<OrgFuelCodeCard />, [query, i18n])
 
         expect(
           screen.getByText(
@@ -174,8 +201,10 @@ describe('OrgFuelCodeCard Component', () => {
           )
         ).toBeInTheDocument()
         expect(screen.queryByText(/There are:/)).not.toBeInTheDocument()
+
+        cleanup()
       }
-    )
+    })
   })
 
   describe('Action links (always present)', () => {
@@ -186,29 +215,41 @@ describe('OrgFuelCodeCard Component', () => {
       })
     })
 
-    it('navigates to the CI applications list via "View all"', () => {
-      render(<OrgFuelCodeCard />, { wrapper })
+    test('navigates to the CI applications list via "View all"', ({
+      render,
+      query,
+      i18n
+    }) => {
+      render(<OrgFuelCodeCard />, [query, i18n])
       fireEvent.click(
         screen.getByText(/View all carbon intensity applications/)
       )
       expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.LIST)
     })
 
-    it('navigates to the add page via "Start a new application"', () => {
-      render(<OrgFuelCodeCard />, { wrapper })
+    test('navigates to the add page via "Start a new application"', ({
+      render,
+      query,
+      i18n
+    }) => {
+      render(<OrgFuelCodeCard />, [query, i18n])
       fireEvent.click(screen.getByText(/Start a new application/))
       expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.ADD)
     })
   })
 
   describe('Hooks and card props', () => {
-    it('calls the counts hook and renders the widget title', () => {
+    test('calls the counts hook and renders the widget title', ({
+      render,
+      query,
+      i18n
+    }) => {
       useOrgFuelCodeCounts.mockReturnValue({
         data: { draft: 1, submitted: 0 },
         isLoading: false
       })
 
-      render(<OrgFuelCodeCard />, { wrapper })
+      render(<OrgFuelCodeCard />, [query, i18n])
 
       expect(useOrgFuelCodeCounts).toHaveBeenCalled()
       expect(useNavigate).toHaveBeenCalled()

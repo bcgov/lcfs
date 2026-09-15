@@ -1,11 +1,20 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
+import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { AddressAutocomplete } from '../AddressAutocomplete'
-import { AppWrapper } from '@/tests/utils'
+import { AddressAutocomplete } from '@/components/BCForm/AddressAutocomplete'
+import { test as fixtureTest } from '@/tests/utils/fixtures'
+
+const test = (name, callback) =>
+  fixtureTest(name, ({ render: fixtureRender, theme }) =>
+    callback({
+      render: (ui, providers = [], options = {}) =>
+        fixtureRender(ui, providers.filter(Boolean), options),
+      theme
+    })
+  )
 
 // Override the global mock for this test file
 vi.unmock('@/components/BCForm/AddressAutocomplete')
@@ -88,7 +97,7 @@ vi.mock('autosuggest-highlight/match', () => ({
   }
 }))
 
-describe('AddressAutocomplete', () => {
+describe.sequential('AddressAutocomplete', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
@@ -104,6 +113,7 @@ describe('AddressAutocomplete', () => {
   })
 
   afterEach(() => {
+    cleanup()
     vi.restoreAllMocks()
   })
 
@@ -153,31 +163,72 @@ describe('AddressAutocomplete', () => {
     ]
   }
 
-  const renderAddressAutocomplete = (props = {}) => {
-    return render(<AddressAutocomplete {...defaultProps} {...props} />, {
-      wrapper: AppWrapper
-    })
+  const renderAddressAutocomplete = (
+    { render, query, theme, localization, router, i18n },
+    props = {}
+  ) => {
+    return render(<AddressAutocomplete {...defaultProps} {...props} />, [
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    ])
   }
 
   describe('Basic Rendering', () => {
-    it('renders autocomplete input with correct structure', () => {
-      renderAddressAutocomplete()
+    test('renders autocomplete input with correct structure', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderAddressAutocomplete({
+        render,
+        theme
+      })
 
       const input = screen.getByRole('combobox')
       expect(input).toBeInTheDocument()
       expect(input).toHaveAttribute('placeholder', 'Start typing address...')
     })
 
-    it('renders with initial value when provided', () => {
+    test('renders with initial value when provided', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const initialValue = '123 Test St'
-      renderAddressAutocomplete({ value: initialValue })
+      renderAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { value: initialValue }
+      )
 
       const input = screen.getByRole('combobox')
       expect(input).toHaveValue(initialValue)
     })
 
-    it('renders correct placeholder based on address selection state', () => {
-      renderAddressAutocomplete()
+    test('renders correct placeholder based on address selection state', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       expect(input).toHaveAttribute('placeholder', 'Start typing address...')
@@ -185,12 +236,26 @@ describe('AddressAutocomplete', () => {
   })
 
   describe('API Integration and Data Fetching', () => {
-    it('makes API call when user types more than 3 characters', async () => {
+    test('makes API call when user types more than 3 characters', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
 
       mockAutocompleteAddress.mockResolvedValueOnce(mockGeocoderResponse)
 
-      renderAddressAutocomplete()
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'test')
@@ -207,10 +272,24 @@ describe('AddressAutocomplete', () => {
       )
     })
 
-    it('does not make API call for input less than 3 characters', async () => {
+    test('does not make API call for input less than 3 characters', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
 
-      renderAddressAutocomplete()
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       await user.clear(input)
@@ -222,12 +301,26 @@ describe('AddressAutocomplete', () => {
       expect(mockAutocompleteAddress).not.toHaveBeenCalled()
     })
 
-    it('debounces API calls with delay', async () => {
+    test('debounces API calls with delay', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
 
       mockAutocompleteAddress.mockResolvedValue(mockGeocoderResponse)
 
-      renderAddressAutocomplete()
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
 
@@ -243,12 +336,26 @@ describe('AddressAutocomplete', () => {
       )
     })
 
-    it('processes API response and sets options correctly', async () => {
+    test('processes API response and sets options correctly', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
 
       mockAutocompleteAddress.mockResolvedValueOnce(mockGeocoderResponse)
 
-      renderAddressAutocomplete()
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'main')
@@ -268,14 +375,28 @@ describe('AddressAutocomplete', () => {
       expect(mockAutocompleteAddress).toHaveBeenCalledTimes(1)
     })
 
-    it('handles API errors gracefully', async () => {
+    test('handles API errors gracefully', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       mockAutocompleteAddress.mockRejectedValueOnce(new Error('Network error'))
 
-      renderAddressAutocomplete()
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'test')
@@ -300,11 +421,21 @@ describe('AddressAutocomplete', () => {
   })
 
   describe('User Input and Interaction', () => {
-    it('calls onChange when user types', async () => {
+    test('calls onChange when user types', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
       const onChangeMock = vi.fn()
 
-      renderAddressAutocomplete({ onChange: onChangeMock })
+      renderAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { onChange: onChangeMock }
+      )
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'test')
@@ -312,11 +443,21 @@ describe('AddressAutocomplete', () => {
       expect(onChangeMock).toHaveBeenCalledWith('test')
     })
 
-    it('calls onSelectAddress when address is selected', async () => {
+    test('calls onSelectAddress when address is selected', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
       const onSelectAddressMock = vi.fn()
 
-      renderAddressAutocomplete({ onSelectAddress: onSelectAddressMock })
+      renderAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { onSelectAddress: onSelectAddressMock }
+      )
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'test address')
@@ -324,25 +465,45 @@ describe('AddressAutocomplete', () => {
       expect(screen.getByDisplayValue('test address')).toBeInTheDocument()
     })
 
-    it('handles string selection with validation', async () => {
+    test('handles string selection with validation', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const onSelectAddressMock = vi.fn()
 
       mockValidateAddress.mockResolvedValueOnce(mockValidationResponse)
 
-      renderAddressAutocomplete({ onSelectAddress: onSelectAddressMock })
+      renderAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { onSelectAddress: onSelectAddressMock }
+      )
 
       expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
   })
 
   describe('Address Selection Logic', () => {
-    it('handles address selection properly', async () => {
+    test('handles address selection properly', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
       const onSelectAddressMock = vi.fn()
 
       mockAutocompleteAddress.mockResolvedValueOnce(mockGeocoderResponse)
 
-      renderAddressAutocomplete({ onSelectAddress: onSelectAddressMock })
+      renderAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { onSelectAddress: onSelectAddressMock }
+      )
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'main')
@@ -361,8 +522,18 @@ describe('AddressAutocomplete', () => {
   })
 
   describe('Disabled State', () => {
-    it('disables autocomplete when disabled prop is true', () => {
-      renderAddressAutocomplete({ disabled: true })
+    test('disables autocomplete when disabled prop is true', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { disabled: true }
+      )
 
       const input = screen.getByRole('combobox')
       expect(input).toBeDisabled()
@@ -370,12 +541,26 @@ describe('AddressAutocomplete', () => {
   })
 
   describe('Loading State', () => {
-    it('shows loading state during API call', async () => {
+    test('shows loading state during API call', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
 
       mockAutocompleteAddress.mockResolvedValueOnce(mockGeocoderResponse)
 
-      renderAddressAutocomplete()
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'test')
@@ -397,20 +582,48 @@ describe('AddressAutocomplete', () => {
   })
 
   describe('Accessibility', () => {
-    it('has proper ARIA attributes', () => {
-      renderAddressAutocomplete()
+    test('has proper ARIA attributes', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       expect(input).toHaveAttribute('aria-expanded')
       expect(input).toHaveAttribute('aria-autocomplete', 'list')
     })
 
-    it('supports keyboard navigation', async () => {
+    test('supports keyboard navigation', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
 
       mockAutocompleteAddress.mockResolvedValueOnce(mockGeocoderResponse)
 
-      renderAddressAutocomplete()
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'main')
@@ -429,10 +642,24 @@ describe('AddressAutocomplete', () => {
       expect(input).toHaveFocus()
     })
 
-    it('provides proper focus management', async () => {
+    test('provides proper focus management', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
 
-      renderAddressAutocomplete()
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       await user.click(input)
@@ -442,29 +669,61 @@ describe('AddressAutocomplete', () => {
   })
 
   describe('ForwardRef Integration', () => {
-    it('forwards ref correctly', () => {
+    test('forwards ref correctly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const ref = { current: null }
 
-      render(<AddressAutocomplete ref={ref} {...defaultProps} />, {
-        wrapper: AppWrapper
-      })
+      render(<AddressAutocomplete ref={ref} {...defaultProps} />, [
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      ])
 
       // Component should render without errors when ref is provided
       expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
 
-    it('has correct displayName', () => {
+    test('has correct displayName', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       expect(AddressAutocomplete.displayName).toBe('AddressAutocomplete')
     })
   })
 
   describe('Edge Cases and Error Handling', () => {
-    it('handles empty API response', async () => {
+    test('handles empty API response', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
 
       mockAutocompleteAddress.mockResolvedValueOnce({ suggestions: [] })
 
-      renderAddressAutocomplete()
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'nonexistent')
@@ -485,12 +744,26 @@ describe('AddressAutocomplete', () => {
       })
     })
 
-    it('handles malformed API response', async () => {
+    test('handles malformed API response', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
 
       mockAutocompleteAddress.mockResolvedValueOnce({ invalid: 'response' })
 
-      renderAddressAutocomplete()
+      renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       const input = screen.getByRole('combobox')
       await user.type(input, 'test')
@@ -507,8 +780,22 @@ describe('AddressAutocomplete', () => {
       expect(input).toBeInTheDocument()
     })
 
-    it('handles component unmounting cleanly', () => {
-      const { unmount } = renderAddressAutocomplete()
+    test('handles component unmounting cleanly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      const { unmount } = renderAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
       expect(() => unmount()).not.toThrow()
     })

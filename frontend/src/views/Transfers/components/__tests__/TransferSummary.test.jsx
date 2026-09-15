@@ -1,13 +1,15 @@
-import { render, screen } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { TransferSummary } from '../TransferSummary'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock the utility functions
 vi.mock('@/utils/formatters', () => ({
   decimalFormatter: vi.fn((value) => `${value}.00`),
   calculateTotalValue: vi.fn((quantity, price) => quantity * price),
-  dateFormatter: vi.fn((date) => `formatted_${date?.toISOString?.()?.split('T')[0] || date}`),
+  dateFormatter: vi.fn(
+    (date) => `formatted_${date?.toISOString?.()?.split('T')[0] || date}`
+  ),
   formatNumberWithCommas: vi.fn(({ value }) => `${value}_formatted`)
 }))
 
@@ -38,7 +40,7 @@ describe('TransferSummary', () => {
 
   const mockFormData = {
     quantity: 1000,
-    pricePerUnit: 25.50,
+    pricePerUnit: 25.5,
     agreementDate: new Date('2024-01-15')
   }
 
@@ -47,21 +49,31 @@ describe('TransferSummary', () => {
   })
 
   describe('Component Rendering', () => {
-    it('renders with valid props', () => {
+    test('renders with valid props', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
-      expect(screen.getByText('Compliance units from: From Organization')).toBeInTheDocument()
-      expect(screen.getByText('Compliance units to: To Organization')).toBeInTheDocument()
+      expect(
+        screen.getByText('Compliance units from: From Organization')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('Compliance units to: To Organization')
+      ).toBeInTheDocument()
     })
 
-    it('renders with default props', () => {
+    test('renders with default props', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={{
@@ -74,16 +86,24 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
-      expect(screen.getByText((content) => content.includes('Compliance units from:'))).toBeInTheDocument()
-      expect(screen.getByText((content) => content.includes('Compliance units to:'))).toBeInTheDocument()
+      expect(
+        screen.getByText((content) =>
+          content.includes('Compliance units from:')
+        )
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText((content) => content.includes('Compliance units to:'))
+      ).toBeInTheDocument()
     })
 
-
-    it('renders with empty formData', () => {
+    test('renders with empty formData', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
@@ -93,7 +113,7 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
@@ -101,115 +121,164 @@ describe('TransferSummary', () => {
   })
 
   describe('Translation Usage', () => {
-    it('uses all translation keys correctly', () => {
+    test('uses all translation keys correctly', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
-      expect(screen.getByText('Compliance units from: From Organization')).toBeInTheDocument()
-      expect(screen.getByText('Compliance units to: To Organization')).toBeInTheDocument()
-      expect(screen.getByText('Number of units to transfer: 1000_formatted')).toBeInTheDocument()
+      expect(
+        screen.getByText('Compliance units from: From Organization')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('Compliance units to: To Organization')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('Number of units to transfer: 1000_formatted')
+      ).toBeInTheDocument()
       expect(screen.getByText('Value per unit: $25.5.00')).toBeInTheDocument()
       expect(screen.getByText('Total value: $25500.00')).toBeInTheDocument()
-      expect(screen.getByText('Agreement date: formatted_2024-01-15')).toBeInTheDocument()
-      expect(screen.getByText('Send transfer confirmation toTo Organization?')).toBeInTheDocument()
+      expect(
+        screen.getByText('Agreement date: formatted_2024-01-15')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('Send transfer confirmation toTo Organization?')
+      ).toBeInTheDocument()
     })
 
-    it('applies trimEnd to complianceUnitsTo translation', () => {
+    test('applies trimEnd to complianceUnitsTo translation', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        { wrapper }
+        [theme]
       )
 
-      expect(screen.getByText('Compliance units to: To Organization')).toBeInTheDocument()
+      expect(
+        screen.getByText('Compliance units to: To Organization')
+      ).toBeInTheDocument()
     })
   })
 
   describe('Formatter Function Calls', () => {
-    it('calls formatNumberWithCommas for quantity', () => {
+    test('calls formatNumberWithCommas for quantity', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        { wrapper }
+        [theme]
       )
 
-      expect(screen.getByText('Number of units to transfer: 1000_formatted')).toBeInTheDocument()
+      expect(
+        screen.getByText('Number of units to transfer: 1000_formatted')
+      ).toBeInTheDocument()
     })
 
-    it('calls decimalFormatter for pricePerUnit', () => {
+    test('calls decimalFormatter for pricePerUnit', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Value per unit: $25.5.00')).toBeInTheDocument()
     })
 
-    it('calls calculateTotalValue and decimalFormatter for total', () => {
+    test('calls calculateTotalValue and decimalFormatter for total', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Total value: $25500.00')).toBeInTheDocument()
     })
 
-    it('calls dateFormatter for agreementDate', () => {
+    test('calls dateFormatter for agreementDate', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        { wrapper }
+        [theme]
       )
 
-      expect(screen.getByText('Agreement date: formatted_2024-01-15')).toBeInTheDocument()
+      expect(
+        screen.getByText('Agreement date: formatted_2024-01-15')
+      ).toBeInTheDocument()
     })
   })
 
   describe('Organization Names Display', () => {
-    it('displays fromOrganization name correctly', () => {
+    test('displays fromOrganization name correctly', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        { wrapper }
+        [theme]
       )
 
-      expect(screen.getByText('Compliance units from: From Organization')).toBeInTheDocument()
+      expect(
+        screen.getByText('Compliance units from: From Organization')
+      ).toBeInTheDocument()
     })
 
-    it('displays toOrganization name correctly', () => {
+    test('displays toOrganization name correctly', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={mockFormData}
         />,
-        { wrapper }
+        [theme]
       )
 
-      expect(screen.getByText('Compliance units to: To Organization')).toBeInTheDocument()
-      expect(screen.getByText('Send transfer confirmation toTo Organization?')).toBeInTheDocument()
+      expect(
+        screen.getByText('Compliance units to: To Organization')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('Send transfer confirmation toTo Organization?')
+      ).toBeInTheDocument()
     })
 
-    it('handles empty organization names with defaults', () => {
+    test('handles empty organization names with defaults', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={{
@@ -222,41 +291,62 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        { wrapper }
+        [theme]
       )
 
-      expect(screen.getByText((content) => content.includes('Compliance units from:'))).toBeInTheDocument()
-      expect(screen.getByText((content) => content.includes('Compliance units to:'))).toBeInTheDocument()
-      expect(screen.getByText((content) => content.includes('Send transfer confirmation to'))).toBeInTheDocument()
+      expect(
+        screen.getByText((content) =>
+          content.includes('Compliance units from:')
+        )
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText((content) => content.includes('Compliance units to:'))
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText((content) =>
+          content.includes('Send transfer confirmation to')
+        )
+      ).toBeInTheDocument()
     })
   })
 
   describe('Edge Cases', () => {
-    it('handles zero quantity', () => {
+    test('handles zero quantity', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={{ ...mockFormData, quantity: 0 }}
         />,
-        { wrapper }
+        [theme]
       )
 
-      expect(screen.getByText('Number of units to transfer: 0_formatted')).toBeInTheDocument()
+      expect(
+        screen.getByText('Number of units to transfer: 0_formatted')
+      ).toBeInTheDocument()
     })
 
-    it('handles zero pricePerUnit', () => {
+    test('handles zero pricePerUnit', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
           formData={{ ...mockFormData, pricePerUnit: 0 }}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Value per unit: $0.00')).toBeInTheDocument()
     })
 
-    it('handles different date formats', () => {
+    test('handles different date formats', ({
+      render,
+       theme
+    }) => {
       const testDate = new Date('2023-12-25')
 
       render(
@@ -264,13 +354,18 @@ describe('TransferSummary', () => {
           transferData={mockTransferData}
           formData={{ ...mockFormData, agreementDate: testDate }}
         />,
-        { wrapper }
+        [theme]
       )
 
-      expect(screen.getByText('Agreement date: formatted_2023-12-25')).toBeInTheDocument()
+      expect(
+        screen.getByText('Agreement date: formatted_2023-12-25')
+      ).toBeInTheDocument()
     })
 
-    it('renders with missing formData properties', () => {
+    test('renders with missing formData properties', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
@@ -280,13 +375,16 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
     })
 
-    it('handles undefined formData', () => {
+    test('handles undefined formData', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
@@ -296,7 +394,7 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
@@ -304,7 +402,10 @@ describe('TransferSummary', () => {
   })
 
   describe('Default Values', () => {
-    it('uses default formData when not provided', () => {
+    test('uses default formData when not provided', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={{
@@ -317,46 +418,60 @@ describe('TransferSummary', () => {
             agreementDate: new Date()
           }}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
-      expect(screen.getByText('Number of units to transfer: 0_formatted')).toBeInTheDocument()
+      expect(
+        screen.getByText('Number of units to transfer: 0_formatted')
+      ).toBeInTheDocument()
       expect(screen.getByText('Value per unit: $0.00')).toBeInTheDocument()
       expect(screen.getByText('Total value: $0.00')).toBeInTheDocument()
     })
 
-    it('handles partial transferData with valid organization', () => {
+    test('handles partial transferData with valid organization', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
-          transferData={{ 
+          transferData={{
             fromOrganization: { name: 'Test From' },
-            toOrganization: { name: 'Test To' } 
+            toOrganization: { name: 'Test To' }
           }}
           formData={mockFormData}
         />,
-        { wrapper }
+        [theme]
       )
 
-      expect(screen.getByText('Compliance units from: Test From')).toBeInTheDocument()
-      expect(screen.getByText('Compliance units to: Test To')).toBeInTheDocument()
+      expect(
+        screen.getByText('Compliance units from: Test From')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('Compliance units to: Test To')
+      ).toBeInTheDocument()
     })
 
-    it('handles partial formData with missing values', () => {
+    test('handles partial formData with missing values', ({
+      render,
+       theme
+    }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
-          formData={{ 
-            quantity: 500, 
-            pricePerUnit: 0, 
-            agreementDate: new Date() 
+          formData={{
+            quantity: 500,
+            pricePerUnit: 0,
+            agreementDate: new Date()
           }}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
-      expect(screen.getByText('Number of units to transfer: 500_formatted')).toBeInTheDocument()
+      expect(
+        screen.getByText('Number of units to transfer: 500_formatted')
+      ).toBeInTheDocument()
     })
   })
 })

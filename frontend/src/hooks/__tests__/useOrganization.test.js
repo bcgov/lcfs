@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { waitFor } from '@testing-library/react'
+import { describe, beforeEach, afterEach, expect, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { useApiService } from '@/services/useApiService'
 import { useQueryClient } from '@tanstack/react-query'
 vi.mock('@/hooks/useCurrentUser', () => ({
@@ -67,43 +67,52 @@ describe('useOrganization hooks', () => {
     vi.clearAllMocks()
   })
 
-  it('useOrganization fetches by id', async () => {
+  test('useOrganization fetches by id', async ({ renderHook, query }) => {
     mockGet.mockResolvedValue({ data: { id: 5, name: 'Org' } })
-    const { result } = renderHook(() => useOrganization(5), { wrapper })
+    const { result } = renderHook(() => useOrganization(5), [query])
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/organizations/5')
     expect(result.current.data).toEqual({ id: 5, name: 'Org' })
   })
 
-  it('useOrganizationUser fetches user', async () => {
+  test('useOrganizationUser fetches user', async ({ renderHook, query }) => {
     mockGet.mockResolvedValue({ data: { id: 9 } })
-    const { result } = renderHook(() => useOrganizationUser(1, 9), { wrapper })
+    const { result } = renderHook(() => useOrganizationUser(1, 9), [query])
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/organization/1/users/9')
   })
 
-  it('useOrganizationBalance guarded when orgID missing', async () => {
-    const { result } = renderHook(() => useOrganizationBalance(), { wrapper })
+  test('useOrganizationBalance guarded when orgID missing', async ({
+    renderHook,
+    query
+  }) => {
+    const { result } = renderHook(() => useOrganizationBalance(), [query])
     expect(result.current.fetchStatus).toBe('idle')
   })
 
-  it('useCurrentOrgBalance fetches', async () => {
+  test('useCurrentOrgBalance fetches', async ({ renderHook, query }) => {
     mockGet.mockResolvedValue({ data: { total: 1 } })
-    const { result } = renderHook(() => useCurrentOrgBalance(), { wrapper })
+    const { result } = renderHook(() => useCurrentOrgBalance(), [query])
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/organizations/current/balances')
   })
 
-  it('useCreditMarketListings fetches list', async () => {
+  test('useCreditMarketListings fetches list', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockResolvedValue({ data: { items: [] } })
-    const { result } = renderHook(() => useCreditMarketListings(), { wrapper })
+    const { result } = renderHook(() => useCreditMarketListings(), [query])
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith(
       '/organizations/credit-market-listings'
     )
   })
 
-  it('useCreditMarketAuditLogs posts paginated request', async () => {
+  test('useCreditMarketAuditLogs posts paginated request', async ({
+    renderHook,
+    query
+  }) => {
     mockPost.mockResolvedValue({
       data: { pagination: { total: 0 }, creditMarketAuditLogs: [] }
     })
@@ -115,7 +124,7 @@ describe('useOrganization hooks', () => {
           sortOrders: [{ field: 'uploadedDate', direction: 'desc' }],
           filters: []
         }),
-      { wrapper }
+      [query]
     )
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockPost).toHaveBeenCalledWith(
@@ -129,75 +138,91 @@ describe('useOrganization hooks', () => {
     )
   })
 
-  it('useGetOrgComplianceReportReportedYears fetches', async () => {
+  test('useGetOrgComplianceReportReportedYears fetches', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockResolvedValue({ data: [2023, 2024] })
     const { result } = renderHook(
       () => useGetOrgComplianceReportReportedYears(10),
-      { wrapper }
+      [query]
     )
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalled()
   })
 
-  it('useAvailableFormTypes fetches', async () => {
+  test('useAvailableFormTypes fetches', async ({ renderHook, query }) => {
     mockGet.mockResolvedValue({ data: { forms: {} } })
-    const { result } = renderHook(() => useAvailableFormTypes(2), { wrapper })
+    const { result } = renderHook(() => useAvailableFormTypes(2), [query])
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/organizations/2/forms')
   })
 
-  it('useOrganizationLinkKeys fetches', async () => {
+  test('useOrganizationLinkKeys fetches', async ({ renderHook, query }) => {
     mockGet.mockResolvedValue({ data: { linkKeys: [] } })
-    const { result } = renderHook(() => useOrganizationLinkKeys(2), { wrapper })
+    const { result } = renderHook(() => useOrganizationLinkKeys(2), [query])
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/organizations/2/link-keys')
   })
 
-  it('useGenerateLinkKey posts', async () => {
+  test('useGenerateLinkKey posts', async ({ renderHook, query }) => {
     mockPost.mockResolvedValue({ data: { ok: true } })
-    const { result } = renderHook(() => useGenerateLinkKey(3), { wrapper })
+    const { result } = renderHook(() => useGenerateLinkKey(3), [query])
     await result.current.mutateAsync({ formId: 7 })
     expect(mockPost).toHaveBeenCalledWith('/organizations/3/link-keys', {
       form_id: 7
     })
   })
 
-  it('useUpdateOrganization success updates cache and invalidates', async () => {
+  test('useUpdateOrganization success updates cache and invalidates', async ({
+    renderHook,
+    query
+  }) => {
     mockPut.mockResolvedValue({ data: { id: 3, name: 'X' } })
     const { result } = renderHook(
       () => useUpdateOrganization(3, { clearCache: false }),
-      { wrapper }
+      [query]
     )
     await result.current.mutateAsync({ name: 'X' })
     expect(qcMock.setQueryData).toHaveBeenCalled()
     expect(qcMock.invalidateQueries).toHaveBeenCalled()
   })
 
-  it('useUpdateOrganization error invalidates specific query', async () => {
+  test('useUpdateOrganization error invalidates specific query', async ({
+    renderHook,
+    query
+  }) => {
     mockPut.mockRejectedValue(new Error('boom'))
-    const { result } = renderHook(() => useUpdateOrganization(9), { wrapper })
+    const { result } = renderHook(() => useUpdateOrganization(9), [query])
     try {
       await result.current.mutateAsync({})
     } catch {}
     expect(qcMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['organization', 9] })
   })
 
-  it('useUpdateOrganizationUser success invalidates related queries', async () => {
+  test('useUpdateOrganizationUser success invalidates related queries', async ({
+    renderHook,
+    query
+  }) => {
     mockPut.mockResolvedValue({ data: { ok: true } })
     const { result } = renderHook(
       () => useUpdateOrganizationUser(1, 2, { clearCache: false }),
-      { wrapper }
+      [query]
     )
     await result.current.mutateAsync({})
     expect(qcMock.setQueryData).toHaveBeenCalled()
     expect(qcMock.invalidateQueries).toHaveBeenCalled()
   })
 
-  it('useUpdateOrganizationUser error invalidates specific query', async () => {
+  test('useUpdateOrganizationUser error invalidates specific query', async ({
+    renderHook,
+    query
+  }) => {
     mockPut.mockRejectedValue(new Error('bad'))
-    const { result } = renderHook(() => useUpdateOrganizationUser(1, 2), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useUpdateOrganizationUser(1, 2),
+      [query]
+    )
     try {
       await result.current.mutateAsync({})
     } catch {}
@@ -208,11 +233,14 @@ describe('useOrganization hooks', () => {
     ] })
   })
 
-  it('useUpdateCurrentOrgCreditMarket success invalidates related', async () => {
+  test('useUpdateCurrentOrgCreditMarket success invalidates related', async ({
+    renderHook,
+    query
+  }) => {
     mockPut.mockResolvedValue({ data: { ok: true } })
     const { result } = renderHook(
       () => useUpdateCurrentOrgCreditMarket({ clearCache: false }),
-      { wrapper }
+      [query]
     )
     await result.current.mutateAsync({})
     expect(qcMock.setQueryData).toHaveBeenCalled()
@@ -228,11 +256,14 @@ describe('useOrganization hooks', () => {
     ] })
   })
 
-  it('useUpdateOrganizationCreditMarket invalidates caches and listings', async () => {
+  test('useUpdateOrganizationCreditMarket invalidates caches and listings', async ({
+    renderHook,
+    query
+  }) => {
     mockPut.mockResolvedValue({ data: { ok: true } })
     const { result } = renderHook(
       () => useUpdateOrganizationCreditMarket(5, { clearCache: true }),
-      { wrapper }
+      [query]
     )
     await result.current.mutateAsync({})
     expect(mockPut).toHaveBeenCalledWith('/organizations/5/credit-market', {})
@@ -246,24 +277,30 @@ describe('useOrganization hooks', () => {
     ] })
   })
 
-  it('useOrganizationBalance disabled when user not government', async () => {
+  test('useOrganizationBalance disabled when user not government', async ({
+    renderHook,
+    query
+  }) => {
     // Override hasRoles to return false
     const { useCurrentUser } = await import('@/hooks/useCurrentUser')
     useCurrentUser.mockReturnValue({ hasRoles: () => false })
-    const { result } = renderHook(() => useOrganizationBalance(1), { wrapper })
+    const { result } = renderHook(() => useOrganizationBalance(1), [query])
     expect(result.current.fetchStatus).toBe('idle')
   })
 
-  it('useRegenerateLinkKey puts', async () => {
+  test('useRegenerateLinkKey puts', async ({ renderHook, query }) => {
     mockPut.mockResolvedValue({ data: { ok: true } })
-    const { result } = renderHook(() => useRegenerateLinkKey(3), { wrapper })
+    const { result } = renderHook(() => useRegenerateLinkKey(3), [query])
     await result.current.mutateAsync(7)
     expect(mockPut).toHaveBeenCalledWith('/organizations/3/link-keys/7')
   })
 
-  it('useValidateLinkKey fetches validation', async () => {
+  test('useValidateLinkKey fetches validation', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockResolvedValue({ data: { valid: true } })
-    const { result } = renderHook(() => useValidateLinkKey('abc'), { wrapper })
+    const { result } = renderHook(() => useValidateLinkKey('abc'), [query])
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/organizations/validate-link-key/abc')
   })

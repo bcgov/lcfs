@@ -47,13 +47,16 @@ vi.mock('@/components/BCBox', () => ({
   ))
 }))
 
-vi.mock('@mui/material', () => ({
-  AppBar: vi.fn(({ children, ...props }) => (
+vi.mock('@mui/material/AppBar', () => ({
+  default: vi.fn(({ children, ...props }) => (
     <div data-test="app-bar" {...props}>
       {children}
     </div>
-  )),
-  Tabs: vi.fn(({ children, onChange, ...props }) => (
+  ))
+}))
+
+vi.mock('@mui/material/Tabs', () => ({
+  default: vi.fn(({ children, onChange, ...props }) => (
     <div
       data-test="tabs"
       data-orientation={props.orientation}
@@ -63,8 +66,11 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </div>
-  )),
-  Tab: vi.fn(({ label, wrapped, ...props }) => (
+  ))
+}))
+
+vi.mock('@mui/material/Tab', () => ({
+  default: vi.fn(({ label, wrapped, ...props }) => (
     <button data-test="tab" data-wrapped={wrapped} {...props}>
       {label}
     </button>

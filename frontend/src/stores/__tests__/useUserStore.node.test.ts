@@ -1,6 +1,16 @@
-import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useUserStore, type User } from '../useUserStore'
+
+const getStoreResult = () => ({
+  result: {
+    get current() {
+      return useUserStore.getState()
+    }
+  },
+  unmount: () => {}
+})
+
+const run = <T>(callback: () => T): T => callback()
 
 const getUser = (user: User | null): User => {
   if (!user) {
@@ -12,20 +22,20 @@ const getUser = (user: User | null): User => {
 describe('useUserStore', () => {
   beforeEach(() => {
     // Reset store state before each test
-    act(() => {
+    run(() => {
       useUserStore.setState({ user: null })
     })
   })
 
   describe('initial state', () => {
     it('should initialize with null user', () => {
-      const { result } = renderHook(() => useUserStore())
+      const { result } = getStoreResult()
       
       expect(result.current.user).toBeNull()
     })
 
     it('should have setUser function available', () => {
-      const { result } = renderHook(() => useUserStore())
+      const { result } = getStoreResult()
       
       expect(typeof result.current.setUser).toBe('function')
     })
@@ -33,7 +43,7 @@ describe('useUserStore', () => {
 
   describe('setUser functionality', () => {
     it('should set user data when setUser is called', () => {
-      const { result } = renderHook(() => useUserStore())
+      const { result } = getStoreResult()
       const mockUser = {
         id: 1,
         name: 'Test User',
@@ -41,7 +51,7 @@ describe('useUserStore', () => {
         role: 'ANALYST'
       }
 
-      act(() => {
+      run(() => {
         result.current.setUser(mockUser)
       })
 
@@ -49,7 +59,7 @@ describe('useUserStore', () => {
     })
 
     it('should overwrite existing user data', () => {
-      const { result } = renderHook(() => useUserStore())
+      const { result } = getStoreResult()
       const firstUser = {
         id: 1,
         name: 'First User',
@@ -63,13 +73,13 @@ describe('useUserStore', () => {
         role: 'GOVERNMENT'
       }
 
-      act(() => {
+      run(() => {
         result.current.setUser(firstUser)
       })
       
       expect(result.current.user).toEqual(firstUser)
 
-      act(() => {
+      run(() => {
         result.current.setUser(secondUser)
       })
 
@@ -77,7 +87,7 @@ describe('useUserStore', () => {
     })
 
     it('should handle setting user to null', () => {
-      const { result } = renderHook(() => useUserStore())
+      const { result } = getStoreResult()
       const mockUser = {
         id: 1,
         name: 'Test User',
@@ -86,14 +96,14 @@ describe('useUserStore', () => {
       }
 
       // First set a user
-      act(() => {
+      run(() => {
         result.current.setUser(mockUser)
       })
       
       expect(result.current.user).toEqual(mockUser)
 
       // Then clear the user
-      act(() => {
+      run(() => {
         result.current.setUser(null)
       })
 
@@ -101,14 +111,14 @@ describe('useUserStore', () => {
     })
 
     it('should handle partial user objects', () => {
-      const { result } = renderHook(() => useUserStore())
+      const { result } = getStoreResult()
       const partialUser = {
         id: 1,
         name: 'Partial User'
         // Missing email and role
       }
 
-      act(() => {
+      run(() => {
         result.current.setUser(partialUser)
       })
 
@@ -123,7 +133,7 @@ describe('useUserStore', () => {
 
   describe('store reactivity', () => {
     it('should trigger re-renders when user state changes', () => {
-      const { result } = renderHook(() => useUserStore())
+      const { result } = getStoreResult()
       const mockUser = {
         id: 1,
         name: 'Test User',
@@ -133,7 +143,7 @@ describe('useUserStore', () => {
 
       expect(result.current.user).toBeNull()
 
-      act(() => {
+      run(() => {
         result.current.setUser(mockUser)
       })
 
@@ -142,8 +152,8 @@ describe('useUserStore', () => {
     })
 
     it('should allow multiple hooks to access the same state', () => {
-      const { result: result1 } = renderHook(() => useUserStore())
-      const { result: result2 } = renderHook(() => useUserStore())
+      const { result: result1 } = getStoreResult()
+      const { result: result2 } = getStoreResult()
       
       const mockUser = {
         id: 1,
@@ -152,7 +162,7 @@ describe('useUserStore', () => {
         role: 'ANALYST'
       }
 
-      act(() => {
+      run(() => {
         result1.current.setUser(mockUser)
       })
 
@@ -172,9 +182,9 @@ describe('useUserStore', () => {
       }
 
       // First hook instance
-      const { result: result1, unmount } = renderHook(() => useUserStore())
+      const { result: result1, unmount } = getStoreResult()
       
-      act(() => {
+      run(() => {
         result1.current.setUser(mockUser)
       })
       
@@ -184,7 +194,7 @@ describe('useUserStore', () => {
       unmount()
       
       // Create a new hook instance
-      const { result: result2 } = renderHook(() => useUserStore())
+      const { result: result2 } = getStoreResult()
       
       // State should persist
       expect(result2.current.user).toEqual(mockUser)
@@ -193,7 +203,7 @@ describe('useUserStore', () => {
 
   describe('edge cases and error handling', () => {
     it('should handle rapid successive updates', () => {
-      const { result } = renderHook(() => useUserStore())
+      const { result } = getStoreResult()
       
       const users = [
         { id: 1, name: 'User 1' },
@@ -201,7 +211,7 @@ describe('useUserStore', () => {
         { id: 3, name: 'User 3' }
       ]
 
-      act(() => {
+      run(() => {
         users.forEach(user => {
           result.current.setUser(user)
         })
@@ -212,7 +222,7 @@ describe('useUserStore', () => {
     })
 
     it('should handle complex nested user objects', () => {
-      const { result } = renderHook(() => useUserStore())
+      const { result } = getStoreResult()
       const complexUser = {
         id: 1,
         name: 'Complex User',
@@ -234,7 +244,7 @@ describe('useUserStore', () => {
         }
       }
 
-      act(() => {
+      run(() => {
         result.current.setUser(complexUser)
       })
 

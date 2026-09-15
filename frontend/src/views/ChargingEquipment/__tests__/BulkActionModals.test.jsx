@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { BulkActionModals } from '../components/BulkActionModals'
 
@@ -10,11 +10,14 @@ vi.mock('react-i18next', () => ({
       const translations = {
         'chargingEquipment:submitConfirmTitle': 'Submit confirmation',
         'chargingEquipment:submitConfirmMessage': `This will set ${options?.count || 0} selected FSE to Submitted status.`,
-        'chargingEquipment:submitConfirmWarning': 'No more edits will be possible.',
+        'chargingEquipment:submitConfirmWarning':
+          'No more edits will be possible.',
         'chargingEquipment:submitSelected': 'Submit Selected',
-        'chargingEquipment:decommissionConfirmTitle': 'Decommission confirmation',
+        'chargingEquipment:decommissionConfirmTitle':
+          'Decommission confirmation',
         'chargingEquipment:decommissionConfirmMessage': `This will set ${options?.count || 0} selected FSE to Decommissioned status.`,
-        'chargingEquipment:decommissionConfirmWarning': 'They will no longer be available in future compliance reports.',
+        'chargingEquipment:decommissionConfirmWarning':
+          'They will no longer be available in future compliance reports.',
         'chargingEquipment:setToDecommissioned': 'Set to decommissioned',
         'common:cancel': 'Cancel'
       }
@@ -31,7 +34,9 @@ vi.mock('@/components/BCModal', () => ({
     return (
       <div data-test="modal" role="dialog">
         <div data-test="modal-title">{title}</div>
-        <button data-test="modal-close" onClick={onClose}>×</button>
+        <button data-test="modal-close" onClick={onClose}>
+          ×
+        </button>
         {children}
       </div>
     )
@@ -39,9 +44,7 @@ vi.mock('@/components/BCModal', () => ({
 }))
 
 const TestWrapper = ({ children }) => (
-  <ThemeProvider theme={theme}>
-    {children}
-  </ThemeProvider>
+  <ThemeProvider theme={theme}>{children}</ThemeProvider>
 )
 
 describe('BulkActionModals', () => {
@@ -91,11 +94,19 @@ describe('BulkActionModals', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByTestId('modal-title')).toHaveTextContent('Submit confirmation')
-    expect(screen.getByText(/This will set 3 selected FSE to Submitted status/)).toBeInTheDocument()
-    expect(screen.getByText('No more edits will be possible.')).toBeInTheDocument()
+    expect(screen.getByTestId('modal-title')).toHaveTextContent(
+      'Submit confirmation'
+    )
+    expect(
+      screen.getByText(/This will set 3 selected FSE to Submitted status/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('No more edits will be possible.')
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Submit Selected' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Submit Selected' })
+    ).toBeInTheDocument()
   })
 
   it('renders decommission modal when showDecommissionModal is true', () => {
@@ -115,11 +126,21 @@ describe('BulkActionModals', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByTestId('modal-title')).toHaveTextContent('Decommission confirmation')
-    expect(screen.getByText(/This will set 2 selected FSE to Decommissioned status/)).toBeInTheDocument()
-    expect(screen.getByText('They will no longer be available in future compliance reports.')).toBeInTheDocument()
+    expect(screen.getByTestId('modal-title')).toHaveTextContent(
+      'Decommission confirmation'
+    )
+    expect(
+      screen.getByText(/This will set 2 selected FSE to Decommissioned status/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'They will no longer be available in future compliance reports.'
+      )
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Set to decommissioned' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Set to decommissioned' })
+    ).toBeInTheDocument()
   })
 
   it('handles submit modal actions', () => {
@@ -170,7 +191,9 @@ describe('BulkActionModals', () => {
     expect(mockOnDecommissionCancel).toHaveBeenCalledOnce()
 
     // Test confirm action
-    fireEvent.click(screen.getByRole('button', { name: 'Set to decommissioned' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Set to decommissioned' })
+    )
     expect(mockOnDecommissionConfirm).toHaveBeenCalledOnce()
   })
 
@@ -216,7 +239,9 @@ describe('BulkActionModals', () => {
     )
 
     const cancelButton = screen.getByRole('button', { name: 'Cancel' })
-    const decommissionButton = screen.getByRole('button', { name: 'Set to decommissioned' })
+    const decommissionButton = screen.getByRole('button', {
+      name: 'Set to decommissioned'
+    })
 
     expect(cancelButton).toBeDisabled()
     expect(decommissionButton).toBeDisabled()
@@ -263,9 +288,13 @@ describe('BulkActionModals', () => {
     // Should have both modal titles
     const modals = screen.getAllByRole('dialog')
     expect(modals).toHaveLength(2)
-    
+
     // Should have buttons for both actions
-    expect(screen.getByRole('button', { name: 'Submit Selected' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Set to decommissioned' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Submit Selected' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Set to decommissioned' })
+    ).toBeInTheDocument()
   })
 })

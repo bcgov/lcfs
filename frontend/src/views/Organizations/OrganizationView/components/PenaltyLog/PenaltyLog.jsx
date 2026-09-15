@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Grid, Stack } from '@mui/material'
+import Grid from '@mui/material/Grid'
+import Stack from '@mui/material/Stack'
 import { useTheme } from '@mui/material/styles'
 import { useParams } from 'react-router-dom'
 

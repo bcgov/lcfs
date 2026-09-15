@@ -7,17 +7,17 @@ import {
   type ForwardedRef
 } from 'react'
 import Fade from '@mui/material/Fade'
-import {
-  Info as InfoIcon,
-  Error as ErrorIcon,
-  Warning as WarningIcon,
-  CheckCircle as CheckCircleIcon,
-  Close as CloseIcon,
-  ExpandMore
-} from '@mui/icons-material'
+import InfoIcon from '@mui/icons-material/Info'
+import ErrorIcon from '@mui/icons-material/Error'
+import WarningIcon from '@mui/icons-material/Warning'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import CloseIcon from '@mui/icons-material/Close'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import BCBox from '@/components/BCBox'
-import BCAlertRoot, { type AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
-import { CircularProgress } from '@mui/material'
+import BCAlertRoot, {
+  type AlertSeverity
+} from '@/components/BCAlert/BCAlertRoot'
+import CircularProgress from '@mui/material/CircularProgress'
 import type { BoxProps } from '@mui/material/Box'
 
 type AlertStatus = 'mount' | 'fadeOut' | 'unmount'
@@ -35,7 +35,12 @@ export interface BCAlert2Props extends Omit<BoxProps, 'color'> {
 
 export const BCAlert2 = forwardRef(
   (
-    { dismissible = false, noFade = false, delay = 5000, ...rest }: BCAlert2Props,
+    {
+      dismissible = false,
+      noFade = false,
+      delay = 5000,
+      ...rest
+    }: BCAlert2Props,
     ref: ForwardedRef<BCAlert2Handle>
   ) => {
     const [alertStatus, setAlertStatus] = useState<AlertStatus>('mount')
@@ -75,7 +80,11 @@ export const BCAlert2 = forwardRef(
 
     useEffect(() => {
       setAlertStatus('mount')
-      const fadeExemptSeverities: AlertSeverity[] = ['error', 'pending', 'warning']
+      const fadeExemptSeverities: AlertSeverity[] = [
+        'error',
+        'pending',
+        'warning'
+      ]
       if (noFade || (severity && fadeExemptSeverities.includes(severity))) {
         return
       }

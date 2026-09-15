@@ -32,18 +32,22 @@ vi.mock('react-router-dom', () => ({
 }))
 
 // Mock Material-UI components
-vi.mock('@mui/material', () => ({
-  Stack: ({ children, ...props }) => (
+vi.mock('@mui/material/Stack', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="stack" {...props}>
       {children}
     </div>
-  ),
-  List: ({ children, ...props }) => (
+  )
+}))
+vi.mock('@mui/material/List', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="list" {...props}>
       {children}
     </div>
-  ),
-  ListItemButton: ({ children, onClick, ...props }) => (
+  )
+}))
+vi.mock('@mui/material/ListItemButton', () => ({
+  default: ({ children, onClick, ...props }) => (
     <div data-test="list-item-button" onClick={onClick} {...props}>
       {children}
     </div>

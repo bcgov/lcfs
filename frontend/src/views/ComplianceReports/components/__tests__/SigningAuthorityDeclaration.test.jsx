@@ -1,8 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, beforeEach, expect, vi } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { describe, beforeEach, expect, vi } from 'vitest'
 import { useState } from 'react'
 import SigningAuthorityDeclaration from '../SigningAuthorityDeclaration'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -42,7 +42,7 @@ describe('SigningAuthorityDeclaration Component', () => {
     hasValidAddress: true
   }
 
-  const renderComponent = (props) => {
+  const renderComponent = (render, providers, props) => {
     return render(
       <SigningAuthorityDeclaration
         {...baseProps}
@@ -50,20 +50,34 @@ describe('SigningAuthorityDeclaration Component', () => {
         onChange={onChangeMock}
         {...props}
       />,
-      { wrapper }
+      providers
     )
   }
 
-  it('renders component structure with title', () => {
-    renderComponent()
+  test('renders component structure with title', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router])
 
-    expect(screen.getByText('report:signingAuthorityDeclaration')).toBeInTheDocument()
+    expect(
+      screen.getByText('report:signingAuthorityDeclaration')
+    ).toBeInTheDocument()
     expect(screen.getByText('report:declarationText')).toBeInTheDocument()
     expect(screen.getByRole('checkbox')).toBeInTheDocument()
   })
 
-  it('renders the component with all alerts when no props are true', () => {
-    renderComponent({
+  test('renders the component with all alerts when no props are true', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router], {
       hasAuthority: false,
       hasRecords: false,
       hasValidAddress: false
@@ -77,8 +91,14 @@ describe('SigningAuthorityDeclaration Component', () => {
     expect(screen.getByRole('checkbox')).toBeDisabled()
   })
 
-  it('renders without alerts and enables checkbox when all props are true', () => {
-    renderComponent()
+  test('renders without alerts and enables checkbox when all props are true', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router])
 
     expect(screen.queryByText('report:noRecords')).not.toBeInTheDocument()
     expect(
@@ -88,8 +108,14 @@ describe('SigningAuthorityDeclaration Component', () => {
     expect(screen.getByRole('checkbox')).toBeEnabled()
   })
 
-  it('renders only noRecords alert when hasRecords is false', () => {
-    renderComponent({
+  test('renders only noRecords alert when hasRecords is false', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router], {
       hasRecords: false,
       checked: false
     })
@@ -101,8 +127,14 @@ describe('SigningAuthorityDeclaration Component', () => {
     expect(screen.queryByText('report:invalidAddress')).not.toBeInTheDocument()
   })
 
-  it('renders only noSigningAuthorityTooltip alert when hasAuthority is false', () => {
-    renderComponent({
+  test('renders only noSigningAuthorityTooltip alert when hasAuthority is false', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router], {
       hasAuthority: false,
       checked: false
     })
@@ -114,8 +146,14 @@ describe('SigningAuthorityDeclaration Component', () => {
     expect(screen.queryByText('report:invalidAddress')).not.toBeInTheDocument()
   })
 
-  it('renders only invalidAddress alert when hasValidAddress is false', () => {
-    renderComponent({
+  test('renders only invalidAddress alert when hasValidAddress is false', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router], {
       hasValidAddress: false
     })
 
@@ -126,8 +164,14 @@ describe('SigningAuthorityDeclaration Component', () => {
     expect(screen.getByText('report:invalidAddress')).toBeInTheDocument()
   })
 
-  it('disables checkbox when hasRecords is false', () => {
-    renderComponent({
+  test('disables checkbox when hasRecords is false', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router], {
       hasRecords: false,
       checked: false
     })
@@ -135,8 +179,14 @@ describe('SigningAuthorityDeclaration Component', () => {
     expect(screen.getByRole('checkbox')).toBeDisabled()
   })
 
-  it('disables checkbox when hasAuthority is false', () => {
-    renderComponent({
+  test('disables checkbox when hasAuthority is false', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router], {
       hasAuthority: false,
       checked: false
     })
@@ -144,21 +194,30 @@ describe('SigningAuthorityDeclaration Component', () => {
     expect(screen.getByRole('checkbox')).toBeDisabled()
   })
 
-  it('disables checkbox when hasValidAddress is false', () => {
-    renderComponent({
+  test('disables checkbox when hasValidAddress is false', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router], {
       hasValidAddress: false
     })
 
     expect(screen.getByRole('checkbox')).toBeDisabled()
   })
 
-  it('calls onChange with correct value when checkbox is clicked', () => {
+  test('calls onChange with correct value when checkbox is clicked', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
-      <ControlledSigningAuthority
-        {...baseProps}
-        onChange={onChangeMock}
-      />,
-      { wrapper }
+      <ControlledSigningAuthority {...baseProps} onChange={onChangeMock} />,
+      [query, theme, localization, router]
     )
 
     const checkbox = screen.getByRole('checkbox')
@@ -168,20 +227,29 @@ describe('SigningAuthorityDeclaration Component', () => {
     expect(onChangeMock).toHaveBeenLastCalledWith(false)
   })
 
-  it('checkbox starts unchecked by default', () => {
-    renderComponent()
+  test('checkbox starts unchecked by default', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router])
 
     const checkbox = screen.getByRole('checkbox')
     expect(checkbox).not.toBeChecked()
   })
 
-  it('checkbox maintains state between clicks when controlled externally', () => {
+  test('checkbox maintains state between clicks when controlled externally', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
-      <ControlledSigningAuthority
-        {...baseProps}
-        onChange={onChangeMock}
-      />,
-      { wrapper }
+      <ControlledSigningAuthority {...baseProps} onChange={onChangeMock} />,
+      [query, theme, localization, router]
     )
 
     const checkbox = screen.getByRole('checkbox')
@@ -193,9 +261,14 @@ describe('SigningAuthorityDeclaration Component', () => {
     expect(checkbox).not.toBeChecked()
   })
 
-
-  it('alert boxes have correct test attributes', () => {
-    renderComponent({
+  test('alert boxes have correct test attributes', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    renderComponent(render, [query, theme, localization, router], {
       onChange: onChangeMock,
       hasAuthority: false,
       hasRecords: false,

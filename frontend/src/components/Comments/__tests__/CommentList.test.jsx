@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { roles } from '@/constants/roles'
 import CommentList from '../CommentList'
 
@@ -102,8 +102,11 @@ describe('CommentList comment filters', () => {
     mockUserState.username = 'idir-user'
   })
 
-  it('defaults to all comments for IDIR dual-mode users', () => {
-    render(<CommentList {...baseProps} />, { wrapper })
+  test('defaults to all comments for IDIR dual-mode users', ({
+    render,
+    theme
+  }) => {
+    render(<CommentList {...baseProps} />, [theme])
 
     expect(screen.getByRole('tab', { name: 'All comments' })).toHaveAttribute(
       'aria-selected',
@@ -113,8 +116,11 @@ describe('CommentList comment filters', () => {
     expect(screen.getByText('Public comment body')).toBeInTheDocument()
   })
 
-  it('filters between internal, public, and all comments without reloading', () => {
-    render(<CommentList {...baseProps} />, { wrapper })
+  test('filters between internal, public, and all comments without reloading', ({
+    render,
+    theme
+  }) => {
+    render(<CommentList {...baseProps} />, [theme])
 
     fireEvent.click(screen.getByRole('tab', { name: 'Internal comments' }))
     expect(screen.getByText('Internal comment body')).toBeInTheDocument()
@@ -129,7 +135,7 @@ describe('CommentList comment filters', () => {
     expect(screen.getByText('Public comment body')).toBeInTheDocument()
   })
 
-  it('changes sort order from the sort tabs', () => {
+  test('changes sort order from the sort tabs', ({ render, theme }) => {
     const onSortOrderChange = vi.fn()
 
     render(
@@ -138,7 +144,7 @@ describe('CommentList comment filters', () => {
         sortOrder="desc"
         onSortOrderChange={onSortOrderChange}
       />,
-      { wrapper }
+      [theme]
     )
 
     fireEvent.click(screen.getByRole('tab', { name: 'Sort oldest first' }))
@@ -146,7 +152,10 @@ describe('CommentList comment filters', () => {
     expect(onSortOrderChange).toHaveBeenCalledWith('asc')
   })
 
-  it('resets filter and sort order after adding a comment', async () => {
+  test('resets filter and sort order after adding a comment', async ({
+    render,
+    theme
+  }) => {
     const onAddComment = vi.fn().mockResolvedValue({})
     const onSortOrderChange = vi.fn()
 
@@ -158,7 +167,7 @@ describe('CommentList comment filters', () => {
         sortOrder="asc"
         onSortOrderChange={onSortOrderChange}
       />,
-      { wrapper }
+      [theme]
     )
 
     fireEvent.click(screen.getByRole('tab', { name: 'Internal comments' }))
@@ -178,7 +187,10 @@ describe('CommentList comment filters', () => {
     expect(onSortOrderChange).toHaveBeenCalledWith('desc')
   })
 
-  it('confirms before posting a public comment', async () => {
+  test('confirms before posting a public comment', async ({
+    render,
+    theme
+  }) => {
     const onAddComment = vi.fn().mockResolvedValue({})
 
     render(
@@ -188,7 +200,7 @@ describe('CommentList comment filters', () => {
         commentInput="New public comment"
         visibility="Public"
       />,
-      { wrapper }
+      [theme]
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Add comment' }))
@@ -205,7 +217,10 @@ describe('CommentList comment filters', () => {
     await waitFor(() => expect(onAddComment).toHaveBeenCalled())
   })
 
-  it('confirms before changing an internal comment to public', async () => {
+  test('confirms before changing an internal comment to public', async ({
+    render,
+    theme
+  }) => {
     const onEditComment = vi.fn()
 
     render(
@@ -223,7 +238,7 @@ describe('CommentList comment filters', () => {
           }
         ]}
       />,
-      { wrapper }
+      [theme]
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
@@ -238,13 +253,16 @@ describe('CommentList comment filters', () => {
     await waitFor(() => expect(onEditComment).toHaveBeenCalled())
   })
 
-  it('renders sort tabs but not filter tabs for BCeID dual-mode users', () => {
+  test('renders sort tabs but not filter tabs for BCeID dual-mode users', ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.ci_applicant]
     const onSortOrderChange = vi.fn()
 
     render(
       <CommentList {...baseProps} onSortOrderChange={onSortOrderChange} />,
-      { wrapper }
+      [theme]
     )
 
     expect(screen.queryByTestId('comment-filter-tabs')).not.toBeInTheDocument()
@@ -288,8 +306,11 @@ describe('CommentList attachments', () => {
     mockUserState.username = 'idir-user'
   })
 
-  it('renders attachment download links and downloads on click', () => {
-    render(<CommentList {...attachmentProps} />, { wrapper })
+  test('renders attachment download links and downloads on click', ({
+    render,
+    theme
+  }) => {
+    render(<CommentList {...attachmentProps} />, [theme])
 
     const link = screen.getByText('spec.pdf')
     expect(link).toBeInTheDocument()
@@ -303,23 +324,24 @@ describe('CommentList attachments', () => {
     )
   })
 
-  it('renders the attach file input on the add form', () => {
-    const { container } = render(<CommentList {...attachmentProps} />, {
-      wrapper
-    })
+  test('renders the attach file input on the add form', ({ render, theme }) => {
+    const { container } = render(<CommentList {...attachmentProps} />, [theme])
     expect(
       container.querySelector('[data-test="comment-attachment-input"]')
     ).toBeInTheDocument()
   })
 
-  it('stages a valid selected file via onAttachmentsChange', () => {
+  test('stages a valid selected file via onAttachmentsChange', ({
+    render,
+    theme
+  }) => {
     const onAttachmentsChange = vi.fn()
     const { container } = render(
       <CommentList
         {...attachmentProps}
         onAttachmentsChange={onAttachmentsChange}
       />,
-      { wrapper }
+      [theme]
     )
     const input = container.querySelector(
       '[data-test="comment-attachment-input"]'
@@ -329,10 +351,13 @@ describe('CommentList attachments', () => {
     expect(onAttachmentsChange).toHaveBeenCalledWith([file])
   })
 
-  it('does not render the attach input when attachments are disabled', () => {
+  test('does not render the attach input when attachments are disabled', ({
+    render,
+    theme
+  }) => {
     const { container } = render(
       <CommentList {...attachmentProps} enableAttachments={false} />,
-      { wrapper }
+      [theme]
     )
     expect(
       container.querySelector('[data-test="comment-attachment-input"]')
@@ -346,7 +371,10 @@ describe('CommentList admin edit mode', () => {
     mockUserState.username = 'idir-user'
   })
 
-  it('only shows the edit link for the original author when the user is not an admin', () => {
+  test('only shows the edit link for the original author when the user is not an admin', ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.government, roles.analyst]
     mockUserState.username = 'analyst-user'
 
@@ -372,14 +400,17 @@ describe('CommentList admin edit mode', () => {
       ]
     }
 
-    render(<CommentList {...props} />, { wrapper })
+    render(<CommentList {...props} />, [theme])
 
     const editLinks = screen.getAllByTestId('comment-edit-link')
     // Only the author's own comment should expose an edit affordance.
     expect(editLinks).toHaveLength(1)
   })
 
-  it('shows the edit link on every comment when the user has the Administrator role', () => {
+  test('shows the edit link on every comment when the user has the Administrator role', ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.government, roles.administrator]
     mockUserState.username = 'admin-user'
 
@@ -405,14 +436,17 @@ describe('CommentList admin edit mode', () => {
       ]
     }
 
-    render(<CommentList {...props} />, { wrapper })
+    render(<CommentList {...props} />, [theme])
 
     const editLinks = screen.getAllByTestId('comment-edit-link')
     // Admin can edit every comment regardless of author.
     expect(editLinks).toHaveLength(2)
   })
 
-  it("does not show the edit link on other users' comments when the user only has the System Admin role", () => {
+  test("does not show the edit link on other users' comments when the user only has the System Admin role", ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.system_admin]
     mockUserState.username = 'sysadmin'
 
@@ -438,12 +472,15 @@ describe('CommentList admin edit mode', () => {
       ]
     }
 
-    render(<CommentList {...props} />, { wrapper })
+    render(<CommentList {...props} />, [theme])
 
     expect(screen.queryAllByTestId('comment-edit-link')).toHaveLength(0)
   })
 
-  it("shows the editor name on the edited indicator when an admin edited another user's comment", () => {
+  test("shows the editor name on the edited indicator when an admin edited another user's comment", ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.government]
     mockUserState.username = 'reader'
 
@@ -464,13 +501,16 @@ describe('CommentList admin edit mode', () => {
       ]
     }
 
-    render(<CommentList {...props} />, { wrapper })
+    render(<CommentList {...props} />, [theme])
 
     const indicator = screen.getByTestId('comment-edited-indicator')
     expect(indicator.textContent).toContain('Edited by Admin User')
   })
 
-  it('shows the plain "Edited" indicator when the author edited their own comment', () => {
+  test('shows the plain "Edited" indicator when the author edited their own comment', ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.government]
     mockUserState.username = 'reader'
 
@@ -491,7 +531,7 @@ describe('CommentList admin edit mode', () => {
       ]
     }
 
-    render(<CommentList {...props} />, { wrapper })
+    render(<CommentList {...props} />, [theme])
 
     const indicator = screen.getByTestId('comment-edited-indicator')
     expect(indicator.textContent).toBe('Edited')

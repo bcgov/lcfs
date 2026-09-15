@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { MainLayout } from '../MainLayout/MainLayout'
-import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useMatches, useNavigate } from 'react-router-dom'
 import { useAuthorization } from '@/contexts/AuthorizationContext'
 import { useLoadingStore } from '@/stores/useLoadingStore'
@@ -80,7 +80,7 @@ const mockedUseAuth = useAuth as unknown as Mock
 describe('MainLayout', () => {
   const navigate = vi.fn()
 
-  beforeEach(() => {
+  test.beforeEach(() => {
     // Default mock setup
     mockedUseMatches.mockReturnValue([{ handle: { title: 'Test Page Title' } }])
     mockedUseNavigate.mockReturnValue(navigate)
@@ -102,8 +102,13 @@ describe('MainLayout', () => {
     navigate.mockClear()
   })
 
-  it('renders the layout with all expected components', async () => {
-    render(<MainLayout />, { wrapper })
+  test('renders the layout with all expected components', async ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<MainLayout />, [query, theme, router])
 
     expect(screen.getByTestId('require-auth')).toBeInTheDocument()
     expect(screen.getByTestId('navbar-component')).toBeInTheDocument()
@@ -114,49 +119,76 @@ describe('MainLayout', () => {
     expect(screen.getByText('Test Page Title')).toBeInTheDocument()
   })
 
-  it('displays the page title from route metadata', () => {
-    mockedUseMatches.mockReturnValue([{ handle: { title: 'Custom Page Title' } }])
+  test('displays the page title from route metadata', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    mockedUseMatches.mockReturnValue([
+      { handle: { title: 'Custom Page Title' } }
+    ])
 
-    render(<MainLayout />, { wrapper })
+    render(<MainLayout />, [query, theme, router])
 
     expect(screen.getByText('Custom Page Title')).toBeInTheDocument()
   })
 
-  it('uses default title when no title in route metadata', () => {
+  test('uses default title when no title in route metadata', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseMatches.mockReturnValue([{ handle: {} }])
 
-    render(<MainLayout />, { wrapper })
+    render(<MainLayout />, [query, theme, router])
 
     expect(screen.getByText('LCFS')).toBeInTheDocument()
   })
 
-  it('redirects to unauthorized page when forbidden is true', async () => {
+  test('redirects to unauthorized page when forbidden is true', async ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseAuthorization.mockReturnValue({
       forbidden: true
     })
 
     window.history.replaceState({}, '', '/dashboard')
 
-    render(<MainLayout />, { wrapper })
+    render(<MainLayout />, [query, theme, router])
 
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith(ROUTES.AUTH.UNAUTHORIZED)
     })
   })
 
-  it('does not redirect when already on unauthorized page', () => {
+  test('does not redirect when already on unauthorized page', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseAuthorization.mockReturnValue({
       forbidden: true
     })
 
     window.history.replaceState({}, '', ROUTES.AUTH.UNAUTHORIZED)
 
-    render(<MainLayout />, { wrapper })
+    render(<MainLayout />, [query, theme, router])
 
     expect(navigate).not.toHaveBeenCalled()
   })
 
-  it('shows different disclaimer banner for government vs non-government users', () => {
+  test('shows different disclaimer banner for government vs non-government users', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     // Test with government user
     mockedUseCurrentUser.mockReturnValue({
       data: {
@@ -165,7 +197,7 @@ describe('MainLayout', () => {
       }
     })
 
-    const { rerender } = render(<MainLayout />, { wrapper })
+    const { rerender } = render(<MainLayout />, [query, theme, router])
     const disclaimerBanner = screen.getByTestId('disclaimer-banner')
     expect(disclaimerBanner.children.length).toBe(1)
 
@@ -184,7 +216,12 @@ describe('MainLayout', () => {
     expect(disclaimerBanner2.children.length).toBe(2)
   })
 
-  it('displays loading component when loading state is true', () => {
+  test('displays loading component when loading state is true', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseLoadingStore.mockImplementation(
       (selector: (state: { loading: boolean }) => boolean) => {
         // This simulates the zustand store behavior
@@ -192,13 +229,18 @@ describe('MainLayout', () => {
       }
     )
 
-    render(<MainLayout />, { wrapper })
+    render(<MainLayout />, [query, theme, router])
 
     // Get loading component by text content instead
     expect(screen.getByText('Fixed Loading')).toBeInTheDocument()
   })
 
-  it('does not display loading component when loading state is false', () => {
+  test('does not display loading component when loading state is false', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseLoadingStore.mockImplementation(
       (selector: (state: { loading: boolean }) => boolean) => {
         // This simulates the zustand store behavior
@@ -206,7 +248,7 @@ describe('MainLayout', () => {
       }
     )
 
-    render(<MainLayout />, { wrapper })
+    render(<MainLayout />, [query, theme, router])
 
     expect(screen.queryByTestId('loading-component')).not.toBeInTheDocument()
   })

@@ -1,7 +1,36 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { wrapper } from '@/tests/utils/wrapper'
-import { fuelExportColDefs, changelogCommonColDefs } from '../_schema'
+import { describe, it, expect, vi } from 'vitest'
+import { fuelExportColDefs } from '../_schema'
+
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor',
+  () => ({
+    AsyncSuggestionEditor: () => null
+  })
+)
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor',
+  () => ({
+    AutocompleteCellEditor: () => null
+  })
+)
+vi.mock('@/components/BCDataGrid/components/Editors/DateEditor', () => ({
+  DateEditor: () => null
+}))
+vi.mock('@/components/BCDataGrid/components/Editors/NumberEditor', () => ({
+  NumberEditor: () => null
+}))
+vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
+  RequiredHeader: () => null
+}))
+vi.mock('@/components/BCDataGrid/components/Renderers/ActionsRenderer', () => ({
+  ActionsRenderer: () => null
+}))
+vi.mock(
+  '@/components/BCDataGrid/components/Renderers/ValidationRenderer2',
+  () => ({
+    ValidationRenderer2: () => null
+  })
+)
 
 describe('FuelExports Schema', () => {
   describe('Column Definitions', () => {
