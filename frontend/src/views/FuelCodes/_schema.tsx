@@ -17,6 +17,7 @@ import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
 import {
+  CO_PROCESSED_OPTIONS,
   FUEL_CODE_STATUSES,
   getAllFuelCodeStatuses
 } from '@/constants/statuses'
@@ -48,7 +49,6 @@ const FuelCodeStatusBadge = (props) => {
   )
 }
 
-const CO_PROCESSED_OPTIONS = ['No', 'Yes - DHT', 'Yes - FCC']
 const getCoProcessedOptions = () => ({
   data: CO_PROCESSED_OPTIONS.map((value) => ({ coProcessed: value })),
   isLoading: false,

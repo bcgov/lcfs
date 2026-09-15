@@ -109,7 +109,8 @@ export function AdminMenu() {
   const tabIndex = useMemo(() => {
     const index = tabs.findIndex(
       (tab) =>
-        location.pathname === tab.path || location.pathname === `${tab.path}/`
+        location.pathname === tab.path ||
+        location.pathname.startsWith(`${tab.path}/`)
     )
     return index === -1 ? false : index
   }, [location.pathname, tabs])
@@ -153,6 +154,8 @@ export function AdminMenu() {
               key={tab.key}
               label={tab.label}
               wrapped={tab.wrapped}
+              aria-selected={index === tabIndex}
+              tabIndex={index === tabIndex ? 0 : -1}
               {...a11yProps(index)}
             />
           ))}

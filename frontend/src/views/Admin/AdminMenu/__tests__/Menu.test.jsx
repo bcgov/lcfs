@@ -202,6 +202,17 @@ describe('AdminMenu Component', () => {
         )
       })
     })
+
+    it('marks only the active tab as aria-selected and keyboard focusable', () => {
+      const { container } = render(<AdminMenu />)
+
+      const tabs = container.querySelectorAll('[data-test="tab"]')
+      tabs.forEach((tab, index) => {
+        const expectedSelected = String(index === 0)
+        expect(tab).toHaveAttribute('aria-selected', expectedSelected)
+        expect(tab).toHaveAttribute('tabIndex', index === 0 ? '0' : '-1')
+      })
+    })
   })
 
   describe('Role-based tab visibility', () => {
