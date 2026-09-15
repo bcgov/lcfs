@@ -19,6 +19,24 @@ function a11yProps(index) {
   }
 }
 
+function getActiveTabIndex(pathname, tabs) {
+  const exactIndex = tabs.findIndex(
+    (tab) => pathname === tab.path || pathname === `${tab.path}/`
+  )
+  if (exactIndex !== -1) {
+    return exactIndex
+  }
+
+  const prefixIndex = tabs
+    .map((tab, index) => ({ tab, index }))
+    .filter(
+      ({ tab }) => pathname === tab.path || pathname.startsWith(`${tab.path}/`)
+    )
+    .sort((a, b) => b.tab.path.length - a.tab.path.length)[0]?.index
+
+  return prefixIndex === undefined ? 0 : prefixIndex
+}
+
 export function ReportsMenu() {
   const { t } = useTranslation(['report'])
   const alertRef = useRef()
@@ -78,20 +96,10 @@ export function ReportsMenu() {
     return baseTabs
   }, [canAccessChargingSitesTab, canAccessFseTab, isSystemAdmin, isIDIR, t])
 
-  const tabIndex = useMemo(() => {
-    // Only select tab when on the exact index route, not on detail/nested pages
-    const index = tabs.findIndex((tab) => {
-      return (
-        location.pathname === tab.path || location.pathname === `${tab.path}/`
-      )
-    })
-    if (index !== -1) {
-      return index
-    }
-
-    // Return false when on detail/nested routes to show no tab as selected
-    return false
-  }, [location.pathname, tabs])
+  const tabIndex = useMemo(
+    () => getActiveTabIndex(location.pathname, tabs),
+    [location.pathname, tabs]
+  )
 
   useEffect(() => {
     function handleTabsOrientation() {
@@ -164,7 +172,14 @@ export function ReportsMenu() {
         </AppBar>
       )}
       <FloatingAlert ref={alertRef} data-test="alert-box" />
-      <BCBox sx={{ pt: 3 }}>{renderContent()}</BCBox>
+      <BCBox
+        id={`full-width-admin-tabs-${tabIndex}`}
+        role="tabpanel"
+        aria-labelledby={`full-width-tab-${tabIndex}`}
+        sx={{ pt: 3 }}
+      >
+        {renderContent()}
+      </BCBox>
     </BCBox>
   )
 }

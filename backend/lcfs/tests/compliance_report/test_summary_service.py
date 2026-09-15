@@ -3103,6 +3103,298 @@ async def test_line_15_16_zero_when_no_assessed_report_for_supplemental(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("compliance_year", ["2024", "2025"])
+async def test_locked_supplemental_summary_recomputes_carry_forward_when_no_assessed_report(
+    compliance_report_summary_service,
+    mock_repo,
+    compliance_year,
+):
+    """
+    Locked supplemental reports without an assessed same-period baseline should
+    not display previous-version issued units as Line 15/16 carry-forward.
+
+    This covers historical/migrated records such as CR2772 where the final
+    transaction was created for the correct issuance, but the stored summary
+    still showed Line 15 = current issuance and Line 20 = 0.
+    """
+    summary = make_summary(locked=True)
+    summary.summary_id = 1
+    summary.compliance_report_id = 2772
+    summary.line_15_banked_units_used = 212
+    summary.line_16_banked_units_remaining = 0
+    summary.line_17_non_banked_units_used = 1000
+    summary.line_18_units_to_be_banked = 212
+    summary.line_19_units_to_be_exported = 0
+    summary.line_20_surplus_deficit_units = 0
+    summary.line_21_non_compliance_penalty_payable = 0
+    summary.line_22_compliance_units_issued = 1000
+
+    report = make_report(1, ComplianceReportStatusEnum.Assessed, compliance_year)
+    report.summary = summary
+    report.compliance_report_id = 2772
+
+    later_assessed_report = make_report(
+        2, ComplianceReportStatusEnum.Assessed, compliance_year
+    )
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
+    mock_repo.get_assessed_compliance_report_by_period = AsyncMock(
+        return_value=later_assessed_report
+    )
+    mock_repo.get_prior_assessed_compliance_report_in_group = AsyncMock(
+        return_value=None
+    )
+
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(
+            report_id=2772
+        )
+    )
+
+    line_values = _get_line_values(result.low_carbon_fuel_target_summary)
+    assert line_values[15] == 0
+    assert line_values[16] == 0
+    assert line_values[20] == 212
+    assert line_values[22] == 1212
+    assert summary.line_15_banked_units_used == 0
+    assert summary.line_16_banked_units_remaining == 0
+    assert summary.line_20_surplus_deficit_units == 212
+    assert summary.line_22_compliance_units_issued == 1212
+    compliance_report_summary_service.repo.db.flush.assert_awaited()
+    mock_repo.get_prior_assessed_compliance_report_in_group.assert_awaited_with(
+        "group-uuid", 1, int(compliance_year), 1, 2772
+    )
+
+
+@pytest.mark.anyio
+async def test_locked_supplemental_normalization_updates_penalty_summary_totals(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """
+    Stored penalty columns and penalty summary rows should be corrected with
+    the low-carbon rows when a locked supplemental has no assessed baseline.
+    """
+    summary = make_summary(locked=True)
+    summary.summary_id = 1
+    summary.compliance_report_id = 2772
+    summary.line_11_non_compliance_penalty_gasoline = 25
+    summary.line_15_banked_units_used = 200
+    summary.line_16_banked_units_remaining = 0
+    summary.line_17_non_banked_units_used = 100
+    summary.line_18_units_to_be_banked = -200
+    summary.line_19_units_to_be_exported = 0
+    summary.line_20_surplus_deficit_units = 0
+    summary.line_21_non_compliance_penalty_payable = 0
+    summary.line_22_compliance_units_issued = 100
+    summary.total_non_compliance_penalty_payable = 25
+
+    report = make_report(1, ComplianceReportStatusEnum.Assessed, "2024")
+    report.summary = summary
+    report.compliance_report_id = 2772
+
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
+    mock_repo.get_prior_assessed_compliance_report_in_group = AsyncMock(
+        return_value=None
+    )
+    mock_trxn_repo.get_prior_group_adjustments_excluded_from_line_17 = AsyncMock(
+        return_value=50
+    )
+
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(
+            report_id=2772
+        )
+    )
+
+    low_carbon_values = _get_line_values(result.low_carbon_fuel_target_summary)
+    penalty_values = {
+        row.line: row.total_value for row in result.non_compliance_penalty_summary
+    }
+
+    assert low_carbon_values[20] == -200
+    assert low_carbon_values[21] == 30000
+    assert low_carbon_values[22] == 0
+    assert penalty_values[21] == 30000
+    assert penalty_values[None] == 30025
+    assert summary.line_21_non_compliance_penalty_payable == 30000
+    assert summary.total_non_compliance_penalty_payable == 30025
+    mock_trxn_repo.get_prior_group_adjustments_excluded_from_line_17.assert_awaited_once_with(
+        "group-uuid", 1, 2772, 2024, 1
+    )
+
+
+@pytest.mark.anyio
+async def test_locked_supplemental_normalization_preserves_low_carbon_exemption_formula(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """Low-carbon exempted locked reports should persist exemption lines."""
+    summary = make_summary(locked=True)
+    summary.summary_id = 1
+    summary.compliance_report_id = 2772
+    summary.line_11_non_compliance_penalty_gasoline = 25
+    summary.line_15_banked_units_used = 200
+    summary.line_16_banked_units_remaining = 0
+    summary.line_17_non_banked_units_used = 100
+    summary.line_18_units_to_be_banked = 0
+    summary.line_19_units_to_be_exported = -200
+    summary.line_20_surplus_deficit_units = -200
+    summary.line_21_non_compliance_penalty_payable = 30000
+    summary.line_22_compliance_units_issued = 0
+    summary.total_non_compliance_penalty_payable = 30025
+
+    report = make_report(1, ComplianceReportStatusEnum.Assessed, "2024")
+    report.summary = summary
+    report.compliance_report_id = 2772
+    report.is_low_carbon_fuel_exempted = True
+
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
+    mock_repo.get_prior_assessed_compliance_report_in_group = AsyncMock(
+        return_value=None
+    )
+    mock_trxn_repo.get_prior_group_adjustments_excluded_from_line_17 = AsyncMock(
+        return_value=50
+    )
+
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(
+            report_id=2772
+        )
+    )
+
+    low_carbon_values = _get_line_values(result.low_carbon_fuel_target_summary)
+    penalty_values = {
+        row.line: row.total_value for row in result.non_compliance_penalty_summary
+    }
+
+    assert low_carbon_values[15] == 0
+    assert low_carbon_values[16] == 0
+    assert low_carbon_values[20] == 0
+    assert low_carbon_values[21] == 0
+    assert low_carbon_values[22] == 100
+    assert penalty_values[21] == 0
+    assert penalty_values[None] == 25
+    assert summary.line_15_banked_units_used == 0
+    assert summary.line_16_banked_units_remaining == 0
+    assert summary.line_20_surplus_deficit_units == 0
+    assert summary.line_21_non_compliance_penalty_payable == 0
+    assert summary.line_22_compliance_units_issued == 100
+    assert summary.total_non_compliance_penalty_payable == 25
+    compliance_report_summary_service.repo.db.flush.assert_awaited()
+
+
+@pytest.mark.anyio
+async def test_locked_supplemental_normalization_preserves_penalty_override_total(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """Director override totals should remain effective on locked 2024+ reports."""
+    summary = make_summary(locked=True)
+    summary.summary_id = 1
+    summary.compliance_report_id = 2772
+    summary.line_11_non_compliance_penalty_gasoline = 25
+    summary.line_15_banked_units_used = 200
+    summary.line_16_banked_units_remaining = 0
+    summary.line_17_non_banked_units_used = 100
+    summary.line_18_units_to_be_banked = -200
+    summary.line_19_units_to_be_exported = 0
+    summary.line_20_surplus_deficit_units = 0
+    summary.line_21_non_compliance_penalty_payable = 0
+    summary.line_22_compliance_units_issued = 100
+    summary.total_non_compliance_penalty_payable = 300
+    summary.penalty_override_enabled = True
+    summary.renewable_penalty_override = 100
+    summary.low_carbon_penalty_override = 200
+
+    report = make_report(1, ComplianceReportStatusEnum.Assessed, "2024")
+    report.summary = summary
+    report.compliance_report_id = 2772
+
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
+    mock_repo.get_prior_assessed_compliance_report_in_group = AsyncMock(
+        return_value=None
+    )
+    mock_trxn_repo.get_prior_group_adjustments_excluded_from_line_17 = AsyncMock(
+        return_value=50
+    )
+
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(
+            report_id=2772
+        )
+    )
+
+    low_carbon_values = _get_line_values(result.low_carbon_fuel_target_summary)
+    penalty_values = {
+        row.line: row.total_value for row in result.non_compliance_penalty_summary
+    }
+
+    assert low_carbon_values[21] == 30000
+    assert penalty_values[21] == 30000
+    assert penalty_values[None] == 300
+    assert summary.line_21_non_compliance_penalty_payable == 30000
+    assert summary.total_non_compliance_penalty_payable == 300
+    compliance_report_summary_service.repo.db.flush.assert_awaited()
+
+
+@pytest.mark.anyio
+async def test_locked_supplemental_normalization_skips_flush_when_already_correct(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """Already-normalized stored summaries should not be rewritten on GET."""
+    summary = make_summary(locked=True)
+    summary.summary_id = 1
+    summary.compliance_report_id = 2772
+    summary.line_11_non_compliance_penalty_gasoline = 25
+    summary.line_15_banked_units_used = 0
+    summary.line_16_banked_units_remaining = 0
+    summary.line_17_non_banked_units_used = 100
+    summary.line_18_units_to_be_banked = -200
+    summary.line_19_units_to_be_exported = 0
+    summary.line_20_surplus_deficit_units = -200
+    summary.line_21_non_compliance_penalty_payable = 30000
+    summary.line_22_compliance_units_issued = 0
+    summary.total_non_compliance_penalty_payable = 30025.000000000004
+
+    report = make_report(1, ComplianceReportStatusEnum.Assessed, "2024")
+    report.summary = summary
+    report.compliance_report_id = 2772
+
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
+    mock_repo.get_prior_assessed_compliance_report_in_group = AsyncMock(
+        return_value=None
+    )
+    mock_trxn_repo.get_prior_group_adjustments_excluded_from_line_17 = AsyncMock(
+        return_value=50
+    )
+
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(
+            report_id=2772
+        )
+    )
+
+    low_carbon_values = _get_line_values(result.low_carbon_fuel_target_summary)
+    penalty_values = {
+        row.line: row.total_value for row in result.non_compliance_penalty_summary
+    }
+
+    assert low_carbon_values[15] == 0
+    assert low_carbon_values[20] == -200
+    assert low_carbon_values[21] == 30000
+    assert low_carbon_values[22] == 0
+    assert penalty_values[21] == 30000
+    assert penalty_values[None] == pytest.approx(30025)
+    compliance_report_summary_service.repo.db.add.assert_not_called()
+    compliance_report_summary_service.repo.db.flush.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_line_15_16_uses_assessed_report_values(
     compliance_report_summary_service,
     mock_repo,

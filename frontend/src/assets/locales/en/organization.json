@@ -182,7 +182,7 @@
     "metrics": {
       "totalPenalties": "Total penalties",
       "totalAuto": "Total automatic",
-      "totalSubtitle": "Auto renewable + auto low carbon",
+      "totalSubtitle": "Automatic renewable fuel penalty + automatic low carbon fuel penalty",
       "autoPenalties": "Automatic penalties",
       "discretionaryPenalty": "Discretionary penalty",
       "totalPenaltiesTrend": "Total penalties trend",
@@ -191,8 +191,10 @@
       "discretionary": "Discretionary",
       "discretionarySubtitle": "Assessed by director",
       "discretionaryPenaltiesTrend": "Discretionary penalties trend",
-      "autoRenewable": "Auto renewable",
-      "autoLowCarbon": "Auto low carbon"
+      "autoRenewable": "Automatic renewable fuel penalty",
+      "autoLowCarbon": "Automatic low carbon fuel penalty",
+      "automaticRenewableFuelPenalty": "Automatic renewable fuel penalty",
+      "automaticLowCarbonFuelPenalty": "Automatic low carbon fuel penalty"
     },
     "manageTitle": "Confer discretionary penalty",
     "saveReturn": "Save & return",
