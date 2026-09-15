@@ -40,6 +40,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 const mockProfile = vi.fn()
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useDesignatedActionProfile: () => mockProfile(),
+  useSetRecommendedCredits: () => ({ mutate: vi.fn() }),
   useEvidenceRequirements: () => ({
     data: [{ evidenceRequirementId: 1, reviewOutcome: 'Satisfactory' }]
   })
@@ -206,7 +207,9 @@ describe('DesignatedActionDetail', () => {
       expect.objectContaining({
         availableActions: ['accept_evidence', 'recommend_to_manager'],
         allEvidenceSatisfactory: true,
-        creditAllocation: 1850
+        // The amount is edited in the header now (#5079); the workflow
+        // only carries the saved value into the recommend action.
+        recommendedCredits: null
       })
     )
   })

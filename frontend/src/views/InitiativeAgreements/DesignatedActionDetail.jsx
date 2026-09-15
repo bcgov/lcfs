@@ -9,7 +9,8 @@ import {
   Stack,
   Step,
   StepLabel,
-  Stepper
+  Stepper,
+  TextField
 } from '@mui/material'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -29,7 +30,8 @@ import withRole from '@/utils/withRole'
 
 import {
   useDesignatedActionProfile,
-  useEvidenceRequirements
+  useEvidenceRequirements,
+  useSetRecommendedCredits
 } from '@/hooks/useInitiativeAgreements'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
@@ -81,6 +83,25 @@ const DesignatedActionDetailBase = () => {
 
   const { data: requirements = [] } =
     useEvidenceRequirements(designatedActionId)
+
+  // The recommended amount is edited here, beside the allocation it is
+  // measured against, rather than at the foot of the page (#5079).
+  const { mutate: saveCredits } = useSetRecommendedCredits(designatedActionId)
+  const [credits, setCredits] = useState('')
+  useEffect(() => {
+    setCredits(
+      action?.recommendedCredits === null ||
+        action?.recommendedCredits === undefined
+        ? ''
+        : String(action.recommendedCredits)
+    )
+  }, [action?.recommendedCredits])
+  const commitCredits = () => {
+    const next = credits === '' ? null : Number(credits)
+    if (next !== (action?.recommendedCredits ?? null)) {
+      saveCredits(next)
+    }
+  }
   const allEvidenceSatisfactory =
     requirements.length > 0 &&
     requirements.every((r) => r.reviewOutcome === 'Satisfactory')
@@ -239,14 +260,50 @@ const DesignatedActionDetailBase = () => {
                   count: (action.creditAllocation ?? 0).toLocaleString()
                 })}
               />
-              <LabelValue
-                label={t('initiativeAgreement:actionDetail.recommendedCredits')}
-                value={
-                  action.recommendedCredits != null
-                    ? action.recommendedCredits.toLocaleString()
-                    : null
-                }
-              />
+              {canRecommend ? (
+                <BCBox
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <BCTypography
+                    variant="body4"
+                    component="label"
+                    htmlFor="recommended-credits-input"
+                    sx={{ fontWeight: 700 }}
+                  >
+                    {t('initiativeAgreement:actionDetail.recommendedCredits')}
+                  </BCTypography>
+                  <TextField
+                    id="recommended-credits-input"
+                    size="small"
+                    type="number"
+                    value={credits}
+                    inputProps={{
+                      min: 0,
+                      max: action.creditAllocation ?? undefined,
+                      'data-test': 'recommended-credits-input'
+                    }}
+                    sx={{ width: 160 }}
+                    onChange={(event) => setCredits(event.target.value)}
+                    onBlur={commitCredits}
+                  />
+                </BCBox>
+              ) : (
+                <LabelValue
+                  label={t(
+                    'initiativeAgreement:actionDetail.recommendedCredits'
+                  )}
+                  value={
+                    action.recommendedCredits != null
+                      ? action.recommendedCredits.toLocaleString()
+                      : null
+                  }
+                />
+              )}
               <LabelValue
                 label={t('initiativeAgreement:actionDetail.completionDate')}
                 value={
@@ -324,10 +381,8 @@ const DesignatedActionDetailBase = () => {
           designatedActionId={designatedActionId}
           availableActions={action.availableActions}
           recommendedCredits={action.recommendedCredits}
-          creditAllocation={action.creditAllocation}
           allEvidenceSatisfactory={allEvidenceSatisfactory}
           hasRequirements={requirements.length > 0}
-          canEditCredits={canRecommend}
           onChanged={refreshAction}
         />
       </Role>

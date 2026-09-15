@@ -164,15 +164,19 @@
     "empty": "No evidence requirements have been added yet.",
     "loading": "Loading evidence requirements...",
     "newRequirementTitle": "New evidence requirement",
-    "requirementNamePlaceholder": "Describe what the proponent must provide",
     "reviewedBy": "Reviewed by {{name}}",
     "pending": "Not yet reviewed",
-    "evidenceFor": "Evidence of completion for {{name}}",
     "notesFor": "Notes for {{name}}",
     "createRequirement": "Create",
     "cancel": "Cancel",
     "saved": "Saved",
-    "autosaveHint": "Changes save as you go."
+    "addTitle": "Add evidence of completion",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description of the evidence required",
+    "descriptionFor": "Description of {{name}}",
+    "evaluationLabel": "Evaluation",
+    "evaluationFor": "Evaluation of {{name}}",
+    "editRequirement": "Edit {{name}}"
   },
   "workflow": {
     "accept": "Accept",

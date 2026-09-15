@@ -213,7 +213,7 @@ export const useCreateEvidenceRequirement = (
 ) =>
   useEvidenceMutation(
     designatedActionId,
-    (client) => async (payload: { description: string }) =>
+    (client) => async (payload: { title: string; description: string }) =>
       (
         await client.post(
           apiRoutes.evidenceRequirements.replace(

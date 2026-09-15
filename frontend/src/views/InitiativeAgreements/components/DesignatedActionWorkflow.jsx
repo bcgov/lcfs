@@ -6,10 +6,7 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
-import {
-  useDesignatedActionWorkflow,
-  useSetRecommendedCredits
-} from '@/hooks/useInitiativeAgreements'
+import { useDesignatedActionWorkflow } from '@/hooks/useInitiativeAgreements'
 
 // Workflow actions for a designated action (#4898). Which buttons appear
 // is decided by the API — availableActions comes from the same transition
@@ -80,25 +77,17 @@ export const DesignatedActionWorkflow = ({
   designatedActionId,
   availableActions = [],
   recommendedCredits,
-  creditAllocation,
   allEvidenceSatisfactory,
   hasRequirements = true,
-  canEditCredits = false,
   onChanged
 }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [pendingAction, setPendingAction] = useState(null)
   const [comment, setComment] = useState('')
-  const [credits, setCredits] = useState(
-    recommendedCredits === null || recommendedCredits === undefined
-      ? ''
-      : String(recommendedCredits)
-  )
   const [error, setError] = useState('')
 
   const { mutate: performAction, isPending } =
     useDesignatedActionWorkflow(designatedActionId)
-  const { mutate: saveCredits } = useSetRecommendedCredits(designatedActionId)
 
   const run = (action, payload = {}) => {
     setError('')
@@ -128,9 +117,9 @@ export const DesignatedActionWorkflow = ({
       return
     }
     if (action === ACTION_RECOMMEND_TO_MANAGER) {
-      run(action, {
-        recommendedCredits: credits === '' ? null : Number(credits)
-      })
+      // The amount lives in the header now (#5079); the action carries
+      // whatever is saved there.
+      run(action, { recommendedCredits: recommendedCredits ?? null })
       return
     }
     run(action)
@@ -159,35 +148,6 @@ export const DesignatedActionWorkflow = ({
 
   return (
     <BCBox mt={3} data-test="designated-action-workflow">
-      {canEditCredits && (
-        <Box sx={{ mb: 2, maxWidth: 360 }}>
-          <BCTypography variant="body4" component="p" sx={{ fontWeight: 700 }}>
-            {t('initiativeAgreement:actionDetail.recommendedCredits')}
-          </BCTypography>
-          <TextField
-            size="small"
-            fullWidth
-            type="number"
-            value={credits}
-            inputProps={{
-              min: 0,
-              max: creditAllocation ?? undefined,
-              'data-test': 'recommended-credits-input',
-              'aria-label': t(
-                'initiativeAgreement:actionDetail.recommendedCredits'
-              )
-            }}
-            onChange={(event) => setCredits(event.target.value)}
-            onBlur={() => {
-              const next = credits === '' ? null : Number(credits)
-              if (next !== (recommendedCredits ?? null)) {
-                saveCredits(next)
-              }
-            }}
-          />
-        </Box>
-      )}
-
       {error && (
         <BCTypography
           variant="body4"

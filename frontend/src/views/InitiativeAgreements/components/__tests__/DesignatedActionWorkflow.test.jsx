@@ -104,22 +104,19 @@ describe('DesignatedActionWorkflow', () => {
     )
   })
 
-  it('sends the recommended amount when recommending', () => {
+  it('sends the saved recommended amount when recommending', () => {
+    // The amount is edited in the page header (#5079); the action carries
+    // whatever was saved there.
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
         availableActions={analystActions}
         allEvidenceSatisfactory
-        canEditCredits
-        recommendedCredits={null}
-        creditAllocation={1850}
+        recommendedCredits={1200}
       />,
       { wrapper }
     )
 
-    fireEvent.change(screen.getByTestId('recommended-credits-input'), {
-      target: { value: '1200' }
-    })
     fireEvent.click(screen.getByTestId('workflow-recommend_to_manager'))
 
     expect(mockPerform).toHaveBeenCalledWith(
@@ -128,34 +125,13 @@ describe('DesignatedActionWorkflow', () => {
     )
   })
 
-  it('saves an edited amount when the field loses focus', () => {
+  it('no longer hosts the credits field', () => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
         availableActions={analystActions}
         allEvidenceSatisfactory
-        canEditCredits
         recommendedCredits={null}
-        creditAllocation={1850}
-      />,
-      { wrapper }
-    )
-
-    const input = screen.getByTestId('recommended-credits-input')
-    fireEvent.change(input, { target: { value: '900' } })
-    fireEvent.blur(input)
-
-    expect(mockSaveCredits).toHaveBeenCalledWith(900)
-  })
-
-  it('does not offer the credits field to a director', () => {
-    render(
-      <DesignatedActionWorkflow
-        designatedActionId="9"
-        availableActions={['approve', 'reject', 'return']}
-        allEvidenceSatisfactory
-        canEditCredits={false}
-        recommendedCredits={1200}
       />,
       { wrapper }
     )

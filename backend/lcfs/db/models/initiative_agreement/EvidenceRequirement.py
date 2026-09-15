@@ -67,6 +67,14 @@ class EvidenceRequirement(BaseModel, Auditable):
         nullable=False,
         comment="Business number of the requirement; also the display order",
     )
+    title = Column(
+        String(500),
+        nullable=True,
+        comment=(
+            "Short heading for the requirement; NULL for requirements created "
+            "before titles existed, which display their description instead."
+        ),
+    )
     description = Column(
         Text, nullable=False, comment="Description of the evidence requirement"
     )

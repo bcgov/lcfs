@@ -28,7 +28,10 @@ const mockUpdate = vi.fn()
 const mockRemove = vi.fn()
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useEvidenceRequirements: () => mockList(),
-  useCreateEvidenceRequirement: () => ({ mutate: mockCreate }),
+  useCreateEvidenceRequirement: () => ({
+    mutate: mockCreate,
+    isPending: false
+  }),
   useUpdateEvidenceRequirement: () => ({ mutate: mockUpdate }),
   useDeleteEvidenceRequirement: () => ({ mutate: mockRemove })
 }))
@@ -37,6 +40,7 @@ const requirement = (overrides = {}) => ({
   evidenceRequirementId: 1,
   designatedActionId: 9,
   requirementNumber: 1,
+  title: 'Permits',
   description: 'List of major permits and approvals',
   isActive: true,
   analystReview: '',
@@ -57,13 +61,15 @@ describe('EvidenceOfCompletion', () => {
   it('renders a requirement card and the review summary', () => {
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
-    // The title appears twice on purpose: once on the card, once in the
-    // review summary, matching the wireframe.
-    expect(screen.getByTestId('eoc-card-1')).toHaveTextContent(
+    // The title appears twice on purpose: once as the card's heading,
+    // once in the review summary, matching the wireframe. The description
+    // is the card's body.
+    expect(screen.getByTestId('eoc-heading-1')).toHaveTextContent('Permits')
+    expect(screen.getByTestId('eoc-description-1')).toHaveValue(
       'List of major permits and approvals'
     )
     expect(screen.getByTestId('eoc-review-summary')).toHaveTextContent(
-      'List of major permits and approvals'
+      'Permits'
     )
   })
 
@@ -123,26 +129,73 @@ describe('EvidenceOfCompletion', () => {
     ).not.toBeChecked()
   })
 
-  it('saves the narrative when the box loses focus, and not before', () => {
+  it('shows the number and title as the heading, with the evaluation always present', () => {
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
-    const box = screen.getByTestId('eoc-review-1')
-    fireEvent.change(box, { target: { value: 'Permits verified.' } })
+    expect(screen.getByTestId('eoc-heading-1')).toHaveTextContent('1. Permits')
+    expect(screen.getByTestId('eoc-review-1')).toBeInTheDocument()
+    // Outside edit mode the text is read-only, not editable in place.
+    expect(screen.getByTestId('eoc-review-1')).toHaveAttribute('readonly')
+  })
+
+  it('falls back to the description as the heading when there is no title', () => {
+    mockList.mockReturnValue({
+      data: [requirement({ title: null })],
+      isLoading: false
+    })
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    expect(screen.getByTestId('eoc-heading-1')).toHaveTextContent(
+      '1. List of major permits and approvals'
+    )
+  })
+
+  it('writes nothing until Save, then only what changed', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    fireEvent.click(screen.getByTestId('eoc-edit-1'))
+    fireEvent.change(screen.getByTestId('eoc-review-1'), {
+      target: { value: 'Permits verified.' }
+    })
+    fireEvent.change(screen.getByTestId('eoc-title-1'), {
+      target: { value: 'Permits and approvals' }
+    })
+    // Typing is not saving.
     expect(mockUpdate).not.toHaveBeenCalled()
 
-    fireEvent.blur(box)
+    fireEvent.click(screen.getByTestId('eoc-save-1'))
+
+    // The untouched description is not sent.
     expect(mockUpdate).toHaveBeenCalledWith({
       evidenceRequirementId: 1,
+      title: 'Permits and approvals',
       analystReview: 'Permits verified.'
     })
   })
 
-  it('does not save an unchanged narrative on blur', () => {
+  it('Cancel restores what was there and writes nothing', () => {
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
-    fireEvent.blur(screen.getByTestId('eoc-review-1'))
+    fireEvent.click(screen.getByTestId('eoc-edit-1'))
+    fireEvent.change(screen.getByTestId('eoc-review-1'), {
+      target: { value: 'Half a thought' }
+    })
+    fireEvent.click(screen.getByTestId('eoc-cancel-1'))
 
     expect(mockUpdate).not.toHaveBeenCalled()
+    expect(screen.getByTestId('eoc-review-1')).toHaveValue('')
+    expect(screen.queryByTestId('eoc-save-1')).not.toBeInTheDocument()
+  })
+
+  it('will not save an item with its title blanked', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    fireEvent.click(screen.getByTestId('eoc-edit-1'))
+    fireEvent.change(screen.getByTestId('eoc-title-1'), {
+      target: { value: '   ' }
+    })
+
+    expect(screen.getByTestId('eoc-save-1')).toBeDisabled()
   })
 
   it('shows the notes box only when notes are toggled on', () => {
@@ -166,39 +219,58 @@ describe('EvidenceOfCompletion', () => {
     expect(screen.getByTestId('eoc-notes-1')).toBeInTheDocument()
   })
 
-  it('adds a requirement with Enter and abandons it with Escape', () => {
+  it('creates a requirement from the modal with a title and description', () => {
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
     fireEvent.click(screen.getByTestId('eoc-add-button'))
-    const input = screen.getByTestId('eoc-new-description')
-    fireEvent.change(input, { target: { value: 'Risk register' } })
-    fireEvent.keyDown(input, { key: 'Enter' })
-
-    expect(mockCreate).toHaveBeenCalledWith({ description: 'Risk register' })
-
-    fireEvent.click(screen.getByTestId('eoc-add-button'))
-    fireEvent.keyDown(screen.getByTestId('eoc-new-description'), {
-      key: 'Escape'
-    })
-    expect(mockCreate).toHaveBeenCalledTimes(1)
-  })
-
-  it('creates a requirement from the button, not only from Enter', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
-
-    fireEvent.click(screen.getByTestId('eoc-add-button'))
-    // Nothing to create yet, so the button says so.
-    expect(screen.getByTestId('eoc-new-create')).toBeDisabled()
-
-    fireEvent.change(screen.getByTestId('eoc-new-description'), {
+    fireEvent.change(screen.getByTestId('eoc-new-title'), {
       target: { value: 'Risk register' }
     })
-    fireEvent.click(screen.getByTestId('eoc-new-create'))
+    fireEvent.change(screen.getByTestId('eoc-new-description'), {
+      target: { value: 'Identification of risks and mitigations' }
+    })
+    fireEvent.click(
+      screen.getByText('initiativeAgreement:evidence.createRequirement')
+    )
 
-    expect(mockCreate).toHaveBeenCalledWith({ description: 'Risk register' })
+    expect(mockCreate).toHaveBeenCalledWith({
+      title: 'Risk register',
+      description: 'Identification of risks and mitigations'
+    })
   })
 
-  it('acknowledges a save so the autosave is visible', () => {
+  it('will not create a requirement without both a title and a description', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    fireEvent.click(screen.getByTestId('eoc-add-button'))
+    fireEvent.change(screen.getByTestId('eoc-new-title'), {
+      target: { value: 'Risk register' }
+    })
+    // Asserting the behaviour rather than the button's disabled state:
+    // the point is that nothing is created from a half-filled form.
+    fireEvent.click(
+      screen.getByText('initiativeAgreement:evidence.createRequirement')
+    )
+
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('cancelling the modal creates nothing', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    fireEvent.click(screen.getByTestId('eoc-add-button'))
+    fireEvent.change(screen.getByTestId('eoc-new-title'), {
+      target: { value: 'Risk register' }
+    })
+    fireEvent.change(screen.getByTestId('eoc-new-description'), {
+      target: { value: 'Identification of risks' }
+    })
+    fireEvent.click(screen.getByText('common:cancelBtn'))
+
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('acknowledges an outcome decision, which still takes effect at once', () => {
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
     expect(screen.queryByTestId('eoc-saved-1')).not.toBeInTheDocument()

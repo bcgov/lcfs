@@ -188,6 +188,9 @@ class EvidenceRequirementSchema(BaseSchema):
     evidence_requirement_id: int
     designated_action_id: int
     requirement_number: int
+    # Nullable: requirements from before titles existed show their
+    # description as the heading until one is saved.
+    title: Optional[str] = None
     description: str
     evidence_type: Optional[str] = None
     is_active: bool = True
@@ -202,12 +205,14 @@ class EvidenceRequirementSchema(BaseSchema):
 
 
 class EvidenceRequirementCreateSchema(BaseSchema):
+    title: str
     description: str
     evidence_type: Optional[str] = None
     requirement_number: Optional[int] = None
 
 
 class EvidenceRequirementUpdateSchema(BaseSchema):
+    title: Optional[str] = None
     description: Optional[str] = None
     evidence_type: Optional[str] = None
     requirement_number: Optional[int] = None

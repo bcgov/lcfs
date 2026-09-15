@@ -587,6 +587,7 @@ class InitiativeAgreementServices:
                 {
                     "evidence_requirement_id": r.evidence_requirement_id,
                     "requirement_number": r.requirement_number,
+                    "title": r.title,
                     "description": r.description,
                     "analyst_review": r.analyst_review,
                     "review_outcome": r.review_outcome,
@@ -792,6 +793,11 @@ class InitiativeAgreementServices:
     ) -> EvidenceRequirementSchema:
         """Add an evidence requirement to an action (the wireframe's Add EOC)."""
         await self._get_action_or_404(designated_action_id)
+        title = (data.title or "").strip()
+        if not title:
+            raise HTTPException(
+                status_code=400, detail="A requirement title is required."
+            )
         description = (data.description or "").strip()
         if not description:
             raise HTTPException(
@@ -805,6 +811,7 @@ class InitiativeAgreementServices:
             EvidenceRequirement(
                 designated_action_id=designated_action_id,
                 requirement_number=number,
+                title=title,
                 description=description,
                 evidence_type=data.evidence_type,
                 create_user=username,
@@ -832,13 +839,32 @@ class InitiativeAgreementServices:
                 f"Evidence requirement with id {evidence_requirement_id} not found"
             )
 
+        # The text an analyst saves deliberately — title, description and
+        # evaluation — is recorded with its before and after, the way a
+        # correction to the action's own details is. Outcome and notes are
+        # not: they are captured whole in the workflow snapshots.
+        changes = {}
+        if data.title is not None:
+            title = data.title.strip()
+            if not title:
+                raise HTTPException(
+                    status_code=400, detail="A requirement title is required."
+                )
+            if title != requirement.title:
+                changes["title"] = {"from": requirement.title, "to": title}
+                requirement.title = title
         if data.description is not None:
             description = data.description.strip()
             if not description:
                 raise HTTPException(
                     status_code=400, detail="A requirement description is required."
                 )
-            requirement.description = description
+            if description != requirement.description:
+                changes["description"] = {
+                    "from": requirement.description,
+                    "to": description,
+                }
+                requirement.description = description
         if data.evidence_type is not None:
             requirement.evidence_type = data.evidence_type
         if data.requirement_number is not None:
@@ -846,6 +872,11 @@ class InitiativeAgreementServices:
 
         review_touched = False
         if data.analyst_review is not None:
+            if data.analyst_review != (requirement.analyst_review or ""):
+                changes["evaluation"] = {
+                    "from": requirement.analyst_review,
+                    "to": data.analyst_review,
+                }
             requirement.analyst_review = data.analyst_review
             review_touched = True
         if data.review_notes is not None:
@@ -869,6 +900,36 @@ class InitiativeAgreementServices:
             requirement.reviewed_by_user_id = getattr(user, "user_profile_id", None)
             requirement.reviewed_date = datetime.now(timezone.utc)
         requirement.update_user = getattr(user, "keycloak_username", None)
+
+        if changes:
+            action = await self.repo.get_designated_action_by_id(
+                requirement.designated_action_id
+            )
+            display_name = " ".join(
+                p
+                for p in (
+                    getattr(user, "first_name", ""),
+                    getattr(user, "last_name", ""),
+                )
+                if p
+            ).strip()
+            await self.repo.add_designated_action_history(
+                DesignatedActionHistory(
+                    designated_action_id=action.designated_action_id,
+                    designated_action_group_uuid=action.group_uuid,
+                    event=EVENT_DETAILS_EDITED,
+                    status_id=action.current_status_id,
+                    user_profile_id=getattr(user, "user_profile_id", None),
+                    display_name=display_name or None,
+                    snapshot={
+                        "changed": changes,
+                        "evidence_requirement_id": requirement.evidence_requirement_id,
+                        "requirement_number": requirement.requirement_number,
+                        "requirement_title": requirement.title
+                        or requirement.description,
+                    },
+                )
+            )
         await self.repo.db.flush()
 
         refreshed = await self.repo.get_evidence_requirement(evidence_requirement_id)
