@@ -13,6 +13,25 @@ This document outlines performance considerations for the LCFS system and strate
     *   **Query Efficiency**: Ensure SQLAlchemy queries are optimized. Use `EXPLAIN ANALYZE` for complex queries to understand their execution plans.
     *   **Indexing**: Proper database indexing on frequently queried columns is crucial. This should be reviewed based on query patterns.
     *   **Connection Pooling**: SQLAlchemy uses connection pooling by default, which is efficient.
+    *   **Eager-loading conventions** (repository layer, see [#4099](https://github.com/bcgov/lcfs/issues/4099) and [#4101](https://github.com/bcgov/lcfs/issues/4101)):
+        *   `joinedload()` only for many-to-one / one-to-one relationships (organization, period, status, summary, fuel type, fuel code, ...). These cannot multiply the parent rows.
+        *   Collections (`ComplianceReport.history`, the schedule collections, `FuelCode.*_transport_modes`) are loaded with `selectinload()`. Joining a collection repeats every parent column once per child row; joining two collections on the same query produces a cartesian product. `ComplianceReportRepository._get_history_load_option()` is the shared history loader.
+        *   When a query already joins a table for its `WHERE`/`ORDER BY`, load the relationship from that join with `contains_eager()` instead of letting `joinedload()` add a second aliased copy (see `get_assessed_compliance_report_by_period`, `get_organization_fuel_supply_paginated`).
+        *   Filtering on a related table without joining it makes SQLAlchemy add the table as a bare `FROM` entry (a cross join). `get_fuel_code_by_code_prefix` had this bug; always add the explicit `join()`.
+        *   The reference-data collections on `FuelType` / `FuelCategory` (energy density, EER, additional and target CI) are served to forms by `get_fuel_supply_table_options` and are not loaded on `FuelSupply` rows. Loading a single fuel supply with those collections joined produced ~11.6 million rows on a development database.
+    *   **Measured effect of the above** (development database: 1,496 compliance reports, 4,256 fuel supply rows; "cells" = rows x columns the driver transferred):
+
+        | Query | Before | After |
+        | --- | --- | --- |
+        | `get_fuel_supply_by_id` | timed out (> 20 s), 6 collections joined | 7 ms, 768 cells |
+        | `get_effective_fuel_supplies` (99 rows) | 440 ms, 25,501 rows / 2.36 M cells | 21 ms, 99 rows / 18 k cells |
+        | `get_changelog_data` (fuel supplies) | 39 ms, 107 k cells | 26 ms, 21 k cells |
+        | `get_compliance_report_chain` (10 versions) | 6,003 cells | 3,663 cells |
+        | `get_compliance_report_by_id` | 1,305 cells | 585 cells |
+        | `get_assessed_compliance_report_by_period` | 9 joins (period, org, summary joined twice) | 7 joins |
+
+        Single-report fetches now issue one extra `SELECT ... IN` for history, so their wall time on a tiny local database is unchanged to slightly higher; the saving is proportional to history length x report width and grows with real data.
+    *   **Indexes**: `compliance_report` has single-column indexes on `organization_id`, `compliance_period_id`, `current_status_id`, `transaction_id`, `assigned_analyst_id` and `compliance_report_group_uuid`, plus composites `(compliance_report_group_uuid, version, compliance_report_id)` and `(organization_id, compliance_period_id, version DESC)` (the latter covers the "latest assessed report for an org/period" lookups in one index scan instead of a BitmapAnd over two indexes).
 *   **Efficient Data Structures**: Using Pydantic for data validation and serialization is generally efficient.
 
 ## 2. Frontend Performance

@@ -15,13 +15,13 @@ from sqlalchemy import (
     and_,
     case,
     exists,
+    literal,
     or_,
     select,
     func,
     cast,
     Integer,
     String,
-    text,
     update,
     distinct,
     desc,
@@ -376,10 +376,10 @@ class FuelCodeRepository:
             latest_fc = await self.db.scalar(
                 select(FuelCode)
                 .options(
-                    joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
+                    selectinload(FuelCode.feedstock_fuel_transport_modes).joinedload(
                         FeedstockFuelTransportMode.feedstock_fuel_transport_mode
                     ),
-                    joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
+                    selectinload(FuelCode.finished_fuel_transport_modes).joinedload(
                         FinishedFuelTransportMode.finished_fuel_transport_mode
                     ),
                     joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
@@ -946,10 +946,10 @@ class FuelCodeRepository:
         return await self.db.scalar(
             select(FuelCode)
             .options(
-                joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
+                selectinload(FuelCode.feedstock_fuel_transport_modes).joinedload(
                     FeedstockFuelTransportMode.feedstock_fuel_transport_mode
                 ),
-                joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
+                selectinload(FuelCode.finished_fuel_transport_modes).joinedload(
                     FinishedFuelTransportMode.finished_fuel_transport_mode
                 ),
                 joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
@@ -1166,17 +1166,24 @@ class FuelCodeRepository:
     async def get_fuel_code_by_code_prefix(
         self, fuel_suffix: str, prefix: str
     ) -> list[FuelCodeCloneSchema]:
+        # The WHERE clause filters on fuel_code_prefix and fuel_code_status, so
+        # join them explicitly and load the relationships from those joins.
+        # Without the joins SQLAlchemy added both tables as bare FROM entries
+        # (a cross join), which matched the suffix under every prefix and
+        # ignored the status filter.
         query = (
             select(FuelCode)
+            .join(FuelCode.fuel_code_prefix)
+            .join(FuelCode.fuel_code_status)
             .options(
-                joinedload(FuelCode.fuel_code_status),
-                joinedload(FuelCode.fuel_code_prefix),
+                contains_eager(FuelCode.fuel_code_status),
+                contains_eager(FuelCode.fuel_code_prefix),
                 joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
                 joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
-                joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
+                selectinload(FuelCode.feedstock_fuel_transport_modes).joinedload(
                     FeedstockFuelTransportMode.feedstock_fuel_transport_mode
                 ),
-                joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
+                selectinload(FuelCode.finished_fuel_transport_modes).joinedload(
                     FinishedFuelTransportMode.finished_fuel_transport_mode
                 ),
             )
@@ -1245,90 +1252,91 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
-        query = text(
-            """
-            WITH parsed_codes AS (
-                SELECT SPLIT_PART(fc.fuel_suffix, '.', 1)::INTEGER AS base_code
-                FROM fuel_code fc
-                JOIN fuel_code_prefix fcp ON fcp.fuel_code_prefix_id = fc.prefix_id
-                WHERE fcp.prefix = :prefix
-            ),
-            range_params AS (
-                SELECT
-                    CASE
-                        WHEN :prefix = 'PROXY' THEN 1
-                        ELSE 101
-                    END AS min_code
-            ),
-            all_possible_codes AS (
-                SELECT generate_series(
-                    (SELECT min_code FROM range_params),
-                    GREATEST(
-                        (SELECT min_code FROM range_params),
-                        COALESCE((SELECT MAX(base_code) FROM parsed_codes), 0) + 1
-                    )
-                ) AS base_code
-            ),
-            available_codes AS (
-                SELECT base_code
-                FROM all_possible_codes
-                WHERE base_code NOT IN (SELECT base_code FROM parsed_codes)
-            ),
-            next_code AS (
-                SELECT MIN(base_code) AS next_base_code
-                FROM available_codes
+        """
+        Lowest unused main version for a prefix, formatted as ``NNN.0``.
+
+        Main versions start at 1 for PROXY codes and 101 for everything else.
+        Gaps left by deleted codes are reused before a new high number is
+        issued.
+        """
+        base_code = cast(func.split_part(FuelCode.fuel_suffix, ".", 1), Integer)
+        parsed_codes = (
+            select(base_code.label("base_code"))
+            .join(
+                FuelCodePrefix, FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id
             )
-            SELECT LPAD(next_base_code::TEXT, 3, '0') || '.0' AS next_fuel_code
-            FROM next_code;
-            """
+            .where(FuelCodePrefix.prefix == prefix)
+            .cte("parsed_codes")
         )
-        result = (await self.db.execute(query, {"prefix": prefix})).scalar_one_or_none()
+        min_code = 1 if prefix == "PROXY" else 101
+        highest_used = select(
+            func.coalesce(func.max(parsed_codes.c.base_code), 0)
+        ).scalar_subquery()
+        all_possible_codes = select(
+            func.generate_series(
+                min_code, func.greatest(min_code, highest_used + 1)
+            ).label("base_code")
+        ).cte("all_possible_codes")
+        available_codes = (
+            select(all_possible_codes.c.base_code)
+            .where(
+                all_possible_codes.c.base_code.not_in(select(parsed_codes.c.base_code))
+            )
+            .cte("available_codes")
+        )
+        next_base_code = select(func.min(available_codes.c.base_code)).scalar_subquery()
+        query = select(
+            (func.lpad(cast(next_base_code, String), 3, "0") + ".0").label(
+                "next_fuel_code"
+            )
+        )
+        result = (await self.db.execute(query)).scalar_one_or_none()
         return self.format_decimal(result)
 
     async def get_next_available_sub_version_fuel_code_by_prefix(
         self, input_version: str, prefix_id: int
     ) -> str:
-        query = text(
-            """
-            WITH split_versions AS (
-                SELECT
-                    fuel_suffix,
-                    CAST(SPLIT_PART(fuel_suffix, '.', 1) AS INTEGER) AS main_version,
-                    CAST(SPLIT_PART(fuel_suffix, '.', 2) AS INTEGER) AS sub_version
-                FROM fuel_code fc
-                JOIN fuel_code_prefix fcp ON fcp.fuel_code_prefix_id = fc.prefix_id
-                WHERE fcp.fuel_code_prefix_id = :prefix_id
-            ),
-            sub_versions AS (
-                SELECT
-                    main_version,
-                    sub_version
-                FROM split_versions
-                WHERE main_version = :input_version
-            ),
-            all_sub_versions AS (
-                SELECT generate_series(0, COALESCE((SELECT MAX(sub_version) FROM sub_versions), -1)) AS sub_version
-            ),
-            missing_sub_versions AS (
-                SELECT a.sub_version
-                FROM all_sub_versions a
-                LEFT JOIN sub_versions s ON a.sub_version = s.sub_version
-                WHERE s.sub_version IS NULL
-                ORDER BY a.sub_version
-                LIMIT 1
+        """
+        Lowest unused sub version of ``input_version`` for a prefix, formatted
+        as ``NNN.M``. Gaps are reused; otherwise max + 1 is issued.
+        """
+        main_version_int = int(input_version)
+        main_version = cast(func.split_part(FuelCode.fuel_suffix, ".", 1), Integer)
+        sub_version = cast(func.split_part(FuelCode.fuel_suffix, ".", 2), Integer)
+        sub_versions = (
+            select(sub_version.label("sub_version"))
+            .where(
+                FuelCode.prefix_id == prefix_id,
+                main_version == main_version_int,
             )
-            SELECT
-                :input_version || '.' ||
-                COALESCE((SELECT sub_version FROM missing_sub_versions)::VARCHAR,
-                        (SELECT COALESCE(MAX(sub_version), -1) + 1 FROM sub_versions)::VARCHAR)
-                AS next_available_version
-            """
+            .cte("sub_versions")
         )
-        result = (
-            await self.db.execute(
-                query, {"input_version": int(input_version), "prefix_id": prefix_id}
+        highest_used = select(
+            func.coalesce(func.max(sub_versions.c.sub_version), -1)
+        ).scalar_subquery()
+        all_sub_versions = select(
+            func.generate_series(0, highest_used).label("sub_version")
+        ).cte("all_sub_versions")
+        first_gap = (
+            select(all_sub_versions.c.sub_version)
+            .outerjoin(
+                sub_versions,
+                all_sub_versions.c.sub_version == sub_versions.c.sub_version,
             )
-        ).scalar_one_or_none()
+            .where(sub_versions.c.sub_version.is_(None))
+            .order_by(all_sub_versions.c.sub_version)
+            .limit(1)
+            .scalar_subquery()
+        )
+        next_sub_version = func.coalesce(
+            cast(first_gap, String), cast(highest_used + 1, String)
+        )
+        query = select(
+            (literal(str(main_version_int)) + "." + next_sub_version).label(
+                "next_available_version"
+            )
+        )
+        result = (await self.db.execute(query)).scalar_one_or_none()
         return self.format_decimal(result)
 
     async def get_latest_fuel_codes(self) -> List[FuelCodeSchema]:
@@ -1342,10 +1350,10 @@ class FuelCodeRepository:
             select(FuelCode)
             .join(subquery, FuelCode.fuel_suffix == subquery.c.latest_code)
             .options(
-                joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
+                selectinload(FuelCode.feedstock_fuel_transport_modes).joinedload(
                     FeedstockFuelTransportMode.feedstock_fuel_transport_mode
                 ),
-                joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
+                selectinload(FuelCode.finished_fuel_transport_modes).joinedload(
                     FinishedFuelTransportMode.finished_fuel_transport_mode
                 ),
                 joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
