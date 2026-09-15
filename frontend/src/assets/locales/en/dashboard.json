@@ -32,6 +32,14 @@
     "inProgress": "CI Application(s) in progress",
     "loadingMessage": "Loading CI applications card..."
   },
+  "initiativeAgreements": {
+    "title": "Initiative agreements",
+    "thereAre": "There are:",
+    "underway": "Initiative agreement(s) underway",
+    "draft": "Draft initiative agreement(s)",
+    "viewAll": "View all initiative agreement(s)",
+    "loadingMessage": "Loading initiative agreements card..."
+  },
   "orgFuelCodes": {
     "title": "Fuel codes",
     "loadingMessage": "Loading fuel codes card...",

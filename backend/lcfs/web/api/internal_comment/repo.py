@@ -36,6 +36,10 @@ from lcfs.db.models.comment.TransferInternalComment import TransferInternalComme
 from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
     InitiativeAgreementInternalComment,
 )
+from lcfs.db.models.comment.DesignatedActionInternalComment import (
+    DesignatedActionInternalComment,
+)
+from lcfs.db.models.initiative_agreement.DesignatedAction import DesignatedAction
 from lcfs.db.models.comment.AdminAdjustmentInternalComment import (
     AdminAdjustmentInternalComment,
 )
@@ -118,6 +122,21 @@ class InternalCommentRepository:
                 compliance_report_id=entity_id,
                 internal_comment_id=internal_comment.internal_comment_id,
             )
+        elif entity_type == EntityTypeEnum.DESIGNATED_ACTION:
+            # Stamp the action's group uuid so the comment stays with the
+            # action across change-order version rows.
+            group_uuid = (
+                await self.db.execute(
+                    select(DesignatedAction.group_uuid).where(
+                        DesignatedAction.designated_action_id == entity_id
+                    )
+                )
+            ).scalar_one_or_none()
+            association = DesignatedActionInternalComment(
+                designated_action_id=entity_id,
+                internal_comment_id=internal_comment.internal_comment_id,
+                designated_action_group_uuid=group_uuid,
+            )
         elif entity_type == EntityTypeEnum.CI_APPLICATION:
             association = CIApplicationInternalComment(
                 ci_application_id=entity_id,
@@ -191,6 +210,10 @@ class InternalCommentRepository:
                 CIApplicationInternalComment,
                 CIApplicationInternalComment.ci_application_id,
             ),
+            EntityTypeEnum.DESIGNATED_ACTION: (
+                DesignatedActionInternalComment,
+                DesignatedActionInternalComment.designated_action_id,
+            ),
             EntityTypeEnum.ORGANIZATION: (
                 OrganizationInternalComment,
                 OrganizationInternalComment.organization_id,
@@ -200,6 +223,25 @@ class InternalCommentRepository:
         # Get the specific model and where condition for the given entity_type
         entity_model, where_condition = entity_mapping[entity_type]
         entity_ids = [entity_id]
+        if entity_type == EntityTypeEnum.DESIGNATED_ACTION:
+            # A change order appends a version row; the thread spans every
+            # version of the action, so expand to the whole group.
+            group_ids = (
+                (
+                    await self.db.execute(
+                        select(DesignatedAction.designated_action_id).where(
+                            DesignatedAction.group_uuid
+                            == select(DesignatedAction.group_uuid)
+                            .where(DesignatedAction.designated_action_id == entity_id)
+                            .scalar_subquery()
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if group_ids:
+                entity_ids = list(group_ids)
         if entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
             # Get all related compliance report IDs in the same chain
             entity_ids = await self.report_repo.get_related_compliance_report_ids(
@@ -541,6 +583,16 @@ class InternalCommentRepository:
             stmt = select(InitiativeAgreement.to_organization_id).where(
                 InitiativeAgreement.initiative_agreement_id == entity_id
             )
+        elif entity_type == EntityTypeEnum.DESIGNATED_ACTION:
+            stmt = (
+                select(InitiativeAgreement.to_organization_id)
+                .join(
+                    DesignatedAction,
+                    DesignatedAction.initiative_agreement_id
+                    == InitiativeAgreement.initiative_agreement_id,
+                )
+                .where(DesignatedAction.designated_action_id == entity_id)
+            )
         elif entity_type == EntityTypeEnum.ADMIN_ADJUSTMENT:
             stmt = select(AdminAdjustment.to_organization_id).where(
                 AdminAdjustment.admin_adjustment_id == entity_id
@@ -793,7 +845,7 @@ class InternalCommentRepository:
 
             ilike_term = f"%{search_term}%"
             normalized_search = _SEARCH_NORMALIZE_RE.sub("", search_term).lower()
-            
+
             stripped_comment = func.regexp_replace(
                 func.coalesce(InternalComment.comment, ""),
                 r"<[^>]*>",

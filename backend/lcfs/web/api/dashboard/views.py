@@ -12,6 +12,7 @@ from lcfs.web.api.dashboard.schema import (
     FuelCodeCountsSchema,
     OrgFuelCodeCountsSchema,
     CIApplicationCountsSchema,
+    InitiativeAgreementCountsSchema,
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -65,10 +66,7 @@ async def get_org_compliance_report_counts(
     return await service.get_org_compliance_report_counts(organization_id)
 
 
-@router.get(
-    "/compliance-report-counts",
-    response_model=ComplianceReportCountsSchema
-)
+@router.get("/compliance-report-counts", response_model=ComplianceReportCountsSchema)
 @view_handler([RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER])
 async def get_compliance_report_counts(
     request: Request,
@@ -78,10 +76,7 @@ async def get_compliance_report_counts(
     return await service.get_compliance_report_counts()
 
 
-@router.get(
-    "/fuel-code-counts",
-    response_model=FuelCodeCountsSchema
-)
+@router.get("/fuel-code-counts", response_model=FuelCodeCountsSchema)
 @view_handler([RoleEnum.ANALYST])
 async def get_fuel_code_counts(
     request: Request,
@@ -102,6 +97,17 @@ async def get_org_fuel_code_counts(
     caller's organization (CI applications not yet approved)."""
     organization_id = request.user.organization.organization_id
     return await service.get_org_fuel_code_counts(organization_id)
+
+
+@router.get(
+    "/initiative-agreement-counts", response_model=InitiativeAgreementCountsSchema
+)
+@view_handler([RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR])
+async def get_initiative_agreement_counts(
+    request: Request,
+    service: DashboardServices = Depends(),
+):
+    return await service.get_initiative_agreement_counts()
 
 
 @router.get("/ci-application-counts", response_model=CIApplicationCountsSchema)

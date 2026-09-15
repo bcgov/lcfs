@@ -1,0 +1,130 @@
+from datetime import datetime
+from typing import List, Optional
+
+from lcfs.web.api.base import BaseSchema
+
+
+class FolderDocumentSchema(BaseSchema):
+    """A document row inside the tree.
+
+    Deliberately its own schema rather than FileResponseSchema: the shared
+    contract stays untouched by the folder layer.
+    """
+
+    document_id: int
+    file_name: str
+    # What a rename set. The tree shows this where it exists, so a renamed
+    # file reads by its new name while the stored object keeps its key.
+    display_name: Optional[str] = None
+    file_size: int
+    create_date: Optional[datetime] = None
+    create_user: Optional[str] = None
+    # Code of the uploader's organization; None for government uploads.
+    uploading_organization_code: Optional[str] = None
+
+
+class FolderNodeSchema(BaseSchema):
+    folder_id: int
+    name: str
+    parent_folder_id: Optional[int] = None
+    sort_order: int = 0
+    is_system: bool = False
+    document_count: int = 0
+    documents: List[FolderDocumentSchema] = []
+    children: List["FolderNodeSchema"] = []
+
+
+class DocumentFolderTreeSchema(BaseSchema):
+    folders: List[FolderNodeSchema] = []
+    # Documents of the parent with no placement row.
+    root_documents: List[FolderDocumentSchema] = []
+
+
+class DeletedDocumentSchema(BaseSchema):
+    document_id: int
+    file_name: str
+    file_size: int
+    deleted_date: Optional[datetime] = None
+    deleted_by: Optional[str] = None
+    # Resolved for display; the stored value is the username.
+    deleted_by_name: Optional[str] = None
+    # Where it will return to. None means the top level, either because it
+    # was there or because the folder it came from has since gone.
+    restore_folder_id: Optional[int] = None
+    restore_folder_name: Optional[str] = None
+
+
+class DeletedFolderDocumentSchema(BaseSchema):
+    """One file a folder restore would bring back."""
+
+    document_id: int
+    file_name: str
+    file_size: int
+    # Folders between the listed folder and the file, joined with " / ";
+    # empty when the file sat directly in it.
+    relative_path: str = ""
+
+
+class DeletedFolderSchema(BaseSchema):
+    """A folder in the bin: one row per thing somebody deleted.
+
+    Listed folders are the roots of their deletion — a folder whose
+    parent went to the bin in the same delete is part of its parent's
+    row, not a row of its own, so deleting a three-deep tree shows one
+    entry rather than three. A root whose subtree holds no file gets no
+    row: nothing was lost with it, and it comes back on its own if
+    something beneath it is restored.
+    """
+
+    folder_id: int
+    name: str
+    # The path it will return to, outermost first, so the panel can show
+    # where a restore will put it.
+    path: List[str] = []
+    # Everything the restore brings back, counted and listed across the
+    # whole subtree — the question the row answers is "what do I get
+    # back", not "what was directly inside".
+    document_count: int = 0
+    documents: List[DeletedFolderDocumentSchema] = []
+    deleted_date: Optional[datetime] = None
+    deleted_by: Optional[str] = None
+    deleted_by_name: Optional[str] = None
+
+
+class DeletedDocumentsSchema(BaseSchema):
+    documents: List[DeletedDocumentSchema] = []
+    folders: List[DeletedFolderSchema] = []
+    total: int = 0
+
+
+class FolderCreateSchema(BaseSchema):
+    name: str
+    parent_folder_id: Optional[int] = None
+
+
+class FolderUpdateSchema(BaseSchema):
+    name: Optional[str] = None
+    parent_folder_id: Optional[int] = None
+    sort_order: Optional[int] = None
+    # Distinguishes "move to root" (explicit null) from "leave in place"
+    # (field absent); pydantic drops that difference otherwise.
+    move_to_root: bool = False
+
+
+class FolderItemsMoveSchema(BaseSchema):
+    document_ids: List[int]
+    # None places the documents at the root (removes their placement rows).
+    folder_id: Optional[int] = None
+
+
+class FolderSchema(BaseSchema):
+    folder_id: int
+    parent_type: str
+    parent_id: int
+    parent_folder_id: Optional[int] = None
+    name: str
+    sort_order: int = 0
+    is_system: bool = False
+
+    class Config:
+        from_attributes = True

@@ -10,6 +10,7 @@ from starlette import status
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.dashboard.schema import (
     CIApplicationCountsSchema,
+    InitiativeAgreementCountsSchema,
     OrgFuelCodeCountsSchema,
 )
 
@@ -84,4 +85,34 @@ async def test_ci_application_counts_forbidden_for_non_analyst(
     """The endpoint is gated to IDIR analysts."""
     set_user_role(RoleEnum.CI_APPLICANT)
     response = await client.get("/api/dashboard/ci-application-counts")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_initiative_agreement_counts_success_for_ia_manager(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    """IA module roles get the lifecycle counts card data (#4895)."""
+    set_user_role(RoleEnum.IA_MANAGER)
+    with patch(
+        "lcfs.web.api.dashboard.services.DashboardServices.get_initiative_agreement_counts"
+    ) as mock:
+        mock.return_value = InitiativeAgreementCountsSchema(draft=2, underway=5)
+        response = await client.get("/api/dashboard/initiative-agreement-counts")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {"draft": 2, "underway": 5}
+
+
+@pytest.mark.anyio
+async def test_initiative_agreement_counts_forbidden_for_proponent(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    """The card is IDIR-only; a BCeID proponent is refused."""
+    set_user_role(RoleEnum.IA_PROPONENT)
+    response = await client.get("/api/dashboard/initiative-agreement-counts")
     assert response.status_code == status.HTTP_403_FORBIDDEN
