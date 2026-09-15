@@ -487,23 +487,25 @@ class InitiativeAgreementRepository:
     @repo_handler
     async def get_designated_actions_paginated(
         self,
-        initiative_agreement_id: int,
+        initiative_agreement_id: Optional[int],
         pagination: PaginationRequestSchema,
     ) -> Tuple[List[DesignatedAction], int]:
         """
-        Paginated current-version designated actions for one agreement's
-        grid. Change orders append rows sharing group_uuid, so the base set
-        is the highest version per group.
+        Paginated current-version designated actions. Scoped to one
+        agreement for its detail-page grid, or across every agreement
+        when *initiative_agreement_id* is None for the module's Designated
+        actions tab (#5078). Change orders append rows sharing group_uuid,
+        so the base set is the highest version per group.
         """
-        latest = (
-            select(
-                DesignatedAction.group_uuid,
-                func.max(DesignatedAction.version).label("max_version"),
-            )
-            .where(DesignatedAction.initiative_agreement_id == initiative_agreement_id)
-            .group_by(DesignatedAction.group_uuid)
-            .subquery()
+        latest = select(
+            DesignatedAction.group_uuid,
+            func.max(DesignatedAction.version).label("max_version"),
         )
+        if initiative_agreement_id is not None:
+            latest = latest.where(
+                DesignatedAction.initiative_agreement_id == initiative_agreement_id
+            )
+        latest = latest.group_by(DesignatedAction.group_uuid).subquery()
         query = (
             select(DesignatedAction)
             .join(
@@ -518,11 +520,12 @@ class InitiativeAgreementRepository:
                 DesignatedAction.current_status_id
                 == DesignatedActionStatus.designated_action_status_id,
             )
-            .where(
-                DesignatedAction.initiative_agreement_id == initiative_agreement_id,
-                DesignatedAction.action_type != ActionTypeEnum.DELETE,
-            )
+            .where(DesignatedAction.action_type != ActionTypeEnum.DELETE)
         )
+        if initiative_agreement_id is not None:
+            query = query.where(
+                DesignatedAction.initiative_agreement_id == initiative_agreement_id
+            )
         for filter_model in pagination.filters:
             # The analyst floating filter's value crosses the wire as a
             # string; the column is an integer FK.
@@ -559,6 +562,9 @@ class InitiativeAgreementRepository:
             query.options(
                 selectinload(DesignatedAction.current_status),
                 selectinload(DesignatedAction.assigned_analyst),
+                # The module-wide grid shows which agreement each row
+                # belongs to; loaded here so the schema never lazy-loads.
+                selectinload(DesignatedAction.initiative_agreement),
             )
             .order_by(*order_by_clauses)
             .offset(offset)

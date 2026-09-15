@@ -79,6 +79,31 @@ export const useInitiativeAgreementStatuses = (
 }
 
 /** Paginated designated actions for one agreement's grid (#4896). */
+/** Every agreement's designated actions, for the module's tab (#5078). */
+export const useAllDesignatedActions = (
+  { page = 1, size = 10, sortOrders = [], filters = [] }: PaginationParams = {},
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: [
+      'designated-actions',
+      'all',
+      { page, size, sortOrders, filters }
+    ],
+    queryFn: async () =>
+      (
+        await client.post(apiRoutes.getAllDesignatedActionsList, {
+          page,
+          size,
+          sortOrders,
+          filters
+        })
+      ).data,
+    ...options
+  })
+}
+
 export const useDesignatedActions = (
   initiativeAgreementId: number | string,
   { page = 1, size = 10, sortOrders = [], filters = [] }: PaginationParams = {},

@@ -6,6 +6,7 @@ import Grid2 from '@mui/material/Grid2'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
+import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
@@ -87,6 +88,7 @@ const InitiativeAgreementDetailBase = () => {
 
   return (
     <BCBox>
+      <InitiativeAgreementTabs />
       <BCTypography
         variant="h5"
         color="primary"

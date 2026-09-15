@@ -153,13 +153,26 @@ export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
 // detail page (#4896). The ID renders as "DA{n}-IA{agreement}", matching
 // the wireframe; the analyst column assigns inline for managers and
 // directors and its floating filter sends the analyst's id.
+// The module-wide tab (#5078) reuses the agreement grid's columns, with
+// the ID read off each row's own agreement and the analyst column left
+// out — the wireframe's tab has no analyst, and the rows come from many
+// agreements at once.
+export const allDesignatedActionColDefs = (t): ColDef[] =>
+  designatedActionColDefs(t, null).filter(
+    (colDef) => colDef.colId !== 'assignedAnalyst'
+  )
+
 export const designatedActionColDefs = (t, initiativeAgreementId): ColDef[] => [
   {
     colId: 'actionNumber',
     field: 'actionNumber',
     headerName: t('initiativeAgreement:actions.columns.id'),
+    // On the agreement's own grid the agreement is fixed; on the module-
+    // wide tab each row carries its own.
     valueGetter: (params) =>
-      `DA${params.data?.actionNumber}-IA${initiativeAgreementId}`,
+      `DA${params.data?.actionNumber}-IA${
+        initiativeAgreementId ?? params.data?.initiativeAgreementId
+      }`,
     minWidth: 120,
     filter: false
   },

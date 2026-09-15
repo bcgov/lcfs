@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  allDesignatedActionColDefs,
   defaultSortModel,
   designatedActionColDefs,
   initiativeAgreementColDefs
@@ -68,5 +69,45 @@ describe('designatedActionColDefs', () => {
     expect(column.valueGetter({ data: undefined })).toBe('')
     // Sorting stays on (server-side, by workflow order).
     expect(column.sortable).not.toBe(false)
+  })
+})
+
+describe('allDesignatedActionColDefs (module tab, #5078)', () => {
+  const t = (key) => key
+
+  it('drops the analyst column and keeps the rest in order', () => {
+    const ids = allDesignatedActionColDefs(t).map(
+      (colDef) => colDef.colId ?? colDef.field
+    )
+    expect(ids).toEqual([
+      'actionNumber',
+      'name',
+      'currentStatus',
+      'lastComment',
+      'creditAllocation',
+      'updateDate'
+    ])
+  })
+
+  it("builds the ID from each row's own agreement", () => {
+    const idColumn = allDesignatedActionColDefs(t).find(
+      (colDef) => colDef.colId === 'actionNumber'
+    )
+    expect(
+      idColumn.valueGetter({
+        data: { actionNumber: 2, initiativeAgreementId: 5 }
+      })
+    ).toBe('DA2-IA5')
+  })
+
+  it('the agreement grid still pins its own agreement in the ID', () => {
+    const idColumn = designatedActionColDefs(t, 9).find(
+      (colDef) => colDef.colId === 'actionNumber'
+    )
+    expect(
+      idColumn.valueGetter({
+        data: { actionNumber: 1, initiativeAgreementId: 5 }
+      })
+    ).toBe('DA1-IA9')
   })
 })

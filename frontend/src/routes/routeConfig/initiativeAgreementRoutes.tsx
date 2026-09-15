@@ -1,5 +1,6 @@
 import {
   DesignatedActionDetail,
+  DesignatedActions,
   InitiativeAgreementDetail,
   InitiativeAgreements
 } from '@/views/InitiativeAgreements'
@@ -23,6 +24,11 @@ const DesignatedActionDetailGated = withFeatureFlag(
   FEATURE_FLAGS.INITIATIVE_AGREEMENTS,
   ROUTES.DASHBOARD
 )
+const DesignatedActionsGated = withFeatureFlag(
+  DesignatedActions,
+  FEATURE_FLAGS.INITIATIVE_AGREEMENTS,
+  ROUTES.DASHBOARD
+)
 
 export const initiativeAgreementRoutes: AppRouteObject[] = [
   {
@@ -31,6 +37,14 @@ export const initiativeAgreementRoutes: AppRouteObject[] = [
     handle: {
       title: 'Initiative agreements',
       crumb: () => 'Initiative agreements'
+    }
+  },
+  {
+    path: ROUTES.INITIATIVE_AGREEMENTS.ACTIONS_LIST,
+    element: <DesignatedActionsGated />,
+    handle: {
+      title: 'Designated actions',
+      crumb: () => 'Designated actions'
     }
   },
   {

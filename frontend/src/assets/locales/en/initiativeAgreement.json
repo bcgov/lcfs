@@ -75,7 +75,9 @@
     "editTitle": "Edit designated action",
     "save": "Save changes",
     "editFailed": "The changes could not be saved.",
-    "addTooltip": "Add a designated action to this agreement."
+    "addTooltip": "Add a designated action to this agreement.",
+    "tabTitle": "Designated actions",
+    "loadFailMsg": "Designated actions could not be loaded."
   },
   "actionDetail": {
     "title": "Designated actions",
@@ -264,5 +266,10 @@
     "endLabel": "End date",
     "created": "Agreement {{code}} created as a draft.",
     "failed": "The agreement could not be created."
+  },
+  "tabs": {
+    "initiativeAgreements": "Initiative agreements",
+    "designatedActions": "Designated actions",
+    "ariaLabel": "Initiative agreements navigation tabs"
   }
 }

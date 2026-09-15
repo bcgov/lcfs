@@ -5,6 +5,7 @@ from fastapi import APIRouter, Body, Depends, Request, status
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.schema import (
+    AllDesignatedActionsListSchema,
     AgreementCreateSchema,
     AnalystAssignmentSchema,
     DesignatedActionCreateSchema,
@@ -129,6 +130,23 @@ async def get_designated_actions(
     return await service.get_designated_actions_paginated(
         initiative_agreement_id, pagination
     )
+
+
+@router.post(
+    "/designated-actions/list",
+    response_model=AllDesignatedActionsListSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def get_all_designated_actions(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Every agreement's designated actions, for the module's Designated
+    actions tab (#5078). IDIR only; proponents arrive with the BCeID
+    stories."""
+    return await service.get_all_designated_actions_paginated(pagination)
 
 
 @router.put(

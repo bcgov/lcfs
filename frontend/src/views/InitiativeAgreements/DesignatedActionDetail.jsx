@@ -17,6 +17,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
+import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Comments from '@/components/Comments'
@@ -163,6 +164,7 @@ const DesignatedActionDetailBase = () => {
 
   return (
     <BCBox>
+      <InitiativeAgreementTabs />
       <BCTypography
         variant="h5"
         color="primary"

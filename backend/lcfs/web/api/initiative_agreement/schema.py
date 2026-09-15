@@ -284,6 +284,22 @@ class DesignatedActionsListSchema(BaseSchema):
     designated_actions: List[DesignatedActionSchema]
 
 
+class DesignatedActionListItemSchema(DesignatedActionSchema):
+    """A row of the module-wide Designated actions tab (#5078).
+
+    Carries which agreement the action belongs to, for the ID column
+    (DA{n}-IA{agreement}) and for navigating to the action's page.
+    """
+
+    initiative_agreement_id: int
+    ia_code: Optional[str] = None
+
+
+class AllDesignatedActionsListSchema(BaseSchema):
+    pagination: PaginationResponseSchema
+    designated_actions: List[DesignatedActionListItemSchema]
+
+
 class AnalystAssignmentSchema(BaseSchema):
     assigned_analyst_id: Optional[int] = None
 

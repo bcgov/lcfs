@@ -32,10 +32,13 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
+    SortOrder,
     validate_pagination,
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.schema import (
+    AllDesignatedActionsListSchema,
+    DesignatedActionListItemSchema,
     AgreementCreateSchema,
     AnalystAssignmentSchema,
     CreateInitiativeAgreementHistorySchema,
@@ -492,13 +495,62 @@ class InitiativeAgreementServices:
         actions, total_count = await self.repo.get_designated_actions_paginated(
             initiative_agreement_id, pagination
         )
-        # The grid endpoint is IDIR-only, so internal comments are visible.
+        rows = await self._designated_action_rows(actions, DesignatedActionSchema)
+        return DesignatedActionsListSchema(
+            pagination=self._pagination_response(pagination, total_count),
+            designated_actions=rows,
+        )
+
+    @service_handler
+    async def get_all_designated_actions_paginated(
+        self, pagination: PaginationRequestSchema
+    ) -> AllDesignatedActionsListSchema:
+        """Every agreement's designated actions, for the module's
+        Designated actions tab (#5078). Newest activity first unless the
+        caller sorts otherwise: the tab is a work queue."""
+        pagination = validate_pagination(pagination)
+        pagination.size = min(pagination.size, MAX_PAGE_SIZE)
+        if not pagination.sort_orders:
+            pagination.sort_orders = [SortOrder(field="update_date", direction="desc")]
+        actions, total_count = await self.repo.get_designated_actions_paginated(
+            None, pagination
+        )
+        rows = await self._designated_action_rows(
+            actions, DesignatedActionListItemSchema
+        )
+        for row, action in zip(rows, actions):
+            row.ia_code = (
+                action.initiative_agreement.ia_code
+                if action.initiative_agreement
+                else None
+            )
+        return AllDesignatedActionsListSchema(
+            pagination=self._pagination_response(pagination, total_count),
+            designated_actions=rows,
+        )
+
+    @staticmethod
+    def _pagination_response(pagination, total_count) -> PaginationResponseSchema:
+        return PaginationResponseSchema(
+            total=total_count,
+            page=pagination.page,
+            size=pagination.size,
+            total_pages=(
+                math.ceil(total_count / pagination.size) if pagination.size else 0
+            ),
+        )
+
+    async def _designated_action_rows(self, actions, schema):
+        """Grid rows with each action's newest comment attached.
+
+        Both grids are IDIR-only, so internal comments are visible.
+        """
         latest_comments = await self.repo.get_latest_comments_by_designated_action_ids(
             actions, include_internal=True
         )
         rows = []
         for action in actions:
-            row = DesignatedActionSchema.model_validate(action)
+            row = schema.model_validate(action)
             entry = latest_comments.get(action.designated_action_id)
             if entry:
                 comment, full_name = entry
@@ -516,17 +568,7 @@ class InitiativeAgreementServices:
                         }
                     )
             rows.append(row)
-        return DesignatedActionsListSchema(
-            pagination=PaginationResponseSchema(
-                total=total_count,
-                page=pagination.page,
-                size=pagination.size,
-                total_pages=(
-                    math.ceil(total_count / pagination.size) if pagination.size else 0
-                ),
-            ),
-            designated_actions=rows,
-        )
+        return rows
 
     @service_handler
     async def get_designated_action_profile(
