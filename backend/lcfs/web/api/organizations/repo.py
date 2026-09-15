@@ -7,7 +7,7 @@ import structlog
 from typing import Dict, List, Optional
 
 from fastapi import Depends, HTTPException
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, case, func, select, asc, desc, distinct, or_, delete
 
@@ -245,6 +245,49 @@ class OrganizationsRepository:
             "has_early_issuance": has_early_issuance
         }
 
+        return OrganizationResponseSchema.model_validate(org_data)
+
+    @repo_handler
+    async def get_organization_response(
+        self, organization_id: int
+    ) -> OrganizationResponseSchema:
+        """
+        Build the create/update response from the persisted organization,
+        including its type and available-role associations (#4565).
+
+        populate_existing forces a reload even when the organization is
+        already in the session's identity map, so associations written after
+        the row was first loaded are picked up.
+        """
+        organization = await self.db.scalar(
+            select(Organization)
+            .options(
+                joinedload(Organization.org_status),
+                joinedload(Organization.org_type),
+                joinedload(Organization.org_address),
+                joinedload(Organization.org_attorney_address),
+                selectinload(Organization.org_types),
+                selectinload(Organization.available_roles),
+            )
+            .where(Organization.organization_id == organization_id)
+            .execution_options(populate_existing=True)
+        )
+        has_early_issuance = await self.get_current_year_early_issuance(
+            organization_id
+        )
+        org_data = {
+            **{
+                column.name: getattr(organization, column.name)
+                for column in organization.__table__.columns
+            },
+            "has_early_issuance": has_early_issuance,
+            "org_status": organization.org_status,
+            "org_type": organization.org_type,
+            "org_types": organization.org_types,
+            "available_roles": organization.available_roles,
+            "org_address": organization.org_address,
+            "org_attorney_address": organization.org_attorney_address,
+        }
         return OrganizationResponseSchema.model_validate(org_data)
 
     def add(self, entity: BaseModel):

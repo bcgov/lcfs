@@ -75,7 +75,16 @@ async def test_create_org_returns_types_and_available_roles(
     }
     response = await client.post("/api/organizations/create", json=payload)
     assert response.status_code == status.HTTP_201_CREATED
-    org_id = response.json()["organizationId"]
+    created = response.json()
+    org_id = created["organizationId"]
+
+    # The create response itself must carry the persisted associations, not
+    # just the row columns (they are written after the row is inserted).
+    assert {t["orgType"] for t in created["orgTypes"]} == {
+        "fuel_supplier",
+        "aggregator",
+    }
+    assert set(created["availableRoles"]) == {"Transfer", "Compliance Reporting"}
 
     get_response = await client.get(f"/api/organizations/{org_id}")
     assert get_response.status_code == status.HTTP_200_OK
@@ -165,3 +174,39 @@ async def test_withdrawing_role_removes_it_from_org_users(
     # And the org no longer offers it
     org_response = await client.get("/api/organizations/1")
     assert set(org_response.json()["availableRoles"]) == {"Compliance Reporting"}
+
+
+@pytest.mark.anyio
+async def test_update_response_carries_types_and_roles(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+) -> None:
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    org_update = {
+        **ORG_UPDATE_BASE,
+        "organizationTypeIds": [1, 2],
+        "availableRoles": ["Compliance Reporting", "CI Applicant"],
+    }
+    response = await client.put("/api/organizations/1", json=org_update)
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert {t["orgType"] for t in body["orgTypes"]} == {"fuel_supplier", "aggregator"}
+    assert set(body["availableRoles"]) == {"Compliance Reporting", "CI Applicant"}
+
+
+@pytest.mark.anyio
+async def test_update_omitting_available_roles_preserves_them(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+) -> None:
+    """A PUT without availableRoles must not silently withdraw the org's
+    roles (and strip them from its users)."""
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    before = (await client.get("/api/organizations/1")).json()["availableRoles"]
+    assert before, "seed should grant organization 1 at least one role"
+
+    org_update = {**ORG_UPDATE_BASE, "organizationTypeIds": [1]}
+    assert "availableRoles" not in org_update
+    response = await client.put("/api/organizations/1", json=org_update)
+    assert response.status_code == status.HTTP_200_OK
+
+    after = (await client.get("/api/organizations/1")).json()["availableRoles"]
+    assert set(after) == set(before)

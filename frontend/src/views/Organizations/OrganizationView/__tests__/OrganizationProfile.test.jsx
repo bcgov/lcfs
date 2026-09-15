@@ -154,7 +154,11 @@ vi.mock('@/constants/roles', () => ({
   roles: {
     government: 'government',
     supplier: 'supplier',
-    analyst: 'analyst'
+    analyst: 'analyst',
+    compliance_reporting: 'Compliance Reporting',
+    transfers: 'Transfer',
+    ci_applicant: 'CI Applicant',
+    ia_proponent: 'IA Proponent'
   }
 }))
 
@@ -850,8 +854,10 @@ describe('OrganizationProfile Component', () => {
         { wrapper }
       )
 
+      // Backend role names are rendered with the form's wording, in the
+      // form's order, rather than the raw enum values.
       expect(
-        screen.getByText('Transfer, Compliance Reporting')
+        screen.getByText('Compliance reporting, Credit transfer')
       ).toBeInTheDocument()
     })
   })

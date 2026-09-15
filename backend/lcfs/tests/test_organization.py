@@ -215,12 +215,11 @@ async def test_create_organization_invalid_type(
     }
 
     response = await create_organization(client, fastapi_app, payload)
-    # Depending on validation strategy, could be 400/422 client error or 500 server error from DB FK violation
-    assert response.status_code in [
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_422_UNPROCESSABLE_ENTITY,
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-    ]
+    # Unknown type ids are rejected up front as a client error (ValueError
+    # from the service is mapped to 400 by view_handler), never a 500 from a
+    # downstream FK violation.
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "999" in response.json()["detail"]
 
 
 @pytest.mark.anyio

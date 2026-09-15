@@ -308,6 +308,10 @@ class OrganizationsService:
         await self._apply_available_role_changes(
             created_organization.organization_id, organization_data.available_roles
         )
+        # Re-serialize so the response carries the persisted types and roles
+        created_organization = await self.repo.get_organization_response(
+            created_organization.organization_id
+        )
 
         if (
             hasattr(organization_data, "has_early_issuance")
@@ -475,8 +479,16 @@ class OrganizationsService:
         await self.repo.set_organization_types(
             organization_id, organization_data.organization_type_ids
         )
-        await self._apply_available_role_changes(
-            organization_id, organization_data.available_roles
+        # None means the field was omitted: leave role availability untouched.
+        # An explicit list (including []) replaces the set and auto-removes
+        # withdrawn roles from the organization's users.
+        if organization_data.available_roles is not None:
+            await self._apply_available_role_changes(
+                organization_id, organization_data.available_roles
+            )
+        # Re-serialize so the response carries the persisted types and roles
+        updated_organization = await self.repo.get_organization_response(
+            organization_id
         )
 
         await FastAPICache.clear()

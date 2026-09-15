@@ -21,6 +21,7 @@ from lcfs.db.models.organization.OrganizationStatus import (
     OrgStatusEnum,
 )
 from lcfs.web.api.base import PaginationRequestSchema, FilterModel
+from lcfs.db.models.user.Role import RoleEnum
 from unittest.mock import patch
 
 
@@ -69,6 +70,9 @@ def mock_association_repo_methods(mock_repo, type_ids=(1,)):
     mock_repo.get_available_role_ids = AsyncMock(return_value=set())
     mock_repo.set_available_roles = AsyncMock()
     mock_repo.delete_user_roles_for_org = AsyncMock(return_value=[])
+    mock_repo.get_organization_response = AsyncMock(
+        return_value=MagicMock(organization_id=1)
+    )
 
 
 @pytest.fixture
@@ -585,6 +589,117 @@ async def test_update_organization_with_early_issuance_change(
     )
 
 
+@pytest.mark.anyio
+async def test_update_organization_omitting_available_roles_leaves_them_untouched(
+    organizations_service, mock_repo
+):
+    """A PUT that omits availableRoles must not withdraw the org's roles
+    (which would also strip them from every user of the organization)."""
+    update_data = OrganizationUpdateSchema(
+        has_early_issuance=False, organization_type_ids=[1]
+    )
+    assert update_data.available_roles is None
+
+    mock_repo.get_organization = AsyncMock(
+        return_value=MagicMock(
+            organization_address_id=1, organization_attorney_address_id=1
+        )
+    )
+    mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_repo.update_organization = AsyncMock()
+    mock_association_repo_methods(mock_repo)
+
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_organization(1, update_data, user=MagicMock())
+
+    mock_repo.set_organization_types.assert_awaited_once_with(1, [1])
+    mock_repo.set_available_roles.assert_not_awaited()
+    mock_repo.delete_user_roles_for_org.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_update_organization_with_empty_available_roles_withdraws_all(
+    organizations_service, mock_repo
+):
+    """An explicit empty list is a real instruction: withdraw every role."""
+    update_data = OrganizationUpdateSchema(
+        has_early_issuance=False, organization_type_ids=[1], available_roles=[]
+    )
+    assert update_data.available_roles == []
+
+    mock_repo.get_organization = AsyncMock(
+        return_value=MagicMock(
+            organization_address_id=1, organization_attorney_address_id=1
+        )
+    )
+    mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_repo.update_organization = AsyncMock()
+    mock_association_repo_methods(mock_repo)
+
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_organization(1, update_data, user=MagicMock())
+
+    mock_repo.set_available_roles.assert_awaited_once_with(1, [])
+
+
+@pytest.mark.anyio
+async def test_create_response_is_rebuilt_after_association_writes(
+    organizations_service, mock_repo
+):
+    """The returned payload must reflect the persisted types and roles, which
+    are written after the row-level response was first built."""
+    create_data = OrganizationCreateSchema(
+        name="Test Org",
+        operating_name="Test Op Org",
+        email="test@test.com",
+        phone="1234567890",
+        organization_status_id=1,
+        organization_type_ids=[1],
+        available_roles=["Transfer"],
+        has_early_issuance=False,
+        address=OrganizationAddressSchema(
+            name="Test Org",
+            street_address="123 Main St",
+            city="Anytown",
+            postalCode_zipCode="12345",
+            provinceState="BC",
+            country="Canada",
+        ),
+        attorney_address=OrganizationAddressSchema(
+            name="Test Org",
+            street_address="456 Law St",
+            city="Legaltown",
+            postalCode_zipCode="67890",
+            provinceState="BC",
+            country="Canada",
+        ),
+    )
+    mock_repo.create_organization = AsyncMock(return_value=MagicMock(organization_id=7))
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_association_repo_methods(mock_repo)
+    mock_repo.get_role_ids_by_enums = AsyncMock(
+        return_value={RoleEnum.TRANSFER: 8, RoleEnum.IA_PROPONENT: 13}
+    )
+    rebuilt = MagicMock(organization_id=7, available_roles=["Transfer"])
+    mock_repo.get_organization_response = AsyncMock(return_value=rebuilt)
+
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        result = await organizations_service.create_organization(
+            create_data, user=MagicMock()
+        )
+
+    assert result is rebuilt
+    mock_repo.get_organization_response.assert_awaited_once_with(7)
+
+
 def _listed_organization():
     """An organization with an active credit market listing."""
     org = MagicMock(
@@ -610,8 +725,9 @@ def _prepare_update_repo(mock_repo, organization):
     mock_repo.update_early_issuance_by_year = AsyncMock()
     mock_repo.update_organization = AsyncMock(return_value=organization)
     mock_repo.create_credit_market_audit_log = AsyncMock()
-    mock_repo.get_organization_type = AsyncMock(
-        return_value=MagicMock(is_bceid_user=False)
+    mock_association_repo_methods(mock_repo)
+    mock_repo.get_organization_types_by_ids = AsyncMock(
+        return_value=[mock_org_type(1, is_bceid_user=False)]
     )
 
 
@@ -627,10 +743,15 @@ async def test_update_organization_preserves_credit_market_listing(
         name="Renamed Org",
         email="org@example.com",
         has_early_issuance=False,
-        organization_type_id=1,
+        organization_type_ids=[1],
     )
 
-    await organizations_service.update_organization(1, update_data, user=MagicMock())
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_organization(
+            1, update_data, user=MagicMock()
+        )
 
     assert organization.name == "Renamed Org"
     assert organization.credit_market_contact_name == "Jane Seller"
@@ -652,14 +773,17 @@ async def test_update_organization_audits_explicit_credit_market_change(
 
     update_data = OrganizationUpdateSchema(
         has_early_issuance=False,
-        organization_type_id=1,
+        organization_type_ids=[1],
         display_in_credit_market=False,
         credits_to_sell=0,
     )
     user = MagicMock()
     user.keycloak_username = "idir.user"
 
-    await organizations_service.update_organization(1, update_data, user=user)
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_organization(1, update_data, user=user)
 
     assert organization.display_in_credit_market is False
     assert organization.credits_to_sell == 0

@@ -54,10 +54,12 @@ export const organizationsColDefs = (t) => [
       params.data.orgTypes?.length
         ? getOrgTypesDisplayLabel(params.data.orgTypes)
         : getOrgTypeDisplayLabel(params.data.orgType),
-    filterValueGetter: (params) =>
-      params.data?.orgTypes?.map((type) => type.orgType).join(',') ??
-      params.data?.orgType?.orgType ??
-      '',
+    // Filtering is applied server-side (BCGridViewer forwards the filter
+    // model to /organizations/, which matches any of an organization's
+    // types), so this only feeds the grid's local row value: use the
+    // primary type rather than a comma-joined list an equals filter would
+    // never match.
+    filterValueGetter: (params) => params.data?.orgType?.orgType ?? '',
     cellRenderer: OrgTypeRenderer,
     cellClass: 'vertical-middle',
     filter: true,

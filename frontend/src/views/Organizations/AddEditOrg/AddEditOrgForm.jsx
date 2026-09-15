@@ -39,19 +39,10 @@ import {
   AddressAutocomplete,
   BCFormCheckbox
 } from '@/components/BCForm/index.js'
-import { roles } from '@/constants/roles'
+import { orgAvailableRoleOptions } from '@/constants/organizationRoles'
 import colors from '@/themes/base/colors'
 import { getCurrentEarlyIssuanceYear } from '@/constants/common'
 import ReferenceCompareBox from './ReferenceCompareBox'
-
-// Org-controllable roles assignable to BCeID users (#4565); labels follow the
-// wireframe wording ("Credit transfer" gates the Transfer role).
-const availableRoleOptions = [
-  { value: roles.compliance_reporting, label: 'Compliance reporting' },
-  { value: roles.transfers, label: 'Credit transfer' },
-  { value: roles.ci_applicant, label: 'CI applicant' },
-  { value: roles.ia_proponent, label: 'IA proponent' }
-]
 
 // Component for adding a new organization
 export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
@@ -658,7 +649,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                         form={methods}
                         name="availableRoles"
                         label={`${t('org:rolesAvailableLabel')}:`}
-                        options={availableRoleOptions}
+                        options={orgAvailableRoleOptions}
                       />
                     </Grid>
                   </Grid>

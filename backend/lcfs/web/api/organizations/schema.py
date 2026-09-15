@@ -36,7 +36,13 @@ ORG_CONTROLLABLE_ROLE_VALUES = {role.value for role in ORG_CONTROLLABLE_ROLES}
 
 
 class OrganizationTypesAndRolesMixin(BaseSchema):
-    """Shared multi-type + available-roles fields for org create/update (#4565)."""
+    """Shared multi-type + available-roles fields for org create/update (#4565).
+
+    Create schemas default ``available_roles`` to an empty list. Update schemas
+    override it to ``None`` so a PUT that omits the field leaves the
+    organization's role availability untouched instead of withdrawing every
+    role (which would also strip them from the organization's users).
+    """
 
     organization_type_ids: List[int]
     available_roles: List[str] = []
@@ -51,6 +57,8 @@ class OrganizationTypesAndRolesMixin(BaseSchema):
     @field_validator("available_roles")
     @classmethod
     def _controllable_roles_only(cls, value):
+        if value is None:
+            return None
         if not value:
             return []
         canonical = {v.lower(): v for v in ORG_CONTROLLABLE_ROLE_VALUES}
@@ -251,6 +259,7 @@ class NonBCeIDOrganizationCreateSchema(OrganizationTypesAndRolesMixin):
 
 
 class OrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
+    available_roles: Optional[List[str]] = None
     name: Optional[str] = None
     operating_name: Optional[str] = None
     email: Optional[str] = None
@@ -273,6 +282,7 @@ class OrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
 
 # Update schema for non-BCeID organization types with relaxed validation
 class NonBCeIDOrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
+    available_roles: Optional[List[str]] = None
     name: Optional[str] = None
     operating_name: Optional[str] = None
     email: Optional[str] = None

@@ -3,6 +3,7 @@ import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
+import { formatOrgAvailableRoles } from '@/constants/organizationRoles'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 import { useTranslation } from 'react-i18next'
 import { phoneNumberFormatter } from '@/utils/formatters'
@@ -53,9 +54,7 @@ export const OrganizationProfile = ({
 
           <BCTypography variant="body4">
             <strong>{t('org:rolesAvailableLabel')}:</strong>{' '}
-            {orgData?.availableRoles?.length
-              ? orgData.availableRoles.join(', ')
-              : '—'}
+            {formatOrgAvailableRoles(orgData?.availableRoles) || '—'}
           </BCTypography>
 
           {orgData?.contactName && (
