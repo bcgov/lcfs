@@ -27,6 +27,34 @@ ORG_ROLE_SET: set[RoleEnum] = {
     RoleEnum.IA_SIGNER,
 }
 
+# Roles an analyst can enable/disable per organization (#4565). Stored in
+# organization_available_role; every other org role is always available.
+ORG_CONTROLLABLE_ROLES: set[RoleEnum] = {
+    RoleEnum.TRANSFER,
+    RoleEnum.COMPLIANCE_REPORTING,
+    RoleEnum.CI_APPLICANT,
+    RoleEnum.IA_PROPONENT,
+}
+
+ALWAYS_AVAILABLE_ORG_ROLES: set[RoleEnum] = {
+    RoleEnum.SUPPLIER,
+    RoleEnum.MANAGE_USERS,
+    RoleEnum.SIGNING_AUTHORITY,
+    RoleEnum.READ_ONLY,
+}
+
+
+def allowed_roles_for_org(available_roles: set[RoleEnum]) -> set[RoleEnum]:
+    """Roles assignable to an organization's BCeID users.
+
+    IA Signer is never directly toggleable: it is allowed exactly when
+    IA Proponent is available to the organization.
+    """
+    allowed = ALWAYS_AVAILABLE_ORG_ROLES | (available_roles & ORG_CONTROLLABLE_ROLES)
+    if RoleEnum.IA_PROPONENT in allowed:
+        allowed.add(RoleEnum.IA_SIGNER)
+    return allowed
+
 
 def is_government_seed_user(profile_seed_row: dict[str, Any]) -> bool:
     return profile_seed_row.get("organization_id") is None
