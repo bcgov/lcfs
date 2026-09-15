@@ -16,21 +16,32 @@ def mock_repo():
     repo.get_holder_balances = AsyncMock(return_value=[])
     repo.get_total_credits_issued = AsyncMock(return_value=0)
     repo.get_report_periods = AsyncMock(return_value=[])
+    repo.get_report_a1_periods = AsyncMock(return_value=[])
     repo.get_report_all_time = AsyncMock(
-        return_value=SimpleNamespace(
-            transfers=0, volume=0, transfer_value=0, wavg=None
-        )
+        return_value=SimpleNamespace(transfers=0, volume=0, transfer_value=0, wavg=None)
     )
     return repo
 
 
-def _report_row(period, transfers, volume, value, wavg, sellers, buyers):
+def _report_row(
+    period,
+    transfers,
+    volume,
+    value,
+    wavg,
+    sellers,
+    buyers,
+    min_price=None,
+    max_price=None,
+):
     return SimpleNamespace(
         period=period,
         transfers=transfers,
         volume=volume,
         transfer_value=value,
         wavg=wavg,
+        min_price=min_price,
+        max_price=max_price,
         distinct_sellers=sellers,
         distinct_buyers=buyers,
     )
@@ -184,3 +195,54 @@ async def test_public_report_suppresses_low_count_periods(service, mock_repo):
     assert result.kpis.label_period == "2025-01"
     assert result.kpis.transfers.current == 10
     assert result.kpis.transfers.delta_pct is None
+    assert result.ytd_kpis.transfers.current == 10
+
+
+@pytest.mark.anyio
+async def test_public_report_includes_a1_details_from_transfer_base_view(
+    service, mock_repo
+):
+    mock_repo.get_report_periods.return_value = [
+        _report_row(datetime(2026, 7, 1), 13, 51404, 6972143.2, 135.63, 4, 4, 100, 175)
+    ]
+    mock_repo.get_report_a1_periods.return_value = [
+        _report_row(datetime(2025, 7, 1), 9, 38000, 4560000, 120.0, 3, 3),
+        _report_row(datetime(2026, 6, 1), 10, 35000, 4210500, 120.3, 3, 3, 90, 150),
+        _report_row(datetime(2026, 7, 1), 11, 41274, 5849110.5, 141.75, 3, 3, 100, 175),
+    ]
+
+    result = await service.get_public_report()
+
+    mock_repo.get_report_a1_periods.assert_awaited_once_with("month")
+    assert result.monthly[0].min_price == 100
+    assert result.monthly[0].max_price == 175
+    assert result.a1_monthly[-1].min_price == 100
+    assert result.a1_monthly[-1].max_price == 175
+    assert result.a1_kpis.label_period == "2026-07"
+    assert result.a1_kpis.transfers.current == 11
+    assert result.a1_kpis.volume.current == 41274
+    assert result.a1_kpis.weighted_avg_price.current == 141.75
+    assert result.a1_kpis.weighted_avg_price.prior == 120.3
+    assert result.a1_kpis.weighted_avg_price.delta_pct == 17.83
+
+
+@pytest.mark.anyio
+async def test_public_report_builds_ytd_kpis(service, mock_repo):
+    mock_repo.get_report_periods.return_value = [
+        _report_row(datetime(2025, 1, 1), 10, 1000, 200000, 200, 4, 3),
+        _report_row(datetime(2025, 2, 1), 15, 1500, 330000, 220, 4, 3),
+        _report_row(datetime(2026, 1, 1), 20, 1900, 361000, 190, 4, 3),
+        _report_row(datetime(2026, 2, 1), 25, 2100, 441000, 210, 4, 3),
+    ]
+
+    result = await service.get_public_report()
+
+    assert result.ytd_kpis.label_period == "2026-02"
+    assert result.ytd_kpis.transfers.current == 45
+    assert result.ytd_kpis.transfers.prior == 25
+    assert result.ytd_kpis.transfers.delta_pct == 80
+    assert result.ytd_kpis.volume.current == 4000
+    assert result.ytd_kpis.volume.prior == 2500
+    assert result.ytd_kpis.volume.delta_pct == 60
+    assert result.ytd_kpis.weighted_avg_price.current == 200.5
+    assert result.ytd_kpis.weighted_avg_price.prior == 212
