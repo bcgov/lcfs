@@ -34,9 +34,11 @@ MIN_PARTICIPANTS = 3
 
 
 def _publishable(row) -> bool:
-    return (row.transfers or 0) >= MIN_TRANSFERS and (
-        row.distinct_sellers or 0
-    ) >= MIN_PARTICIPANTS
+    return (
+        (row.transfers or 0) >= MIN_TRANSFERS
+        and (row.distinct_sellers or 0) >= MIN_PARTICIPANTS
+        and (row.distinct_buyers or 0) >= MIN_PARTICIPANTS
+    )
 
 
 def _period_label(period: datetime, interval: str) -> str:
@@ -148,7 +150,7 @@ class CreditMarketServices:
         a1_monthly_rows = await self.repo.get_report_a1_periods("month")
         all_time_row = await self.repo.get_report_all_time()
 
-        def to_periods(rows, interval):
+        def to_periods(rows, interval, suppress_low_counts: bool = False):
             return [
                 MarketReportPeriodSchema(
                     period=_period_label(r.period, interval),
@@ -157,10 +159,48 @@ class CreditMarketServices:
                     weighted_avg_price=_to_float(r.wavg),
                     min_price=_to_float(getattr(r, "min_price", None)),
                     max_price=_to_float(getattr(r, "max_price", None)),
+                    category_a_transfers=_to_int(
+                        getattr(r, "category_a_transfers", None)
+                    ),
+                    category_a_average_price=_to_float(
+                        getattr(r, "category_a_average_price", None)
+                    ),
+                    category_a_credit_volume=_to_int(
+                        getattr(r, "category_a_credit_volume", None)
+                    ),
+                    category_b_transfers=_to_int(
+                        getattr(r, "category_b_transfers", None)
+                    ),
+                    category_b_average_price=_to_float(
+                        getattr(r, "category_b_average_price", None)
+                    ),
+                    category_b_credit_volume=_to_int(
+                        getattr(r, "category_b_credit_volume", None)
+                    ),
+                    category_c_transfers=_to_int(
+                        getattr(r, "category_c_transfers", None)
+                    ),
+                    category_c_average_price=_to_float(
+                        getattr(r, "category_c_average_price", None)
+                    ),
+                    category_c_credit_volume=_to_int(
+                        getattr(r, "category_c_credit_volume", None)
+                    ),
+                    category_a1_transfers=_to_int(
+                        getattr(r, "category_a1_transfers", None)
+                    ),
+                    category_a1_average_price=_to_float(
+                        getattr(r, "category_a1_average_price", None)
+                    ),
+                    category_a1_credit_volume=_to_int(
+                        getattr(r, "category_a1_credit_volume", None)
+                    ),
+                    min_a1_price=_to_float(getattr(r, "min_a1_price", None)),
+                    max_a1_price=_to_float(getattr(r, "max_a1_price", None)),
                     transfer_value=_to_float(r.transfer_value) or 0.0,
                 )
                 for r in rows
-                if _publishable(r)
+                if not suppress_low_counts or _publishable(r)
             ]
 
         pub_monthly = [r for r in monthly_rows if _publishable(r)]
@@ -190,10 +230,10 @@ class CreditMarketServices:
         )
 
         return PublicMarketReportSchema(
-            monthly=to_periods(monthly_rows, "month"),
-            a1_monthly=to_periods(a1_monthly_rows, "month"),
-            quarterly=to_periods(quarterly_rows, "quarter"),
-            annual=to_periods(annual_rows, "year"),
+            monthly=to_periods(monthly_rows, "month", suppress_low_counts=True),
+            a1_monthly=to_periods(a1_monthly_rows, "month", suppress_low_counts=True),
+            quarterly=to_periods(quarterly_rows, "quarter", suppress_low_counts=True),
+            annual=to_periods(annual_rows, "year", suppress_low_counts=True),
             all_time=all_time,
             kpis=kpis,
             ytd_kpis=ytd_kpis,

@@ -83,6 +83,20 @@ class MarketReportPeriodSchema(BaseSchema):
     weighted_avg_price: Optional[float] = None
     min_price: Optional[float] = None
     max_price: Optional[float] = None
+    category_a_transfers: int = 0
+    category_a_average_price: Optional[float] = None
+    category_a_credit_volume: int = 0
+    category_b_transfers: int = 0
+    category_b_average_price: Optional[float] = None
+    category_b_credit_volume: int = 0
+    category_c_transfers: int = 0
+    category_c_average_price: Optional[float] = None
+    category_c_credit_volume: int = 0
+    category_a1_transfers: int = 0
+    category_a1_average_price: Optional[float] = None
+    category_a1_credit_volume: int = 0
+    min_a1_price: Optional[float] = None
+    max_a1_price: Optional[float] = None
     transfer_value: float = 0.0
 
 

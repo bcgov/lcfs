@@ -159,6 +159,8 @@ async def test_public_overview_suppresses_low_count_periods(service, mock_repo):
         _report_row(datetime(2024, 1, 1), 10, 500, 180000, 360.0, 4, 3),
         # withheld: too few transfers / sellers
         _report_row(datetime(2024, 4, 1), 2, 50, 20000, 395.0, 2, 1),
+        # withheld: enough transfers and sellers, but too few buyers
+        _report_row(datetime(2024, 7, 1), 7, 250, 87500, 350.0, 3, 2),
     ]
     result = await service.get_public_overview("quarter")
     assert [p.period for p in result.price_index] == ["2024-Q1"]
@@ -171,7 +173,9 @@ async def test_public_overview_invalid_interval_raises(service):
 
 
 @pytest.mark.anyio
-async def test_public_report_suppresses_low_count_periods(service, mock_repo):
+async def test_public_report_tables_and_kpis_suppress_low_counts(
+    service, mock_repo
+):
     rows = [
         # publishable: >= 5 transfers and >= 3 distinct sellers
         _report_row(datetime(2025, 1, 1), 10, 1000, 200000, 200.0, 4, 3),
@@ -185,13 +189,12 @@ async def test_public_report_suppresses_low_count_periods(service, mock_repo):
 
     result = await service.get_public_report()
 
-    # Only the qualifying period survives, at every granularity.
+    # Public report tables only include publishable aggregate periods.
     assert [p.period for p in result.monthly] == ["2025-01"]
     assert result.monthly[0].transfer_value == 200000.0
     assert result.all_time.transfers == 13
     assert result.min_transfers == 5
     assert result.min_participants == 3
-    # Latest publishable month with no publishable year-ago comparison.
     assert result.kpis.label_period == "2025-01"
     assert result.kpis.transfers.current == 10
     assert result.kpis.transfers.delta_pct is None
