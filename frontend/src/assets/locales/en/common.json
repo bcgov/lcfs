@@ -43,10 +43,10 @@
     "publicCreditCalculator": "Public LCFS information"
   },
   "publicDashboard": {
-    "cardTitle": "LCFS program information",
+    "cardTitle": "LCFS At a Glance",
     "hero": {
       "title": "Cleaner fuels, measured in the open",
-      "subtitle": "British Columbia's Low Carbon Fuel Standard reduces the carbon intensity of transportation fuels supplied in the province, lowering greenhouse gas emissions and supporting cleaner, lower-carbon alternatives."
+      "subtitle": "British Columbia’s Low Carbon Fuel Standard reduces the carbon intensity of transportation fuels supplied in the province, lowering greenhouse gas emissions and supporting economic growth by creating opportunities for BC businesses that produce and supply renewable and low-carbon energy."
     },
     "impact": {
       "heading": "tonnes of CO₂e reduced",
@@ -56,7 +56,7 @@
     "stats": {
       "creditsTraded": "Credits traded",
       "avgPrice": "Average price (VWAP)",
-      "outstandingCredits": "Outstanding credits",
+      "totalGeneratedCredits": "Credits generated all time",
       "participatingOrgs": "Participating organizations"
     },
     "market": {
@@ -72,7 +72,7 @@
     },
     "intro": {
       "programTitle": "About the Low Carbon Fuel Standard",
-      "programBody": "The Low Carbon Fuels Act and its two regulations form British Columbia's Low Carbon Fuel Standard, which sets requirements that encourage the use of renewable and low carbon fuels and offers incentives to organizations that supply them, based on how much these fuels reduce greenhouse gas emissions compared to conventional fuels.",
+      "programBody": "The Low Carbon Fuels Act and its two regulations form British Columbia's Low Carbon Fuel Standard (LCFS), which sets requirements that encourage the use of renewable and low carbon fuels. The LCFS offers incentives to organizations based on the amounts of greenhouse gas emissions avoided in comparison to conventional fossil-derived fuels.",
       "siteTitle": "Using this site",
       "siteBody": "This site provides public access to program tools and data — including the compliance unit calculator, approved carbon intensities, and credit market information. Registered fuel suppliers and government staff can log in to file and review compliance reports."
     },

@@ -16,7 +16,8 @@ import {
   idirTextFields,
   bceidTextFields,
   defaultValues,
-  statusOptions
+  statusOptions,
+  allowedBceidRoleValues
 } from './_schema'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { BCFormRadio, BCFormText } from '@/components/BCForm'
@@ -44,7 +45,7 @@ import Loading from '@/components/Loading'
 import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
 import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
 import { roles } from '@/constants/roles'
-import { useOrganizationUser } from '@/hooks/useOrganization'
+import { useOrganization, useOrganizationUser } from '@/hooks/useOrganization'
 
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({
@@ -83,6 +84,15 @@ export const AddEditUser = ({
   const safeToDelete = data?.isSafeToRemove
   const isEditingGovernmentUser = data?.isGovernmentUser || false
   const isCurrentUserGovernment = currentUser?.isGovernmentUser || false
+
+  // The organization's available roles constrain which BCeID roles can be
+  // assigned (#4565). Applies to both the IDIR route (orgID param) and the
+  // BCeID self-serve route (current user's organization).
+  const roleOrgId = orgID || currentUser?.organization?.organizationId
+  const { data: orgData } = useOrganization(roleOrgId, {
+    enabled: !!roleOrgId && (!!orgID || hasRoles(roles.supplier))
+  })
+  const availableRoles = orgData?.availableRoles ?? null
 
   // User form hook and form validation
   const form = useForm({
@@ -264,6 +274,12 @@ export const AddEditUser = ({
     }
   }, [isUserFetched, data, reset])
 
+  // Lowercase BCeID role values the organization allows (null = no filtering)
+  const allowedBceidRoles = useMemo(
+    () => allowedBceidRoleValues(availableRoles),
+    [availableRoles]
+  )
+
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
     // For IDIR users, use keycloakEmail for both email fields
@@ -289,7 +305,13 @@ export const AddEditUser = ({
         data.status === 'Active'
           ? [
               ...data.adminRole,
-              ...(data.readOnly === '' ? data.bceidRoles : []),
+              ...(data.readOnly === ''
+                ? (data.bceidRoles || []).filter(
+                    (role) =>
+                      allowedBceidRoles == null ||
+                      allowedBceidRoles.includes(role)
+                  )
+                : []),
               data.idirRole,
               data.iaRole,
               data.readOnly
@@ -413,6 +435,7 @@ export const AddEditUser = ({
                     disabled={disabled}
                     status={status}
                     isGovernmentUser={isCurrentUserGovernment}
+                    availableRoles={availableRoles}
                     t={t}
                   />
                 ) : (
