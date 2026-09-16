@@ -185,6 +185,7 @@ async def get_organization(
 @router.get(
     "/{organization_id}/penalties/analytics",
     response_model=PenaltyAnalyticsResponseSchema,
+    response_model_exclude_none=True,
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
@@ -204,7 +205,9 @@ async def get_penalty_analytics(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to view this organization's penalty data.",
         )
-    return await service.get_penalty_analytics(organization_id)
+    return await service.get_penalty_analytics(
+        organization_id, include_penalty_status=bool(user.is_government)
+    )
 
 
 @router.get(
