@@ -27,6 +27,7 @@
   "contactNameLabel": "Contact name/BCeID account manager",
   "contactNameLabelOptional": "Contact name/BCeID account manager (optional)",
   "orgTypeLabel": "Organization type",
+  "rolesAvailableLabel": "Roles available",
   "regTrnLabel": "Registered for transfers",
   "registeredTransferYes": "Yes — A registered organization is able to transfer compliance units.",
   "registeredTransferNo": "No — An organization must be registered to transfer compliance units.",
@@ -73,9 +74,9 @@
   "sections": {
     "companyOverview": {
       "title": "Company overview",
-      "description": "Internal notes about this organization. Comments are searchable in the Comment log.",
-      "empty": "No company overview comments yet.",
-      "addTitle": "Add a company overview comment"
+      "description": "Internal shared overview for this organization. Previous overview comments remain searchable in the Comment log.",
+      "empty": "No company overview statement yet.",
+      "addTitle": "Add company overview"
     },
     "penaltyLog": {
       "title": "Penalty log",
