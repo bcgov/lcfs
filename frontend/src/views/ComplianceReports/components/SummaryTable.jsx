@@ -14,7 +14,9 @@ import TableRow from '@mui/material/TableRow'
 import Input from '@mui/material/Input'
 import InputAdornment from '@mui/material/InputAdornment'
 import CircularProgress from '@mui/material/CircularProgress'
-import Tooltip from '@mui/material/Tooltip'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import FormControlLabel from '@mui/material/FormControlLabel'
 
 const SummaryTable = ({
   title,
@@ -22,6 +24,7 @@ const SummaryTable = ({
   columns,
   data: initialData,
   onCellEditStopped,
+  onBooleanCellEditStopped,
   useParenthesis = false,
   width = '100%',
   savingCellKey = null,
@@ -189,6 +192,20 @@ const SummaryTable = ({
     setEditingCell({ rowIndex, columnId })
   }
 
+  const handleBooleanCellChange = (rowIndex, columnId, value) => {
+    const booleanValue = value === 'true'
+    const newData = data.map((row, index) =>
+      index === rowIndex ? { ...row, [columnId]: booleanValue } : row
+    )
+    setData(newData)
+    const cellInfo = { rowIndex, columnId }
+    if (onBooleanCellEditStopped) {
+      onBooleanCellEditStopped(newData, cellInfo)
+    } else {
+      onCellEditStopped?.(newData, cellInfo)
+    }
+  }
+
   const handleCellFocus = (rowIndex, columnId) => {
     // Store original value when editing starts
     const currentRow = data[rowIndex]
@@ -325,6 +342,7 @@ const SummaryTable = ({
                 const isExempted = isLineExempted(row)
                 const isGreyedOrLocked =
                   isCellLocked(rowIndex, row) || isGreyedByYear || isExempted
+                const isEditableCell = isCellEditable(rowIndex, column.id)
                 return (
                   <TableCell
                     key={column.id}
@@ -366,8 +384,68 @@ const SummaryTable = ({
                           : 1
                     }}
                   >
-                    {isCellEditable(rowIndex, column.id) &&
-                    !isCellLocked(rowIndex, row) ? (
+                    {column.type === 'booleanRadio' ? (
+                      <div style={{ position: 'relative' }}>
+                        <RadioGroup
+                          row
+                          value={
+                            row[column.id] === null ||
+                            row[column.id] === undefined
+                              ? ''
+                              : String(row[column.id])
+                          }
+                          onChange={(event) => {
+                            if (!isEditableCell || isGreyedOrLocked) return
+                            handleBooleanCellChange(
+                              rowIndex,
+                              column.id,
+                              event.target.value
+                            )
+                          }}
+                          sx={{
+                            justifyContent: 'center',
+                            flexWrap: 'nowrap',
+                            '& .MuiFormControlLabel-root': {
+                              mr: 1,
+                              whiteSpace: 'nowrap'
+                            }
+                          }}
+                        >
+                          <FormControlLabel
+                            value="true"
+                            control={
+                              <Radio
+                                size="small"
+                                disabled={!isEditableCell || isGreyedOrLocked}
+                              />
+                            }
+                            label="Yes"
+                          />
+                          <FormControlLabel
+                            value="false"
+                            control={
+                              <Radio
+                                size="small"
+                                disabled={!isEditableCell || isGreyedOrLocked}
+                              />
+                            }
+                            label="No"
+                          />
+                        </RadioGroup>
+                        {isCellSaving(rowIndex, column.id) && (
+                          <CircularProgress
+                            size={18}
+                            color="primary"
+                            sx={{
+                              position: 'absolute',
+                              right: 2,
+                              top: '50%',
+                              transform: 'translateY(-50%)'
+                            }}
+                          />
+                        )}
+                      </div>
+                    ) : isEditableCell && !isCellLocked(rowIndex, row) ? (
                       <div
                         style={{
                           position: 'relative',
@@ -508,7 +586,12 @@ const SummaryTable = ({
                             row.format &&
                             colIndex !== 0 &&
                             column.id !== 'description' &&
-                            column.id !== 'line'
+                            column.id !== 'line' &&
+                            column.type !== 'booleanRadio'
+
+                          if (column.type === 'booleanRadio') {
+                            return ''
+                          }
 
                           if (shouldFormat) {
                             const numericValue =

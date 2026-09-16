@@ -358,7 +358,7 @@ export const formatDateWithTimezoneAbbr = (
   const time = dayjs(dateInput)
   const formattedDate = time.format('LLL')
 
-  const formatter = new Intl.DateTimeFormat('en-US', {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZoneName: 'short'
   })
   const parts = formatter.formatToParts(time.toDate())

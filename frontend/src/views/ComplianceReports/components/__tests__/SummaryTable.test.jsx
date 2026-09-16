@@ -123,6 +123,30 @@ vi.mock('@mui/material/CircularProgress', () => ({
 vi.mock('@mui/material/Tooltip', () => ({
   default: ({ children }) => children
 }))
+vi.mock('@mui/material/Radio', () => ({
+  default: ({ disabled, ...props }) => (
+    <input data-test="radio" type="radio" disabled={disabled} {...props} />
+  )
+}))
+vi.mock('@mui/material/RadioGroup', () => ({
+  default: ({ children, value, onChange, row, ...props }) => (
+    <div
+      data-test="radio-group"
+      data-value={value}
+      onChange={onChange}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}))
+vi.mock('@mui/material/FormControlLabel', () => ({
+  default: ({ control, label, value }) => (
+    <label>
+      {React.cloneElement(control, { value })}
+      {label}
+    </label>
+}))
 
 // Mock react-number-format
 vi.mock('react-number-format', () => ({
@@ -310,6 +334,37 @@ describe('SummaryTable', () => {
 
       const inputs = screen.getAllByTestId('input')
       expect(inputs).toHaveLength(1) // Only one editable cell
+    })
+
+    it('disables boolean radio cells when the row is locked', () => {
+      const booleanColumns = [
+        { id: 'line', label: 'Line' },
+        {
+          id: 'invoiceSent',
+          label: 'Invoice sent',
+          type: 'booleanRadio',
+          editable: true,
+          editableCells: [0]
+        }
+      ]
+      const onBooleanCellEditStopped = vi.fn()
+
+      customRender(
+        <SummaryTable
+          columns={booleanColumns}
+          data={[{ line: 7, invoiceSent: false }]}
+          lines7And9Locked
+          onBooleanCellEditStopped={onBooleanCellEditStopped}
+        />
+      )
+
+      const radios = screen.getAllByTestId('radio')
+
+      expect(radios).toHaveLength(2)
+      radios.forEach((radio) => expect(radio).toBeDisabled())
+
+      fireEvent.click(radios[0])
+      expect(onBooleanCellEditStopped).not.toHaveBeenCalled()
     })
   })
 

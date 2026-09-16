@@ -118,6 +118,20 @@ describe('PublicDashboard', () => {
     expect(screen.getByText('publicDashboard.cardTitle')).toBeInTheDocument()
   })
 
+  test('shows all-time generated credits in the hero stats', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<PublicDashboard />, [theme, router])
+    expect(
+      screen.getByTestId('hero-stat-totalGeneratedCredits')
+    ).toHaveTextContent('publicDashboard.stats.totalGeneratedCredits')
+    expect(
+      screen.getByTestId('hero-stat-totalGeneratedCredits')
+    ).toHaveTextContent('9.2M')
+  })
+
   test('renders the public tool tiles', ({ render, theme, router }) => {
     render(<PublicDashboard />, [theme, router])
     expect(screen.getByTestId('tool-calculator')).toBeInTheDocument()

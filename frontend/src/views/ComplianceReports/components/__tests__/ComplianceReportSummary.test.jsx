@@ -5,6 +5,7 @@ import { describe, expect, vi, beforeEach } from 'vitest'
 import ComplianceReportSummary from '../ComplianceReportSummary'
 import {
   useGetComplianceReportSummary,
+  useUpdateComplianceReportPenaltyStatus,
   useUpdateComplianceReportSummary
 } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -287,6 +288,9 @@ describe('ComplianceReportSummary', () => {
     // Setup default mock implementations
     useUpdateComplianceReportSummary.mockReturnValue({
       mutate: mockMutate
+    })
+    useUpdateComplianceReportPenaltyStatus.mockReturnValue({
+      mutate: vi.fn()
     })
 
     useCurrentUser.mockReturnValue({

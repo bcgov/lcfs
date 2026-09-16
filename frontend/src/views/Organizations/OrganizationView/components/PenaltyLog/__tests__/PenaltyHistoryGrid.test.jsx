@@ -1,10 +1,12 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
-import { PenaltyHistoryGrid } from '../PenaltyHistoryGrid'
+import { AutomaticPenaltyLogGrid, PenaltyHistoryGrid } from '../PenaltyGrids'
+
+const mockBCGridViewer = vi.hoisted(() => vi.fn())
 
 // Mock hooks
 const mockNavigate = vi.fn()
@@ -19,7 +21,10 @@ vi.mock('react-router-dom', async () => {
 const mockT = vi.fn((key, options) => {
   const translations = {
     'org:penaltyLog.history': 'Penalty history',
-    'org:penaltyLog.addPenaltyBtn': 'Add/Edit discretionary penalties'
+    'org:penaltyLog.discretionaryPenalties': 'Penalty history',
+    'org:penaltyLog.addPenaltyBtn': 'Add/Edit discretionary penalties',
+    'org:penaltyLog.metrics.totalPenalties': 'Total penalties',
+    'org:penaltyLog.columns.invoiced': 'Invoiced'
   }
   return translations[key] || options?.defaultValue || key
 })
@@ -56,7 +61,7 @@ const mockPenaltyLogs = {
       notes: 'Another test'
     }
   ],
-  pagination: { total: 2, page: 1, size: 10, totalPages: 1 }
+  pagination: { total: 12, page: 1, size: 2, totalPages: 6 }
 }
 
 vi.mock('@/hooks/useOrganization', () => ({
@@ -69,20 +74,32 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock BCGridViewer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: ({ columnDefs, queryData }) => (
-    <div data-testid="bc-grid-viewer">
-      <div data-testid="column-count">{columnDefs?.length || 0}</div>
-      <div data-testid="data-loaded">
-        {queryData?.data?.penaltyLogs?.length || 0}
+  BCGridViewer: (props) => {
+    mockBCGridViewer(props)
+    return (
+      <div data-testid="bc-grid-viewer">
+        <div data-testid="column-count">{props.columnDefs?.length || 0}</div>
+        <div data-testid="data-loaded">
+          {props.queryData?.data?.penaltyLogs?.length || 0}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 }))
 
 // Mock Role component
 vi.mock('@/components/Role', () => ({
   Role: ({ children, roles }) => (
     <div data-testid="role-wrapper">{children}</div>
+  )
+}))
+
+vi.mock('@/components/BCButton', () => ({
+  __esModule: true,
+  default: ({ children, onClick, ...props }) => (
+    <button onClick={onClick} {...props}>
+      {children}
+    </button>
   )
 }))
 
@@ -234,6 +251,128 @@ describe('PenaltyHistoryGrid - Component Functionality', () => {
     expect(container).toBeTruthy()
     expect(screen.getByText('Penalty history')).toBeInTheDocument()
   })
+
+  it('should pass minimum widths to grid viewer', () => {
+    renderComponent()
+
+    const gridProps = mockBCGridViewer.mock.calls.find(
+      ([props]) => props.gridKey === 'penalty-log-history'
+    )?.[0]
+
+    expect(gridProps).toBeDefined()
+    expect(gridProps.columnState).toEqual([])
+    expect(
+      gridProps.columnDefs.every((columnDef) => columnDef.minWidth > 0)
+    ).toBe(true)
+  })
+
+  it('preserves server pagination metadata for discretionary penalties', () => {
+    renderComponent()
+
+    const gridProps = mockBCGridViewer.mock.calls.find(
+      ([props]) => props.gridKey === 'penalty-log-history'
+    )?.[0]
+
+    expect(gridProps.queryData.data.penaltyLogs).toHaveLength(2)
+    expect(gridProps.queryData.data.pagination).toEqual({
+      total: 12,
+      page: 1,
+      size: 2,
+      totalPages: 6
+    })
+  })
+})
+
+describe('AutomaticPenaltyLogGrid - Grid Sizing', () => {
+  let queryClient
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false }
+      }
+    })
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    queryClient.clear()
+  })
+
+  const renderComponent = (automaticPenaltyRows = []) => {
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={theme}>
+          <MemoryRouter>
+            <AutomaticPenaltyLogGrid
+              automaticPenaltyRows={automaticPenaltyRows}
+            />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>
+    )
+  }
+
+  it('should allow the description column to expand', () => {
+    renderComponent()
+
+    const gridProps = mockBCGridViewer.mock.calls.find(
+      ([props]) => props.gridKey === 'automatic-penalty-log-history'
+    )?.[0]
+
+    expect(gridProps).toBeDefined()
+    expect(gridProps.columnState).toEqual([])
+    expect(
+      gridProps.columnDefs.find(
+        (columnDef) => columnDef.field === 'description'
+      )
+    ).toMatchObject({ flex: 2, minWidth: 420 })
+    expect(
+      gridProps.columnDefs.every((columnDef) => columnDef.minWidth > 0)
+    ).toBe(true)
+  })
+
+  it('counts total automatic penalty rows and invoiced rows', () => {
+    renderComponent([
+      { penaltyLogId: 'auto-1', penaltyAmount: 100, invoiceSent: true },
+      { penaltyLogId: 'auto-2', penaltyAmount: 200, invoiceSent: false },
+      { penaltyLogId: 'auto-3', penaltyAmount: 300, invoiceSent: true }
+    ])
+
+    expect(screen.getByText('Total penalties:')).toBeInTheDocument()
+    expect(screen.getByText('Invoiced:')).toBeInTheDocument()
+    expect(screen.getAllByText('3').length).toBeGreaterThan(0)
+    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(screen.queryByText('$600.00')).not.toBeInTheDocument()
+    expect(screen.queryByText('$400.00')).not.toBeInTheDocument()
+  })
+
+  it('slices local automatic penalty rows for the selected page', () => {
+    const automaticPenaltyRows = Array.from({ length: 12 }, (_, index) => ({
+      penaltyLogId: `auto-${index + 1}`,
+      penaltyAmount: (index + 1) * 100,
+      invoiceSent: false
+    }))
+
+    renderComponent(automaticPenaltyRows)
+
+    const gridProps = mockBCGridViewer.mock.calls.find(
+      ([props]) => props.gridKey === 'automatic-penalty-log-history'
+    )?.[0]
+
+    expect(gridProps.queryData.data.penaltyLogs).toHaveLength(10)
+
+    act(() => {
+      gridProps.onPaginationChange({ page: 2, size: 10 })
+    })
+
+    const updatedGridProps = mockBCGridViewer.mock.calls
+      .map(([props]) => props)
+      .findLast((props) => props.gridKey === 'automatic-penalty-log-history')
+
+    expect(updatedGridProps.queryData.data.penaltyLogs).toHaveLength(2)
+  })
 })
 
 describe('PenaltyHistoryGrid - Edge Cases', () => {
@@ -266,9 +405,8 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   }
 
   it('should handle empty penalty logs', async () => {
-    const { useOrganizationPenaltyLogs } = await import(
-      '@/hooks/useOrganization'
-    )
+    const { useOrganizationPenaltyLogs } =
+      await import('@/hooks/useOrganization')
     const mockHook = vi.mocked(useOrganizationPenaltyLogs)
 
     mockHook.mockReturnValue({
@@ -287,9 +425,8 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   })
 
   it('should handle loading state', async () => {
-    const { useOrganizationPenaltyLogs } = await import(
-      '@/hooks/useOrganization'
-    )
+    const { useOrganizationPenaltyLogs } =
+      await import('@/hooks/useOrganization')
     const mockHook = vi.mocked(useOrganizationPenaltyLogs)
 
     mockHook.mockReturnValue({

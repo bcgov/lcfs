@@ -17,6 +17,7 @@ import {
 } from './_schema'
 import {
   useGetComplianceReportSummary,
+  useUpdateComplianceReportPenaltyStatus,
   useUpdateComplianceReportSummary
 } from '@/hooks/useComplianceReports'
 import BCTypography from '@/components/BCTypography'
@@ -102,10 +103,44 @@ const ComplianceReportSummary = ({
   const { data, isLoading, isError, error, isFetching } =
     useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
-    useUpdateComplianceReportSummary(data?.complianceReportId, {
+    useUpdateComplianceReportSummary(reportID, {
       onSuccess: (response) => {
         setSummaryData(response.data)
         setSavingCellKey(null)
+      },
+      onError: (error) => {
+        setSavingCellKey(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    })
+  const { mutate: updateComplianceReportPenaltyStatus } =
+    useUpdateComplianceReportPenaltyStatus(reportID, {
+      onSuccess: (response) => {
+        setSummaryData((currentSummary) => {
+          if (!currentSummary) return currentSummary
+
+          return {
+            ...currentSummary,
+            nonCompliancePenaltySummary:
+              currentSummary.nonCompliancePenaltySummary?.map((row) =>
+                Number(row.line) === Number(response.data?.line)
+                  ? {
+                      ...row,
+                      invoiceSent: response.data.invoiceSent,
+                      paymentReceived: response.data.paymentReceived
+                    }
+                  : row
+              )
+          }
+        })
+        setSavingCellKey(null)
+        alertRef.current?.triggerAlert({
+          message: 'Penalty status updated.',
+          severity: 'success'
+        })
       },
       onError: (error) => {
         setSavingCellKey(null)
@@ -169,10 +204,14 @@ const ComplianceReportSummary = ({
       const updatedData = {
         ...summaryData,
         nonCompliancePenaltySummary: data,
-        renewablePenaltyOverride: renewablePenaltyValue,
-        lowCarbonPenaltyOverride: lowCarbonPenaltyValue,
-        penaltyOverrideDate: new Date().toISOString(),
-        penaltyOverrideUser: currentUser?.userProfileId
+        ...(penaltyOverrideEnabled
+          ? {
+              renewablePenaltyOverride: renewablePenaltyValue,
+              lowCarbonPenaltyOverride: lowCarbonPenaltyValue,
+              penaltyOverrideDate: new Date().toISOString(),
+              penaltyOverrideUser: currentUser?.userProfileId
+            }
+          : {})
       }
 
       if (cellInfo) {
@@ -181,7 +220,46 @@ const ComplianceReportSummary = ({
       setSummaryData(updatedData)
       updateComplianceReportSummary(updatedData)
     },
-    [summaryData, updateComplianceReportSummary, currentUser]
+    [
+      summaryData,
+      updateComplianceReportSummary,
+      currentUser,
+      penaltyOverrideEnabled
+    ]
+  )
+
+  const handlePenaltyStatusCellEdit = useCallback(
+    (data, cellInfo = null) => {
+      const updatedData = {
+        ...summaryData,
+        nonCompliancePenaltySummary: data
+      }
+      const row = data[cellInfo?.rowIndex]
+
+      setSummaryData(updatedData)
+
+      if (!row?.line) return
+
+      if (cellInfo) {
+        setSavingCellKey(`penalty_${cellInfo.rowIndex}_${cellInfo.columnId}`)
+      }
+
+      alertRef.current?.triggerAlert({
+        message: 'Updating penalty status...',
+        severity: 'pending'
+      })
+
+      updateComplianceReportPenaltyStatus({
+        line: Number(row.line),
+        ...(cellInfo?.columnId === 'invoiceSent'
+          ? { invoiceSent: !!row.invoiceSent }
+          : {}),
+        ...(cellInfo?.columnId === 'paymentReceived'
+          ? { paymentReceived: !!row.paymentReceived }
+          : {})
+      })
+    },
+    [summaryData, updateComplianceReportPenaltyStatus]
   )
 
   // Computed data for non-compliance penalty summary based on override state
@@ -221,6 +299,19 @@ const ComplianceReportSummary = ({
       return row
     })
   }, [summaryData, penaltyOverrideEnabled])
+
+  const penaltyStatusEditableCells = useMemo(
+    () =>
+      (nonCompliancePenaltyDisplayData ?? []).reduce((indexes, row, index) => {
+        if (row?.line && Number(row.totalValue) > 0) indexes.push(index)
+        return indexes
+      }, []),
+    [nonCompliancePenaltyDisplayData]
+  )
+  const showPenaltyStatusColumns =
+    isGovernmentUser &&
+    currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT &&
+    penaltyStatusEditableCells.length > 0
 
   // When low carbon fuel is exempted, override line 22 to show line 17's value
   // (no credit change applied) instead of the stale calculated value
@@ -359,12 +450,23 @@ const ComplianceReportSummary = ({
                 <SummaryTable
                   data-test="non-compliance-summary"
                   title={t('report:nonCompliancePenaltySummary')}
-                  columns={nonComplianceColumns(t, penaltyOverrideEnabled)}
+                  columns={nonComplianceColumns(
+                    t,
+                    penaltyOverrideEnabled,
+                    showPenaltyStatusColumns,
+                    showPenaltyStatusColumns,
+                    penaltyStatusEditableCells
+                  )}
                   data={nonCompliancePenaltyDisplayData}
                   width={'80.65%'}
                   onCellEditStopped={
-                    penaltyOverrideEnabled
+                    isGovernmentUser || penaltyOverrideEnabled
                       ? handlePenaltyOverrideCellEdit
+                      : undefined
+                  }
+                  onBooleanCellEditStopped={
+                    showPenaltyStatusColumns
+                      ? handlePenaltyStatusCellEdit
                       : undefined
                   }
                   savingCellKey={savingCellKey}
