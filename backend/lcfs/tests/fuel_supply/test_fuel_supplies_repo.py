@@ -756,3 +756,118 @@ async def test_get_organization_fuel_supply_analytics_filters_no_duplicate_join(
         )
         assert isinstance(rows, list)
         assert isinstance(total, int)
+
+
+@pytest.mark.anyio
+async def test_get_organization_fuel_supply_uses_effective_versions(dbsession):
+    """Regression (#5045): the Supply History tab must not double count a
+    row that a supplemental report re-versioned.
+
+    Original report (v0) has three rows; the supplemental (v1) updates one,
+    leaves one untouched and deletes one. Both the paginated table and the
+    analytics totals must reflect only the latest version of each group —
+    the naive "all CREATE/UPDATE rows" query summed original + supplemental.
+    """
+    from sqlalchemy import select
+
+    from lcfs.db.base import ActionTypeEnum
+    from lcfs.db.models.compliance import (
+        CompliancePeriod,
+        ComplianceReport,
+        ComplianceReportStatus,
+    )
+    from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
+    from lcfs.db.models.fuel import FuelCategory, FuelType, ProvisionOfTheAct
+    from lcfs.db.models.organization import Organization
+
+    # Reference rows come from the migrations' seed data.
+    period = (await dbsession.execute(select(CompliancePeriod).limit(1))).scalar_one()
+    status = (
+        await dbsession.execute(select(ComplianceReportStatus).limit(1))
+    ).scalar_one()
+    fuel_type = (await dbsession.execute(select(FuelType).limit(1))).scalar_one()
+    fuel_category = (
+        await dbsession.execute(select(FuelCategory).limit(1))
+    ).scalar_one()
+    provision = (
+        await dbsession.execute(select(ProvisionOfTheAct).limit(1))
+    ).scalar_one()
+
+    org = Organization(
+        organization_id=95045,
+        organization_code="o95045",
+        name="org95045",
+        total_balance=0,
+        reserved_balance=0,
+        count_transfers_in_progress=0,
+    )
+    dbsession.add(org)
+    await dbsession.flush()
+
+    chain_uuid = "5045-chain"
+    original = ComplianceReport(
+        compliance_report_id=95045,
+        compliance_period_id=period.compliance_period_id,
+        organization_id=org.organization_id,
+        current_status_id=status.compliance_report_status_id,
+        compliance_report_group_uuid=chain_uuid,
+        version=0,
+        reporting_frequency=ReportingFrequency.ANNUAL,
+    )
+    supplemental = ComplianceReport(
+        compliance_report_id=95046,
+        compliance_period_id=period.compliance_period_id,
+        organization_id=org.organization_id,
+        current_status_id=status.compliance_report_status_id,
+        compliance_report_group_uuid=chain_uuid,
+        version=1,
+        reporting_frequency=ReportingFrequency.ANNUAL,
+    )
+    dbsession.add_all([original, supplemental])
+    await dbsession.flush()
+
+    def _row(fuel_supply_id, report, group_uuid, version, action_type, quantity):
+        return FuelSupply(
+            fuel_supply_id=fuel_supply_id,
+            compliance_report_id=report.compliance_report_id,
+            group_uuid=group_uuid,
+            version=version,
+            action_type=action_type,
+            quantity=quantity,
+            units="Litres",
+            fuel_type_id=fuel_type.fuel_type_id,
+            fuel_category_id=fuel_category.fuel_category_id,
+            provision_of_the_act_id=provision.provision_of_the_act_id,
+        )
+
+    dbsession.add_all(
+        [
+            # Group A: updated in the supplemental — only 150 should count.
+            _row(950450, original, "5045-a", 0, ActionTypeEnum.CREATE, 100),
+            _row(950451, supplemental, "5045-a", 1, ActionTypeEnum.UPDATE, 150),
+            # Group B: untouched by the supplemental — still counts once.
+            _row(950452, original, "5045-b", 0, ActionTypeEnum.CREATE, 50),
+            # Group C: deleted in the supplemental — must not count at all.
+            _row(950453, original, "5045-c", 0, ActionTypeEnum.CREATE, 30),
+            _row(950454, supplemental, "5045-c", 1, ActionTypeEnum.DELETE, 30),
+        ]
+    )
+    await dbsession.flush()
+
+    repo = FuelSupplyRepository(db=dbsession)
+
+    pagination = PaginationRequestSchema(page=1, size=10, filters=[], sort_orders=[])
+    rows, total = await repo.get_organization_fuel_supply_paginated(
+        org.organization_id, pagination
+    )
+    assert total == 2
+    assert {(r.group_uuid, r.quantity) for r in rows} == {
+        ("5045-a", 150),
+        ("5045-b", 50),
+    }
+
+    analytics = await repo.get_organization_fuel_supply_analytics(
+        org.organization_id, None
+    )
+    assert analytics["total_volume"] == 200
+    assert analytics["total_by_year"] == {period.description: 200}
