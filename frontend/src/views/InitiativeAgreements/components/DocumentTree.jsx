@@ -37,6 +37,7 @@ import CreateNewFolderOutlinedIcon from '@mui/icons-material/CreateNewFolderOutl
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline'
+import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop'
 import FolderIcon from '@mui/icons-material/Folder'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -99,25 +100,47 @@ const MetaColumn = ({ width, align = 'left', children }) => (
   </BCTypography>
 )
 
-const NameEditor = ({ initialValue, onCommit, onCancel }) => (
-  <TextField
-    size="small"
-    variant="standard"
-    autoFocus
-    defaultValue={initialValue}
-    inputProps={{ 'data-test': 'folder-name-input' }}
-    onFocus={(event) => event.target.select()}
-    onClick={(event) => event.stopPropagation()}
-    onKeyDown={(event) => {
-      event.stopPropagation()
-      if (event.key === 'Enter') {
-        onCommit(event.target.value)
-      } else if (event.key === 'Escape') {
-        onCancel()
-      }
-    }}
-  />
-)
+// Enter commits, Escape cancels, and so does clicking away: an editor
+// that stays open until someone finds the right key is a trap, and a
+// click elsewhere is a clearer "never mind" than an accidental rename.
+// The keys are written under the box because nothing else says them.
+const NameEditor = ({ initialValue, onCommit, onCancel }) => {
+  const { t } = useTranslation(['initiativeAgreement'])
+  return (
+    <Box sx={{ display: 'inline-flex', flexDirection: 'column' }}>
+      <TextField
+        size="small"
+        variant="standard"
+        autoFocus
+        defaultValue={initialValue}
+        inputProps={{
+          'data-test': 'folder-name-input',
+          'aria-describedby': 'folder-name-hint'
+        }}
+        onFocus={(event) => event.target.select()}
+        onClick={(event) => event.stopPropagation()}
+        onBlur={onCancel}
+        onKeyDown={(event) => {
+          event.stopPropagation()
+          if (event.key === 'Enter') {
+            onCommit(event.target.value)
+          } else if (event.key === 'Escape') {
+            onCancel()
+          }
+        }}
+      />
+      <BCTypography
+        id="folder-name-hint"
+        variant="body4"
+        color="text.secondary"
+        component="span"
+        sx={{ fontSize: '0.75rem' }}
+      >
+        {t('initiativeAgreement:folders.renameHint')}
+      </BCTypography>
+    </Box>
+  )
+}
 
 // Downloading is its own button, which frees the name to behave the way
 // every other name in this tree does: double-click to rename. A rename
@@ -131,7 +154,10 @@ const FileLabel = ({
   renaming,
   onStartRename,
   onCommitRename,
-  onCancelRename
+  onCancelRename,
+  // Present only for files inside a folder: a root file has nowhere
+  // higher to go, so the control is absent rather than disabled.
+  onMoveToRoot
 }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -226,6 +252,24 @@ const FileLabel = ({
       >
         <FileDownloadOutlinedIcon fontSize="inherit" />
       </IconButton>
+      {/* Dragging to the top level is possible but the drop zone only
+          exists mid-drag, below the tree, where nobody finds it. A
+          button is discoverable and works from the keyboard. */}
+      {onMoveToRoot && (
+        <IconButton
+          size="small"
+          data-test={`tree-file-to-root-${file.documentId}`}
+          aria-label={t('initiativeAgreement:folders.moveFileToRoot', {
+            name: displayName
+          })}
+          onClick={(event) => {
+            event.stopPropagation()
+            onMoveToRoot(file.documentId)
+          }}
+        >
+          <VerticalAlignTopIcon fontSize="inherit" />
+        </IconButton>
+      )}
       {/* Removing a file sends it to the bin below; nothing is
           destroyed. */}
       <IconButton
@@ -500,6 +544,20 @@ export const DocumentTree = ({
     setMenu({ anchorEl: event.currentTarget, folder })
   }
   const closeMenu = () => setMenu(null)
+  // An inline editor opened from the menu must mount after the menu has
+  // finished closing. Mounted during the close, it autofocuses into a
+  // Menu still tearing down its focus trap, loses focus, and cancels
+  // itself before anyone sees it.
+  const afterMenuClosed = useRef(null)
+  const closeMenuThen = (action) => {
+    afterMenuClosed.current = action
+    setMenu(null)
+  }
+  const runAfterMenuClosed = () => {
+    const action = afterMenuClosed.current
+    afterMenuClosed.current = null
+    action?.()
+  }
 
   const commitCreate = (name) => {
     const trimmed = name.trim()
@@ -518,6 +576,30 @@ export const DocumentTree = ({
       updateFolder({ folderId, name: trimmed })
     }
     setRenamingId(null)
+  }
+
+  // Same move the drag path performs, with the same undo; only the
+  // way in differs.
+  const moveFolderToRoot = (folder) => {
+    const previousParent = folder.parentFolderId ?? null
+    updateFolder(
+      { folderId: folder.folderId, moveToRoot: true },
+      {
+        onSuccess: () =>
+          setUndo({
+            message: t('initiativeAgreement:folders.movedFolder'),
+            run: () =>
+              updateFolder(
+                previousParent === null
+                  ? { folderId: folder.folderId, moveToRoot: true }
+                  : {
+                      folderId: folder.folderId,
+                      parentFolderId: previousParent
+                    }
+              )
+          })
+      }
+    )
   }
 
   const runDocumentMove = (documentIds, folderId) => {
@@ -725,6 +807,7 @@ export const DocumentTree = ({
           label={
             <FileLabel
               file={file}
+              onMoveToRoot={(documentId) => runDocumentMove([documentId], null)}
               onDownload={downloadDocument}
               onDelete={(documentId) =>
                 setPendingDelete({ documentId, fileName: file.fileName })
@@ -987,6 +1070,7 @@ export const DocumentTree = ({
         open={!!menu}
         onClose={closeMenu}
         disableRestoreFocus
+        TransitionProps={{ onExited: runAfterMenuClosed }}
         dense
         slotProps={{
           paper: { sx: { maxWidth: 260 } }
@@ -1001,8 +1085,8 @@ export const DocumentTree = ({
           <MenuItem
             data-test="menu-new-subfolder"
             onClick={() => {
-              setCreating({ parentFolderId: menu.folder.folderId })
-              closeMenu()
+              const { folderId } = menu.folder
+              closeMenuThen(() => setCreating({ parentFolderId: folderId }))
             }}
           >
             <ListItemIcon>
@@ -1027,11 +1111,27 @@ export const DocumentTree = ({
             {t('initiativeAgreement:folders.uploadHere')}
           </ListItemText>
         </MenuItem>
+        {menu?.folder?.parentFolderId != null && (
+          <MenuItem
+            data-test="menu-move-to-root"
+            onClick={() => {
+              moveFolderToRoot(menu.folder)
+              closeMenu()
+            }}
+          >
+            <ListItemIcon>
+              <VerticalAlignTopIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>
+              {t('initiativeAgreement:folders.moveToRoot')}
+            </ListItemText>
+          </MenuItem>
+        )}
         <MenuItem
           data-test="menu-rename"
           onClick={() => {
-            setRenamingId(menu.folder.folderId)
-            closeMenu()
+            const { folderId } = menu.folder
+            closeMenuThen(() => setRenamingId(folderId))
           }}
         >
           <ListItemIcon>

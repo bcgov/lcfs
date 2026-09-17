@@ -43,10 +43,15 @@ export const EditDesignatedAction = ({ action, onChanged }) => {
   const submit = () => {
     setError('')
     if (!name.trim()) return
+    const creditAllocation = credits === '' ? null : Number(credits)
+    if (creditAllocation !== null && !Number.isInteger(creditAllocation)) {
+      setError(t('initiativeAgreement:actions.invalidCredits'))
+      return
+    }
     updateAction(
       {
         name: name.trim(),
-        creditAllocation: credits === '' ? null : Number(credits),
+        creditAllocation,
         // An empty box means clear the date, which a bare null cannot say.
         ...(completionDate === ''
           ? { clearSpecifiedDate: true }

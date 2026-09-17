@@ -125,6 +125,29 @@ describe('AddDesignatedAction', () => {
     )
   })
 
+  it('refuses a non-numeric credit amount rather than sending it as null', () => {
+    // A number input sanitises garbage to '' in a browser, so this cannot
+    // happen from a keyboard; the guard is for the day something else
+    // feeds the field, when NaN must not slip through as "no allocation".
+    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, {
+      wrapper
+    })
+    open()
+
+    fireEvent.change(screen.getByTestId('new-action-name'), {
+      target: { value: 'Commission the first station' }
+    })
+    fireEvent.change(screen.getByTestId('new-action-credits'), {
+      target: { value: '12.5' }
+    })
+    fireEvent.click(screen.getByText('initiativeAgreement:actions.create'))
+
+    expect(mockCreate).not.toHaveBeenCalled()
+    expect(screen.getByTestId('add-action-error')).toHaveTextContent(
+      'invalidCredits'
+    )
+  })
+
   it('surfaces the reason the API refused', () => {
     mockCreate.mockImplementation((_payload, handlers) =>
       handlers.onError({

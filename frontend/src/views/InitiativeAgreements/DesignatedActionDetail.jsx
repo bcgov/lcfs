@@ -103,6 +103,16 @@ const DesignatedActionDetailBase = () => {
   }, [action?.recommendedCredits])
   const commitCredits = () => {
     const next = credits === '' ? null : Number(credits)
+    // A number input sanitises garbage to '', but if a non-number ever
+    // arrives it must not be saved as null and read as "cleared".
+    if (next !== null && !Number.isInteger(next)) {
+      setCredits(
+        action?.recommendedCredits == null
+          ? ''
+          : String(action.recommendedCredits)
+      )
+      return
+    }
     if (next !== (action?.recommendedCredits ?? null)) {
       saveCredits(next)
     }

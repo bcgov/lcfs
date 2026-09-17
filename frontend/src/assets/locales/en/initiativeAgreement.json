@@ -77,7 +77,8 @@
     "editFailed": "The changes could not be saved.",
     "addTooltip": "Add a designated action to this agreement.",
     "tabTitle": "Designated actions",
-    "loadFailMsg": "Designated actions could not be loaded."
+    "loadFailMsg": "Designated actions could not be loaded.",
+    "invalidCredits": "Compliance units must be a whole number."
   },
   "actionDetail": {
     "title": "Designated actions",
@@ -152,7 +153,10 @@
     "confirmDeleteFolderEmpty": "{{name}} has no files in it. It leaves the folder tree; nothing else is affected.",
     "showFolderFiles": "Show {{count}} file",
     "showFolderFiles_other": "Show {{count}} files",
-    "hideFolderFiles": "Hide files"
+    "hideFolderFiles": "Hide files",
+    "renameHint": "Enter to save · Esc to cancel",
+    "moveToRoot": "Move to top level",
+    "moveFileToRoot": "Move {{name}} to top level"
   },
   "evidence": {
     "sectionTitle": "Evidence of completion of designated action:",

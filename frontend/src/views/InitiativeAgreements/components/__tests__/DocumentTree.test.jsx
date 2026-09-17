@@ -229,18 +229,71 @@ describe('DocumentTree', () => {
     expect(mockCreate).toHaveBeenCalledTimes(1)
   })
 
-  it('renames a folder from its menu', () => {
+  it('renames a folder from its menu', async () => {
     render(<DocumentTree parentType="designatedAction" parentID="9" />, {
       wrapper
     })
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
     fireEvent.click(screen.getByTestId('menu-rename'))
-    const input = screen.getByTestId('folder-name-input')
+    // The editor mounts once the menu has finished closing, so that its
+    // autofocus is not lost to the menu's teardown.
+    const input = await screen.findByTestId('folder-name-input')
     fireEvent.change(input, { target: { value: 'Approvals' } })
     fireEvent.keyDown(input, { key: 'Enter' })
 
     expect(mockUpdate).toHaveBeenCalledWith({ folderId: 12, name: 'Approvals' })
+  })
+
+  it('a rename is abandoned by clicking away, keeping the original name', async () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    fireEvent.click(screen.getByTestId('folder-menu-12'))
+    fireEvent.click(screen.getByTestId('menu-rename'))
+    const input = await screen.findByTestId('folder-name-input')
+    fireEvent.change(input, { target: { value: 'Half typed' } })
+    fireEvent.blur(input)
+
+    expect(mockUpdate).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('folder-name-input')).not.toBeInTheDocument()
+    expect(screen.getByText('Permits & Approvals')).toBeInTheDocument()
+  })
+
+  it('moves a file in a folder to the top level from its own button', () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    fireEvent.click(screen.getByTestId('tree-file-to-root-88'))
+
+    expect(mockMove).toHaveBeenCalledWith(
+      { documentIds: [88], folderId: null },
+      expect.anything()
+    )
+    // A file already at the root has nowhere higher to go.
+    expect(screen.queryByTestId('tree-file-to-root-90')).not.toBeInTheDocument()
+  })
+
+  it('moves a nested folder to the top level from its menu, and offers nothing for a root folder', () => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
+      wrapper
+    })
+
+    // The root folder's menu has no such item.
+    fireEvent.click(screen.getByTestId('folder-menu-12'))
+    expect(screen.queryByTestId('menu-move-to-root')).not.toBeInTheDocument()
+    fireEvent.keyDown(document.activeElement, { key: 'Escape' })
+
+    // The nested one's does.
+    fireEvent.click(screen.getByTestId('folder-menu-13'))
+    fireEvent.click(screen.getByTestId('menu-move-to-root'))
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      { folderId: 13, moveToRoot: true },
+      expect.anything()
+    )
   })
 
   it('asks before sending a folder and its files to the bin', () => {
@@ -282,7 +335,7 @@ describe('DocumentTree', () => {
     expect(screen.queryByTestId('menu-new-subfolder')).not.toBeInTheDocument()
   })
 
-  it('creates a subfolder under the menu folder when nesting is allowed', () => {
+  it('creates a subfolder under the menu folder when nesting is allowed', async () => {
     render(
       <DocumentTree
         parentType="designatedAction"
@@ -294,7 +347,7 @@ describe('DocumentTree', () => {
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
     fireEvent.click(screen.getByTestId('menu-new-subfolder'))
-    const input = screen.getByTestId('folder-name-input')
+    const input = await screen.findByTestId('folder-name-input')
     fireEvent.change(input, { target: { value: 'Evidence' } })
     fireEvent.keyDown(input, { key: 'Enter' })
 

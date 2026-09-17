@@ -41,10 +41,15 @@ export const AddDesignatedAction = ({ initiativeAgreementId, isDraft }) => {
     // The button is disabled without a name, but the guard belongs with
     // the action rather than only in the control's appearance.
     if (!name.trim()) return
+    const creditAllocation = credits === '' ? null : Number(credits)
+    if (creditAllocation !== null && !Number.isInteger(creditAllocation)) {
+      setError(t('initiativeAgreement:actions.invalidCredits'))
+      return
+    }
     createAction(
       {
         name: name.trim(),
-        creditAllocation: credits === '' ? null : Number(credits),
+        creditAllocation,
         specifiedDate: completionDate === '' ? null : completionDate
       },
       {
