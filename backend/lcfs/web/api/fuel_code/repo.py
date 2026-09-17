@@ -1046,6 +1046,38 @@ class FuelCodeRepository:
         return (await self.db.execute(query)).scalars().all()
 
     @repo_handler
+    async def get_distinct_feedstocks(self, feedstock: str) -> List[str]:
+        query = (
+            select(distinct(FuelCode.feedstock))
+            .where(
+                FuelCode.feedstock.isnot(None),
+                FuelCode.feedstock != "",
+                func.lower(FuelCode.feedstock).like(func.lower(feedstock + "%")),
+            )
+            .order_by(FuelCode.feedstock)
+            .limit(10)
+        )
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_distinct_feedstock_locations(
+        self, feedstock_location: str
+    ) -> List[str]:
+        query = (
+            select(distinct(FuelCode.feedstock_location))
+            .where(
+                FuelCode.feedstock_location.isnot(None),
+                FuelCode.feedstock_location != "",
+                func.lower(FuelCode.feedstock_location).like(
+                    func.lower(feedstock_location + "%")
+                ),
+            )
+            .order_by(FuelCode.feedstock_location)
+            .limit(10)
+        )
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
     async def get_contact_names_by_company(
         self, company: str, contact_name: str
     ) -> List[str]:
