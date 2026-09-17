@@ -1296,11 +1296,10 @@ class FuelCodeRepository:
             .cte("available_codes")
         )
         next_base_code = select(func.min(available_codes.c.base_code)).scalar_subquery()
-        query = select(
-            (func.lpad(cast(next_base_code, String), 3, "0") + ".0").label(
-                "next_fuel_code"
-            )
-        )
+        # lpad is not one of SQLAlchemy's known functions, so give it a type;
+        # otherwise the string concatenation below relies on type coercion.
+        padded_code = func.lpad(cast(next_base_code, String), 3, "0", type_=String)
+        query = select((padded_code + ".0").label("next_fuel_code"))
         result = (await self.db.execute(query)).scalar_one_or_none()
         return self.format_decimal(result)
 

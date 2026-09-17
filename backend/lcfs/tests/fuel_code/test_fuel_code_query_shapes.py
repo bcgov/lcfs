@@ -60,7 +60,10 @@ async def test_next_available_fuel_code_is_a_core_select(
     assert f"generate_series({first_code}," in sql
     assert "WITH parsed_codes AS" in sql
     assert f"fuel_code_prefix.prefix = '{prefix}'" in sql
+    # string concatenation, not arithmetic, on the padded code
     assert "lpad(" in sql
+    assert "|| '.0' AS next_fuel_code" in sql
+    assert "+ '.0'" not in sql
 
 
 @pytest.mark.anyio
