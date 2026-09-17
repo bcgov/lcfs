@@ -347,7 +347,14 @@ const HistoryGroup = ({ group }) => {
           mb: 1,
           cursor: 'pointer',
           textAlign: 'left',
-          font: 'inherit'
+          font: 'inherit',
+          // The border is stripped for the look, so the focus ring is
+          // declared rather than inherited.
+          '&:focus-visible': {
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: 2
+          }
         }}
       >
         {open ? (
