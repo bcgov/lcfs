@@ -1,8 +1,8 @@
 """Add composite index for compliance report lookups by organization and period.
 
 Revision ID: aee96beadb45
-Revises: c8d9e0f1a2b3
-Create Date: 2026-09-09 10:00:00.000000
+Revises: d6e7f8a9b0c2
+Create Date: 2026-09-17 10:00:00.000000
 
 The compliance report repository resolves "the latest assessed report for an
 organization in a period", "previous/next assessed reports" and "does a report
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 
 
 revision = "aee96beadb45"
-down_revision = "c8d9e0f1a2b3"
+down_revision = "d6e7f8a9b0c2"
 branch_labels = None
 depends_on = None
 

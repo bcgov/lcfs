@@ -51,6 +51,18 @@ def _get_filter_values(filter_item):
     return []
 
 
+def _scalar_reference_options(fuel_category_loader, fuel_type_loader):
+    """
+    Attach the collection overrides described in
+    ``FuelSupplyRepository._row_load_options`` to a fuel_category loader and
+    a fuel_type loader (``joinedload`` or ``contains_eager``).
+    """
+    return [
+        fuel_category_loader.raiseload(FuelCategory.category_carbon_intensities),
+        fuel_type_loader.raiseload(FuelType.default_carbon_intensities),
+    ]
+
+
 class FuelSupplyRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
@@ -68,14 +80,24 @@ class FuelSupplyRepository:
         read from a FuelSupply row. Joining them multiplied each row by the
         product of the collection sizes: loading one fuel supply by id
         produced ~11.6 million rows on a development database and timed out.
+
+        ``FuelType.default_carbon_intensities`` and
+        ``FuelCategory.category_carbon_intensities`` are ``lazy="selectin"``
+        on the mapping, so without an override every load of these rows also
+        fired one extra IN query per collection. Nothing reads them off a
+        fuel supply row either, so the loaders below switch them off for
+        these rows. ``raiseload`` rather than ``noload`` so that a future
+        consumer gets an error instead of a silently empty list.
         """
         return [
             joinedload(FuelSupply.fuel_code).options(
                 joinedload(FuelCode.fuel_code_status),
                 joinedload(FuelCode.fuel_code_prefix),
             ),
-            joinedload(FuelSupply.fuel_category),
-            joinedload(FuelSupply.fuel_type),
+            *_scalar_reference_options(
+                joinedload(FuelSupply.fuel_category),
+                joinedload(FuelSupply.fuel_type),
+            ),
             joinedload(FuelSupply.provision_of_the_act),
             joinedload(FuelSupply.end_use_type),
         ]
@@ -448,18 +470,12 @@ class FuelSupplyRepository:
         """
         Retrieve the list of fuel supplies for a given report (compliance or supplemental).
         """
-        query = select(FuelSupply).options(
-            joinedload(FuelSupply.fuel_code),
-            joinedload(FuelSupply.fuel_category),
-            joinedload(FuelSupply.fuel_type),
-            joinedload(FuelSupply.provision_of_the_act),
-            joinedload(FuelSupply.end_use_type),
-        )
-
-        query = query.where(FuelSupply.compliance_report_id == report_id)
+        # Same row graph as get_effective_fuel_supplies; the two feed the
+        # same list response through get_fuel_supply_list.
+        query = self.query.where(FuelSupply.compliance_report_id == report_id)
 
         result = await self.db.execute(query)
-        return result.scalars().all()
+        return result.unique().scalars().all()
 
     @repo_handler
     async def check_duplicate(self, fuel_supply: FuelSupplyCreateUpdateSchema):
@@ -714,8 +730,10 @@ class FuelSupplyRepository:
             # the rows, so point the loaders at those joins instead of letting
             # joinedload add a second, aliased copy of each table.
             .options(
-                contains_eager(FuelSupply.fuel_type),
-                contains_eager(FuelSupply.fuel_category),
+                *_scalar_reference_options(
+                    contains_eager(FuelSupply.fuel_category),
+                    contains_eager(FuelSupply.fuel_type),
+                ),
                 contains_eager(FuelSupply.provision_of_the_act),
                 contains_eager(FuelSupply.fuel_code),
                 contains_eager(FuelSupply.compliance_report).contains_eager(
@@ -853,8 +871,10 @@ class FuelSupplyRepository:
             )
             .outerjoin(FuelCode, FuelSupply.fuel_code_id == FuelCode.fuel_code_id)
             .options(
-                contains_eager(FuelSupply.fuel_type),
-                contains_eager(FuelSupply.fuel_category),
+                *_scalar_reference_options(
+                    contains_eager(FuelSupply.fuel_category),
+                    contains_eager(FuelSupply.fuel_type),
+                ),
                 contains_eager(FuelSupply.provision_of_the_act),
                 contains_eager(FuelSupply.fuel_code).joinedload(
                     FuelCode.fuel_code_prefix
