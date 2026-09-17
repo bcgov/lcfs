@@ -21,11 +21,12 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
+let mockRoles = [roles.ia_analyst]
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
-    data: { roles: [{ name: 'IA Analyst' }] },
-    hasRoles: (...names) => names.includes(roles.ia_analyst),
-    hasAnyRole: (...names) => names.includes(roles.ia_analyst)
+    data: { roles: mockRoles.map((name) => ({ name })) },
+    hasRoles: (...names) => names.some((n) => mockRoles.includes(n)),
+    hasAnyRole: (...names) => names.some((n) => mockRoles.includes(n))
   })
 }))
 
@@ -64,6 +65,25 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 describe('InitiativeAgreements', () => {
+  it('gives a proponent the same grid without the organization column (#4893)', () => {
+    mockRoles = [roles.ia_proponent]
+    mockUseGetInitiativeAgreements.mockReturnValue({
+      data: { initiativeAgreements: [], pagination: { total: 0 } },
+      isLoading: false,
+      isError: false
+    })
+    render(<InitiativeAgreements />, { wrapper })
+    mockRoles = [roles.ia_analyst]
+
+    const { columnDefs } = mockBCGridViewer.mock.calls[0][0]
+    const fields = columnDefs.map((colDef) => colDef.field)
+    // One organization, so the column would repeat itself on every row.
+    expect(fields).not.toContain('organization.name')
+    // Status filter, sort and the rest are the shared grid.
+    expect(fields).toContain('lifecycleStatus.status')
+    expect(fields).toContain('lastComment')
+  })
+
   it('renders the index grid wired to the agreements list query', () => {
     mockUseGetInitiativeAgreements.mockReturnValue({
       data: {

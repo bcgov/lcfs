@@ -299,6 +299,7 @@ export const apiRoutes = {
   orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
   ciApplicationCounts: '/dashboard/ci-application-counts',
   initiativeAgreementCounts: '/dashboard/initiative-agreement-counts',
+  orgInitiativeAgreementCounts: '/dashboard/org-initiative-agreement-counts',
 
   // credit market
   creditMarketOverview: '/credit-market/overview',

@@ -5,9 +5,19 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { InitiativeAgreementTabs } from '../InitiativeAgreementTabs'
 import { wrapper } from '@/tests/utils/wrapper'
 import { ROUTES } from '@/routes/routes'
+import { roles } from '@/constants/roles'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
+}))
+
+let mockRoles = [roles.ia_analyst]
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    data: { roles: mockRoles.map((name) => ({ name })) },
+    hasRoles: (...names) => names.some((n) => mockRoles.includes(n)),
+    hasAnyRole: (...names) => names.some((n) => mockRoles.includes(n))
+  })
 }))
 
 const mockNavigate = vi.fn()
@@ -29,6 +39,7 @@ const selected = (key) =>
 describe('InitiativeAgreementTabs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockRoles = [roles.ia_analyst]
     mockLocation = { pathname: ROUTES.INITIATIVE_AGREEMENTS.LIST, search: '' }
   })
   afterEach(cleanup)
@@ -76,6 +87,20 @@ describe('InitiativeAgreementTabs', () => {
     render(<InitiativeAgreementTabs />, { wrapper })
     expect(selected('designatedActions')).toBe('true')
     expect(selected('initiativeAgreements')).toBe('false')
+  })
+
+  it('offers a proponent only the agreements tab (#4893)', () => {
+    // The actions list is IDIR-only and its endpoint refuses proponents;
+    // a tab that bounces them off it would be worse than none.
+    mockRoles = [roles.ia_proponent]
+    render(<InitiativeAgreementTabs />, { wrapper })
+
+    expect(
+      screen.getByTestId('initiative-agreements-tab-initiativeAgreements')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('initiative-agreements-tab-designatedActions')
+    ).not.toBeInTheDocument()
   })
 
   it('navigates to the tab that is clicked', () => {

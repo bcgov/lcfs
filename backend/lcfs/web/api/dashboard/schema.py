@@ -47,3 +47,11 @@ class InitiativeAgreementCountsSchema(BaseSchema):
     # rows are excluded (#4895).
     draft: int = Field(default=0)
     underway: int = Field(default=0)
+
+
+class OrgInitiativeAgreementCountsSchema(BaseSchema):
+    # The caller's organization's agreements by lifecycle status, for the
+    # BCeID dashboard card (#4893). No draft count: a draft is the
+    # ministry's working record until it is executed.
+    underway: int = Field(default=0)
+    completed: int = Field(default=0)

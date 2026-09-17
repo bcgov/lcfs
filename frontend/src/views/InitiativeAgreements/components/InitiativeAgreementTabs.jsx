@@ -1,7 +1,9 @@
 import { AppBar, Tab, Tabs } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { roles } from '@/constants/roles'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import ROUTES from '@/routes/routes'
 import breakpoints from '@/themes/base/breakpoints'
 
@@ -19,26 +21,35 @@ const isOnActionsTab = (loc) =>
   // reached from.
   /\/designated-actions\/\d+/.test(loc.pathname)
 
-const tabs = [
-  {
-    key: 'initiativeAgreements',
-    labelKey: 'initiativeAgreement:tabs.initiativeAgreements',
-    path: AGREEMENTS,
-    isActive: (loc) =>
-      loc.pathname.startsWith(AGREEMENTS) && !isOnActionsTab(loc)
-  },
-  {
-    key: 'designatedActions',
-    labelKey: 'initiativeAgreement:tabs.designatedActions',
-    path: ACTIONS,
-    isActive: isOnActionsTab
-  }
-]
+const agreementsTab = {
+  key: 'initiativeAgreements',
+  labelKey: 'initiativeAgreement:tabs.initiativeAgreements',
+  path: AGREEMENTS,
+  isActive: (loc) => loc.pathname.startsWith(AGREEMENTS) && !isOnActionsTab(loc)
+}
+
+// IDIR only: the actions list is a work queue across every agreement,
+// and its endpoint refuses proponents. Offering the tab and bouncing
+// them off it would be worse than not offering it (#4893).
+const actionsTab = {
+  key: 'designatedActions',
+  labelKey: 'initiativeAgreement:tabs.designatedActions',
+  path: ACTIONS,
+  isActive: isOnActionsTab
+}
 
 export const InitiativeAgreementTabs = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const navigate = useNavigate()
   const location = useLocation()
+  const { hasAnyRole } = useCurrentUser()
+  const tabs = useMemo(
+    () =>
+      hasAnyRole?.(roles.ia_analyst, roles.ia_manager, roles.director)
+        ? [agreementsTab, actionsTab]
+        : [agreementsTab],
+    [hasAnyRole]
+  )
 
   const matchedIndex = tabs.findIndex((tab) => tab.isActive(location))
   const activeIndex = matchedIndex === -1 ? false : matchedIndex

@@ -153,10 +153,11 @@ class DashboardRepository:
         return {"draft": row.draft or 0, "submitted": row.submitted or 0}
 
     @repo_handler
-    async def get_initiative_agreement_counts(self):
+    async def get_initiative_agreement_counts(self, organization_id=None):
         """Counts of agreement-kind initiative agreements by lifecycle
         status. Legacy award rows never carry a lifecycle status and are
-        excluded by record_kind."""
+        excluded by record_kind. Scoped to one organization for the BCeID
+        card (#4893); every organization for the IDIR card."""
         query = (
             select(
                 InitiativeAgreementLifecycleStatus.status,
@@ -166,6 +167,10 @@ class DashboardRepository:
             .where(InitiativeAgreement.record_kind == RECORD_KIND_AGREEMENT)
             .group_by(InitiativeAgreementLifecycleStatus.status)
         )
+        if organization_id is not None:
+            query = query.where(
+                InitiativeAgreement.to_organization_id == organization_id
+            )
         result = await self.db.execute(query)
         return {status: count for status, count in result.all()}
 

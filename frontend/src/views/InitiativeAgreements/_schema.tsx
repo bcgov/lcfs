@@ -96,6 +96,13 @@ const dateCol = (field, headerName) => ({
   minWidth: 140
 })
 
+// A proponent's grid holds one organization, so the column would show
+// the same value in every row and its filter would filter nothing (#4893).
+export const proponentInitiativeAgreementColDefs = (t): ColDef[] =>
+  initiativeAgreementColDefs(t).filter(
+    (colDef) => colDef.field !== 'organization.name'
+  )
+
 export const initiativeAgreementColDefs = (t): ColDef[] => [
   {
     field: 'lifecycleStatus.status',

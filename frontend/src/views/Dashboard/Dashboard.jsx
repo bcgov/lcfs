@@ -25,6 +25,7 @@ import {
 import OrganizationsSummaryCard from './components/cards/idir/OrganizationsSummaryCard'
 import { CIApplicationCard } from './components/cards/idir/CIApplicationCard'
 import { InitiativeAgreementsCard } from './components/cards/idir/InitiativeAgreementsCard'
+import OrgInitiativeAgreementsCard from './components/cards/bceid/OrgInitiativeAgreementsCard'
 import { ComplianceReportCard } from './components/cards/idir/ComplianceReportCard'
 
 export const Dashboard = () => {
@@ -100,6 +101,9 @@ export const Dashboard = () => {
             </Role>
             <Role roles={[roles.ci_applicant]}>
               <OrgFuelCodeCard />
+            </Role>
+            <Role roles={[roles.ia_proponent]}>
+              <OrgInitiativeAgreementsCard />
             </Role>
             <Role roles={[roles.director]}>
               <DirectorReviewCard />
