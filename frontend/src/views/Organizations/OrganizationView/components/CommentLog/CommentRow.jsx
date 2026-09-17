@@ -74,6 +74,7 @@ export const CommentRow = forwardRef(function CommentRow(
     showInternalBadge,
     isGovernmentUser,
     allowPublicVisibility = true,
+    useLatestAttribution = false,
     searchQuery = '',
     onEdit,
     isEditPending
@@ -108,6 +109,14 @@ export const CommentRow = forwardRef(function CommentRow(
   )
 
   const edited = isCommentEdited(comment.createDate, comment.updateDate)
+  const displayName =
+    useLatestAttribution && edited
+      ? comment.updateFullName || comment.updateUser || comment.fullName
+      : comment.fullName
+  const displayUser =
+    useLatestAttribution && edited ? comment.updateUser : comment.createUser
+  const displayDate =
+    useLatestAttribution && edited ? comment.updateDate : comment.createDate
   const isInternal = comment.visibility === 'Internal'
   const renderVisibilityChip =
     !!comment.visibility && (showInternalBadge || !isInternal)
@@ -140,7 +149,7 @@ export const CommentRow = forwardRef(function CommentRow(
         }
       }}
     >
-      <Tooltip title={comment.fullName || ''} arrow>
+      <Tooltip title={displayName || ''} arrow>
         <Avatar
           sx={{
             width: 32,
@@ -151,10 +160,10 @@ export const CommentRow = forwardRef(function CommentRow(
             mt: 2.5,
             mr: 2
           }}
-          aria-label={`Comment by ${comment.fullName || comment.createUser || ''}`}
+          aria-label={`Comment by ${displayName || displayUser || ''}`}
           role="img"
         >
-          {getInitials(comment.fullName) || '?'}
+          {getInitials(displayName) || '?'}
         </Avatar>
       </Tooltip>
       <BCBox
@@ -205,12 +214,12 @@ export const CommentRow = forwardRef(function CommentRow(
               />
             )}
             <BCTypography variant="body2" color="text" component="span">
-              <strong>{comment.fullName || comment.createUser || '—'}</strong>
-              {comment.createDate && (
+              <strong>{displayName || displayUser || '—'}</strong>
+              {displayDate && (
                 <>
                   {', '}
-                  <time dateTime={comment.createDate}>
-                    {formatCommentDateTime(comment.createDate)}
+                  <time dateTime={displayDate}>
+                    {formatCommentDateTime(displayDate)}
                   </time>
                 </>
               )}
@@ -326,9 +335,22 @@ export const CommentRow = forwardRef(function CommentRow(
             )}
           </BCBox>
         </BCBox>
-        <div
+        <BCBox
           className="comment-content"
           data-test="comment-body"
+          sx={{
+            wordBreak: 'break-word',
+            fontSize: '1rem',
+            lineHeight: 1.5,
+            '& p': { margin: '0.25rem 0' },
+            '& ul, & ol': {
+              paddingLeft: '1.5rem',
+              margin: '0.25rem 0'
+            },
+            '& li': {
+              lineHeight: 1.6
+            }
+          }}
           dangerouslySetInnerHTML={{ __html: renderedHtml }}
         />
         {editing && (

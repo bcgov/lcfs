@@ -4,10 +4,10 @@ from lcfs.db.base import BaseModel
 from lcfs.db.models.transaction import Transaction
 from lcfs.web.api.transaction.schema import TransactionActionEnum
 import structlog
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional
 
 from fastapi import Depends, HTTPException
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, case, func, select, asc, desc, distinct, or_, delete
 
@@ -25,12 +25,20 @@ from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
 )
 from lcfs.db.models.organization.OrganizationType import OrganizationType
+from lcfs.db.models.organization.OrganizationTypeAssociation import (
+    OrganizationTypeAssociation,
+)
+from lcfs.db.models.organization.OrganizationAvailableRole import (
+    OrganizationAvailableRole,
+)
 from lcfs.db.models.organization.OrganizationEarlyIssuanceByYear import (
     OrganizationEarlyIssuanceByYear,
 )
+from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.organization.CreditMarketAuditLog import CreditMarketAuditLog
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
@@ -48,9 +56,7 @@ from lcfs.web.api.base import (
     apply_number_filter_conditions,
     validate_pagination,
 )
-
-if TYPE_CHECKING:
-    from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 
 from .schema import (
     OrganizationSchema,
@@ -68,6 +74,7 @@ ORG_TYPE_SHORT_LABELS = {
     "fuel_producer": "Producer",
     "exempted_supplier": "Exempted",
     "initiative_agreement_holder": "IA Holder",
+    "credit_trader": "Credit Transfer",
 }
 
 
@@ -101,13 +108,33 @@ class OrganizationsRepository:
         """
         Fetch organization_id, name, status, and their reserved and available balances.
         """
+        type_rows = await self.db.execute(
+            select(
+                OrganizationTypeAssociation.organization_id,
+                OrganizationType.org_type,
+                OrganizationType.description,
+            )
+            .join(
+                OrganizationType,
+                OrganizationTypeAssociation.organization_type_id
+                == OrganizationType.organization_type_id,
+            )
+            .order_by(
+                OrganizationTypeAssociation.organization_id,
+                OrganizationType.display_order,
+            )
+        )
+        type_labels: Dict[int, List[str]] = {}
+        for org_id, org_type, org_description in type_rows:
+            type_labels.setdefault(org_id, []).append(
+                get_short_org_type_label(org_type, org_description)
+            )
+
         result = await self.db.execute(
             select(
                 Organization.organization_id,
                 Organization.name,
                 OrganizationStatus.status,
-                OrganizationType.org_type,
-                OrganizationType.description,
                 func.abs(
                     func.sum(
                         case(
@@ -142,17 +169,10 @@ class OrganizationsRepository:
                 Organization.organization_status_id
                 == OrganizationStatus.organization_status_id,
             )
-            .outerjoin(
-                OrganizationType,
-                Organization.organization_type_id
-                == OrganizationType.organization_type_id,
-            )
             .group_by(
                 Organization.organization_id,
                 Organization.name,
                 OrganizationStatus.status,
-                OrganizationType.org_type,
-                OrganizationType.description,
             )
             .order_by(Organization.organization_id)
         )
@@ -162,10 +182,10 @@ class OrganizationsRepository:
                 name,
                 int(total_balance or 0),
                 int(reserved_balance or 0),
-                get_short_org_type_label(org_type, org_description),
+                ", ".join(type_labels.get(org_id, [])),
                 status.value,
             ]
-            for org_id, name, status, org_type, org_description, reserved_balance, total_balance in result
+            for org_id, name, status, reserved_balance, total_balance in result
         ]
 
     @repo_handler
@@ -227,6 +247,49 @@ class OrganizationsRepository:
             "has_early_issuance": has_early_issuance
         }
 
+        return OrganizationResponseSchema.model_validate(org_data)
+
+    @repo_handler
+    async def get_organization_response(
+        self, organization_id: int
+    ) -> OrganizationResponseSchema:
+        """
+        Build the create/update response from the persisted organization,
+        including its type and available-role associations (#4565).
+
+        populate_existing forces a reload even when the organization is
+        already in the session's identity map, so associations written after
+        the row was first loaded are picked up.
+        """
+        organization = await self.db.scalar(
+            select(Organization)
+            .options(
+                joinedload(Organization.org_status),
+                joinedload(Organization.org_type),
+                joinedload(Organization.org_address),
+                joinedload(Organization.org_attorney_address),
+                selectinload(Organization.org_types),
+                selectinload(Organization.available_roles),
+            )
+            .where(Organization.organization_id == organization_id)
+            .execution_options(populate_existing=True)
+        )
+        has_early_issuance = await self.get_current_year_early_issuance(
+            organization_id
+        )
+        org_data = {
+            **{
+                column.name: getattr(organization, column.name)
+                for column in organization.__table__.columns
+            },
+            "has_early_issuance": has_early_issuance,
+            "org_status": organization.org_status,
+            "org_type": organization.org_type,
+            "org_types": organization.org_types,
+            "available_roles": organization.available_roles,
+            "org_address": organization.org_address,
+            "org_attorney_address": organization.org_attorney_address,
+        }
         return OrganizationResponseSchema.model_validate(org_data)
 
     def add(self, entity: BaseModel):
@@ -387,6 +450,7 @@ class OrganizationsRepository:
                 **{column.name: getattr(organization, column.name) for column in organization.__table__.columns},
                 "has_early_issuance": has_early_issuance,
                 "org_type": organization.org_type,
+                "org_types": organization.org_types,
                 "org_status": organization.org_status
             }
             
@@ -431,6 +495,139 @@ class OrganizationsRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
+    async def get_organization_types_by_ids(
+        self, type_ids: List[int]
+    ) -> List[OrganizationType]:
+        """
+        Get organization types matching the given ids.
+        """
+        result = await self.db.execute(
+            select(OrganizationType).where(
+                OrganizationType.organization_type_id.in_(type_ids)
+            )
+        )
+        return result.scalars().all()
+
+    @repo_handler
+    async def set_organization_types(
+        self, organization_id: int, type_ids: List[int]
+    ) -> None:
+        """
+        Replace the organization's type associations with the given set.
+        """
+        await self.db.execute(
+            delete(OrganizationTypeAssociation)
+            .where(
+                OrganizationTypeAssociation.organization_id == organization_id,
+                OrganizationTypeAssociation.organization_type_id.not_in(type_ids),
+            )
+            .execution_options(synchronize_session=False)
+        )
+        existing_result = await self.db.execute(
+            select(OrganizationTypeAssociation.organization_type_id).where(
+                OrganizationTypeAssociation.organization_id == organization_id
+            )
+        )
+        existing = set(existing_result.scalars().all())
+        for type_id in type_ids:
+            if type_id not in existing:
+                self.db.add(
+                    OrganizationTypeAssociation(
+                        organization_id=organization_id,
+                        organization_type_id=type_id,
+                    )
+                )
+        await self.db.flush()
+
+    @repo_handler
+    async def get_available_role_ids(self, organization_id: int) -> set:
+        """
+        Get the role ids currently available to the organization's users.
+        """
+        result = await self.db.execute(
+            select(OrganizationAvailableRole.role_id).where(
+                OrganizationAvailableRole.organization_id == organization_id
+            )
+        )
+        return set(result.scalars().all())
+
+    @repo_handler
+    async def set_available_roles(
+        self, organization_id: int, role_ids: List[int]
+    ) -> None:
+        """
+        Replace the organization's available-role set with the given role ids.
+        """
+        await self.db.execute(
+            delete(OrganizationAvailableRole)
+            .where(
+                OrganizationAvailableRole.organization_id == organization_id,
+                OrganizationAvailableRole.role_id.not_in(role_ids),
+            )
+            .execution_options(synchronize_session=False)
+        )
+        existing_result = await self.db.execute(
+            select(OrganizationAvailableRole.role_id).where(
+                OrganizationAvailableRole.organization_id == organization_id
+            )
+        )
+        existing = set(existing_result.scalars().all())
+        for role_id in role_ids:
+            if role_id not in existing:
+                self.db.add(
+                    OrganizationAvailableRole(
+                        organization_id=organization_id, role_id=role_id
+                    )
+                )
+        await self.db.flush()
+
+    @repo_handler
+    async def get_role_ids_by_enums(self, role_enums: List[RoleEnum]) -> Dict:
+        """
+        Map RoleEnum members to their role ids.
+        """
+        result = await self.db.execute(
+            select(Role.role_id, Role.name).where(Role.name.in_(role_enums))
+        )
+        return {name: role_id for role_id, name in result.all()}
+
+    @repo_handler
+    async def delete_user_roles_for_org(
+        self, organization_id: int, role_ids: List[int]
+    ) -> List[tuple]:
+        """
+        Remove the given roles from every user of the organization.
+        Returns the affected (user_profile_id, role_id) pairs so callers can
+        clean up per-user state such as notification subscriptions.
+        """
+        if not role_ids:
+            return []
+        # Imported here to avoid a circular import: UserProfile pulls in the
+        # organizations schema module at import time.
+        from lcfs.db.models.user.UserProfile import UserProfile
+        from lcfs.db.models.user.UserRole import UserRole
+
+        org_users = select(UserProfile.user_profile_id).where(
+            UserProfile.organization_id == organization_id
+        )
+        result = await self.db.execute(
+            delete(UserRole)
+            .where(
+                UserRole.user_profile_id.in_(org_users),
+                UserRole.role_id.in_(role_ids),
+            )
+            .returning(UserRole.user_profile_id, UserRole.role_id)
+            .execution_options(synchronize_session=False)
+        )
+        affected = [(row[0], row[1]) for row in result.all()]
+        await self.db.flush()
+        # The bulk delete bypasses the ORM (synchronize_session=False), so any
+        # UserProfile/UserRole already loaded in this session would still show
+        # the removed roles. Expire them so later reads re-query.
+        self.db.expire_all()
+        return affected
+
+    @repo_handler
     async def get_organization_names(
         self,
         conditions=None,
@@ -459,7 +656,12 @@ class OrganizationsRepository:
         )
 
         if normalized_org_type != "all":
-            query = query.filter(OrganizationType.org_type == normalized_org_type)
+            # Has-type semantics: an organization matches if any of its types match.
+            query = query.filter(
+                Organization.org_types.any(
+                    OrganizationType.org_type == normalized_org_type
+                )
+            )
 
         if conditions:
             query = query.filter(*conditions)
@@ -510,6 +712,7 @@ class OrganizationsRepository:
                     "reserved_balance": org.reserved_balance,
                     "status": org.org_status,
                     "org_type": org_type_value,
+                    "org_types": [t.org_type for t in org.org_types],
                 }
             )
 
@@ -892,18 +1095,40 @@ class OrganizationsRepository:
         return await self.db.scalar(query)
 
     @repo_handler
-    async def get_penalty_analytics_data(self, organization_id: int):
+    async def get_penalty_analytics_data(
+        self, organization_id: int, include_government_reports: bool = False
+    ):
         """
         Retrieve compliance report penalty summary data and discretionary penalties
         for a given organization.
         """
-        assessed_reports_cte = (
+        visible_report_status_conditions = [
+            ComplianceReportListView.report_status.is_not(None)
+        ]
+        if include_government_reports:
+            visible_report_status_conditions.append(
+                ComplianceReportListView.report_status
+                != ComplianceReportStatusEnum.Draft
+            )
+        else:
+            visible_report_status_conditions.append(
+                ComplianceReportListView.report_status.in_(
+                    [
+                        ComplianceReportStatusEnum.Submitted,
+                        ComplianceReportStatusEnum.Assessed,
+                        ComplianceReportStatusEnum.Exempted,
+                    ]
+                )
+            )
+
+        latest_reports_cte = (
             select(
                 ComplianceReportListView.compliance_report_id.label("report_id"),
                 ComplianceReportListView.compliance_period_id.label(
                     "compliance_period_id"
                 ),
                 ComplianceReportListView.compliance_period.label("compliance_year"),
+                ComplianceReportListView.report_status.label("report_status"),
                 func.row_number()
                 .over(
                     partition_by=ComplianceReportListView.compliance_period_id,
@@ -915,21 +1140,32 @@ class OrganizationsRepository:
                 .label("row_number"),
             ).where(
                 ComplianceReportListView.organization_id == organization_id,
-                ComplianceReportListView.is_latest.is_(True),
-                ComplianceReportListView.report_status.in_(
-                    [
-                        ComplianceReportStatusEnum.Submitted,
-                        ComplianceReportStatusEnum.Assessed,
-                        ComplianceReportStatusEnum.Exempted,
-                    ]
-                ),
+                *visible_report_status_conditions,
             )
-        ).cte("assessed_reports")
+        ).cte("latest_reports")
 
         summary_query = (
             select(
-                assessed_reports_cte.c.compliance_period_id,
-                assessed_reports_cte.c.compliance_year,
+                latest_reports_cte.c.compliance_period_id,
+                latest_reports_cte.c.compliance_year,
+                latest_reports_cte.c.report_status,
+                (
+                    select(ComplianceReportHistory.create_date)
+                    .join(
+                        ComplianceReportStatus,
+                        ComplianceReportStatus.compliance_report_status_id
+                        == ComplianceReportHistory.status_id,
+                    )
+                    .where(
+                        ComplianceReportHistory.compliance_report_id
+                        == latest_reports_cte.c.report_id,
+                        ComplianceReportStatus.status
+                        == ComplianceReportStatusEnum.Assessed,
+                    )
+                    .order_by(ComplianceReportHistory.create_date.desc())
+                    .limit(1)
+                    .scalar_subquery()
+                ).label("assessed_date"),
                 ComplianceReportSummary.line_11_non_compliance_penalty_gasoline.label(
                     "line_11_penalty_gasoline"
                 ),
@@ -938,6 +1174,9 @@ class OrganizationsRepository:
                 ),
                 ComplianceReportSummary.line_11_non_compliance_penalty_jet_fuel.label(
                     "line_11_penalty_jet_fuel"
+                ),
+                ComplianceReportSummary.line_11_fossil_derived_base_fuel_total.label(
+                    "line_11_penalty_payable"
                 ),
                 ComplianceReportSummary.line_21_non_compliance_penalty_payable.label(
                     "line_21_penalty_payable"
@@ -951,14 +1190,45 @@ class OrganizationsRepository:
                 ComplianceReportSummary.low_carbon_penalty_override.label(
                     "low_carbon_penalty_override"
                 ),
+                ComplianceReportSummary.line_11_invoice_sent.label(
+                    "line_11_invoice_sent"
+                ),
+                ComplianceReportSummary.line_11_payment_received.label(
+                    "line_11_payment_received"
+                ),
+                ComplianceReportSummary.line_21_invoice_sent.label(
+                    "line_21_invoice_sent"
+                ),
+                ComplianceReportSummary.line_21_payment_received.label(
+                    "line_21_payment_received"
+                ),
             )
             .join(
                 ComplianceReportSummary,
                 ComplianceReportSummary.compliance_report_id
-                == assessed_reports_cte.c.report_id,
+                == latest_reports_cte.c.report_id,
             )
-            .where(assessed_reports_cte.c.row_number == 1)
-            .order_by(assessed_reports_cte.c.compliance_year.asc())
+            .where(latest_reports_cte.c.row_number == 1)
+            .where(
+                or_(
+                    latest_reports_cte.c.report_status.in_(
+                        [
+                            ComplianceReportStatusEnum.Submitted,
+                            ComplianceReportStatusEnum.Assessed,
+                            ComplianceReportStatusEnum.Exempted,
+                        ]
+                    ),
+                    ComplianceReportSummary.line_11_fossil_derived_base_fuel_total
+                    > 0,
+                    ComplianceReportSummary.line_21_non_compliance_penalty_payable
+                    > 0,
+                    ComplianceReportSummary.line_11_invoice_sent.is_(True),
+                    ComplianceReportSummary.line_11_payment_received.is_(True),
+                    ComplianceReportSummary.line_21_invoice_sent.is_(True),
+                    ComplianceReportSummary.line_21_payment_received.is_(True),
+                )
+            )
+            .order_by(latest_reports_cte.c.compliance_year.asc())
         )
 
         summaries = (await self.db.execute(summary_query)).mappings().all()
@@ -1246,47 +1516,29 @@ class OrganizationsRepository:
             )
         )
 
-        latest_version_per_group = (
-            select(
-                AllocationAgreement.group_uuid,
-                func.max(AllocationAgreement.version).label("max_version"),
-            )
-            .where(
+        # Get groups where the latest version is a DELETE.
+        # We check the latest version rather than any version because
+        # ETL-migrated TFRS supplemental chains can have DELETE followed
+        # by UPDATE on the same group_uuid (not possible in modern LCFS).
+        deleted_groups = VersioningQueryHelper.deleted_groups_subquery(
+            AllocationAgreement,
+            where_clauses=[
                 AllocationAgreement.compliance_report_id.in_(
                     compliance_reports_select
                 )
-            )
-            .group_by(AllocationAgreement.group_uuid)
-        ).subquery()
-
-        deleted_groups = (
-            select(AllocationAgreement.group_uuid)
-            .join(
-                latest_version_per_group,
-                and_(
-                    AllocationAgreement.group_uuid
-                    == latest_version_per_group.c.group_uuid,
-                    AllocationAgreement.version
-                    == latest_version_per_group.c.max_version,
-                ),
-            )
-            .where(AllocationAgreement.action_type == ActionTypeEnum.DELETE)
-            .distinct()
+            ],
         )
 
-        valid_agreements_subq = (
-            select(
-                AllocationAgreement.group_uuid,
-                func.max(AllocationAgreement.version).label("max_version"),
-            )
-            .where(
+        valid_agreements_subq = VersioningQueryHelper.latest_version_subquery(
+            AllocationAgreement,
+            version_label="max_version",
+            where_clauses=[
                 AllocationAgreement.compliance_report_id.in_(
                     compliance_reports_select
                 ),
                 ~AllocationAgreement.group_uuid.in_(deleted_groups),
-            )
-            .group_by(AllocationAgreement.group_uuid)
-        ).subquery()
+            ],
+        )
 
         query = (
             select(AllocationAgreement)
