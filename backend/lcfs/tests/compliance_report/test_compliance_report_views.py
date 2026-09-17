@@ -10,6 +10,7 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
+    ComplianceReportPenaltyStatusSchema,
     ComplianceReportYearNavigationItemSchema,
     ComplianceReportYearNavigationSchema,
     ChainedComplianceReportSchema,
@@ -422,11 +423,15 @@ async def test_get_compliance_report_summary_success(
         assert response.status_code == 200
 
         expected_response = json.loads(
-            mock_compliance_report_summary.json(by_alias=True)
+            mock_compliance_report_summary.model_dump_json(
+                by_alias=True, exclude_none=True
+            )
         )
 
         assert response.json() == expected_response
-        mock_calculate_compliance_report_summary.assert_called_once_with(1)
+        mock_calculate_compliance_report_summary.assert_called_once_with(
+            1, include_penalty_status=False
+        )
         mock_validate_organization_access.assert_called_once_with(1)
 
 
@@ -510,11 +515,15 @@ async def test_update_compliance_report_summary_success(
         assert response.status_code == 200
 
         expected_response = json.loads(
-            mock_compliance_report_summary.json(by_alias=True)
+            mock_compliance_report_summary.model_dump_json(
+                by_alias=True, exclude_none=True
+            )
         )
 
         assert response.json() == expected_response
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, include_penalty_status=False
+        )
         mock_validate_organization_access.assert_called_once_with(1)
 
 
@@ -576,6 +585,76 @@ async def test_update_compliance_report_summary_not_found(
         assert response.status_code == 404  # Not Found
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("line", [11, 21])
+async def test_update_compliance_report_penalty_status_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, line
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportSummaryService.update_penalty_status"
+    ) as mock_update_penalty_status, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access:
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+
+        mock_validate_organization_access.return_value = MagicMock()
+        mock_update_penalty_status.return_value = ComplianceReportPenaltyStatusSchema(
+            line=line,
+            invoice_sent=True,
+            payment_received=False,
+        )
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report_penalty_status", report_id=1
+        )
+        payload = {
+            "line": line,
+            "invoiceSent": True,
+            "paymentReceived": False,
+        }
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "line": line,
+            "invoiceSent": True,
+            "paymentReceived": False,
+        }
+        mock_validate_organization_access.assert_called_once_with(1)
+        mock_update_penalty_status.assert_called_once()
+        args, kwargs = mock_update_penalty_status.call_args
+        assert args[0] == 1
+        assert args[1].line == line
+        assert args[1].invoice_sent is True
+        assert args[1].payment_received is False
+        assert kwargs["user"] is not None
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_penalty_status_forbidden_for_supplier(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportSummaryService.update_penalty_status"
+    ) as mock_update_penalty_status:
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report_penalty_status", report_id=1
+        )
+        payload = {
+            "line": 21,
+            "invoiceSent": True,
+            "paymentReceived": True,
+        }
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 403
+        mock_update_penalty_status.assert_not_called()
+
+
 # Penalty Override Tests
 @pytest.mark.anyio
 async def test_update_compliance_report_summary_with_penalty_override_director_role(
@@ -622,7 +701,9 @@ async def test_update_compliance_report_summary_with_penalty_override_director_r
         response = await client.put(url, json=payload)
 
         assert response.status_code == 200
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, include_penalty_status=True
+        )
         mock_validate_organization_access.assert_called_once_with(1)
 
 
@@ -670,7 +751,9 @@ async def test_update_compliance_report_summary_penalty_override_non_director_al
         # Currently the API allows any authorized user to set penalty override values
         # Role-based restrictions may be implemented in future PRs
         assert response.status_code == 200
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, include_penalty_status=False
+        )
 
 
 @pytest.mark.anyio
@@ -715,7 +798,9 @@ async def test_update_compliance_report_summary_penalty_override_disabled(
         response = await client.put(url, json=payload)
 
         assert response.status_code == 200
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, include_penalty_status=True
+        )
 
 
 @pytest.mark.anyio
@@ -759,7 +844,9 @@ async def test_update_compliance_report_summary_penalty_override_zero_values(
         response = await client.put(url, json=payload)
 
         assert response.status_code == 200
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, include_penalty_status=True
+        )
 
 
 @pytest.mark.anyio
@@ -828,13 +915,16 @@ async def test_get_compliance_report_summary_with_penalty_override_fields(
         assert "penaltyOverrideEnabled" in response_data
         assert "renewablePenaltyOverride" in response_data
         assert "lowCarbonPenaltyOverride" in response_data
-        assert "penaltyOverrideDate" in response_data
+        assert "penaltyOverrideDate" not in response_data
         assert "penaltyOverrideUser" in response_data
 
         assert response_data["penaltyOverrideEnabled"] is True
         assert response_data["renewablePenaltyOverride"] == 1500.75
         assert response_data["lowCarbonPenaltyOverride"] == 750.50
         assert response_data["penaltyOverrideUser"] == 123
+        mock_get_compliance_report_summary.assert_called_once_with(
+            1, include_penalty_status=True
+        )
 
 
 # update_compliance_report

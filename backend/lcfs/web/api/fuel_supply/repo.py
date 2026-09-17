@@ -32,6 +32,7 @@ from lcfs.db.models.fuel import (
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema, camel_to_snake
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema, ModeEnum
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -475,18 +476,16 @@ class FuelSupplyRepository:
         )
 
         # Subquery to get the maximum version for each group_uuid
-        max_version_subquery = (
-            select(
-                FuelSupply.group_uuid, func.max(FuelSupply.version).label("max_version")
-            )
-            .where(
+        max_version_subquery = VersioningQueryHelper.latest_version_subquery(
+            FuelSupply,
+            version_label="max_version",
+            where_clauses=[
                 FuelSupply.compliance_report_id.in_(related_reports_subquery),
                 FuelSupply.action_type.in_(
                     [ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]
                 ),
-            )
-            .group_by(FuelSupply.group_uuid)
-        ).subquery()
+            ],
+        )
 
         # Main duplicate query - only consider latest versions of each group
         duplicate_query = (
@@ -607,28 +606,11 @@ class FuelSupplyRepository:
         # We check the latest version rather than any version because
         # ETL-migrated TFRS supplemental chains can have DELETE followed
         # by UPDATE on the same group_uuid (not possible in modern LCFS).
-        latest_version_per_group = (
-            select(
-                FuelSupply.group_uuid,
-                func.max(FuelSupply.version).label("max_version"),
-            )
-            .where(FuelSupply.compliance_report_id.in_(compliance_reports_select))
-            .group_by(FuelSupply.group_uuid)
-        ).subquery()
-
-        deleted_groups = (
-            select(FuelSupply.group_uuid)
-            .join(
-                latest_version_per_group,
-                and_(
-                    FuelSupply.group_uuid
-                    == latest_version_per_group.c.group_uuid,
-                    FuelSupply.version
-                    == latest_version_per_group.c.max_version,
-                ),
-            )
-            .where(FuelSupply.action_type == ActionTypeEnum.DELETE)
-            .distinct()
+        deleted_groups = VersioningQueryHelper.deleted_groups_subquery(
+            FuelSupply,
+            where_clauses=[
+                FuelSupply.compliance_report_id.in_(compliance_reports_select)
+            ],
         )
 
         # Build query conditions
@@ -649,16 +631,11 @@ class FuelSupplyRepository:
             conditions.extend([~FuelSupply.group_uuid.in_(deleted_groups)])
 
         # Get the latest version of each record
-        valid_fuel_supplies_select = (
-            select(
-                FuelSupply.group_uuid,
-                func.max(FuelSupply.version).label("max_version"),
-            )
-            .where(*conditions)
-            .group_by(FuelSupply.group_uuid)
+        valid_fuel_supplies_subq = VersioningQueryHelper.latest_version_subquery(
+            FuelSupply,
+            version_label="max_version",
+            where_clauses=conditions,
         )
-
-        valid_fuel_supplies_subq = valid_fuel_supplies_select.subquery()
 
         # Get the actual records with their related data
         query = (
