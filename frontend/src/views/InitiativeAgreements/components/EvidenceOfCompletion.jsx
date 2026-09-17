@@ -7,7 +7,8 @@ import {
   FormControlLabel,
   IconButton,
   Paper,
-  TextField
+  TextField,
+  Tooltip
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import CheckIcon from '@mui/icons-material/Check'
@@ -58,7 +59,16 @@ const railColour = (outcome) => {
 // nobody could tell whether a half-finished evaluation had been kept.
 // The outcome boxes and notes are decisions, not prose, and still take
 // effect at once.
-const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
+const RequirementCard = ({
+  requirement,
+  onSave,
+  onRemove,
+  canEdit,
+  // Edit mode exists (#5079) but its entry point is hidden for now: a
+  // pencil beside the remove icon read as two unlabelled controls, and
+  // the × as "cancel". Flip this on once the control is redesigned.
+  allowEdit = false
+}) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [justSaved, setJustSaved] = useState(false)
   const acknowledge = () => {
@@ -194,7 +204,7 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
             {t('initiativeAgreement:evidence.saved')}
           </BCBox>
         )}
-        {canEdit && !editing && (
+        {canEdit && allowEdit && !editing && (
           <IconButton
             size="small"
             data-test={`eoc-edit-${requirement.evidenceRequirementId}`}
@@ -207,14 +217,16 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
           </IconButton>
         )}
         {canEdit && (
-          <IconButton
-            size="small"
-            data-test={`eoc-remove-${requirement.evidenceRequirementId}`}
-            aria-label={t('initiativeAgreement:evidence.removeRequirement')}
-            onClick={onRemove}
-          >
-            <CloseIcon fontSize="inherit" />
-          </IconButton>
+          <Tooltip title={t('initiativeAgreement:evidence.removeRequirement')}>
+            <IconButton
+              size="small"
+              data-test={`eoc-remove-${requirement.evidenceRequirementId}`}
+              aria-label={t('initiativeAgreement:evidence.removeRequirement')}
+              onClick={onRemove}
+            >
+              <CloseIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
         )}
       </Box>
 
@@ -490,6 +502,7 @@ const AddRequirementModal = ({ open, onClose, onCreate, isPending }) => {
 export const EvidenceOfCompletion = ({
   designatedActionId,
   canEdit = true,
+  allowEdit = false,
   // The evidence decisions — accept, request information — rendered
   // beneath the review summary they act on (#5080). The page owns them;
   // this section only says where they go.
@@ -545,6 +558,7 @@ export const EvidenceOfCompletion = ({
                 key={requirement.evidenceRequirementId}
                 requirement={requirement}
                 canEdit={canEdit}
+                allowEdit={allowEdit}
                 onSave={(payload) =>
                   updateRequirement({
                     evidenceRequirementId: requirement.evidenceRequirementId,

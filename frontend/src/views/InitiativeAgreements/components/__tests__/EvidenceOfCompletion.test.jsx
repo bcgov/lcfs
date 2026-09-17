@@ -150,8 +150,21 @@ describe('EvidenceOfCompletion', () => {
     )
   })
 
-  it('writes nothing until Save, then only what changed', () => {
+  it('hides the edit control by default, leaving the text read-only', () => {
+    // The pencil beside the remove icon read as two unlabelled controls,
+    // so its entry point is off until the control is redesigned. The
+    // machinery stays: the tests below turn it on.
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    expect(screen.queryByTestId('eoc-edit-1')).not.toBeInTheDocument()
+    expect(screen.getByTestId('eoc-review-1')).toHaveAttribute('readonly')
+    expect(screen.getByTestId('eoc-remove-1')).toBeInTheDocument()
+  })
+
+  it('writes nothing until Save, then only what changed', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" allowEdit />, {
+      wrapper
+    })
 
     fireEvent.click(screen.getByTestId('eoc-edit-1'))
     fireEvent.change(screen.getByTestId('eoc-review-1'), {
@@ -174,7 +187,9 @@ describe('EvidenceOfCompletion', () => {
   })
 
   it('Cancel restores what was there and writes nothing', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+    render(<EvidenceOfCompletion designatedActionId="9" allowEdit />, {
+      wrapper
+    })
 
     fireEvent.click(screen.getByTestId('eoc-edit-1'))
     fireEvent.change(screen.getByTestId('eoc-review-1'), {
@@ -188,7 +203,9 @@ describe('EvidenceOfCompletion', () => {
   })
 
   it('will not save an item with its title blanked', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+    render(<EvidenceOfCompletion designatedActionId="9" allowEdit />, {
+      wrapper
+    })
 
     fireEvent.click(screen.getByTestId('eoc-edit-1'))
     fireEvent.change(screen.getByTestId('eoc-title-1'), {
