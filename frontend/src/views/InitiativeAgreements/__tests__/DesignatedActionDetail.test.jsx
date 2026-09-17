@@ -173,11 +173,13 @@ describe('DesignatedActionDetail', () => {
     )
   })
 
-  it('publishes the action identifier to the breadcrumb store', () => {
+  it('publishes the action identifier and its agreement to the breadcrumb store', () => {
     render(<DesignatedActionDetail />, { wrapper })
-    expect(useInitiativeAgreementPageStore.getState().agreementCrumb).toBe(
-      'DA1-IA5'
-    )
+    const store = useInitiativeAgreementPageStore.getState()
+    expect(store.agreementCrumb).toBe('DA1-IA5')
+    // The agreement segment before the action gets the agreement's code,
+    // so the trail reads module > agreement > action.
+    expect(store.parentCrumb).toBe('IA-26ORG1')
   })
 
   it('offers document upload to IDIR IA roles only', () => {

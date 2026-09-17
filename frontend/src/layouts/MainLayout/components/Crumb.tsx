@@ -84,6 +84,9 @@ const Crumb = () => {
   const initiativeAgreementCrumb = useInitiativeAgreementPageStore(
     (state) => state.agreementCrumb
   )
+  const initiativeAgreementParentCrumb = useInitiativeAgreementPageStore(
+    (state) => state.parentCrumb
+  )
 
   // Get the actual compliance period from the cached report data (not the URL)
   // This prevents URL manipulation from showing incorrect year in breadcrumbs
@@ -187,14 +190,6 @@ const Crumb = () => {
           if (reportPathRegex.test(name)) {
             routeTo = `compliance-reporting/${reportCompliancePeriod}/${complianceReportId}`
           }
-          // "Designated actions" leads back to the agreement page, where
-          // the grid lives — the bare segment path is not a route.
-          if (
-            name === 'designated-actions' &&
-            pathnames[0] === 'initiative-agreements'
-          ) {
-            routeTo = `/${pathnames.slice(0, index).join('/')}`
-          }
           const displayName =
             customCrumb.label ||
             name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
@@ -209,12 +204,43 @@ const Crumb = () => {
             return null
           }
 
-          // Skip the numeric agreement ID between the module and the
-          // designated action child route
-          if (
+          // A designated action's URL is /initiative-agreements/{ia}/
+          // designated-actions/{da}. The trail reads that hierarchy —
+          // module, agreement, action — so the agreement's id becomes
+          // its code, linking to the agreement page, and the structural
+          // "designated-actions" segment between the two ids is not a
+          // page and is not shown. (The module's own Designated actions
+          // tab, /initiative-agreements/designated-actions, has no id
+          // before the segment and keeps its crumb.)
+          const isAgreementIdBeforeActions =
             isNumeric(name) &&
             pathnames[index - 1] === 'initiative-agreements' &&
             pathnames[index + 1] === 'designated-actions'
+          if (isAgreementIdBeforeActions) {
+            return (
+              <StyledBreadcrumb
+                key={name}
+                to={`/initiative-agreements/${name}`}
+                component={Link}
+                label={initiativeAgreementParentCrumb || `IA${name}`}
+                sx={{
+                  cursor: 'pointer',
+                  padding: 0,
+                  '& .MuiChip-label': {
+                    color: 'link.main',
+                    overflow: 'initial',
+                    padding: 0
+                  },
+                  '& span': { padding: 0 },
+                  '& span:hover': { textDecoration: 'underline' }
+                }}
+              />
+            )
+          }
+          if (
+            name === 'designated-actions' &&
+            pathnames[0] === 'initiative-agreements' &&
+            isNumeric(pathnames[index - 1] ?? '')
           ) {
             return null
           }

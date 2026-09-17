@@ -131,9 +131,13 @@ const DesignatedActionDetailBase = () => {
       queryKey: ['document-tree', PARENT_TYPE, String(designatedActionId)]
     })
 
-  // Surface the wireframe's action identifier in the breadcrumb.
+  // The breadcrumb reads the hierarchy the URL encodes — the agreement,
+  // then the action — so it needs a label for each numeric segment.
   const setAgreementCrumb = useInitiativeAgreementPageStore(
     (state) => state.setAgreementCrumb
+  )
+  const setParentCrumb = useInitiativeAgreementPageStore(
+    (state) => state.setParentCrumb
   )
   useEffect(() => {
     setAgreementCrumb(
@@ -141,8 +145,12 @@ const DesignatedActionDetailBase = () => {
         ? `DA${action.actionNumber}-IA${action.initiativeAgreementId}`
         : null
     )
-    return () => setAgreementCrumb(null)
-  }, [action, setAgreementCrumb])
+    setParentCrumb(action?.iaCode ?? null)
+    return () => {
+      setAgreementCrumb(null)
+      setParentCrumb(null)
+    }
+  }, [action, setAgreementCrumb, setParentCrumb])
 
   if (isLoading) {
     return <Loading message={t('initiativeAgreement:loadingText')} />
