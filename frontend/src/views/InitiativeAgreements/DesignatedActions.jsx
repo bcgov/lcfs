@@ -56,7 +56,9 @@ const DesignatedActionsBase = () => {
       cellRenderer: LinkRenderer,
       cellRendererParams: {
         // Absolute: the action's page lives under its agreement, not
-        // under this tab.
+        // under this tab. Without the flag the renderer prefixes the
+        // current route and the link doubles up.
+        isAbsolute: true,
         url: (data) =>
           ROUTES.INITIATIVE_AGREEMENTS.ACTION_VIEW.replace(
             ':initiativeAgreementId',

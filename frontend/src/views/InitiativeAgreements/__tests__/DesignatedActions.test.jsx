@@ -94,6 +94,10 @@ describe('DesignatedActions (module tab)', () => {
         data: { initiativeAgreementId: 5, designatedActionId: 12 }
       })
     ).toBe('/initiative-agreements/5/designated-actions/12')
+    // The renderer prefixes the current route unless told the URL is
+    // absolute; without this the link reads
+    // /initiative-agreements/designated-actions/initiative-agreements/5/...
+    expect(defaultColDef.cellRendererParams.isAbsolute).toBe(true)
   })
 
   it('surfaces a load failure in the alert box', () => {

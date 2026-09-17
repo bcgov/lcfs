@@ -512,6 +512,8 @@ export const DocumentTree = ({
   const hoverTimer = useRef(null)
   const uploadInputRef = useRef(null)
   const uploadTargetRef = useRef(null)
+  // The action a folder-menu item queued to run once the menu has exited.
+  const afterMenuClosed = useRef(null)
 
   const sensors = useSensors(
     // A few pixels of slack so click-to-download never starts a drag.
@@ -548,7 +550,6 @@ export const DocumentTree = ({
   // finished closing. Mounted during the close, it autofocuses into a
   // Menu still tearing down its focus trap, loses focus, and cancels
   // itself before anyone sees it.
-  const afterMenuClosed = useRef(null)
   const closeMenuThen = (action) => {
     afterMenuClosed.current = action
     setMenu(null)

@@ -86,6 +86,25 @@ describe('DocumentTree', () => {
     mockTree.mockReturnValue({ data: tree, isLoading: false })
   })
 
+  it('survives the transition from loading to loaded', () => {
+    // Every hook must run on the loading render too. A hook placed after
+    // the loading return renders fine in isolation and then throws React
+    // #310 the moment the data arrives — which is how the deployed
+    // environment crashed on 2026-09-17.
+    mockTree.mockReturnValue({ data: undefined, isLoading: true })
+    const { rerender } = render(
+      <DocumentTree parentType="designatedAction" parentID="9" />,
+      { wrapper }
+    )
+    expect(screen.queryByText('Permits & Approvals')).not.toBeInTheDocument()
+
+    mockTree.mockReturnValue({ data: tree, isLoading: false })
+    expect(() =>
+      rerender(<DocumentTree parentType="designatedAction" parentID="9" />)
+    ).not.toThrow()
+    expect(screen.getByText('Permits & Approvals')).toBeInTheDocument()
+  })
+
   it('renders nested folders with counts and files', () => {
     render(<DocumentTree parentType="designatedAction" parentID="9" />, {
       wrapper
