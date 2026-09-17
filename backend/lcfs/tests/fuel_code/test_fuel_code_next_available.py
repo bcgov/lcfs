@@ -18,6 +18,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import func, select
 
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.fuel import FuelCode, FuelCodePrefix, FuelCodeStatus, FuelType
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
@@ -52,7 +53,9 @@ async def next_code_fuel_type(dbsession):
     fuel_type = FuelType(
         fuel_type_id=980,
         fuel_type="Next code test fuel",
-        units="Litres",
+        # the enum member, not its name: the instance stays in the identity
+        # map and the clone schema validates whatever is set on it
+        units=QuantityUnitsEnum.Litres,
         unrecognized=False,
         fossil_derived=False,
     )
@@ -216,3 +219,57 @@ async def test_next_sub_version_is_scoped_to_the_prefix(
     )
 
     assert result == "101.0"
+
+
+# --- get_fuel_code_by_code_prefix -------------------------------------------
+#
+# Clones the codes matching a suffix under a prefix, re-numbered to the next
+# free sub version. The sub-version helper filters on fuel_code.prefix_id, so
+# the prefix *name* the endpoint receives has to be resolved to its id first;
+# passing the name through bound a string to an integer column and failed at
+# the driver.
+
+
+@pytest.mark.anyio
+async def test_clone_by_code_prefix_uses_the_next_sub_version(
+    repo, add_fuel_codes, prefix_ids
+):
+    await add_fuel_codes("BCLCF", "101.0", "101.1")
+
+    clones = await repo.get_fuel_code_by_code_prefix("101.0", "BCLCF")
+
+    assert [clone.fuel_suffix for clone in clones] == ["101.2"]
+    clone = clones[0]
+    assert clone.prefix_id == prefix_ids["BCLCF"]
+    assert clone.fuel_code_prefix.prefix == "BCLCF"
+    assert clone.company == "Next code test"  # copied from the matched code
+
+
+@pytest.mark.anyio
+async def test_clone_by_code_prefix_without_a_match_returns_a_blank_clone(
+    repo, add_fuel_codes, prefix_ids
+):
+    # the same suffix under another prefix is not a match for BCLCF
+    await add_fuel_codes("PROXY", "101.0")
+
+    clones = await repo.get_fuel_code_by_code_prefix("101.0", "BCLCF")
+
+    assert len(clones) == 1
+    assert clones[0].fuel_suffix == "101.0"
+    assert clones[0].prefix_id == prefix_ids["BCLCF"]
+    assert clones[0].fuel_code_prefix.prefix == "BCLCF"
+    assert clones[0].company is None
+
+
+@pytest.mark.anyio
+async def test_clone_by_code_prefix_skips_deleted_codes_but_keeps_their_number(
+    repo, add_fuel_codes
+):
+    await add_fuel_codes("BCLCF", "101.0", status=FuelCodeStatusEnum.Deleted)
+
+    clones = await repo.get_fuel_code_by_code_prefix("101.0", "BCLCF")
+
+    # A deleted code is not cloned, but its number stays taken.
+    assert len(clones) == 1
+    assert clones[0].company is None
+    assert clones[0].fuel_suffix == "101.1"

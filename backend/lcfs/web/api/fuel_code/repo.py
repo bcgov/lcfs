@@ -1197,11 +1197,22 @@ class FuelCodeRepository:
         )
         fuel_code_main_version = fuel_suffix.split(".")[0]
         results = (await self.db.execute(query)).unique().scalars().all()
+        # The sub-version helper filters on fuel_code.prefix_id, so the prefix
+        # name has to be resolved to its row first. The matched codes carry
+        # it, the no-match path below does not.
+        fuel_code_prefix = await self.db.scalar(
+            select(FuelCodePrefix).where(FuelCodePrefix.prefix == prefix)
+        )
+        prefix_id = fuel_code_prefix.fuel_code_prefix_id if fuel_code_prefix else None
         next_suffix = await self.get_next_available_sub_version_fuel_code_by_prefix(
-            fuel_code_main_version, prefix
+            fuel_code_main_version, prefix_id
         )
         if results is None or len(results) < 1:
-            fc = FuelCodeCloneSchema(fuel_suffix=next_suffix, prefix=prefix)
+            fc = FuelCodeCloneSchema(
+                fuel_suffix=next_suffix,
+                prefix_id=prefix_id,
+                fuel_code_prefix=fuel_code_prefix,
+            )
             return [fc]
         else:
             fuel_code_results = []
