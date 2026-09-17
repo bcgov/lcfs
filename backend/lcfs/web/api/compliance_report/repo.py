@@ -65,6 +65,7 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.role.schema import user_has_roles, is_government_user
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -508,7 +509,7 @@ class ComplianceReportRepository:
 
         is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
         is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
-        if not is_analyst and not is_supplier:
+        if not is_analyst:
             excluded_statuses.append(ComplianceReportStatusEnum.Analyst_adjustment)
 
         if not is_supplier:
@@ -983,14 +984,10 @@ class ComplianceReportRepository:
         group_uuid, version, _ = anchor
         chain_report_ids = self._get_chain_report_ids_subquery(group_uuid, version)
 
-        latest_version_per_group = (
-            select(
-                model.group_uuid,
-                func.max(model.version).label("max_version"),
-            )
-            .where(model.compliance_report_id.in_(chain_report_ids))
-            .group_by(model.group_uuid)
-            .subquery()
+        latest_version_per_group = VersioningQueryHelper.latest_version_subquery(
+            model,
+            version_label="max_version",
+            where_clauses=[model.compliance_report_id.in_(chain_report_ids)],
         )
 
         latest_records = (
@@ -1036,14 +1033,10 @@ class ComplianceReportRepository:
         group_uuid, version, _ = anchor
         chain_report_ids = self._get_chain_report_ids_subquery(group_uuid, version)
 
-        latest_version_per_group = (
-            select(
-                model.group_uuid,
-                func.max(model.version).label("max_version"),
-            )
-            .where(model.compliance_report_id.in_(chain_report_ids))
-            .group_by(model.group_uuid)
-            .subquery()
+        latest_version_per_group = VersioningQueryHelper.latest_version_subquery(
+            model,
+            version_label="max_version",
+            where_clauses=[model.compliance_report_id.in_(chain_report_ids)],
         )
 
         options = []
