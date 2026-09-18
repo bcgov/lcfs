@@ -427,6 +427,7 @@ export const useCreateAgreement = () => {
       agreementType?: string
       title?: string | null
       projectDescription?: string | null
+      projectLocation?: string | null
       contactName?: string | null
       contactEmail?: string | null
       contactPhone?: string | null

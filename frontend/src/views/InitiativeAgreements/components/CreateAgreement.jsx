@@ -35,6 +35,7 @@ export const CreateAgreement = () => {
   const [iaCode, setIaCode] = useState('')
   const [agreementType, setAgreementType] = useState(AGREEMENT_TYPES[0])
   const [title, setTitle] = useState('')
+  const [projectLocation, setProjectLocation] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [error, setError] = useState('')
@@ -64,6 +65,7 @@ export const CreateAgreement = () => {
     setIaCode('')
     setAgreementType(AGREEMENT_TYPES[0])
     setTitle('')
+    setProjectLocation('')
     setStartDate('')
     setEndDate('')
     setError('')
@@ -82,6 +84,7 @@ export const CreateAgreement = () => {
         iaCode: iaCode.trim(),
         agreementType,
         title: title.trim() || null,
+        projectLocation: projectLocation.trim() || null,
         agreementStartDate: startDate || null,
         agreementEndDate: endDate || null
       },
@@ -228,6 +231,15 @@ export const CreateAgreement = () => {
                 value={title}
                 inputProps={{ 'data-test': 'create-agreement-title' }}
                 onChange={(event) => setTitle(event.target.value)}
+              />
+
+              <ModalField
+                id="create-agreement-location"
+                label={t('initiativeAgreement:create.locationLabel')}
+                optional
+                value={projectLocation}
+                inputProps={{ 'data-test': 'create-agreement-location' }}
+                onChange={(event) => setProjectLocation(event.target.value)}
               />
 
               <ModalField

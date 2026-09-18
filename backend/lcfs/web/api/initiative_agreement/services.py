@@ -226,6 +226,7 @@ class InitiativeAgreementServices:
         return InitiativeAgreementProfileSchema(
             **self._list_item_kwargs(agreement),
             project_description=agreement.project_description,
+            project_location=agreement.project_location,
             contact_email=agreement.contact_email,
             contact_phone=agreement.contact_phone,
             create_date=agreement.create_date,
@@ -295,6 +296,7 @@ class InitiativeAgreementServices:
                 agreement_type=data.agreement_type,
                 title=(data.title or None),
                 project_description=(data.project_description or None),
+                project_location=(data.project_location or None),
                 contact_name=(data.contact_name or None),
                 contact_email=(data.contact_email or None),
                 contact_phone=(data.contact_phone or None),

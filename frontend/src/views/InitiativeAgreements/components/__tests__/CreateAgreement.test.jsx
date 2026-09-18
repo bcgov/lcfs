@@ -80,6 +80,7 @@ describe('CreateAgreement', () => {
         iaCode: 'IA-26NEW1',
         agreementType: 'Initiative Agreement',
         title: null,
+        projectLocation: null,
         agreementStartDate: null,
         agreementEndDate: null
       },
