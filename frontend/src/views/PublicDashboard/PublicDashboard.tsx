@@ -129,11 +129,11 @@ export const PublicDashboard = () => {
           : '—'
     },
     {
-      key: 'outstandingCredits',
-      label: t('publicDashboard.stats.outstandingCredits'),
+      key: 'totalGeneratedCredits',
+      label: t('publicDashboard.stats.totalGeneratedCredits'),
       value:
-        data?.outstandingCredits != null
-          ? compactFmt.format(data.outstandingCredits)
+        data?.totalCreditsIssued != null
+          ? compactFmt.format(data.totalCreditsIssued)
           : '—'
     },
     {
@@ -337,7 +337,11 @@ export const PublicDashboard = () => {
           backgroundColor: '#0d2b45',
           backgroundImage: `url(${bgUrl})`,
           backgroundSize: 'cover',
-          backgroundPosition: 'center'
+          backgroundPosition: 'center',
+          '& .MuiButton-root:focus-visible': {
+            outline: `3px solid ${GOLD}`,
+            outlineOffset: '3px'
+          }
         }}
       >
         <BCBox
@@ -345,7 +349,7 @@ export const PublicDashboard = () => {
             position: 'absolute',
             inset: 0,
             background:
-              'linear-gradient(100deg, rgba(0,26,51,.80) 0%, rgba(0,26,51,.52) 45%, rgba(0,26,51,.15) 100%)'
+              'linear-gradient(100deg, rgba(0,26,51,.88) 0%, rgba(0,26,51,.62) 48%, rgba(0,26,51,.20) 100%)'
           }}
         />
         <BCBox
@@ -398,18 +402,34 @@ export const PublicDashboard = () => {
 
             <BCBox sx={{ mb: 4.5 }}>{renderLoginButtons()}</BCBox>
 
-            <BCBox sx={{ display: 'flex' }}>
+            <BCBox
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(3, minmax(0, 1fr))'
+                },
+                maxWidth: 620,
+                rowGap: 2
+              }}
+            >
               {heroStats.map((s, i) => (
                 <BCBox
                   key={s.key}
                   data-test={`hero-stat-${s.key}`}
                   sx={{
-                    px: i === 0 ? 0 : 3.5,
-                    pr: i === heroStats.length - 1 ? 0 : 3.5,
-                    borderRight:
-                      i === heroStats.length - 1
-                        ? 'none'
-                        : '1px solid rgba(255,255,255,.25)'
+                    px: { xs: 0, sm: i === 0 ? 0 : 3 },
+                    pr: {
+                      xs: 0,
+                      sm: i === heroStats.length - 1 ? 0 : 3
+                    },
+                    borderRight: {
+                      xs: 'none',
+                      sm:
+                        i === heroStats.length - 1
+                          ? 'none'
+                          : '1px solid rgba(255,255,255,.35)'
+                    }
                   }}
                 >
                   <BCTypography
@@ -423,7 +443,7 @@ export const PublicDashboard = () => {
                     {s.value}
                   </BCTypography>
                   <BCTypography
-                    sx={{ fontSize: 12.5, color: 'rgba(255,255,255,.7)' }}
+                    sx={{ fontSize: 12.5, color: 'rgba(255,255,255,.86)' }}
                   >
                     {s.label}
                   </BCTypography>
@@ -578,7 +598,12 @@ export const PublicDashboard = () => {
                   fontWeight: 700,
                   color: LINK,
                   textDecoration: 'none',
-                  '&:hover': { color: NAVY }
+                  '&:hover': { color: NAVY },
+                  '&:focus-visible': {
+                    outline: `3px solid ${GOLD}`,
+                    outlineOffset: '3px',
+                    borderRadius: '3px'
+                  }
                 }}
               >
                 {t('publicDashboard.market.explore')} →
@@ -597,7 +622,13 @@ export const PublicDashboard = () => {
       </BCBox>
 
       {/* Intro + public tools + legislation */}
-      <BCBox sx={{ ...fullBleed }}>
+      <BCBox
+        sx={{
+          ...fullBleed,
+          background:
+            'linear-gradient(180deg, #F3F7FB 0%, #FFFFFF 44%, #EEF5F9 100%)'
+        }}
+      >
         <BCBox sx={{ ...innerContainer, py: { xs: 4, md: 4.5 } }}>
           {/* About the program + using this site */}
           <BCBox
@@ -614,7 +645,7 @@ export const PublicDashboard = () => {
                 border: '1px solid #D8D8D8',
                 borderRadius: '8px',
                 p: { xs: 2.5, md: 3 },
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                boxShadow: '0 8px 24px rgba(0,51,102,0.08)',
                 height: '100%'
               }}
             >
@@ -631,7 +662,7 @@ export const PublicDashboard = () => {
               >
                 {t('publicDashboard.intro.programBody', {
                   defaultValue:
-                    "The Low Carbon Fuels Act and its two regulations form British Columbia's Low Carbon Fuel Standard, which sets requirements that encourage the use of renewable and low carbon fuels and offers incentives to organizations that supply them, based on how much these fuels reduce greenhouse gas emissions compared to conventional fuels."
+                    "The Low Carbon Fuels Act and its two regulations form British Columbia's Low Carbon Fuel Standard (LCFS), which sets requirements that encourage the use of renewable and low carbon fuels. The LCFS offers incentives to organizations based on the amounts of greenhouse gas emissions avoided in comparison to conventional fossil-derived fuels."
                 })}
               </BCTypography>
             </BCBox>
@@ -641,7 +672,7 @@ export const PublicDashboard = () => {
                 border: '1px solid #D8D8D8',
                 borderRadius: '8px',
                 p: { xs: 2.5, md: 3 },
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                boxShadow: '0 8px 24px rgba(0,51,102,0.08)',
                 height: '100%'
               }}
             >
@@ -692,7 +723,12 @@ export const PublicDashboard = () => {
                   py: 2.25,
                   borderBottom: '1px solid #D8D8D8',
                   textDecoration: 'none',
-                  '&:hover': { backgroundColor: '#F2F7FC' }
+                  '&:hover': { backgroundColor: '#F2F7FC' },
+                  '&:focus-visible': {
+                    outline: `3px solid ${GOLD}`,
+                    outlineOffset: '-3px',
+                    backgroundColor: '#F2F7FC'
+                  }
                 }}
               >
                 <BCBox sx={{ display: 'flex' }}>{tool.icon}</BCBox>
@@ -767,7 +803,13 @@ export const PublicDashboard = () => {
                   color: LINK,
                   fontWeight: 700,
                   fontSize: 15.5,
-                  '&:hover': { background: '#F2F7FC', borderColor: '#B7CCE0' }
+                  background: '#fff',
+                  '&:hover': { background: '#F2F7FC', borderColor: '#B7CCE0' },
+                  '&:focus-visible': {
+                    outline: `3px solid ${GOLD}`,
+                    outlineOffset: '3px',
+                    borderColor: NAVY
+                  }
                 }}
               >
                 {l.label}

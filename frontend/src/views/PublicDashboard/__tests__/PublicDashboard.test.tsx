@@ -22,9 +22,8 @@ vi.mock('@react-keycloak/web', () => ({
 }))
 
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>(
-    'react-router-dom'
-  )
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
   return { ...actual, useNavigate: () => navigateMock }
 })
 
@@ -101,6 +100,16 @@ describe('PublicDashboard', () => {
     render(<PublicDashboard />, { wrapper })
     expect(screen.getByText('publicDashboard.hero.title')).toBeInTheDocument()
     expect(screen.getByText('publicDashboard.cardTitle')).toBeInTheDocument()
+  })
+
+  it('shows all-time generated credits in the hero stats', () => {
+    render(<PublicDashboard />, { wrapper })
+    expect(
+      screen.getByTestId('hero-stat-totalGeneratedCredits')
+    ).toHaveTextContent('publicDashboard.stats.totalGeneratedCredits')
+    expect(
+      screen.getByTestId('hero-stat-totalGeneratedCredits')
+    ).toHaveTextContent('9.2M')
   })
 
   it('renders the public tool tiles', () => {
