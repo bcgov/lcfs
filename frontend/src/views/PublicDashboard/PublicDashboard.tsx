@@ -37,6 +37,8 @@ const LEGISLATION_URL =
   'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels'
 const REQUIREMENTS_URL =
   'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels/requirements'
+const TROUBLE_LOGGING_IN_URL =
+  'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels/reporting-system'
 
 const compactFmt = new Intl.NumberFormat('en-CA', {
   notation: 'compact',
@@ -400,7 +402,41 @@ export const PublicDashboard = () => {
               {t('publicDashboard.hero.subtitle')}
             </BCTypography>
 
-            <BCBox sx={{ mb: 4.5 }}>{renderLoginButtons()}</BCBox>
+            <BCBox
+              sx={{
+                mb: 4.5,
+                display: 'inline-flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 1.5
+              }}
+            >
+              {renderLoginButtons()}
+              <Box
+                component="a"
+                href={TROUBLE_LOGGING_IN_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-test="trouble-logging-in"
+                sx={{
+                  fontSize: 14,
+                  color: 'rgba(255,255,255,.78)',
+                  '&&': {
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '3px',
+                    textDecorationColor: 'rgba(255,255,255,.78)'
+                  },
+                  '&:hover': { color: '#fff', textDecorationColor: '#fff' },
+                  '&:focus-visible': {
+                    outline: `3px solid ${GOLD}`,
+                    outlineOffset: '3px',
+                    borderRadius: '3px'
+                  }
+                }}
+              >
+                {t('login.troubleMessage')}
+              </Box>
+            </BCBox>
 
             <BCBox
               sx={{
