@@ -153,6 +153,66 @@ describe('ReviewCharts', () => {
     )
   })
 
+  it('renders renewable liquid fuel volume with the included fuel type description', () => {
+    const chartData: ReviewChartData = {
+      renewableLiquidFuelVolume: [
+        {
+          title: 'Renewable vs non-renewable liquid fuel supply',
+          currentLabel: '2025',
+          comparisonLabel: '2024',
+          points: [
+            {
+              label: 'Renewable',
+              currentValue: 6000,
+              comparisonValue: 250,
+              delta: 5750,
+              units: 'litres'
+            },
+            {
+              label: 'Non-renewable',
+              currentValue: 4000,
+              comparisonValue: 750,
+              delta: 3250,
+              units: 'litres'
+            }
+          ]
+        }
+      ]
+    }
+
+    render(<ReviewCharts chartData={chartData} />)
+
+    expect(
+      screen.getByText('Renewable vs non-renewable liquid fuel supply')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Includes liquid gasoline, diesel, and jet fuel supply only/)
+    ).toBeInTheDocument()
+    expect(screen.getByText(/renewable naphtha/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/biodiesel, HDRD, other diesel fuel/)
+    ).toBeInTheDocument()
+    expect(screen.getByText(/alternative jet fuel/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Non-renewable includes liquid gasoline, diesel, and jet fuel/)
+    ).toBeInTheDocument()
+
+    const option = chartProps[0].option
+    expect(option.xAxis.data).toEqual(['Renewable', 'Non-renewable'])
+    expect(option.series).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: '2024',
+          data: [250, 750]
+        }),
+        expect.objectContaining({
+          name: '2025',
+          data: [6000, 4000]
+        })
+      ])
+    )
+  })
+
   it('renders the supply and FSE correlation trend as a dual-axis chart', () => {
     const chartData: ReviewChartData = {
       historicalVariance: [

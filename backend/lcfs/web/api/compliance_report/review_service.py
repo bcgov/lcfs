@@ -40,6 +40,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 
 MATERIAL_PERCENT_THRESHOLD = 25
 MATERIAL_VOLUME_THRESHOLD = 100_000
+LIQUID_TARGET_FUEL_CATEGORIES = ("Gasoline", "Diesel", "Jet fuel")
 
 logger = structlog.get_logger(__name__)
 
@@ -1741,6 +1742,11 @@ class ComplianceReportReviewService:
                 current_label,
             )
         )
+        renewable_liquid_fuel_volume = self._build_renewable_liquid_fuel_volume_series(
+            current_records,
+            prior_year_record_snapshots,
+            current_label,
+        )
         for prior_report, prior_totals in prior_year_snapshots:
             prior_label = str(prior_report.compliance_period.description)
             for key in self._schedule_keys():
@@ -1837,12 +1843,47 @@ class ComplianceReportReviewService:
 
         return ComplianceReportReviewChartDataSchema(
             historical_variance=historical,
+            renewable_liquid_fuel_volume=renewable_liquid_fuel_volume,
             supplemental_impact=supplemental,
             compliance_units_by_fuel=[
                 ComplianceReportReviewComplianceUnitPointSchema(**point)
                 for point in compliance_units_by_fuel
             ],
         )
+
+    def _build_renewable_liquid_fuel_volume_series(
+        self,
+        current_records: dict[str, list],
+        prior_year_record_snapshots: list[tuple[object, dict[str, list]]],
+        current_label: str,
+    ) -> list[ComplianceReportReviewComparisonSeriesSchema]:
+        current_totals = self._sum_renewable_liquid_fuel_volume(
+            current_records.get("fuel_supplies", [])
+        )
+        series = []
+
+        for prior_report, prior_records in prior_year_record_snapshots:
+            prior_totals = self._sum_renewable_liquid_fuel_volume(
+                prior_records.get("fuel_supplies", [])
+            )
+            points = self._comparison_points(
+                current_totals,
+                prior_totals,
+                units="litres",
+            )
+            if points:
+                series.append(
+                    ComplianceReportReviewComparisonSeriesSchema(
+                        title="Renewable vs non-renewable liquid fuel supply",
+                        current_label=current_label,
+                        comparison_label=str(
+                            prior_report.compliance_period.description
+                        ),
+                        points=points,
+                    )
+                )
+
+        return series
 
     def _fse_chart_series(
         self,
@@ -2252,6 +2293,33 @@ class ComplianceReportReviewService:
                 getattr(row, quantity_field, 0)
             )
         return dict(totals)
+
+    def _sum_renewable_liquid_fuel_volume(self, rows: Iterable) -> dict[str, float]:
+        totals = {"Renewable": 0.0, "Non-renewable": 0.0}
+        for row in rows:
+            renewable_group = self._renewable_liquid_fuel_group(row)
+            if not renewable_group:
+                continue
+            totals[renewable_group] += self._fuel_supply_quantity(row)
+        return {key: value for key, value in totals.items() if value}
+
+    def _renewable_liquid_fuel_group(self, row) -> str | None:
+        fuel_category = getattr(getattr(row, "fuel_category", None), "category", None)
+        if fuel_category not in LIQUID_TARGET_FUEL_CATEGORIES:
+            return None
+
+        if not self._is_litres_unit(getattr(row, "units", None)):
+            return None
+
+        fuel_type = getattr(row, "fuel_type", None)
+        if bool(getattr(fuel_type, "renewable", False)):
+            return "Renewable"
+        return "Non-renewable"
+
+    def _is_litres_unit(self, unit) -> bool:
+        unit_name = getattr(unit, "name", None)
+        unit_value = getattr(unit, "value", unit)
+        return unit_name == "Litres" or unit_value == QuantityUnitsEnum.Litres.value
 
     def _fuel_label(self, row) -> str:
         fuel_category = getattr(getattr(row, "fuel_category", None), "category", None)

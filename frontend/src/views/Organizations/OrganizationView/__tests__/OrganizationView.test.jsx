@@ -42,6 +42,19 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: mockT })
 }))
 
+vi.mock('@/views/Transactions/components/OrganizationList', () => ({
+  default: ({ onOrgChange }) => (
+    <button
+      data-testid="select-organization"
+      onClick={() =>
+        onOrgChange({ id: '3', name: 'LCFS Org 3', label: 'LCFS Org 3' })
+      }
+    >
+      Select organization
+    </button>
+  )
+}))
+
 // Mock child components
 vi.mock('../OrganizationDetailsCard', () => ({
   OrganizationDetailsCard: () => (
@@ -269,6 +282,32 @@ describe('OrganizationView', () => {
       renderComponent()
 
       expect(screen.getByText('Test Org — Users')).toBeInTheDocument()
+    })
+
+    it('shows the organization selector for government users across tabs', () => {
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123/credit-ledger',
+        state: {}
+      })
+
+      renderComponent()
+
+      expect(screen.getByTestId('select-organization')).toBeInTheDocument()
+    })
+
+    it('navigates to the same tab for the selected organization', () => {
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123/supply-history',
+        state: {}
+      })
+
+      renderComponent()
+
+      fireEvent.click(screen.getByTestId('select-organization'))
+
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/organizations/3/supply-history'
+      )
     })
   })
 
