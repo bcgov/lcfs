@@ -37,6 +37,13 @@ from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
 
+LIQUID_TARGET_FUEL_CATEGORIES = ("Gasoline", "Diesel", "Jet fuel")
+RENEWABLE_LIQUID_FUEL_CATEGORY_LABELS = {
+    "Gasoline": "Renewable gasoline",
+    "Diesel": "Renewable diesel",
+    "Jet fuel": "Renewable jet fuel",
+}
+
 
 def _get_filter_values(filter_item):
     values = getattr(filter_item, "values", None)
@@ -49,6 +56,46 @@ def _get_filter_values(filter_item):
     if filter_value not in (None, ""):
         return [str(filter_value)]
     return []
+
+
+def _is_litres_unit(unit):
+    if unit is None:
+        return False
+    unit_name = getattr(unit, "name", None)
+    unit_value = getattr(unit, "value", None)
+    return unit_name == "Litres" or unit_value == "L" or unit == "Litres"
+
+
+def _get_renewable_liquid_fuel_group(fuel_supply):
+    fuel_category = getattr(
+        getattr(fuel_supply, "fuel_category", None), "category", None
+    )
+    if fuel_category not in LIQUID_TARGET_FUEL_CATEGORIES:
+        return None
+
+    fuel_type = getattr(fuel_supply, "fuel_type", None)
+    if not _is_litres_unit(getattr(fuel_type, "units", None)):
+        return None
+
+    if bool(getattr(fuel_type, "renewable", False)):
+        return "Renewable"
+    return "Non-renewable"
+
+
+def _get_renewable_liquid_fuel_category_label(fuel_supply):
+    fuel_category = getattr(
+        getattr(fuel_supply, "fuel_category", None), "category", None
+    )
+    if fuel_category not in LIQUID_TARGET_FUEL_CATEGORIES:
+        return None
+
+    fuel_type = getattr(fuel_supply, "fuel_type", None)
+    if not _is_litres_unit(getattr(fuel_type, "units", None)):
+        return None
+
+    if bool(getattr(fuel_type, "renewable", False)):
+        return RENEWABLE_LIQUID_FUEL_CATEGORY_LABELS[fuel_category]
+    return f"Non-renewable {fuel_category.lower()}"
 
 
 def _scalar_reference_options(fuel_category_loader, fuel_type_loader):
@@ -979,6 +1026,8 @@ class FuelSupplyRepository:
         total_by_fuel_code = {}
         yearly = {}
         yearly_fuel_type = {}
+        yearly_renewable_liquid_fuel = {}
+        renewable_liquid_fuel_types_by_category = {}
 
         for fs in all_fuel_supplies:
             quantity = _quantity(fs)
@@ -1045,6 +1094,22 @@ class FuelSupplyRepository:
             else:
                 yearly[year]["zero_or_negative_compliance_units"] += compliance_units
                 yearly[year]["non_positive_cu_volume"] += quantity
+
+            renewable_liquid_group = _get_renewable_liquid_fuel_group(fs)
+            if renewable_liquid_group:
+                yearly_renewable_liquid_fuel.setdefault(year, {})
+                yearly_renewable_liquid_fuel[year][renewable_liquid_group] = (
+                    yearly_renewable_liquid_fuel[year].get(renewable_liquid_group, 0)
+                    + quantity
+                )
+
+                if include_in_filtered_totals:
+                    fuel_type_label = getattr(fs.fuel_type, "fuel_type", None)
+                    category_label = _get_renewable_liquid_fuel_category_label(fs)
+                    if fuel_type_label and category_label:
+                        renewable_liquid_fuel_types_by_category.setdefault(
+                            category_label, set()
+                        ).add(fuel_type_label)
 
             fuel_type_name = fs.fuel_type.fuel_type
             yearly_fuel_type.setdefault(year, {})
@@ -1172,6 +1237,7 @@ class FuelSupplyRepository:
         compliance_unit_credit_debit_trend = []
         compliance_units_per_unit_trend = []
         fuel_type_volume_trend = []
+        renewable_liquid_fuel_volume_trend = []
         top_fuel_codes = [
             {"fuelCode": fuel_code, "totalVolume": volume}
             for fuel_code, volume in sorted(
@@ -1219,6 +1285,16 @@ class FuelSupplyRepository:
                         "fuelCategory": fuel_type_data.get("fuel_category"),
                         "totalVolume": fuel_type_data.get("total_volume", 0),
                         "fossilDerived": fuel_type_data.get("fossil_derived", False),
+                    }
+                )
+            for renewable_liquid_group in ("Renewable", "Non-renewable"):
+                renewable_liquid_fuel_volume_trend.append(
+                    {
+                        "reportingYear": year,
+                        "renewableCategory": renewable_liquid_group,
+                        "totalVolume": yearly_renewable_liquid_fuel.get(year, {}).get(
+                            renewable_liquid_group, 0
+                        ),
                     }
                 )
 
@@ -1271,5 +1347,12 @@ class FuelSupplyRepository:
             "compliance_unit_credit_debit_trend": compliance_unit_credit_debit_trend,
             "compliance_units_per_unit_trend": compliance_units_per_unit_trend,
             "fuel_type_volume_trend": fuel_type_volume_trend,
+            "renewable_liquid_fuel_volume_trend": renewable_liquid_fuel_volume_trend,
+            "renewable_liquid_fuel_types_by_category": {
+                category: sorted(fuel_types)
+                for category, fuel_types in sorted(
+                    renewable_liquid_fuel_types_by_category.items()
+                )
+            },
             "top_fuel_codes": top_fuel_codes,
         }

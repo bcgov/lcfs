@@ -1,18 +1,12 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import { SupplyHistory } from '../SupplyHistory'
-import { roles } from '@/constants/roles'
 import theme from '@/themes'
 
-const mockNavigate = vi.fn()
 const mockUseOrganizationFuelSupply = vi.fn()
-
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => mockNavigate
-}))
 
 vi.mock('echarts-for-react', () => ({
   default: () => <div data-test="echarts" />
@@ -20,29 +14,6 @@ vi.mock('echarts-for-react', () => ({
 
 vi.mock('@/hooks/useFuelSupply', () => ({
   useOrganizationFuelSupply: (...args) => mockUseOrganizationFuelSupply(...args)
-}))
-
-vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({
-    data: {
-      organization: { organizationId: '1' },
-      roles: [{ name: roles.government }]
-    },
-    hasRoles: (role) => role === roles.government
-  })
-}))
-
-vi.mock('@/views/Transactions/components/OrganizationList', () => ({
-  default: ({ onOrgChange }) => (
-    <button
-      data-test="select-organization"
-      onClick={() =>
-        onOrgChange({ id: '3', name: 'LCFS Org 3', label: 'LCFS Org 3' })
-      }
-    >
-      Select organization
-    </button>
-  )
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -55,6 +26,28 @@ const queryData = {
     analytics: {
       totalByYear: { 2023: 100, 2024: 200, 2025: 300 },
       selectedYearSummary: {},
+      renewableLiquidFuelVolumeTrend: [
+        {
+          reportingYear: '2023',
+          renewableCategory: 'Renewable',
+          totalVolume: 100
+        },
+        {
+          reportingYear: '2023',
+          renewableCategory: 'Non-renewable',
+          totalVolume: 50
+        },
+        {
+          reportingYear: '2024',
+          renewableCategory: 'Renewable',
+          totalVolume: 125
+        },
+        {
+          reportingYear: '2024',
+          renewableCategory: 'Non-renewable',
+          totalVolume: 75
+        }
+      ],
       totalReports: 0
     },
     pagination: { page: 1, size: 10, total: 0, totalPages: 0 }
@@ -112,13 +105,88 @@ describe('SupplyHistory', () => {
     })
   })
 
-  it('navigates to the selected organization supply history route', () => {
+  it('describes the fuel types included in the renewable volume chart', () => {
     renderComponent()
 
-    fireEvent.click(screen.getByTestId('select-organization'))
+    expect(
+      screen.getByText(/Includes liquid gasoline, diesel, and jet fuel supply only/)
+    ).toBeInTheDocument()
+    expect(screen.getByText(/renewable naphtha/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/biodiesel, HDRD, other diesel fuel/)
+    ).toBeInTheDocument()
+    expect(screen.getByText(/alternative jet fuel/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Non-renewable includes liquid gasoline, diesel, and jet fuel/)
+    ).toBeInTheDocument()
+  })
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/organizations/3/supply-history'
-    )
+  it('does not render charts that only contain zero or empty data', () => {
+    mockUseOrganizationFuelSupply.mockReturnValue({
+      ...queryData,
+      data: {
+        ...queryData.data,
+        analytics: {
+          totalByYear: { 2023: 0, 2024: 0 },
+          selectedYearSummary: {},
+          complianceUnitCreditDebitTrend: [
+            {
+              reportingYear: '2023',
+              complianceUnitGroup: 'Positive compliance units',
+              complianceUnits: 0
+            },
+            {
+              reportingYear: '2024',
+              complianceUnitGroup: 'Positive compliance units',
+              complianceUnits: 0
+            }
+          ],
+          fuelTypeVolumeTrend: [
+            {
+              reportingYear: '2023',
+              fuelType: 'Ethanol',
+              totalVolume: 0
+            },
+            {
+              reportingYear: '2024',
+              fuelType: 'Ethanol',
+              totalVolume: 0
+            }
+          ],
+          renewableLiquidFuelVolumeTrend: [
+            {
+              reportingYear: '2023',
+              renewableCategory: 'Renewable',
+              totalVolume: 100
+            },
+            {
+              reportingYear: '2024',
+              renewableCategory: 'Renewable',
+              totalVolume: 100
+            }
+          ],
+          topFuelCodes: [
+            { fuelCode: 'BCLCF1', totalVolume: 0 },
+            { fuelCode: 'BCLCF2', totalVolume: 0 }
+          ],
+          totalReports: 0
+        }
+      }
+    })
+
+    renderComponent()
+
+    expect(
+      screen.queryByText(/Includes liquid gasoline, diesel, and jet fuel supply only/)
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('Top 10 fuel codes by volume')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Volume by fuel type over each compliance period')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        /Net credits and debits generated YoY \(compliance units\)/
+      )
+    ).not.toBeInTheDocument()
   })
 })

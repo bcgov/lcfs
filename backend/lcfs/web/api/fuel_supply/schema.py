@@ -241,6 +241,8 @@ class FuelSupplyAnalyticsSchema(BaseSchema):
     compliance_unit_credit_debit_trend: List[dict] = []
     compliance_units_per_unit_trend: List[dict] = []
     fuel_type_volume_trend: List[dict] = []
+    renewable_liquid_fuel_volume_trend: List[dict] = []
+    renewable_liquid_fuel_types_by_category: dict = {}
     top_fuel_codes: List[dict] = []
 
 

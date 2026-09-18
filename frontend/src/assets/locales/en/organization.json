@@ -265,6 +265,7 @@
       "fuelTypeVolumeTrend": "Volume by fuel type over each compliance period",
       "fuelTypeVolumeTrendHelp": "Hover a point to see its year-over-year percentage change",
       "renewableSupplyVolumeChange": "Fuel supply volume change: renewable vs non-renewable",
+      "renewableSupplyVolumeChangeHelp": "Includes liquid gasoline, diesel, and jet fuel supply only. Renewable gasoline includes renewable gasoline, ethanol, renewable naphtha, and other applicable renewable gasoline fuels. Renewable diesel includes biodiesel, HDRD, other diesel fuel, and other applicable renewable diesel fuels. Renewable jet fuel includes alternative jet fuel and other applicable renewable jet fuels. Non-renewable includes liquid gasoline, diesel, and jet fuel types that are not marked renewable.",
       "renewable": "Renewable",
       "nonRenewable": "Non-renewable",
       "fuelTypeYoyMovers": "Fuel type YoY movers",
