@@ -16,6 +16,28 @@ const appVersion: string = existsSync(releaseNotesPath)
   : '0.0.0'
 const workerCount = Math.max(1, Math.min(8, availableParallelism()))
 
+// Coverage thresholds (issue #4094). These are floors, not targets: they exist
+// so coverage cannot silently regress. Raise them as coverage improves (see
+// wiki/Testing-Procedures.md, "Coverage thresholds").
+//
+// Thresholds are only enforced when ENFORCE_COVERAGE_THRESHOLDS is set, because
+// Vitest checks them against whatever was collected in the current process:
+//   - a filtered run (`vitest run src/views/Foo.test.jsx`) or a CI shard
+//     (`--shard=N/M`) only covers a slice of the suite and would always fail;
+//   - `npm run test.coverage` (full run) and the CI `--merge-reports` step
+//     (all shards merged) are the two places that see the whole suite, and
+//     both set the variable.
+const COVERAGE_THRESHOLDS = {
+  statements: 60,
+  branches: 50,
+  functions: 52,
+  lines: 60
+}
+const isShardedRun = process.argv.some((arg) => arg.startsWith('--shard'))
+const enforceCoverageThresholds =
+  ['1', 'true'].includes(process.env.ENFORCE_COVERAGE_THRESHOLDS ?? '') &&
+  !isShardedRun
+
 // https://vitejs.dev/config/
 export default defineConfig({
   define: {
@@ -43,14 +65,10 @@ export default defineConfig({
     silent: 'passed-only',
     coverage: {
       provider: 'v8',
-      // thresholds: {
-      //   statements: 80,
-      //   functions: 80,
-      //   branches: 80,
-      //   lines: 80
-      // },
-      reporter: ['html'],
-      include: ['src/**/*.{js,jsx,ts,tsx}'],
+      thresholds: enforceCoverageThresholds ? COVERAGE_THRESHOLDS : undefined,
+      enabled: true,
+      reporter: ['text-summary', 'html'],
+      include: ['src'],
       exclude: [
         'src/*.{jsx,js,tsx,ts}',
         'src/assets',
