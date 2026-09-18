@@ -14,7 +14,7 @@
     "storybook": "cross-env NODE_ENV=development storybook dev -p 6006",
     "storybook:build": "storybook build",
     "test": "vitest",
-    "test.coverage": "vitest --coverage",
+    "test.coverage": "cross-env ENFORCE_COVERAGE_THRESHOLDS=true vitest run --coverage",
     "test:run": "vitest run",
     "test:ci": "vitest run --reporter=verbose --reporter=junit --outputFile.junit=vitest-results.xml",
     "test:ci:memory": "node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=github-actions --reporter=blob --shard=$SHARD_INDEX/$SHARD_TOTAL",
