@@ -948,6 +948,116 @@ class UserRepository:
         return user_profile
 
     @repo_handler
+    async def get_user_assigned_work(self, user_profile_id: int) -> dict:
+        from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+        from lcfs.db.models.compliance.ComplianceReportStatus import (
+            ComplianceReportStatus,
+            ComplianceReportStatusEnum,
+        )
+        from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+        from lcfs.db.models.organization.Organization import Organization
+        from lcfs.db.models.ci_application.CIApplication import CIApplication
+        from lcfs.db.models.ci_application.CIApplicationStatus import CIApplicationStatus
+
+        terminal_cr_ids_result = await self.db.execute(
+            select(ComplianceReportStatus.compliance_report_status_id)
+            .where(
+                ComplianceReportStatus.status.in_([
+                    ComplianceReportStatusEnum.Assessed,
+                    ComplianceReportStatusEnum.Exempted,
+                    ComplianceReportStatusEnum.Rejected,
+                ])
+            )
+        )
+        terminal_cr_ids = terminal_cr_ids_result.scalars().all()
+
+        cr_query = (
+            select(
+                ComplianceReport.compliance_report_id,
+                Organization.name.label("organization"),
+                CompliancePeriod.description.label("period"),
+                ComplianceReportStatus.status.label("status"),
+            )
+            .join(
+                ComplianceReportStatus,
+                ComplianceReport.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            )
+            .join(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
+            )
+            .join(
+                Organization,
+                ComplianceReport.organization_id == Organization.organization_id,
+            )
+            .where(ComplianceReport.assigned_analyst_id == user_profile_id)
+        )
+        if terminal_cr_ids:
+            cr_query = cr_query.where(
+                ComplianceReport.current_status_id.notin_(terminal_cr_ids)
+            )
+        cr_rows = (await self.db.execute(cr_query)).mappings().all()
+
+        compliance_reports = [
+            {
+                "compliance_report_id": row["compliance_report_id"],
+                "organization": row["organization"],
+                "period": str(row["period"]),
+                "status": row["status"].value
+                if hasattr(row["status"], "value")
+                else str(row["status"]),
+            }
+            for row in cr_rows
+        ]
+
+        terminal_ci_ids_result = await self.db.execute(
+            select(CIApplicationStatus.ci_application_status_id)
+            .where(
+                CIApplicationStatus.status.in_(["Completed", "Withdrawn", "Rejected"])
+            )
+        )
+        terminal_ci_ids = terminal_ci_ids_result.scalars().all()
+
+        ci_query = (
+            select(
+                CIApplication.ci_application_id,
+                Organization.name.label("organization"),
+                CIApplicationStatus.status.label("status"),
+            )
+            .join(
+                CIApplicationStatus,
+                CIApplication.status_id
+                == CIApplicationStatus.ci_application_status_id,
+            )
+            .join(
+                Organization,
+                CIApplication.organization_id == Organization.organization_id,
+            )
+            .where(CIApplication.assigned_analyst_id == user_profile_id)
+        )
+        if terminal_ci_ids:
+            ci_query = ci_query.where(
+                CIApplication.status_id.notin_(terminal_ci_ids)
+            )
+        ci_rows = (await self.db.execute(ci_query)).mappings().all()
+
+        ci_applications = [
+            {
+                "ci_application_id": row["ci_application_id"],
+                "organization": row["organization"],
+                "status": str(row["status"]),
+            }
+            for row in ci_rows
+        ]
+
+        return {
+            "compliance_reports": compliance_reports,
+            "ci_applications": ci_applications,
+        }
+
+    @repo_handler
     async def is_user_safe_to_remove(self, keycloak_username: str) -> bool:
         """
         Invokes the is_user_safe_to_remove() SQL function,
