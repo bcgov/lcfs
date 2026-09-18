@@ -679,11 +679,15 @@ class CIApplicationDecisionSchema(BaseSchema):
 
     Government users approve, withdraw, reactivate, or return an application
     to analysts. An optional comment is captured alongside the decision and
-    surfaced in the comments thread.
+    surfaced in the comments thread. A second verifier can also return a
+    submitted application from Verification 2 back to Verification 1 when a
+    later finding materially changes earlier work.
     """
 
     status: CIApplicationStatusEnum
     comment: Optional[str] = Field(default=None, max_length=4000)
+    reason: Optional[str] = Field(default=None, max_length=4000)
+    return_to_first_verification: bool = Field(default=False)
 
     @field_validator("status")
     @classmethod
@@ -697,6 +701,17 @@ class CIApplicationDecisionSchema(BaseSchema):
                 "Decision status must be Submitted, Completed or Withdrawn."
             )
         return value
+
+    @model_validator(mode="after")
+    def _validate_return_reason(self):
+        if not self.return_to_first_verification:
+            return self
+        return_reason = (self.reason or self.comment or "").strip()
+        if not return_reason:
+            raise ValueError(
+                "A return reason is required when returning an application to first verification."
+            )
+        return self
 
 
 # Note: the Step 5 comment thread now uses the shared internal_comments
