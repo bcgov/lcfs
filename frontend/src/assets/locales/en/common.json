@@ -87,22 +87,84 @@
       "title": "Credit market data",
       "subtitle": "Credit transfer activity under the Low Carbon Fuel Standard. Prices are volume-weighted averages across all reported transfers; individual transactions are never shown.",
       "aggregatedNote": "Aggregated · anonymized",
-      "downloadCsv": "Download CSV",
+      "downloadExcel": "Download Excel",
+      "downloadPdf": "Download PDF",
+      "generatingPdf": "Generating PDF…",
       "vsYearAgo": "vs {{period}}",
+      "vsPreviousMonth": "vs. previous month: {{price}}",
+      "sections": {
+        "reportDescription": "Report description",
+        "currentSnapshot": "Current Market Snapshot",
+        "transferClassifications": "Transfer Classifications",
+        "activityAndStatistics": "Market Activity and Statistics",
+        "yearToDateActivity": "Year-to-Date Market Activity",
+        "marketTrendsHistoricalPerformance": "Market Trends and Historical Performance",
+        "cumulativeMarketStats": "Cumulative Market Statistics",
+        "detailedReports": "Detailed Market Reports"
+      },
+      "snapshot": {
+        "avgAll": "Average Credit Price for All Transfers",
+        "avgA1": "Average Credit Price for A1 Transfers",
+        "allDetails": "Monthly All Transfers Details",
+        "a1Details": "Monthly Category A1 Details",
+        "a1Unavailable": "Published A1 price not available"
+      },
+      "classifications": {
+        "summary": "Transfer category definitions",
+        "a1": {
+          "title": "Category A1",
+          "body": "Transfers are categorized A1 when the agreement date is within 30 days of the recorded transfer date."
+        },
+        "a": {
+          "title": "Category A",
+          "body": "The agreement to transfer credits was reached within six months of the credit transfer."
+        },
+        "b": {
+          "title": "Category B",
+          "body": "The agreement to transfer credits was reached six months to one year before the credit transfer."
+        },
+        "c": {
+          "title": "Category C",
+          "body": "The agreement was reached more than one year before the transfer, or falls outside any defined timeframe."
+        }
+      },
       "kpi": {
         "transfers": "Transfers",
         "totalVolume": "Total volume (credits)",
         "avgPrice": "Weighted average price"
       },
+      "ytd": {
+        "transferCount": "Transfer count",
+        "transferVolume": "Transfer volume",
+        "currentTransfers": "Current YTD transfers",
+        "previousTransfers": "Previous YTD transfers",
+        "currentVolume": "Current YTD credit volume",
+        "previousVolume": "Previous YTD credit volume",
+        "percentageChange": "Percentage change"
+      },
       "allTimeTitle": "All time",
       "allTime": {
-        "volume": "Volume (credits)",
         "transfers": "Transfers",
-        "avgPrice": "Weighted average price",
-        "transferValue": "Total transfer value"
+        "volume": "Volume (credits)",
+        "minPrice": "Min of Price Per Unit (CA$)",
+        "maxPrice": "Max of Price Per Unit (CA$)",
+        "avgPrice": "Weighted average price ($)",
+        "transferValue": "Sum of Transfer Value ($)"
       },
       "chartTitle": "Price and volume over time",
       "chartSubtitle": "Volume-weighted average price per credit and credits traded",
+      "trendCharts": {
+        "annualAverageTitle": "Weighted Average Price A1 - annual trend line",
+        "transferPriceTitle": "Credit Transfer Price Trend",
+        "tradeVolumeTitle": "Credit Trade Volume",
+        "weightedAverage": "Weighted average",
+        "minimumPrice": "Min of Price Per Unit",
+        "maximumPrice": "Max of Price Per Unit",
+        "creditVolume": "Sum of Credit Quantity",
+        "month": "Month",
+        "transferDate": "Transfer Date",
+        "monthYear": "Month/Year"
+      },
       "granularity": {
         "month": "Monthly",
         "quarter": "Quarterly",
@@ -111,11 +173,46 @@
       "tables": {
         "monthly": "Monthly market report",
         "quarterly": "Quarterly market report",
-        "annual": "Annual market report",
+        "annual": "Yearly market report",
+        "month": "Month",
+        "quarter": "Quarter",
+        "year": "Year",
         "period": "Period",
+        "calculatedEffectiveDate": "Calculated effective date",
+        "sum": "Sum",
+        "count": "Count",
+        "weightedAveragePrice": "Weighted average price",
+        "volumeCredits": "Volume (Credits)",
+        "max": "Max",
+        "min": "Min",
+        "minUnitPriceCad": "Min of Price Per Unit (CAD)",
+        "maxUnitPriceCad": "Max of Price Per Unit (CAD)",
         "transfers": "Transfers (#)",
         "volume": "Volume (credits)",
         "avgPrice": "Weighted average price",
+        "minPrice": "Min price",
+        "maxPrice": "Max price",
+        "categoryATransfers": "Category A - Transfers",
+        "categoryAAveragePrice": "Category A - Average Price",
+        "categoryACreditVolume": "Category A - Credit Volume",
+        "categoryBTransfers": "Category B - Transfers",
+        "categoryBAveragePrice": "Category B - Average Price",
+        "categoryBCreditVolume": "Category B - Credit Volume",
+        "categoryCTransfers": "Category C - Transfers",
+        "categoryCAveragePrice": "Category C - Average Price",
+        "categoryCCreditVolume": "Category C - Credit Volume",
+        "categoryA1Transfers": "Category A1 - Transfers",
+        "categoryA1AveragePrice": "Category A1 - Average Price",
+        "categoryA1CreditVolume": "Category A1 - Credit Volume",
+        "categoryA1MinUnitPriceCad": "Category A1 - Min of Price Per Unit (CAD)",
+        "categoryA1MaxUnitPriceCad": "Category A1 - Max of Price Per Unit (CAD)",
+        "allTransfers": "All Transfers (#)",
+        "allVolumeCredits": "All Volume (Credits)",
+        "allWeightedAveragePrice": "All Weighted average price",
+        "allMinUnitPriceCad": "All Min of Price Per Unit (CAD)",
+        "allMaxUnitPriceCad": "All Max of Price Per Unit (CAD)",
+        "minA1": "Min A1",
+        "maxA1": "Max A1",
         "transferValue": "Transfer value",
         "noData": "No published periods for this granularity yet."
       },
