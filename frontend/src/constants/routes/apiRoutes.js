@@ -16,6 +16,7 @@ export const apiRoutes = {
   seededTestUsers: '/users/seeded-test-users',
   resolveOrgName: '/users/anonymizer/resolve-org-name',
   getUserActivities: '/users/:userID/activity',
+  getUserAssignedWork: '/users/:userID/assigned-work',
   getAllUserActivities: '/users/activities/all',
   trackUserLogin: '/users/logged-in',
   getUserLoginHistories: '/users/login-history',
@@ -276,6 +277,7 @@ export const apiRoutes = {
   getNotifications: '/notifications/list',
   getNotificationsCount: '/notifications/count',
   getNotificationSubscriptions: '/notifications/subscriptions',
+  getUserNotificationSubscriptions: '/notifications/subscriptions/user',
   saveNotificationSubscriptions: '/notifications/subscriptions/save',
 
   // government notifications
