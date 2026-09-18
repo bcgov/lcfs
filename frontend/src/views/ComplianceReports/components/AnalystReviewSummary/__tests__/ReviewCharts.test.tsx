@@ -183,8 +183,8 @@ describe('ReviewCharts', () => {
     render(<ReviewCharts chartData={chartData} />)
 
     expect(
-      screen.getByText('Renewable vs non-renewable liquid fuel supply')
-    ).toBeInTheDocument()
+      screen.getAllByText('Renewable vs non-renewable liquid fuel supply')
+    ).toHaveLength(2)
     expect(
       screen.getByText(/Includes liquid gasoline, diesel, and jet fuel supply only/)
     ).toBeInTheDocument()

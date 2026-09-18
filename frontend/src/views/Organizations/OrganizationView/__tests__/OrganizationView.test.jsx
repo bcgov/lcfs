@@ -45,7 +45,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/views/Transactions/components/OrganizationList', () => ({
   default: ({ onOrgChange }) => (
     <button
-      data-testid="select-organization"
+      data-test="select-organization"
       onClick={() =>
         onOrgChange({ id: '3', name: 'LCFS Org 3', label: 'LCFS Org 3' })
       }
