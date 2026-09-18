@@ -658,9 +658,42 @@ class ComplianceReportServices:
         ):
             await self._reinstate_previous_transaction(current_report)
 
+        # Remove the report's own working transaction before the report row
+        # goes away. repo.delete_compliance_report does not cascade into the
+        # transaction table, and nothing else references a report's Reserved
+        # row, so a report that was recommended (which mints a Reserved
+        # transaction), returned to the analyst and then deleted would leave
+        # that row orphaned: no parent, still effective, surfacing in the
+        # ledger as a "legacy" transaction. Mirror what returning a report to
+        # the supplier does and delete it outright; the audit log keeps the
+        # record. A finalized Adjustment is never touched here.
+        await self._delete_own_working_transaction(current_report)
+
         # Delete the compliance report
         await self.repo.delete_compliance_report(report_id)
         return True
+
+    async def _delete_own_working_transaction(self, report: ComplianceReport):
+        """Delete the Reserved/Released transaction that belongs to `report`."""
+        if not report.transaction_id:
+            return
+
+        transaction = await self.transaction_repo.get_transaction_by_id(
+            report.transaction_id
+        )
+        if transaction is None:
+            return
+        if transaction.transaction_action == TransactionActionEnum.Adjustment:
+            logger.warning(
+                "compliance_report.delete.adjustment_transaction_kept",
+                report_id=report.compliance_report_id,
+                transaction_id=report.transaction_id,
+            )
+            return
+
+        await self.transaction_repo.delete_transaction(
+            report.transaction_id, report.compliance_report_id
+        )
 
     @service_handler
     async def get_compliance_reports_paginated(
