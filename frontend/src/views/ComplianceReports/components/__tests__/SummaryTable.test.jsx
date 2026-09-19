@@ -146,6 +146,7 @@ vi.mock('@mui/material/FormControlLabel', () => ({
       {React.cloneElement(control, { value })}
       {label}
     </label>
+  )
 }))
 
 // Mock react-number-format
