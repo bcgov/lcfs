@@ -1,7 +1,7 @@
 import {
   DOC_CATEGORY_GHGENIUS_MODEL,
   DOC_CATEGORY_TECHNICAL_REPORT
-} from './components/DocumentsModellingStep'
+} from './components/documentCategories'
 
 // 0-based indices into CI_APPLICATION_STEPS (see CIApplicationProgress.jsx).
 export const CI_STEP_APPLICATION_INFO = 0

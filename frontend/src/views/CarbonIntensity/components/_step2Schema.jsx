@@ -1,10 +1,8 @@
-import {
-  ActionsRenderer,
-  AutocompleteCellEditor,
-  DateEditor,
-  RequiredHeader,
-  TransportModeDistanceCellEditor
-} from '@/components/BCDataGrid/components'
+import { ActionsRenderer } from '@/components/BCDataGrid/components/Renderers/ActionsRenderer'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { DateEditor } from '@/components/BCDataGrid/components/Editors/DateEditor'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import { TransportModeDistanceCellEditor } from '@/components/BCDataGrid/components/Editors/TransportModeDistanceCellEditor'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import colors from '@/themes/base/colors'

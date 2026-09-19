@@ -1,4 +1,5 @@
-import { Box, TextField } from '@mui/material'
+import Box from '@mui/material/Box'
+import TextField from '@mui/material/TextField'
 import BCTypography from '@/components/BCTypography'
 import { useFormContext } from 'react-hook-form'
 import { LabelBox } from './LabelBox'

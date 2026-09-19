@@ -20,14 +20,12 @@ import {
   useInitiativeAgreement,
   useCreateUpdateInitiativeAgreement
 } from '@/hooks/useInitiativeAgreement'
-import {
-  useTheme,
-  Stack,
-  useMediaQuery,
-  Step,
-  StepLabel,
-  Stepper
-} from '@mui/material'
+import useTheme from '@mui/material/styles/useTheme'
+import Stack from '@mui/material/Stack'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
+import Stepper from '@mui/material/Stepper'
 import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'

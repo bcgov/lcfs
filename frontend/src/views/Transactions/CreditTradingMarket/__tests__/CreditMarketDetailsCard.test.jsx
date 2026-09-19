@@ -1,8 +1,8 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { CreditMarketDetailsCard } from '../CreditMarketDetailsCard'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useOrganization,
@@ -14,7 +14,13 @@ import { useQueryClient } from '@tanstack/react-query'
 // Mock the hooks
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganization')
-vi.mock('@tanstack/react-query')
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useQueryClient: vi.fn()
+  }
+})
 
 // Mock FontAwesome icons
 vi.mock('@fortawesome/react-fontawesome', () => ({
@@ -27,8 +33,8 @@ vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
     <div data-testid="bc-widget-card" {...props}>
       <h2>{title}</h2>
       {editButton && (
-        <button 
-          data-testid="edit-button" 
+        <button
+          data-testid="edit-button"
           onClick={editButton.onClick}
           id={editButton.id}
         >
@@ -108,7 +114,7 @@ describe('CreditMarketDetailsCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockHasAnyRole.mockClear()
-    
+
     mockHandleSubmit.mockImplementation((fn) => (e) => {
       e?.preventDefault?.()
       const formData = {
@@ -133,7 +139,9 @@ describe('CreditMarketDetailsCard', () => {
       data: mockOrganizationData,
       isLoading: false
     })
-    vi.mocked(useUpdateCurrentOrgCreditMarket).mockReturnValue(mockUpdateMutation)
+    vi.mocked(useUpdateCurrentOrgCreditMarket).mockReturnValue(
+      mockUpdateMutation
+    )
     vi.mocked(useUpdateOrganizationCreditMarket).mockReturnValue(
       mockAdminUpdateMutation
     )
@@ -141,26 +149,36 @@ describe('CreditMarketDetailsCard', () => {
   })
 
   describe('Loading and Basic Rendering', () => {
-    it('displays loading component when data is loading', () => {
+    test('displays loading component when data is loading', ({
+      render,
+      theme,
+      i18n
+    }) => {
       vi.mocked(useOrganization).mockReturnValue({
         data: null,
         isLoading: true
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       expect(screen.getByTestId('loading')).toBeInTheDocument()
     })
 
-    it('renders component without crashing', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
-      expect(screen.getByText('Credit trading market details')).toBeInTheDocument()
+    test('renders component without crashing', ({ render, theme, i18n }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
+      expect(
+        screen.getByText('Credit trading market details')
+      ).toBeInTheDocument()
     })
 
-    it('displays organization data in read-only mode', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+    test('displays organization data in read-only mode', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       expect(screen.getByText('Jane Smith')).toBeInTheDocument()
       expect(screen.getByText('(555) 123-4')).toBeInTheDocument()
       expect(screen.getByText('jane@example.com')).toBeInTheDocument()
@@ -169,58 +187,80 @@ describe('CreditMarketDetailsCard', () => {
   })
 
   describe('Permission and Access Control', () => {
-    it('hides edit button when user lacks permissions', () => {
+    test('hides edit button when user lacks permissions', ({
+      render,
+      theme,
+      i18n
+    }) => {
       vi.mocked(useCurrentUser).mockReturnValue({
         data: { ...mockCurrentUser, roles: [{ name: 'supplier' }] },
         hasAnyRole: () => false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       expect(screen.queryByTestId('edit-button')).not.toBeInTheDocument()
     })
 
-    it('hides edit button when no current user', () => {
+    test('hides edit button when no current user', ({
+      render,
+      theme,
+      i18n
+    }) => {
       vi.mocked(useCurrentUser).mockReturnValue({
         data: null,
         hasAnyRole: () => false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       expect(screen.queryByTestId('edit-button')).not.toBeInTheDocument()
     })
   })
 
   describe('Edit Mode Functionality', () => {
-    it('handles edit mode state changes', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+    test('handles edit mode state changes', ({ render, theme, i18n }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       // Component should be in read-only mode by default
       expect(screen.getByText('Jane Smith')).toBeInTheDocument()
-      expect(screen.getByText('Credit trading market details')).toBeInTheDocument()
+      expect(
+        screen.getByText('Credit trading market details')
+      ).toBeInTheDocument()
     })
 
-    it('form reset is called when component mounts', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+    test('form reset is called when component mounts', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       // Form reset should be called due to useEffect
       expect(mockReset).toHaveBeenCalled()
     })
   })
 
   describe('Form Logic', () => {
-    it('initializes form with organization data', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+    test('initializes form with organization data', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       // Verify handleSubmit was properly mocked
       expect(mockHandleSubmit).toBeDefined()
       expect(mockWatch).toBeDefined()
     })
 
-    it('handles form submission logic correctly', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+    test('handles form submission logic correctly', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       // Test that form submit logic would transform data correctly
       const testData = {
         contactName: 'Test Contact',
@@ -231,7 +271,7 @@ describe('CreditMarketDetailsCard', () => {
         creditsToSell: '150',
         displayInMarket: true
       }
-      
+
       // Verify the mutation would be called with correct transformation
       const expectedPayload = {
         credit_market_contact_name: testData.contactName,
@@ -242,45 +282,55 @@ describe('CreditMarketDetailsCard', () => {
         credits_to_sell: 150,
         display_in_credit_market: testData.displayInMarket
       }
-      
+
       expect(expectedPayload.credits_to_sell).toBe(150)
     })
 
-    it('handles seller vs non-seller credits logic', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+    test('handles seller vs non-seller credits logic', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       // Test credits to sell logic for sellers
       const sellerData = { isSeller: true, creditsToSell: '100' }
       const expectedSellerCredits = parseInt(sellerData.creditsToSell, 10) || 0
       expect(expectedSellerCredits).toBe(100)
-      
+
       // Test credits to sell logic for non-sellers (should be 0)
       const nonSellerData = { isSeller: false, creditsToSell: '100' }
-      const expectedNonSellerCredits = nonSellerData.isSeller ? parseInt(nonSellerData.creditsToSell, 10) || 0 : 0
+      const expectedNonSellerCredits = nonSellerData.isSeller
+        ? parseInt(nonSellerData.creditsToSell, 10) || 0
+        : 0
       expect(expectedNonSellerCredits).toBe(0)
     })
 
-    it('handles invalid credits input', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+    test('handles invalid credits input', ({ render, theme, i18n }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       // Test invalid input handling
       const invalidCredits = parseInt('invalid', 10) || 0
       expect(invalidCredits).toBe(0)
-      
+
       const emptyCredits = parseInt('', 10) || 0
       expect(emptyCredits).toBe(0)
-      
+
       const validCredits = parseInt('123', 10) || 0
       expect(validCredits).toBe(123)
     })
   })
 
   describe('Admin variant handling', () => {
-    it('initializes admin mutation when organizationId is provided', () => {
-      render(
-        <CreditMarketDetailsCard organizationId={5} variant="admin" />,
-        { wrapper }
-      )
+    test('initializes admin mutation when organizationId is provided', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard organizationId={5} variant="admin" />, [
+        theme,
+        i18n
+      ])
 
       expect(useUpdateOrganizationCreditMarket).toHaveBeenCalledWith(
         5,
@@ -291,40 +341,50 @@ describe('CreditMarketDetailsCard', () => {
       )
     })
 
-    it('renders selected organization details when provided', () => {
-      render(
-        <CreditMarketDetailsCard
-          organizationId={5}
-          variant="admin"
-        />,
-        { wrapper }
-      )
+    test('renders selected organization details when provided', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard organizationId={5} variant="admin" />, [
+        theme,
+        i18n
+      ])
 
-      expect(
-        screen.getByText(/Selected organization/i)
-      ).toBeInTheDocument()
-      expect(
-        screen.queryByText(/Clear selection/i)
-      ).not.toBeInTheDocument()
+      expect(screen.getByText(/Selected organization/i)).toBeInTheDocument()
+      expect(screen.queryByText(/Clear selection/i)).not.toBeInTheDocument()
     })
   })
 
   describe('Data Display', () => {
-    it('displays contact info with fallbacks to user data', () => {
-      const { creditMarketContactName, creditMarketContactEmail, creditMarketContactPhone, ...orgDataWithoutCreditMarketContact } = mockOrganizationData
+    test('displays contact info with fallbacks to user data', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      const {
+        creditMarketContactName,
+        creditMarketContactEmail,
+        creditMarketContactPhone,
+        ...orgDataWithoutCreditMarketContact
+      } = mockOrganizationData
       vi.mocked(useOrganization).mockReturnValue({
         data: orgDataWithoutCreditMarketContact,
         isLoading: false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.getByText('org@example.com')).toBeInTheDocument()
       expect(screen.getByText('(555) 567-8')).toBeInTheDocument()
     })
 
-    it('displays "Not available" when no contact info exists', () => {
+    test('displays "Not available" when no contact info exists', ({
+      render,
+      theme,
+      i18n
+    }) => {
       vi.mocked(useOrganization).mockReturnValue({
         data: {
           ...mockOrganizationData,
@@ -342,12 +402,14 @@ describe('CreditMarketDetailsCard', () => {
         hasAnyRole: mockHasAnyRole
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
-      expect(screen.getAllByText(/not available/i).length).toBeGreaterThanOrEqual(3)
+      expect(
+        screen.getAllByText(/not available/i).length
+      ).toBeGreaterThanOrEqual(3)
     })
 
-    it('displays seller role only', () => {
+    test('displays seller role only', ({ render, theme, i18n }) => {
       vi.mocked(useOrganization).mockReturnValue({
         data: {
           ...mockOrganizationData,
@@ -357,12 +419,12 @@ describe('CreditMarketDetailsCard', () => {
         isLoading: false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
       expect(screen.getByText(/seller/i)).toBeInTheDocument()
     })
 
-    it('displays buyer role only', () => {
+    test('displays buyer role only', ({ render, theme, i18n }) => {
       vi.mocked(useOrganization).mockReturnValue({
         data: {
           ...mockOrganizationData,
@@ -372,12 +434,12 @@ describe('CreditMarketDetailsCard', () => {
         isLoading: false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
       expect(screen.getByText(/buyer/i)).toBeInTheDocument()
     })
 
-    it('displays both seller and buyer roles', () => {
+    test('displays both seller and buyer roles', ({ render, theme, i18n }) => {
       vi.mocked(useOrganization).mockReturnValue({
         data: {
           ...mockOrganizationData,
@@ -387,12 +449,16 @@ describe('CreditMarketDetailsCard', () => {
         isLoading: false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
       expect(screen.getByText(/seller, buyer/i)).toBeInTheDocument()
     })
 
-    it('displays "Not available" when no roles selected', () => {
+    test('displays "Not available" when no roles selected', ({
+      render,
+      theme,
+      i18n
+    }) => {
       vi.mocked(useOrganization).mockReturnValue({
         data: {
           ...mockOrganizationData,
@@ -402,50 +468,74 @@ describe('CreditMarketDetailsCard', () => {
         isLoading: false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
       expect(screen.getByText(/not available/i)).toBeInTheDocument()
     })
 
-    it('shows registration warning for unregistered organizations', () => {
+    test('shows registration warning for unregistered organizations', ({
+      render,
+      theme,
+      i18n
+    }) => {
       vi.mocked(useOrganization).mockReturnValue({
         data: { ...mockOrganizationData, orgStatus: { status: 'Active' } },
         isLoading: false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
-      expect(screen.getByText(/must be registered for transfers/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/must be registered for transfers/i)
+      ).toBeInTheDocument()
     })
 
-    it('hides registration warning for registered organizations', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
+    test('hides registration warning for registered organizations', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
-      expect(screen.queryByText(/must be registered for transfers/i)).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/must be registered for transfers/i)
+      ).not.toBeInTheDocument()
     })
 
-    it('displays yes for display in market when true', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
+    test('displays yes for display in market when true', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
       expect(screen.getByText(/yes/i)).toBeInTheDocument()
     })
 
-    it('displays no for display in market when false', () => {
+    test('displays no for display in market when false', ({
+      render,
+      theme,
+      i18n
+    }) => {
       vi.mocked(useOrganization).mockReturnValue({
         data: { ...mockOrganizationData, displayInCreditMarket: false },
         isLoading: false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
       expect(screen.getByText(/no/i)).toBeInTheDocument()
     })
   })
 
   describe('Hooks Integration', () => {
-    it('uses organization hook with correct parameters', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+    test('uses organization hook with correct parameters', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       expect(vi.mocked(useOrganization)).toHaveBeenCalledWith(1, {
         enabled: true,
         staleTime: 0,
@@ -453,9 +543,9 @@ describe('CreditMarketDetailsCard', () => {
       })
     })
 
-    it('initializes mutation hook correctly', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+    test('initializes mutation hook correctly', ({ render, theme, i18n }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       expect(vi.mocked(useUpdateCurrentOrgCreditMarket)).toHaveBeenCalledWith(
         expect.objectContaining({
           clearCache: true,
@@ -466,98 +556,146 @@ describe('CreditMarketDetailsCard', () => {
       )
     })
 
-    it('uses query client for cache management', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
-      
+    test('uses query client for cache management', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
+
       expect(vi.mocked(useQueryClient)).toHaveBeenCalled()
     })
   })
 
   describe('Edge Cases and Error Handling', () => {
-    it('handles missing organization data gracefully', () => {
-      vi.mocked(useOrganization).mockReturnValue({ data: null, isLoading: false })
+    test('handles missing organization data gracefully', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      vi.mocked(useOrganization).mockReturnValue({
+        data: null,
+        isLoading: false
+      })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
-      expect(screen.getByText('Credit trading market details')).toBeInTheDocument()
+      expect(
+        screen.getByText('Credit trading market details')
+      ).toBeInTheDocument()
     })
 
-    it('handles form reset when organization data changes', () => {
-      render(<CreditMarketDetailsCard />, { wrapper })
+    test('handles form reset when organization data changes', ({
+      render,
+      theme,
+      i18n
+    }) => {
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
       expect(mockReset).toHaveBeenCalled()
     })
 
-    it('handles successful mutation with query refetch and callback', async () => {
+    test('handles successful mutation with query refetch and callback', async ({
+      render,
+      theme,
+      i18n
+    }) => {
       const onSuccess = vi.fn()
       const onSaveSuccess = vi.fn()
-      vi.mocked(useUpdateCurrentOrgCreditMarket).mockImplementation(({ onSuccess: callback }) => {
-        onSuccess.mockImplementation(callback)
-        return mockUpdateMutation
-      })
+      vi.mocked(useUpdateCurrentOrgCreditMarket).mockImplementation(
+        ({ onSuccess: callback }) => {
+          onSuccess.mockImplementation(callback)
+          return mockUpdateMutation
+        }
+      )
 
-      render(<CreditMarketDetailsCard onSaveSuccess={onSaveSuccess} />, {
-        wrapper
-      })
+      render(<CreditMarketDetailsCard onSaveSuccess={onSaveSuccess} />, [
+        theme,
+        i18n
+      ])
 
       await act(async () => {
         onSuccess()
       })
 
-      expect(mockQueryClient.refetchQueries).toHaveBeenCalledWith(['organization', 1])
+      expect(mockQueryClient.refetchQueries).toHaveBeenCalledWith([
+        'organization',
+        1
+      ])
       expect(onSaveSuccess).toHaveBeenCalled()
     })
 
-    it('handles mutation error gracefully', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    test('handles mutation error gracefully', async ({
+      render,
+      theme,
+      i18n
+    }) => {
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {})
       const onError = vi.fn()
-      
-      vi.mocked(useUpdateCurrentOrgCreditMarket).mockImplementation(({ onError: callback }) => {
-        onError.mockImplementation(callback)
-        return mockUpdateMutation
-      })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      vi.mocked(useUpdateCurrentOrgCreditMarket).mockImplementation(
+        ({ onError: callback }) => {
+          onError.mockImplementation(callback)
+          return mockUpdateMutation
+        }
+      )
+
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
       const error = new Error('Update failed')
       onError(error)
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to update credit market details:', error)
-      
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to update credit market details:',
+        error
+      )
+
       consoleErrorSpy.mockRestore()
     })
 
-    it('handles missing user name gracefully', () => {
+    test('handles missing user name gracefully', ({ render, theme, i18n }) => {
       vi.mocked(useCurrentUser).mockReturnValue({
         data: { ...mockCurrentUser, firstName: '', lastName: '' },
         hasAnyRole: mockHasAnyRole
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
-      expect(screen.getByText('Credit trading market details')).toBeInTheDocument()
+      expect(
+        screen.getByText('Credit trading market details')
+      ).toBeInTheDocument()
     })
 
-    it('handles available balance fallback', () => {
+    test('handles available balance fallback', ({ render, theme, i18n }) => {
       vi.mocked(useOrganization).mockReturnValue({
-        data: { ...mockOrganizationData, totalBalance: null, total_balance: 300 },
+        data: {
+          ...mockOrganizationData,
+          totalBalance: null,
+          total_balance: 300
+        },
         isLoading: false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
-      expect(screen.getByText('Credit trading market details')).toBeInTheDocument()
+      expect(
+        screen.getByText('Credit trading market details')
+      ).toBeInTheDocument()
     })
 
-    it('handles zero available balance', () => {
+    test('handles zero available balance', ({ render, theme, i18n }) => {
       vi.mocked(useOrganization).mockReturnValue({
         data: { ...mockOrganizationData, totalBalance: 0 },
         isLoading: false
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard />, [theme, i18n])
 
-      expect(screen.getByText('Credit trading market details')).toBeInTheDocument()
+      expect(
+        screen.getByText('Credit trading market details')
+      ).toBeInTheDocument()
     })
   })
 })

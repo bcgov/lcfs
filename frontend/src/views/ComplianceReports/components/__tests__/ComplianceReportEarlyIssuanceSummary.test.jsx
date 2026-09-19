@@ -4,17 +4,14 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import ComplianceReportEarlyIssuanceSummary from '../ComplianceReportEarlyIssuanceSummary'
 import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import { useTranslation } from 'react-i18next'
-import { wrapper } from '@/tests/utils/wrapper'
 
 // Mock the custom hooks and components
 vi.mock('@/hooks/useComplianceReports')
 vi.mock('react-i18next')
-vi.mock('../SummaryTable', () => ({ 
+vi.mock('../SummaryTable', () => ({
   default: (props) => (
-    <div data-test={props['data-test']}>
-      SummaryTable: {props.title}
-    </div>
-  ) 
+    <div data-test={props['data-test']}>SummaryTable: {props.title}</div>
+  )
 }))
 vi.mock('../_schema', () => ({
   earlyIssuanceColumns: vi.fn((t) => ['column1', 'column2'])
@@ -29,21 +26,25 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Accordion: ({ children }) => <div data-test="accordion">{children}</div>,
-  AccordionSummary: ({ children, expandIcon }) => (
+vi.mock('@mui/material/Accordion', () => ({
+  default: ({ children }) => <div data-test="accordion">{children}</div>
+}))
+
+vi.mock('@mui/material/AccordionSummary', () => ({
+  default: ({ children, expandIcon }) => (
     <div data-test="accordion-summary">
       {children}
       {expandIcon && <span data-test="expand-icon">{expandIcon}</span>}
     </div>
-  ),
-  AccordionDetails: ({ children }) => (
-    <div data-test="accordion-details">{children}</div>
   )
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  ExpandMore: (props) => <div data-test="expand-more-icon">ExpandMore</div>
+vi.mock('@mui/material/AccordionDetails', () => ({
+  default: ({ children }) => <div data-test="accordion-details">{children}</div>
+}))
+
+vi.mock('@mui/icons-material/ExpandMore', () => ({
+  default: (props) => <div data-test="expand-more-icon">ExpandMore</div>
 }))
 
 describe('ComplianceReportEarlyIssuanceSummary', () => {
@@ -80,13 +81,12 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: true
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />)
 
     expect(screen.getByTestId('loading')).toBeInTheDocument()
-    expect(screen.getByText('Loading compliance report summary...')).toBeInTheDocument()
+    expect(
+      screen.getByText('Loading compliance report summary...')
+    ).toBeInTheDocument()
     expect(screen.queryByTestId('accordion')).not.toBeInTheDocument()
   })
 
@@ -96,10 +96,7 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />)
 
     expect(screen.queryByTestId('loading')).not.toBeInTheDocument()
     expect(screen.getByTestId('accordion')).toBeInTheDocument()
@@ -113,10 +110,7 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />)
 
     expect(useTranslation).toHaveBeenCalledWith(['report'])
   })
@@ -127,10 +121,7 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />)
 
     expect(useGetComplianceReportSummary).toHaveBeenCalledWith(123)
   })
@@ -141,10 +132,7 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={undefined} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={undefined} />)
 
     expect(useGetComplianceReportSummary).toHaveBeenCalledWith(undefined)
     expect(screen.getByTestId('accordion')).toBeInTheDocument()
@@ -156,10 +144,7 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={null} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={null} />)
 
     expect(useGetComplianceReportSummary).toHaveBeenCalledWith(undefined)
     expect(screen.getByTestId('accordion')).toBeInTheDocument()
@@ -171,10 +156,7 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />)
 
     expect(screen.getByTestId('accordion')).toBeInTheDocument()
     expect(screen.getByTestId('accordion-summary')).toBeInTheDocument()
@@ -187,10 +169,7 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />)
 
     expect(screen.getByTestId('expand-more-icon')).toBeInTheDocument()
     expect(screen.getByText('Summary & declaration')).toBeInTheDocument()
@@ -202,10 +181,7 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />)
 
     expect(screen.getByTestId('bc-typography')).toBeInTheDocument()
     expect(screen.getByText('Summary & declaration')).toBeInTheDocument()
@@ -217,13 +193,12 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />)
 
     expect(screen.getByTestId('early-issuance-summary')).toBeInTheDocument()
-    expect(screen.getByText('SummaryTable: Non-compliance penalty summary')).toBeInTheDocument()
+    expect(
+      screen.getByText('SummaryTable: Non-compliance penalty summary')
+    ).toBeInTheDocument()
   })
 
   it('renders SummaryTable when data is available', () => {
@@ -232,10 +207,7 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />)
 
     expect(screen.getByTestId('early-issuance-summary')).toBeInTheDocument()
   })
@@ -246,10 +218,7 @@ describe('ComplianceReportEarlyIssuanceSummary', () => {
       isLoading: false
     })
 
-    render(
-      <ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />,
-      { wrapper }
-    )
+    render(<ComplianceReportEarlyIssuanceSummary reportData={mockReportData} />)
 
     expect(screen.getByTestId('early-issuance-summary')).toBeInTheDocument()
   })

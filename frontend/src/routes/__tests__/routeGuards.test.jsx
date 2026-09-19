@@ -1,12 +1,11 @@
 import React, { createElement } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
 import { router } from '../index'
 import { useKeycloak } from '@react-keycloak/web'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { testQueryClient } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock RequireAuth to simulate authentication behavior
 vi.mock('@/components/RequireAuth', () => ({
@@ -15,15 +14,23 @@ vi.mock('@/components/RequireAuth', () => ({
     const { useCurrentUser } = require('@/hooks/useCurrentUser')
     const { keycloak } = useKeycloak()
     const { isError, error } = useCurrentUser()
-    
+
     if (isError) {
-      return createElement('div', {'data-test': 'user-error'}, `User Error: ${error?.response?.data?.detail || 'Unknown error'}`)
+      return createElement(
+        'div',
+        { 'data-test': 'user-error' },
+        `User Error: ${error?.response?.data?.detail || 'Unknown error'}`
+      )
     }
-    
+
     if (!keycloak || !keycloak.authenticated) {
-      return createElement('div', {'data-test': 'redirect-to-login'}, `Redirecting to ${redirectTo}`)
+      return createElement(
+        'div',
+        { 'data-test': 'redirect-to-login' },
+        `Redirecting to ${redirectTo}`
+      )
     }
-    
+
     // Check for redirect from sessionStorage
     const redirectTarget = sessionStorage.getItem('redirect')
     if (keycloak.authenticated && redirectTarget) {
@@ -31,28 +38,35 @@ vi.mock('@/components/RequireAuth', () => ({
         const parsedRedirect = JSON.parse(redirectTarget)
         const { timestamp, pathname } = parsedRedirect
         sessionStorage.removeItem('redirect')
-        
+
         const REDIRECT_TIMER = 60 * 1000 // 1 minute
         if (timestamp + REDIRECT_TIMER > Date.now()) {
-          return createElement('div', {'data-test': 'redirect-preserved'}, `Redirecting to ${pathname}`)
+          return createElement(
+            'div',
+            { 'data-test': 'redirect-preserved' },
+            `Redirecting to ${pathname}`
+          )
         }
       } catch (e) {
         // Handle malformed JSON gracefully
         sessionStorage.removeItem('redirect')
       }
     }
-    
+
     return children
   }
 }))
 
-// Mock all components to focus on routing logic  
+// Mock all components to focus on routing logic
 vi.mock('@/layouts/MainLayout', () => {
   const { Outlet } = require('react-router-dom')
   return {
-    MainLayout: () => createElement('div', {'data-test': 'main-layout'}, 
-      createElement(Outlet)
-    )
+    MainLayout: () =>
+      createElement(
+        'div',
+        { 'data-test': 'main-layout' },
+        createElement(Outlet)
+      )
   }
 })
 
@@ -60,7 +74,11 @@ vi.mock('@/layouts/PublicLayout', () => {
   const { Outlet } = require('react-router-dom')
   return {
     __esModule: true,
-    default: () => <div data-test="public-layout"><Outlet /></div>
+    default: () => (
+      <div data-test="public-layout">
+        <Outlet />
+      </div>
+    )
   }
 })
 
@@ -78,14 +96,22 @@ vi.mock('@/components/Unauthorized', () => ({
 
 vi.mock('@/views/Organizations', () => ({
   Organizations: () => <div data-test="organizations">Organizations</div>,
-  AddEditOrg: () => <div data-test="add-edit-organization">Add/Edit Organization</div>,
-  OrganizationView: () => <div data-test="view-organization">View Organization</div>
+  AddEditOrg: () => (
+    <div data-test="add-edit-organization">Add/Edit Organization</div>
+  ),
+  OrganizationView: () => (
+    <div data-test="view-organization">View Organization</div>
+  )
 }))
 
 vi.mock('@/views/Transactions', () => ({
   Transactions: () => <div data-test="transactions">Transactions</div>,
-  AddEditViewTransaction: () => <div data-test="add-edit-view-transaction">Add/Edit/View Transaction</div>,
-  ViewOrgTransaction: () => <div data-test="view-org-transaction">View Org Transaction</div>
+  AddEditViewTransaction: () => (
+    <div data-test="add-edit-view-transaction">Add/Edit/View Transaction</div>
+  ),
+  ViewOrgTransaction: () => (
+    <div data-test="view-org-transaction">View Org Transaction</div>
+  )
 }))
 
 vi.mock('@/views/Admin/AdminMenu', () => ({
@@ -105,23 +131,26 @@ vi.mock('@/contexts/AuthorizationContext', () => ({
   })
 }))
 
-
 // Mock Role component for role-based access control
 vi.mock('@/components/Role', () => ({
   Role: ({ allowedRoles, children, fallback }) => {
     const { keycloak } = useKeycloak()
     const mockRoles = keycloak.realmAccess?.roles || []
-    
-    const hasRequiredRole = allowedRoles?.some(role => mockRoles.includes(role))
-    
+
+    const hasRequiredRole = allowedRoles?.some((role) =>
+      mockRoles.includes(role)
+    )
+
     if (!hasRequiredRole && fallback) {
       return fallback
     }
-    
+
     if (!hasRequiredRole) {
-      return <div data-test="role-forbidden">Access Forbidden - Missing Role</div>
+      return (
+        <div data-test="role-forbidden">Access Forbidden - Missing Role</div>
+      )
     }
-    
+
     return <div data-test="role-wrapper">{children}</div>
   }
 }))
@@ -134,13 +163,8 @@ const createTestRouter = (initialEntries = ['/']) => {
 }
 
 // Helper function to render router with providers
-const renderRouterWithProviders = (testRouter) => {
-  return render(
-    <QueryClientProvider client={testQueryClient}>
-      <RouterProvider router={testRouter} />
-    </QueryClientProvider>
-  )
-}
+const renderRouterWithProviders = (testRouter, render, query) =>
+  render(<RouterProvider router={testRouter} />, [query])
 
 describe('Route Guards and Authentication', () => {
   const mockKeycloak = {
@@ -167,10 +191,10 @@ describe('Route Guards and Authentication', () => {
       keycloak: mockKeycloak
     })
     useCurrentUser.mockReturnValue(mockCurrentUser)
-    
+
     // Clear session storage
     sessionStorage.clear()
-    
+
     // Reset mock state
     mockKeycloak.authenticated = false
     mockKeycloak.realmAccess.roles = []
@@ -187,9 +211,12 @@ describe('Route Guards and Authentication', () => {
       mockKeycloak.authenticated = false
     })
 
-    it('should render dashboard route structure for unauthenticated user', async () => {
+    test('should render dashboard route structure for unauthenticated user', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -197,9 +224,12 @@ describe('Route Guards and Authentication', () => {
       })
     })
 
-    it('should render organizations route structure for unauthenticated user', async () => {
+    test('should render organizations route structure for unauthenticated user', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/organizations'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -207,9 +237,12 @@ describe('Route Guards and Authentication', () => {
       })
     })
 
-    it('should render admin route structure for unauthenticated user', async () => {
+    test('should render admin route structure for unauthenticated user', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/admin/users'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -217,9 +250,12 @@ describe('Route Guards and Authentication', () => {
       })
     })
 
-    it('should render transactions route structure for unauthenticated user', async () => {
+    test('should render transactions route structure for unauthenticated user', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/transactions'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -227,25 +263,35 @@ describe('Route Guards and Authentication', () => {
       })
     })
 
-    it('should allow access to public routes without authentication', async () => {
+    test('should allow access to public routes without authentication', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/login'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('public-layout')).toBeInTheDocument()
         expect(screen.getByTestId('login')).toBeInTheDocument()
-        expect(screen.queryByTestId('redirect-to-login')).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('redirect-to-login')
+        ).not.toBeInTheDocument()
       })
     })
 
-    it('should allow access to unauthorized page without authentication', async () => {
+    test('should allow access to unauthorized page without authentication', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/unauthorized'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('public-layout')).toBeInTheDocument()
         expect(screen.getByTestId('unauthorized')).toBeInTheDocument()
-        expect(screen.queryByTestId('redirect-to-login')).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('redirect-to-login')
+        ).not.toBeInTheDocument()
       })
     })
   })
@@ -255,49 +301,69 @@ describe('Route Guards and Authentication', () => {
       mockKeycloak.authenticated = true
     })
 
-    it('should allow authenticated user to access dashboard', async () => {
+    test('should allow authenticated user to access dashboard', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
         expect(screen.getByTestId('dashboard')).toBeInTheDocument()
-        expect(screen.queryByTestId('redirect-to-login')).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('redirect-to-login')
+        ).not.toBeInTheDocument()
       })
     })
 
-    it('should allow authenticated user to access organizations', async () => {
+    test('should allow authenticated user to access organizations', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/organizations'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
         expect(screen.getByTestId('organizations')).toBeInTheDocument()
-        expect(screen.queryByTestId('redirect-to-login')).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('redirect-to-login')
+        ).not.toBeInTheDocument()
       })
     })
 
-    it('should allow authenticated user to access transactions', async () => {
+    test('should allow authenticated user to access transactions', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/transactions'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
         expect(screen.getByTestId('transactions')).toBeInTheDocument()
-        expect(screen.queryByTestId('redirect-to-login')).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('redirect-to-login')
+        ).not.toBeInTheDocument()
       })
     })
 
-    it('should allow authenticated user to access admin with proper roles', async () => {
+    test('should allow authenticated user to access admin with proper roles', async ({
+      render,
+      query
+    }) => {
       mockKeycloak.realmAccess.roles = ['admin']
-      
+
       const testRouter = createTestRouter(['/admin/users'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
         expect(screen.getByTestId('admin-menu')).toBeInTheDocument()
-        expect(screen.queryByTestId('redirect-to-login')).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('redirect-to-login')
+        ).not.toBeInTheDocument()
       })
     })
   })
@@ -307,9 +373,12 @@ describe('Route Guards and Authentication', () => {
       mockKeycloak.authenticated = true
     })
 
-    it('should render route components when authenticated', async () => {
+    test('should render route components when authenticated', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -317,9 +386,12 @@ describe('Route Guards and Authentication', () => {
       })
     })
 
-    it('should handle complex route navigation', async () => {
+    test('should handle complex route navigation', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/organizations'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -333,9 +405,12 @@ describe('Route Guards and Authentication', () => {
       mockKeycloak.authenticated = true
     })
 
-    it('should handle session storage operations', async () => {
+    test('should handle session storage operations', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -343,11 +418,14 @@ describe('Route Guards and Authentication', () => {
       })
     })
 
-    it('should render route when session storage is clear', async () => {
+    test('should render route when session storage is clear', async ({
+      render,
+      query
+    }) => {
       sessionStorage.clear()
 
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -355,7 +433,10 @@ describe('Route Guards and Authentication', () => {
       })
     })
 
-    it('should handle navigation with session data', async () => {
+    test('should handle navigation with session data', async ({
+      render,
+      query
+    }) => {
       const redirectData = {
         pathname: '/organizations',
         timestamp: Date.now()
@@ -363,7 +444,7 @@ describe('Route Guards and Authentication', () => {
       sessionStorage.setItem('redirect', JSON.stringify(redirectData))
 
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -377,16 +458,12 @@ describe('Route Guards and Authentication', () => {
       mockKeycloak.authenticated = true
     })
 
-    it('should allow access with correct roles', async () => {
+    test('should allow access with correct roles', async ({ render }) => {
       mockKeycloak.realmAccess.roles = ['admin', 'user']
 
       // This would require actual Role component usage in routes
       // For now, we're testing the mock behavior
-      const TestComponent = () => (
-        <div data-test="role-test">
-          Role Test
-        </div>
-      )
+      const TestComponent = () => <div data-test="role-test">Role Test</div>
 
       render(
         <div>
@@ -399,7 +476,7 @@ describe('Route Guards and Authentication', () => {
       })
     })
 
-    it('should deny access without required roles', async () => {
+    test('should deny access without required roles', async () => {
       mockKeycloak.realmAccess.roles = ['user'] // missing 'admin' role
 
       // This test would be more meaningful with actual Role usage in routes
@@ -408,13 +485,16 @@ describe('Route Guards and Authentication', () => {
   })
 
   describe('Edge Cases', () => {
-    it('should handle null keycloak gracefully', async () => {
+    test('should handle null keycloak gracefully', async ({
+      render,
+      query
+    }) => {
       useKeycloak.mockReturnValue({
         keycloak: null
       })
 
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       // Should render the route structure
       await waitFor(() => {
@@ -422,12 +502,15 @@ describe('Route Guards and Authentication', () => {
       })
     })
 
-    it('should handle malformed redirect data in sessionStorage', async () => {
+    test('should handle malformed redirect data in sessionStorage', async ({
+      render,
+      query
+    }) => {
       mockKeycloak.authenticated = true
       sessionStorage.setItem('redirect', 'invalid-json')
 
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       // Should not crash and should load the dashboard normally
       await waitFor(() => {
@@ -436,12 +519,15 @@ describe('Route Guards and Authentication', () => {
       })
     })
 
-    it('should handle missing realm access in Keycloak', async () => {
+    test('should handle missing realm access in Keycloak', async ({
+      render,
+      query
+    }) => {
       mockKeycloak.authenticated = true
       mockKeycloak.realmAccess = null
 
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()

@@ -1,6 +1,7 @@
 import BCBox from '@/components/BCBox'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
-import { Divider, Toolbar } from '@mui/material'
+import Divider from '@mui/material/Divider'
+import Toolbar from '@mui/material/Toolbar'
 import React from 'react'
 import type {
   NavbarRoute,

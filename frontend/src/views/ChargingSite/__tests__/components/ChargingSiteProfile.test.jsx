@@ -1,8 +1,8 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
 import { ChargingSiteProfile } from '../../components/ChargingSiteProfile'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -11,7 +11,9 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/utils/grid/cellRenderers', () => ({
-  createStatusRenderer: () => ({ data }) => <span>{data?.status?.status}</span>
+  createStatusRenderer:
+    () =>
+    ({ data }) => <span>{data?.status?.status}</span>
 }))
 
 vi.mock('@/components/Role', () => ({
@@ -50,57 +52,119 @@ describe('ChargingSiteProfile', () => {
     vi.clearAllMocks()
   })
 
-  it('renders site profile information', () => {
-    render(<ChargingSiteProfile data={mockData} />, { wrapper })
-    
+  test('renders site profile information', ({ render, theme, router }) => {
+    render(<ChargingSiteProfile data={mockData} />, [theme, router])
+
     expect(screen.getByText('Test Charging Site')).toBeInTheDocument()
     expect(screen.getByText('Draft')).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('CS001')).toBeInTheDocument()
   })
 
-  it('displays address information', () => {
-    render(<ChargingSiteProfile data={mockData} />, { wrapper })
+  test('displays address information', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ChargingSiteProfile data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
-    expect(screen.getByText('123 Main St, Vancouver, V6B 1A1')).toBeInTheDocument()
+    expect(
+      screen.getByText('123 Main St, Vancouver, V6B 1A1')
+    ).toBeInTheDocument()
   })
 
-  it('displays notes', () => {
-    render(<ChargingSiteProfile data={mockData} />, { wrapper })
-    
+  test('displays notes', ({ render, query, theme, localization, router }) => {
+    render(<ChargingSiteProfile data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+
     expect(screen.getByText('Test notes')).toBeInTheDocument()
   })
 
-  it('displays allocating organization name when available', () => {
-    render(<ChargingSiteProfile data={mockData} />, { wrapper })
+  test('displays allocating organization name when available', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ChargingSiteProfile data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Allocating Org Ltd')).toBeInTheDocument()
   })
 
-  it('falls back to allocatingOrganizationName string when nested object is absent', () => {
+  test('falls back to allocatingOrganizationName string when nested object is absent', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const dataWithNameOnly = {
       ...mockData,
       allocatingOrganization: null,
       allocatingOrganizationName: 'Fallback Org'
     }
-    render(<ChargingSiteProfile data={dataWithNameOnly} />, { wrapper })
+    render(<ChargingSiteProfile data={dataWithNameOnly} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Fallback Org')).toBeInTheDocument()
   })
 
-  it('displays N/A when allocating organization is null', () => {
+  test('displays N/A when allocating organization is null', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const dataWithoutAllocating = {
       ...mockData,
       allocatingOrganization: null,
       allocatingOrganizationName: null
     }
-    render(<ChargingSiteProfile data={dataWithoutAllocating} />, { wrapper })
+    render(<ChargingSiteProfile data={dataWithoutAllocating} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('N/A')).toBeInTheDocument()
   })
 
-  it('renders allocating organization below site address', () => {
-    render(<ChargingSiteProfile data={mockData} />, { wrapper })
+  test('renders allocating organization below site address', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ChargingSiteProfile data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const addressText = screen.getByText('123 Main St, Vancouver, V6B 1A1')
     const allocatingText = screen.getByText('Allocating Org Ltd')
@@ -111,13 +175,30 @@ describe('ChargingSiteProfile', () => {
     ).toBeTruthy()
   })
 
-  it('shows organization for government users', () => {
-    render(<ChargingSiteProfile data={mockData} />, { wrapper })
-    
+  test('shows organization for government users', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ChargingSiteProfile data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
   })
 
-  it('handles missing data gracefully', () => {
+  test('handles missing data gracefully', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const incompleteData = {
       siteName: 'Test Site',
       status: { status: 'Draft' },
@@ -125,9 +206,14 @@ describe('ChargingSiteProfile', () => {
       city: '',
       postalCode: ''
     }
-    
-    render(<ChargingSiteProfile data={incompleteData} />, { wrapper })
-    
+
+    render(<ChargingSiteProfile data={incompleteData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+
     expect(screen.getByText('Test Site')).toBeInTheDocument()
     expect(screen.getByText(', ,')).toBeInTheDocument()
   })
@@ -136,7 +222,13 @@ describe('ChargingSiteProfile', () => {
     const setValidatedLabel = 'buttons.setAsValidated'
     const submitUpdatesLabel = 'buttons.submitUpdates'
 
-    it('shows "Set as validated" when IDIR Analyst and status is Submitted', () => {
+    test('shows "Set as validated" when IDIR Analyst and status is Submitted', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const hasAnyRole = vi.fn((...roles) => roles.includes('Analyst'))
       const submittedData = { ...mockData, status: { status: 'Submitted' } }
       render(
@@ -147,13 +239,23 @@ describe('ChargingSiteProfile', () => {
           isIDIR={true}
           refetch={vi.fn()}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
-      expect(screen.getByRole('button', { name: setValidatedLabel })).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: submitUpdatesLabel })).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: setValidatedLabel })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: submitUpdatesLabel })
+      ).not.toBeInTheDocument()
     })
 
-    it('does not show "Set as validated" when IDIR but not Analyst and status is Submitted', () => {
+    test('does not show "Set as validated" when IDIR but not Analyst and status is Submitted', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const hasAnyRole = vi.fn((...roles) => !roles.includes('Analyst'))
       const submittedData = { ...mockData, status: { status: 'Submitted' } }
       render(
@@ -164,13 +266,23 @@ describe('ChargingSiteProfile', () => {
           isIDIR={true}
           refetch={vi.fn()}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
-      expect(screen.queryByRole('button', { name: setValidatedLabel })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: setValidatedLabel })
+      ).not.toBeInTheDocument()
     })
 
-    it('does not show "Submit updates" when BCeID Compliance and status is Draft', () => {
-      const hasAnyRole = vi.fn((...roles) => roles.includes('Compliance Reporting'))
+    test('does not show "Submit updates" when BCeID Compliance and status is Draft', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      const hasAnyRole = vi.fn((...roles) =>
+        roles.includes('Compliance Reporting')
+      )
       render(
         <ChargingSiteProfile
           data={mockData}
@@ -179,14 +291,26 @@ describe('ChargingSiteProfile', () => {
           isIDIR={false}
           refetch={vi.fn()}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
-      expect(screen.queryByRole('button', { name: submitUpdatesLabel })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: setValidatedLabel })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: submitUpdatesLabel })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: setValidatedLabel })
+      ).not.toBeInTheDocument()
     })
 
-    it('shows "Submit updates" when BCeID Compliance and status is Updated', () => {
-      const hasAnyRole = vi.fn((...roles) => roles.includes('Compliance Reporting'))
+    test('shows "Submit updates" when BCeID Compliance and status is Updated', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      const hasAnyRole = vi.fn((...roles) =>
+        roles.includes('Compliance Reporting')
+      )
       const updatedData = { ...mockData, status: { status: 'Updated' } }
       render(
         <ChargingSiteProfile
@@ -196,13 +320,23 @@ describe('ChargingSiteProfile', () => {
           isIDIR={false}
           refetch={vi.fn()}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
-      expect(screen.getByRole('button', { name: submitUpdatesLabel })).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: setValidatedLabel })).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: submitUpdatesLabel })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: setValidatedLabel })
+      ).not.toBeInTheDocument()
     })
 
-    it('does not show status buttons when status is Validated', () => {
+    test('does not show status buttons when status is Validated', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const validatedData = { ...mockData, status: { status: 'Validated' } }
       render(
         <ChargingSiteProfile
@@ -212,13 +346,23 @@ describe('ChargingSiteProfile', () => {
           isIDIR={true}
           refetch={vi.fn()}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
-      expect(screen.queryByRole('button', { name: setValidatedLabel })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: submitUpdatesLabel })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: setValidatedLabel })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: submitUpdatesLabel })
+      ).not.toBeInTheDocument()
     })
 
-    it('calls mutation with Validated when "Set as validated" is clicked', () => {
+    test('calls mutation with Validated when "Set as validated" is clicked', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const hasAnyRole = vi.fn((...roles) => roles.includes('Analyst'))
       const submittedData = { ...mockData, status: { status: 'Submitted' } }
       render(
@@ -229,7 +373,7 @@ describe('ChargingSiteProfile', () => {
           isIDIR={true}
           refetch={vi.fn()}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       fireEvent.click(screen.getByRole('button', { name: setValidatedLabel }))
       expect(mockMutate).toHaveBeenCalledWith(
@@ -238,8 +382,16 @@ describe('ChargingSiteProfile', () => {
       )
     })
 
-    it('calls mutation with Submitted when "Submit updates" is clicked', () => {
-      const hasAnyRole = vi.fn((...roles) => roles.includes('Compliance Reporting'))
+    test('calls mutation with Submitted when "Submit updates" is clicked', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      const hasAnyRole = vi.fn((...roles) =>
+        roles.includes('Compliance Reporting')
+      )
       const updatedData = { ...mockData, status: { status: 'Updated' } }
       render(
         <ChargingSiteProfile
@@ -249,7 +401,7 @@ describe('ChargingSiteProfile', () => {
           isIDIR={false}
           refetch={vi.fn()}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       fireEvent.click(screen.getByRole('button', { name: submitUpdatesLabel }))
       expect(mockMutate).toHaveBeenCalledWith(

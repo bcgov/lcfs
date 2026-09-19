@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import {
   useAdminAdjustment,
   useCreateUpdateAdminAdjustment
@@ -21,7 +21,10 @@ describe('useAdminAdjustment', () => {
     vi.clearAllMocks()
   })
 
-  it('should fetch admin adjustment successfully', async () => {
+  test('should fetch admin adjustment successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       adminAdjustmentId: 123,
       toOrganizationId: 456,
@@ -31,9 +34,7 @@ describe('useAdminAdjustment', () => {
     }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useAdminAdjustment(123), {
-      wrapper
-    })
+    const { result } = renderHook(() => useAdminAdjustment(123), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -43,9 +44,12 @@ describe('useAdminAdjustment', () => {
     expect(mockGet).toHaveBeenCalledWith('/admin-adjustments/123')
   })
 
-  it('should attempt to fetch when ID is missing but fail', async () => {
+  test('should attempt to fetch when ID is missing but fail', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockRejectedValue(new Error('Request failed'))
-    const { result } = renderHook(() => useAdminAdjustment(), { wrapper })
+    const { result } = renderHook(() => useAdminAdjustment(), [query])
 
     // Should attempt to call with undefined ID
     await waitFor(() => {
@@ -54,13 +58,13 @@ describe('useAdminAdjustment', () => {
     expect(mockGet).toHaveBeenCalledWith('/admin-adjustments/undefined')
   })
 
-  it('should handle API errors', async () => {
+  test('should handle API errors', async ({ renderHook, query }) => {
     const errorMessage = 'Failed to fetch admin adjustment'
     mockGet.mockRejectedValue(new Error(errorMessage))
 
     const { result } = renderHook(
       () => useAdminAdjustment(123, { retry: false }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => {
@@ -70,13 +74,13 @@ describe('useAdminAdjustment', () => {
     expect(result.current.error).toEqual(new Error(errorMessage))
   })
 
-  it('should pass through custom options', async () => {
+  test('should pass through custom options', async ({ renderHook, query }) => {
     const mockData = { adminAdjustmentId: 123 }
     mockGet.mockResolvedValue({ data: mockData })
 
     const { result } = renderHook(
       () => useAdminAdjustment(123, { staleTime: 5000 }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => {
@@ -103,16 +107,20 @@ describe('useCreateUpdateAdminAdjustment', () => {
     vi.clearAllMocks()
   })
 
-  it('should create admin adjustment successfully', async () => {
+  test('should create admin adjustment successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       adminAdjustmentId: 1,
       message: 'Admin adjustment created successfully'
     }
     mockPost.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useCreateUpdateAdminAdjustment(), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCreateUpdateAdminAdjustment(),
+      [query]
+    )
 
     const adjustmentData = {
       organizationId: 123,
@@ -131,16 +139,20 @@ describe('useCreateUpdateAdminAdjustment', () => {
     expect(result.current.data).toEqual({ data: mockData })
   })
 
-  it('should update admin adjustment successfully', async () => {
+  test('should update admin adjustment successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       adminAdjustmentId: 123,
       message: 'Admin adjustment updated successfully'
     }
     mockPut.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useCreateUpdateAdminAdjustment(123), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCreateUpdateAdminAdjustment(123),
+      [query]
+    )
 
     const adjustmentData = {
       organizationId: 456,
@@ -162,13 +174,17 @@ describe('useCreateUpdateAdminAdjustment', () => {
     expect(result.current.data).toEqual({ data: mockData })
   })
 
-  it('should handle API errors during admin adjustment creation', async () => {
+  test('should handle API errors during admin adjustment creation', async ({
+    renderHook,
+    query
+  }) => {
     const errorMessage = 'Failed to create admin adjustment'
     mockPost.mockRejectedValue(new Error(errorMessage))
 
-    const { result } = renderHook(() => useCreateUpdateAdminAdjustment(), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCreateUpdateAdminAdjustment(),
+      [query]
+    )
 
     const adjustmentData = {
       organizationId: 123,
@@ -186,10 +202,14 @@ describe('useCreateUpdateAdminAdjustment', () => {
     expect(result.current.error).toEqual(new Error(errorMessage))
   })
 
-  it('should return mutation object with correct properties', async () => {
-    const { result } = renderHook(() => useCreateUpdateAdminAdjustment(), {
-      wrapper
-    })
+  test('should return mutation object with correct properties', async ({
+    renderHook,
+    query
+  }) => {
+    const { result } = renderHook(
+      () => useCreateUpdateAdminAdjustment(),
+      [query]
+    )
 
     expect(result.current).toHaveProperty('mutate')
     expect(result.current).toHaveProperty('mutateAsync')
@@ -203,7 +223,10 @@ describe('useCreateUpdateAdminAdjustment', () => {
     expect(typeof result.current.mutateAsync).toBe('function')
   })
 
-  it('should handle successful response data correctly', async () => {
+  test('should handle successful response data correctly', async ({
+    renderHook,
+    query
+  }) => {
     const mockResponse = {
       adminAdjustmentId: 456,
       organizationId: 123,
@@ -215,9 +238,10 @@ describe('useCreateUpdateAdminAdjustment', () => {
     }
     mockPost.mockResolvedValue({ data: mockResponse })
 
-    const { result } = renderHook(() => useCreateUpdateAdminAdjustment(), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCreateUpdateAdminAdjustment(),
+      [query]
+    )
 
     const adjustmentData = {
       organizationId: 123,
@@ -237,13 +261,14 @@ describe('useCreateUpdateAdminAdjustment', () => {
     expect(result.current.data.data.adjustmentType).toBe('DEBIT')
   })
 
-  it('should handle empty adjustment data', async () => {
+  test('should handle empty adjustment data', async ({ renderHook, query }) => {
     const mockData = { message: 'Empty adjustment processed' }
     mockPost.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useCreateUpdateAdminAdjustment(), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCreateUpdateAdminAdjustment(),
+      [query]
+    )
 
     result.current.mutate({ data: {} })
 
@@ -255,7 +280,10 @@ describe('useCreateUpdateAdminAdjustment', () => {
     expect(result.current.data).toEqual({ data: mockData })
   })
 
-  it('should handle adjustment with all optional fields', async () => {
+  test('should handle adjustment with all optional fields', async ({
+    renderHook,
+    query
+  }) => {
     const fullAdjustmentData = {
       organizationId: 789,
       adjustmentType: 'CREDIT',
@@ -275,9 +303,10 @@ describe('useCreateUpdateAdminAdjustment', () => {
     }
     mockPost.mockResolvedValue({ data: mockResponse })
 
-    const { result } = renderHook(() => useCreateUpdateAdminAdjustment(), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCreateUpdateAdminAdjustment(),
+      [query]
+    )
 
     result.current.mutate({ data: fullAdjustmentData })
 

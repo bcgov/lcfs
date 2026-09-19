@@ -4,21 +4,19 @@ import {
   formatNumberWithCommas,
   numberFormatter
 } from '@/utils/formatters'
-import {
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Input,
-  InputAdornment,
-  CircularProgress,
-  Radio,
-  RadioGroup,
-  FormControlLabel
-} from '@mui/material'
+import Paper from '@mui/material/Paper'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import Input from '@mui/material/Input'
+import InputAdornment from '@mui/material/InputAdornment'
+import CircularProgress from '@mui/material/CircularProgress'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import FormControlLabel from '@mui/material/FormControlLabel'
 
 const SummaryTable = ({
   title,

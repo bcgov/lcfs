@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Box,
-  FormControlLabel,
-  FormHelperText,
-  OutlinedInput,
-  Radio,
-  RadioGroup,
-  Stack
-} from '@mui/material'
+import Box from '@mui/material/Box'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import FormHelperText from '@mui/material/FormHelperText'
+import OutlinedInput from '@mui/material/OutlinedInput'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import Stack from '@mui/material/Stack'
 
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'

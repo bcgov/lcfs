@@ -1,7 +1,10 @@
 import BCTypography from '@/components/BCTypography'
 import ROUTES from '@/routes/routes'
-import { ChevronLeft, ChevronRight } from '@mui/icons-material'
-import { Box, IconButton, Tooltip } from '@mui/material'
+import ChevronLeft from '@mui/icons-material/ChevronLeft'
+import ChevronRight from '@mui/icons-material/ChevronRight'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -87,7 +90,12 @@ export const ReportYearNavigator = ({
         variant="h5"
         component="span"
         data-test="report-year-navigator-current"
-        sx={{ minWidth: '3.5rem', textAlign: 'center', color: '#003366', fontWeight: 'bold' }}
+        sx={{
+          minWidth: '3.5rem',
+          textAlign: 'center',
+          color: '#003366',
+          fontWeight: 'bold'
+        }}
       >
         {currentCompliancePeriod}
       </BCTypography>
@@ -115,11 +123,17 @@ ReportYearNavigator.propTypes = {
     PropTypes.number
   ]).isRequired,
   previous: PropTypes.shape({
-    complianceReportId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    complianceReportId: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.number
+    ]),
     compliancePeriod: PropTypes.string
   }),
   next: PropTypes.shape({
-    complianceReportId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    complianceReportId: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.number
+    ]),
     compliancePeriod: PropTypes.string
   }),
   isLoading: PropTypes.bool

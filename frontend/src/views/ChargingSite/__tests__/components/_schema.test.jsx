@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
@@ -27,9 +26,39 @@ vi.mock('@/hooks/useChargingSite', () => ({
   useChargingSiteStatuses: vi.fn()
 }))
 
-vi.mock('@/components/BCDataGrid/FloatingFilters/BCSelectFloatingFilter', () => ({
-  default: vi.fn()
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor',
+  () => ({
+    AsyncSuggestionEditor: vi.fn()
+  })
+)
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor',
+  () => ({
+    AutocompleteCellEditor: vi.fn()
+  })
+)
+vi.mock(
+  '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter',
+  () => ({
+    BCSelectFloatingFilter: vi.fn()
+  })
+)
+vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
+  RequiredHeader: vi.fn()
 }))
+vi.mock('@/components/BCDataGrid/components/Editors/TextCellEditor', () => ({
+  TextCellEditor: vi.fn()
+}))
+vi.mock('@/components/BCDataGrid/components/Renderers/ActionsRenderer', () => ({
+  ActionsRenderer: vi.fn()
+}))
+vi.mock(
+  '@/components/BCDataGrid/components/Renderers/ValidationRenderer2',
+  () => ({
+    ValidationRenderer2: vi.fn()
+  })
+)
 
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
@@ -91,26 +120,40 @@ describe('chargingSiteColDefs', () => {
   })
 
   describe('editable fields', () => {
-    it.each(['siteName', 'streetAddress', 'city', 'postalCode', 'latitude', 'longitude', 'allocatingOrganization', 'notes'])(
-      'marks "%s" as editable',
-      (field) => {
-        const col = colDefs().find((c) => c.field === field)
-        expect(col?.editable).toBe(true)
-      }
-    )
+    it.each([
+      'siteName',
+      'streetAddress',
+      'city',
+      'postalCode',
+      'latitude',
+      'longitude',
+      'allocatingOrganization',
+      'notes'
+    ])('marks "%s" as editable', (field) => {
+      const col = colDefs().find((c) => c.field === field)
+      expect(col?.editable).toBe(true)
+    })
   })
 
   describe('postalCode valueSetter', () => {
     it('converts input to uppercase', () => {
       const col = colDefs().find((c) => c.field === 'postalCode')
       const data = {}
-      col.valueSetter({ newValue: 'v5k 1a1', data, colDef: { field: 'postalCode' } })
+      col.valueSetter({
+        newValue: 'v5k 1a1',
+        data,
+        colDef: { field: 'postalCode' }
+      })
       expect(data.postalCode).toBe('V5K 1A1')
     })
 
     it('returns true (AG-Grid expects truthy to accept the change)', () => {
       const col = colDefs().find((c) => c.field === 'postalCode')
-      const result = col.valueSetter({ newValue: 'a1b2c3', data: {}, colDef: { field: 'postalCode' } })
+      const result = col.valueSetter({
+        newValue: 'a1b2c3',
+        data: {},
+        colDef: { field: 'postalCode' }
+      })
       expect(result).toBe(true)
     })
   })
@@ -124,7 +167,12 @@ describe('chargingSiteColDefs', () => {
     })
 
     it('clears all address fields when newValue is empty string', () => {
-      data = { city: 'Victoria', postalCode: 'V8V1A1', latitude: 48.4, longitude: -123.3 }
+      data = {
+        city: 'Victoria',
+        postalCode: 'V8V1A1',
+        latitude: 48.4,
+        longitude: -123.3
+      }
       col.valueSetter({ newValue: '', data })
       expect(data.streetAddress).toBe('')
       expect(data.city).toBe('')
@@ -173,7 +221,9 @@ describe('chargingSiteColDefs', () => {
     })
 
     it('valueGetter returns allocatingOrganizationName', () => {
-      expect(col.valueGetter({ data: { allocatingOrganizationName: 'BC Hydro' } })).toBe('BC Hydro')
+      expect(
+        col.valueGetter({ data: { allocatingOrganizationName: 'BC Hydro' } })
+      ).toBe('BC Hydro')
     })
 
     it('valueGetter returns empty string when field is absent', () => {
@@ -182,7 +232,10 @@ describe('chargingSiteColDefs', () => {
 
     it('valueSetter with org object sets id and name', () => {
       const data = {}
-      col.valueSetter({ newValue: { organizationId: 5, name: 'FortisBC' }, data })
+      col.valueSetter({
+        newValue: { organizationId: 5, name: 'FortisBC' },
+        data
+      })
       expect(data.allocatingOrganizationId).toBe(5)
       expect(data.allocatingOrganizationName).toBe('FortisBC')
     })
@@ -219,48 +272,80 @@ describe('chargingSiteColDefs', () => {
 
 describe('chargingEquipmentColDefs', () => {
   describe('core fields always present', () => {
-    it.each(['status', 'siteName', 'registrationNumber', 'version', 'serialNumber', 'manufacturer', 'model', 'levelOfEquipment', 'ports', 'allocatingOrganizationName'])(
-      'always includes "%s"',
-      (field) => {
-        expect(fields(chargingEquipmentColDefs(mockT))).toContain(field)
-      }
-    )
+    it.each([
+      'status',
+      'siteName',
+      'registrationNumber',
+      'version',
+      'serialNumber',
+      'manufacturer',
+      'model',
+      'levelOfEquipment',
+      'ports',
+      'allocatingOrganizationName'
+    ])('always includes "%s"', (field) => {
+      expect(fields(chargingEquipmentColDefs(mockT))).toContain(field)
+    })
   })
 
   describe('showOrganizationColumn option', () => {
     it('excludes organizationName when false (BCeID)', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: false }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, {
+          showOrganizationColumn: false
+        })
+      )
       expect(f).not.toContain('organizationName')
     })
 
     it('includes organizationName when true (IDIR)', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: true }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: true })
+      )
       expect(f).toContain('organizationName')
     })
   })
 
   describe('allocatingOrganizationName column positioning', () => {
     it('immediately follows organizationName for IDIR users', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: true }))
-      expect(f.indexOf('allocatingOrganizationName')).toBe(f.indexOf('organizationName') + 1)
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: true })
+      )
+      expect(f.indexOf('allocatingOrganizationName')).toBe(
+        f.indexOf('organizationName') + 1
+      )
     })
 
     it('immediately follows siteName for BCeID users', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: false }))
-      expect(f.indexOf('allocatingOrganizationName')).toBe(f.indexOf('siteName') + 1)
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, {
+          showOrganizationColumn: false
+        })
+      )
+      expect(f.indexOf('allocatingOrganizationName')).toBe(
+        f.indexOf('siteName') + 1
+      )
     })
 
     it('appears before registrationNumber in both user modes', () => {
       for (const showOrg of [true, false]) {
-        const f = fields(chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: showOrg }))
-        expect(f.indexOf('allocatingOrganizationName')).toBeLessThan(f.indexOf('registrationNumber'))
+        const f = fields(
+          chargingEquipmentColDefs(mockT, false, {
+            showOrganizationColumn: showOrg
+          })
+        )
+        expect(f.indexOf('allocatingOrganizationName')).toBeLessThan(
+          f.indexOf('registrationNumber')
+        )
       }
     })
   })
 
   describe('allocatingOrganizationName valueGetter', () => {
     const allocCol = () =>
-      chargingEquipmentColDefs(mockT).find((c) => c.field === 'allocatingOrganizationName')
+      chargingEquipmentColDefs(mockT).find(
+        (c) => c.field === 'allocatingOrganizationName'
+      )
 
     it('prefers chargingSite.allocatingOrganizationName', () => {
       const result = allocCol().valueGetter({
@@ -286,19 +371,25 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('enableSelection option', () => {
     it('adds a leading __select__ checkbox column', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { enableSelection: true }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { enableSelection: true })
+      )
       expect(f[0]).toBe('__select__')
     })
 
     it('does not add checkbox column when false', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { enableSelection: false }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { enableSelection: false })
+      )
       expect(f).not.toContain('__select__')
     })
   })
 
   describe('historyMode option', () => {
     it('adds a leading history toggle column and compliance years column', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { historyMode: true }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { historyMode: true })
+      )
       expect(f[0]).toBe('__historyToggle__')
       expect(f).toContain('complianceYears')
     })
@@ -368,13 +459,17 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('showDateColumns option', () => {
     it('adds createdDate and updatedDate when true', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showDateColumns: true }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { showDateColumns: true })
+      )
       expect(f).toContain('createdDate')
       expect(f).toContain('updatedDate')
     })
 
     it('omits date columns when false', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showDateColumns: false }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { showDateColumns: false })
+      )
       expect(f).not.toContain('createdDate')
       expect(f).not.toContain('updatedDate')
     })
@@ -382,25 +477,33 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('showIntendedUsers option', () => {
     it('includes intendedUsers column when true', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showIntendedUsers: true }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { showIntendedUsers: true })
+      )
       expect(f).toContain('intendedUsers')
     })
 
     it('excludes intendedUsers column when false', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showIntendedUsers: false }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { showIntendedUsers: false })
+      )
       expect(f).not.toContain('intendedUsers')
     })
   })
 
   describe('showLocationFields option', () => {
     it('includes latitude and longitude when true (default)', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showLocationFields: true }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { showLocationFields: true })
+      )
       expect(f).toContain('latitude')
       expect(f).toContain('longitude')
     })
 
     it('excludes latitude and longitude when false', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showLocationFields: false }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { showLocationFields: false })
+      )
       expect(f).not.toContain('latitude')
       expect(f).not.toContain('longitude')
     })
@@ -408,25 +511,34 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('showNotes option', () => {
     it('includes notes column when true', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showNotes: true }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { showNotes: true })
+      )
       expect(f).toContain('notes')
     })
 
     it('excludes notes column when false (default)', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showNotes: false }))
+      const f = fields(
+        chargingEquipmentColDefs(mockT, false, { showNotes: false })
+      )
       expect(f).not.toContain('notes')
     })
   })
 
   describe('status column valueGetter', () => {
-    const statusCol = () => chargingEquipmentColDefs(mockT).find((c) => c.field === 'status')
+    const statusCol = () =>
+      chargingEquipmentColDefs(mockT).find((c) => c.field === 'status')
 
     it('reads nested status.status', () => {
-      expect(statusCol().valueGetter({ data: { status: { status: 'Validated' } } })).toBe('Validated')
+      expect(
+        statusCol().valueGetter({ data: { status: { status: 'Validated' } } })
+      ).toBe('Validated')
     })
 
     it('reads flat status string', () => {
-      expect(statusCol().valueGetter({ data: { status: 'Draft' } })).toBe('Draft')
+      expect(statusCol().valueGetter({ data: { status: 'Draft' } })).toBe(
+        'Draft'
+      )
     })
 
     it('returns empty string when status is absent', () => {
@@ -435,12 +547,15 @@ describe('chargingEquipmentColDefs', () => {
   })
 
   describe('siteName column valueGetter', () => {
-    const siteCol = () => chargingEquipmentColDefs(mockT).find((c) => c.field === 'siteName')
+    const siteCol = () =>
+      chargingEquipmentColDefs(mockT).find((c) => c.field === 'siteName')
 
     it('prefers chargingSite.siteName', () => {
-      expect(siteCol().valueGetter({
-        data: { chargingSite: { siteName: 'Alpha' }, siteName: 'Beta' }
-      })).toBe('Alpha')
+      expect(
+        siteCol().valueGetter({
+          data: { chargingSite: { siteName: 'Alpha' }, siteName: 'Beta' }
+        })
+      ).toBe('Alpha')
     })
 
     it('falls back to direct siteName', () => {
@@ -453,14 +568,23 @@ describe('chargingEquipmentColDefs', () => {
   })
 
   describe('levelOfEquipment column valueGetter', () => {
-    const levelCol = () => chargingEquipmentColDefs(mockT).find((c) => c.field === 'levelOfEquipment')
+    const levelCol = () =>
+      chargingEquipmentColDefs(mockT).find(
+        (c) => c.field === 'levelOfEquipment'
+      )
 
     it('reads nested levelOfEquipment.name', () => {
-      expect(levelCol().valueGetter({ data: { levelOfEquipment: { name: 'Level 2' } } })).toBe('Level 2')
+      expect(
+        levelCol().valueGetter({
+          data: { levelOfEquipment: { name: 'Level 2' } }
+        })
+      ).toBe('Level 2')
     })
 
     it('falls back to flat levelOfEquipmentName', () => {
-      expect(levelCol().valueGetter({ data: { levelOfEquipmentName: 'Level 1' } })).toBe('Level 1')
+      expect(
+        levelCol().valueGetter({ data: { levelOfEquipmentName: 'Level 1' } })
+      ).toBe('Level 1')
     })
 
     it('returns empty string when absent', () => {
@@ -528,7 +652,9 @@ describe('chargingEquipmentColDefs', () => {
 
     it('valueFormatter joins with ", "', () => {
       const col = intendedUsersCol()
-      expect(col.valueFormatter({ value: ['Fleet', 'Public'] })).toBe('Fleet, Public')
+      expect(col.valueFormatter({ value: ['Fleet', 'Public'] })).toBe(
+        'Fleet, Public'
+      )
     })
   })
 })
@@ -542,8 +668,15 @@ describe('indexChargingSitesColDefs', () => {
 
   describe('required fields', () => {
     it.each([
-      'status', 'organization', 'siteName', 'siteCode',
-      'streetAddress', 'city', 'postalCode', 'allocatingOrganization', 'notes'
+      'status',
+      'organization',
+      'siteName',
+      'siteCode',
+      'streetAddress',
+      'city',
+      'postalCode',
+      'allocatingOrganization',
+      'notes'
     ])('includes field "%s"', (field) => {
       expect(fields(indexChargingSitesColDefs(false, orgMap))).toContain(field)
     })
@@ -551,30 +684,40 @@ describe('indexChargingSitesColDefs', () => {
 
   describe('organization column visibility', () => {
     it('is hidden for BCeID (isIDIR=false)', () => {
-      const col = indexChargingSitesColDefs(false, orgMap).find((c) => c.field === 'organization')
+      const col = indexChargingSitesColDefs(false, orgMap).find(
+        (c) => c.field === 'organization'
+      )
       expect(col.hide).toBe(true)
     })
 
     it('is visible for IDIR (isIDIR=true)', () => {
-      const col = indexChargingSitesColDefs(true, orgMap).find((c) => c.field === 'organization')
+      const col = indexChargingSitesColDefs(true, orgMap).find(
+        (c) => c.field === 'organization'
+      )
       expect(col.hide).toBe(false)
     })
   })
 
   describe('organization column valueGetter', () => {
     const orgCol = (isIDIR = false) =>
-      indexChargingSitesColDefs(isIDIR, orgMap).find((c) => c.field === 'organization')
+      indexChargingSitesColDefs(isIDIR, orgMap).find(
+        (c) => c.field === 'organization'
+      )
 
     it('prefers organization.name from nested object', () => {
-      expect(orgCol().valueGetter({
-        data: { organization: { name: 'From Object' }, organizationId: 1 }
-      })).toBe('From Object')
+      expect(
+        orgCol().valueGetter({
+          data: { organization: { name: 'From Object' }, organizationId: 1 }
+        })
+      ).toBe('From Object')
     })
 
     it('falls back to orgIdToName lookup', () => {
-      expect(orgCol().valueGetter({
-        data: { organizationId: 2 }
-      })).toBe('Org Two')
+      expect(
+        orgCol().valueGetter({
+          data: { organizationId: 2 }
+        })
+      ).toBe('Org Two')
     })
 
     it('returns empty string when neither source is available', () => {
@@ -584,21 +727,27 @@ describe('indexChargingSitesColDefs', () => {
 
   describe('allocatingOrganization column valueGetter', () => {
     const allocCol = () =>
-      indexChargingSitesColDefs(false, orgMap).find((c) => c.field === 'allocatingOrganization')
+      indexChargingSitesColDefs(false, orgMap).find(
+        (c) => c.field === 'allocatingOrganization'
+      )
 
     it('prefers allocatingOrganization.name from nested object', () => {
-      expect(allocCol().valueGetter({
-        data: {
-          allocatingOrganization: { name: 'BC Hydro' },
-          allocatingOrganizationName: 'FortisBC'
-        }
-      })).toBe('BC Hydro')
+      expect(
+        allocCol().valueGetter({
+          data: {
+            allocatingOrganization: { name: 'BC Hydro' },
+            allocatingOrganizationName: 'FortisBC'
+          }
+        })
+      ).toBe('BC Hydro')
     })
 
     it('falls back to allocatingOrganizationName text field', () => {
-      expect(allocCol().valueGetter({
-        data: { allocatingOrganizationName: 'FortisBC' }
-      })).toBe('FortisBC')
+      expect(
+        allocCol().valueGetter({
+          data: { allocatingOrganizationName: 'FortisBC' }
+        })
+      ).toBe('FortisBC')
     })
 
     it('returns empty string when neither is present', () => {
@@ -608,13 +757,17 @@ describe('indexChargingSitesColDefs', () => {
 
   describe('column properties', () => {
     it('allocatingOrganization column supports filter and sort', () => {
-      const col = indexChargingSitesColDefs(false, orgMap).find((c) => c.field === 'allocatingOrganization')
+      const col = indexChargingSitesColDefs(false, orgMap).find(
+        (c) => c.field === 'allocatingOrganization'
+      )
       expect(col.filter).toBe(true)
       expect(col.sortable).toBe(true)
     })
 
     it('organization column supports filter and sort', () => {
-      const col = indexChargingSitesColDefs(true, orgMap).find((c) => c.field === 'organization')
+      const col = indexChargingSitesColDefs(true, orgMap).find(
+        (c) => c.field === 'organization'
+      )
       expect(col.filter).toBe(true)
       expect(col.sortable).toBe(true)
     })
@@ -630,8 +783,10 @@ describe('defaultColDef', () => {
   it('is resizable', () => expect(defaultColDef.resizable).toBe(true))
   it('has no filter', () => expect(defaultColDef.filter).toBe(false))
   it('is not sortable', () => expect(defaultColDef.sortable).toBe(false))
-  it('uses single-click edit', () => expect(defaultColDef.singleClickEdit).toBe(true))
-  it('has no floating filter', () => expect(defaultColDef.floatingFilter).toBe(false))
+  it('uses single-click edit', () =>
+    expect(defaultColDef.singleClickEdit).toBe(true))
+  it('has no floating filter', () =>
+    expect(defaultColDef.floatingFilter).toBe(false))
 })
 
 // ---------------------------------------------------------------------------
@@ -641,6 +796,8 @@ describe('defaultColDef', () => {
 describe('indexDefaultColDef', () => {
   it('is not editable', () => expect(indexDefaultColDef.editable).toBe(false))
   it('is resizable', () => expect(indexDefaultColDef.resizable).toBe(true))
-  it('enables floating filter', () => expect(indexDefaultColDef.floatingFilter).toBe(true))
-  it('suppresses floating filter button', () => expect(indexDefaultColDef.suppressFloatingFilterButton).toBe(true))
+  it('enables floating filter', () =>
+    expect(indexDefaultColDef.floatingFilter).toBe(true))
+  it('suppresses floating filter button', () =>
+    expect(indexDefaultColDef.suppressFloatingFilterButton).toBe(true))
 })

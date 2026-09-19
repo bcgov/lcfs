@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Box, Stack, Autocomplete, TextField } from '@mui/material'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
+import Autocomplete from '@mui/material/Autocomplete'
+import TextField from '@mui/material/TextField'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
@@ -51,7 +54,11 @@ const OrganizationList = ({
     if (!input || input.name === t('txn:allOrganizations')) {
       onOrgChange({ id: null, label: null, name: null })
     } else {
-      onOrgChange({ id: input.organizationId, label: input.label, name: input.name })
+      onOrgChange({
+        id: input.organizationId,
+        label: input.label,
+        name: input.name
+      })
     }
   }
 

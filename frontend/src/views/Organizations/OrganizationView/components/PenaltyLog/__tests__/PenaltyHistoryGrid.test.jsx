@@ -2,7 +2,7 @@ import { act, render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { AutomaticPenaltyLogGrid, PenaltyHistoryGrid } from '../PenaltyGrids'
 
@@ -405,9 +405,8 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   }
 
   it('should handle empty penalty logs', async () => {
-    const { useOrganizationPenaltyLogs } = await import(
-      '@/hooks/useOrganization'
-    )
+    const { useOrganizationPenaltyLogs } =
+      await import('@/hooks/useOrganization')
     const mockHook = vi.mocked(useOrganizationPenaltyLogs)
 
     mockHook.mockReturnValue({
@@ -426,9 +425,8 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   })
 
   it('should handle loading state', async () => {
-    const { useOrganizationPenaltyLogs } = await import(
-      '@/hooks/useOrganization'
-    )
+    const { useOrganizationPenaltyLogs } =
+      await import('@/hooks/useOrganization')
     const mockHook = vi.mocked(useOrganizationPenaltyLogs)
 
     mockHook.mockReturnValue({

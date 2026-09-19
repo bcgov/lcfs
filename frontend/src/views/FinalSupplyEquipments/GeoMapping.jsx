@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { MapContainer } from 'react-leaflet'
-import { Paper } from '@mui/material'
+import Paper from '@mui/material/Paper'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import 'leaflet/dist/leaflet.css'
@@ -57,7 +57,8 @@ const calculateInclusiveDays = (from, to) => {
     return null
   }
 
-  const days = Math.floor((end.getTime() - start.getTime()) / MILLISECONDS_PER_DAY) + 1
+  const days =
+    Math.floor((end.getTime() - start.getTime()) / MILLISECONDS_PER_DAY) + 1
   return days > 0 ? days : null
 }
 
@@ -120,9 +121,7 @@ const calculateLocationMetrics = (locGroup = []) => {
   const reportedKwhUsage = hasUsageData ? sumKwhUsage : null
 
   const utilization =
-    maxCapacity &&
-    maxCapacity > 0 &&
-    reportedKwhUsage !== null
+    maxCapacity && maxCapacity > 0 && reportedKwhUsage !== null
       ? (reportedKwhUsage / maxCapacity) * 100
       : null
 
@@ -286,8 +285,7 @@ const GeoMapping = ({ complianceReportId, data }) => {
 
     const locationMetrics = calculateLocationMetrics(locGroup)
     const equipmentCount =
-      locationMetrics.equipmentCount ??
-      Object.keys(uniqueSupplyUnits).length
+      locationMetrics.equipmentCount ?? Object.keys(uniqueSupplyUnits).length
     const formattedAverageOperationalDays = formatNumber(
       locationMetrics.averageOperationalDays,
       { maximumFractionDigits: 2 }
@@ -312,7 +310,7 @@ const GeoMapping = ({ complianceReportId, data }) => {
           gutterBottom
           component="div"
         >
-            {firstLoc.name}
+          {firstLoc.name}
         </BCTypography>
 
         <BCTypography variant="body" component="div" gutterBottom>
@@ -351,9 +349,7 @@ const GeoMapping = ({ complianceReportId, data }) => {
           </BCTypography>
           <BCTypography variant="body" component="div">
             <strong>Utilization:</strong>{' '}
-            {formattedUtilization !== null
-              ? `${formattedUtilization}%`
-              : 'N/A'}
+            {formattedUtilization !== null ? `${formattedUtilization}%` : 'N/A'}
           </BCTypography>
         </div>
 

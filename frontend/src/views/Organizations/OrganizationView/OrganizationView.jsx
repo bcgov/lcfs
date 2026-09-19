@@ -18,7 +18,9 @@ import {
 } from '@/routes/routeConfig/organizationRoutes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
-import { AppBar, Tab, Tabs } from '@mui/material'
+import AppBar from '@mui/material/AppBar'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
 
 function TabPanel({ children, value, index }) {
   return (

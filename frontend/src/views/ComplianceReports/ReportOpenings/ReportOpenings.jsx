@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Box,
-  Checkbox,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow
-} from '@mui/material'
+import Box from '@mui/material/Box'
+import Checkbox from '@mui/material/Checkbox'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
@@ -212,119 +210,131 @@ export const ReportOpenings = () => {
     <>
       <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
       <Box>
-      <BCTypography variant="h5" color="primary" gutterBottom>
-        {t('reportOpenings.title')}
-      </BCTypography>
-      <Box
-        mt={3}
-        display="flex"
-        justifyContent="flex-start"
-        flexDirection="column"
-        width="fit-content"
-        sx={{ border: '1px solid black', p: 2 }}
-      >
-        <Table
-          size="small"
-          aria-label={t('reportOpenings.title')}
-          sx={{
-            borderCollapse: 'separate',
-            borderSpacing: '32px 0',
-            '& td, & th': { border: 0, py: 0.25 }
-          }}
+        <BCTypography variant="h5" color="primary" gutterBottom>
+          {t('reportOpenings.title')}
+        </BCTypography>
+        <Box
+          mt={3}
+          display="flex"
+          justifyContent="flex-start"
+          flexDirection="column"
+          width="fit-content"
+          sx={{ border: '1px solid black', p: 2 }}
         >
-          <TableHead>
-            <TableRow>
-              <CustomTableCell sx={{ background: 'none', width: 100 }} />
-              <CustomTableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
-                {t('reportOpenings.complianceReporting')}
-              </CustomTableCell>
-              <CustomTableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
-                {t('reportOpenings.earlyIssuance')}
-              </CustomTableCell>
-              <CustomTableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
-                {t('reportOpenings.createSupplemental')}
-              </CustomTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.complianceYear}>
-                <CustomTableCell sx={{ fontWeight: 600 }}>
-                  {row.complianceYear}
+          <Table
+            size="small"
+            aria-label={t('reportOpenings.title')}
+            sx={{
+              borderCollapse: 'separate',
+              borderSpacing: '32px 0',
+              '& td, & th': { border: 0, py: 0.25 }
+            }}
+          >
+            <TableHead>
+              <TableRow>
+                <CustomTableCell sx={{ background: 'none', width: 100 }} />
+                <CustomTableCell
+                  sx={{ fontWeight: 600, color: 'primary.main' }}
+                >
+                  {t('reportOpenings.complianceReporting')}
                 </CustomTableCell>
-                <CustomTableCell>
-                  <Checkbox
-                    color="primary"
-                    checked={row.complianceReportingEnabled}
-                    onChange={() => handleComplianceToggle(row.complianceYear)}
-                    inputProps={{
-                      'aria-label': t(
-                        'reportOpenings.complianceReportingToggle',
-                        {
-                          year: row.complianceYear
-                        }
-                      )
-                    }}
-                  />
+                <CustomTableCell
+                  sx={{ fontWeight: 600, color: 'primary.main' }}
+                >
+                  {t('reportOpenings.earlyIssuance')}
                 </CustomTableCell>
-                <CustomTableCell>
-                  <Checkbox
-                    color="primary"
-                    checked={row.earlyIssuanceEnabled}
-                    disabled={row.complianceYear !== currentYear}
-                    onChange={() =>
-                      handleEarlyIssuanceToggle(row.complianceYear)
-                    }
-                    inputProps={{
-                      'aria-label': t('reportOpenings.earlyIssuanceToggle', {
-                        year: row.complianceYear
-                      })
-                    }}
-                  />
-                </CustomTableCell>
-                <CustomTableCell>
-                  <Checkbox
-                    color="primary"
-                    checked={row.createSupplementalEnabled}
-                    onChange={() =>
-                      handleSupplementalToggle(row.complianceYear)
-                    }
-                    inputProps={{
-                      'aria-label': t(
-                        'reportOpenings.createSupplementalToggle',
-                        {
-                          year: row.complianceYear
-                        }
-                      )
-                    }}
-                  />
+                <CustomTableCell
+                  sx={{ fontWeight: 600, color: 'primary.main' }}
+                >
+                  {t('reportOpenings.createSupplemental')}
                 </CustomTableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <Box mt={3} display="flex" justifyContent="flex-start" pl={2} gap={2}>
-          <BCButton
-            variant="contained"
-            color="primary"
-            onClick={handleSaveClick}
-            disabled={!hasChanges || saving}
-            isLoading={saving}
-          >
-            {t('reportOpenings.save')}
-          </BCButton>
-          <BCButton
-            variant="outlined"
-            color="primary"
-            onClick={handleCancelChanges}
-            disabled={!hasChanges || saving}
-          >
-            {t('common:cancelBtn')}
-          </BCButton>
+            </TableHead>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.complianceYear}>
+                  <CustomTableCell sx={{ fontWeight: 600 }}>
+                    {row.complianceYear}
+                  </CustomTableCell>
+                  <CustomTableCell>
+                    <Checkbox
+                      color="primary"
+                      checked={row.complianceReportingEnabled}
+                      onChange={() =>
+                        handleComplianceToggle(row.complianceYear)
+                      }
+                      inputProps={{
+                        'aria-label': t(
+                          'reportOpenings.complianceReportingToggle',
+                          {
+                            year: row.complianceYear
+                          }
+                        )
+                      }}
+                    />
+                  </CustomTableCell>
+                  <CustomTableCell>
+                    <Checkbox
+                      color="primary"
+                      checked={row.earlyIssuanceEnabled}
+                      disabled={row.complianceYear !== currentYear}
+                      onChange={() =>
+                        handleEarlyIssuanceToggle(row.complianceYear)
+                      }
+                      inputProps={{
+                        'aria-label': t('reportOpenings.earlyIssuanceToggle', {
+                          year: row.complianceYear
+                        })
+                      }}
+                    />
+                  </CustomTableCell>
+                  <CustomTableCell>
+                    <Checkbox
+                      color="primary"
+                      checked={row.createSupplementalEnabled}
+                      onChange={() =>
+                        handleSupplementalToggle(row.complianceYear)
+                      }
+                      inputProps={{
+                        'aria-label': t(
+                          'reportOpenings.createSupplementalToggle',
+                          {
+                            year: row.complianceYear
+                          }
+                        )
+                      }}
+                    />
+                  </CustomTableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <Box mt={3} display="flex" justifyContent="flex-start" pl={2} gap={2}>
+            <BCButton
+              variant="contained"
+              color="primary"
+              onClick={handleSaveClick}
+              disabled={!hasChanges || saving}
+              isLoading={saving}
+            >
+              {t('reportOpenings.save')}
+            </BCButton>
+            <BCButton
+              variant="outlined"
+              color="primary"
+              onClick={handleCancelChanges}
+              disabled={!hasChanges || saving}
+            >
+              {t('common:cancelBtn')}
+            </BCButton>
+          </Box>
         </Box>
       </Box>
-      </Box>
-      <BCModal open={confirmSaveOpen} onClose={handleCancelConfirm} data={confirmModalData} />
+      <BCModal
+        open={confirmSaveOpen}
+        onClose={handleCancelConfirm}
+        data={confirmModalData}
+      />
     </>
   )
 }

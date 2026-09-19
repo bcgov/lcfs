@@ -9,16 +9,18 @@ import {
 } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import Autocomplete from '@mui/material/Autocomplete'
+import Box from '@mui/material/Box'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import {
-  Autocomplete,
-  Box,
-  InputLabel,
-  MenuItem,
-  Stack,
-  TextField
-} from '@mui/material'
-import { DatePicker } from '@mui/x-date-pickers'
-import { format as formatDate, isValid as isValidDate, parseISO } from 'date-fns'
+  format as formatDate,
+  isValid as isValidDate,
+  parseISO
+} from 'date-fns'
 import { debounce } from 'lodash'
 import * as Yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -88,7 +90,9 @@ const FacilityLocationAutocomplete = ({
       sx={LOCATION_AUTOCOMPLETE_SX}
       ListboxProps={{ style: { maxHeight: 320 } }}
       noOptionsText={null}
-      componentsProps={{ paper: { sx: { display: options.length === 0 ? 'none' : 'block' } } }}
+      componentsProps={{
+        paper: { sx: { display: options.length === 0 ? 'none' : 'block' } }
+      }}
       onInputChange={(_event, newInputValue, reason) => {
         if (reason === 'input') {
           onChange(newInputValue)
@@ -301,7 +305,11 @@ export const ApplicationInformationStep = forwardRef(
             overflow: 'hidden'
           }}
         >
-          <input tabIndex={-1} name="address-line1" autoComplete="address-line1" />
+          <input
+            tabIndex={-1}
+            name="address-line1"
+            autoComplete="address-line1"
+          />
           <input tabIndex={-1} name="city" autoComplete="address-level2" />
           <input tabIndex={-1} name="state" autoComplete="address-level1" />
           <input tabIndex={-1} name="country" autoComplete="country-name" />

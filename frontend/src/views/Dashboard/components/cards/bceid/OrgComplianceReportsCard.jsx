@@ -1,7 +1,9 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Stack, List, ListItemButton } from '@mui/material'
+import Stack from '@mui/material/Stack'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
@@ -98,31 +100,39 @@ const OrgComplianceReportsCard = () => {
                   {renderLinkWithCount(
                     t('dashboard:orgComplianceReports.inProgress'),
                     inProgressCount,
-                    () => handleNavigation(ROUTES.REPORTS.LIST, COMPLIANCE_REPORT_STATUSES.DRAFT)
+                    () =>
+                      handleNavigation(
+                        ROUTES.REPORTS.LIST,
+                        COMPLIANCE_REPORT_STATUSES.DRAFT
+                      )
                   )}
                   {renderLinkWithCount(
                     t('dashboard:orgComplianceReports.awaitingGovReview'),
                     awaitingGovReviewCount,
-                    () => handleNavigation(ROUTES.REPORTS.LIST, COMPLIANCE_REPORT_STATUSES.SUBMITTED)
+                    () =>
+                      handleNavigation(
+                        ROUTES.REPORTS.LIST,
+                        COMPLIANCE_REPORT_STATUSES.SUBMITTED
+                      )
                   )}
                 </List>
               </>
             )}
             {
-                <ListItemButton
-                  component="a"
-                  sx={{ pl: '4.2rem' }}
+              <ListItemButton
+                component="a"
+                sx={{ pl: '4.2rem' }}
+                onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
+              >
+                <BCTypography
+                  variant="body2"
+                  color="link"
+                  sx={{
+                    textDecoration: 'underline',
+                    '&:hover': { color: 'info.main' }
+                  }}
                   onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
                 >
-                  <BCTypography
-                    variant="body2"
-                    color="link"
-                    sx={{
-                      textDecoration: 'underline',
-                      '&:hover': { color: 'info.main' }
-                    }}
-                    onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
-                  >
                   {t('report:calcTitle')}
                 </BCTypography>
               </ListItemButton>

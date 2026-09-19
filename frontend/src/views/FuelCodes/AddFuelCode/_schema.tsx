@@ -2,14 +2,12 @@
 import type { ColDef } from '@ag-grid-community/core'
 import type { GridErrors, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import {
-  AsyncSuggestionEditor,
-  AutocompleteCellEditor,
-  DateEditor,
-  NumberEditor,
-  RequiredHeader,
-  TransportModeDistanceCellEditor
-} from '@/components/BCDataGrid/components'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { DateEditor } from '@/components/BCDataGrid/components/Editors/DateEditor'
+import { NumberEditor } from '@/components/BCDataGrid/components/Editors/NumberEditor'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import { TransportModeDistanceCellEditor } from '@/components/BCDataGrid/components/Editors/TransportModeDistanceCellEditor'
 import { apiRoutes } from '@/constants/routes'
 import { CO_PROCESSED_OPTIONS } from '@/constants/statuses'
 import i18n from '@/i18n'

@@ -1,9 +1,13 @@
-import { Box, Collapse, IconButton, TextField } from '@mui/material'
+import Box from '@mui/material/Box'
+import Collapse from '@mui/material/Collapse'
+import IconButton from '@mui/material/IconButton'
+import TextField from '@mui/material/TextField'
 import { useState } from 'react'
 import { useFormContext } from 'react-hook-form'
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
-import { ExpandLess, ExpandMore } from '@mui/icons-material'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 
 export const Comments = ({
   editorMode,

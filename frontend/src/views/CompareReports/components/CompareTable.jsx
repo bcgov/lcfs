@@ -1,17 +1,15 @@
 import React from 'react'
 import { currencyFormatter, numberFormatter } from '@/utils/formatters'
-import {
-  FormControlLabel,
-  Paper,
-  Radio,
-  RadioGroup,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow
-} from '@mui/material'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Paper from '@mui/material/Paper'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
 import BCTypography from '@/components/BCTypography'
 import Box from '@mui/material/Box'
 import { useTranslation } from 'react-i18next'
@@ -260,87 +258,91 @@ const CompareTable = ({
         )}
         <TableBody>
           {data?.map((row, rowIndex) => {
-            const isValueColumn =
-              column_id =>
-                column_id !== 'line' && column_id !== 'description'
+            const isValueColumn = (column_id) =>
+              column_id !== 'line' && column_id !== 'description'
             const isGreyed = !!row.greyed
             return (
-            <TableRow
-              key={row.line ?? rowIndex}
-              sx={{
-                '&:last-child td, &:last-child th': { borderBottom: 0 },
-                backgroundColor: '#fcfcfc'
-              }}
-            >
-              {columns.map((column, colIndex) => {
-                const isValCol = isValueColumn(column.id)
-                const cellBg = isGreyed && isValCol
-                  ? '#f5f5f5'
-                  : isColumnHighlighted(column.id)
-                    ? tableStyles.highlightedBodyCell.backgroundColor
-                    : '#fcfcfc'
-
-                const cellValue = (() => {
-                  if (isGreyed && isValCol) return ''
-                  if (
-                    row.format &&
-                    colIndex !== 0 &&
-                    row[column.id] !== undefined &&
-                    row[column.id] !== null
-                  ) {
-                    return rowFormatters[row.format](
-                      row[column.id],
-                      useParenthesis
-                    )
-                  }
-                  if (row[column.id] === undefined || row[column.id] === null) {
-                    return column.id !== 'description' ? '0' : ''
-                  }
-                  return row[column.id]
-                })()
-
-                return (
-                <TableCell
-                  key={column.id}
-                  align={column.align || 'left'}
-                  title={
+              <TableRow
+                key={row.line ?? rowIndex}
+                sx={{
+                  '&:last-child td, &:last-child th': { borderBottom: 0 },
+                  backgroundColor: '#fcfcfc'
+                }}
+              >
+                {columns.map((column, colIndex) => {
+                  const isValCol = isValueColumn(column.id)
+                  const cellBg =
                     isGreyed && isValCol
-                      ? 'Not applicable for this compliance period'
-                      : undefined
-                  }
-                  sx={{
-                    borderBottom:
-                      rowIndex === data.length - 1
-                        ? 'none'
-                        : '1px solid #495057',
-                    borderRight:
-                      colIndex < columns.length - 1
-                        ? '1px solid #495057'
-                        : 'none',
-                    maxWidth: column.maxWidth || 'none',
-                    width: column.width || 'auto',
-                    backgroundColor: cellBg,
-                    opacity: isGreyed && isValCol ? 0.7 : 1,
-                    ...tableStyles.tableCell
-                  }}
-                >
-                  <span
-                    style={{
-                      ...getBodyCellStyles(column.id),
-                      fontWeight:
-                        column.bold ||
-                        (column.id === 'description' && !row.line)
-                          ? 'bold'
-                          : 'normal'
-                    }}
-                  >
-                    {cellValue}
-                  </span>
-                </TableCell>
-              )})}
-            </TableRow>
-          )})}
+                      ? '#f5f5f5'
+                      : isColumnHighlighted(column.id)
+                        ? tableStyles.highlightedBodyCell.backgroundColor
+                        : '#fcfcfc'
 
+                  const cellValue = (() => {
+                    if (isGreyed && isValCol) return ''
+                    if (
+                      row.format &&
+                      colIndex !== 0 &&
+                      row[column.id] !== undefined &&
+                      row[column.id] !== null
+                    ) {
+                      return rowFormatters[row.format](
+                        row[column.id],
+                        useParenthesis
+                      )
+                    }
+                    if (
+                      row[column.id] === undefined ||
+                      row[column.id] === null
+                    ) {
+                      return column.id !== 'description' ? '0' : ''
+                    }
+                    return row[column.id]
+                  })()
+
+                  return (
+                    <TableCell
+                      key={column.id}
+                      align={column.align || 'left'}
+                      title={
+                        isGreyed && isValCol
+                          ? 'Not applicable for this compliance period'
+                          : undefined
+                      }
+                      sx={{
+                        borderBottom:
+                          rowIndex === data.length - 1
+                            ? 'none'
+                            : '1px solid #495057',
+                        borderRight:
+                          colIndex < columns.length - 1
+                            ? '1px solid #495057'
+                            : 'none',
+                        maxWidth: column.maxWidth || 'none',
+                        width: column.width || 'auto',
+                        backgroundColor: cellBg,
+                        opacity: isGreyed && isValCol ? 0.7 : 1,
+                        ...tableStyles.tableCell
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...getBodyCellStyles(column.id),
+                          fontWeight:
+                            column.bold ||
+                            (column.id === 'description' && !row.line)
+                              ? 'bold'
+                              : 'normal'
+                        }}
+                      >
+                        {cellValue}
+                      </span>
+                    </TableCell>
+                  )
+                })}
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </TableContainer>

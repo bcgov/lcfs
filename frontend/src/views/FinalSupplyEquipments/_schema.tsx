@@ -3,14 +3,12 @@ import type { ColDef } from '@ag-grid-community/core'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
-import {
-  AsyncSuggestionEditor,
-  AutocompleteCellEditor,
-  DateEditor,
-  NumberEditor,
-  RequiredHeader,
-  TextCellEditor
-} from '@/components/BCDataGrid/components'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { DateEditor } from '@/components/BCDataGrid/components/Editors/DateEditor'
+import { NumberEditor } from '@/components/BCDataGrid/components/Editors/NumberEditor'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import { TextCellEditor } from '@/components/BCDataGrid/components/Editors/TextCellEditor'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import dayjs from 'dayjs'

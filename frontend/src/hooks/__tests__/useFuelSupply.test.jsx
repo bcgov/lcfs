@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { testQueryClient, wrapper } from '@/tests/utils/wrapper'
+import { waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import {
   useFuelSupplyOptions,
   useGetFuelSupplies,
@@ -37,12 +37,9 @@ vi.mock('@/constants/statuses', () => ({
   }
 }))
 
-// Using the standard test wrapper from utils
-
 describe('useFuelSupply', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    testQueryClient.clear()
   })
 
   afterEach(() => {
@@ -50,7 +47,10 @@ describe('useFuelSupply', () => {
   })
 
   describe('useFuelSupplyOptions', () => {
-    it('should fetch fuel supply options successfully', async () => {
+    test('should fetch fuel supply options successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockOptions = {
         fuelTypes: ['Gasoline', 'Diesel'],
         fuelCategories: ['Renewable', 'Non-renewable']
@@ -59,7 +59,7 @@ describe('useFuelSupply', () => {
 
       const { result } = renderHook(
         () => useFuelSupplyOptions({ compliancePeriod: 2024 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -72,33 +72,34 @@ describe('useFuelSupply', () => {
       )
     })
 
-    it('should not fetch when compliancePeriod is missing', () => {
-      const { result } = renderHook(() => useFuelSupplyOptions({}), {
-        wrapper: wrapper
-      })
+    test('should not fetch when compliancePeriod is missing', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useFuelSupplyOptions({}), [query])
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should handle enabled option', () => {
+    test('should handle enabled option', ({ renderHook, query }) => {
       const { result } = renderHook(
         () =>
           useFuelSupplyOptions({ compliancePeriod: 2024 }, { enabled: false }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('API Error')
       mockApiService.get.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useFuelSupplyOptions({ compliancePeriod: 2024 }, { retry: 0 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -110,7 +111,10 @@ describe('useFuelSupply', () => {
   })
 
   describe('useGetFuelSupplies', () => {
-    it('should fetch fuel supplies successfully', async () => {
+    test('should fetch fuel supplies successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockSupplies = {
         fuelSupplies: [
           { id: 1, fuelType: 'Gasoline' },
@@ -121,9 +125,10 @@ describe('useFuelSupply', () => {
       mockApiService.post.mockResolvedValue({ data: mockSupplies })
 
       const pagination = { page: 1, size: 10 }
-      const { result } = renderHook(() => useGetFuelSupplies(123, pagination), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(
+        () => useGetFuelSupplies(123, pagination),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -136,21 +141,24 @@ describe('useFuelSupply', () => {
       })
     })
 
-    it('should not fetch when complianceReportId is missing', () => {
+    test('should not fetch when complianceReportId is missing', ({
+      renderHook,
+      query
+    }) => {
       const { result } = renderHook(
         () => useGetFuelSupplies(null, { page: 1, size: 10 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.post).not.toHaveBeenCalled()
     })
 
-    it('should handle enabled option', () => {
+    test('should handle enabled option', ({ renderHook, query }) => {
       const { result } = renderHook(
         () =>
           useGetFuelSupplies(123, { page: 1, size: 10 }, { enabled: false }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
@@ -159,7 +167,10 @@ describe('useFuelSupply', () => {
   })
 
   describe('useGetFuelSuppliesList', () => {
-    it('should fetch fuel supplies list successfully with default mode', async () => {
+    test('should fetch fuel supplies list successfully with default mode', async ({
+      renderHook,
+      query
+    }) => {
       const mockSupplies = {
         fuelSupplies: [
           { id: 1, fuelType: 'Gasoline' },
@@ -172,7 +183,7 @@ describe('useFuelSupply', () => {
       const pagination = { page: 1, size: 10 }
       const { result } = renderHook(
         () => useGetFuelSuppliesList({ complianceReportId: 123 }, pagination),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -187,7 +198,10 @@ describe('useFuelSupply', () => {
       })
     })
 
-    it('should fetch fuel supplies list with edit mode', async () => {
+    test('should fetch fuel supplies list with edit mode', async ({
+      renderHook,
+      query
+    }) => {
       const mockSupplies = {
         fuelSupplies: [],
         pagination: { total: 0, page: 1 }
@@ -201,7 +215,7 @@ describe('useFuelSupply', () => {
             { complianceReportId: 123, mode: 'edit' },
             pagination
           ),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -215,10 +229,13 @@ describe('useFuelSupply', () => {
       })
     })
 
-    it('should not fetch when complianceReportId is missing', () => {
+    test('should not fetch when complianceReportId is missing', ({
+      renderHook,
+      query
+    }) => {
       const { result } = renderHook(
         () => useGetFuelSuppliesList({}, { page: 1, size: 10 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
@@ -227,13 +244,16 @@ describe('useFuelSupply', () => {
   })
 
   describe('useSaveFuelSupply', () => {
-    it('should save fuel supply successfully', async () => {
+    test('should save fuel supply successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { id: 1, fuelType: 'Gasoline' } }
       mockApiService.post.mockResolvedValue(mockResponse)
 
       const { result } = renderHook(
         () => useSaveFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       const supplyData = {
@@ -253,13 +273,13 @@ describe('useFuelSupply', () => {
       })
     })
 
-    it('should handle save errors', async () => {
+    test('should handle save errors', async ({ renderHook, query }) => {
       const mockError = new Error('Save failed')
       mockApiService.post.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useSaveFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate({ fuelType: 'Gasoline' })
@@ -271,13 +291,16 @@ describe('useFuelSupply', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should invalidate main report queries after saving fuel supply', async () => {
+    test('should invalidate main report queries after saving fuel supply', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.post.mockResolvedValue({ data: { id: 1 } })
-      const invalidateSpy = vi.spyOn(testQueryClient, 'invalidateQueries')
+      const invalidateSpy = vi.spyOn(query.client, 'invalidateQueries')
 
       const { result } = renderHook(
         () => useSaveFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate({ fuelType: 'Gasoline', quantity: 1000 })
@@ -299,13 +322,16 @@ describe('useFuelSupply', () => {
   })
 
   describe('useUpdateFuelSupply', () => {
-    it('should update fuel supply successfully', async () => {
+    test('should update fuel supply successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { id: 1, fuelType: 'Updated Gasoline' } }
       mockApiService.put.mockResolvedValue(mockResponse)
 
       const { result } = renderHook(
         () => useUpdateFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       const supplyData = {
@@ -326,13 +352,13 @@ describe('useFuelSupply', () => {
       })
     })
 
-    it('should handle update errors', async () => {
+    test('should handle update errors', async ({ renderHook, query }) => {
       const mockError = new Error('Update failed')
       mockApiService.put.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useUpdateFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate({ id: 1, fuelType: 'Gasoline' })
@@ -344,13 +370,16 @@ describe('useFuelSupply', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should invalidate main report queries after updating fuel supply', async () => {
+    test('should invalidate main report queries after updating fuel supply', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.put.mockResolvedValue({ data: { id: 1 } })
-      const invalidateSpy = vi.spyOn(testQueryClient, 'invalidateQueries')
+      const invalidateSpy = vi.spyOn(query.client, 'invalidateQueries')
 
       const { result } = renderHook(
         () => useUpdateFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate({ id: 1, fuelType: 'Diesel', quantity: 1500 })
@@ -372,12 +401,15 @@ describe('useFuelSupply', () => {
   })
 
   describe('useDeleteFuelSupply', () => {
-    it('should delete fuel supply successfully', async () => {
+    test('should delete fuel supply successfully', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.delete.mockResolvedValue({ data: {} })
 
       const { result } = renderHook(
         () => useDeleteFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate(1)
@@ -389,13 +421,13 @@ describe('useFuelSupply', () => {
       expect(mockApiService.delete).toHaveBeenCalledWith('/fuel-supplies/1')
     })
 
-    it('should handle delete errors', async () => {
+    test('should handle delete errors', async ({ renderHook, query }) => {
       const mockError = new Error('Delete failed')
       mockApiService.delete.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useDeleteFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate(1)
@@ -407,13 +439,16 @@ describe('useFuelSupply', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should invalidate main report queries after deleting fuel supply', async () => {
+    test('should invalidate main report queries after deleting fuel supply', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.delete.mockResolvedValue({ data: {} })
-      const invalidateSpy = vi.spyOn(testQueryClient, 'invalidateQueries')
+      const invalidateSpy = vi.spyOn(query.client, 'invalidateQueries')
 
       const { result } = renderHook(
         () => useDeleteFuelSupply({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate(1)

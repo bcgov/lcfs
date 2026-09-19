@@ -29,15 +29,16 @@ const mockGridApi = {
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
   BCGridBase: vi.fn().mockImplementation((props) => {
-    const { onGridReady, onFirstDataRendered, onFilterChanged, onSortChanged } = props
-    
+    const { onGridReady, onFirstDataRendered, onFilterChanged, onSortChanged } =
+      props
+
     // Simulate grid ready
     if (onGridReady) {
       setTimeout(() => onGridReady({ api: mockGridApi }), 0)
     }
-    
+
     return (
-      <div 
+      <div
         data-test="bc-grid-base"
         onClick={() => {
           if (onFirstDataRendered) onFirstDataRendered({ api: mockGridApi })
@@ -51,14 +52,21 @@ vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
   })
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  AccessibleHeader: () => <div data-test="accessible-header">Header</div>,
+vi.mock(
+  '@/components/BCDataGrid/components/Renderers/AccessibleHeader',
+  () => ({
+    AccessibleHeader: () => <div data-test="accessible-header">Header</div>
+  })
+)
+
+vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
   BCPagination: vi.fn().mockImplementation((props) => (
-    <div 
+    <div
       data-test="bc-pagination"
       onClick={() => {
         if (props.handleChangePage) props.handleChangePage({}, 1)
-        if (props.handleChangeRowsPerPage) props.handleChangeRowsPerPage({ target: { value: '20' } })
+        if (props.handleChangeRowsPerPage)
+          props.handleChangeRowsPerPage({ target: { value: '20' } })
       }}
     >
       Pagination
@@ -133,19 +141,19 @@ describe('BCGridViewer Component', () => {
         queryData: {
           ...defaultProps.queryData,
           isError: true,
-          error: { 
+          error: {
             message: 'Server error',
             response: { status: 500 }
           }
         }
       }
-      
+
       render(
         <TestWrapper>
           <BCGridViewer {...errorProps} />
         </TestWrapper>
       )
-      
+
       expect(screen.getByTestId('bc-alert')).toBeInTheDocument()
       expect(screen.getByText(/Server error/)).toBeInTheDocument()
     })
@@ -156,19 +164,19 @@ describe('BCGridViewer Component', () => {
         queryData: {
           ...defaultProps.queryData,
           isError: true,
-          error: { 
+          error: {
             message: 'Not found',
             response: { status: 404 }
           }
         }
       }
-      
+
       render(
         <TestWrapper>
           <BCGridViewer {...errorProps} />
         </TestWrapper>
       )
-      
+
       expect(screen.queryByTestId('bc-alert')).not.toBeInTheDocument()
     })
 
@@ -181,13 +189,13 @@ describe('BCGridViewer Component', () => {
           error: { message: 'Network error' }
         }
       }
-      
+
       render(
         <TestWrapper>
           <BCGridViewer {...errorProps} />
         </TestWrapper>
       )
-      
+
       expect(screen.getByTestId('bc-alert')).toBeInTheDocument()
       expect(screen.getByText(/Network error/)).toBeInTheDocument()
     })
@@ -200,7 +208,7 @@ describe('BCGridViewer Component', () => {
         enablePageCaching: true,
         gridKey: 'cache-test-grid'
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -217,13 +225,13 @@ describe('BCGridViewer Component', () => {
         ...defaultProps,
         suppressPagination: true
       }
-      
+
       render(
         <TestWrapper>
           <BCGridViewer {...props} />
         </TestWrapper>
       )
-      
+
       expect(screen.queryByTestId('bc-pagination')).not.toBeInTheDocument()
     })
   })
@@ -234,7 +242,7 @@ describe('BCGridViewer Component', () => {
         ...defaultProps,
         onPaginationChange: undefined
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -250,12 +258,12 @@ describe('BCGridViewer Component', () => {
       // Temporarily remove IntersectionObserver
       const originalIntersectionObserver = window.IntersectionObserver
       window.IntersectionObserver = undefined
-      
+
       const props = {
         ...defaultProps,
         enableFloatingPagination: true
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -263,7 +271,7 @@ describe('BCGridViewer Component', () => {
           </TestWrapper>
         )
       }).not.toThrow()
-      
+
       // Restore IntersectionObserver
       window.IntersectionObserver = originalIntersectionObserver
     })
@@ -276,7 +284,7 @@ describe('BCGridViewer Component', () => {
         ...defaultProps,
         defaultColDef: { resizable: false }
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -298,7 +306,7 @@ describe('BCGridViewer Component', () => {
         exportName: 'CustomExport',
         autoSizeStrategy: { type: 'fitGridWidth' }
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -317,7 +325,7 @@ describe('BCGridViewer Component', () => {
         ...defaultProps,
         onPaginationChange
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -334,7 +342,7 @@ describe('BCGridViewer Component', () => {
         ...defaultProps,
         onPaginationChange
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -354,7 +362,7 @@ describe('BCGridViewer Component', () => {
           isLoading: true
         }
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -374,7 +382,7 @@ describe('BCGridViewer Component', () => {
           isLoading: false
         }
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -398,7 +406,7 @@ describe('BCGridViewer Component', () => {
           isLoading: false
         }
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -416,20 +424,23 @@ describe('BCGridViewer Component', () => {
         scrollWidth: 1000,
         clientWidth: 800
       }
-      
+
       const originalQuerySelector = HTMLElement.prototype.querySelector
       HTMLElement.prototype.querySelector = vi.fn().mockReturnValue(mockElement)
-      
+
       const props = {
         ...defaultProps,
         queryData: {
-          data: { items: [{ id: 1 }], pagination: { page: 1, size: 10, total: 1 } },
+          data: {
+            items: [{ id: 1 }],
+            pagination: { page: 1, size: 10, total: 1 }
+          },
           error: null,
           isError: false,
           isLoading: false
         }
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -437,7 +448,7 @@ describe('BCGridViewer Component', () => {
           </TestWrapper>
         )
       }).not.toThrow()
-      
+
       HTMLElement.prototype.querySelector = originalQuerySelector
     })
 
@@ -446,20 +457,20 @@ describe('BCGridViewer Component', () => {
         ...defaultProps,
         gridKey: 'initial-key'
       }
-      
+
       const { rerender } = render(
         <TestWrapper>
           <BCGridViewer {...props} />
         </TestWrapper>
       )
-      
+
       // Change gridKey to trigger the effect
       rerender(
         <TestWrapper>
           <BCGridViewer {...props} gridKey="changed-key" />
         </TestWrapper>
       )
-      
+
       // Component should handle gridKey change without errors
       expect(true).toBe(true) // If we get here, the effect didn't crash
     })
@@ -472,12 +483,12 @@ describe('BCGridViewer Component', () => {
         enablePageCaching: true,
         gridKey: 'test-key'
       }
-      
+
       const propsDisabled = {
         ...defaultProps,
         enablePageCaching: false
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -485,7 +496,7 @@ describe('BCGridViewer Component', () => {
           </TestWrapper>
         )
       }).not.toThrow()
-      
+
       expect(() => {
         render(
           <TestWrapper>
@@ -501,7 +512,7 @@ describe('BCGridViewer Component', () => {
         gridKey: null,
         enablePageCaching: true
       }
-      
+
       expect(() => {
         render(
           <TestWrapper>

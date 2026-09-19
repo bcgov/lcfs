@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { Box, IconButton } from '@mui/material'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
 import CloseIcon from '@mui/icons-material/Close'
 import { useTranslation } from 'react-i18next'
 import { useAuthorization } from '@/contexts/AuthorizationContext'
@@ -8,13 +9,22 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 
 const ERROR_CONTENT = {
-  500: { code: '500', titleKey: 'internalServerError.title', messageKey: 'internalServerError.message' }
+  500: {
+    code: '500',
+    titleKey: 'internalServerError.title',
+    messageKey: 'internalServerError.message'
+  }
 }
 
 export const ErrorOverlay = () => {
   const { t } = useTranslation('common')
-  const { errorStatus, errorRefs, setErrorStatus, clearErrorRefs, resetServerError } =
-    useAuthorization()
+  const {
+    errorStatus,
+    errorRefs,
+    setErrorStatus,
+    clearErrorRefs,
+    resetServerError
+  } = useAuthorization()
 
   useEffect(() => router.subscribe(resetServerError), [])
 
@@ -72,18 +82,30 @@ export const ErrorOverlay = () => {
 
         <BCTypography
           variant="overline"
-          sx={{ color: '#003366', fontWeight: 700, letterSpacing: 1, display: 'block', mb: 0.5 }}
+          sx={{
+            color: '#003366',
+            fontWeight: 700,
+            letterSpacing: 1,
+            display: 'block',
+            mb: 0.5
+          }}
         >
           Error {code}
         </BCTypography>
 
         {titleKey && (
-          <BCTypography variant="h6" sx={{ fontWeight: 600, color: '#003366', mb: 1.5 }}>
+          <BCTypography
+            variant="h6"
+            sx={{ fontWeight: 600, color: '#003366', mb: 1.5 }}
+          >
             {t(titleKey)}
           </BCTypography>
         )}
 
-        <BCTypography variant="body2" sx={{ color: '#444', lineHeight: 1.7, mb: 3 }}>
+        <BCTypography
+          variant="body2"
+          sx={{ color: '#444', lineHeight: 1.7, mb: 3 }}
+        >
           {t(messageKey)}
         </BCTypography>
 
@@ -109,7 +131,11 @@ export const ErrorOverlay = () => {
                 mb: 0.75
               }}
             >
-              {t(errorRefs.length > 1 ? 'errorPage.referenceNumbersLabel' : 'errorPage.referenceNumberLabel')}
+              {t(
+                errorRefs.length > 1
+                  ? 'errorPage.referenceNumbersLabel'
+                  : 'errorPage.referenceNumberLabel'
+              )}
             </BCTypography>
             {errorRefs.map((ref, index) => (
               <Box
@@ -124,7 +150,8 @@ export const ErrorOverlay = () => {
                   mt: index > 0 ? 0.5 : 0
                 }}
               >
-                {errorRefs.length > 1 && `${index + 1}. `}{ref}
+                {errorRefs.length > 1 && `${index + 1}. `}
+                {ref}
               </Box>
             ))}
             <BCTypography
@@ -136,9 +163,15 @@ export const ErrorOverlay = () => {
           </Box>
         )}
 
-        <BCTypography variant="caption" sx={{ color: '#777', display: 'block', mb: 3 }}>
+        <BCTypography
+          variant="caption"
+          sx={{ color: '#777', display: 'block', mb: 3 }}
+        >
           {t('errorPage.contactSupport')}{' '}
-          <a href={`mailto:${t('unauthorized.email')}`} style={{ color: '#003366' }}>
+          <a
+            href={`mailto:${t('unauthorized.email')}`}
+            style={{ color: '#003366' }}
+          >
             {t('unauthorized.email')}
           </a>
         </BCTypography>

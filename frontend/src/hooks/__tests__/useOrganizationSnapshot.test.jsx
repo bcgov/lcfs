@@ -1,6 +1,17 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
+
+let fixtureRenderHook
+let fixtureProviders
+const it = (name, callback) =>
+  test(name, ({ renderHook, query }) => {
+    fixtureRenderHook = renderHook
+    fixtureProviders = [query]
+    return callback()
+  })
+const renderHook = (callback) => fixtureRenderHook(callback, fixtureProviders)
 import {
   useOrganizationSnapshot,
   useUpdateOrganizationSnapshot

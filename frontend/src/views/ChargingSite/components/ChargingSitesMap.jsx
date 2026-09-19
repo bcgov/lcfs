@@ -4,25 +4,21 @@ import MarkerClusterGroup from 'react-leaflet-cluster'
 import { createPortal } from 'react-dom'
 import { Control, DomEvent, DomUtil } from 'leaflet'
 import L from 'leaflet'
-import {
-  Paper,
-  Chip,
-  IconButton,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  Box,
-  Slide,
-  useTheme,
-  useMediaQuery,
-  Link
-} from '@mui/material'
-import {
-  Fullscreen as FullscreenIcon,
-  FullscreenExit as FullscreenExitIcon,
-  Close as CloseIcon,
-  OpenInNew as OpenInNewIcon
-} from '@mui/icons-material'
+import Paper from '@mui/material/Paper'
+import Chip from '@mui/material/Chip'
+import IconButton from '@mui/material/IconButton'
+import Dialog from '@mui/material/Dialog'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
+import Box from '@mui/material/Box'
+import Slide from '@mui/material/Slide'
+import useTheme from '@mui/material/styles/useTheme'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import Link from '@mui/material/Link'
+import FullscreenIcon from '@mui/icons-material/Fullscreen'
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
+import CloseIcon from '@mui/icons-material/Close'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import BCTypography from '@/components/BCTypography'
 import { fixLeafletIcons, markerIcons } from './utils'
 import 'leaflet/dist/leaflet.css'

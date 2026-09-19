@@ -2,27 +2,32 @@ import { useEffect, useState } from 'react'
 import { useMap, Marker, Popup, TileLayer } from 'react-leaflet'
 import { createPortal } from 'react-dom'
 import { Control, DomEvent, DomUtil } from 'leaflet'
-import { Paper, CircularProgress } from '@mui/material'
+import Paper from '@mui/material/Paper'
+import CircularProgress from '@mui/material/CircularProgress'
 import BCTypography from '@/components/BCTypography'
 import { markerIcons } from './utils'
 
 // Custom Control component using React portals
-export const MapControl = ({ position = 'topright', disableClickPropagation = false, children }) => {
+export const MapControl = ({
+  position = 'topright',
+  disableClickPropagation = false,
+  children
+}) => {
   const [container, setContainer] = useState(null)
   const map = useMap()
 
   useEffect(() => {
     // Create a new map control
     const mapControl = new Control({ position })
-    
+
     mapControl.onAdd = () => {
       const section = DomUtil.create('section')
-      
+
       if (disableClickPropagation) {
         DomEvent.disableClickPropagation(section)
         DomEvent.disableScrollPropagation(section)
       }
-      
+
       setContainer(section)
       return section
     }

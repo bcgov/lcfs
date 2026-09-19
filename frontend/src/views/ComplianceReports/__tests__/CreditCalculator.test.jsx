@@ -72,8 +72,7 @@ vi.mock('@/hooks/useCalculator', () => ({
   useCalculateQuantityFromComplianceUnits: vi.fn()
 }))
 
-vi.mock('@/components/BCForm', async () => {
-  const actual = await vi.importActual('@/components/BCForm')
+vi.mock('@/components/BCForm/BCFormRadio', () => {
   const MockRadio = ({ name, label, options = [], disabled }) => {
     const { control, getValues } = useFormContext()
 
@@ -132,10 +131,7 @@ vi.mock('@/components/BCForm', async () => {
     )
   }
 
-  return {
-    ...actual,
-    BCFormRadio: MockRadio
-  }
+  return { BCFormRadio: MockRadio }
 })
 
 vi.mock('@/utils/clipboard', () => ({

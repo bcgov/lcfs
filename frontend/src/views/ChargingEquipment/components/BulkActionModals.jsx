@@ -1,6 +1,6 @@
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import { useTranslation } from 'react-i18next'
 
 export const BulkActionModals = ({

@@ -1,11 +1,11 @@
 import React from 'react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as useUserHook from '@/hooks/useUser.js'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser.js'
 import * as useOrganizationHook from '@/hooks/useOrganization.js'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 import { UserDetailsCard } from '../UserDetailsCard.jsx'
 
 // Mocks
@@ -255,7 +255,13 @@ describe('UserDetailsCard Component', () => {
   })
 
   describe('Loading and Error States', () => {
-    it('renders loading state', () => {
+    test('renders loading state', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useUserHook.useUser).mockReturnValue({
         data: null,
         isLoading: true,
@@ -265,11 +271,17 @@ describe('UserDetailsCard Component', () => {
         refetch: vi.fn()
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
       expect(getByDataTest('loading')).toBeInTheDocument()
     })
 
-    it('renders error state', () => {
+    test('renders error state', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const errorMessage = 'An error occurred'
       vi.mocked(useUserHook.useUser).mockReturnValue({
         data: null,
@@ -283,41 +295,69 @@ describe('UserDetailsCard Component', () => {
         refetch: vi.fn()
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
       expect(getByDataTest('bc-alert')).toBeInTheDocument()
     })
   })
 
   describe('Rendering Modes', () => {
-    it('renders in view mode by default', () => {
-      render(<UserDetailsCard />, { wrapper })
+    test('renders in view mode by default', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       expect(getByDataTest('user-profile')).toBeInTheDocument()
       expect(screen.getByText('User Profile for John Doe')).toBeInTheDocument()
       expect(getByDataTest('card-title')).toHaveTextContent('admin:userDetails')
     })
 
-    it('renders in add mode when addMode prop is true', () => {
+    test('renders in add mode when addMode prop is true', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       // For add mode, there should be no userID
       vi.mocked(useParams).mockReturnValue({
         orgID: '123',
         userID: undefined
       })
 
-      render(<UserDetailsCard addMode={true} />, { wrapper })
+      render(<UserDetailsCard addMode={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(getByDataTest('add-edit-user')).toBeInTheDocument()
       expect(getByDataTest('card-title')).toHaveTextContent('Add user')
     })
 
-    it('passes userType prop to AddEditUser component', () => {
+    test('passes userType prop to AddEditUser component', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       // For add mode, there should be no userID
       vi.mocked(useParams).mockReturnValue({
         orgID: '123',
         userID: undefined
       })
 
-      render(<UserDetailsCard addMode={true} userType="bceid" />, { wrapper })
+      render(<UserDetailsCard addMode={true} userType="bceid" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(
         screen.getByText('Add/Edit User Component - bceid')
@@ -326,7 +366,13 @@ describe('UserDetailsCard Component', () => {
   })
 
   describe('Edit Functionality', () => {
-    it('shows edit button when user has permissions', () => {
+    test('shows edit button when user has permissions', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn((role) => {
           if (Array.isArray(role)) {
@@ -339,24 +385,36 @@ describe('UserDetailsCard Component', () => {
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       expect(getByDataTest('edit-button')).toBeInTheDocument()
       expect(getByDataTest('edit-button')).toHaveTextContent('admin:editBtn')
     })
 
-    it('does not show edit button when user lacks permissions', () => {
+    test('does not show edit button when user lacks permissions', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn(() => false),
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       expect(queryByDataTest('edit-button')).not.toBeInTheDocument()
     })
 
-    it('switches to edit mode when edit button is clicked', async () => {
+    test('switches to edit mode when edit button is clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn((role) => {
           if (Array.isArray(role)) {
@@ -369,7 +427,7 @@ describe('UserDetailsCard Component', () => {
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       const editButton = getByDataTest('edit-button')
       fireEvent.click(editButton)
@@ -380,7 +438,13 @@ describe('UserDetailsCard Component', () => {
       })
     })
 
-    it('shows correct title in edit mode', async () => {
+    test('shows correct title in edit mode', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn((role) => {
           if (Array.isArray(role)) {
@@ -393,7 +457,7 @@ describe('UserDetailsCard Component', () => {
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       fireEvent.click(getByDataTest('edit-button'))
 
@@ -406,7 +470,13 @@ describe('UserDetailsCard Component', () => {
   })
 
   describe('Navigation and Actions', () => {
-    it('navigates on cancel in add mode', async () => {
+    test('navigates on cancel in add mode', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       // For add mode, there should be no userID
       vi.mocked(useParams).mockReturnValue({
         orgID: '123',
@@ -423,7 +493,12 @@ describe('UserDetailsCard Component', () => {
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard addMode={true} />, { wrapper })
+      render(<UserDetailsCard addMode={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const cancelButton = getByDataTest('cancel-button')
       fireEvent.click(cancelButton)
@@ -433,7 +508,13 @@ describe('UserDetailsCard Component', () => {
       })
     })
 
-    it('exits edit mode on cancel in edit mode', async () => {
+    test('exits edit mode on cancel in edit mode', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn((role) => {
           if (Array.isArray(role)) {
@@ -446,7 +527,7 @@ describe('UserDetailsCard Component', () => {
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       // Enter edit mode first
       fireEvent.click(getByDataTest('edit-button'))
@@ -464,14 +545,25 @@ describe('UserDetailsCard Component', () => {
       })
     })
 
-    it('handles save success in add mode', async () => {
+    test('handles save success in add mode', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       // For add mode, there should be no userID
       vi.mocked(useParams).mockReturnValue({
         orgID: '123',
         userID: undefined
       })
 
-      render(<UserDetailsCard addMode={true} />, { wrapper })
+      render(<UserDetailsCard addMode={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const saveButton = getByDataTest('save-button')
       fireEvent.click(saveButton)
@@ -481,7 +573,13 @@ describe('UserDetailsCard Component', () => {
       })
     })
 
-    it('handles save success in edit mode', async () => {
+    test('handles save success in edit mode', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const mockRefetch = vi.fn()
       vi.mocked(useUserHook.useUser).mockReturnValue({
         data: mockUser,
@@ -504,7 +602,7 @@ describe('UserDetailsCard Component', () => {
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       // Enter edit mode
       fireEvent.click(getByDataTest('edit-button'))
@@ -524,7 +622,13 @@ describe('UserDetailsCard Component', () => {
   })
 
   describe('Role-based Behavior', () => {
-    it('uses useOrganizationUser hook for supplier role', () => {
+    test('uses useOrganizationUser hook for supplier role', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn((role) => {
           if (Array.isArray(role)) {
@@ -535,7 +639,7 @@ describe('UserDetailsCard Component', () => {
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       expect(useOrganizationHook.useOrganizationUser).toHaveBeenCalledWith(
         '123',
@@ -543,18 +647,30 @@ describe('UserDetailsCard Component', () => {
       )
     })
 
-    it('uses useUser hook for non-supplier role', () => {
+    test('uses useUser hook for non-supplier role', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn(() => false),
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       expect(useUserHook.useUser).toHaveBeenCalledWith(1)
     })
 
-    it('shows user activity grid for admin/manage_users roles', () => {
+    test('shows user activity grid for admin/manage_users roles', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn((role) => {
           if (Array.isArray(role)) {
@@ -567,26 +683,43 @@ describe('UserDetailsCard Component', () => {
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       expect(getByDataTest('bc-grid-container')).toBeInTheDocument()
       expect(screen.getByText('admin:UserActivity')).toBeInTheDocument()
     })
 
-    it('does not show user activity grid in add mode', () => {
+    test('does not show user activity grid in add mode', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn(() => true),
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard addMode={true} />, { wrapper })
+      render(<UserDetailsCard addMode={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(queryByDataTest('bc-grid-container')).not.toBeInTheDocument()
     })
   })
 
   describe('Grid Configuration', () => {
-    it('configures data grid with correct props', () => {
+    test('configures data grid with correct props', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn((role) => {
           if (Array.isArray(role)) {
@@ -599,7 +732,7 @@ describe('UserDetailsCard Component', () => {
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       const dataGrid = getByDataTest('bc-grid-container')
       expect(dataGrid).toBeInTheDocument()
@@ -609,15 +742,27 @@ describe('UserDetailsCard Component', () => {
   })
 
   describe('Responsive Design', () => {
-    it('applies correct responsive width styles', () => {
-      render(<UserDetailsCard />, { wrapper })
+    test('applies correct responsive width styles', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       // The BCBox should have responsive maxWidth styles
       // This would be tested through CSS-in-JS or checking computed styles
       expect(getByDataTest('user-card')).toBeInTheDocument()
     })
 
-    it('adjusts width in edit mode', async () => {
+    test('adjusts width in edit mode', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
         hasRoles: vi.fn((role) => {
           if (Array.isArray(role)) {
@@ -630,7 +775,7 @@ describe('UserDetailsCard Component', () => {
         data: mockCurrentUser
       })
 
-      render(<UserDetailsCard />, { wrapper })
+      render(<UserDetailsCard />, [query, theme, localization, router])
 
       fireEvent.click(getByDataTest('edit-button'))
 
