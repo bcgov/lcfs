@@ -24,6 +24,7 @@ function BCNavbar({
   routes = defaultRoutes,
   beta = true,
   headerRightPart = null,
+  headerUtilityPart = null,
   menuRightPart = null
 }: BCNavbarProps) {
   const theme = useTheme()
@@ -34,6 +35,7 @@ function BCNavbar({
     routes,
     beta,
     headerRightPart,
+    headerUtilityPart,
     menuRightPart
   }
 
@@ -41,7 +43,10 @@ function BCNavbar({
     <BCBox
       py={0}
       className="main-layout-navbar"
-      sx={{ position: 'relative', zIndex: (theme: any) => theme.zIndex.modal + 2 }}
+      sx={{
+        position: 'relative',
+        zIndex: (theme: any) => theme.zIndex.modal + 2
+      }}
     >
       <PopupState variant="popover" popupId="demo-popup-menu">
         {(popupState: PopupStateType) => (

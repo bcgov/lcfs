@@ -197,6 +197,18 @@ describe('BCNavbar', () => {
 
       expect(screen.getByTestId('menu-right')).toBeInTheDocument()
     })
+
+    it('renders a utility in the global header', () => {
+      render(
+        <BCNavbar
+          routes={sampleRoutes}
+          headerUtilityPart={<div data-test="header-utility">Search</div>}
+        />,
+        { wrapper: TestWrapper }
+      )
+
+      expect(screen.getByTestId('header-utility')).toBeInTheDocument()
+    })
   })
 
   describe('icons', () => {
