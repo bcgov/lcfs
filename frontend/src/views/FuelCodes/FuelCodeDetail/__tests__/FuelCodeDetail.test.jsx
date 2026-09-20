@@ -254,12 +254,15 @@ describe('FuelCodeDetail', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('uses the single-record endpoint and renders a read-only view for BCeID', () => {
+  test('uses the single-record endpoint and renders a read-only view for BCeID', ({
+    render,
+    router
+  }) => {
     mockUseCurrentUser.mockReturnValue({
       data: { isGovernmentUser: false }
     })
 
-    render(<FuelCodeDetail />, { wrapper })
+    render(<FuelCodeDetail />, [router])
 
     expect(mockUseGetFuelCode).toHaveBeenCalledWith('100', { enabled: true })
     expect(mockUseGetFuelCodeGroup).toHaveBeenCalledWith('100', {
@@ -274,8 +277,8 @@ describe('FuelCodeDetail', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('uses the group endpoint for IDIR users', () => {
-    render(<FuelCodeDetail />, { wrapper })
+  test('uses the group endpoint for IDIR users', ({ render, router }) => {
+    render(<FuelCodeDetail />, [router])
 
     expect(mockUseGetFuelCodeGroup).toHaveBeenCalledWith('100', {
       enabled: true
