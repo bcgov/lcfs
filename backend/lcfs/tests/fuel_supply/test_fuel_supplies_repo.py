@@ -806,6 +806,7 @@ async def test_get_organization_fuel_supply_analytics_normalizes_petroleum_fuel_
         "Fossil-derived diesel": 250,
         "Fossil-derived gasoline": 300,
     }
+    assert analytics["total_fuel_types"] == 2
     assert yoy_by_fuel_type["Fossil-derived diesel"]["priorYearVolume"] == 100
     assert yoy_by_fuel_type["Fossil-derived diesel"]["totalVolume"] == 150
     assert yoy_by_fuel_type["Fossil-derived diesel"]["pctChangeYoy"] == 50

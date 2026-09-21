@@ -33,6 +33,10 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import OrganizationList from '@/views/Transactions/components/OrganizationList'
 import { formatNumberWithCommas } from '@/utils/formatters'
+import {
+  isEquivalentFossilFuelType,
+  normalizeFuelTypeForDisplay
+} from '@/utils/fuelTypeNormalization'
 import { defaultInitialPagination } from '@/constants/schedules'
 
 import {
@@ -204,6 +208,29 @@ const getTopFuelTypesByVolume = (rows, limit = 8) =>
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([fuelType]) => fuelType)
+
+export const normalizeFuelTypeVolumeTrendRows = (rows = []) =>
+  Array.from(
+    rows
+      .reduce((acc, row) => {
+        const fuelType = normalizeFuelTypeForDisplay(row.fuelType)
+        const key = `${row.reportingYear}|${fuelType}|${row.fuelCategory || ''}`
+        const existing = acc.get(key) || {
+          ...row,
+          fuelType,
+          totalVolume: 0,
+          fossilDerived: false
+        }
+        existing.totalVolume += row.totalVolume || 0
+        existing.fossilDerived =
+          existing.fossilDerived ||
+          row.fossilDerived ||
+          isEquivalentFossilFuelType(row.fuelType)
+        acc.set(key, existing)
+        return acc
+      }, new Map())
+      .values()
+  )
 
 const SupplyMetricCard = ({ title, value, period, comparisons = [] }) => (
   <Card
@@ -611,7 +638,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   }, [analytics.complianceUnitCreditDebitTrend])
 
   const fuelTypeVolumeTrendData = useMemo(() => {
-    const rows = analytics.fuelTypeVolumeTrend || []
+    const rows = normalizeFuelTypeVolumeTrendRows(
+      analytics.fuelTypeVolumeTrend || []
+    )
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()
@@ -644,7 +673,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
 
   // YoY % change per fuel type/year, used to annotate the volume trend tooltip.
   const fuelTypeYoyChangeData = useMemo(() => {
-    const rows = analytics.fuelTypeVolumeTrend || []
+    const rows = normalizeFuelTypeVolumeTrendRows(
+      analytics.fuelTypeVolumeTrend || []
+    )
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()
@@ -693,7 +724,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   }, [analytics.fuelTypeVolumeTrend])
 
   const renewableSupplyVolumeChangeData = useMemo(() => {
-    const rows = analytics.fuelTypeVolumeTrend || []
+    const rows = normalizeFuelTypeVolumeTrendRows(
+      analytics.fuelTypeVolumeTrend || []
+    )
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()

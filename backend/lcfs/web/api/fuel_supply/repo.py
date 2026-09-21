@@ -1064,7 +1064,9 @@ class FuelSupplyRepository:
                 total_volume += quantity
 
                 # Track unique fuel types
-                fuel_types_set.add(fs.fuel_type.fuel_type)
+                fuel_types_set.add(
+                    _normalized_supply_history_fuel_type(fs.fuel_type.fuel_type)
+                )
 
                 # Track submission dates
                 if fs.compliance_report.update_date:
