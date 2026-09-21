@@ -45,21 +45,31 @@ const formatItemTooltip = ({ marker = '', name, value, percent }) =>
 const formatCompactNumber = (value) =>
   value >= 1000 ? `${value / 1000}k` : value
 
+const chartCurrencyLabel = (overrides = {}) => ({
+  show: true,
+  formatter: ({ value }) =>
+    Number(value) === 0 ? '' : compactCurrencyFormatter.format(value),
+  color: '#ffffff',
+  fontSize: 11,
+  fontWeight: 600,
+  ...overrides
+})
+
 const getPaletteColor = (palette, key, fallbackKey) =>
   palette?.[key]?.main ?? palette?.[fallbackKey]?.main
 
 export const useStackedBarOption = (data, theme) => {
   const palette = theme?.palette
   const chartColors = [
-    getPaletteColor(palette, 'primary'),
-    getPaletteColor(palette, 'info')
-  ].filter(Boolean)
+    getPaletteColor(palette, 'primary') ?? BC_CHART_COLORS.blue,
+    getPaletteColor(palette, 'warning') ?? BC_CHART_COLORS.orange
+  ]
 
   return getStandardChartOptions({
     ...(chartColors.length ? { color: chartColors } : {}),
     tooltip: { trigger: 'axis', formatter: formatAxisTooltip },
     legend: { top: 0, type: 'scroll' },
-    grid: { ...BC_CHART_GRID, top: 48, bottom: 44 },
+    grid: { ...BC_CHART_GRID, left: 96, top: 48, bottom: 44 },
     xAxis: {
       type: 'category',
       name: 'Compliance year',
@@ -71,7 +81,7 @@ export const useStackedBarOption = (data, theme) => {
       type: 'value',
       name: 'Penalty amount',
       nameLocation: 'middle',
-      nameGap: 52,
+      nameGap: 72,
       nameRotate: 90,
       nameTextStyle: {
         color: BC_CHART_COLORS.text,
@@ -84,17 +94,24 @@ export const useStackedBarOption = (data, theme) => {
     },
     series: [
       {
-        name: PENALTY_CHART_LABELS.automaticRenewableFuelPenalty,
+        name: AUTO_RENEWABLE_PENALTY_LABEL,
         type: 'bar',
         stack: 'total',
         emphasis: { focus: 'series' },
+        label: chartCurrencyLabel({ position: 'inside' }),
+        labelLayout: { hideOverlap: true },
         data: data.map((item) => item.autoRenewable)
       },
       {
-        name: PENALTY_CHART_LABELS.automaticLowCarbonFuelPenalty,
+        name: AUTO_LOW_CARBON_PENALTY_LABEL,
         type: 'bar',
         stack: 'total',
         emphasis: { focus: 'series' },
+        label: chartCurrencyLabel({
+          position: 'inside',
+          color: BC_CHART_COLORS.text
+        }),
+        labelLayout: { hideOverlap: true },
         data: data.map((item) => item.autoLowCarbon)
       }
     ]
