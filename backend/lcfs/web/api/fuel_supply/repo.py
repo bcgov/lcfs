@@ -37,6 +37,48 @@ from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
 
+FUEL_TYPE_EQUIVALENTS = {
+    "petroleum diesel": "Fossil-derived diesel",
+    "petroleum-based diesel": "Fossil-derived diesel",
+    "fossil derived diesel": "Fossil-derived diesel",
+    "fossil-derived diesel": "Fossil-derived diesel",
+    "petroleum gasoline": "Fossil-derived gasoline",
+    "petroleum-based gasoline": "Fossil-derived gasoline",
+    "fossil derived gasoline": "Fossil-derived gasoline",
+    "fossil-derived gasoline": "Fossil-derived gasoline",
+}
+
+
+def _fuel_type_equivalence_key(fuel_type_name):
+    return str(fuel_type_name or "").strip().lower().replace("\u2010", "-")
+
+
+def _normalized_supply_history_fuel_type(fuel_type_name):
+    """
+    Petroleum and fossil-derived labels represent the same historical supply
+    type across the 2023 terminology transition.
+    """
+    return FUEL_TYPE_EQUIVALENTS.get(
+        _fuel_type_equivalence_key(fuel_type_name), fuel_type_name
+    )
+
+
+def _fuel_type_filter_values(filter_values):
+    equivalent_values = set()
+    for value in filter_values:
+        key = _fuel_type_equivalence_key(value)
+        canonical = FUEL_TYPE_EQUIVALENTS.get(key)
+        if not canonical:
+            equivalent_values.add(key)
+            continue
+
+        equivalent_values.update(
+            name
+            for name, matching_canonical in FUEL_TYPE_EQUIVALENTS.items()
+            if matching_canonical == canonical
+        )
+    return sorted(equivalent_values)
+
 
 def _get_filter_values(filter_item):
     values = getattr(filter_item, "values", None)
@@ -768,7 +810,22 @@ class FuelSupplyRepository:
                             CompliancePeriod.description.ilike(f"%{filter_value}%")
                         )
                 elif field == "fuel_type":
-                    query = query.where(FuelType.fuel_type.ilike(f"%{filter_value}%"))
+                    equivalent_values = _fuel_type_filter_values(
+                        filter_values or [filter_value]
+                    )
+                    is_set_filter = getattr(filter_item, "filter_type", None) == "set"
+                    if equivalent_values and (
+                        is_set_filter
+                        or _fuel_type_equivalence_key(filter_value)
+                        in FUEL_TYPE_EQUIVALENTS
+                    ):
+                        query = query.where(
+                            func.lower(FuelType.fuel_type).in_(equivalent_values)
+                        )
+                    else:
+                        query = query.where(
+                            FuelType.fuel_type.ilike(f"%{filter_value}%")
+                        )
                 elif field == "fuel_category":
                     # category is a Postgres enum; cast to text so ILIKE works
                     # (otherwise the pattern is cast to the enum type and fails).
@@ -913,7 +970,22 @@ class FuelSupplyRepository:
                 if field == "compliance_period":
                     selected_year_filter = set(filter_values)
                 elif field == "fuel_type":
-                    query = query.where(FuelType.fuel_type.ilike(f"%{filter_value}%"))
+                    equivalent_values = _fuel_type_filter_values(
+                        filter_values or [filter_value]
+                    )
+                    is_set_filter = getattr(filter_item, "filter_type", None) == "set"
+                    if equivalent_values and (
+                        is_set_filter
+                        or _fuel_type_equivalence_key(filter_value)
+                        in FUEL_TYPE_EQUIVALENTS
+                    ):
+                        query = query.where(
+                            func.lower(FuelType.fuel_type).in_(equivalent_values)
+                        )
+                    else:
+                        query = query.where(
+                            FuelType.fuel_type.ilike(f"%{filter_value}%")
+                        )
                 elif field == "fuel_category":
                     # category is a Postgres enum; cast to text so ILIKE works
                     # (otherwise the pattern is cast to the enum type and fails).
@@ -999,7 +1071,9 @@ class FuelSupplyRepository:
                     submission_dates_set.add(fs.compliance_report.update_date)
 
                 # Aggregate by fuel type
-                fuel_type_name = fs.fuel_type.fuel_type
+                fuel_type_name = _normalized_supply_history_fuel_type(
+                    fs.fuel_type.fuel_type
+                )
                 total_by_fuel_type[fuel_type_name] = (
                     total_by_fuel_type.get(fuel_type_name, 0) + quantity
                 )
@@ -1046,7 +1120,11 @@ class FuelSupplyRepository:
                 yearly[year]["zero_or_negative_compliance_units"] += compliance_units
                 yearly[year]["non_positive_cu_volume"] += quantity
 
-            fuel_type_name = fs.fuel_type.fuel_type
+            raw_fuel_type_name = fs.fuel_type.fuel_type
+            fuel_type_name = _normalized_supply_history_fuel_type(raw_fuel_type_name)
+            is_equivalent_fossil_type = (
+                _fuel_type_equivalence_key(raw_fuel_type_name) in FUEL_TYPE_EQUIVALENTS
+            )
             yearly_fuel_type.setdefault(year, {})
             yearly_fuel_type[year].setdefault(
                 fuel_type_name,
@@ -1057,15 +1135,19 @@ class FuelSupplyRepository:
                     "total_compliance_units": 0,
                     "positive_compliance_units": False,
                     "renewable": bool(getattr(fs.fuel_type, "renewable", False)),
-                    "fossil_derived": bool(
-                        getattr(fs.fuel_type, "fossil_derived", False)
-                    ),
+                    "fossil_derived": is_equivalent_fossil_type
+                    or bool(getattr(fs.fuel_type, "fossil_derived", False)),
                 },
             )
             yearly_fuel_type[year][fuel_type_name]["total_volume"] += quantity
             yearly_fuel_type[year][fuel_type_name][
                 "total_compliance_units"
             ] += compliance_units
+            yearly_fuel_type[year][fuel_type_name]["fossil_derived"] = (
+                yearly_fuel_type[year][fuel_type_name].get("fossil_derived", False)
+                or is_equivalent_fossil_type
+                or bool(getattr(fs.fuel_type, "fossil_derived", False))
+            )
             if compliance_units > 0:
                 yearly_fuel_type[year][fuel_type_name][
                     "positive_compliance_units"
