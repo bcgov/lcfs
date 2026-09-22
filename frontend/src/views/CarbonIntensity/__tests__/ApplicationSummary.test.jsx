@@ -18,7 +18,7 @@ vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
   __esModule: true,
   default: ({ document }) => (
     <button type="button" data-test="document-preview-button">
-      Preview {document.fileName}
+      Preview document
     </button>
   )
 }))
