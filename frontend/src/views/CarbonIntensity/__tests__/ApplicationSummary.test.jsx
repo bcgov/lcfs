@@ -14,6 +14,15 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDownloadDocument: () => mockDownloadDocument
 }))
 
+vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
+  __esModule: true,
+  default: ({ document }) => (
+    <button type="button" data-test="document-preview-button">
+      Preview {document.fileName}
+    </button>
+  )
+}))
+
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: () => <div data-test="grid-stub" />
 }))

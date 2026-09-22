@@ -44,6 +44,15 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDownloadDocument: vi.fn(() => mockDownloadDoc)
 }))
 
+vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
+  __esModule: true,
+  default: ({ document }) => (
+    <button type="button" data-test="document-preview-button">
+      Preview {document.fileName}
+    </button>
+  )
+}))
+
 const mockDownload = vi.fn().mockResolvedValue({})
 vi.mock('@/services/useApiService', () => ({
   useApiService: () => ({ download: mockDownload, get: vi.fn(), post: vi.fn() })

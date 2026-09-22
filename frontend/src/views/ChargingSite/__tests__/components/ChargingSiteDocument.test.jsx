@@ -18,9 +18,18 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDownloadDocument: () => vi.fn()
 }))
 
+vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
+  __esModule: true,
+  default: ({ document }) => (
+    <button type="button" data-test="document-preview-button">
+      Preview {document.fileName}
+    </button>
+  )
+}))
+
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   __esModule: true,
-  default: ({ open, close }) => 
+  default: ({ open, close }) =>
     open ? <div data-testid="document-upload-dialog">Upload Dialog</div> : null
 }))
 
@@ -44,36 +53,36 @@ describe('ChargingSiteDocument', () => {
 
   it('renders document accordion with attachments', () => {
     render(<ChargingSiteDocument attachments={mockAttachments} />, { wrapper })
-    
+
     expect(screen.getByText('documentTitle')).toBeInTheDocument()
     expect(screen.getByText('test-document.pdf')).toBeInTheDocument()
   })
 
   it('renders empty state when no attachments', () => {
     render(<ChargingSiteDocument attachments={[]} />, { wrapper })
-    
+
     expect(screen.getByText('documentTitle')).toBeInTheDocument()
     expect(screen.queryByText('test-document.pdf')).not.toBeInTheDocument()
   })
 
   it('opens upload dialog when edit button is clicked', () => {
     render(<ChargingSiteDocument attachments={mockAttachments} />, { wrapper })
-    
+
     const editButton = screen.getByLabelText('edit')
     fireEvent.click(editButton)
-    
+
     expect(screen.getByText('Upload Dialog')).toBeInTheDocument()
   })
 
   it('displays document metadata correctly', () => {
     render(<ChargingSiteDocument attachments={mockAttachments} />, { wrapper })
-    
+
     expect(screen.getByText(/Test User/)).toBeInTheDocument()
   })
 
   it('handles document click for download', () => {
     render(<ChargingSiteDocument attachments={mockAttachments} />, { wrapper })
-    
+
     const documentLink = screen.getByText('test-document.pdf')
     expect(documentLink).toBeInTheDocument()
   })

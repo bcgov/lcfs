@@ -27,6 +27,15 @@ vi.mock('@/hooks/useDocuments.js', () => ({
   useDownloadDocument: mockUseDownloadDocument
 }))
 
+vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
+  __esModule: true,
+  default: ({ document }) => (
+    <button type="button" data-test="document-preview-button">
+      Preview {document.fileName}
+    </button>
+  )
+}))
+
 vi.mock('@/utils/formatters', () => ({
   numberFormatter: mockNumberFormatter
 }))
@@ -85,20 +94,20 @@ describe('TransactionView Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     mockHasAnyRole = vi.fn()
     mockViewDocument = vi.fn()
-    
+
     mockUseCurrentUser.mockReturnValue({
       hasAnyRole: mockHasAnyRole
     })
-    
+
     mockUseDocuments.mockReturnValue({
       data: []
     })
-    
+
     mockUseDownloadDocument.mockReturnValue(mockViewDocument)
-    
+
     mockNumberFormatter.mockReturnValue('1,000')
   })
 
@@ -113,7 +122,7 @@ describe('TransactionView Component', () => {
 
   it('renders basic transaction information correctly', () => {
     renderComponent({ transaction: mockTransaction })
-    
+
     expect(screen.getByText(/txn:administrativeAdjustment/)).toBeInTheDocument()
     expect(screen.getByText(/Test Organization/)).toBeInTheDocument()
     expect(screen.getByText(/txn:complianceUnitsLabel/)).toBeInTheDocument()
@@ -124,7 +133,7 @@ describe('TransactionView Component', () => {
 
   it('displays admin adjustment when adminAdjustmentId exists', () => {
     renderComponent({ transaction: mockTransaction })
-    
+
     expect(screen.getByText(/txn:administrativeAdjustment/)).toBeInTheDocument()
     expect(mockUseDocuments).toHaveBeenCalledWith('AdminAdjustment', 123)
     expect(mockUseDownloadDocument).toHaveBeenCalledWith('AdminAdjustment', 123)
@@ -136,12 +145,15 @@ describe('TransactionView Component', () => {
       adminAdjustmentId: null,
       initiativeAgreementId: 456
     }
-    
+
     renderComponent({ transaction: initiativeTransaction })
-    
+
     expect(screen.getByText(/txn:initiativeAgreement/)).toBeInTheDocument()
     expect(mockUseDocuments).toHaveBeenCalledWith('InitiativeAgreement', 456)
-    expect(mockUseDownloadDocument).toHaveBeenCalledWith('InitiativeAgreement', 456)
+    expect(mockUseDownloadDocument).toHaveBeenCalledWith(
+      'InitiativeAgreement',
+      456
+    )
   })
 
   it('displays unknown organization when toOrganization is null', () => {
@@ -149,9 +161,9 @@ describe('TransactionView Component', () => {
       ...mockTransaction,
       toOrganization: null
     }
-    
+
     renderComponent({ transaction: transactionWithoutOrg })
-    
+
     expect(screen.getByText(/common:unknown/)).toBeInTheDocument()
   })
 
@@ -160,15 +172,15 @@ describe('TransactionView Component', () => {
       ...mockTransaction,
       toOrganization: {}
     }
-    
+
     renderComponent({ transaction: transactionWithEmptyOrg })
-    
+
     expect(screen.getByText(/common:unknown/)).toBeInTheDocument()
   })
 
   it('displays regular comments when not recommended status', () => {
     renderComponent({ transaction: mockTransaction })
-    
+
     expect(screen.getByText(/txn:comments/)).toBeInTheDocument()
     expect(screen.getByText(/Test comment/)).toBeInTheDocument()
   })
@@ -178,11 +190,11 @@ describe('TransactionView Component', () => {
       ...mockTransaction,
       currentStatus: { status: 'Recommended' }
     }
-    
+
     mockHasAnyRole.mockReturnValue(true)
-    
+
     renderComponent({ transaction: recommendedTransaction })
-    
+
     expect(screen.getByText(/txn:editableComments/)).toBeInTheDocument()
     expect(mockHasAnyRole).toHaveBeenCalledWith('director')
   })
@@ -192,25 +204,25 @@ describe('TransactionView Component', () => {
       ...mockTransaction,
       currentStatus: { status: 'Recommended' }
     }
-    
+
     mockHasAnyRole.mockReturnValue(false)
-    
+
     renderComponent({ transaction: recommendedTransaction })
-    
+
     expect(screen.getByText(/txn:comments/)).toBeInTheDocument()
   })
 
   it('displays regular comments for director when not recommended status', () => {
     mockHasAnyRole.mockReturnValue(true)
-    
+
     renderComponent({ transaction: mockTransaction })
-    
+
     expect(screen.getByText(/txn:comments/)).toBeInTheDocument()
   })
 
   it('displays attachments section', () => {
     renderComponent({ transaction: mockTransaction })
-    
+
     expect(screen.getByText(/txn:attachments/)).toBeInTheDocument()
   })
 
@@ -218,9 +230,9 @@ describe('TransactionView Component', () => {
     mockUseDocuments.mockReturnValue({
       data: []
     })
-    
+
     renderComponent({ transaction: mockTransaction })
-    
+
     expect(screen.getByText(/txn:attachments/)).toBeInTheDocument()
     expect(screen.queryByText(/test-file.pdf/)).not.toBeInTheDocument()
   })
@@ -229,9 +241,9 @@ describe('TransactionView Component', () => {
     mockUseDocuments.mockReturnValue({
       data: null
     })
-    
+
     renderComponent({ transaction: mockTransaction })
-    
+
     expect(screen.getByText(/txn:attachments/)).toBeInTheDocument()
     expect(screen.queryByText(/test-file.pdf/)).not.toBeInTheDocument()
   })
@@ -241,31 +253,29 @@ describe('TransactionView Component', () => {
       { documentId: 1, fileName: 'test-file.pdf' },
       { documentId: 2, fileName: 'another-file.doc' }
     ]
-    
+
     mockUseDocuments.mockReturnValue({
       data: mockFiles
     })
-    
+
     renderComponent({ transaction: mockTransaction })
-    
+
     expect(screen.getByText(/test-file.pdf/)).toBeInTheDocument()
     expect(screen.getByText(/another-file.doc/)).toBeInTheDocument()
   })
 
   it('calls viewDocument when file is clicked', () => {
-    const mockFiles = [
-      { documentId: 1, fileName: 'test-file.pdf' }
-    ]
-    
+    const mockFiles = [{ documentId: 1, fileName: 'test-file.pdf' }]
+
     mockUseDocuments.mockReturnValue({
       data: mockFiles
     })
-    
+
     renderComponent({ transaction: mockTransaction })
-    
+
     const fileLink = screen.getByText(/test-file.pdf/)
     fireEvent.click(fileLink)
-    
+
     expect(mockViewDocument).toHaveBeenCalledWith(1)
   })
 
@@ -274,19 +284,19 @@ describe('TransactionView Component', () => {
       { documentId: 1, fileName: 'file1.pdf' },
       { documentId: 2, fileName: 'file2.doc' }
     ]
-    
+
     mockUseDocuments.mockReturnValue({
       data: mockFiles
     })
-    
+
     renderComponent({ transaction: mockTransaction })
-    
+
     const file1Link = screen.getByText(/file1.pdf/)
     const file2Link = screen.getByText(/file2.doc/)
-    
+
     fireEvent.click(file1Link)
     fireEvent.click(file2Link)
-    
+
     expect(mockViewDocument).toHaveBeenCalledWith(1)
     expect(mockViewDocument).toHaveBeenCalledWith(2)
     expect(mockViewDocument).toHaveBeenCalledTimes(2)
@@ -294,7 +304,7 @@ describe('TransactionView Component', () => {
 
   it('calls numberFormatter with compliance units', () => {
     renderComponent({ transaction: mockTransaction })
-    
+
     expect(mockNumberFormatter).toHaveBeenCalledWith('1000')
   })
 
@@ -303,9 +313,9 @@ describe('TransactionView Component', () => {
       ...mockTransaction,
       transactionEffectiveDate: null
     }
-    
+
     renderComponent({ transaction: transactionWithoutDate })
-    
+
     expect(screen.getByText(/txn:effectiveDateLabel/)).toBeInTheDocument()
   })
 
@@ -314,9 +324,9 @@ describe('TransactionView Component', () => {
       ...mockTransaction,
       govComment: ''
     }
-    
+
     renderComponent({ transaction: transactionWithoutComment })
-    
+
     expect(screen.getByText(/txn:comments/)).toBeInTheDocument()
   })
 
@@ -326,10 +336,13 @@ describe('TransactionView Component', () => {
       adminAdjustmentId: null,
       initiativeAgreementId: null
     }
-    
+
     renderComponent({ transaction: transactionWithNoIds })
-    
+
     expect(mockUseDocuments).toHaveBeenCalledWith('InitiativeAgreement', null)
-    expect(mockUseDownloadDocument).toHaveBeenCalledWith('InitiativeAgreement', null)
+    expect(mockUseDownloadDocument).toHaveBeenCalledWith(
+      'InitiativeAgreement',
+      null
+    )
   })
 })
