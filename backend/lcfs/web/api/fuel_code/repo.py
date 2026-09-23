@@ -1665,7 +1665,20 @@ class FuelCodeRepository:
         energy_effectiveness = await self.get_energy_effectiveness_ratio(
             fuel_type_id, fuel_category_id, compliance_period_id, end_use_id
         )
-        eer = energy_effectiveness.ratio if energy_effectiveness else 1.0
+        if energy_effectiveness:
+            eer = energy_effectiveness.ratio
+        elif int(compliance_period) < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR):
+            # Pre-2024 EER data only lists some fuels; anything not listed is 1.0.
+            eer = 1.0
+        else:
+            # From 2024 the EER table lists every combination the forms offer, so
+            # a missing row is a gap in the reference data. Fail rather than
+            # silently calculating at 1.0 (#5113).
+            raise ValueError(
+                f"No energy effectiveness ratio is configured for "
+                f"{fuel_type.fuel_type} (fuel category {fuel_category_id}, "
+                f"end use {end_use_id}) in {compliance_period}"
+            )
 
         # Fetch target carbon intensity (TCI)
         # For legacy years (pre-2024), TCI may not exist in the database

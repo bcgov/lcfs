@@ -12,6 +12,7 @@ from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
+from lcfs.db.models.fuel.FuelInstance import FuelInstance
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 
@@ -93,9 +94,9 @@ async def test_cng_gasoline_eer_stays_at_0_9(dbsession, year):
 async def test_end_use_specific_eers_resolve_in_2027(
     dbsession, fuel_type, category, end_use, expected
 ):
-    """End-use-specific ratios must resolve to a row in 2027. When no row is
-    found the calculation silently falls back to 1.0, which is how these
-    were understated before #5113."""
+    """End-use-specific ratios must resolve to a row in 2027. Before #5113 a
+    missing row silently fell back to 1.0, which is how these were
+    understated."""
     repo = FuelCodeRepository(db=dbsession)
     fuel_type_id, category_id, end_use_id, period_id = await _ids(
         dbsession, fuel_type, category, end_use, "2027"
@@ -105,3 +106,38 @@ async def test_end_use_specific_eers_resolve_in_2027(
     )
     assert eer is not None, f"no 2027 EER row for {fuel_type}/{category}/{end_use}"
     assert eer.ratio == pytest.approx(expected)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "year", ["2024", "2025", LATEST_SCHEDULE_YEAR, *EXTENDED_YEARS]
+)
+async def test_every_offered_fuel_and_category_has_an_eer(dbsession, year):
+    """From 2024 a missing EER fails the calculation instead of defaulting to
+    1.0, so every fuel type / category pair the forms offer must have at least
+    one EER row in each year."""
+    period_id = (
+        select(CompliancePeriod.compliance_period_id)
+        .where(CompliancePeriod.description == year)
+        .scalar_subquery()
+    )
+    result = await dbsession.execute(
+        select(FuelType.fuel_type, FuelCategory.category)
+        .select_from(FuelInstance)
+        .join(FuelType, FuelType.fuel_type_id == FuelInstance.fuel_type_id)
+        .join(
+            FuelCategory,
+            FuelCategory.fuel_category_id == FuelInstance.fuel_category_id,
+        )
+        .where(
+            ~select(EnergyEffectivenessRatio.eer_id)
+            .where(
+                EnergyEffectivenessRatio.fuel_type_id == FuelInstance.fuel_type_id,
+                EnergyEffectivenessRatio.fuel_category_id
+                == FuelInstance.fuel_category_id,
+                EnergyEffectivenessRatio.compliance_period_id == period_id,
+            )
+            .exists()
+        )
+    )
+    assert result.all() == []

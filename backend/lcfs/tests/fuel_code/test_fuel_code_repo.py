@@ -1099,6 +1099,63 @@ async def test_get_standardized_fuel_data(fuel_code_repo, mock_db):
     fuel_code_repo.get_additional_carbon_intensity.assert_awaited_once()
 
 
+def _mock_lookups_without_eer(fuel_code_repo, mock_db):
+    """Every lookup get_standardized_fuel_data makes succeeds except the EER."""
+    mock_db.get_one.return_value = FuelType(
+        fuel_type_id=1,
+        fuel_type="Electricity",
+        default_carbon_intensity=80.0,
+        unrecognized=False,
+    )
+    fuel_code_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    fuel_code_repo.get_default_carbon_intensity = AsyncMock(return_value=80.0)
+    fuel_code_repo.get_energy_density = AsyncMock(
+        return_value=EnergyDensity(
+            energy_density_id=1, density=3.6, fuel_type_id=1, compliance_period_id=1
+        )
+    )
+    fuel_code_repo.get_energy_effectiveness_ratio = AsyncMock(return_value=None)
+    fuel_code_repo.get_target_carbon_intensity = AsyncMock(
+        return_value=TargetCarbonIntensity(
+            target_carbon_intensity_id=1, target_carbon_intensity=50.0
+        )
+    )
+    fuel_code_repo.get_additional_carbon_intensity = AsyncMock(return_value=None)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("compliance_period", ["2024", "2027", "2031"])
+async def test_get_standardized_fuel_data_missing_eer_fails(
+    fuel_code_repo, mock_db, compliance_period
+):
+    """From 2024 a missing EER is a gap in the reference data. It must fail
+    rather than silently calculate at 1.0, which understated 2027-2030
+    credits in #5113."""
+    _mock_lookups_without_eer(fuel_code_repo, mock_db)
+
+    with pytest.raises(ValueError, match="No energy effectiveness ratio"):
+        await fuel_code_repo.get_standardized_fuel_data(
+            fuel_type_id=1,
+            fuel_category_id=1,
+            end_use_id=3,
+            compliance_period=compliance_period,
+        )
+
+
+@pytest.mark.anyio
+async def test_get_standardized_fuel_data_missing_eer_legacy_defaults_to_1(
+    fuel_code_repo, mock_db
+):
+    """Pre-2024 EER data only lists some fuels; anything not listed is 1.0."""
+    _mock_lookups_without_eer(fuel_code_repo, mock_db)
+
+    result = await fuel_code_repo.get_standardized_fuel_data(
+        fuel_type_id=1, fuel_category_id=1, end_use_id=3, compliance_period="2023"
+    )
+
+    assert result.eer == 1.0
+
+
 @pytest.mark.anyio
 async def test_get_additional_carbon_intensity(fuel_code_repo, mock_db):
     aci = AdditionalCarbonIntensity(additional_uci_id=1, intensity=10.0)
