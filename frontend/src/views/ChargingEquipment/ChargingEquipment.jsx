@@ -52,7 +52,6 @@ const initialPaginationOptions = {
 }
 
 const EXCLUDED_ORG_TYPES = new Set([
-  'non_bceid_supplier',
   'exempted_supplier',
   'fuel_producer',
   'initiative_agreement_holder'
@@ -105,8 +104,19 @@ export const ChargingEquipment = () => {
   const filteredOrgNames = useMemo(
     () =>
       (orgNames || []).filter((org) => {
-        const orgTypeKey = (org?.orgType || org?.org_type || '').toLowerCase()
-        return !EXCLUDED_ORG_TYPES.has(orgTypeKey)
+        // Multi-type orgs (#4565): include the org if any of its types is
+        // not excluded; fall back to the legacy single type.
+        const orgTypeKeys = (
+          org?.orgTypes?.length
+            ? org.orgTypes
+            : [org?.orgType || org?.org_type]
+        )
+          .filter(Boolean)
+          .map((key) => String(key).toLowerCase())
+        return (
+          orgTypeKeys.length === 0 ||
+          orgTypeKeys.some((key) => !EXCLUDED_ORG_TYPES.has(key))
+        )
       }),
     [orgNames]
   )

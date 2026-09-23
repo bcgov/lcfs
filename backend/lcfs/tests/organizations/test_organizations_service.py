@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 import unittest
+from datetime import datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 from lcfs.web.api.organizations.services import OrganizationsService
@@ -21,6 +22,7 @@ from lcfs.db.models.organization.OrganizationStatus import (
     OrgStatusEnum,
 )
 from lcfs.web.api.base import PaginationRequestSchema, FilterModel
+from lcfs.db.models.user.Role import RoleEnum
 from unittest.mock import patch
 
 
@@ -47,7 +49,31 @@ def organizations_service(mock_repo, mock_transaction_repo):
     service = OrganizationsService()
     service.repo = mock_repo
     service.transaction_repo = mock_transaction_repo
+    service.notification_service = AsyncMock()
     return service
+
+
+def mock_org_type(type_id=1, is_bceid_user=True, display_order=1):
+    return MagicMock(
+        organization_type_id=type_id,
+        is_bceid_user=is_bceid_user,
+        display_order=display_order,
+    )
+
+
+def mock_association_repo_methods(mock_repo, type_ids=(1,)):
+    """Mocks for the #4565 org-type/available-role association flow."""
+    mock_repo.get_organization_types_by_ids = AsyncMock(
+        return_value=[mock_org_type(type_id) for type_id in type_ids]
+    )
+    mock_repo.set_organization_types = AsyncMock()
+    mock_repo.get_role_ids_by_enums = AsyncMock(return_value={})
+    mock_repo.get_available_role_ids = AsyncMock(return_value=set())
+    mock_repo.set_available_roles = AsyncMock()
+    mock_repo.delete_user_roles_for_org = AsyncMock(return_value=[])
+    mock_repo.get_organization_response = AsyncMock(
+        return_value=MagicMock(organization_id=1)
+    )
 
 
 @pytest.fixture
@@ -322,6 +348,112 @@ async def test_get_penalty_analytics_aggregates_values(
 
 
 @pytest.mark.anyio
+async def test_get_penalty_analytics_uses_persisted_line_11_total(
+    penalty_service, mock_repo
+):
+    summaries = [
+        {
+            "compliance_period_id": 1,
+            "compliance_year": "2025",
+            "line_11_penalty_gasoline": 0.0,
+            "line_11_penalty_diesel": 0.0,
+            "line_11_penalty_jet_fuel": 0.0,
+            "line_11_penalty_payable": 18000.0,
+            "line_21_penalty_payable": 0.0,
+            "penalty_override_enabled": False,
+            "renewable_penalty_override": None,
+            "low_carbon_penalty_override": None,
+        }
+    ]
+
+    mock_repo.get_penalty_analytics_data = AsyncMock(return_value=(summaries, []))
+
+    result = await penalty_service.get_penalty_analytics(organization_id=123)
+
+    assert result.yearly_penalties[0].auto_renewable == pytest.approx(18000.0)
+    assert result.yearly_penalties[0].total_automatic == pytest.approx(18000.0)
+    assert result.totals.auto_renewable == pytest.approx(18000.0)
+    assert result.totals.total == pytest.approx(18000.0)
+
+
+@pytest.mark.anyio
+async def test_get_penalty_analytics_includes_assessment_details(
+    penalty_service, mock_repo
+):
+    assessed_date = datetime(2026, 4, 15, 17, 30, tzinfo=timezone.utc)
+    summaries = [
+        {
+            "compliance_period_id": 1,
+            "compliance_year": "2025",
+            "report_status": "Assessed",
+            "assessed_date": assessed_date,
+            "line_11_penalty_payable": 18000.0,
+            "line_21_penalty_payable": 0.0,
+            "penalty_override_enabled": False,
+        }
+    ]
+    mock_repo.get_penalty_analytics_data = AsyncMock(return_value=(summaries, []))
+
+    result = await penalty_service.get_penalty_analytics(organization_id=123)
+
+    assert result.yearly_penalties[0].report_status == "Assessed"
+    assert result.yearly_penalties[0].assessed_date == assessed_date
+
+
+@pytest.mark.anyio
+async def test_get_penalty_analytics_uses_zero_for_empty_enabled_overrides(
+    penalty_service, mock_repo
+):
+    summaries = [
+        {
+            "compliance_period_id": 1,
+            "compliance_year": "2025",
+            "line_11_penalty_payable": 18000.0,
+            "line_21_penalty_payable": 12500.0,
+            "penalty_override_enabled": True,
+            "renewable_penalty_override": None,
+            "low_carbon_penalty_override": None,
+        }
+    ]
+    mock_repo.get_penalty_analytics_data = AsyncMock(return_value=(summaries, []))
+
+    result = await penalty_service.get_penalty_analytics(organization_id=123)
+
+    assert result.yearly_penalties[0].auto_renewable == 0
+    assert result.yearly_penalties[0].auto_low_carbon == 0
+    assert result.yearly_penalties[0].total_automatic == 0
+
+
+@pytest.mark.anyio
+async def test_get_penalty_analytics_uses_line_21_penalty_payable(
+    penalty_service, mock_repo
+):
+    summaries = [
+        {
+            "compliance_period_id": 1,
+            "compliance_year": "2025",
+            "line_11_penalty_gasoline": 0.0,
+            "line_11_penalty_diesel": 0.0,
+            "line_11_penalty_jet_fuel": 0.0,
+            "line_11_penalty_payable": 0.0,
+            "line_21_penalty_payable": 12500.0,
+            "penalty_override_enabled": False,
+            "renewable_penalty_override": None,
+            "low_carbon_penalty_override": None,
+        }
+    ]
+
+    mock_repo.get_penalty_analytics_data = AsyncMock(return_value=(summaries, []))
+
+    result = await penalty_service.get_penalty_analytics(organization_id=123)
+
+    assert result.yearly_penalties[0].auto_low_carbon == pytest.approx(12500.0)
+    assert result.yearly_penalties[0].total_automatic == pytest.approx(12500.0)
+    assert result.totals.auto_low_carbon == pytest.approx(12500.0)
+    assert result.totals.total == pytest.approx(12500.0)
+
+
+@pytest.mark.anyio
 async def test_get_penalty_logs_paginated(penalty_service, mock_repo):
     pagination = PaginationRequestSchema(page=2, size=5, filters=[], sort_orders=[])
 
@@ -473,7 +605,7 @@ async def test_create_organization_with_early_issuance(
         phone="1234567890",
         edrms_record="12345",
         organization_status_id=1,
-        organization_type_id=1,
+        organization_type_ids=[1],
         address=OrganizationAddressSchema(
             name="Test Org",
             street_address="123 Main St",
@@ -495,9 +627,7 @@ async def test_create_organization_with_early_issuance(
 
     mock_repo.create_organization = AsyncMock(return_value=MagicMock(organization_id=1))
     mock_repo.update_early_issuance_by_year = AsyncMock()
-    mock_repo.get_organization_type = AsyncMock(
-        return_value=MagicMock(is_bceid_user=True)
-    )
+    mock_association_repo_methods(mock_repo)
 
     with patch(
         "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
@@ -519,7 +649,7 @@ async def test_update_organization_with_early_issuance_change(
     """Test updating an organization's early issuance flag."""
     update_data = OrganizationUpdateSchema(
         has_early_issuance=True,
-        organization_type_id=1,
+        organization_type_ids=[1],
         address={
             "name": "Test Org",
             "streetAddress": "123 Main St",
@@ -549,13 +679,13 @@ async def test_update_organization_with_early_issuance_change(
     mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
     mock_repo.update_early_issuance_by_year = AsyncMock()
     mock_repo.update_organization = AsyncMock()
-    mock_repo.get_organization_type = AsyncMock(
-        return_value=MagicMock(is_bceid_user=True)
-    )
+    mock_association_repo_methods(mock_repo)
 
     with patch(
         "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
         return_value="2023",
+    ), patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
     ):
         await organizations_service.update_organization(
             organization_id, update_data, user=MagicMock()
@@ -564,6 +694,117 @@ async def test_update_organization_with_early_issuance_change(
     mock_repo.update_early_issuance_by_year.assert_called_once_with(
         organization_id, "2023", True, unittest.mock.ANY
     )
+
+
+@pytest.mark.anyio
+async def test_update_organization_omitting_available_roles_leaves_them_untouched(
+    organizations_service, mock_repo
+):
+    """A PUT that omits availableRoles must not withdraw the org's roles
+    (which would also strip them from every user of the organization)."""
+    update_data = OrganizationUpdateSchema(
+        has_early_issuance=False, organization_type_ids=[1]
+    )
+    assert update_data.available_roles is None
+
+    mock_repo.get_organization = AsyncMock(
+        return_value=MagicMock(
+            organization_address_id=1, organization_attorney_address_id=1
+        )
+    )
+    mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_repo.update_organization = AsyncMock()
+    mock_association_repo_methods(mock_repo)
+
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_organization(1, update_data, user=MagicMock())
+
+    mock_repo.set_organization_types.assert_awaited_once_with(1, [1])
+    mock_repo.set_available_roles.assert_not_awaited()
+    mock_repo.delete_user_roles_for_org.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_update_organization_with_empty_available_roles_withdraws_all(
+    organizations_service, mock_repo
+):
+    """An explicit empty list is a real instruction: withdraw every role."""
+    update_data = OrganizationUpdateSchema(
+        has_early_issuance=False, organization_type_ids=[1], available_roles=[]
+    )
+    assert update_data.available_roles == []
+
+    mock_repo.get_organization = AsyncMock(
+        return_value=MagicMock(
+            organization_address_id=1, organization_attorney_address_id=1
+        )
+    )
+    mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_repo.update_organization = AsyncMock()
+    mock_association_repo_methods(mock_repo)
+
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_organization(1, update_data, user=MagicMock())
+
+    mock_repo.set_available_roles.assert_awaited_once_with(1, [])
+
+
+@pytest.mark.anyio
+async def test_create_response_is_rebuilt_after_association_writes(
+    organizations_service, mock_repo
+):
+    """The returned payload must reflect the persisted types and roles, which
+    are written after the row-level response was first built."""
+    create_data = OrganizationCreateSchema(
+        name="Test Org",
+        operating_name="Test Op Org",
+        email="test@test.com",
+        phone="1234567890",
+        organization_status_id=1,
+        organization_type_ids=[1],
+        available_roles=["Transfer"],
+        has_early_issuance=False,
+        address=OrganizationAddressSchema(
+            name="Test Org",
+            street_address="123 Main St",
+            city="Anytown",
+            postalCode_zipCode="12345",
+            provinceState="BC",
+            country="Canada",
+        ),
+        attorney_address=OrganizationAddressSchema(
+            name="Test Org",
+            street_address="456 Law St",
+            city="Legaltown",
+            postalCode_zipCode="67890",
+            provinceState="BC",
+            country="Canada",
+        ),
+    )
+    mock_repo.create_organization = AsyncMock(return_value=MagicMock(organization_id=7))
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_association_repo_methods(mock_repo)
+    mock_repo.get_role_ids_by_enums = AsyncMock(
+        return_value={RoleEnum.TRANSFER: 8, RoleEnum.IA_PROPONENT: 13}
+    )
+    rebuilt = MagicMock(organization_id=7, available_roles=["Transfer"])
+    mock_repo.get_organization_response = AsyncMock(return_value=rebuilt)
+
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        result = await organizations_service.create_organization(
+            create_data, user=MagicMock()
+        )
+
+    assert result is rebuilt
+    mock_repo.get_organization_response.assert_awaited_once_with(7)
 
 
 def _listed_organization():
@@ -591,8 +832,9 @@ def _prepare_update_repo(mock_repo, organization):
     mock_repo.update_early_issuance_by_year = AsyncMock()
     mock_repo.update_organization = AsyncMock(return_value=organization)
     mock_repo.create_credit_market_audit_log = AsyncMock()
-    mock_repo.get_organization_type = AsyncMock(
-        return_value=MagicMock(is_bceid_user=False)
+    mock_association_repo_methods(mock_repo)
+    mock_repo.get_organization_types_by_ids = AsyncMock(
+        return_value=[mock_org_type(1, is_bceid_user=False)]
     )
 
 
@@ -608,10 +850,15 @@ async def test_update_organization_preserves_credit_market_listing(
         name="Renamed Org",
         email="org@example.com",
         has_early_issuance=False,
-        organization_type_id=1,
+        organization_type_ids=[1],
     )
 
-    await organizations_service.update_organization(1, update_data, user=MagicMock())
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_organization(
+            1, update_data, user=MagicMock()
+        )
 
     assert organization.name == "Renamed Org"
     assert organization.credit_market_contact_name == "Jane Seller"
@@ -633,14 +880,17 @@ async def test_update_organization_audits_explicit_credit_market_change(
 
     update_data = OrganizationUpdateSchema(
         has_early_issuance=False,
-        organization_type_id=1,
+        organization_type_ids=[1],
         display_in_credit_market=False,
         credits_to_sell=0,
     )
     user = MagicMock()
     user.keycloak_username = "idir.user"
 
-    await organizations_service.update_organization(1, update_data, user=user)
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_organization(1, update_data, user=user)
 
     assert organization.display_in_credit_market is False
     assert organization.credits_to_sell == 0
@@ -654,6 +904,95 @@ async def test_update_organization_audits_explicit_credit_market_change(
             "display_in_credit_market": {"from": True, "to": False},
         },
     )
+
+
+@pytest.mark.anyio
+async def test_apply_available_role_changes_removes_withdrawn_roles(
+    organizations_service, mock_repo
+):
+    """Withdrawing a role deletes it from the org's users and cleans up
+    notification subscriptions for each affected assignment."""
+    from lcfs.db.models.user.Role import RoleEnum
+
+    mock_repo.get_role_ids_by_enums = AsyncMock(
+        return_value={
+            RoleEnum.TRANSFER: 8,
+            RoleEnum.COMPLIANCE_REPORTING: 9,
+            RoleEnum.CI_APPLICANT: 12,
+            RoleEnum.IA_PROPONENT: 13,
+            RoleEnum.IA_SIGNER: 17,
+        }
+    )
+    mock_repo.get_available_role_ids = AsyncMock(return_value={8, 9})
+    mock_repo.set_available_roles = AsyncMock()
+    mock_repo.delete_user_roles_for_org = AsyncMock(return_value=[(4, 8), (7, 8)])
+
+    await organizations_service._apply_available_role_changes(
+        1, ["Compliance Reporting"]
+    )
+
+    mock_repo.set_available_roles.assert_awaited_once_with(1, [9])
+    mock_repo.delete_user_roles_for_org.assert_awaited_once_with(1, [8])
+    notification = organizations_service.notification_service
+    assert notification.delete_subscriptions_for_user_role.await_count == 2
+    notification.delete_subscriptions_for_user_role.assert_any_await(
+        4, RoleEnum.TRANSFER
+    )
+    notification.delete_subscriptions_for_user_role.assert_any_await(
+        7, RoleEnum.TRANSFER
+    )
+
+
+@pytest.mark.anyio
+async def test_apply_available_role_changes_ia_proponent_cascades_ia_signer(
+    organizations_service, mock_repo
+):
+    """Withdrawing IA Proponent also strips IA Signer from the org's users."""
+    from lcfs.db.models.user.Role import RoleEnum
+
+    mock_repo.get_role_ids_by_enums = AsyncMock(
+        return_value={
+            RoleEnum.TRANSFER: 8,
+            RoleEnum.COMPLIANCE_REPORTING: 9,
+            RoleEnum.CI_APPLICANT: 12,
+            RoleEnum.IA_PROPONENT: 13,
+            RoleEnum.IA_SIGNER: 17,
+        }
+    )
+    mock_repo.get_available_role_ids = AsyncMock(return_value={13})
+    mock_repo.set_available_roles = AsyncMock()
+    mock_repo.delete_user_roles_for_org = AsyncMock(return_value=[])
+
+    await organizations_service._apply_available_role_changes(1, [])
+
+    mock_repo.set_available_roles.assert_awaited_once_with(1, [])
+    deleted_role_ids = mock_repo.delete_user_roles_for_org.call_args[0][1]
+    assert sorted(deleted_role_ids) == [13, 17]
+
+
+@pytest.mark.anyio
+async def test_apply_available_role_changes_no_removal_when_unchanged(
+    organizations_service, mock_repo
+):
+    from lcfs.db.models.user.Role import RoleEnum
+
+    mock_repo.get_role_ids_by_enums = AsyncMock(
+        return_value={
+            RoleEnum.TRANSFER: 8,
+            RoleEnum.COMPLIANCE_REPORTING: 9,
+            RoleEnum.CI_APPLICANT: 12,
+            RoleEnum.IA_PROPONENT: 13,
+            RoleEnum.IA_SIGNER: 17,
+        }
+    )
+    mock_repo.get_available_role_ids = AsyncMock(return_value={8})
+    mock_repo.set_available_roles = AsyncMock()
+    mock_repo.delete_user_roles_for_org = AsyncMock()
+
+    await organizations_service._apply_available_role_changes(1, ["Transfer"])
+
+    mock_repo.set_available_roles.assert_awaited_once_with(1, [8])
+    mock_repo.delete_user_roles_for_org.assert_not_awaited()
 
 
 @pytest.mark.anyio

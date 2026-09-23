@@ -972,6 +972,214 @@ async def test_calculate_line_17_reserved_before_assessed_after_deadline(
 
 
 @pytest.mark.anyio
+async def test_calculate_line_17_prior_period_reduction_reserved_before_assessed_after_deadline(
+    dbsession, transaction_repo
+):
+    """
+    A prior-period supplemental that REDUCES units, submitted (Reserved) before
+    the next period's March 31 deadline but assessed after it, must still
+    reduce the next period's Line 17.
+
+    Scenario (mirrors a production report chain):
+    - 2024 original (+890) assessed before March 31, 2026 -> in 2025 past balance
+    - 2024 supplemental (-198) created (Reserved) March 10, 2026, assessed
+      August 17, 2026 (after the 2025 deadline)
+
+    Before the fix the reduction fell through both branches: not "past"
+    (assessed after the deadline) and not a "future debit" (created before the
+    deadline), so 2025 Line 17 stayed at 890 instead of 692.
+    """
+    from datetime import datetime
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+    from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+    from lcfs.db.models.compliance.ComplianceReportStatus import (
+        ComplianceReportStatus,
+        ComplianceReportStatusEnum,
+    )
+    from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+    from lcfs.db.models import Organization, OrganizationAddress
+    from sqlalchemy import select
+
+    test_org_id = 4101
+
+    result = await dbsession.execute(
+        select(CompliancePeriod).where(CompliancePeriod.description == "2024")
+    )
+    period_2024 = result.scalars().first()
+    assert period_2024 is not None, "Seeded compliance period for 2024 not found"
+
+    test_org = Organization(
+        organization_id=test_org_id,
+        name="Test Company 4101",
+        operating_name="Test Co. 4101",
+        org_address=OrganizationAddress(
+            street_address="123 Prior Period Reduction St",
+            city="Test City",
+            province_state="Test Province",
+            country="Test Country",
+            postalCode_zipCode="T3ST 4Z2",
+        ),
+    )
+    dbsession.add(test_org)
+
+    assessed_status = await dbsession.get(ComplianceReportStatus, 5)
+    if not assessed_status:
+        assessed_status = ComplianceReportStatus(
+            compliance_report_status_id=5,
+            status=ComplianceReportStatusEnum.Assessed,
+        )
+        dbsession.add(assessed_status)
+
+    original_tx = Transaction(
+        transaction_id=4101,
+        organization_id=test_org_id,
+        compliance_units=890,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 3, 27),
+        update_date=datetime(2025, 11, 21),  # before March 31, 2026
+    )
+    original_report = ComplianceReport(
+        compliance_report_id=4101,
+        organization_id=test_org_id,
+        current_status_id=5,
+        compliance_period_id=period_2024.compliance_period_id,
+        compliance_report_group_uuid="prior-period-reduction",
+        transaction_id=4101,
+        version=0,
+    )
+    supplemental_tx = Transaction(
+        transaction_id=4102,
+        organization_id=test_org_id,
+        compliance_units=-198,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2026, 3, 10),  # Reserved BEFORE the 2025 deadline
+        update_date=datetime(2026, 8, 17),  # Assessed AFTER the 2025 deadline
+    )
+    supplemental_report = ComplianceReport(
+        compliance_report_id=4102,
+        organization_id=test_org_id,
+        current_status_id=5,
+        compliance_period_id=period_2024.compliance_period_id,
+        compliance_report_group_uuid="prior-period-reduction",
+        transaction_id=4102,
+        version=1,
+    )
+    dbsession.add_all(
+        [original_tx, original_report, supplemental_tx, supplemental_report]
+    )
+    await dbsession.commit()
+
+    balance_2025 = (
+        await transaction_repo.calculate_line_17_available_balance_for_period(
+            test_org_id, 2025
+        )
+    )
+    assert balance_2025 == 692, (
+        f"Expected 692 but got {balance_2025}. "
+        "A prior-period reduction assessed after the deadline must still be "
+        "subtracted even though it was reserved before the deadline."
+    )
+
+    # For the 2024 period itself the reduction was created after the deadline
+    # and was already treated as a future debit; unchanged behaviour.
+    balance_2024 = (
+        await transaction_repo.calculate_line_17_available_balance_for_period(
+            test_org_id, 2024
+        )
+    )
+    assert balance_2024 == 0  # 890 assessed after March 31, 2025 is excluded
+
+
+@pytest.mark.anyio
+async def test_group_adjustments_excluded_from_line_17_ignore_negative_adjustments(
+    dbsession, transaction_repo, mock_transactions
+):
+    """
+    Post-deadline debits are already subtracted inside Line 17 as future
+    debits, so the same-group add-back must only return positive adjustments;
+    otherwise a later supplemental double-counts the reduction.
+    """
+    from datetime import datetime
+    from sqlalchemy import select
+    from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+    from lcfs.db.models.compliance.ComplianceReportStatus import (
+        ComplianceReportStatus,
+        ComplianceReportStatusEnum,
+    )
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+
+    period_result = await dbsession.execute(
+        select(CompliancePeriod).where(CompliancePeriod.description == "2024")
+    )
+    compliance_period = period_result.scalars().first()
+    assert compliance_period is not None
+
+    status_result = await dbsession.execute(
+        select(ComplianceReportStatus).where(
+            ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed
+        )
+    )
+    assessed_status = status_result.scalars().first()
+    assert assessed_status is not None
+
+    late_credit = Transaction(
+        transaction_id=990101,
+        organization_id=test_org_id,
+        compliance_units=890,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 3, 27),
+        update_date=datetime(2025, 11, 21),
+    )
+    late_debit = Transaction(
+        transaction_id=990102,
+        organization_id=test_org_id,
+        compliance_units=-198,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2026, 3, 10),
+        update_date=datetime(2026, 8, 17),
+    )
+    v0 = ComplianceReport(
+        compliance_report_id=990101,
+        organization_id=test_org_id,
+        current_status_id=assessed_status.compliance_report_status_id,
+        compliance_period_id=compliance_period.compliance_period_id,
+        compliance_report_group_uuid="negative-addback-group",
+        version=0,
+        transaction_id=late_credit.transaction_id,
+    )
+    v1 = ComplianceReport(
+        compliance_report_id=990102,
+        organization_id=test_org_id,
+        current_status_id=assessed_status.compliance_report_status_id,
+        compliance_period_id=compliance_period.compliance_period_id,
+        compliance_report_group_uuid="negative-addback-group",
+        version=1,
+        transaction_id=late_debit.transaction_id,
+    )
+    dbsession.add_all([late_credit, late_debit, v0, v1])
+    await dbsession.flush()
+
+    assert (
+        await transaction_repo.get_group_adjustments_excluded_from_line_17(
+            "negative-addback-group", test_org_id, 990103, 2024
+        )
+        == 890
+    )
+    assert (
+        await transaction_repo.get_prior_group_adjustments_excluded_from_line_17(
+            "negative-addback-group", test_org_id, 990103, 2024, 2
+        )
+        == 890
+    )
+
+
+@pytest.mark.anyio
 async def test_create_transaction(dbsession, transaction_repo):
     dbsession.add_all([test_org])
     await dbsession.flush()

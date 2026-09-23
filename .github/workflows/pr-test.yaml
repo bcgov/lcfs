@@ -685,8 +685,24 @@ jobs:
 
           # Merge valid reports using the locally installed vitest so it
           # stays in sync with @vitest/ui and @vitest/coverage-v8.
+          #
+          # Each shard's blob carries its coverage map. Merging them here is
+          # the only point in CI that sees coverage for the whole suite, so
+          # this is where the coverage thresholds from vite.config.ts are
+          # enforced (ENFORCE_COVERAGE_THRESHOLDS). Vitest exits non-zero and
+          # prints "ERROR: Coverage for <metric> ... does not meet global
+          # threshold" when coverage drops below a floor. See issue #4094.
           echo "Merging valid blob reports..."
-          ./node_modules/.bin/vitest --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
+          ENFORCE_COVERAGE_THRESHOLDS=true ./node_modules/.bin/vitest --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
+
+      - name: Upload merged coverage report
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2.23.0
