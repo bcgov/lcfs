@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { formatDateWithTimezoneAbbr } from '@/utils/formatters'
-import { Divider } from '@mui/material'
+import Divider from '@mui/material/Divider'
 import { useTranslation } from 'react-i18next'
 
 const analystName = (analyst, unassignedLabel) =>

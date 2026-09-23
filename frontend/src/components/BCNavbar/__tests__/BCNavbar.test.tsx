@@ -1,18 +1,26 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useMediaQuery, useTheme } from '@mui/material'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import useTheme from '@mui/material/styles/useTheme'
 import BCNavbar from '../index'
 import theme from '@/themes'
 
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material')
+vi.mock('@mui/material/styles/useTheme', async (importOriginal) => {
+  const actual = await importOriginal()
   return {
     ...actual,
-    useTheme: vi.fn(),
-    useMediaQuery: vi.fn()
+    default: vi.fn()
+  }
+})
+
+vi.mock('@mui/material/useMediaQuery', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    default: vi.fn()
   }
 })
 

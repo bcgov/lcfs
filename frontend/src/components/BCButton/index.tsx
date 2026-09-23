@@ -1,6 +1,6 @@
 import { forwardRef, ReactNode } from 'react'
 import BCButtonRoot from './BCButtonRoot'
-import { CircularProgress } from '@mui/material'
+import CircularProgress from '@mui/material/CircularProgress'
 
 type BCButtonColor = 
   | 'white'

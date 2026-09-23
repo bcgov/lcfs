@@ -3,18 +3,48 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ComplianceReportPageNav } from '../ComplianceReportPageNav'
 
-vi.mock('@mui/icons-material', () => ({
-  AutoAwesome: () => <span data-test="auto-awesome-icon" />,
-  Description: () => <span data-test="description-icon" />,
-  ElectricBolt: () => <span data-test="electric-bolt-icon" />,
-  FactCheck: () => <span data-test="fact-check-icon" />,
-  Gavel: () => <span data-test="gavel-icon" />,
-  Handshake: () => <span data-test="handshake-icon" />,
-  LocalGasStation: () => <span data-test="local-gas-station-icon" />,
-  Recycling: () => <span data-test="recycling-icon" />,
-  Summarize: () => <span data-test="summarize-icon" />,
-  SwapHoriz: () => <span data-test="swap-horiz-icon" />,
-  UploadFile: () => <span data-test="upload-file-icon" />
+vi.mock('@mui/icons-material/AutoAwesome', () => ({
+    default: () => <span data-test="auto-awesome-icon" />
+}))
+
+vi.mock('@mui/icons-material/Description', () => ({
+    default: () => <span data-test="description-icon" />
+}))
+
+vi.mock('@mui/icons-material/ElectricBolt', () => ({
+    default: () => <span data-test="electric-bolt-icon" />
+}))
+
+vi.mock('@mui/icons-material/FactCheck', () => ({
+    default: () => <span data-test="fact-check-icon" />
+}))
+
+vi.mock('@mui/icons-material/Gavel', () => ({
+    default: () => <span data-test="gavel-icon" />
+}))
+
+vi.mock('@mui/icons-material/Handshake', () => ({
+    default: () => <span data-test="handshake-icon" />
+}))
+
+vi.mock('@mui/icons-material/LocalGasStation', () => ({
+    default: () => <span data-test="local-gas-station-icon" />
+}))
+
+vi.mock('@mui/icons-material/Recycling', () => ({
+    default: () => <span data-test="recycling-icon" />
+}))
+
+vi.mock('@mui/icons-material/Summarize', () => ({
+    default: () => <span data-test="summarize-icon" />
+}))
+
+vi.mock('@mui/icons-material/SwapHoriz', () => ({
+    default: () => <span data-test="swap-horiz-icon" />
+}))
+
+vi.mock('@mui/icons-material/UploadFile', () => ({
+    default: () => <span data-test="upload-file-icon" />
 }))
 
 const intersectionObservers: MockIntersectionObserver[] = []

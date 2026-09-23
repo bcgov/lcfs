@@ -5,8 +5,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useForm, FormProvider } from 'react-hook-form'
-import { BCFormCheckbox } from '../BCFormCheckbox'
+import { BCFormCheckbox } from '@/components/BCForm/BCFormCheckbox'
 import { AppWrapper, getByDataTest } from '@/tests/utils'
+
+vi.unmock('@/components/BCForm/BCFormCheckbox')
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({

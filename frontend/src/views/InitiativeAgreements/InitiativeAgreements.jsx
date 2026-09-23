@@ -3,7 +3,7 @@ import BCTypography from '@/components/BCTypography'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import withRole from '@/utils/withRole'
-import { Divider } from '@mui/material'
+import Divider from '@mui/material/Divider'
 import { useTranslation } from 'react-i18next'
 
 const InitiativeAgreementsBase = () => {

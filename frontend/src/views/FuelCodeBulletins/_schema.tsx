@@ -2,7 +2,7 @@
 import { ColDef } from '@ag-grid-community/core'
 import { TFunction } from 'i18next'
 import { Link } from 'react-router-dom'
-import { BCDateFloatingFilter } from '@/components/BCDataGrid/components'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { fuelCodeColDefs as idirFuelCodeColDefs } from '@/views/FuelCodes/_schema'
 import { ROUTES, buildPath } from '@/routes/routes'
 import BCBadge from '@/components/BCBadge'

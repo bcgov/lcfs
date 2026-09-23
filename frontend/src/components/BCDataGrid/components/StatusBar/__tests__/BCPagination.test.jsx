@@ -22,11 +22,11 @@ vi.mock('../BCPaginationActions', () => ({
 }))
 
 // Mock MUI TablePagination for detailed prop testing
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material')
+vi.mock('@mui/material/TablePagination', async (importOriginal) => {
+  const actual = await importOriginal()
   return {
     ...actual,
-    TablePagination: ({ 
+    default: ({
       count, 
       page, 
       rowsPerPage, 

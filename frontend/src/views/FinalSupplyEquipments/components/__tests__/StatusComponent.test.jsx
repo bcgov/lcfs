@@ -11,13 +11,16 @@ vi.mock('@/components/BCTypography', () => ({
   default: ({ children, gutterBottom, ...rest }) => <div {...rest}>{children}</div>
 }))
 
-vi.mock('@mui/material', () => ({
-  Alert: ({ children, severity, ...rest }) => (
+vi.mock('@mui/material/Alert', () => ({
+    default: ({ children, severity, ...rest }) => (
     <div data-test="alert" data-severity={severity} {...rest}>
       {children}
     </div>
-  ),
-  CircularProgress: ({ size }) => (
+  )
+}))
+
+vi.mock('@mui/material/CircularProgress', () => ({
+    default: ({ size }) => (
     <div data-test="progress" data-size={size} />
   )
 }))

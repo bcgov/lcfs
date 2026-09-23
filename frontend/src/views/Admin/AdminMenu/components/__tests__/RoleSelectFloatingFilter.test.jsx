@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { RoleSelectFloatingFilter } from '../RoleSelectFloatingFilter'
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  BCSelectFloatingFilter: vi.fn(({ optionsQuery, valueKey, labelKey, model, onModelChange, disabled, params, initialFilterType, multiple, initialSelectedValues, customProp, onSelectionChange, clearable, ...domProps }) => {
+vi.mock('@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter', () => ({
+    BCSelectFloatingFilter: vi.fn(({ optionsQuery, valueKey, labelKey, model, onModelChange, disabled, params, initialFilterType, multiple, initialSelectedValues, customProp, onSelectionChange, clearable, ...domProps }) => {
     const result = optionsQuery?.()
     return (
       <div 
@@ -21,7 +21,7 @@ vi.mock('@/hooks/useRole', () => ({
   useRoleList: vi.fn()
 }))
 
-import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useRoleList } from '@/hooks/useRole'
 
 const mockedBCSelectFloatingFilter = vi.mocked(BCSelectFloatingFilter)

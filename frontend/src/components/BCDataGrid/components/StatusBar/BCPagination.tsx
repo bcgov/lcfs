@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types'
 // @mui components
-import { TablePagination } from '@mui/material'
-import { ArrowDropDown } from '@mui/icons-material'
+import TablePagination from '@mui/material/TablePagination'
+import ArrowDropDown from '@mui/icons-material/ArrowDropDown'
 import { BCPaginationActions } from './BCPaginationActions'
 import type { ChangeEventHandler } from 'react'
 

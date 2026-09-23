@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { finalSupplyEquipmentColDefs } from '../_schema'
-import { DateEditor } from '@/components/BCDataGrid/components'
+import { DateEditor } from '@/components/BCDataGrid/components/Editors/DateEditor'
 
 // Mock i18n.t function
 vi.mock('i18next', () => ({

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { AddEditViewTransaction } from '../AddEditViewTransaction'
 import { useTranslation } from 'react-i18next'
@@ -39,11 +39,11 @@ vi.mock('@react-keycloak/web', () => ({
 }))
 
 // Partial mock for @mui/material to retain ThemeProvider
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material')
+vi.mock('@mui/material/useMediaQuery', async (importOriginal) => {
+  const actual = await importOriginal()
   return {
     ...actual,
-    useMediaQuery: vi.fn()
+    default: vi.fn()
   }
 })
 

@@ -18,17 +18,32 @@ vi.mock('@/components/BCAlert/BCAlertRoot', () => ({
   )
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  Info: () => <span data-test="icon-info">ℹ</span>,
-  Error: () => <span data-test="icon-error">✖</span>,
-  Warning: () => <span data-test="icon-warning">⚠</span>,
-  CheckCircle: () => <span data-test="icon-success">✔</span>,
-  Close: ({ onClick }) => (
+vi.mock('@mui/icons-material/Info', () => ({
+    default: () => <span data-test="icon-info">ℹ</span>
+}))
+
+vi.mock('@mui/icons-material/Error', () => ({
+    default: () => <span data-test="icon-error">✖</span>
+}))
+
+vi.mock('@mui/icons-material/Warning', () => ({
+    default: () => <span data-test="icon-warning">⚠</span>
+}))
+
+vi.mock('@mui/icons-material/CheckCircle', () => ({
+    default: () => <span data-test="icon-success">✔</span>
+}))
+
+vi.mock('@mui/icons-material/Close', () => ({
+    default: ({ onClick }) => (
     <span data-test="icon-close" onClick={onClick} style={{ cursor: 'pointer' }}>
       ×
     </span>
-  ),
-  ExpandMore: ({ onClick }) => (
+  )
+}))
+
+vi.mock('@mui/icons-material/ExpandMore', () => ({
+    default: ({ onClick }) => (
     <span data-test="icon-expand" onClick={onClick}>
       ▼
     </span>
@@ -41,11 +56,11 @@ vi.mock('@mui/material/Fade', () => ({
     show ? <div data-test="fade-wrapper">{children}</div> : null
 }))
 
-vi.mock('@mui/material', async (importOriginal) => {
+vi.mock('@mui/material/CircularProgress', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    CircularProgress: ({ size }) => (
+    default: ({ size }) => (
       <span data-test="circular-progress" data-size={size}>
         ⟳
       </span>

@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next'
-import { Accordion, AccordionDetails, AccordionSummary } from '@mui/material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
 import SummaryTable from './SummaryTable'
 import { earlyIssuanceColumns } from './_schema'
 import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import { ExpandMore } from '@mui/icons-material'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 
 const ComplianceReportEarlyIssuanceSummary = ({ reportData }) => {
   const { t } = useTranslation(['report'])

@@ -1,9 +1,7 @@
-import {
-  AsyncSuggestionEditor,
-  AutocompleteCellEditor,
-  RequiredHeader,
-  TextCellEditor
-} from '@/components/BCDataGrid/components'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import { TextCellEditor } from '@/components/BCDataGrid/components/Editors/TextCellEditor'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   CommonArrayRenderer,

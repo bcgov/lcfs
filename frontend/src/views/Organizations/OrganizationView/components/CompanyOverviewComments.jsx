@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
-import { Alert, Box } from '@mui/material'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'

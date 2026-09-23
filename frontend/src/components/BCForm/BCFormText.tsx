@@ -1,11 +1,9 @@
 import { Controller } from 'react-hook-form'
-import {
-  TextField,
-  InputLabel,
-  FormControlLabel,
-  Checkbox,
-  Box
-} from '@mui/material'
+import TextField from '@mui/material/TextField'
+import InputLabel from '@mui/material/InputLabel'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
+import Box from '@mui/material/Box'
 import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
 import type { ChangeEventHandler, ReactNode } from 'react'

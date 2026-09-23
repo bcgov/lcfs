@@ -16,43 +16,39 @@ import {
   verticalListSortingStrategy
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Alert,
-  Box,
-  Chip,
-  CircularProgress,
-  IconButton,
-  InputAdornment,
-  Link,
-  List,
-  ListItem,
-  Skeleton,
-  Stack,
-  TextField,
-  Tooltip
-} from '@mui/material'
-import {
-  Add,
-  BugReport,
-  Close,
-  ContentCopy,
-  DoneAll,
-  DragIndicator,
-  Edit,
-  ExpandLess,
-  ExpandMore,
-  Extension,
-  InfoOutlined,
-  MoreHoriz,
-  NewReleases,
-  OpenInNew,
-  SearchRounded,
-  Security,
-  Warning
-} from '@mui/icons-material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
+import IconButton from '@mui/material/IconButton'
+import InputAdornment from '@mui/material/InputAdornment'
+import Link from '@mui/material/Link'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import Skeleton from '@mui/material/Skeleton'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
+import Add from '@mui/icons-material/Add'
+import BugReport from '@mui/icons-material/BugReport'
+import Close from '@mui/icons-material/Close'
+import ContentCopy from '@mui/icons-material/ContentCopy'
+import DoneAll from '@mui/icons-material/DoneAll'
+import DragIndicator from '@mui/icons-material/DragIndicator'
+import Edit from '@mui/icons-material/Edit'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import Extension from '@mui/icons-material/Extension'
+import InfoOutlined from '@mui/icons-material/InfoOutlined'
+import MoreHoriz from '@mui/icons-material/MoreHoriz'
+import NewReleases from '@mui/icons-material/NewReleases'
+import OpenInNew from '@mui/icons-material/OpenInNew'
+import SearchRounded from '@mui/icons-material/SearchRounded'
+import Security from '@mui/icons-material/Security'
+import Warning from '@mui/icons-material/Warning'
 import { useSnackbar } from 'notistack'
 import { format, formatDistanceToNow } from 'date-fns'
 import { useTranslation } from 'react-i18next'

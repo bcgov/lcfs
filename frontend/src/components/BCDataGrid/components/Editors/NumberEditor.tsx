@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
-import { TextField } from '@mui/material'
+import TextField from '@mui/material/TextField'
 import { styled } from '@mui/material/styles'
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
