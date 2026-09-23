@@ -330,4 +330,89 @@ describe('EvidenceOfCompletion', () => {
       screen.getByText('initiativeAgreement:evidence.empty')
     ).toBeInTheDocument()
   })
+
+  it('always shows the Missing information box, even with nothing added (#5118)', () => {
+    mockList.mockReturnValue({ data: [], isLoading: false })
+    render(
+      <EvidenceOfCompletion
+        designatedActionId="9"
+        missingInformation="The signed stage two permit."
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('eoc-missing-information')).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('initiativeAgreement:evidence.missingInformation')
+    ).toHaveValue('The signed stage two permit.')
+  })
+
+  it('hands edits to the Missing information box back to the page', () => {
+    const onChange = vi.fn()
+    const onBlur = vi.fn()
+    render(
+      <EvidenceOfCompletion
+        designatedActionId="9"
+        missingInformation=""
+        onMissingInformationChange={onChange}
+        onMissingInformationBlur={onBlur}
+      />,
+      { wrapper }
+    )
+
+    const box = screen.getByTestId('eoc-missing-information-input')
+    fireEvent.change(box, { target: { value: 'The risk register.' } })
+    fireEvent.blur(box)
+
+    expect(onChange).toHaveBeenCalledWith('The risk register.')
+    expect(onBlur).toHaveBeenCalled()
+  })
+
+  it('shows the Missing information read-only when the page says so', () => {
+    render(
+      <EvidenceOfCompletion
+        designatedActionId="9"
+        missingInformation="The signed stage two permit."
+        missingInformationReadOnly
+      />,
+      { wrapper }
+    )
+
+    // Read-only rather than disabled, so it keeps its contrast.
+    const box = screen.getByTestId('eoc-missing-information-input')
+    expect(box).toHaveAttribute('readonly')
+    expect(box).not.toBeDisabled()
+  })
+
+  it('names each outcome in the review summary', () => {
+    mockList.mockReturnValue({
+      data: [
+        requirement({ reviewOutcome: OUTCOME_SATISFACTORY }),
+        requirement({
+          evidenceRequirementId: 2,
+          requirementNumber: 2,
+          title: 'Risks',
+          reviewOutcome: OUTCOME_INFORMATION_REQUESTED
+        }),
+        requirement({
+          evidenceRequirementId: 3,
+          requirementNumber: 3,
+          title: 'Letter'
+        })
+      ],
+      isLoading: false
+    })
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    // The icons carry the outcome, so each needs a name, and the gold
+    // one still says which kind of outstanding.
+    const names = [
+      ...screen.getByTestId('eoc-review-summary').querySelectorAll('svg title')
+    ].map((title) => title.textContent)
+    expect(names).toEqual([
+      'initiativeAgreement:evidence.satisfactory',
+      'initiativeAgreement:evidence.requestInformation',
+      'initiativeAgreement:evidence.pending'
+    ])
+  })
 })

@@ -339,6 +339,29 @@ export const useSetRecommendedCredits = (
   })
 }
 
+// The Missing information box's working text (#5118). Requesting
+// additional information sends it; saving it records nothing.
+export const useSetMissingInformation = (
+  designatedActionId: number | string
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (missingInformation: string | null) =>
+      (
+        await client.put(
+          actionPath(
+            apiRoutes.designatedActionMissingInformation,
+            designatedActionId
+          ),
+          { missingInformation }
+        )
+      ).data,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
+  })
+}
+
 export const useDesignatedActionHistory = (
   designatedActionId: number | string,
   options: QueryOptions<unknown> = {}

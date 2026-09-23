@@ -124,6 +124,15 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
             "recommendation. Bounded by credit_allocation at the API layer."
         ),
     )
+    missing_information = Column(
+        Text,
+        nullable=True,
+        comment=(
+            "What the analyst needs from the proponent, kept on the page "
+            "between review rounds; sent as the reason when additional "
+            "information is requested"
+        ),
+    )
     current_status_id = Column(
         Integer,
         ForeignKey("designated_action_status.designated_action_status_id"),

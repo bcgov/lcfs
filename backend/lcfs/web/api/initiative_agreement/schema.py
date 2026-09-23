@@ -171,6 +171,7 @@ class DesignatedActionSchema(BaseSchema):
     determination_date: Optional[date] = None
     credit_allocation: int
     recommended_credits: Optional[int] = None
+    missing_information: Optional[str] = None
     determination: Optional[str] = None
     current_status: DesignatedActionStatusSchema
     assigned_analyst: Optional[AssignedAnalystSchema] = None
@@ -234,6 +235,10 @@ class DesignatedActionWorkflowSchema(BaseSchema):
 
 class RecommendedCreditsSchema(BaseSchema):
     recommended_credits: Optional[int] = None
+
+
+class MissingInformationSchema(BaseSchema):
+    missing_information: Optional[str] = None
 
 
 class DesignatedActionHistorySchema(BaseSchema):

@@ -167,6 +167,8 @@
     "satisfactory": "Evidence is satisfactory",
     "requestInformation": "Request information",
     "reviewSummary": "Review summary",
+    "missingInformation": "Missing information",
+    "missingInformationPlaceholder": "Describe the information needed from the proponent...",
     "empty": "No evidence requirements have been added yet.",
     "loading": "Loading evidence requirements...",
     "newRequirementTitle": "New evidence requirement",
@@ -188,31 +190,38 @@
     "accept": "Accept",
     "requestInformation": "Request additional information",
     "recommendToManager": "Recommend to manager",
+    "notRecommended": "Not recommended",
     "recommendToDirector": "Recommend to director",
     "approve": "Approve",
     "return": "Return for further work",
     "reject": "Reject",
     "submit": "Submit",
     "commentPrompt": "Explain what is needed. This is kept with the designated action's history.",
+    "prompt": {
+      "not_recommend": "Explain why you do not recommend this designated action. This is kept with the designated action's history."
+    },
     "actionFailed": "That action could not be completed.",
     "history": "Activity",
     "noHistory": "Nothing has happened on this designated action yet.",
     "confirm": {
       "request_information": "Request additional information",
+      "not_recommend": "Not recommended",
       "return": "Return for further work",
       "reject": "Reject this designated action"
     },
     "tip": {
       "accept_evidence": "Record that the evidence is accepted. Unlocks recommending.",
-      "request_information": "Send the designated action back for more evidence.",
+      "request_information": "Send the designated action back to the proponent with the missing information.",
       "recommend_to_manager": "Send your recommendation, with an amount, to a manager.",
+      "not_recommend": "Send the designated action to a manager without recommending credits.",
       "recommend_to_director": "Send the manager's endorsement to the director.",
       "approve": "Approve the designated action. No credits are issued by this.",
       "return": "Send it back to the previous reviewer for rework.",
       "reject": "Reject the designated action."
     },
     "blockedByEvidence": "Every evidence requirement must be marked satisfactory first.",
-    "blockedNoRequirements": "Add at least one evidence requirement and mark it satisfactory first."
+    "blockedNoRequirements": "Add at least one evidence requirement and mark it satisfactory first.",
+    "blockedNoMissingInformation": "Enter the missing information first."
   },
   "history": {
     "title": "Activity",

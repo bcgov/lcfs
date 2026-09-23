@@ -7,6 +7,7 @@ import {
   FormControlLabel,
   IconButton,
   Paper,
+  SvgIcon,
   TextField,
   Tooltip
 } from '@mui/material'
@@ -15,7 +16,6 @@ import CheckIcon from '@mui/icons-material/Check'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
-import ErrorIcon from '@mui/icons-material/Error'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
@@ -47,11 +47,26 @@ export const OUTCOME_INFORMATION_REQUESTED = 'Information requested'
 export const requirementHeading = (requirement) =>
   requirement.title || requirement.description
 
+// The wireframe's EOC colours (#5118): green when satisfactory, BC gold
+// while information is outstanding. Gold replaces the theme's orange
+// warning, which the design does not use here.
+const OUTSTANDING_COLOUR = 'secondary.main'
+
 const railColour = (outcome) => {
   if (outcome === OUTCOME_SATISFACTORY) return 'success.main'
-  if (outcome === OUTCOME_INFORMATION_REQUESTED) return 'warning.main'
+  if (outcome === OUTCOME_INFORMATION_REQUESTED) return OUTSTANDING_COLOUR
   return 'divider'
 }
+
+// A gold disc is too pale against white to carry meaning on its own
+// (WCAG 1.4.11), so the exclamation mark is dark rather than the
+// wireframe's white; the shape stays legible at any contrast setting.
+const OutstandingIcon = ({ titleAccess, sx }) => (
+  <SvgIcon titleAccess={titleAccess} sx={sx}>
+    <circle cx="12" cy="12" r="10" fill="currentColor" />
+    <path d="M13 17h-2v-2h2zm0-4h-2V7h2z" fill="#313132" />
+  </SvgIcon>
+)
 
 // The text of a requirement — title, description and evaluation — is
 // edited deliberately: Edit opens the fields, Save writes them, Cancel
@@ -383,27 +398,35 @@ const RequirementCard = ({
   )
 }
 
+// Compact and wide (#5118): tight rows and small icons, half the row on
+// wider screens, and titles free to wrap rather than setting its width.
 const ReviewSummary = ({ requirements }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   return (
     <Paper
       variant="outlined"
-      sx={{ p: 2, maxWidth: 520, borderRadius: 1 }}
+      sx={{
+        px: 1.5,
+        py: 1,
+        borderRadius: 1,
+        flex: { xs: '1 1 100%', md: '0 1 50%' },
+        minWidth: 0
+      }}
       data-test="eoc-review-summary"
     >
       <BCTypography
         variant="body4"
         component="p"
         color="primary"
-        sx={{ fontWeight: 700, m: 0, mb: 1.5 }}
+        sx={{ fontWeight: 700, m: 0, mb: 0.5 }}
       >
         {t('initiativeAgreement:evidence.reviewSummary')}
       </BCTypography>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
         {requirements.map((requirement) => (
           <Box
             key={requirement.evidenceRequirementId}
-            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}
           >
             {/* Two states, as the wireframe has it: satisfied, or still
                 outstanding. The icon carries the outcome, so it needs
@@ -411,14 +434,18 @@ const ReviewSummary = ({ requirements }) => {
                 name — and the words still say which kind of outstanding. */}
             {requirement.reviewOutcome === OUTCOME_SATISFACTORY ? (
               <CheckCircleIcon
-                fontSize="small"
                 color="success"
+                sx={{ fontSize: 16, mt: '2px', flexShrink: 0 }}
                 titleAccess={t('initiativeAgreement:evidence.satisfactory')}
               />
             ) : (
-              <ErrorIcon
-                fontSize="small"
-                color="warning"
+              <OutstandingIcon
+                sx={{
+                  fontSize: 16,
+                  mt: '2px',
+                  flexShrink: 0,
+                  color: OUTSTANDING_COLOUR
+                }}
                 titleAccess={
                   requirement.reviewOutcome === OUTCOME_INFORMATION_REQUESTED
                     ? t('initiativeAgreement:evidence.requestInformation')
@@ -426,12 +453,66 @@ const ReviewSummary = ({ requirements }) => {
                 }
               />
             )}
-            <BCTypography variant="body4">
+            <BCTypography
+              variant="body4"
+              sx={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.5 }}
+            >
               {requirementHeading(requirement)}
             </BCTypography>
           </Box>
         ))}
       </Box>
+    </Paper>
+  )
+}
+
+// What the analyst needs from the proponent (#5118). Always on the page,
+// not only inside the request dialog, so the current ask is visible
+// between rounds; Request additional information sends it.
+const MissingInformation = ({ value, onChange, onBlur, readOnly }) => {
+  const { t } = useTranslation(['initiativeAgreement'])
+  const label = t('initiativeAgreement:evidence.missingInformation')
+  return (
+    <Paper
+      variant="outlined"
+      data-test="eoc-missing-information"
+      sx={{
+        p: 1.5,
+        borderLeft: 4,
+        borderLeftColor: 'success.main',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1
+      }}
+    >
+      <BCTypography
+        variant="body4"
+        component="label"
+        htmlFor="eoc-missing-information-input"
+        color="primary"
+        sx={{ fontWeight: 700 }}
+      >
+        {label}
+      </BCTypography>
+      <TextField
+        id="eoc-missing-information-input"
+        multiline
+        minRows={2}
+        fullWidth
+        size="small"
+        value={value}
+        placeholder={
+          readOnly
+            ? ''
+            : t('initiativeAgreement:evidence.missingInformationPlaceholder')
+        }
+        // Read-only, not disabled, for the same contrast reason as the
+        // requirement fields.
+        InputProps={{ readOnly }}
+        inputProps={{ 'data-test': 'eoc-missing-information-input' }}
+        onChange={(event) => onChange?.(event.target.value)}
+        onBlur={onBlur}
+      />
     </Paper>
   )
 }
@@ -506,7 +587,13 @@ export const EvidenceOfCompletion = ({
   // The evidence decisions — accept, request information — rendered
   // beneath the review summary they act on (#5080). The page owns them;
   // this section only says where they go.
-  actions = null
+  actions = null,
+  // The Missing information box (#5118). The page owns its text because
+  // the request button sends it.
+  missingInformation = '',
+  onMissingInformationChange,
+  onMissingInformationBlur,
+  missingInformationReadOnly = false
 }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [expanded, setExpanded] = useState(true)
@@ -522,7 +609,14 @@ export const EvidenceOfCompletion = ({
     useDeleteEvidenceRequirement(designatedActionId)
 
   return (
-    <BCBox mt={3} data-test="evidence-of-completion-section">
+    // A box of its own inside the designated action card (#5118): the
+    // evidence review, its summary and its decisions read as one unit,
+    // with the recommendation beneath it.
+    <Paper
+      variant="outlined"
+      sx={{ mt: 3, p: 2, borderRadius: 1 }}
+      data-test="evidence-of-completion-section"
+    >
       <Box
         sx={{
           display: 'flex',
@@ -577,6 +671,13 @@ export const EvidenceOfCompletion = ({
               </BCTypography>
             )}
 
+            <MissingInformation
+              value={missingInformation}
+              onChange={onMissingInformationChange}
+              onBlur={onMissingInformationBlur}
+              readOnly={missingInformationReadOnly}
+            />
+
             <Box
               sx={{
                 display: 'flex',
@@ -615,7 +716,7 @@ export const EvidenceOfCompletion = ({
         onClose={() => setAdding(false)}
         onCreate={createRequirement}
       />
-    </BCBox>
+    </Paper>
   )
 }
 
