@@ -40,6 +40,7 @@ from lcfs.db.models.fuel import (
 )
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
+from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
@@ -1674,10 +1675,16 @@ class FuelCodeRepository:
             # From 2024 the EER table lists every combination the forms offer, so
             # a missing row is a gap in the reference data. Fail rather than
             # silently calculating at 1.0 (#5113).
+            fuel_category = await self.db.get(FuelCategory, fuel_category_id)
+            end_use = await self.db.get(EndUseType, end_use_id) if end_use_id else None
+            combination = f"fuel type {fuel_type.fuel_type}, fuel category " + (
+                fuel_category.category if fuel_category else str(fuel_category_id)
+            )
+            if end_use:
+                combination += f", end use {end_use.type}"
             raise ValueError(
-                f"No energy effectiveness ratio is configured for "
-                f"{fuel_type.fuel_type} (fuel category {fuel_category_id}, "
-                f"end use {end_use_id}) in {compliance_period}"
+                f"No energy effectiveness ratio is configured for {combination} "
+                f"in {compliance_period}"
             )
 
         # Fetch target carbon intensity (TCI)
