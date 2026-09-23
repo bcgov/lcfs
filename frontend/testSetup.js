@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
-import { afterAll, afterEach, vi } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { config } from './public/config/config'
 import '@/i18n'
 import { testQueryClient } from '@/tests/utils/wrapper'
@@ -8,28 +8,6 @@ import { setupMsw } from '@/tests/utils/server'
 import React from 'react'
 
 configure({ testIdAttribute: 'data-test' })
-
-const jsdomWindow = globalThis.jsdom?.window
-if (jsdomWindow) {
-  const storageKeys = ['Storage', 'localStorage', 'sessionStorage']
-  const storageDescriptors = storageKeys.map((key) => [
-    key,
-    Object.getOwnPropertyDescriptor(globalThis, key)
-  ])
-  storageKeys.forEach((key) =>
-    Object.defineProperty(globalThis, key, {
-      configurable: true,
-      value: jsdomWindow[key],
-      writable: true
-    })
-  )
-  afterAll(() =>
-    storageDescriptors.forEach(([key, descriptor]) => {
-      if (descriptor) Object.defineProperty(globalThis, key, descriptor)
-      else delete globalThis[key]
-    })
-  )
-}
 
 beforeAll(async () => {
   vi.stubGlobal('lcfs_config', config)
