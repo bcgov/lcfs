@@ -5,7 +5,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   Divider,
   IconButton,
-  Paper,
   Stack,
   Step,
   StepLabel,
@@ -414,6 +413,10 @@ const DesignatedActionDetailBase = () => {
             <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
               <EvidenceOfCompletion
                 designatedActionId={designatedActionId}
+                // The API takes evidence edits from analysts and managers
+                // only; directors see the review without controls that
+                // would be refused.
+                canEdit={canRecommend}
                 missingInformation={missingInformation}
                 onMissingInformationChange={setMissingInformation}
                 onMissingInformationBlur={commitMissingInformation}

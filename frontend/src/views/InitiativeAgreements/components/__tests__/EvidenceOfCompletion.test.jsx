@@ -150,21 +150,40 @@ describe('EvidenceOfCompletion', () => {
     )
   })
 
-  it('hides the edit control by default, leaving the text read-only', () => {
-    // The pencil beside the remove icon read as two unlabelled controls,
-    // so its entry point is off until the control is redesigned. The
-    // machinery stays: the tests below turn it on.
+  it('offers a labelled Edit button, with the text read-only until it is used', () => {
+    // A bare pencil beside the remove icon read as two unlabelled
+    // controls (#5118); the button says what it does.
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
-    expect(screen.queryByTestId('eoc-edit-1')).not.toBeInTheDocument()
+    const edit = screen.getByTestId('eoc-edit-1')
+    expect(edit).toHaveTextContent('common:editBtn')
+    expect(edit).toHaveAccessibleName(
+      'initiativeAgreement:evidence.editRequirement'
+    )
     expect(screen.getByTestId('eoc-review-1')).toHaveAttribute('readonly')
-    expect(screen.getByTestId('eoc-remove-1')).toBeInTheDocument()
+
+    fireEvent.click(edit)
+
+    expect(screen.getByTestId('eoc-review-1')).not.toHaveAttribute('readonly')
+    expect(screen.queryByTestId('eoc-edit-1')).not.toBeInTheDocument()
+    expect(screen.getByTestId('eoc-save-1')).toBeInTheDocument()
+  })
+
+  it('offers no editing to someone who cannot edit', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" canEdit={false} />, {
+      wrapper
+    })
+
+    expect(screen.queryByTestId('eoc-edit-1')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('eoc-remove-1')).not.toBeInTheDocument()
+    expect(screen.getByTestId('eoc-review-1')).toHaveAttribute('readonly')
+    expect(
+      screen.getByTestId('eoc-satisfactory-1').querySelector('input')
+    ).toBeDisabled()
   })
 
   it('writes nothing until Save, then only what changed', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" allowEdit />, {
-      wrapper
-    })
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
     fireEvent.click(screen.getByTestId('eoc-edit-1'))
     fireEvent.change(screen.getByTestId('eoc-review-1'), {
@@ -187,9 +206,7 @@ describe('EvidenceOfCompletion', () => {
   })
 
   it('Cancel restores what was there and writes nothing', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" allowEdit />, {
-      wrapper
-    })
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
     fireEvent.click(screen.getByTestId('eoc-edit-1'))
     fireEvent.change(screen.getByTestId('eoc-review-1'), {
@@ -203,9 +220,7 @@ describe('EvidenceOfCompletion', () => {
   })
 
   it('will not save an item with its title blanked', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" allowEdit />, {
-      wrapper
-    })
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
     fireEvent.click(screen.getByTestId('eoc-edit-1'))
     fireEvent.change(screen.getByTestId('eoc-title-1'), {
