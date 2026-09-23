@@ -1,8 +1,10 @@
 import { ActionsRenderer } from '@/components/BCDataGrid/components/Renderers/ActionsRenderer'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
 import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
 import { DateEditor } from '@/components/BCDataGrid/components/Editors/DateEditor'
 import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 import { TransportModeDistanceCellEditor } from '@/components/BCDataGrid/components/Editors/TransportModeDistanceCellEditor'
+import { apiRoutes } from '@/constants/routes'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import colors from '@/themes/base/colors'
@@ -11,6 +13,16 @@ import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import i18n from '@/i18n'
 
 const APPLICATION_TYPE_RENEWAL = 'Renewal'
+
+const fuelCodeFieldSuggestionQuery = (field) => async ({ queryKey, client }) => {
+  const searchTerm = queryKey[1] || ''
+  let path = apiRoutes.ciApplicationFuelCodeFieldSearch
+  path += `field=${encodeURIComponent(field)}&query=${encodeURIComponent(
+    searchTerm
+  )}`
+  const response = await client.get(path)
+  return response.data
+}
 
 export const normalizeTransportModes = (value) => {
   if (!value && value !== 0) return []
@@ -189,9 +201,6 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
   const fuelTypes = optionsData?.fuelTypes || []
   const transportModes = optionsData?.transportModes || []
   const fuelCodes = optionsData?.fuelCodes || []
-  const feedstockOptions = optionsData?.fieldOptions?.feedstock || []
-  const feedstockRegionOptions =
-    optionsData?.fieldOptions?.feedstockRegion || []
 
   const fuelCodeById = new Map(fuelCodes.map((fc) => [fc.fuelCodeId, fc]))
 
@@ -440,16 +449,13 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       headerName: i18n.t('carbonIntensity:step2.feedstock'),
       headerComponent: canEdit ? RequiredHeader : undefined,
       editable: lockedOnRenewal,
-      cellEditor: AutocompleteCellEditor,
+      cellEditor: AsyncSuggestionEditor,
       suppressKeyboardEvent,
-      cellEditorParams: {
-        noLabel: true,
-        options: feedstockOptions,
-        multiple: false,
-        disableCloseOnSelect: false,
-        freeSolo: true,
-        openOnFocus: true
-      },
+      cellEditorParams: (params) => ({
+        queryKey: 'ci-feedstock-search',
+        queryFn: fuelCodeFieldSuggestionQuery('feedstock'),
+        api: params.api
+      }),
       cellRenderer: renderTextPlaceholder,
       minWidth: 220
     },
@@ -458,16 +464,13 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       headerName: i18n.t('carbonIntensity:step2.feedstockRegion'),
       headerComponent: canEdit ? RequiredHeader : undefined,
       editable: lockedOnRenewal,
-      cellEditor: AutocompleteCellEditor,
+      cellEditor: AsyncSuggestionEditor,
       suppressKeyboardEvent,
-      cellEditorParams: {
-        noLabel: true,
-        options: feedstockRegionOptions,
-        multiple: false,
-        disableCloseOnSelect: false,
-        freeSolo: true,
-        openOnFocus: true
-      },
+      cellEditorParams: (params) => ({
+        queryKey: 'ci-feedstock-location-search',
+        queryFn: fuelCodeFieldSuggestionQuery('feedstockLocation'),
+        api: params.api
+      }),
       cellRenderer: renderTextPlaceholder,
       minWidth: 230
     },
