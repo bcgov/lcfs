@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { roles } from '@/constants/roles'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -78,12 +78,13 @@ vi.mock('../components/EvidenceOfCompletion', () => ({
   // renders both so the page's wiring is observable.
   EvidenceOfCompletion: ({
     actions,
+    canEdit,
     missingInformation,
     onMissingInformationChange,
     onMissingInformationBlur,
     missingInformationReadOnly
   }) => (
-    <div data-test="evidence-of-completion">
+    <div data-test="evidence-of-completion" data-can-edit={String(canEdit)}>
       <textarea
         data-test="missing-information-stub"
         value={missingInformation}
@@ -304,6 +305,23 @@ describe('DesignatedActionDetail', () => {
 
     expect(screen.getByTestId('missing-information-stub')).toHaveAttribute(
       'readonly'
+    )
+  })
+
+  it('lets analysts and managers edit the evidence, and not directors', () => {
+    // The API takes evidence edits from those two roles only.
+    render(<DesignatedActionDetail />, { wrapper })
+    expect(screen.getByTestId('evidence-of-completion')).toHaveAttribute(
+      'data-can-edit',
+      'true'
+    )
+    cleanup()
+
+    mockRoles = [{ name: roles.director }]
+    render(<DesignatedActionDetail />, { wrapper })
+    expect(screen.getByTestId('evidence-of-completion')).toHaveAttribute(
+      'data-can-edit',
+      'false'
     )
   })
 

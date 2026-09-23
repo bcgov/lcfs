@@ -74,16 +74,11 @@ const OutstandingIcon = ({ titleAccess, sx }) => (
 // nobody could tell whether a half-finished evaluation had been kept.
 // The outcome boxes and notes are decisions, not prose, and still take
 // effect at once.
-const RequirementCard = ({
-  requirement,
-  onSave,
-  onRemove,
-  canEdit,
-  // Edit mode exists (#5079) but its entry point is hidden for now: a
-  // pencil beside the remove icon read as two unlabelled controls, and
-  // the × as "cancel". Flip this on once the control is redesigned.
-  allowEdit = false
-}) => {
+//
+// Edit is a labelled button where Save and Cancel appear, not a pencil
+// beside the remove icon: the pencil read as one of two unlabelled
+// controls, and the × as "cancel" (#5118).
+const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [justSaved, setJustSaved] = useState(false)
   const acknowledge = () => {
@@ -219,18 +214,6 @@ const RequirementCard = ({
             {t('initiativeAgreement:evidence.saved')}
           </BCBox>
         )}
-        {canEdit && allowEdit && !editing && (
-          <IconButton
-            size="small"
-            data-test={`eoc-edit-${requirement.evidenceRequirementId}`}
-            aria-label={t('initiativeAgreement:evidence.editRequirement', {
-              name: heading
-            })}
-            onClick={startEditing}
-          >
-            <EditOutlinedIcon fontSize="inherit" />
-          </IconButton>
-        )}
         {canEdit && (
           <Tooltip title={t('initiativeAgreement:evidence.removeRequirement')}>
             <IconButton
@@ -309,29 +292,53 @@ const RequirementCard = ({
             }
             onChange={(event) => setEvaluation(event.target.value)}
           />
-          {editing && (
+          {canEdit && (
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-              <BCButton
-                type="button"
-                variant="outlined"
-                color="primary"
-                size="small"
-                data-test={`eoc-cancel-${requirement.evidenceRequirementId}`}
-                onClick={cancelEditing}
-              >
-                {t('common:cancelBtn')}
-              </BCButton>
-              <BCButton
-                type="button"
-                variant="contained"
-                color="primary"
-                size="small"
-                data-test={`eoc-save-${requirement.evidenceRequirementId}`}
-                disabled={!canSave}
-                onClick={saveEdits}
-              >
-                {t('common:saveBtn')}
-              </BCButton>
+              {editing ? (
+                <>
+                  <BCButton
+                    type="button"
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    data-test={`eoc-cancel-${requirement.evidenceRequirementId}`}
+                    onClick={cancelEditing}
+                  >
+                    {t('common:cancelBtn')}
+                  </BCButton>
+                  <BCButton
+                    type="button"
+                    variant="contained"
+                    color="primary"
+                    size="small"
+                    data-test={`eoc-save-${requirement.evidenceRequirementId}`}
+                    disabled={!canSave}
+                    onClick={saveEdits}
+                  >
+                    {t('common:saveBtn')}
+                  </BCButton>
+                </>
+              ) : (
+                // The accessible name starts with the visible label, so
+                // speech input can say "Edit" and still reach it.
+                <BCButton
+                  type="button"
+                  variant="outlined"
+                  color="primary"
+                  size="small"
+                  startIcon={<EditOutlinedIcon />}
+                  data-test={`eoc-edit-${requirement.evidenceRequirementId}`}
+                  aria-label={t(
+                    'initiativeAgreement:evidence.editRequirement',
+                    {
+                      name: heading
+                    }
+                  )}
+                  onClick={startEditing}
+                >
+                  {t('common:editBtn')}
+                </BCButton>
+              )}
             </Box>
           )}
         </BCBox>
@@ -583,7 +590,6 @@ const AddRequirementModal = ({ open, onClose, onCreate, isPending }) => {
 export const EvidenceOfCompletion = ({
   designatedActionId,
   canEdit = true,
-  allowEdit = false,
   // The evidence decisions — accept, request information — rendered
   // beneath the review summary they act on (#5080). The page owns them;
   // this section only says where they go.
@@ -652,7 +658,6 @@ export const EvidenceOfCompletion = ({
                 key={requirement.evidenceRequirementId}
                 requirement={requirement}
                 canEdit={canEdit}
-                allowEdit={allowEdit}
                 onSave={(payload) =>
                   updateRequirement({
                     evidenceRequirementId: requirement.evidenceRequirementId,
