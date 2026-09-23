@@ -15,18 +15,27 @@ import { useDesignatedActionWorkflow } from '@/hooks/useInitiativeAgreements'
 export const ACTION_ACCEPT = 'accept_evidence'
 export const ACTION_REQUEST_INFORMATION = 'request_information'
 export const ACTION_RECOMMEND_TO_MANAGER = 'recommend_to_manager'
+export const ACTION_NOT_RECOMMEND = 'not_recommend'
 export const ACTION_RETURN = 'return'
 export const ACTION_RECOMMEND_TO_DIRECTOR = 'recommend_to_director'
 export const ACTION_APPROVE = 'approve'
 export const ACTION_REJECT = 'reject'
 
 // Actions that must say why. The API requires the comment too; asking for
-// it here means the user finds out before they lose the click.
+// it here means the user finds out before they lose the click. Requesting
+// information is the exception: its reason is the page's Missing
+// information box (#5118), so it asks for nothing more.
 const REQUIRES_COMMENT = new Set([
-  ACTION_REQUEST_INFORMATION,
+  ACTION_NOT_RECOMMEND,
   ACTION_RETURN,
   ACTION_REJECT
 ])
+
+// Actions whose reason is asked for in their own words; the rest share
+// the general prompt.
+const PROMPT_KEYS = {
+  [ACTION_NOT_RECOMMEND]: 'initiativeAgreement:workflow.prompt.not_recommend'
+}
 
 // Where on the page each action belongs (#5080). Evidence decisions sit
 // beneath the review summary they act on; recommendation and approval
@@ -53,6 +62,13 @@ const BUTTONS = [
     action: ACTION_RECOMMEND_TO_MANAGER,
     labelKey: 'recommendToManager',
     variant: 'contained',
+    colour: 'primary',
+    placement: PLACEMENT_DECISION
+  },
+  {
+    action: ACTION_NOT_RECOMMEND,
+    labelKey: 'notRecommended',
+    variant: 'outlined',
     colour: 'primary',
     placement: PLACEMENT_DECISION
   },
@@ -92,6 +108,9 @@ export const DesignatedActionWorkflow = ({
   recommendedCredits,
   allEvidenceSatisfactory,
   hasRequirements = true,
+  // The Missing information box's current text; it is what a request for
+  // additional information sends.
+  missingInformation = '',
   // Omitted: every available action, as before the split.
   placement,
   onChanged
@@ -131,6 +150,10 @@ export const DesignatedActionWorkflow = ({
       setPendingAction(action)
       return
     }
+    if (action === ACTION_REQUEST_INFORMATION) {
+      run(action, { comment: missingInformation.trim() })
+      return
+    }
     if (action === ACTION_RECOMMEND_TO_MANAGER) {
       // The amount lives in the header now (#5079); the action carries
       // whatever is saved there.
@@ -155,6 +178,8 @@ export const DesignatedActionWorkflow = ({
   const blockedByEvidence = (action) =>
     (action === ACTION_ACCEPT || action === ACTION_RECOMMEND_TO_MANAGER) &&
     !allEvidenceSatisfactory
+  const blockedByMissingInformation = (action) =>
+    action === ACTION_REQUEST_INFORMATION && !missingInformation.trim()
 
   // A disabled button should say what would enable it, not just refuse.
   const tooltipFor = (action) => {
@@ -163,8 +188,15 @@ export const DesignatedActionWorkflow = ({
         ? t('initiativeAgreement:workflow.blockedByEvidence')
         : t('initiativeAgreement:workflow.blockedNoRequirements')
     }
+    if (blockedByMissingInformation(action)) {
+      return t('initiativeAgreement:workflow.blockedNoMissingInformation')
+    }
     return t(`initiativeAgreement:workflow.tip.${action}`)
   }
+
+  const commentPrompt = t(
+    PROMPT_KEYS[pendingAction] ?? 'initiativeAgreement:workflow.commentPrompt'
+  )
 
   return (
     <BCBox
@@ -198,7 +230,11 @@ export const DesignatedActionWorkflow = ({
                 variant={button.variant}
                 color={button.colour}
                 size="small"
-                disabled={isPending || blockedByEvidence(button.action)}
+                disabled={
+                  isPending ||
+                  blockedByEvidence(button.action) ||
+                  blockedByMissingInformation(button.action)
+                }
                 data-test={`workflow-${button.action}`}
                 onClick={() => start(button.action)}
               >
@@ -226,7 +262,7 @@ export const DesignatedActionWorkflow = ({
           content: (
             <Box sx={{ minWidth: { xs: 'auto', sm: 420 } }}>
               <BCTypography variant="body4" component="p" sx={{ mb: 1 }}>
-                {t('initiativeAgreement:workflow.commentPrompt')}
+                {commentPrompt}
               </BCTypography>
               <TextField
                 multiline
@@ -236,7 +272,7 @@ export const DesignatedActionWorkflow = ({
                 value={comment}
                 inputProps={{
                   'data-test': 'workflow-comment',
-                  'aria-label': t('initiativeAgreement:workflow.commentPrompt')
+                  'aria-label': commentPrompt
                 }}
                 onChange={(event) => setComment(event.target.value)}
               />

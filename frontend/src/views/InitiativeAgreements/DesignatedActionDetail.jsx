@@ -32,6 +32,7 @@ import withRole from '@/utils/withRole'
 import {
   useDesignatedActionProfile,
   useEvidenceRequirements,
+  useSetMissingInformation,
   useSetRecommendedCredits
 } from '@/hooks/useInitiativeAgreements'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -117,6 +118,21 @@ const DesignatedActionDetailBase = () => {
       saveCredits(next)
     }
   }
+  // The Missing information box (#5118): edited here because the request
+  // button beside the summary sends it, saved on leaving the field like
+  // the recommended amount.
+  const { mutate: saveMissingInformation } =
+    useSetMissingInformation(designatedActionId)
+  const [missingInformation, setMissingInformation] = useState('')
+  useEffect(() => {
+    setMissingInformation(action?.missingInformation ?? '')
+  }, [action?.missingInformation])
+  const commitMissingInformation = () => {
+    if (missingInformation.trim() !== (action?.missingInformation ?? '')) {
+      saveMissingInformation(missingInformation)
+    }
+  }
+
   const allEvidenceSatisfactory =
     requirements.length > 0 &&
     requirements.every((r) => r.reviewOutcome === 'Satisfactory')
@@ -197,9 +213,10 @@ const DesignatedActionDetailBase = () => {
       </BCTypography>
       <Divider sx={{ mt: 2, mb: 3 }} />
 
+      {/* Centred on the page, per the design review (#5118). */}
       <Stepper
         alternativeLabel
-        sx={{ mb: 3, maxWidth: 640 }}
+        sx={{ mb: 3, maxWidth: 640, mx: 'auto' }}
         data-test="designated-action-stepper"
       >
         {WORKFLOW_STEPS.map((step) => (
@@ -388,43 +405,45 @@ const DesignatedActionDetailBase = () => {
                 }
               />
             </BCBox>
+
+            {/* Evidence of completion review (#4899) in its own box inside
+                the card, with the evidence decisions beneath its summary
+                (#5080) and the recommendation beneath the box (#5118).
+                Which buttons appear comes from the API, so the page cannot
+                offer a transition the server refuses. */}
+            <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
+              <EvidenceOfCompletion
+                designatedActionId={designatedActionId}
+                missingInformation={missingInformation}
+                onMissingInformationChange={setMissingInformation}
+                onMissingInformationBlur={commitMissingInformation}
+                missingInformationReadOnly={!canRecommend}
+                actions={
+                  <DesignatedActionWorkflow
+                    designatedActionId={designatedActionId}
+                    availableActions={action.availableActions}
+                    recommendedCredits={action.recommendedCredits}
+                    allEvidenceSatisfactory={allEvidenceSatisfactory}
+                    hasRequirements={requirements.length > 0}
+                    missingInformation={missingInformation}
+                    placement={PLACEMENT_EVIDENCE}
+                    onChanged={refreshAction}
+                  />
+                }
+              />
+              <DesignatedActionWorkflow
+                designatedActionId={designatedActionId}
+                availableActions={action.availableActions}
+                recommendedCredits={action.recommendedCredits}
+                allEvidenceSatisfactory={allEvidenceSatisfactory}
+                hasRequirements={requirements.length > 0}
+                placement={PLACEMENT_DECISION}
+                onChanged={refreshAction}
+              />
+            </Role>
           </BCBox>
         }
       />
-
-      {/* Evidence of completion review (#4899), with the evidence
-          decisions beneath its summary (#5080). Which buttons appear
-          comes from the API, so the page cannot offer a transition the
-          server refuses. */}
-      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
-        <EvidenceOfCompletion
-          designatedActionId={designatedActionId}
-          actions={
-            <DesignatedActionWorkflow
-              designatedActionId={designatedActionId}
-              availableActions={action.availableActions}
-              recommendedCredits={action.recommendedCredits}
-              allEvidenceSatisfactory={allEvidenceSatisfactory}
-              hasRequirements={requirements.length > 0}
-              placement={PLACEMENT_EVIDENCE}
-              onChanged={refreshAction}
-            />
-          }
-        />
-      </Role>
-
-      {/* The recommendation and approval decisions close the page. */}
-      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
-        <DesignatedActionWorkflow
-          designatedActionId={designatedActionId}
-          availableActions={action.availableActions}
-          recommendedCredits={action.recommendedCredits}
-          allEvidenceSatisfactory={allEvidenceSatisfactory}
-          hasRequirements={requirements.length > 0}
-          placement={PLACEMENT_DECISION}
-          onChanged={refreshAction}
-        />
-      </Role>
 
       <DocumentUploadDialog
         open={uploadOpen}

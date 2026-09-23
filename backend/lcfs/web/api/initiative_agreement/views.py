@@ -25,6 +25,7 @@ from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementSchema,
     InitiativeAgreementsListSchema,
     InitiativeAgreementUpdateSchema,
+    MissingInformationSchema,
     RecommendedCreditsSchema,
 )
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
@@ -186,6 +187,24 @@ async def set_designated_action_recommended_credits(
     """Save the recommended amount before recommending."""
     return await service.set_recommended_credits(
         designated_action_id, data.recommended_credits, request.user
+    )
+
+
+@router.put(
+    "/designated-actions/{designated_action_id}/missing-information",
+    response_model=DesignatedActionSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def set_designated_action_missing_information(
+    request: Request,
+    designated_action_id: int,
+    data: MissingInformationSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Save the working text of the Missing information box (#5118)."""
+    return await service.set_missing_information(
+        designated_action_id, data.missing_information, request.user
     )
 
 

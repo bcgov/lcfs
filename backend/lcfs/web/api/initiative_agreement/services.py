@@ -684,6 +684,23 @@ class InitiativeAgreementServices:
         return DesignatedActionSchema.model_validate(refreshed)
 
     @service_handler
+    async def set_missing_information(
+        self, designated_action_id: int, text: Optional[str], user
+    ) -> DesignatedActionSchema:
+        """Persist the Missing information box between review rounds (#5118).
+
+        No history event, for the same reason as the recommended amount:
+        this is working text. Requesting additional information records
+        what was actually sent.
+        """
+        action = await self._get_action_or_404(designated_action_id)
+        action.missing_information = (text or "").strip() or None
+        action.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+        refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
+        return DesignatedActionSchema.model_validate(refreshed)
+
+    @service_handler
     async def perform_workflow_action(
         self, designated_action_id: int, data: DesignatedActionWorkflowSchema, user
     ) -> DesignatedActionSchema:
@@ -713,6 +730,12 @@ class InitiativeAgreementServices:
             )
 
         comment = (data.comment or "").strip()
+        if transition.uses_missing_information:
+            if comment:
+                # The box and what was sent must agree afterwards.
+                action.missing_information = comment
+            else:
+                comment = (action.missing_information or "").strip()
         if transition.requires_comment and not comment:
             raise HTTPException(
                 status_code=400,

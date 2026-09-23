@@ -25,7 +25,8 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
 const analystActions = [
   'accept_evidence',
   'request_information',
-  'recommend_to_manager'
+  'recommend_to_manager',
+  'not_recommend'
 ]
 
 describe('DesignatedActionWorkflow', () => {
@@ -64,6 +65,8 @@ describe('DesignatedActionWorkflow', () => {
     expect(
       screen.getByTestId('workflow-recommend_to_manager')
     ).toBeInTheDocument()
+    // The wireframe's negative recommendation sits beside it (#5118).
+    expect(screen.getByTestId('workflow-not_recommend')).toBeInTheDocument()
     expect(
       screen.queryByTestId('workflow-accept_evidence')
     ).not.toBeInTheDocument()
@@ -108,16 +111,19 @@ describe('DesignatedActionWorkflow', () => {
         designatedActionId="9"
         availableActions={analystActions}
         allEvidenceSatisfactory={false}
+        missingInformation="The signed permit."
       />,
       { wrapper }
     )
 
     expect(screen.getByTestId('workflow-accept_evidence')).toBeDisabled()
     expect(screen.getByTestId('workflow-recommend_to_manager')).toBeDisabled()
-    // Requesting information is exactly what you do when it is not.
+    // Requesting information, or not recommending, is exactly what you do
+    // when it is not.
     expect(
       screen.getByTestId('workflow-request_information')
     ).not.toBeDisabled()
+    expect(screen.getByTestId('workflow-not_recommend')).not.toBeDisabled()
   })
 
   it('accepts the evidence without asking for anything else', () => {
@@ -138,25 +144,71 @@ describe('DesignatedActionWorkflow', () => {
     )
   })
 
-  it('asks what is needed before requesting information', () => {
+  it('sends the Missing information box when requesting information', () => {
+    // The reason is on the page (#5118); there is nothing more to ask.
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
         availableActions={analystActions}
         allEvidenceSatisfactory
+        missingInformation="  Send the signed permit.  "
       />,
       { wrapper }
     )
 
     fireEvent.click(screen.getByTestId('workflow-request_information'))
-    expect(mockPerform).not.toHaveBeenCalled()
 
-    const box = screen.getByTestId('workflow-comment')
-    fireEvent.change(box, { target: { value: 'Send the signed permit.' } })
+    expect(screen.queryByTestId('workflow-comment')).not.toBeInTheDocument()
+    expect(mockPerform).toHaveBeenCalledWith(
+      { action: 'request_information', comment: 'Send the signed permit.' },
+      expect.anything()
+    )
+  })
+
+  it('cannot request information until the box says what is missing', () => {
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory
+        missingInformation="   "
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('workflow-request_information')).toBeDisabled()
+    expect(
+      screen.getByTestId('workflow-tip-request_information')
+    ).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('blockedNoMissingInformation')
+    )
+  })
+
+  it('asks why before not recommending', () => {
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory={false}
+        placement={PLACEMENT_DECISION}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('workflow-not_recommend'))
+    expect(mockPerform).not.toHaveBeenCalled()
+    expect(
+      screen.getByText('initiativeAgreement:workflow.prompt.not_recommend')
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByTestId('workflow-comment'), {
+      target: { value: 'The permit was never issued.' }
+    })
     fireEvent.click(screen.getByText('initiativeAgreement:workflow.submit'))
 
     expect(mockPerform).toHaveBeenCalledWith(
-      { action: 'request_information', comment: 'Send the signed permit.' },
+      { action: 'not_recommend', comment: 'The permit was never issued.' },
       expect.anything()
     )
   })
