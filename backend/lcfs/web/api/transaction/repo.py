@@ -490,6 +490,10 @@ class TransactionRepository:
                     ),
                     else_=None,
                 ).label("admin_effective_date"),
+                # Linked transfer ids, so a transfer with no usable date can
+                # be told apart from a transaction with no parent at all
+                Transfer.transfer_id.label("transfer_from_id"),
+                TransferTo.transfer_id.label("transfer_to_id"),
                 # Include status checks
                 Transfer.current_status_id.label("transfer_from_status"),
                 TransferTo.current_status_id.label("transfer_to_status"),
@@ -570,6 +574,19 @@ class TransactionRepository:
             # which may differ from create_date if the transaction was initially
             # created as Reserved during an earlier pipeline step.
             update_date = row.update_date
+
+            # A transfer with neither an effective date nor a Recorded history
+            # row can't be placed in any period. Leave it out entirely, as
+            # Lines 12/13 do, instead of letting it fall through to the
+            # undated historical branch below and count in every period.
+            if (
+                row.transfer_from_id is not None
+                and row.transfer_from_effective_date is None
+            ) or (
+                row.transfer_to_id is not None
+                and row.transfer_to_effective_date is None
+            ):
+                continue
 
             # Determine if this transaction should be counted as past or future
             count_as_past = False

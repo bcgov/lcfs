@@ -1287,3 +1287,101 @@ async def test_calculate_line_17_transfer_without_effective_date_uses_recorded_d
     assert await line_17(from_org_id, 2025) == 40
     assert await line_17(to_org_id, 2024) == 0
     assert await line_17(to_org_id, 2025) == 60
+
+
+@pytest.mark.anyio
+async def test_calculate_line_17_excludes_transfer_without_any_date(
+    dbsession, transaction_repo
+):
+    """
+    A recorded transfer with no transaction_effective_date and no Recorded
+    history row has nothing to date it by. It must be left out of every
+    period, matching Lines 12/13, rather than counted as an undated historical
+    transaction (which would hit every period) or as a future debit.
+
+    Scenario: 100 units on hand from a historical assessment; a 60-unit
+    transfer out created June 10, 2025 with no date anywhere.
+    Both periods stay at 100 for the sender and 0 for the receiver.
+    """
+    from datetime import datetime
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+    from lcfs.db.models.transfer import Transfer
+    from lcfs.db.models import Organization, OrganizationAddress
+
+    from_org_id, to_org_id = 6011, 6012
+    for org_id in (from_org_id, to_org_id):
+        dbsession.add(
+            Organization(
+                organization_id=org_id,
+                name=f"Test Company {org_id}",
+                operating_name=f"Test Co. {org_id}",
+                org_address=OrganizationAddress(
+                    street_address="123 No Date St",
+                    city="Test City",
+                    province_state="Test Province",
+                    country="Test Country",
+                    postalCode_zipCode="T3ST 6Z2",
+                ),
+            )
+        )
+
+    # Historical credits, no parent entity
+    dbsession.add(
+        Transaction(
+            transaction_id=6011,
+            organization_id=from_org_id,
+            compliance_units=100,
+            transaction_action=TransactionActionEnum.Adjustment,
+            create_date=datetime(2023, 6, 1),
+            update_date=datetime(2023, 6, 1),
+        )
+    )
+    # Both sides of the transfer, created June 10, 2025
+    dbsession.add(
+        Transaction(
+            transaction_id=6012,
+            organization_id=from_org_id,
+            compliance_units=-60,
+            transaction_action=TransactionActionEnum.Adjustment,
+            create_date=datetime(2025, 6, 10),
+            update_date=datetime(2025, 6, 10),
+        )
+    )
+    dbsession.add(
+        Transaction(
+            transaction_id=6013,
+            organization_id=to_org_id,
+            compliance_units=60,
+            transaction_action=TransactionActionEnum.Adjustment,
+            create_date=datetime(2025, 6, 10),
+            update_date=datetime(2025, 6, 10),
+        )
+    )
+    await dbsession.flush()
+
+    # No transaction_effective_date and no TransferHistory row
+    dbsession.add(
+        Transfer(
+            transfer_id=96011,
+            from_organization_id=from_org_id,
+            to_organization_id=to_org_id,
+            from_transaction_id=6012,
+            to_transaction_id=6013,
+            agreement_date=datetime(2025, 6, 1),
+            transaction_effective_date=None,
+            current_status_id=6,  # Recorded
+            quantity=60,
+            price_per_unit=0,
+        )
+    )
+    await dbsession.commit()
+
+    line_17 = transaction_repo.calculate_line_17_available_balance_for_period
+
+    assert await line_17(from_org_id, 2024) == 100
+    assert await line_17(from_org_id, 2025) == 100
+    assert await line_17(to_org_id, 2024) == 0
+    assert await line_17(to_org_id, 2025) == 0
