@@ -3,7 +3,7 @@ import { apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { render, renderHook, waitFor } from '@testing-library/react'
 import { HttpResponse, delay } from 'msw'
-import { httpOverwrite } from '@/tests/utils/handlers'
+import { httpOverwrite } from '@/tests/utils/server'
 import { wrapper } from '@/tests/utils/wrapper'
 
 const keycloak = vi.hoisted(() => ({

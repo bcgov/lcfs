@@ -2,6 +2,14 @@ import { describe, it, expect, vi } from 'vitest'
 import { routesMapping, columnDefs, defaultSortModel } from '../_schema'
 import { ROUTES } from '@/routes/routes'
 
+vi.mock('@/components/BCDataGrid/components', () => ({
+  BCDateFloatingFilter: { displayName: 'BCDateFloatingFilter' }
+}))
+
+vi.mock('@/components/BCDataGrid/columns', () => ({
+  actions: () => ({})
+}))
+
 describe('Notification Schema', () => {
   describe('routesMapping', () => {
     it('returns correct routes for government users', () => {

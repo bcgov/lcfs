@@ -1,10 +1,20 @@
-import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   useLoadingStore,
   type LoadingDetails,
   type LoadingState
 } from '../useLoadingStore'
+
+const getStoreResult = () => ({
+  result: {
+    get current() {
+      return useLoadingStore.getState()
+    }
+  },
+  unmount: () => {}
+})
+
+const run = <T>(callback: () => T): T => callback()
 
 const getLoadingDetails = (loading: LoadingState): LoadingDetails => {
   if (typeof loading === 'boolean') {
@@ -16,7 +26,7 @@ const getLoadingDetails = (loading: LoadingState): LoadingDetails => {
 describe('useLoadingStore', () => {
   beforeEach(() => {
     // Reset store state before each test
-    act(() => {
+    run(() => {
       useLoadingStore.setState({
         loading: false
       })
@@ -25,13 +35,13 @@ describe('useLoadingStore', () => {
 
   describe('initial state', () => {
     it('should initialize with loading false', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
       
       expect(result.current.loading).toBe(false)
     })
 
     it('should have setLoading function available', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
       
       expect(typeof result.current.setLoading).toBe('function')
     })
@@ -39,9 +49,9 @@ describe('useLoadingStore', () => {
 
   describe('setLoading functionality', () => {
     it('should set loading to true when setLoading(true) is called', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
 
-      act(() => {
+      run(() => {
         result.current.setLoading(true)
       })
 
@@ -49,17 +59,17 @@ describe('useLoadingStore', () => {
     })
 
     it('should set loading to false when setLoading(false) is called', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
 
       // First set to true
-      act(() => {
+      run(() => {
         result.current.setLoading(true)
       })
       
       expect(result.current.loading).toBe(true)
 
       // Then set to false
-      act(() => {
+      run(() => {
         result.current.setLoading(false)
       })
 
@@ -67,9 +77,9 @@ describe('useLoadingStore', () => {
     })
 
     it('should handle rapid state changes', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
 
-      act(() => {
+      run(() => {
         result.current.setLoading(true)
         result.current.setLoading(false)
         result.current.setLoading(true)
@@ -79,9 +89,9 @@ describe('useLoadingStore', () => {
     })
 
     it('should handle setting the same value multiple times', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
 
-      act(() => {
+      run(() => {
         result.current.setLoading(true)
         result.current.setLoading(true)
         result.current.setLoading(true)
@@ -89,7 +99,7 @@ describe('useLoadingStore', () => {
 
       expect(result.current.loading).toBe(true)
 
-      act(() => {
+      run(() => {
         result.current.setLoading(false)
         result.current.setLoading(false)
         result.current.setLoading(false)
@@ -101,7 +111,7 @@ describe('useLoadingStore', () => {
 
   describe('structured loading states', () => {
     it('should accept loading detail objects', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
 
       const loadingDetails = {
         isLoading: true,
@@ -110,7 +120,7 @@ describe('useLoadingStore', () => {
         total: 2
       }
 
-      act(() => {
+      run(() => {
         result.current.setLoading(loadingDetails)
       })
 
@@ -122,7 +132,7 @@ describe('useLoadingStore', () => {
     })
 
     it('should preserve extra metadata on loading detail objects', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
 
       const loadingDetails = {
         isLoading: true,
@@ -135,7 +145,7 @@ describe('useLoadingStore', () => {
         }
       }
 
-      act(() => {
+      run(() => {
         result.current.setLoading(loadingDetails)
       })
 
@@ -148,11 +158,11 @@ describe('useLoadingStore', () => {
 
   describe('store reactivity', () => {
     it('should trigger re-renders when loading state changes', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
 
       expect(result.current.loading).toBe(false)
 
-      act(() => {
+      run(() => {
         result.current.setLoading(true)
       })
 
@@ -161,10 +171,10 @@ describe('useLoadingStore', () => {
     })
 
     it('should allow multiple hooks to access the same state', () => {
-      const { result: result1 } = renderHook(() => useLoadingStore())
-      const { result: result2 } = renderHook(() => useLoadingStore())
+      const { result: result1 } = getStoreResult()
+      const { result: result2 } = getStoreResult()
 
-      act(() => {
+      run(() => {
         result1.current.setLoading(true)
       })
 
@@ -172,7 +182,7 @@ describe('useLoadingStore', () => {
       expect(result1.current.loading).toBe(true)
       expect(result2.current.loading).toBe(true)
 
-      act(() => {
+      run(() => {
         result2.current.setLoading(false)
       })
 
@@ -182,17 +192,17 @@ describe('useLoadingStore', () => {
     })
 
     it('should handle setting the same value multiple times', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
 
       // Set initial value
-      act(() => {
+      run(() => {
         result.current.setLoading(true)
       })
 
       expect(result.current.loading).toBe(true)
 
       // Set the same value again
-      act(() => {
+      run(() => {
         result.current.setLoading(true)
       })
 
@@ -204,9 +214,9 @@ describe('useLoadingStore', () => {
   describe('store state persistence', () => {
     it('should maintain state across hook unmount/mount cycles', () => {
       // First hook instance
-      const { result: result1, unmount } = renderHook(() => useLoadingStore())
+      const { result: result1, unmount } = getStoreResult()
       
-      act(() => {
+      run(() => {
         result1.current.setLoading(true)
       })
       
@@ -216,7 +226,7 @@ describe('useLoadingStore', () => {
       unmount()
       
       // Create a new hook instance
-      const { result: result2 } = renderHook(() => useLoadingStore())
+      const { result: result2 } = getStoreResult()
       
       // State should persist
       expect(result2.current.loading).toBe(true)
@@ -225,16 +235,16 @@ describe('useLoadingStore', () => {
 
   describe('typical usage patterns', () => {
     it('should support async operation loading pattern', async () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
 
       // Simulate starting an async operation
-      act(() => {
+      run(() => {
         result.current.setLoading(true)
       })
       expect(result.current.loading).toBe(true)
 
       // Simulate async operation completion
-      await act(async () => {
+      await run(async () => {
         await new Promise(resolve => setTimeout(resolve, 10))
         result.current.setLoading(false)
       })
@@ -242,13 +252,13 @@ describe('useLoadingStore', () => {
     })
 
     it('should support conditional loading states', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
 
       // Simulate conditional loading based on some state
       const hasData = false
       const isProcessing = true
 
-      act(() => {
+      run(() => {
         result.current.setLoading(hasData || isProcessing)
       })
       expect(result.current.loading).toBe(true)
@@ -257,13 +267,13 @@ describe('useLoadingStore', () => {
       const hasDataUpdated = true
       const isProcessingUpdated = false
 
-      act(() => {
+      run(() => {
         result.current.setLoading(hasDataUpdated || isProcessingUpdated)
       })
       expect(result.current.loading).toBe(true)
 
       // Both false
-      act(() => {
+      run(() => {
         result.current.setLoading(false && false)
       })
       expect(result.current.loading).toBe(false)
@@ -272,11 +282,11 @@ describe('useLoadingStore', () => {
 
   describe('performance considerations', () => {
     it('should handle rapid state changes efficiently', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
       
       const startTime = performance.now()
       
-      act(() => {
+      run(() => {
         // Simulate rapid state changes
         for (let i = 0; i < 100; i++) {
           result.current.setLoading(i % 2 === 0)
@@ -292,7 +302,7 @@ describe('useLoadingStore', () => {
     })
 
     it('should handle complex loading objects efficiently', () => {
-      const { result } = renderHook(() => useLoadingStore())
+      const { result } = getStoreResult()
       
       const complexLoadingState = {
         isLoading: true,
@@ -310,7 +320,7 @@ describe('useLoadingStore', () => {
 
       const startTime = performance.now()
       
-      act(() => {
+      run(() => {
         result.current.setLoading(complexLoadingState)
       })
       

@@ -22,14 +22,17 @@ import {
 import colors from '@/themes/base/colors'
 import { isDocumentRenameEnabled } from '@/constants/common'
 import { getDocumentDisplayName } from '@/utils/documents'
+import {
+  DOC_CATEGORY_GHGENIUS_MODEL,
+  DOC_CATEGORY_SUPPORTING,
+  DOC_CATEGORY_TECHNICAL_REPORT
+} from './documentCategories'
 
-// CI document-category constants. Uploading no longer tags a category (Step 3
-// now uses the shared upload modal — #4740), but these remain the canonical
-// category values consumed by the resume-step logic (ciResumeStep) and the
-// legacy categorized layout (DocumentsModellingStep.legacy.jsx — see #4669).
-export const DOC_CATEGORY_TECHNICAL_REPORT = 'technical_report'
-export const DOC_CATEGORY_GHGENIUS_MODEL = 'ghgenius_model'
-export const DOC_CATEGORY_SUPPORTING = 'supporting'
+export {
+  DOC_CATEGORY_GHGENIUS_MODEL,
+  DOC_CATEGORY_SUPPORTING,
+  DOC_CATEGORY_TECHNICAL_REPORT
+} from './documentCategories'
 
 const PARENT_TYPE = 'ci_application'
 

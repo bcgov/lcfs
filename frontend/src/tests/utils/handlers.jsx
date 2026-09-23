@@ -1,4 +1,3 @@
-import { testServer } from '@/../testSetup'
 import { apiRoutes } from '@/constants/routes'
 import { http, HttpResponse } from 'msw'
 
@@ -19,10 +18,6 @@ const reportOpenings = [
     createSupplementalEnabled: true
   }
 ]
-
-export const httpOverwrite = (method, endpoint, cb, once) => {
-  return testServer.use(http[method](api + endpoint, cb, { once }))
-}
 
 export const handlers = [
   // Auth and user endpoints
