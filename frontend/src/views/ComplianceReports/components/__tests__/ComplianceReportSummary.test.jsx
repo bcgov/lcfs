@@ -1,6 +1,6 @@
 import React, { act } from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 
 import ComplianceReportSummary from '../ComplianceReportSummary'
 import {
@@ -12,7 +12,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock all external dependencies
 vi.mock('@/hooks/useComplianceReports')
@@ -150,22 +150,29 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Accordion: ({ children, defaultExpanded }) => (
+vi.mock('@mui/material/Accordion', () => ({
+  default: ({ children, defaultExpanded }) => (
     <div data-test="accordion" data-expanded={defaultExpanded}>
       {children}
     </div>
-  ),
-  AccordionSummary: ({ children, expandIcon }) => (
+  )
+}))
+
+vi.mock('@mui/material/AccordionSummary', () => ({
+  default: ({ children, expandIcon }) => (
     <div data-test="accordion-summary">
       {children}
       <div data-test="expand-icon">{expandIcon}</div>
     </div>
-  ),
-  AccordionDetails: ({ children }) => (
-    <div data-test="accordion-details">{children}</div>
-  ),
-  Stack: ({ children, direction, justifyContent, mt, gap }) => (
+  )
+}))
+
+vi.mock('@mui/material/AccordionDetails', () => ({
+  default: ({ children }) => <div data-test="accordion-details">{children}</div>
+}))
+
+vi.mock('@mui/material/Stack', () => ({
+  default: ({ children, direction, justifyContent, mt, gap }) => (
     <div
       data-test="stack"
       data-direction={direction}
@@ -174,38 +181,36 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </div>
-  ),
-  FormControlLabel: ({ control, label, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/FormControlLabel', () => ({
+  default: ({ control, label, ...props }) => (
     <label data-test="form-control-label" {...props}>
       {control}
       <span>{label}</span>
     </label>
-  ),
-  Checkbox: ({ checked, onChange, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Checkbox', () => ({
+  default: ({ checked, onChange, ...props }) => (
     <input type="checkbox" checked={checked} onChange={onChange} {...props} />
-  ),
-  Box: ({ children, sx, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Box', () => ({
+  default: ({ children, sx, ...props }) => (
     <div data-test="box" {...props}>
       {children}
     </div>
-  ),
-  TextField: (props) => <input {...props} />
+  )
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  ExpandMore: (props) => (
+vi.mock('@mui/icons-material/ExpandMore', () => ({
+  default: (props) => (
     <div data-test="expand-more-icon" {...props}>
       ExpandMore
-    </div>
-  ),
-  CheckBox: (props) => (
-    <div data-test="checkbox-icon" {...props}>
-      CheckBox
-    </div>
-  ),
-  CheckBoxOutlineBlank: (props) => (
-    <div data-test="checkbox-outline-blank-icon" {...props}>
-      CheckBoxOutlineBlank
     </div>
   )
 }))
@@ -315,7 +320,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 1: Loading state
-  it('renders loading state when isLoading is true', () => {
+  test('renders loading state when isLoading is true', ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: true,
       isError: false,
@@ -323,7 +333,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('loading')).toBeInTheDocument()
     expect(screen.getByText('report:summaryLoadingMsg')).toBeInTheDocument()
@@ -331,7 +345,12 @@ describe('ComplianceReportSummary', () => {
 
   // Test 2: Does not show full loading during background refetch (isFetching)
   // This prevents the summary from flashing when saving inline edits
-  it('does not show loading state when isFetching is true but isLoading is false', () => {
+  test('does not show loading state when isFetching is true but isLoading is false', ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -339,7 +358,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: true
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     // Should NOT show loading during background refetch - content should remain visible
     expect(screen.queryByTestId('loading')).not.toBeInTheDocument()
@@ -348,7 +371,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 3: Error state rendering
-  it('renders error state when isError is true', () => {
+  test('renders error state when isError is true', ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: false,
       isError: true,
@@ -357,14 +385,23 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('bc-typography')).toBeInTheDocument()
     expect(screen.getByText('report:errorRetrieving')).toBeInTheDocument()
   })
 
   // Test 4: Error handling in useEffect
-  it('triggers alert when error occurs', async () => {
+  test('triggers alert when error occurs', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: false,
       isError: true,
@@ -376,7 +413,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(mockTriggerAlert).toHaveBeenCalledWith({
@@ -387,8 +428,17 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 5: Basic component rendering with all elements
-  it('renders complete summary content with all tables and elements', async () => {
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+  test('renders complete summary content with all tables and elements', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       // Main structure
@@ -424,8 +474,17 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 6: handleCellEdit function testing
-  it('handles cell edit correctly and updates backend', async () => {
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+  test('handles cell edit correctly and updates backend', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       const cellEditTrigger = screen.getAllByTestId('cell-edit-trigger')[0] // First table
@@ -446,7 +505,12 @@ describe('ComplianceReportSummary', () => {
   // Core functionality is still covered by other tests
 
   // Test 7: nonCompliancePenaltyDisplayData useMemo - override disabled
-  it('displays original penalty data when override is disabled', async () => {
+  test('displays original penalty data when override is disabled', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useGetComplianceReportSummary.mockReturnValue({
       data: {
         ...mockSummaryData,
@@ -468,7 +532,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       // The penalty table should receive the original penalty data
@@ -479,7 +547,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 8: nonCompliancePenaltyDisplayData useMemo - override enabled
-  it('displays override penalty values when override is enabled', async () => {
+  test('displays override penalty values when override is enabled', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useGetComplianceReportSummary.mockReturnValue({
       data: {
         ...mockSummaryData,
@@ -503,7 +576,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       // Component should compute and display override values
@@ -516,7 +593,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 9: Address validation useEffect
-  it('validates organization address data excluding head office and records address', async () => {
+  test('validates organization address data excluding head office and records address', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useOrganizationSnapshot.mockReturnValue({
       data: {
         headOfficeAddress: 'should be excluded',
@@ -527,7 +609,11 @@ describe('ComplianceReportSummary', () => {
       }
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     // Component should process the address validation internally
     // This tests the second useEffect for address validation
@@ -537,10 +623,19 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 10: Address validation with null snapshot data
-  it('handles null snapshot data in address validation', async () => {
+  test('handles null snapshot data in address validation', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useOrganizationSnapshot.mockReturnValue({ data: null })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(screen.getByTestId('accordion')).toBeInTheDocument()
@@ -548,13 +643,22 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 11: Conditional rendering - government user (no signing authority)
-  it('does not render signing authority for government users', async () => {
+  test('does not render signing authority for government users', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useCurrentUser.mockReturnValue({
       hasRoles: mockHasRoles,
       data: { isGovernmentUser: true, userProfileId: 'gov123' }
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(
@@ -564,13 +668,22 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 12: Conditional rendering - non-draft status (no signing authority)
-  it('does not render signing authority for non-draft status', async () => {
+  test('does not render signing authority for non-draft status', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     const nonDraftProps = {
       ...defaultProps,
       currentStatus: COMPLIANCE_REPORT_STATUSES.SUBMITTED
     }
 
-    render(<ComplianceReportSummary {...nonDraftProps} />, { wrapper })
+    render(<ComplianceReportSummary {...nonDraftProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(
@@ -581,7 +694,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 13: Penalty override checkbox conditional - non-director role
-  it('does not render penalty override checkbox for non-directors', async () => {
+  test('does not render penalty override checkbox for non-directors', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     mockHasRoles.mockReturnValue(false) // Not a director
 
     const propsWithCorrectConditions = {
@@ -590,9 +708,11 @@ describe('ComplianceReportSummary', () => {
       compliancePeriodYear: '2024'
     }
 
-    render(<ComplianceReportSummary {...propsWithCorrectConditions} />, {
-      wrapper
-    })
+    render(<ComplianceReportSummary {...propsWithCorrectConditions} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(
@@ -602,7 +722,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 14: Penalty override checkbox conditional - pre-2024 year
-  it('does not render penalty override checkbox for pre-2024 compliance periods', async () => {
+  test('does not render penalty override checkbox for pre-2024 compliance periods', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     mockHasRoles.mockImplementation((role) => role === roles.director)
 
     const propsWithPre2024 = {
@@ -611,7 +736,11 @@ describe('ComplianceReportSummary', () => {
       compliancePeriodYear: '2023' // Pre-2024
     }
 
-    render(<ComplianceReportSummary {...propsWithPre2024} />, { wrapper })
+    render(<ComplianceReportSummary {...propsWithPre2024} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(
@@ -621,7 +750,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 15: Penalty override checkbox conditional - wrong status
-  it('does not render penalty override checkbox for wrong status', async () => {
+  test('does not render penalty override checkbox for wrong status', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     mockHasRoles.mockImplementation((role) => role === roles.director)
 
     const propsWithWrongStatus = {
@@ -630,7 +764,11 @@ describe('ComplianceReportSummary', () => {
       compliancePeriodYear: '2024'
     }
 
-    render(<ComplianceReportSummary {...propsWithWrongStatus} />, { wrapper })
+    render(<ComplianceReportSummary {...propsWithWrongStatus} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(
@@ -640,13 +778,22 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 16: Compare mode toggle functionality
-  it('handles compare mode toggle correctly', async () => {
+  test('handles compare mode toggle correctly', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     const propsWithCompareMode = {
       ...defaultProps,
       enableCompareMode: true
     }
 
-    render(<ComplianceReportSummary {...propsWithCompareMode} />, { wrapper })
+    render(<ComplianceReportSummary {...propsWithCompareMode} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(screen.getByTestId('toggle-panel')).toBeInTheDocument()
@@ -656,8 +803,17 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 17: Compare mode disabled
-  it('disables compare mode when enableCompareMode is false', async () => {
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+  test('disables compare mode when enableCompareMode is false', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(screen.getByTestId('toggle-disabled')).toHaveTextContent(
@@ -667,7 +823,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 18: Button cluster rendering and interaction
-  it('renders and handles button cluster interactions', async () => {
+  test('renders and handles button cluster interactions', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     const expandedButtonConfig = {
       [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
         {
@@ -696,9 +857,11 @@ describe('ComplianceReportSummary', () => {
       buttonClusterConfig: expandedButtonConfig
     }
 
-    render(<ComplianceReportSummary {...propsWithExpandedButtons} />, {
-      wrapper
-    })
+    render(<ComplianceReportSummary {...propsWithExpandedButtons} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       const submitBtn = screen.getByTestId('submit-report-btn')
@@ -713,7 +876,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 19: Test data setting in first useEffect
-  it('sets component state correctly when data loads', async () => {
+  test('sets component state correctly when data loads', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     const mockDataWithFlags = {
       ...mockSummaryData,
       canSign: true,
@@ -728,7 +896,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     // Component should internally set hasRecords and penaltyOverrideEnabled state
     await waitFor(() => {
@@ -738,7 +910,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 20: Test error handling with detailed error message
-  it('handles error with response detail message', async () => {
+  test('handles error with response detail message', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: false,
       isError: true,
@@ -750,7 +927,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(mockTriggerAlert).toHaveBeenCalledWith({
@@ -761,13 +942,22 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 21: Test mutation error handling
-  it('handles mutation errors correctly', async () => {
+  test('handles mutation errors correctly', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     const mockMutateWithError = vi.fn()
     useUpdateComplianceReportSummary.mockReturnValue({
       mutate: mockMutateWithError
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     const cellEditTrigger = screen.getAllByTestId('cell-edit-trigger')[0]
     fireEvent.click(cellEditTrigger)
@@ -777,8 +967,17 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 22: Test signing authority checkbox interaction
-  it('handles signing authority checkbox interaction', async () => {
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+  test('handles signing authority checkbox interaction', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       const signingCheckbox = screen.getByTestId('signing-authority-checkbox')
@@ -789,7 +988,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 23: Test with null nonCompliancePenaltySummary
-  it('handles null nonCompliancePenaltySummary in useMemo', async () => {
+  test('handles null nonCompliancePenaltySummary in useMemo', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useGetComplianceReportSummary.mockReturnValue({
       data: {
         ...mockSummaryData,
@@ -801,7 +1005,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(screen.getByTestId('accordion')).toBeInTheDocument()
@@ -810,7 +1018,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 24: Test penalty override with null override values
-  it('handles null penalty override values correctly', async () => {
+  test('handles null penalty override values correctly', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useGetComplianceReportSummary.mockReturnValue({
       data: {
         ...mockSummaryData,
@@ -834,7 +1047,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       // Should handle null override values by defaulting to 0
@@ -845,8 +1062,17 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 25: Test accordion default expansion
-  it('renders accordion with default expansion', async () => {
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+  test('renders accordion with default expansion', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       const accordion = screen.getByTestId('accordion')
@@ -855,13 +1081,22 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 26: Test all required props are passed to SummaryTables
-  it('passes correct props to renewable fuel summary table', async () => {
+  test('passes correct props to renewable fuel summary table', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     const propsWithCanEdit = {
       ...defaultProps,
       canEdit: true
     }
 
-    render(<ComplianceReportSummary {...propsWithCanEdit} />, { wrapper })
+    render(<ComplianceReportSummary {...propsWithCanEdit} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       const renewableTable = screen.getByTestId('renewable-summary')
@@ -872,7 +1107,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 27: Test penalty override checkbox rendering conditions - all conditions met
-  it('renders penalty override checkbox when all conditions are met', async () => {
+  test('renders penalty override checkbox when all conditions are met', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     mockHasRoles.mockImplementation((role) => role === roles.director)
 
     const propsWithAllConditions = {
@@ -881,7 +1121,11 @@ describe('ComplianceReportSummary', () => {
       compliancePeriodYear: '2024'
     }
 
-    render(<ComplianceReportSummary {...propsWithAllConditions} />, { wrapper })
+    render(<ComplianceReportSummary {...propsWithAllConditions} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       expect(
@@ -894,8 +1138,17 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 28: Test summary table width props
-  it('applies correct width to low carbon and penalty summary tables', async () => {
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+  test('applies correct width to low carbon and penalty summary tables', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       const renewableTable = screen.getByTestId('renewable-summary')
@@ -909,7 +1162,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 29: Test edge case - penalty override calculation with index 2
-  it('calculates total penalty override correctly for index 2', async () => {
+  test('calculates total penalty override correctly for index 2', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     useGetComplianceReportSummary.mockReturnValue({
       data: {
         ...mockSummaryData,
@@ -933,7 +1191,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     // The useMemo should calculate: 1500 + 2500 = 4000 for index 2
     await waitFor(() => {
@@ -944,7 +1206,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 30: Hides renewable summary when Lines 3 and 9 are all zero
-  it('hides renewable summary table and shows message when Lines 3 and 9 are all zero', async () => {
+  test('hides renewable summary table and shows message when Lines 3 and 9 are all zero', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     // Create full summary with 11 lines where Lines 3 and 9 are all zero
     const emptyRenewableSummary = Array.from({ length: 11 }, (_, i) => ({
       line: i + 1,
@@ -964,7 +1231,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       // Should NOT show the renewable summary table
@@ -983,7 +1254,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 31: Shows renewable summary when Line 3 has non-zero values
-  it('shows renewable summary table when Line 3 has non-zero values', async () => {
+  test('shows renewable summary table when Line 3 has non-zero values', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     const summaryWithLine3Values = Array.from({ length: 11 }, (_, i) => ({
       line: i + 1,
       gasoline: i === 2 ? 1000 : 0, // Line 3 (index 2) has value
@@ -1002,7 +1278,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       // Should show the renewable summary table
@@ -1015,7 +1295,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 32: Shows renewable summary when Line 9 has non-zero values
-  it('shows renewable summary table when Line 9 has non-zero values', async () => {
+  test('shows renewable summary table when Line 9 has non-zero values', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     const summaryWithLine9Values = Array.from({ length: 11 }, (_, i) => ({
       line: i + 1,
       gasoline: i === 8 ? 500 : 0, // Line 9 (index 8) has value
@@ -1034,7 +1319,11 @@ describe('ComplianceReportSummary', () => {
       isFetching: false
     })
 
-    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+    render(<ComplianceReportSummary {...defaultProps} />, [
+      query,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       // Should show the renewable summary table
@@ -1047,7 +1336,12 @@ describe('ComplianceReportSummary', () => {
   })
 
   // Test 33: Sets hasEligibleRenewableFuel correctly based on Lines 3 and 9
-  it('sets hasEligibleRenewableFuel to false when Lines 3 and 9 are all zero', async () => {
+  test('sets hasEligibleRenewableFuel to false when Lines 3 and 9 are all zero', async ({
+    render,
+    query,
+    localization,
+    router
+  }) => {
     const emptyRenewableSummary = Array.from({ length: 11 }, (_, i) => ({
       line: i + 1,
       gasoline: i === 2 || i === 8 ? 0 : 100,
@@ -1073,7 +1367,7 @@ describe('ComplianceReportSummary', () => {
         {...defaultProps}
         setHasEligibleRenewableFuel={mockSetHasEligibleRenewableFuel}
       />,
-      { wrapper }
+      [query, localization, router]
     )
 
     await waitFor(() => {

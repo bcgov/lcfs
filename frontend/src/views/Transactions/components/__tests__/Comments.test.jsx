@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Comments } from '../Comments'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 
 // Mock useFormContext with spies
@@ -57,12 +57,18 @@ describe('Comments Component', () => {
   })
 
   it('does not render when commentField is falsy', () => {
-    const { container } = renderComponent({ commentField: null, isEditable: true })
+    const { container } = renderComponent({
+      commentField: null,
+      isEditable: true
+    })
     expect(container.firstChild).toBeNull()
   })
 
   it('does not render when commentField is empty string', () => {
-    const { container } = renderComponent({ commentField: '', isEditable: true })
+    const { container } = renderComponent({
+      commentField: '',
+      isEditable: true
+    })
     expect(container.firstChild).toBeNull()
   })
 
@@ -99,11 +105,11 @@ describe('Comments Component', () => {
 
   it('disables TextField when isEditable is false', async () => {
     renderComponent({ commentField, isEditable: false })
-    
+
     // Expand the collapse to make the textarea accessible
     const toggleButton = screen.getByRole('button')
     fireEvent.click(toggleButton)
-    
+
     await waitFor(() => {
       const textarea = screen.getByRole('textbox')
       expect(textarea).toBeDisabled()
@@ -117,57 +123,67 @@ describe('Comments Component', () => {
 
   it('shows ExpandMore icon when collapsed', () => {
     renderComponent({ commentField, isEditable: true })
-    const expandMoreIcon = document.querySelector('[data-testid="ExpandMoreIcon"]')
+    const expandMoreIcon = document.querySelector(
+      '[data-testid="ExpandMoreIcon"]'
+    )
     expect(expandMoreIcon).toBeInTheDocument()
   })
 
   it('shows ExpandLess icon when expanded', async () => {
     renderComponent({ commentField, isEditable: true })
-    
+
     const toggleButton = screen.getByRole('button')
     fireEvent.click(toggleButton)
-    
+
     await waitFor(() => {
-      const expandLessIcon = document.querySelector('[data-testid="ExpandLessIcon"]')
+      const expandLessIcon = document.querySelector(
+        '[data-testid="ExpandLessIcon"]'
+      )
       expect(expandLessIcon).toBeInTheDocument()
     })
   })
 
   it('expands automatically when initial value exists', async () => {
     mockGetValues.mockReturnValue('existing comment')
-    
+
     await act(async () => {
       renderComponent({ commentField: 'testField', isEditable: true })
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
     })
-    
+
     await waitFor(() => {
-      const expandLessIcon = document.querySelector('[data-testid="ExpandLessIcon"]')
+      const expandLessIcon = document.querySelector(
+        '[data-testid="ExpandLessIcon"]'
+      )
       expect(expandLessIcon).toBeInTheDocument()
     })
   })
 
   it('does not expand when no initial value exists', async () => {
     mockGetValues.mockReturnValue('')
-    
+
     await act(async () => {
       renderComponent({ commentField: 'testField', isEditable: true })
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
     })
-    
-    const expandMoreIcon = document.querySelector('[data-testid="ExpandMoreIcon"]')
+
+    const expandMoreIcon = document.querySelector(
+      '[data-testid="ExpandMoreIcon"]'
+    )
     expect(expandMoreIcon).toBeInTheDocument()
   })
 
   it('does not expand when initial value is null', async () => {
     mockGetValues.mockReturnValue(null)
-    
+
     await act(async () => {
       renderComponent({ commentField: 'testField', isEditable: true })
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
     })
-    
-    const expandMoreIcon = document.querySelector('[data-testid="ExpandMoreIcon"]')
+
+    const expandMoreIcon = document.querySelector(
+      '[data-testid="ExpandMoreIcon"]'
+    )
     expect(expandMoreIcon).toBeInTheDocument()
   })
 
@@ -181,36 +197,42 @@ describe('Comments Component', () => {
 
   it('toggles expansion state when clicked', async () => {
     renderComponent({ commentField, isEditable: true })
-    
+
     const toggleButton = screen.getByRole('button')
-    
+
     // Initially collapsed
-    expect(document.querySelector('[data-testid="ExpandMoreIcon"]')).toBeInTheDocument()
-    
+    expect(
+      document.querySelector('[data-testid="ExpandMoreIcon"]')
+    ).toBeInTheDocument()
+
     // Click to expand
     fireEvent.click(toggleButton)
     await waitFor(() => {
-      expect(document.querySelector('[data-testid="ExpandLessIcon"]')).toBeInTheDocument()
+      expect(
+        document.querySelector('[data-testid="ExpandLessIcon"]')
+      ).toBeInTheDocument()
     })
-    
+
     // Click to collapse
     fireEvent.click(toggleButton)
     await waitFor(() => {
-      expect(document.querySelector('[data-testid="ExpandMoreIcon"]')).toBeInTheDocument()
+      expect(
+        document.querySelector('[data-testid="ExpandMoreIcon"]')
+      ).toBeInTheDocument()
     })
   })
 
   it('renders TextField with correct attributes', async () => {
     renderComponent({ commentField: 'testField', isEditable: true })
-    
+
     // Expand the collapse to make the textarea accessible
     const toggleButton = screen.getByRole('button')
     fireEvent.click(toggleButton)
-    
+
     await waitFor(() => {
       const textarea = screen.getByRole('textbox')
       const textFieldWrapper = screen.getByTestId('external-comments')
-      
+
       expect(textarea).toHaveAttribute('id', 'external-comments')
       expect(textarea).toHaveAttribute('rows', '4')
       expect(textFieldWrapper.getAttribute('class')).toContain('MuiTextField')
@@ -219,7 +241,7 @@ describe('Comments Component', () => {
 
   it('renders clickable header with proper styles', () => {
     renderComponent({ commentField, isEditable: true })
-    
+
     const clickableBox = screen.getByText('txn:commentsDescText').closest('div')
     expect(clickableBox).toHaveStyle({ cursor: 'pointer' })
   })

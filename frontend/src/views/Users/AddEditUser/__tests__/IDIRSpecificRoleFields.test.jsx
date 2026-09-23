@@ -2,10 +2,10 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-// Local override for @/components/BCForm so that BCFormRadio propagates `disabled`
+// Local overrides for direct BCForm files so that BCFormRadio propagates `disabled`
 // to its rendered inputs. This lets us assert the new behaviour where IA radio
 // inputs are NOT disabled simply because Director is selected.
-vi.mock('@/components/BCForm', () => ({
+vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
   BCFormCheckbox: ({ name, options = [] }) =>
     React.createElement(
       'div',
@@ -18,7 +18,10 @@ vi.mock('@/components/BCForm', () => ({
           'data-testid': opt.dataTestId || `${name}${i + 1}`
         })
       )
-    ),
+    )
+}))
+
+vi.mock('@/components/BCForm/BCFormRadio', () => ({
   BCFormRadio: ({ name, options = [], disabled }) =>
     React.createElement(
       'div',
@@ -39,7 +42,11 @@ vi.mock('@/components/BCForm', () => ({
 
 vi.mock('@/components/BCTypography', () => ({
   default: ({ children, variant, component }) => (
-    <div data-test="bc-typography" data-variant={variant} data-component={component}>
+    <div
+      data-test="bc-typography"
+      data-variant={variant}
+      data-component={component}
+    >
       {children}
     </div>
   )
@@ -63,25 +70,34 @@ vi.mock('react-hook-form', () => ({
     })
 }))
 
-vi.mock('@mui/material', () => ({
-  Box: ({ children }) => <div data-test="box">{children}</div>,
-  Stack: ({ children }) => <div data-test="stack">{children}</div>,
-  Button: ({ children, onClick, disabled, ...props }) => (
+vi.mock('@mui/material/Box', () => ({
+  default: ({ children }) => <div data-test="box">{children}</div>
+}))
+vi.mock('@mui/material/Button', () => ({
+  default: ({ children, onClick, disabled, ...props }) => (
     <button onClick={onClick} disabled={disabled} {...props}>
       {children}
     </button>
-  ),
-  FormControl: ({ children }) => <div data-test="form-control">{children}</div>,
-  FormControlLabel: ({ control: ctrl, label, value }) => (
+  )
+}))
+vi.mock('@mui/material/FormControl', () => ({
+  default: ({ children }) => <div data-test="form-control">{children}</div>
+}))
+vi.mock('@mui/material/FormControlLabel', () => ({
+  default: ({ control: ctrl, label, value }) => (
     <div data-test="form-control-label" data-value={value}>
       {ctrl}
       {label}
     </div>
-  ),
-  Radio: ({ disabled }) => (
+  )
+}))
+vi.mock('@mui/material/Radio', () => ({
+  default: ({ disabled }) => (
     <input data-test="radio" type="radio" disabled={disabled} readOnly />
-  ),
-  RadioGroup: ({ children, value }) => (
+  )
+}))
+vi.mock('@mui/material/RadioGroup', () => ({
+  default: ({ children, value }) => (
     <div data-test="radio-group" data-value={value}>
       {children}
     </div>
@@ -90,12 +106,36 @@ vi.mock('@mui/material', () => ({
 
 vi.mock('../_schema', () => ({
   adminRoleOptions: vi.fn(() => [
-    { label: 'Administrator', header: 'Administrator', text: 'admin desc', value: 'administrator', dataTestId: 'adminRole1' },
-    { label: 'System admin', header: 'System admin', text: 'system admin desc', value: 'system admin', dataTestId: 'adminRole2' }
+    {
+      label: 'Administrator',
+      header: 'Administrator',
+      text: 'admin desc',
+      value: 'administrator',
+      dataTestId: 'adminRole1'
+    },
+    {
+      label: 'System admin',
+      header: 'System admin',
+      text: 'system admin desc',
+      value: 'system admin',
+      dataTestId: 'adminRole2'
+    }
   ]),
   iaRoleOptions: vi.fn(() => [
-    { label: 'IA Analyst', header: 'IA Analyst', text: 'ia analyst desc', value: 'ia analyst', dataTestId: 'iaRole1' },
-    { label: 'IA Manager', header: 'IA Manager', text: 'ia manager desc', value: 'ia manager', dataTestId: 'iaRole2' }
+    {
+      label: 'IA Analyst',
+      header: 'IA Analyst',
+      text: 'ia analyst desc',
+      value: 'ia analyst',
+      dataTestId: 'iaRole1'
+    },
+    {
+      label: 'IA Manager',
+      header: 'IA Manager',
+      text: 'ia manager desc',
+      value: 'ia manager',
+      dataTestId: 'iaRole2'
+    }
   ])
 }))
 
@@ -208,12 +248,24 @@ describe('IDIRSpecificRoleFields', () => {
   })
 
   it('Director radio is rendered in the radio group', () => {
-    render(<IDIRSpecificRoleFields form={makeForm('director')} disabled={false} t={t} />)
+    render(
+      <IDIRSpecificRoleFields
+        form={makeForm('director')}
+        disabled={false}
+        t={t}
+      />
+    )
     expect(screen.getByTestId('radio-group')).toBeInTheDocument()
   })
 
   it('IA role radio inputs are NOT disabled when Director is selected and form is enabled', () => {
-    render(<IDIRSpecificRoleFields form={makeForm('director')} disabled={false} t={t} />)
+    render(
+      <IDIRSpecificRoleFields
+        form={makeForm('director')}
+        disabled={false}
+        t={t}
+      />
+    )
     const iaGroup = screen.getByTestId('iaRole-radio-group')
     const iaInputs = iaGroup.querySelectorAll('input[type="radio"]')
     expect(iaInputs).toHaveLength(2)
@@ -221,14 +273,22 @@ describe('IDIRSpecificRoleFields', () => {
   })
 
   it('IA role radio inputs ARE disabled when form disabled=true, regardless of Director', () => {
-    render(<IDIRSpecificRoleFields form={makeForm('director')} disabled={true} t={t} />)
+    render(
+      <IDIRSpecificRoleFields
+        form={makeForm('director')}
+        disabled={true}
+        t={t}
+      />
+    )
     const iaGroup = screen.getByTestId('iaRole-radio-group')
     const iaInputs = iaGroup.querySelectorAll('input[type="radio"]')
     iaInputs.forEach((input) => expect(input).toBeDisabled())
   })
 
   it('IA role radio inputs are enabled when no idirRole is selected', () => {
-    render(<IDIRSpecificRoleFields form={makeForm('')} disabled={false} t={t} />)
+    render(
+      <IDIRSpecificRoleFields form={makeForm('')} disabled={false} t={t} />
+    )
     const iaGroup = screen.getByTestId('iaRole-radio-group')
     const iaInputs = iaGroup.querySelectorAll('input[type="radio"]')
     iaInputs.forEach((input) => expect(input).not.toBeDisabled())
@@ -237,14 +297,22 @@ describe('IDIRSpecificRoleFields', () => {
   describe('Reset roles buttons', () => {
     describe('Compliance roles reset button', () => {
       it('renders the compliance reset roles button', () => {
-        render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+        render(
+          <IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />
+        )
         const resetButton = screen.getByTestId('reset-compliance-roles-btn')
         expect(resetButton).toBeInTheDocument()
         expect(t).toHaveBeenCalledWith('admin:userForm.resetRoles')
       })
 
       it('disables the compliance reset button when no compliance role is selected', () => {
-        render(<IDIRSpecificRoleFields form={makeForm('', '', [])} disabled={false} t={t} />)
+        render(
+          <IDIRSpecificRoleFields
+            form={makeForm('', '', [])}
+            disabled={false}
+            t={t}
+          />
+        )
         const resetButton = screen.getByTestId('reset-compliance-roles-btn')
         expect(resetButton).toBeDisabled()
       })
@@ -260,9 +328,9 @@ describe('IDIRSpecificRoleFields', () => {
         const form = makeForm('analyst', '', [])
         render(<IDIRSpecificRoleFields form={form} disabled={false} t={t} />)
         const resetButton = screen.getByTestId('reset-compliance-roles-btn')
-        
+
         fireEvent.click(resetButton)
-        
+
         expect(form.setValue).toHaveBeenCalledWith('idirRole', '')
       })
 
@@ -276,13 +344,21 @@ describe('IDIRSpecificRoleFields', () => {
 
     describe('IA roles reset button', () => {
       it('renders the IA reset roles button', () => {
-        render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+        render(
+          <IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />
+        )
         const resetButton = screen.getByTestId('reset-ia-roles-btn')
         expect(resetButton).toBeInTheDocument()
       })
 
       it('disables the IA reset button when no IA role is selected', () => {
-        render(<IDIRSpecificRoleFields form={makeForm('', '', [])} disabled={false} t={t} />)
+        render(
+          <IDIRSpecificRoleFields
+            form={makeForm('', '', [])}
+            disabled={false}
+            t={t}
+          />
+        )
         const resetButton = screen.getByTestId('reset-ia-roles-btn')
         expect(resetButton).toBeDisabled()
       })
@@ -298,9 +374,9 @@ describe('IDIRSpecificRoleFields', () => {
         const form = makeForm('', 'ia analyst', [])
         render(<IDIRSpecificRoleFields form={form} disabled={false} t={t} />)
         const resetButton = screen.getByTestId('reset-ia-roles-btn')
-        
+
         fireEvent.click(resetButton)
-        
+
         expect(form.setValue).toHaveBeenCalledWith('iaRole', '')
       })
 
@@ -315,13 +391,15 @@ describe('IDIRSpecificRoleFields', () => {
     it('both reset buttons work independently', () => {
       const form = makeForm('analyst', 'ia analyst', [])
       render(<IDIRSpecificRoleFields form={form} disabled={false} t={t} />)
-      
-      const complianceResetButton = screen.getByTestId('reset-compliance-roles-btn')
+
+      const complianceResetButton = screen.getByTestId(
+        'reset-compliance-roles-btn'
+      )
       const iaResetButton = screen.getByTestId('reset-ia-roles-btn')
-      
+
       fireEvent.click(complianceResetButton)
       expect(form.setValue).toHaveBeenCalledWith('idirRole', '')
-      
+
       fireEvent.click(iaResetButton)
       expect(form.setValue).toHaveBeenCalledWith('iaRole', '')
     })

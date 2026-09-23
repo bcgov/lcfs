@@ -1,5 +1,5 @@
-import { renderHook } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
+import { makeProvider, test } from '@/tests/utils/fixtures'
 import { useAuth } from '../useAuth'
 import { KeycloakContext } from '@/components/KeycloakProvider'
 import React from 'react'
@@ -13,7 +13,9 @@ describe('useAuth', () => {
     vi.clearAllMocks()
   })
 
-  it('should return context when used within AuthProvider', () => {
+  test('should return context when used within AuthProvider', ({
+    renderHook
+  }) => {
     const mockContextValue = {
       keycloak: {
         authenticated: true,
@@ -23,58 +25,60 @@ describe('useAuth', () => {
       }
     }
 
-    const wrapper = ({ children }) => (
+    const provider = makeProvider('custom', (children) => (
       <KeycloakContext.Provider value={mockContextValue}>
         {children}
       </KeycloakContext.Provider>
-    )
+    ))
 
-    const { result } = renderHook(() => useAuth(), { wrapper })
+    const { result } = renderHook(() => useAuth(), [provider])
 
     expect(result.current).toEqual(mockContextValue)
   })
 
-  it('should throw error when used outside AuthProvider', () => {
+  test('should throw error when used outside AuthProvider', ({
+    renderHook
+  }) => {
     // Suppress console.error for this test
     const originalError = console.error
     console.error = vi.fn()
 
     expect(() => {
-      renderHook(() => useAuth())
+      renderHook(() => useAuth(), [])
     }).toThrow('useKeycloak must be used within an AuthProvider')
 
     console.error = originalError
   })
 
-  it('should throw error when context is null', () => {
+  test('should throw error when context is null', ({ renderHook }) => {
     const originalError = console.error
     console.error = vi.fn()
 
-    const wrapper = ({ children }) => (
+    const provider = makeProvider('custom', (children) => (
       <KeycloakContext.Provider value={null}>
         {children}
       </KeycloakContext.Provider>
-    )
+    ))
 
     expect(() => {
-      renderHook(() => useAuth(), { wrapper })
+      renderHook(() => useAuth(), [provider])
     }).toThrow('useKeycloak must be used within an AuthProvider')
 
     console.error = originalError
   })
 
-  it('should throw error when context is undefined', () => {
+  test('should throw error when context is undefined', ({ renderHook }) => {
     const originalError = console.error
     console.error = vi.fn()
 
-    const wrapper = ({ children }) => (
+    const provider = makeProvider('custom', (children) => (
       <KeycloakContext.Provider value={undefined}>
         {children}
       </KeycloakContext.Provider>
-    )
+    ))
 
     expect(() => {
-      renderHook(() => useAuth(), { wrapper })
+      renderHook(() => useAuth(), [provider])
     }).toThrow('useKeycloak must be used within an AuthProvider')
 
     console.error = originalError

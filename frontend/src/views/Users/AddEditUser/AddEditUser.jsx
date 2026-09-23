@@ -20,7 +20,8 @@ import {
   allowedBceidRoleValues
 } from './_schema'
 import { ROUTES, buildPath } from '@/routes/routes'
-import { BCFormRadio, BCFormText } from '@/components/BCForm'
+import { BCFormRadio } from '@/components/BCForm/BCFormRadio'
+import { BCFormText } from '@/components/BCForm/BCFormText'
 import colors from '@/themes/base/colors'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -29,15 +30,13 @@ import {
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
-import {
-  Box,
-  Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Tooltip
-} from '@mui/material'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import Tooltip from '@mui/material/Tooltip'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Grid2'
 import BCAlert from '@/components/BCAlert'
@@ -253,9 +252,7 @@ export const AddEditUser = ({
         idirRole: dataRoles
           .filter((r) => IDIR_COMPLIANCE_ROLES.includes(r))
           .join(''),
-        iaRole: dataRoles
-          .filter((r) => IDIR_IA_ROLES.includes(r))
-          .join(''),
+        iaRole: dataRoles.filter((r) => IDIR_IA_ROLES.includes(r)).join(''),
         bceidRoles: dataRoles.includes(roles.read_only.toLowerCase())
           ? []
           : dataRoles
@@ -285,9 +282,11 @@ export const AddEditUser = ({
     // For IDIR users, use keycloakEmail for both email fields
     // For BCeID users, use altEmail if provided
     const isIDIRUser = !orgID && !hasRoles(roles.supplier)
-    const emailValue = isIDIRUser 
-      ? data.keycloakEmail 
-      : (data.altEmail === '' ? null : data.altEmail)
+    const emailValue = isIDIRUser
+      ? data.keycloakEmail
+      : data.altEmail === ''
+        ? null
+        : data.altEmail
 
     const payload = {
       userProfileId: userID,
@@ -566,7 +565,11 @@ export const AddEditUser = ({
       {/* Confirmation Dialog for deletion */}
       <Dialog open={openConfirm} onClose={handleCancelDelete}>
         <DialogTitle>
-          <BCTypography variant="subtitle1" component="span" color={colors.primary.main}>
+          <BCTypography
+            variant="subtitle1"
+            component="span"
+            color={colors.primary.main}
+          >
             {t('admin:deleteUser.confirmTitle')}
           </BCTypography>
         </DialogTitle>

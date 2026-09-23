@@ -1,7 +1,15 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { screen, waitFor, fireEvent } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import { FinalSupplyEquipmentReporting } from '../FinalSupplyEquipmentReporting'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
+
+let render
+const fixtureOptions = undefined
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, query, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [query, theme], options)
+    return fn()
+  })
 
 // Mock dependencies
 vi.mock('react-router-dom', () => ({
@@ -186,7 +194,7 @@ describe('FinalSupplyEquipmentReporting', () => {
         isLoading: true
       })
 
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
     })
 
@@ -201,7 +209,7 @@ describe('FinalSupplyEquipmentReporting', () => {
       )
 
       const { rerender } = render(<FinalSupplyEquipmentReporting />, {
-        wrapper
+        fixtureOptions
       })
 
       reportState = {
@@ -217,14 +225,14 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('renders the component with title and description', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       // Grid editor is rendered immediately by the mock
       expect(screen.getByText('Grid Editor')).toBeInTheDocument()
     })
 
     it('renders date input fields', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const fromDateInput = screen.getByLabelText(/default from/i)
       const toDateInput = screen.getByLabelText(/default to/i)
@@ -234,14 +242,14 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('renders site name filter dropdown', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const autocomplete = screen.getByRole('combobox')
       expect(autocomplete).toBeInTheDocument()
     })
 
     it('renders set default values button', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const setDefaultButton = screen.getByRole('button', {
         name: /set default/i
@@ -250,7 +258,7 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('renders grid editor component', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       // Use text content instead of testid
       expect(screen.getByText('Grid Editor')).toBeInTheDocument()
@@ -258,7 +266,7 @@ describe('FinalSupplyEquipmentReporting', () => {
   })
 
   it('saves row changes when cell value changes', async () => {
-    render(<FinalSupplyEquipmentReporting />, { wrapper })
+    render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
     const gridCall = mockBCGrid.mock.calls[0][0]
     const mockUpdateData = vi.fn()
@@ -301,7 +309,7 @@ describe('FinalSupplyEquipmentReporting', () => {
 
   describe('Data Fetching', () => {
     it('fetches FSE reporting list on mount', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       expect(useGetFSEReportingList).toHaveBeenCalledWith(
         '123',
@@ -316,7 +324,7 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('fetches site names on mount', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       expect(useSiteNames).toHaveBeenCalled()
     })
@@ -328,7 +336,7 @@ describe('FinalSupplyEquipmentReporting', () => {
         isError: false
       })
 
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       // The autocomplete should show loading state
       const autocomplete = screen.getByRole('combobox')
@@ -339,7 +347,7 @@ describe('FinalSupplyEquipmentReporting', () => {
   describe('Site Filter Functionality', () => {
     it('updates filter when site is selected', async () => {
       const { container } = render(<FinalSupplyEquipmentReporting />, {
-        wrapper
+        fixtureOptions
       })
 
       const autocomplete = screen.getByRole('combobox')
@@ -353,7 +361,7 @@ describe('FinalSupplyEquipmentReporting', () => {
 
     it('clears filter when site selection is cleared', async () => {
       const { container } = render(<FinalSupplyEquipmentReporting />, {
-        wrapper
+        fixtureOptions
       })
 
       const autocomplete = screen.getByRole('combobox')
@@ -363,7 +371,7 @@ describe('FinalSupplyEquipmentReporting', () => {
 
   describe('Date Range Validation', () => {
     it('validates that from date is before to date', async () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const fromDateInput = screen.getByLabelText(/default from/i)
       const toDateInput = screen.getByLabelText(/default to/i)
@@ -381,7 +389,7 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('allows valid date range', async () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const fromDateInput = screen.getByLabelText(/default from/i)
       const toDateInput = screen.getByLabelText(/default to/i)
@@ -402,7 +410,7 @@ describe('FinalSupplyEquipmentReporting', () => {
 
   describe('Default Values Button', () => {
     it('is disabled when no rows are selected', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const setDefaultButton = screen.getByRole('button', {
         name: /set default/i
@@ -411,7 +419,7 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('is disabled when date range is invalid', async () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const fromDateInput = screen.getByLabelText(/default from/i)
       const toDateInput = screen.getByLabelText(/default to/i)
@@ -430,14 +438,14 @@ describe('FinalSupplyEquipmentReporting', () => {
 
   describe('Grid Initialization', () => {
     it('calls onGridReady when grid is initialized', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       // Grid is rendered by the mock
       expect(screen.getByText('Grid Editor')).toBeInTheDocument()
     })
 
     it('sets up grid with correct column definitions', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       expect(screen.getByText('Grid Editor')).toBeInTheDocument()
     })
@@ -453,7 +461,7 @@ describe('FinalSupplyEquipmentReporting', () => {
         refetch: vi.fn()
       })
 
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       // Grid still renders even with API error
       expect(screen.getByText('Grid Editor')).toBeInTheDocument()
@@ -466,7 +474,7 @@ describe('FinalSupplyEquipmentReporting', () => {
         isError: true
       })
 
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const autocomplete = screen.getByRole('combobox')
       expect(autocomplete).toBeInTheDocument()
@@ -475,13 +483,13 @@ describe('FinalSupplyEquipmentReporting', () => {
 
   describe('Store Integration', () => {
     it('retrieves report data from store', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       expect(useComplianceReportWithCache).toHaveBeenCalled()
     })
 
     it('uses organization ID from store in queries', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       expect(useGetFSEReportingList).toHaveBeenCalledWith(
         '123',
@@ -498,7 +506,7 @@ describe('FinalSupplyEquipmentReporting', () => {
 
   describe('Pagination', () => {
     it('initializes with default pagination options', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       expect(useGetFSEReportingList).toHaveBeenCalledWith(
         '123',
@@ -514,7 +522,7 @@ describe('FinalSupplyEquipmentReporting', () => {
 
     it('updates pagination when filter changes', async () => {
       const { container } = render(<FinalSupplyEquipmentReporting />, {
-        wrapper
+        fixtureOptions
       })
 
       const autocomplete = screen.getByRole('combobox')
@@ -528,7 +536,7 @@ describe('FinalSupplyEquipmentReporting', () => {
 
   describe('Date Range Constraints', () => {
     it('enforces compliance period date boundaries', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const fromDateInput = screen.getByLabelText(/default from/i)
       const toDateInput = screen.getByLabelText(/default to/i)
@@ -541,7 +549,7 @@ describe('FinalSupplyEquipmentReporting', () => {
 
   describe('Bulk Update Template Buttons', () => {
     it('renders the "Download update template" button', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const downloadBtn = screen.getByRole('button', {
         name: /download.*template/i
@@ -550,7 +558,7 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('renders the "Upload update template" button', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const uploadBtn = screen.getByRole('button', {
         name: /upload.*template/i
@@ -559,7 +567,7 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('download button is not in a loading state initially', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const downloadBtn = screen.getByRole('button', {
         name: /download.*template/i
@@ -576,7 +584,7 @@ describe('FinalSupplyEquipmentReporting', () => {
         })
       )
 
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const downloadBtn = screen.getByRole('button', {
         name: /download.*template/i
@@ -593,7 +601,7 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('clicking download button triggers the api service download', async () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const downloadBtn = screen.getByRole('button', {
         name: /download.*template/i
@@ -606,7 +614,7 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('import hook is called with the compliance report ID', () => {
-      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       // useImportFSEReportingUpdate is passed as the importHook prop to ImportDialog,
       // which calls it at render time; verify it was invoked.

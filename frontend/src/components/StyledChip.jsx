@@ -1,5 +1,6 @@
 import colors from '@/themes/base/colors'
-import { Chip, styled } from '@mui/material'
+import Chip from '@mui/material/Chip'
+import { styled } from '@mui/material/styles'
 
 export const StyledChip = styled(Chip)({
   fontWeight: 'bold',

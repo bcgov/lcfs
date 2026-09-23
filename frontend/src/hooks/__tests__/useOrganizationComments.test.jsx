@@ -1,8 +1,7 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, useLocation } from 'react-router-dom'
-import React from 'react'
+import { act, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
+import { useLocation } from 'react-router-dom'
 
 import { useApiService } from '@/services/useApiService'
 import {
@@ -14,22 +13,6 @@ vi.mock('@/services/useApiService')
 
 const mockGet = vi.fn()
 
-const makeWrapper = (initialEntries) => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: 0 } }
-  })
-  return ({ children }) =>
-    React.createElement(
-      QueryClientProvider,
-      { client },
-      React.createElement(
-        MemoryRouter,
-        { initialEntries: initialEntries || ['/?'] },
-        children
-      )
-    )
-}
-
 // Helper hook that surfaces the URL so we can assert on it.
 const useHookWithLocation = (orgID) => {
   const hook = useOrganizationComments(orgID)
@@ -38,7 +21,7 @@ const useHookWithLocation = (orgID) => {
 }
 
 describe('parseFiltersFromParams', () => {
-  it('returns defaults for an empty URL', () => {
+  test('returns defaults for an empty URL', () => {
     const f = parseFiltersFromParams(new URLSearchParams(''))
     expect(f).toEqual({
       category: null,
@@ -54,7 +37,7 @@ describe('parseFiltersFromParams', () => {
     })
   })
 
-  it('parses all known params', () => {
+  test('parses all known params', () => {
     const f = parseFiltersFromParams(
       new URLSearchParams(
         'category=Compliance%20notes&compliance_year=2024&date_from=2024-01-01&date_to=2024-12-31&visibility=Internal&search=foo&sort_by=update_date&sort_order=asc&page=3&size=50'
@@ -74,7 +57,7 @@ describe('parseFiltersFromParams', () => {
     })
   })
 
-  it('clamps invalid page/size and ignores unknown visibility', () => {
+  test('clamps invalid page/size and ignores unknown visibility', () => {
     const f = parseFiltersFromParams(
       new URLSearchParams('page=-9&size=99999&visibility=Bogus')
     )
@@ -100,11 +83,22 @@ describe('useOrganizationComments', () => {
     vi.clearAllMocks()
   })
 
-  it('forwards filters from URL params into the API request', async () => {
-    const wrapper = makeWrapper([
-      '/?category=Compliance%20notes&compliance_year=2024&search=foo&page=2'
-    ])
-    const { result } = renderHook(() => useHookWithLocation(42), { wrapper })
+  test('forwards filters from URL params into the API request', async ({
+    renderHook,
+    query,
+    router
+  }) => {
+    const { result } = renderHook(
+      () => useHookWithLocation(42),
+      [
+        query,
+        router.with({
+          initialEntries: [
+            '/?category=Compliance%20notes&compliance_year=2024&search=foo&page=2'
+          ]
+        })
+      ]
+    )
 
     await waitFor(() => expect(mockGet).toHaveBeenCalled())
 
@@ -126,9 +120,15 @@ describe('useOrganizationComments', () => {
     expect(result.current.hook.filters.complianceYear).toBe(2024)
   })
 
-  it('writes filter changes back into the URL and resets page to 1', async () => {
-    const wrapper = makeWrapper(['/?page=5'])
-    const { result } = renderHook(() => useHookWithLocation(7), { wrapper })
+  test('writes filter changes back into the URL and resets page to 1', async ({
+    renderHook,
+    query,
+    router
+  }) => {
+    const { result } = renderHook(
+      () => useHookWithLocation(7),
+      [query, router.with({ initialEntries: ['/?page=5'] })]
+    )
 
     await waitFor(() => expect(mockGet).toHaveBeenCalled())
 
@@ -143,9 +143,15 @@ describe('useOrganizationComments', () => {
     expect(result.current.search).not.toMatch(/page=/)
   })
 
-  it('preserves page when changing page itself', async () => {
-    const wrapper = makeWrapper(['/?category=Person'])
-    const { result } = renderHook(() => useHookWithLocation(7), { wrapper })
+  test('preserves page when changing page itself', async ({
+    renderHook,
+    query,
+    router
+  }) => {
+    const { result } = renderHook(
+      () => useHookWithLocation(7),
+      [query, router.with({ initialEntries: ['/?category=Person'] })]
+    )
 
     await waitFor(() => expect(mockGet).toHaveBeenCalled())
 
@@ -157,11 +163,22 @@ describe('useOrganizationComments', () => {
     expect(result.current.search).toContain('category=Person')
   })
 
-  it('clearFilters drops every filter param from the URL', async () => {
-    const wrapper = makeWrapper([
-      '/?category=Person&compliance_year=2024&search=foo&visibility=Internal&page=2'
-    ])
-    const { result } = renderHook(() => useHookWithLocation(7), { wrapper })
+  test('clearFilters drops every filter param from the URL', async ({
+    renderHook,
+    query,
+    router
+  }) => {
+    const { result } = renderHook(
+      () => useHookWithLocation(7),
+      [
+        query,
+        router.with({
+          initialEntries: [
+            '/?category=Person&compliance_year=2024&search=foo&visibility=Internal&page=2'
+          ]
+        })
+      ]
+    )
 
     await waitFor(() => expect(mockGet).toHaveBeenCalled())
 
@@ -172,9 +189,15 @@ describe('useOrganizationComments', () => {
     await waitFor(() => expect(result.current.search).toBe(''))
   })
 
-  it('does not fire when orgID is missing', () => {
-    const wrapper = makeWrapper(['/'])
-    renderHook(() => useOrganizationComments(undefined), { wrapper })
+  test('does not fire when orgID is missing', ({
+    renderHook,
+    query,
+    router
+  }) => {
+    renderHook(
+      () => useOrganizationComments(undefined),
+      [query, router.with({ initialEntries: ['/'] })]
+    )
     expect(mockGet).not.toHaveBeenCalled()
   })
 })

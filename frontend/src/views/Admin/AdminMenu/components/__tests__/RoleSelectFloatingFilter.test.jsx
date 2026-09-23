@@ -2,26 +2,46 @@ import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { RoleSelectFloatingFilter } from '../RoleSelectFloatingFilter'
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  BCSelectFloatingFilter: vi.fn(({ optionsQuery, valueKey, labelKey, model, onModelChange, disabled, params, initialFilterType, multiple, initialSelectedValues, customProp, onSelectionChange, clearable, ...domProps }) => {
-    const result = optionsQuery?.()
-    return (
-      <div 
-        data-test="bc-select-floating-filter" 
-        {...domProps} 
-        data-options-result={JSON.stringify(result)}
-        data-value-key={valueKey}
-        data-label-key={labelKey}
-      />
+vi.mock(
+  '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter',
+  () => ({
+    BCSelectFloatingFilter: vi.fn(
+      ({
+        optionsQuery,
+        valueKey,
+        labelKey,
+        model,
+        onModelChange,
+        disabled,
+        params,
+        initialFilterType,
+        multiple,
+        initialSelectedValues,
+        customProp,
+        onSelectionChange,
+        clearable,
+        ...domProps
+      }) => {
+        const result = optionsQuery?.()
+        return (
+          <div
+            data-test="bc-select-floating-filter"
+            {...domProps}
+            data-options-result={JSON.stringify(result)}
+            data-value-key={valueKey}
+            data-label-key={labelKey}
+          />
+        )
+      }
     )
   })
-}))
+)
 
 vi.mock('@/hooks/useRole', () => ({
   useRoleList: vi.fn()
 }))
 
-import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useRoleList } from '@/hooks/useRole'
 
 const mockedBCSelectFloatingFilter = vi.mocked(BCSelectFloatingFilter)
@@ -38,7 +58,7 @@ describe('RoleSelectFloatingFilter', () => {
         { id: 1, name: 'Admin', description: 'Administrator role' },
         { id: 2, name: 'User', description: 'Standard user role' }
       ]
-      
+
       mockedUseRoleList.mockReturnValue({
         data: mockData,
         isLoading: false
@@ -54,7 +74,9 @@ describe('RoleSelectFloatingFilter', () => {
 
       render(<RoleSelectFloatingFilter {...props} />)
 
-      expect(screen.getByTestId('bc-select-floating-filter')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('bc-select-floating-filter')
+      ).toBeInTheDocument()
       expect(mockedUseRoleList).toHaveBeenCalledWith(props.params)
       expect(mockedBCSelectFloatingFilter).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -82,7 +104,9 @@ describe('RoleSelectFloatingFilter', () => {
 
       render(<RoleSelectFloatingFilter {...props} />)
 
-      expect(screen.getByTestId('bc-select-floating-filter')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('bc-select-floating-filter')
+      ).toBeInTheDocument()
       expect(mockedUseRoleList).toHaveBeenCalledWith({})
     })
   })
@@ -147,11 +171,11 @@ describe('RoleSelectFloatingFilter', () => {
 
   describe('Hook Integration', () => {
     it('calls useRoleList with provided params', () => {
-      const params = { 
+      const params = {
         search: 'admin',
         status: 'active',
         page: 1,
-        size: 20 
+        size: 20
       }
 
       mockedUseRoleList.mockReturnValue({
@@ -178,16 +202,14 @@ describe('RoleSelectFloatingFilter', () => {
       })
 
       render(
-        <RoleSelectFloatingFilter
-          params={{}}
-          valueKey="id"
-          labelKey="name"
-        />
+        <RoleSelectFloatingFilter params={{}} valueKey="id" labelKey="name" />
       )
 
       const component = screen.getByTestId('bc-select-floating-filter')
-      const optionsResult = JSON.parse(component.getAttribute('data-options-result'))
-      
+      const optionsResult = JSON.parse(
+        component.getAttribute('data-options-result')
+      )
+
       expect(optionsResult).toEqual({
         data: null,
         isLoading: true
@@ -207,16 +229,14 @@ describe('RoleSelectFloatingFilter', () => {
       })
 
       render(
-        <RoleSelectFloatingFilter
-          params={{}}
-          valueKey="id"
-          labelKey="name"
-        />
+        <RoleSelectFloatingFilter params={{}} valueKey="id" labelKey="name" />
       )
 
       const component = screen.getByTestId('bc-select-floating-filter')
-      const optionsResult = JSON.parse(component.getAttribute('data-options-result'))
-      
+      const optionsResult = JSON.parse(
+        component.getAttribute('data-options-result')
+      )
+
       expect(optionsResult).toEqual({
         data: mockRoles,
         isLoading: false
@@ -230,16 +250,14 @@ describe('RoleSelectFloatingFilter', () => {
       })
 
       render(
-        <RoleSelectFloatingFilter
-          params={{}}
-          valueKey="id"
-          labelKey="name"
-        />
+        <RoleSelectFloatingFilter params={{}} valueKey="id" labelKey="name" />
       )
 
       const component = screen.getByTestId('bc-select-floating-filter')
-      const optionsResult = JSON.parse(component.getAttribute('data-options-result'))
-      
+      const optionsResult = JSON.parse(
+        component.getAttribute('data-options-result')
+      )
+
       expect(optionsResult).toEqual({
         data: [],
         isLoading: false
@@ -250,18 +268,14 @@ describe('RoleSelectFloatingFilter', () => {
   describe('optionsQuery Callback', () => {
     it('returns correct object structure from optionsQuery', () => {
       const mockData = [{ id: 1, name: 'Test Role' }]
-      
+
       mockedUseRoleList.mockReturnValue({
         data: mockData,
         isLoading: false
       })
 
       render(
-        <RoleSelectFloatingFilter
-          params={{}}
-          valueKey="id"
-          labelKey="name"
-        />
+        <RoleSelectFloatingFilter params={{}} valueKey="id" labelKey="name" />
       )
 
       const [[callArgs]] = mockedBCSelectFloatingFilter.mock.calls
@@ -281,11 +295,7 @@ describe('RoleSelectFloatingFilter', () => {
       })
 
       render(
-        <RoleSelectFloatingFilter
-          params={{}}
-          valueKey="id"
-          labelKey="name"
-        />
+        <RoleSelectFloatingFilter params={{}} valueKey="id" labelKey="name" />
       )
 
       const [[callArgs]] = mockedBCSelectFloatingFilter.mock.calls
@@ -303,11 +313,7 @@ describe('RoleSelectFloatingFilter', () => {
       })
 
       render(
-        <RoleSelectFloatingFilter
-          params={{}}
-          valueKey="id"
-          labelKey="name"
-        />
+        <RoleSelectFloatingFilter params={{}} valueKey="id" labelKey="name" />
       )
 
       const [[callArgs]] = mockedBCSelectFloatingFilter.mock.calls
@@ -331,7 +337,9 @@ describe('RoleSelectFloatingFilter', () => {
       )
 
       expect(mockedUseRoleList).toHaveBeenCalledWith(undefined)
-      expect(screen.getByTestId('bc-select-floating-filter')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('bc-select-floating-filter')
+      ).toBeInTheDocument()
     })
 
     it('handles null valueKey and labelKey', () => {
@@ -341,11 +349,7 @@ describe('RoleSelectFloatingFilter', () => {
       })
 
       render(
-        <RoleSelectFloatingFilter
-          params={{}}
-          valueKey={null}
-          labelKey={null}
-        />
+        <RoleSelectFloatingFilter params={{}} valueKey={null} labelKey={null} />
       )
 
       expect(mockedBCSelectFloatingFilter).toHaveBeenCalledWith(
@@ -371,7 +375,9 @@ describe('RoleSelectFloatingFilter', () => {
       render(<RoleSelectFloatingFilter {...minimalProps} />)
 
       expect(mockedUseRoleList).toHaveBeenCalledWith(undefined)
-      expect(screen.getByTestId('bc-select-floating-filter')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('bc-select-floating-filter')
+      ).toBeInTheDocument()
     })
   })
 })

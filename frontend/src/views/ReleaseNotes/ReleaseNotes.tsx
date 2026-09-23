@@ -16,43 +16,39 @@ import {
   verticalListSortingStrategy
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Alert,
-  Box,
-  Chip,
-  CircularProgress,
-  IconButton,
-  InputAdornment,
-  Link,
-  List,
-  ListItem,
-  Skeleton,
-  Stack,
-  TextField,
-  Tooltip
-} from '@mui/material'
-import {
-  Add,
-  BugReport,
-  Close,
-  ContentCopy,
-  DoneAll,
-  DragIndicator,
-  Edit,
-  ExpandLess,
-  ExpandMore,
-  Extension,
-  InfoOutlined,
-  MoreHoriz,
-  NewReleases,
-  OpenInNew,
-  SearchRounded,
-  Security,
-  Warning
-} from '@mui/icons-material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
+import IconButton from '@mui/material/IconButton'
+import InputAdornment from '@mui/material/InputAdornment'
+import Link from '@mui/material/Link'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import Skeleton from '@mui/material/Skeleton'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
+import Add from '@mui/icons-material/Add'
+import BugReport from '@mui/icons-material/BugReport'
+import Close from '@mui/icons-material/Close'
+import ContentCopy from '@mui/icons-material/ContentCopy'
+import DoneAll from '@mui/icons-material/DoneAll'
+import DragIndicator from '@mui/icons-material/DragIndicator'
+import Edit from '@mui/icons-material/Edit'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import Extension from '@mui/icons-material/Extension'
+import InfoOutlined from '@mui/icons-material/InfoOutlined'
+import MoreHoriz from '@mui/icons-material/MoreHoriz'
+import NewReleases from '@mui/icons-material/NewReleases'
+import OpenInNew from '@mui/icons-material/OpenInNew'
+import SearchRounded from '@mui/icons-material/SearchRounded'
+import Security from '@mui/icons-material/Security'
+import Warning from '@mui/icons-material/Warning'
 import { useSnackbar } from 'notistack'
 import { format, formatDistanceToNow } from 'date-fns'
 import { useTranslation } from 'react-i18next'
@@ -199,7 +195,11 @@ interface SortableReleaseItemProps {
   index: number
   catKey: keyof ReleaseSections
   catI18nKey: string
-  updateSectionItem: (key: keyof ReleaseSections, index: number, value: string) => void
+  updateSectionItem: (
+    key: keyof ReleaseSections,
+    index: number,
+    value: string
+  ) => void
   removeSectionItem: (key: keyof ReleaseSections, index: number) => void
   removeLabel: string
 }
@@ -214,8 +214,14 @@ const SortableReleaseItem: React.FC<SortableReleaseItemProps> = ({
   removeSectionItem,
   removeLabel
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id })
 
   return (
     <Box
@@ -281,10 +287,13 @@ export const ReleaseNotes = () => {
   const [copied, setCopied] = useState<string | null>(null)
   const [editingTag, setEditingTag] = useState<string | null>(null)
   const [editSummary, setEditSummary] = useState('')
-  const [editSections, setEditSections] = useState<ReleaseSections>(EMPTY_SECTIONS)
+  const [editSections, setEditSections] =
+    useState<ReleaseSections>(EMPTY_SECTIONS)
   // Stable UUIDs per item — dnd-kit needs IDs that travel with the item
   // through moves, not positional indices that reset on re-render.
-  const [editSectionIds, setEditSectionIds] = useState<Record<keyof ReleaseSections, string[]>>({
+  const [editSectionIds, setEditSectionIds] = useState<
+    Record<keyof ReleaseSections, string[]>
+  >({
     features: [],
     fixes: [],
     security: [],
@@ -434,7 +443,10 @@ export const ReleaseNotes = () => {
 
   const addSectionItem = (key: keyof ReleaseSections) => {
     setEditSections((prev) => ({ ...prev, [key]: [...prev[key], ''] }))
-    setEditSectionIds((prev) => ({ ...prev, [key]: [...prev[key], crypto.randomUUID()] }))
+    setEditSectionIds((prev) => ({
+      ...prev,
+      [key]: [...prev[key], crypto.randomUUID()]
+    }))
   }
 
   const removeSectionItem = (key: keyof ReleaseSections, index: number) => {
@@ -818,7 +830,11 @@ export const ReleaseNotes = () => {
                           color="primary"
                           fontWeight="bold"
                           textTransform="uppercase"
-                          sx={{ display: 'block', letterSpacing: '0.07em', mb: 0.5 }}
+                          sx={{
+                            display: 'block',
+                            letterSpacing: '0.07em',
+                            mb: 0.5
+                          }}
                         >
                           {t('releaseNotes:summaryLabel')}
                         </BCTypography>
@@ -831,7 +847,9 @@ export const ReleaseNotes = () => {
                             value={editSummary}
                             onChange={(e) => setEditSummary(e.target.value)}
                             sx={{ mb: 3 }}
-                            inputProps={{ 'aria-label': t('releaseNotes:summaryLabel') }}
+                            inputProps={{
+                              'aria-label': t('releaseNotes:summaryLabel')
+                            }}
                           />
                         </Box>
 
@@ -847,7 +865,11 @@ export const ReleaseNotes = () => {
                                 }}
                               >
                                 <Box
-                                  sx={{ color: cat.color, display: 'flex', alignItems: 'center' }}
+                                  sx={{
+                                    color: cat.color,
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                  }}
                                   aria-hidden="true"
                                 >
                                   {cat.icon}
@@ -872,8 +894,12 @@ export const ReleaseNotes = () => {
                                   const { active, over } = event
                                   if (over && active.id !== over.id) {
                                     const ids = editSectionIds[cat.key]
-                                    const oldIdx = ids.indexOf(active.id as string)
-                                    const newIdx = ids.indexOf(over.id as string)
+                                    const oldIdx = ids.indexOf(
+                                      active.id as string
+                                    )
+                                    const newIdx = ids.indexOf(
+                                      over.id as string
+                                    )
                                     if (oldIdx !== -1 && newIdx !== -1) {
                                       moveSectionItem(cat.key, oldIdx, newIdx)
                                     }
@@ -895,7 +921,9 @@ export const ReleaseNotes = () => {
                                         catI18nKey={cat.i18nKey}
                                         updateSectionItem={updateSectionItem}
                                         removeSectionItem={removeSectionItem}
-                                        removeLabel={t('releaseNotes:removeItem')}
+                                        removeLabel={t(
+                                          'releaseNotes:removeItem'
+                                        )}
                                       />
                                     ))}
                                     <BCButton
@@ -911,7 +939,6 @@ export const ReleaseNotes = () => {
                                   </Stack>
                                 </SortableContext>
                               </DndContext>
-
                             </Box>
                           ))}
                         </Stack>
@@ -933,7 +960,10 @@ export const ReleaseNotes = () => {
                               variant="outlined"
                               color="error"
                               onClick={() => setResetModalOpen(true)}
-                              disabled={updateReleaseNote.isPending || resetReleaseNote.isPending}
+                              disabled={
+                                updateReleaseNote.isPending ||
+                                resetReleaseNote.isPending
+                              }
                               data-test={`reset-release-${release.tag}`}
                             >
                               {t('releaseNotes:resetToDefault')}
@@ -947,7 +977,10 @@ export const ReleaseNotes = () => {
                               variant="outlined"
                               color="dark"
                               onClick={handleEditCancel}
-                              disabled={updateReleaseNote.isPending || resetReleaseNote.isPending}
+                              disabled={
+                                updateReleaseNote.isPending ||
+                                resetReleaseNote.isPending
+                              }
                             >
                               {t('releaseNotes:cancelEdit')}
                             </BCButton>
@@ -955,7 +988,10 @@ export const ReleaseNotes = () => {
                               variant="contained"
                               color="primary"
                               onClick={() => handleEditSave(release)}
-                              disabled={updateReleaseNote.isPending || resetReleaseNote.isPending}
+                              disabled={
+                                updateReleaseNote.isPending ||
+                                resetReleaseNote.isPending
+                              }
                               startIcon={
                                 updateReleaseNote.isPending ? (
                                   <CircularProgress size={16} color="inherit" />
@@ -977,230 +1013,234 @@ export const ReleaseNotes = () => {
                               content: t('releaseNotes:resetModalContent'),
                               primaryButtonText: t('releaseNotes:resetConfirm'),
                               primaryButtonAction: () =>
-                                resetReleaseNote.mutate({ version: release.version }),
+                                resetReleaseNote.mutate({
+                                  version: release.version
+                                }),
                               primaryButtonColor: 'error',
                               secondaryButtonText: t('common:cancel'),
-                              secondaryButtonAction: () => setResetModalOpen(false)
+                              secondaryButtonAction: () =>
+                                setResetModalOpen(false)
                             } as any
                           }
                         />
                       </Box>
                     ) : (
                       <>
-                    {/* summary callout */}
-                    {release.summary && (
-                      <BCBox
-                        variant="bordered"
-                        borderRadius="sm"
-                        sx={{
-                          display: 'flex',
-                          gap: 2,
-                          p: 2,
-                          mb: 3,
-                          borderLeft: '4px solid #003366'
-                        }}
-                      >
-                        <InfoOutlined
-                          sx={{
-                            color: 'primary.main',
-                            fontSize: '1.1rem',
-                            flexShrink: 0,
-                            mt: '2px'
-                          }}
-                        />
-                        <Box>
-                          <BCTypography
-                            variant="caption"
-                            color="primary"
-                            fontWeight="bold"
-                            textTransform="uppercase"
+                        {/* summary callout */}
+                        {release.summary && (
+                          <BCBox
+                            variant="bordered"
+                            borderRadius="sm"
                             sx={{
-                              display: 'block',
-                              letterSpacing: '0.07em',
-                              mb: 0.5
+                              display: 'flex',
+                              gap: 2,
+                              p: 2,
+                              mb: 3,
+                              borderLeft: '4px solid #003366'
                             }}
                           >
-                            {t('releaseNotes:summaryLabel')}
-                          </BCTypography>
-                          <BCTypography variant="body2">
-                            {release.summary}
-                          </BCTypography>
-                        </Box>
-                      </BCBox>
-                    )}
-
-                    {activeCats.length === 0 && (
-                      <BCTypography
-                        variant="body2"
-                        sx={{ opacity: 0.45, fontStyle: 'italic' }}
-                      >
-                        {t('releaseNotes:noChangesInRelease')}
-                      </BCTypography>
-                    )}
-
-                    <Stack spacing={3.5}>
-                      {CATEGORIES.map((cat) => {
-                        const items = release.sections[cat.key]
-                        if (!items?.length) return null
-
-                        return (
-                          <Box
-                            key={cat.key}
-                            sx={{
-                              borderLeft: `3px solid ${cat.color}`,
-                              pl: 2.5
-                            }}
-                          >
-                            <Box
+                            <InfoOutlined
                               sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.75,
-                                mb: 1.5
+                                color: 'primary.main',
+                                fontSize: '1.1rem',
+                                flexShrink: 0,
+                                mt: '2px'
                               }}
-                            >
-                              <Box
-                                sx={{
-                                  color: cat.color,
-                                  display: 'flex',
-                                  alignItems: 'center'
-                                }}
-                                aria-hidden="true"
-                              >
-                                {cat.icon}
-                              </Box>
+                            />
+                            <Box>
                               <BCTypography
-                                variant="subtitle2"
-                                component="h3"
+                                variant="caption"
                                 color="primary"
                                 fontWeight="bold"
+                                textTransform="uppercase"
                                 sx={{
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.06em'
+                                  display: 'block',
+                                  letterSpacing: '0.07em',
+                                  mb: 0.5
                                 }}
                               >
-                                {t(cat.i18nKey)}
+                                {t('releaseNotes:summaryLabel')}
                               </BCTypography>
-                              <Chip
-                                label={items.length}
-                                size="small"
-                                sx={{
-                                  height: '18px',
-                                  fontSize: '0.68rem',
-                                  backgroundColor: cat.bg,
-                                  color: cat.color,
-                                  border: `1px solid ${cat.color}30`,
-                                  '& .MuiChip-label': { px: 0.75 }
-                                }}
-                              />
+                              <BCTypography variant="body2">
+                                {release.summary}
+                              </BCTypography>
                             </Box>
+                          </BCBox>
+                        )}
 
-                            <List dense disablePadding>
-                              {items.map((item, i) => (
-                                <ListItem
-                                  key={i}
-                                  disableGutters
+                        {activeCats.length === 0 && (
+                          <BCTypography
+                            variant="body2"
+                            sx={{ opacity: 0.45, fontStyle: 'italic' }}
+                          >
+                            {t('releaseNotes:noChangesInRelease')}
+                          </BCTypography>
+                        )}
+
+                        <Stack spacing={3.5}>
+                          {CATEGORIES.map((cat) => {
+                            const items = release.sections[cat.key]
+                            if (!items?.length) return null
+
+                            return (
+                              <Box
+                                key={cat.key}
+                                sx={{
+                                  borderLeft: `3px solid ${cat.color}`,
+                                  pl: 2.5
+                                }}
+                              >
+                                <Box
                                   sx={{
-                                    py: 0.5,
                                     display: 'flex',
-                                    alignItems: 'flex-start',
-                                    gap: 1.25
+                                    alignItems: 'center',
+                                    gap: 0.75,
+                                    mb: 1.5
                                   }}
                                 >
                                   <Box
-                                    component="span"
-                                    aria-hidden="true"
                                     sx={{
                                       color: cat.color,
-                                      fontSize: '1rem',
-                                      lineHeight: '1.75',
-                                      flexShrink: 0,
-                                      userSelect: 'none'
+                                      display: 'flex',
+                                      alignItems: 'center'
                                     }}
+                                    aria-hidden="true"
                                   >
-                                    ›
+                                    {cat.icon}
                                   </Box>
                                   <BCTypography
-                                    variant="body1"
-                                    component="span"
+                                    variant="subtitle2"
+                                    component="h3"
+                                    color="primary"
+                                    fontWeight="bold"
                                     sx={{
-                                      lineHeight: 1.75,
-                                      fontSize: '0.9rem'
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.06em'
                                     }}
                                   >
-                                    <TextWithIssueLinks text={item} />
+                                    {t(cat.i18nKey)}
                                   </BCTypography>
-                                </ListItem>
-                              ))}
-                            </List>
-                          </Box>
-                        )
-                      })}
-                    </Stack>
+                                  <Chip
+                                    label={items.length}
+                                    size="small"
+                                    sx={{
+                                      height: '18px',
+                                      fontSize: '0.68rem',
+                                      backgroundColor: cat.bg,
+                                      color: cat.color,
+                                      border: `1px solid ${cat.color}30`,
+                                      '& .MuiChip-label': { px: 0.75 }
+                                    }}
+                                  />
+                                </Box>
+
+                                <List dense disablePadding>
+                                  {items.map((item, i) => (
+                                    <ListItem
+                                      key={i}
+                                      disableGutters
+                                      sx={{
+                                        py: 0.5,
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: 1.25
+                                      }}
+                                    >
+                                      <Box
+                                        component="span"
+                                        aria-hidden="true"
+                                        sx={{
+                                          color: cat.color,
+                                          fontSize: '1rem',
+                                          lineHeight: '1.75',
+                                          flexShrink: 0,
+                                          userSelect: 'none'
+                                        }}
+                                      >
+                                        ›
+                                      </Box>
+                                      <BCTypography
+                                        variant="body1"
+                                        component="span"
+                                        sx={{
+                                          lineHeight: 1.75,
+                                          fontSize: '0.9rem'
+                                        }}
+                                      >
+                                        <TextWithIssueLinks text={item} />
+                                      </BCTypography>
+                                    </ListItem>
+                                  ))}
+                                </List>
+                              </Box>
+                            )
+                          })}
+                        </Stack>
                       </>
                     )}
 
                     {/* Footer: GitHub links */}
-                    {!isEditing && (release.releaseUrl || release.fullChangelogUrl) && (
-                      <Box
-                        sx={{
-                          mt: 4,
-                          pt: 2.5,
-                          borderTop: '1px solid #dee2e6',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          flexWrap: 'wrap',
-                          gap: 1.5,
-                          alignItems: 'center'
-                        }}
-                      >
+                    {!isEditing &&
+                      (release.releaseUrl || release.fullChangelogUrl) && (
                         <Box
                           sx={{
+                            mt: 4,
+                            pt: 2.5,
+                            borderTop: '1px solid #dee2e6',
                             display: 'flex',
-                            gap: 2.5,
+                            justifyContent: 'space-between',
                             flexWrap: 'wrap',
-                            ml: 'auto'
+                            gap: 1.5,
+                            alignItems: 'center'
                           }}
                         >
-                          {release.releaseUrl && (
-                            <Link
-                              href={release.releaseUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              underline="hover"
-                              variant="caption"
-                              sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                color: 'primary.main'
-                              }}
-                            >
-                              {t('releaseNotes:viewOnGitHub')}
-                              <OpenInNew sx={{ fontSize: '0.85rem' }} />
-                            </Link>
-                          )}
-                          {release.fullChangelogUrl && (
-                            <Link
-                              href={release.fullChangelogUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              underline="hover"
-                              variant="caption"
-                              sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                color: 'primary.main'
-                              }}
-                            >
-                              {t('releaseNotes:fullChangelog')}
-                              <OpenInNew sx={{ fontSize: '0.85rem' }} />
-                            </Link>
-                          )}
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              gap: 2.5,
+                              flexWrap: 'wrap',
+                              ml: 'auto'
+                            }}
+                          >
+                            {release.releaseUrl && (
+                              <Link
+                                href={release.releaseUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                underline="hover"
+                                variant="caption"
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  color: 'primary.main'
+                                }}
+                              >
+                                {t('releaseNotes:viewOnGitHub')}
+                                <OpenInNew sx={{ fontSize: '0.85rem' }} />
+                              </Link>
+                            )}
+                            {release.fullChangelogUrl && (
+                              <Link
+                                href={release.fullChangelogUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                underline="hover"
+                                variant="caption"
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  color: 'primary.main'
+                                }}
+                              >
+                                {t('releaseNotes:fullChangelog')}
+                                <OpenInNew sx={{ fontSize: '0.85rem' }} />
+                              </Link>
+                            )}
+                          </Box>
                         </Box>
-                      </Box>
-                    )}
+                      )}
                   </AccordionDetails>
                 </Accordion>
               </Box>

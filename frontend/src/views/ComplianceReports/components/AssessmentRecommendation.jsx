@@ -10,9 +10,13 @@ import BCTypography from '@/components/BCTypography/index.jsx'
 import BCBox from '@/components/BCBox/index.jsx'
 import BCModal from '@/components/BCModal.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { Assignment, CheckCircle } from '@mui/icons-material'
+import Assignment from '@mui/icons-material/Assignment'
+import CheckCircle from '@mui/icons-material/CheckCircle'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
-import { Tooltip, FormControlLabel, Checkbox, Fade } from '@mui/material'
+import Tooltip from '@mui/material/Tooltip'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
+import Fade from '@mui/material/Fade'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useMemo } from 'react'
@@ -53,9 +57,8 @@ export const AssessmentRecommendation = ({
       }
     })
 
-  const { mutate: updateComplianceReport } = useUpdateComplianceReport(
-    complianceReportId
-  )
+  const { mutate: updateComplianceReport } =
+    useUpdateComplianceReport(complianceReportId)
 
   const isGovernmentUser = currentUser?.isGovernmentUser
   const isAnalyst = hasRoles(roles.analyst)
@@ -96,7 +99,13 @@ export const AssessmentRecommendation = ({
       )
     }
     return false
-  }, [isGovernmentUser, isAnalyst, isDirector, isComplianceManager, currentStatus])
+  }, [
+    isGovernmentUser,
+    isAnalyst,
+    isDirector,
+    isComplianceManager,
+    currentStatus
+  ])
   const governmentAdjustmentDialog = (
     <>
       This will put the report into edit mode to update schedule information, do
@@ -283,9 +292,7 @@ export const AssessmentRecommendation = ({
     !isDirector
 
   const hasContentToShow =
-    isDirector || isComplianceManager
-      ? shouldShowNonAssessmentSection
-      : true
+    isDirector || isComplianceManager ? shouldShowNonAssessmentSection : true
 
   if (
     !hasContentToShow &&
@@ -385,8 +392,9 @@ export const AssessmentRecommendation = ({
           {/* Analyst adjustment section - Show above non-assessment */}
           {shouldShowAnalystAdjustment && (
             <BCTypography variant="body2" sx={{ mb: 2 }}>
-              The analyst can make changes to the reported activity information if
-              it is known to be incorrect, click to put the report in edit mode:
+              The analyst can make changes to the reported activity information
+              if it is known to be incorrect, click to put the report in edit
+              mode:
               <br />
               <Tooltip
                 title={

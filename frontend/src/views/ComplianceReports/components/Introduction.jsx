@@ -1,8 +1,10 @@
-import { Accordion, AccordionDetails, AccordionSummary } from '@mui/material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
 import BCTypography from '@/components/BCTypography'
 import { GlobalStyles } from '@mui/system'
 import { useTranslation, Trans } from 'react-i18next'
-import { ExpandMore } from '@mui/icons-material'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 
 // Reusable Section Component
 const Section = ({ header, content }) => (

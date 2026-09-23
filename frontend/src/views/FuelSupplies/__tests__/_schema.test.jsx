@@ -1,9 +1,37 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   PROVISION_APPROVED_FUEL_CODE,
   PROVISION_GHGENIUS,
   fuelSupplyColDefs
 } from '../_schema'
+
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor',
+  () => ({
+    AsyncSuggestionEditor: () => null
+  })
+)
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor',
+  () => ({
+    AutocompleteCellEditor: () => null
+  })
+)
+vi.mock('@/components/BCDataGrid/components/Editors/NumberEditor', () => ({
+  NumberEditor: () => null
+}))
+vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
+  RequiredHeader: () => null
+}))
+vi.mock('@/components/BCDataGrid/components/Renderers/ActionsRenderer', () => ({
+  ActionsRenderer: () => null
+}))
+vi.mock(
+  '@/components/BCDataGrid/components/Renderers/ValidationRenderer2',
+  () => ({
+    ValidationRenderer2: () => null
+  })
+)
 
 describe('Fuel Supply Schema', () => {
   const mockOptionsData = {

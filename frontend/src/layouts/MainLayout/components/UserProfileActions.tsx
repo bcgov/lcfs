@@ -20,23 +20,19 @@ import {
 } from '@/hooks/useNotifications'
 import { roles } from '@/constants/roles'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
-import {
-  Badge,
-  IconButton,
-  Divider,
-  CircularProgress,
-  Tooltip,
-  Popper,
-  Paper,
-  Stack,
-  Button,
-  Box
-} from '@mui/material'
-import {
-  Close,
-  Logout,
-  Notifications as NotificationsIcon
-} from '@mui/icons-material'
+import Badge from '@mui/material/Badge'
+import IconButton from '@mui/material/IconButton'
+import Divider from '@mui/material/Divider'
+import CircularProgress from '@mui/material/CircularProgress'
+import Tooltip from '@mui/material/Tooltip'
+import Popper from '@mui/material/Popper'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import Button from '@mui/material/Button'
+import Box from '@mui/material/Box'
+import Close from '@mui/icons-material/Close'
+import Logout from '@mui/icons-material/Logout'
+import NotificationsIcon from '@mui/icons-material/Notifications'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { RoleSwitcher } from './RoleSwitcher'

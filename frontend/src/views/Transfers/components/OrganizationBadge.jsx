@@ -1,6 +1,6 @@
 import { PropTypes } from 'prop-types'
 import BCBadge from '@/components/BCBadge'
-import { Stack } from '@mui/material'
+import Stack from '@mui/material/Stack'
 import BCTypography from '@/components/BCTypography'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'

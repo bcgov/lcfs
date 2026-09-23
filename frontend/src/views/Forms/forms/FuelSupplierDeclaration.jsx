@@ -2,22 +2,21 @@ import React from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
-import {
-  Box,
-  Grid,
-  TextField,
-  MenuItem,
-  InputLabel,
-  Divider,
-  FormControl,
-  FormControlLabel,
-  FormHelperText,
-  FormLabel,
-  Checkbox,
-  Radio,
-  RadioGroup
-} from '@mui/material'
-import { CheckCircleOutline as CheckCircleOutlineIcon, PictureAsPdf as PictureAsPdfIcon } from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid'
+import TextField from '@mui/material/TextField'
+import MenuItem from '@mui/material/MenuItem'
+import InputLabel from '@mui/material/InputLabel'
+import Divider from '@mui/material/Divider'
+import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import FormHelperText from '@mui/material/FormHelperText'
+import FormLabel from '@mui/material/FormLabel'
+import Checkbox from '@mui/material/Checkbox'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import BCTypography from '@/components/BCTypography'
@@ -46,38 +45,55 @@ const REPORTING_PERIODS = Array.from({ length: 6 }, (_, i) => {
 
 const schema = yup.object({
   reporting_period: yup.string().required('Required'),
-  declaration_type: yup.string().oneOf(['Full', 'Partial', 'Amended']).required('Required'),
-  contact_name:     yup.string().required('Required'),
-  contact_email:    yup.string().email('Invalid email').required('Required'),
-  fuel_type:        yup.string().required('Required'),
-  quantity:         yup.number().typeError('Must be a number').positive('Must be > 0').required('Required'),
-  units:            yup.string().required('Required'),
-  notes:            yup.string(),
-  certified:        yup.boolean().oneOf([true], 'You must certify before exporting')
+  declaration_type: yup
+    .string()
+    .oneOf(['Full', 'Partial', 'Amended'])
+    .required('Required'),
+  contact_name: yup.string().required('Required'),
+  contact_email: yup.string().email('Invalid email').required('Required'),
+  fuel_type: yup.string().required('Required'),
+  quantity: yup
+    .number()
+    .typeError('Must be a number')
+    .positive('Must be > 0')
+    .required('Required'),
+  units: yup.string().required('Required'),
+  notes: yup.string(),
+  certified: yup.boolean().oneOf([true], 'You must certify before exporting')
 })
 
 const DEFAULT_VALUES = {
   reporting_period: String(new Date().getFullYear() - 1),
   declaration_type: 'Full',
-  contact_name:     'Jane Smith',
-  contact_email:    'compliance@bcfuels.ca',
-  fuel_type:        'Biodiesel',
-  quantity:         150000,
-  units:            'L',
-  notes:            'Fuel supplied to commercial fleet operators in the Lower Mainland region.',
-  certified:        true
+  contact_name: 'Jane Smith',
+  contact_email: 'compliance@bcfuels.ca',
+  fuel_type: 'Biodiesel',
+  quantity: 150000,
+  units: 'L',
+  notes:
+    'Fuel supplied to commercial fleet operators in the Lower Mainland region.',
+  certified: true
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey }) {
+export default function FuelSupplierDeclaration({
+  formMeta,
+  formSlug,
+  linkKey
+}) {
   const { exportForm, downloading, downloadSuccess } = useFormExport({
     formSlug,
     linkKey,
     organizationName: formMeta?.organization_name
   })
 
-  const { control, handleSubmit, register, formState: { errors } } = useForm({
+  const {
+    control,
+    handleSubmit,
+    register,
+    formState: { errors }
+  } = useForm({
     resolver: yupResolver(schema),
     defaultValues: DEFAULT_VALUES
   })
@@ -89,10 +105,11 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
       noValidate
     >
       <Grid container spacing={3}>
-
         {/* ── Organization (read-only) ──────────────────────────────────── */}
         <Grid item xs={12}>
-          <InputLabel sx={{ mb: 0.5, fontWeight: 500 }}>Organization</InputLabel>
+          <InputLabel sx={{ mb: 0.5, fontWeight: 500 }}>
+            Organization
+          </InputLabel>
           <TextField
             fullWidth
             size="small"
@@ -103,7 +120,10 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
 
         {/* ── Select ────────────────────────────────────────────────────── */}
         <Grid item xs={12} sm={6}>
-          <InputLabel htmlFor="reporting_period" sx={{ mb: 0.5, fontWeight: 500 }}>
+          <InputLabel
+            htmlFor="reporting_period"
+            sx={{ mb: 0.5, fontWeight: 500 }}
+          >
             Compliance Period
           </InputLabel>
           <Controller
@@ -120,7 +140,9 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
                 helperText={errors.reporting_period?.message}
               >
                 {REPORTING_PERIODS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                  <MenuItem key={o.value} value={o.value}>
+                    {o.label}
+                  </MenuItem>
                 ))}
               </TextField>
             )}
@@ -155,7 +177,9 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
           </FormControl>
         </Grid>
 
-        <Grid item xs={12}><Divider /></Grid>
+        <Grid item xs={12}>
+          <Divider />
+        </Grid>
 
         {/* ── Text ──────────────────────────────────────────────────────── */}
         <Grid item xs={12} sm={6}>
@@ -188,7 +212,9 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
           />
         </Grid>
 
-        <Grid item xs={12}><Divider /></Grid>
+        <Grid item xs={12}>
+          <Divider />
+        </Grid>
 
         {/* ── Select (fuel type) ────────────────────────────────────────── */}
         <Grid item xs={12} sm={4}>
@@ -209,7 +235,9 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
                 helperText={errors.fuel_type?.message}
               >
                 {FUEL_TYPES.map((t) => (
-                  <MenuItem key={t} value={t}>{t}</MenuItem>
+                  <MenuItem key={t} value={t}>
+                    {t}
+                  </MenuItem>
                 ))}
               </TextField>
             )}
@@ -242,7 +270,9 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
         {/* ── Radio (units) ─────────────────────────────────────────────── */}
         <Grid item xs={12} sm={4}>
           <FormControl error={!!errors.units}>
-            <FormLabel sx={{ fontWeight: 500, color: 'text.primary', mb: 0.5 }}>Units</FormLabel>
+            <FormLabel sx={{ fontWeight: 500, color: 'text.primary', mb: 0.5 }}>
+              Units
+            </FormLabel>
             <Controller
               name="units"
               control={control}
@@ -259,16 +289,26 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
                 </RadioGroup>
               )}
             />
-            {errors.units && <FormHelperText>{errors.units.message}</FormHelperText>}
+            {errors.units && (
+              <FormHelperText>{errors.units.message}</FormHelperText>
+            )}
           </FormControl>
         </Grid>
 
-        <Grid item xs={12}><Divider /></Grid>
+        <Grid item xs={12}>
+          <Divider />
+        </Grid>
 
         {/* ── Textarea ──────────────────────────────────────────────────── */}
         <Grid item xs={12}>
           <InputLabel htmlFor="notes" sx={{ mb: 0.5, fontWeight: 500 }}>
-            Additional Notes <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary' }}>(optional)</Box>
+            Additional Notes{' '}
+            <Box
+              component="span"
+              sx={{ fontWeight: 400, color: 'text.secondary' }}
+            >
+              (optional)
+            </Box>
           </InputLabel>
           <TextField
             id="notes"
@@ -282,13 +322,15 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
           />
         </Grid>
 
-        <Grid item xs={12}><Divider /></Grid>
+        <Grid item xs={12}>
+          <Divider />
+        </Grid>
 
         {/* ── Checkbox ──────────────────────────────────────────────────── */}
         <Grid item xs={12}>
           <BCTypography variant="body2" color="text.secondary" mb={1}>
-            I hereby certify that the information provided in this declaration is true,
-            accurate, and complete to the best of my knowledge.
+            I hereby certify that the information provided in this declaration
+            is true, accurate, and complete to the best of my knowledge.
           </BCTypography>
           <Controller
             name="certified"
@@ -297,7 +339,11 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
               <FormControl error={!!errors.certified}>
                 <FormControlLabel
                   control={
-                    <Checkbox {...field} checked={field.value} data-test="certify-checkbox" />
+                    <Checkbox
+                      {...field}
+                      checked={field.value}
+                      data-test="certify-checkbox"
+                    />
                   }
                   label={
                     <BCTypography variant="body2">
@@ -319,7 +365,9 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
             {downloadSuccess && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <CheckCircleOutlineIcon color="success" fontSize="small" />
-                <BCTypography variant="body2" color="success">Downloaded</BCTypography>
+                <BCTypography variant="body2" color="success">
+                  Downloaded
+                </BCTypography>
               </Box>
             )}
             <BCButton
@@ -330,7 +378,11 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
               isLoading={downloading === 'pdf'}
               disabled={!!downloading}
               onClick={handleSubmit((values) => exportForm(values, 'pdf'))}
-              startIcon={downloading === 'pdf' ? undefined : <PictureAsPdfIcon fontSize="small" />}
+              startIcon={
+                downloading === 'pdf' ? undefined : (
+                  <PictureAsPdfIcon fontSize="small" />
+                )
+              }
             >
               <BCTypography variant="button">
                 {downloading === 'pdf' ? 'Generating…' : 'Export as PDF'}
@@ -345,18 +397,19 @@ export default function FuelSupplierDeclaration({ formMeta, formSlug, linkKey })
               isLoading={downloading === 'docx'}
               disabled={!!downloading}
               startIcon={
-                downloading === 'docx'
-                  ? undefined
-                  : <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
+                downloading === 'docx' ? undefined : (
+                  <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
+                )
               }
             >
               <BCTypography variant="button">
-                {downloading === 'docx' ? 'Generating…' : 'Export as Word (.docx)'}
+                {downloading === 'docx'
+                  ? 'Generating…'
+                  : 'Export as Word (.docx)'}
               </BCTypography>
             </BCButton>
           </Box>
         </Grid>
-
       </Grid>
     </Box>
   )

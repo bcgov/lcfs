@@ -1,6 +1,10 @@
 import { useState, useEffect, forwardRef, useRef } from 'react'
-import { TextField, Autocomplete, Box, Grid, CircularProgress } from '@mui/material'
-import { LocationOn as LocationOnIcon } from '@mui/icons-material'
+import TextField from '@mui/material/TextField'
+import Autocomplete from '@mui/material/Autocomplete'
+import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid'
+import CircularProgress from '@mui/material/CircularProgress'
+import LocationOnIcon from '@mui/icons-material/LocationOn'
 import parse from 'autosuggest-highlight/parse'
 import match from 'autosuggest-highlight/match'
 import BCTypography from '../BCTypography'
@@ -56,7 +60,7 @@ export const AddressAutocomplete = forwardRef<
     )
     const [options, setOptions] = useState<AddressOption[]>([])
     const [isAddressSelected, setIsAddressSelected] = useState(false)
-    
+
     const { autocompleteAddress, validateAddress } = useGeocoder()
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
@@ -97,7 +101,7 @@ export const AddressAutocomplete = forwardRef<
             longitude: addr.longitude,
             score: addr.score
           }))
-          
+
           setOptions(addresses)
         }
       } catch (error) {
@@ -189,7 +193,7 @@ export const AddressAutocomplete = forwardRef<
                     minScore,
                     maxResults: 1
                   })
-                  
+
                   if (
                     validationResult.addresses &&
                     validationResult.addresses.length > 0
@@ -205,14 +209,14 @@ export const AddressAutocomplete = forwardRef<
                       longitude: addr.longitude,
                       score: addr.score
                     }
-                    
+
                     // Auto-populate postal code in the input field
                     const fullAddressWithPostal = addr.postal_code
                       ? `${addr.full_address}, ${addr.postal_code}`
                       : addr.full_address
                     setInputValue(fullAddressWithPostal)
                     if (onChange) onChange(fullAddressWithPostal)
-                    
+
                     onSelectAddress(addressData)
                   } else {
                     onSelectAddress(newValue)
@@ -234,7 +238,7 @@ export const AddressAutocomplete = forwardRef<
                   longitude: newValue.longitude,
                   score: newValue.score
                 }
-                
+
                 // Auto-populate postal code in the input field
                 const postalCode = newValue.postalCode || newValue.postal_code
                 const fullAddressWithPostal = postalCode
@@ -242,7 +246,7 @@ export const AddressAutocomplete = forwardRef<
                   : newValue.fullAddress
                 setInputValue(fullAddressWithPostal)
                 if (onChange) onChange(fullAddressWithPostal)
-                
+
                 onSelectAddress(addressData)
               }
             } else if (onChange) {
@@ -275,10 +279,12 @@ export const AddressAutocomplete = forwardRef<
                 ...params.InputProps,
                 endAdornment: (
                   <>
-                    {isLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                    {isLoading ? (
+                      <CircularProgress color="inherit" size={20} />
+                    ) : null}
                     {params.InputProps.endAdornment}
                   </>
-                ),
+                )
               }}
             />
           </Box>
@@ -314,7 +320,9 @@ export const AddressAutocomplete = forwardRef<
                   ))}
                   <BCTypography variant="body2" color="text" fontSize="0.75rem">
                     {option.score ? `Confidence: ${option.score}% • ` : ''}
-                    {option.postalCode || option.postal_code ? 'Address with postal code' : 'Select to add postal code'}
+                    {option.postalCode || option.postal_code
+                      ? 'Address with postal code'
+                      : 'Select to add postal code'}
                   </BCTypography>
                 </Grid>
               </Grid>

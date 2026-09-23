@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import { SupplyHistory } from '../SupplyHistory'
 import { roles } from '@/constants/roles'
 import theme from '@/themes'
@@ -91,7 +91,9 @@ describe('SupplyHistory', () => {
     await user.click(fromSelect)
     await user.click(screen.getByRole('option', { name: '2023' }))
     await user.click(toSelect)
-    expect(screen.queryByRole('option', { name: '2023' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('option', { name: '2023' })
+    ).not.toBeInTheDocument()
     await user.click(screen.getByRole('option', { name: '2025' }))
 
     await waitFor(() => {
@@ -117,8 +119,6 @@ describe('SupplyHistory', () => {
 
     fireEvent.click(screen.getByTestId('select-organization'))
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/organizations/3/supply-history'
-    )
+    expect(mockNavigate).toHaveBeenCalledWith('/organizations/3/supply-history')
   })
 })

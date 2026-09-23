@@ -12,42 +12,46 @@ const renderWithTheme = (component) => {
 }
 
 // Mock Material-UI components
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material')
-  return {
-    ...actual,
-    Pagination: vi.fn(
-      ({
-        onChange,
-        showFirstButton,
-        showLastButton,
-        component,
-        color,
-        ...props
-      }) => (
-        <div
-          data-test="pagination"
-          onClick={() => onChange && onChange(null, 2)}
-          {...props}
-        >
-          Mock Pagination
-        </div>
-      )
-    ),
-    IconButton: vi.fn(({ onClick, children, ...props }) => (
-      <button data-test={props.id} onClick={onClick} {...props}>
-        {children}
-      </button>
-    )),
-    Tooltip: vi.fn(({ children }) => <div>{children}</div>)
-  }
-})
+vi.mock('@mui/material/Pagination', () => ({
+  default: vi.fn(
+    ({
+      onChange,
+      showFirstButton,
+      showLastButton,
+      component,
+      color,
+      ...props
+    }) => (
+      <div
+        data-test="pagination"
+        onClick={() => onChange && onChange(null, 2)}
+        {...props}
+      >
+        Mock Pagination
+      </div>
+    )
+  )
+}))
+vi.mock('@mui/material/IconButton', () => ({
+  default: vi.fn(({ onClick, children, ...props }) => (
+    <button data-test={props.id} onClick={onClick} {...props}>
+      {children}
+    </button>
+  ))
+}))
+vi.mock('@mui/material/Tooltip', () => ({
+  default: vi.fn(({ children }) => <div>{children}</div>)
+}))
 
 // Mock Material-UI icons
-vi.mock('@mui/icons-material', () => ({
-  Replay: () => <span>Replay</span>,
-  ContentCopy: () => <span>ContentCopy</span>,
-  FileDownloadOutlined: () => <span>FileDownloadOutlined</span>
+vi.mock('@mui/icons-material/Replay', () => ({
+  default: () => <span>Replay</span>
+}))
+vi.mock('@mui/icons-material/ContentCopy', () => ({
+  default: () => <span>ContentCopy</span>
+}))
+vi.mock('@mui/icons-material/FileDownloadOutlined', () => ({
+  default: () => <span>FileDownloadOutlined</span>
 }))
 
 // Mock BCBox component
@@ -168,7 +172,7 @@ describe('BCPaginationActions', () => {
     })
 
     it('pagination component receives correct props', async () => {
-      const { Pagination } = await import('@mui/material')
+      const { default: Pagination } = await import('@mui/material/Pagination')
 
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
 

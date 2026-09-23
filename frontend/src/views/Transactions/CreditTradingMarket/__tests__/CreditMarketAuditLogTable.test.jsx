@@ -1,8 +1,8 @@
-import { render, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 
 import { CreditMarketAuditLogTable } from '../CreditMarketAuditLogTable'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 const mockUseCreditMarketAuditLogs = vi.fn()
 const mockCreditMarketAuditLogColDefs = vi.fn(() => [
@@ -15,7 +15,8 @@ vi.mock('@/hooks/useOrganization', () => ({
 }))
 
 vi.mock('../_schema', () => ({
-  creditMarketAuditLogColDefs: (...args) => mockCreditMarketAuditLogColDefs(...args),
+  creditMarketAuditLogColDefs: (...args) =>
+    mockCreditMarketAuditLogColDefs(...args),
   defaultAuditSortModel: [{ field: 'uploadedDate', direction: 'desc' }]
 }))
 
@@ -47,8 +48,8 @@ describe('CreditMarketAuditLogTable', () => {
     })
   })
 
-  it('renders audit grid with expected props', async () => {
-    render(<CreditMarketAuditLogTable />, { wrapper })
+  test('renders audit grid with expected props', async ({ render, theme }) => {
+    render(<CreditMarketAuditLogTable />, [theme])
 
     await waitFor(() => {
       expect(mockGridViewer).toHaveBeenCalled()
@@ -64,8 +65,11 @@ describe('CreditMarketAuditLogTable', () => {
     ])
   })
 
-  it('calls useCreditMarketAuditLogs with initial pagination defaults', async () => {
-    render(<CreditMarketAuditLogTable />, { wrapper })
+  test('calls useCreditMarketAuditLogs with initial pagination defaults', async ({
+    render,
+    theme
+  }) => {
+    render(<CreditMarketAuditLogTable />, [theme])
 
     await waitFor(() => {
       expect(mockUseCreditMarketAuditLogs).toHaveBeenCalled()

@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
-import {
-  Autocomplete,
-  Box,
-  Checkbox,
-  FormControlLabel,
-  InputLabel,
-  Paper,
-  Stack,
-  TextField
-} from '@mui/material'
+import Autocomplete from '@mui/material/Autocomplete'
+import Box from '@mui/material/Box'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import InputLabel from '@mui/material/InputLabel'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
 import Grid2 from '@mui/material/Grid2'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
@@ -498,20 +496,14 @@ export const SeededUserAssociation = () => {
                           }}
                           renderOption={(props, option, { selected }) => (
                             <li {...props} key={option.value}>
-                              <Checkbox
-                                checked={selected}
-                                sx={{ mr: 1 }}
-                              />
+                              <Checkbox checked={selected} sx={{ mr: 1 }} />
                               <BCTypography variant="body2">
                                 {option.label}
                               </BCTypography>
                             </li>
                           )}
                           renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              error={!!fieldState.error}
-                            />
+                            <TextField {...params} error={!!fieldState.error} />
                           )}
                         />
                         {renderError(fieldState.error?.message)}
@@ -624,12 +616,12 @@ export const SeededUserAssociation = () => {
 
                     <Box>
                       <BCButton
-                      color="primary"
-                      variant="outlined"
-                      disabled={isPending || isResolvingOrgName}
-                      onClick={handleResolveOrgName}
-                    >
-                      {t('admin:seededAssoc.resolveBtn')}
+                        color="primary"
+                        variant="outlined"
+                        disabled={isPending || isResolvingOrgName}
+                        onClick={handleResolveOrgName}
+                      >
+                        {t('admin:seededAssoc.resolveBtn')}
                       </BCButton>
                     </Box>
 

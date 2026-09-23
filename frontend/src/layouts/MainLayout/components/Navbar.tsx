@@ -7,7 +7,8 @@ import { useTranslation } from 'react-i18next'
 import { HeaderComponent } from './HeaderComponent'
 import { UserProfileActions } from './UserProfileActions'
 import { GlobalSearch } from '@/components/GlobalSearch/GlobalSearch'
-import { useMediaQuery, useTheme } from '@mui/material'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import useTheme from '@mui/material/styles/useTheme'
 
 type NavItem = {
   name: string

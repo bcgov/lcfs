@@ -23,9 +23,13 @@ vi.mock('react-i18next', () => ({
     t: (key, options = {}) => {
       const translations = {
         'finalSupplyEquipment:fseTitle': 'Final Supply Equipment',
-        'finalSupplyEquipment:noFinalSupplyEquipmentsFound': 'No equipment found',
+        'finalSupplyEquipment:noFinalSupplyEquipmentsFound':
+          'No equipment found',
         'finalSupplyEquipment:scheduleUpdated': 'Schedule updated',
-        'finalSupplyEquipment:reportingResponsibilityInfo': ['Info line 1', 'Info line 2'],
+        'finalSupplyEquipment:reportingResponsibilityInfo': [
+          'Info line 1',
+          'Info line 2'
+        ],
         'common:importExport.export.btn': 'Export',
         'common:importExport.export.withDataBtn': 'Export with data',
         'common:importExport.export.withoutDataBtn': 'Export template',
@@ -95,205 +99,304 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => {
   const React = require('react')
   const { forwardRef, useImperativeHandle } = React
   return {
-    BCGridEditor: forwardRef(({ 
-      onGridReady, 
-      onCellEditingStopped, 
-      onAction, 
-      saveButtonProps, 
-      gridRef, 
-      alertRef,
-      columnDefs,
-      defaultColDef,
-      rowData,
-      onAddRows,
-      gridOptions,
-      loading,
-      showAddRowsButton,
-      ...props 
-    }, ref) => {
-      // Create a mock API that will be shared with both refs
-      const mockApi = {
-        sizeColumnsToFit: vi.fn(),
-        getLastDisplayedRowIndex: () => 0,
-        startEditingCell: vi.fn(),
-        autoSizeAllColumns: vi.fn(),
-        refreshCells: vi.fn()
-      }
+    BCGridEditor: forwardRef(
+      (
+        {
+          onGridReady,
+          onCellEditingStopped,
+          onAction,
+          saveButtonProps,
+          gridRef,
+          alertRef,
+          columnDefs,
+          defaultColDef,
+          rowData,
+          onAddRows,
+          gridOptions,
+          loading,
+          showAddRowsButton,
+          ...props
+        },
+        ref
+      ) => {
+        // Create a mock API that will be shared with both refs
+        const mockApi = {
+          sizeColumnsToFit: vi.fn(),
+          getLastDisplayedRowIndex: () => 0,
+          startEditingCell: vi.fn(),
+          autoSizeAllColumns: vi.fn(),
+          refreshCells: vi.fn()
+        }
 
-      // Set up both possible refs
-      useImperativeHandle(ref, () => ({
-        api: mockApi
-      }), [])
-
-      React.useEffect(() => {
-        // Initialize gridRef.current immediately
-        if (gridRef && !gridRef.current) {
-          gridRef.current = {
+        // Set up both possible refs
+        useImperativeHandle(
+          ref,
+          () => ({
             api: mockApi
+          }),
+          []
+        )
+
+        React.useEffect(() => {
+          // Initialize gridRef.current immediately
+          if (gridRef && !gridRef.current) {
+            gridRef.current = {
+              api: mockApi
+            }
+          } else if (gridRef && gridRef.current) {
+            gridRef.current.api = mockApi
           }
-        } else if (gridRef && gridRef.current) {
-          gridRef.current.api = mockApi
-        }
-        
-        // Call onGridReady to simulate grid being ready
-        if (onGridReady) {
-          setTimeout(() => onGridReady({ api: mockApi }), 0)
-        }
-      }, [onGridReady, gridRef])
 
-      // Filter out non-DOM props
-      const domProps = {}
-      Object.keys(props).forEach(key => {
-        if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
-          domProps[key] = props[key]
-        }
-      })
+          // Call onGridReady to simulate grid being ready
+          if (onGridReady) {
+            setTimeout(() => onGridReady({ api: mockApi }), 0)
+          }
+        }, [onGridReady, gridRef])
 
-      return (
-        <div data-test="bc-grid-editor" {...domProps}>
-          <button data-test="grid-ready-btn" onClick={() => onGridReady?.({ api: mockApi })}>Grid Ready</button>
-          <button 
-            data-test="cell-edit-btn" 
-            onClick={() => onCellEditingStopped?.({ 
-              oldValue: 'old', 
-              newValue: 'new',
-              node: { 
-                data: { id: '1', test: 'data' },
-                updateData: vi.fn(),
-                rowIndex: 0
-              },
-              api: {
-                autoSizeAllColumns: vi.fn(),
-                refreshCells: vi.fn(),
-                sizeColumnsToFit: vi.fn()
-              }
-            })}
-          >
-            Cell Edit
-          </button>
-          <button 
-            data-test="cell-edit-unchanged-btn" 
-            onClick={() => onCellEditingStopped?.({ 
-              oldValue: 'same', 
-              newValue: 'same',
-              node: { 
-                data: { id: '1', test: 'data' },
-                updateData: vi.fn(),
-                rowIndex: 0
-              }
-            })}
-          >
-            Cell Edit Unchanged
-          </button>
-          <button 
-            data-test="delete-action-btn" 
-            onClick={() => onAction?.('delete', { node: { data: { id: '1' }, rowIndex: 0 } })}
-          >
-            Delete Action
-          </button>
-          <button 
-            data-test="duplicate-action-btn" 
-            onClick={() => onAction?.('duplicate', { node: { data: { id: '1' }, rowIndex: 0 } })}
-          >
-            Duplicate Action
-          </button>
-          {saveButtonProps && (
-            <button data-test="save-btn" onClick={saveButtonProps.onSave}>
-              {saveButtonProps.text}
+        // Filter out non-DOM props
+        const domProps = {}
+        Object.keys(props).forEach((key) => {
+          if (
+            key.startsWith('data-') ||
+            key.startsWith('aria-') ||
+            ['id', 'className', 'style'].includes(key)
+          ) {
+            domProps[key] = props[key]
+          }
+        })
+
+        return (
+          <div data-test="bc-grid-editor" {...domProps}>
+            <button
+              data-test="grid-ready-btn"
+              onClick={() => onGridReady?.({ api: mockApi })}
+            >
+              Grid Ready
             </button>
-          )}
-        </div>
-      )
-    })
+            <button
+              data-test="cell-edit-btn"
+              onClick={() =>
+                onCellEditingStopped?.({
+                  oldValue: 'old',
+                  newValue: 'new',
+                  node: {
+                    data: { id: '1', test: 'data' },
+                    updateData: vi.fn(),
+                    rowIndex: 0
+                  },
+                  api: {
+                    autoSizeAllColumns: vi.fn(),
+                    refreshCells: vi.fn(),
+                    sizeColumnsToFit: vi.fn()
+                  }
+                })
+              }
+            >
+              Cell Edit
+            </button>
+            <button
+              data-test="cell-edit-unchanged-btn"
+              onClick={() =>
+                onCellEditingStopped?.({
+                  oldValue: 'same',
+                  newValue: 'same',
+                  node: {
+                    data: { id: '1', test: 'data' },
+                    updateData: vi.fn(),
+                    rowIndex: 0
+                  }
+                })
+              }
+            >
+              Cell Edit Unchanged
+            </button>
+            <button
+              data-test="delete-action-btn"
+              onClick={() =>
+                onAction?.('delete', {
+                  node: { data: { id: '1' }, rowIndex: 0 }
+                })
+              }
+            >
+              Delete Action
+            </button>
+            <button
+              data-test="duplicate-action-btn"
+              onClick={() =>
+                onAction?.('duplicate', {
+                  node: { data: { id: '1' }, rowIndex: 0 }
+                })
+              }
+            >
+              Duplicate Action
+            </button>
+            {saveButtonProps && (
+              <button data-test="save-btn" onClick={saveButtonProps.onSave}>
+                {saveButtonProps.text}
+              </button>
+            )}
+          </div>
+        )
+      }
+    )
   }
 })
 
 // Mock other components
-vi.mock('@/components/BCTypography', () => ({ 
+vi.mock('@/components/BCTypography', () => ({
   default: ({ children, dangerouslySetInnerHTML, ...props }) => {
     const domProps = {}
-    Object.keys(props).forEach(key => {
-      if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+    Object.keys(props).forEach((key) => {
+      if (
+        key.startsWith('data-') ||
+        key.startsWith('aria-') ||
+        ['id', 'className', 'style'].includes(key)
+      ) {
         domProps[key] = props[key]
       }
     })
-    
+
     // Handle dangerouslySetInnerHTML
     if (dangerouslySetInnerHTML) {
-      return <div {...domProps} dangerouslySetInnerHTML={dangerouslySetInnerHTML} />
+      return (
+        <div {...domProps} dangerouslySetInnerHTML={dangerouslySetInnerHTML} />
+      )
     }
-    
+
     return <div {...domProps}>{children}</div>
   }
 }))
-vi.mock('@/components/BCBox', () => ({ 
+vi.mock('@/components/BCBox', () => ({
   default: ({ children, ...props }) => {
     const domProps = {}
-    Object.keys(props).forEach(key => {
-      if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+    Object.keys(props).forEach((key) => {
+      if (
+        key.startsWith('data-') ||
+        key.startsWith('aria-') ||
+        ['id', 'className', 'style'].includes(key)
+      ) {
         domProps[key] = props[key]
       }
     })
     return <div {...domProps}>{children}</div>
   }
 }))
-vi.mock('@/components/BCButton/index.jsx', () => ({ 
+vi.mock('@/components/BCButton/index.jsx', () => ({
   default: ({ children, onClick, isLoading, endIcon, startIcon, ...props }) => {
     const domProps = {}
-    Object.keys(props).forEach(key => {
-      if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+    Object.keys(props).forEach((key) => {
+      if (
+        key.startsWith('data-') ||
+        key.startsWith('aria-') ||
+        ['id', 'className', 'style'].includes(key)
+      ) {
         domProps[key] = props[key]
       }
     })
-    return <button {...domProps} onClick={onClick} disabled={isLoading}>{children}</button>
+    return (
+      <button {...domProps} onClick={onClick} disabled={isLoading}>
+        {children}
+      </button>
+    )
   }
 }))
-vi.mock('@mui/material', async (importOriginal) => {
+vi.mock('@mui/material/Menu', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    Menu: ({ children, open, onClose, anchorEl, anchorOrigin, transformOrigin, slotProps, ...props }) => {
+    default: ({
+      children,
+      open,
+      onClose,
+      anchorEl,
+      anchorOrigin,
+      transformOrigin,
+      slotProps,
+      ...props
+    }) => {
       if (!open) return null
       const domProps = {}
-      Object.keys(props).forEach(key => {
-        if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+      Object.keys(props).forEach((key) => {
+        if (
+          key.startsWith('data-') ||
+          key.startsWith('aria-') ||
+          ['id', 'className', 'style'].includes(key)
+        ) {
           domProps[key] = props[key]
         }
       })
-      return <div data-test="menu" {...domProps}>{children}</div>
-    },
-    MenuItem: ({ children, onClick, ...props }) => {
-      const domProps = {}
-      Object.keys(props).forEach(key => {
-        if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
-          domProps[key] = props[key]
-        }
-      })
-      return <div data-test="menu-item" onClick={onClick} {...domProps}>{children}</div>
+      return (
+        <div data-test="menu" {...domProps}>
+          {children}
+        </div>
+      )
     }
   }
 })
-vi.mock('@mui/material/Grid2', () => ({ 
+vi.mock('@mui/material/MenuItem', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    default: ({ children, onClick, ...props }) => {
+      const domProps = {}
+      Object.keys(props).forEach((key) => {
+        if (
+          key.startsWith('data-') ||
+          key.startsWith('aria-') ||
+          ['id', 'className', 'style'].includes(key)
+        ) {
+          domProps[key] = props[key]
+        }
+      })
+      return (
+        <div data-test="menu-item" onClick={onClick} {...domProps}>
+          {children}
+        </div>
+      )
+    }
+  }
+})
+vi.mock('@mui/material/Grid2', () => ({
   default: ({ children, ...props }) => {
     const domProps = {}
-    Object.keys(props).forEach(key => {
-      if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+    Object.keys(props).forEach((key) => {
+      if (
+        key.startsWith('data-') ||
+        key.startsWith('aria-') ||
+        ['id', 'className', 'style'].includes(key)
+      ) {
         domProps[key] = props[key]
       }
     })
     return <div {...domProps}>{children}</div>
   }
 }))
-vi.mock('@/components/ImportDialog', () => ({ 
-  default: ({ open, close, complianceReportId, isOverwrite, importHook, getJobStatusHook, ...props }) => {
+vi.mock('@/components/ImportDialog', () => ({
+  default: ({
+    open,
+    close,
+    complianceReportId,
+    isOverwrite,
+    importHook,
+    getJobStatusHook,
+    ...props
+  }) => {
     if (!open) return null
     const domProps = {}
-    Object.keys(props).forEach(key => {
-      if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+    Object.keys(props).forEach((key) => {
+      if (
+        key.startsWith('data-') ||
+        key.startsWith('aria-') ||
+        ['id', 'className', 'style'].includes(key)
+      ) {
         domProps[key] = props[key]
       }
     })
-    return <div data-test="import-dialog" {...domProps}><button onClick={close}>Close</button></div>
+    return (
+      <div data-test="import-dialog" {...domProps}>
+        <button onClick={close}>Close</button>
+      </div>
+    )
   }
 }))
 
@@ -311,15 +414,20 @@ vi.mock('@fortawesome/free-solid-svg-icons', () => ({
 
 // Mock routes and navigation
 vi.mock('@/routes/routes', () => ({
-  ROUTES: { REPORTS: { VIEW: '/reports/:compliancePeriod/:complianceReportId' } },
-  buildPath: (route, params) => `/reports/${params.compliancePeriod}/${params.complianceReportId}`
+  ROUTES: {
+    REPORTS: { VIEW: '/reports/:compliancePeriod/:complianceReportId' }
+  },
+  buildPath: (route, params) =>
+    `/reports/${params.compliancePeriod}/${params.complianceReportId}`
 }))
 
 // Mock constants
 vi.mock('@/constants/routes/index', () => ({
   apiRoutes: {
-    exportFinalSupplyEquipments: '/api/final-supply-equipments/export/:reportID',
-    downloadFinalSupplyEquipmentsTemplate: '/api/final-supply-equipments/template/:reportID'
+    exportFinalSupplyEquipments:
+      '/api/final-supply-equipments/export/:reportID',
+    downloadFinalSupplyEquipmentsTemplate:
+      '/api/final-supply-equipments/template/:reportID'
   }
 }))
 
@@ -331,11 +439,14 @@ vi.mock('@/utils/array', () => ({
 describe('AddEditFinalSupplyEquipments', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Setup mocked functions
     vi.mocked(handleScheduleDelete).mockImplementation(vi.fn())
-    vi.mocked(handleScheduleSave).mockResolvedValue({ id: '1', updated: 'data' })
-    
+    vi.mocked(handleScheduleSave).mockResolvedValue({
+      id: '1',
+      updated: 'data'
+    })
+
     // Reset mock data
     mockNavigate.mockReset()
     mockSaveRow.mockReset()
@@ -343,7 +454,7 @@ describe('AddEditFinalSupplyEquipments', () => {
     mockJobStatusHook.mockReset()
     mockApiService.download.mockResolvedValue()
     mockEquipmentsHook.refetch.mockReset()
-    
+
     // Reset mock data objects
     Object.assign(mockFeatureFlags, {})
     Object.assign(mockLocationState, { state: {} })
@@ -383,7 +494,9 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should render loading state correctly', () => {
       mockOptionsHook.isFetched = false
       renderComponent()
-      expect(screen.queryByText('Final Supply Equipment')).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('Final Supply Equipment')
+      ).not.toBeInTheDocument()
     })
 
     it('should render main content when loaded', () => {
@@ -412,33 +525,33 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should handle onGridReady event', async () => {
       renderComponent()
       const gridReadyBtn = screen.getByTestId('grid-ready-btn')
-      
+
       await act(async () => {
         fireEvent.click(gridReadyBtn)
       })
-      
+
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
     it('should handle onCellEditingStopped with unchanged value', async () => {
       renderComponent()
       const cellEditUnchangedBtn = screen.getByTestId('cell-edit-unchanged-btn')
-      
+
       await act(async () => {
         fireEvent.click(cellEditUnchangedBtn)
       })
-      
+
       expect(handleScheduleSave).not.toHaveBeenCalled()
     })
 
     it('should handle onCellEditingStopped with changed value', async () => {
       renderComponent()
       const cellEditBtn = screen.getByTestId('cell-edit-btn')
-      
+
       await act(async () => {
         fireEvent.click(cellEditBtn)
       })
-      
+
       await waitFor(() => {
         expect(handleScheduleSave).toHaveBeenCalled()
       })
@@ -447,18 +560,18 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should handle delete action', async () => {
       renderComponent()
       const deleteBtn = screen.getByTestId('delete-action-btn')
-      
+
       await act(async () => {
         fireEvent.click(deleteBtn)
       })
-      
+
       expect(handleScheduleDelete).toHaveBeenCalled()
     })
 
     it('should handle duplicate action', async () => {
       renderComponent()
       const duplicateBtn = screen.getByTestId('duplicate-action-btn')
-      
+
       let result
       await act(async () => {
         // Mock the onAction to capture return value
@@ -466,7 +579,7 @@ describe('AddEditFinalSupplyEquipments', () => {
         result = { add: [{ id: expect.any(String) }], addIndex: 1 }
         fireEvent.click(duplicateBtn)
       })
-      
+
       // Verify duplicate action creates new row
       expect(duplicateBtn).toBeInTheDocument()
     })
@@ -480,16 +593,16 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should handle download with data', async () => {
       renderComponent()
       const exportBtn = screen.getByText('Export')
-      
+
       await act(async () => {
         fireEvent.click(exportBtn)
       })
-      
+
       const withDataBtn = screen.getByText('Export with data')
       await act(async () => {
         fireEvent.click(withDataBtn)
       })
-      
+
       expect(mockApiService.download).toHaveBeenCalledWith({
         url: expect.stringContaining('123')
       })
@@ -498,16 +611,16 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should handle download template without data', async () => {
       renderComponent()
       const exportBtn = screen.getByText('Export')
-      
+
       await act(async () => {
         fireEvent.click(exportBtn)
       })
-      
+
       const templateBtn = screen.getByText('Export template')
       await act(async () => {
         fireEvent.click(templateBtn)
       })
-      
+
       expect(mockApiService.download).toHaveBeenCalledWith({
         url: expect.stringContaining('template')
       })
@@ -515,27 +628,29 @@ describe('AddEditFinalSupplyEquipments', () => {
 
     it('should handle download error', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      mockApiService.download.mockRejectedValueOnce(new Error('Download failed'))
-      
+      mockApiService.download.mockRejectedValueOnce(
+        new Error('Download failed')
+      )
+
       renderComponent()
       const exportBtn = screen.getByText('Export')
-      
+
       await act(async () => {
         fireEvent.click(exportBtn)
       })
-      
+
       const withDataBtn = screen.getByText('Export with data')
       await act(async () => {
         fireEvent.click(withDataBtn)
       })
-      
+
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith(
           'Error downloading final supply equipment information:',
           expect.any(Error)
         )
       })
-      
+
       consoleSpy.mockRestore()
     })
   })
@@ -548,53 +663,53 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should open import dialog with overwrite option', async () => {
       renderComponent()
       const importBtn = screen.getByText('Import')
-      
+
       await act(async () => {
         fireEvent.click(importBtn)
       })
-      
+
       const overwriteBtn = screen.getByText('Overwrite')
       await act(async () => {
         fireEvent.click(overwriteBtn)
       })
-      
+
       expect(screen.getByTestId('import-dialog')).toBeInTheDocument()
     })
 
     it('should open import dialog with append option', async () => {
       renderComponent()
       const importBtn = screen.getByText('Import')
-      
+
       await act(async () => {
         fireEvent.click(importBtn)
       })
-      
+
       const appendBtn = screen.getByText('Append')
       await act(async () => {
         fireEvent.click(appendBtn)
       })
-      
+
       expect(screen.getByTestId('import-dialog')).toBeInTheDocument()
     })
 
     it('should close import dialog', async () => {
       renderComponent()
       const importBtn = screen.getByText('Import')
-      
+
       await act(async () => {
         fireEvent.click(importBtn)
       })
-      
+
       const appendBtn = screen.getByText('Append')
       await act(async () => {
         fireEvent.click(appendBtn)
       })
-      
+
       const closeBtn = screen.getByText('Close')
       await act(async () => {
         fireEvent.click(closeBtn)
       })
-      
+
       expect(mockEquipmentsHook.refetch).toHaveBeenCalled()
     })
   })
@@ -603,11 +718,11 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should handle navigate back', async () => {
       renderComponent()
       const saveBtn = screen.getByTestId('save-btn')
-      
+
       await act(async () => {
         fireEvent.click(saveBtn)
       })
-      
+
       expect(mockNavigate).toHaveBeenCalledWith(
         expect.stringContaining('/reports/2024/123'),
         expect.objectContaining({
@@ -623,7 +738,9 @@ describe('AddEditFinalSupplyEquipments', () => {
 
   describe('Effects', () => {
     it('should handle location state message', () => {
-      Object.assign(mockLocationState, { state: { message: 'Test message', severity: 'info' } })
+      Object.assign(mockLocationState, {
+        state: { message: 'Test message', severity: 'info' }
+      })
       renderComponent()
       // Component should render without errors
       expect(screen.getByText('Final Supply Equipment')).toBeInTheDocument()
@@ -632,12 +749,12 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should setup grid data with empty data', async () => {
       mockEquipmentsHook.data = { finalSupplyEquipments: [] }
       renderComponent()
-      
+
       const gridReadyBtn = screen.getByTestId('grid-ready-btn')
       await act(async () => {
         fireEvent.click(gridReadyBtn)
       })
-      
+
       // Component should handle empty data
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
@@ -645,16 +762,20 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should setup grid data with existing data', async () => {
       mockEquipmentsHook.data = {
         finalSupplyEquipments: [
-          { id: 1, organizationName: 'Existing Org', finalSupplyEquipmentId: 'fse-1' }
+          {
+            id: 1,
+            organizationName: 'Existing Org',
+            finalSupplyEquipmentId: 'fse-1'
+          }
         ]
       }
       renderComponent()
-      
+
       const gridReadyBtn = screen.getByTestId('grid-ready-btn')
       await act(async () => {
         fireEvent.click(gridReadyBtn)
       })
-      
+
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
@@ -664,14 +785,14 @@ describe('AddEditFinalSupplyEquipments', () => {
         finalSupplyEquipments: [{ id: 1, organizationName: 'Test' }]
       }
       mockFeatureFlags.FSE_IMPORT_EXPORT = true
-      
+
       renderComponent()
       const importBtn = screen.getByText('Import')
-      
+
       act(() => {
         fireEvent.click(importBtn)
       })
-      
+
       // Overwrite option should not be visible for versioned reports with data
       expect(screen.queryByText('Overwrite')).not.toBeInTheDocument()
       expect(screen.getByText('Append')).toBeInTheDocument()
@@ -680,14 +801,14 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should show overwrite for original reports', () => {
       mockCurrentReportHook.data.report.version = 0
       mockFeatureFlags.FSE_IMPORT_EXPORT = true
-      
+
       renderComponent()
       const importBtn = screen.getByText('Import')
-      
+
       act(() => {
         fireEvent.click(importBtn)
       })
-      
+
       expect(screen.getByText('Overwrite')).toBeInTheDocument()
       expect(screen.getByText('Append')).toBeInTheDocument()
     })
@@ -715,14 +836,14 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should open and close download menu', async () => {
       renderComponent()
       const exportBtn = screen.getByText('Export')
-      
+
       // Open menu
       await act(async () => {
         fireEvent.click(exportBtn)
       })
-      
+
       expect(screen.getByTestId('menu')).toBeInTheDocument()
-      
+
       // Close menu by clicking outside or escape
       await act(async () => {
         fireEvent.keyDown(document, { key: 'Escape' })
@@ -732,12 +853,12 @@ describe('AddEditFinalSupplyEquipments', () => {
     it('should open and close import menu', async () => {
       renderComponent()
       const importBtn = screen.getByText('Import')
-      
+
       // Open menu
       await act(async () => {
         fireEvent.click(importBtn)
       })
-      
+
       expect(screen.getByTestId('menu')).toBeInTheDocument()
     })
   })

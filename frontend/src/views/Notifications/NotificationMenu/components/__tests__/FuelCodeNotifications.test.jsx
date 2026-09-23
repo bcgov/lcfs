@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { Notifications } from '../Notifications'
 
@@ -14,11 +14,11 @@ vi.mock('react-router-dom', async () => {
 })
 
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({ 
-    data: { 
+  useCurrentUser: () => ({
+    data: {
       isGovernmentUser: true,
       roles: [{ name: 'Analyst' }]
-    } 
+    }
   })
 }))
 
@@ -40,7 +40,11 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/components/BCButton', () => ({
   default: ({ children, ...props }) => (
-    <button data-test={props['data-test']} data-testid={props['data-test']} {...props}>
+    <button
+      data-test={props['data-test']}
+      data-testid={props['data-test']}
+      {...props}
+    >
       {children}
     </button>
   )
@@ -93,7 +97,7 @@ describe('Fuel Code Notifications', () => {
     it('correctly maps fuel code notification types to routes', () => {
       const currentUser = { isGovernmentUser: true }
       const mapping = routesMapping(currentUser)
-      
+
       expect(mapping['Fuel Code Recommended']).toBe(ROUTES.FUEL_CODES.EDIT)
       expect(mapping['Fuel Code Approved']).toBe(ROUTES.FUEL_CODES.EDIT)
       expect(mapping['Fuel Code Returned']).toBe(ROUTES.FUEL_CODES.EDIT)
@@ -110,7 +114,7 @@ describe('Fuel Code Notifications', () => {
         'Fuel Code Returned'
       ]
 
-      fuelCodeTypes.forEach(type => {
+      fuelCodeTypes.forEach((type) => {
         const currentUser = { isGovernmentUser: true }
         const mapping = routesMapping(currentUser)
         expect(mapping[type]).toBeDefined()

@@ -1,16 +1,14 @@
 import { useParams } from 'react-router-dom'
 import { useAuditLog } from '@/hooks/useAuditLog'
 import Loading from '@/components/Loading'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Box,
-} from '@mui/material'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import Paper from '@mui/material/Paper'
+import Box from '@mui/material/Box'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import colors from '@/themes/base/colors'

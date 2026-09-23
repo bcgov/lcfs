@@ -4,8 +4,10 @@ import { StyledListItem } from '@/components/StyledListItem.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import { timezoneFormatter, currencyFormatter } from '@/utils/formatters'
-import { ExpandMore } from '@mui/icons-material'
-import { List, ListItemText, styled } from '@mui/material'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import List from '@mui/material/List'
+import ListItemText from '@mui/material/ListItemText'
+import { styled } from '@mui/material/styles'
 import MuiAccordion from '@mui/material/Accordion'
 import MuiAccordionDetails from '@mui/material/AccordionDetails'
 import MuiAccordionSummary, {
@@ -182,9 +184,7 @@ export const HistoryCard = ({
               {t('report:assessmentLn1', {
                 name: report.organization.name,
                 hasMet:
-                  renewablePenaltyAmountRaw <= 0
-                    ? 'has met'
-                    : 'has not met'
+                  renewablePenaltyAmountRaw <= 0 ? 'has met' : 'has not met'
               })}
             </ListItemText>
             {renewableTargetNotMet && (
@@ -210,10 +210,7 @@ export const HistoryCard = ({
             </strong>
             {t('report:assessmentLn2', {
               name: report.organization.name,
-              hasMet:
-                lowCarbonPenaltyAmountRaw <= 0
-                  ? 'has met'
-                  : 'has not met'
+              hasMet: lowCarbonPenaltyAmountRaw <= 0 ? 'has met' : 'has not met'
             })}
           </ListItemText>
           {lowCarbonTargetNotMet && (

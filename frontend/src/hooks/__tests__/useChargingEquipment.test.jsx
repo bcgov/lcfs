@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { 
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
+import {
   useChargingEquipment,
   useDownloadChargingEquipment,
   useGetChargingEquipment,
@@ -78,25 +78,8 @@ const mockBulkActionResponse = {
   errors: []
 }
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false }
-    }
-  })
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
-}
-
 describe('useChargingEquipment', () => {
-  let wrapper
-
   beforeEach(() => {
-    wrapper = createWrapper()
     vi.clearAllMocks()
   })
 
@@ -105,7 +88,10 @@ describe('useChargingEquipment', () => {
   })
 
   describe('useChargingEquipment - list hook', () => {
-    it('fetches charging equipment list successfully', async () => {
+    test('fetches charging equipment list successfully', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.post.mockResolvedValue({ data: mockEquipmentData })
 
       const paginationOptions = {
@@ -117,7 +103,7 @@ describe('useChargingEquipment', () => {
 
       const { result } = renderHook(
         () => useChargingEquipment(paginationOptions),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -137,9 +123,11 @@ describe('useChargingEquipment', () => {
       )
     })
 
-    it('handles bulk submit successfully', async () => {
+    test('handles bulk submit successfully', async ({ renderHook, query }) => {
       mockApiService.post.mockResolvedValueOnce({ data: mockEquipmentData })
-      mockApiService.post.mockResolvedValueOnce({ data: mockBulkActionResponse })
+      mockApiService.post.mockResolvedValueOnce({
+        data: mockBulkActionResponse
+      })
 
       const paginationOptions = {
         page: 1,
@@ -150,7 +138,7 @@ describe('useChargingEquipment', () => {
 
       const { result } = renderHook(
         () => useChargingEquipment(paginationOptions),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -166,9 +154,14 @@ describe('useChargingEquipment', () => {
       )
     })
 
-    it('handles bulk decommission successfully', async () => {
+    test('handles bulk decommission successfully', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.post.mockResolvedValueOnce({ data: mockEquipmentData })
-      mockApiService.post.mockResolvedValueOnce({ data: mockBulkActionResponse })
+      mockApiService.post.mockResolvedValueOnce({
+        data: mockBulkActionResponse
+      })
 
       const paginationOptions = {
         page: 1,
@@ -179,7 +172,7 @@ describe('useChargingEquipment', () => {
 
       const { result } = renderHook(
         () => useChargingEquipment(paginationOptions),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -195,11 +188,11 @@ describe('useChargingEquipment', () => {
       )
     })
 
-    it('does not fetch when pagination options are not provided', () => {
-      const { result } = renderHook(
-        () => useChargingEquipment(null),
-        { wrapper }
-      )
+    test('does not fetch when pagination options are not provided', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useChargingEquipment(null), [query])
 
       expect(result.current.data).toBeUndefined()
       expect(mockApiService.post).not.toHaveBeenCalled()
@@ -207,19 +200,29 @@ describe('useChargingEquipment', () => {
   })
 
   describe('useDownloadChargingEquipment', () => {
-    it('downloads filtered charging equipment export', async () => {
+    test('downloads filtered charging equipment export', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.download.mockResolvedValue(undefined)
 
       const { result } = renderHook(
         () => useDownloadChargingEquipment(),
-        { wrapper }
+        [query]
       )
 
       const requestBody = {
         page: 1,
         size: 1000,
         sortOrders: [{ field: 'updateDate', direction: 'desc' }],
-        filters: [{ field: 'manufacturer', filterType: 'text', type: 'contains', filter: 'Tesla' }],
+        filters: [
+          {
+            field: 'manufacturer',
+            filterType: 'text',
+            type: 'contains',
+            filter: 'Tesla'
+          }
+        ],
         organization_id: 7
       }
 
@@ -234,13 +237,13 @@ describe('useChargingEquipment', () => {
   })
 
   describe('useGetChargingEquipment', () => {
-    it('fetches single equipment successfully', async () => {
+    test('fetches single equipment successfully', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.get.mockResolvedValue({ data: mockSingleEquipment })
 
-      const { result } = renderHook(
-        () => useGetChargingEquipment(1),
-        { wrapper }
-      )
+      const { result } = renderHook(() => useGetChargingEquipment(1), [query])
 
       await waitFor(() => {
         expect(result.current.data).toEqual(mockSingleEquipment)
@@ -248,15 +251,13 @@ describe('useChargingEquipment', () => {
         expect(result.current.isError).toBe(false)
       })
 
-      expect(mockApiService.get).toHaveBeenCalledWith(
-        '/charging-equipment/1'
-      )
+      expect(mockApiService.get).toHaveBeenCalledWith('/charging-equipment/1')
     })
 
-    it('does not fetch when id is not provided', () => {
+    test('does not fetch when id is not provided', ({ renderHook, query }) => {
       const { result } = renderHook(
         () => useGetChargingEquipment(null),
-        { wrapper }
+        [query]
       )
 
       expect(result.current.data).toBeUndefined()
@@ -265,13 +266,10 @@ describe('useChargingEquipment', () => {
   })
 
   describe('useCreateChargingEquipment', () => {
-    it('creates equipment successfully', async () => {
+    test('creates equipment successfully', async ({ renderHook, query }) => {
       mockApiService.post.mockResolvedValue({ data: mockSingleEquipment })
 
-      const { result } = renderHook(
-        () => useCreateChargingEquipment(),
-        { wrapper }
-      )
+      const { result } = renderHook(() => useCreateChargingEquipment(), [query])
 
       const createData = {
         charging_site_id: 1,
@@ -291,13 +289,10 @@ describe('useChargingEquipment', () => {
   })
 
   describe('useUpdateChargingEquipment', () => {
-    it('updates equipment successfully', async () => {
+    test('updates equipment successfully', async ({ renderHook, query }) => {
       mockApiService.put.mockResolvedValue({ data: mockSingleEquipment })
 
-      const { result } = renderHook(
-        () => useUpdateChargingEquipment(),
-        { wrapper }
-      )
+      const { result } = renderHook(() => useUpdateChargingEquipment(), [query])
 
       const updateData = {
         manufacturer: 'ChargePoint',
@@ -318,13 +313,10 @@ describe('useChargingEquipment', () => {
   })
 
   describe('useDeleteChargingEquipment', () => {
-    it('deletes equipment successfully', async () => {
+    test('deletes equipment successfully', async ({ renderHook, query }) => {
       mockApiService.delete.mockResolvedValue({})
 
-      const { result } = renderHook(
-        () => useDeleteChargingEquipment(),
-        { wrapper }
-      )
+      const { result } = renderHook(() => useDeleteChargingEquipment(), [query])
 
       await result.current.mutateAsync(1)
 
@@ -335,7 +327,7 @@ describe('useChargingEquipment', () => {
   })
 
   describe('useChargingEquipmentMetadata', () => {
-    it('fetches all metadata successfully', async () => {
+    test('fetches all metadata successfully', async ({ renderHook, query }) => {
       const mockStatuses = [
         { status_id: 1, status: 'Draft' },
         { status_id: 2, status: 'Submitted' }
@@ -356,7 +348,7 @@ describe('useChargingEquipment', () => {
 
       const { result } = renderHook(
         () => useChargingEquipmentMetadata(),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -366,18 +358,27 @@ describe('useChargingEquipment', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      expect(mockApiService.get).toHaveBeenCalledWith('/charging-equipment/statuses/list')
-      expect(mockApiService.get).toHaveBeenCalledWith('/charging-equipment/levels/list')
-      expect(mockApiService.get).toHaveBeenCalledWith('/charging-equipment/end-use-types/list')
+      expect(mockApiService.get).toHaveBeenCalledWith(
+        '/charging-equipment/statuses/list'
+      )
+      expect(mockApiService.get).toHaveBeenCalledWith(
+        '/charging-equipment/levels/list'
+      )
+      expect(mockApiService.get).toHaveBeenCalledWith(
+        '/charging-equipment/end-use-types/list'
+      )
     })
 
-    it('shows loading state while fetching metadata', async () => {
+    test('shows loading state while fetching metadata', async ({
+      renderHook,
+      query
+    }) => {
       // Make the API calls return promises that never resolve to keep loading state
       mockApiService.get.mockReturnValue(new Promise(() => {}))
 
       const { result } = renderHook(
         () => useChargingEquipmentMetadata(),
-        { wrapper }
+        [query]
       )
 
       expect(result.current.isLoading).toBe(true)
@@ -388,7 +389,7 @@ describe('useChargingEquipment', () => {
   })
 
   describe('error handling', () => {
-    it('handles API errors in list fetch', async () => {
+    test('handles API errors in list fetch', async ({ renderHook, query }) => {
       const error = new Error('API Error')
       mockApiService.post.mockRejectedValue(error)
 
@@ -401,7 +402,7 @@ describe('useChargingEquipment', () => {
 
       const { result } = renderHook(
         () => useChargingEquipment(paginationOptions),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -410,14 +411,11 @@ describe('useChargingEquipment', () => {
       })
     })
 
-    it('handles API errors in mutations', async () => {
+    test('handles API errors in mutations', async ({ renderHook, query }) => {
       const error = new Error('Mutation Error')
       mockApiService.post.mockRejectedValue(error)
 
-      const { result } = renderHook(
-        () => useCreateChargingEquipment(),
-        { wrapper }
-      )
+      const { result } = renderHook(() => useCreateChargingEquipment(), [query])
 
       try {
         await result.current.mutateAsync({

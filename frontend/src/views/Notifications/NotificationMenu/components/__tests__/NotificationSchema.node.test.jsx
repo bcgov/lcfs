@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { routesMapping, columnDefs, defaultSortModel } from '../_schema'
 import { ROUTES } from '@/routes/routes'
 
@@ -9,8 +9,12 @@ describe('Notification Schema', () => {
       const mapping = routesMapping(currentUser)
 
       expect(mapping.Transfer).toBe(ROUTES.TRANSFERS.VIEW)
-      expect(mapping.AdminAdjustment).toBe(ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW)
-      expect(mapping.InitiativeAgreement).toBe(ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW)
+      expect(mapping.AdminAdjustment).toBe(
+        ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW
+      )
+      expect(mapping.InitiativeAgreement).toBe(
+        ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW
+      )
       expect(mapping.ComplianceReport).toBe(ROUTES.REPORTS.VIEW)
     })
 
@@ -19,8 +23,12 @@ describe('Notification Schema', () => {
       const mapping = routesMapping(currentUser)
 
       expect(mapping.Transfer).toBe(ROUTES.TRANSFERS.VIEW)
-      expect(mapping.AdminAdjustment).toBe(ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.ORG_VIEW)
-      expect(mapping.InitiativeAgreement).toBe(ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.ORG_VIEW)
+      expect(mapping.AdminAdjustment).toBe(
+        ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.ORG_VIEW
+      )
+      expect(mapping.InitiativeAgreement).toBe(
+        ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.ORG_VIEW
+      )
       expect(mapping.ComplianceReport).toBe(ROUTES.REPORTS.VIEW)
     })
 
@@ -37,7 +45,7 @@ describe('Notification Schema', () => {
         'Fuel Code Returned'
       ]
 
-      fuelCodeTypes.forEach(type => {
+      fuelCodeTypes.forEach((type) => {
         expect(mapping[type]).toBe(ROUTES.FUEL_CODES.EDIT)
       })
     })
@@ -62,7 +70,7 @@ describe('Notification Schema', () => {
         'Fuel Code Returned'
       ]
 
-      expectedKeys.forEach(key => {
+      expectedKeys.forEach((key) => {
         expect(mapping).toHaveProperty(key)
         expect(mapping[key]).toBeTruthy()
       })
@@ -76,9 +84,9 @@ describe('Notification Schema', () => {
       const columns = columnDefs(mockT, currentUser)
 
       expect(Array.isArray(columns)).toBe(true)
-      
+
       // Check for required columns
-      const columnIds = columns.map(col => col.colId || col.field)
+      const columnIds = columns.map((col) => col.colId || col.field)
       expect(columnIds).toContain('type')
       expect(columnIds).toContain('date')
       expect(columnIds).toContain('user')
@@ -91,7 +99,7 @@ describe('Notification Schema', () => {
       const currentUser = { isGovernmentUser: true }
       const columns = columnDefs(mockT, currentUser)
 
-      const actionColumn = columns.find(col => col.headerName === 'Delete')
+      const actionColumn = columns.find((col) => col.headerName === 'Delete')
       expect(actionColumn).toBeDefined()
     })
 
@@ -100,7 +108,7 @@ describe('Notification Schema', () => {
       const currentUser = { isGovernmentUser: true }
       const columns = columnDefs(mockT, currentUser)
 
-      const dateColumn = columns.find(col => col.colId === 'date')
+      const dateColumn = columns.find((col) => col.colId === 'date')
       expect(dateColumn).toBeDefined()
       expect(dateColumn.filter).toBe('agDateColumnFilter')
       expect(dateColumn.floatingFilterComponent).toBeDefined()
@@ -111,22 +119,22 @@ describe('Notification Schema', () => {
       const currentUser = { isGovernmentUser: true }
       const columns = columnDefs(mockT, currentUser)
 
-      const userColumn = columns.find(col => col.colId === 'user')
+      const userColumn = columns.find((col) => col.colId === 'user')
       expect(userColumn.valueGetter).toBeDefined()
 
-      const dateColumn = columns.find(col => col.colId === 'date')
+      const dateColumn = columns.find((col) => col.colId === 'date')
       expect(dateColumn.valueGetter).toBeDefined()
 
-      const transactionColumn = columns.find(col => col.colId === 'transactionId')
+      const transactionColumn = columns.find(
+        (col) => col.colId === 'transactionId'
+      )
       expect(transactionColumn.valueGetter).toBeDefined()
     })
   })
 
   describe('defaultSortModel', () => {
     it('sorts by date in descending order by default', () => {
-      expect(defaultSortModel).toEqual([
-        { field: 'date', direction: 'desc' }
-      ])
+      expect(defaultSortModel).toEqual([{ field: 'date', direction: 'desc' }])
     })
   })
 
@@ -166,7 +174,7 @@ describe('Notification Schema', () => {
       const mapping = routesMapping(currentUser)
 
       // Verify all values are actual route strings
-      Object.values(mapping).forEach(route => {
+      Object.values(mapping).forEach((route) => {
         expect(typeof route).toBe('string')
         expect(route).toMatch(/^\//) // All routes should start with /
       })
@@ -181,7 +189,9 @@ describe('Notification Schema', () => {
 
       // Government users should see different admin/initiative routes
       expect(govMapping.AdminAdjustment).not.toBe(nonGovMapping.AdminAdjustment)
-      expect(govMapping.InitiativeAgreement).not.toBe(nonGovMapping.InitiativeAgreement)
+      expect(govMapping.InitiativeAgreement).not.toBe(
+        nonGovMapping.InitiativeAgreement
+      )
 
       // But same routes for others
       expect(govMapping.Transfer).toBe(nonGovMapping.Transfer)

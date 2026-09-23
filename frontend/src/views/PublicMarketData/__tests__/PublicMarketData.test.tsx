@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { screen } from '@testing-library/react'
+import { describe, expect, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { PublicMarketData } from '../PublicMarketData'
 
 vi.mock('echarts-for-react', () => ({ default: () => null }))
@@ -61,8 +61,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('PublicMarketData', () => {
-  it('renders the title and KPI cards', () => {
-    render(<PublicMarketData />, { wrapper })
+  test('renders the title and KPI cards', ({ render, theme }) => {
+    render(<PublicMarketData />, [theme])
     expect(
       screen.getByText('publicDashboard.marketData.title')
     ).toBeInTheDocument()
@@ -71,8 +71,8 @@ describe('PublicMarketData', () => {
     expect(screen.getByTestId('kpi-avgPrice')).toBeInTheDocument()
   })
 
-  it('renders the CO2 impact band and CSV download', () => {
-    render(<PublicMarketData />, { wrapper })
+  test('renders the CO2 impact band and CSV download', ({ render, theme }) => {
+    render(<PublicMarketData />, [theme])
     expect(screen.getByTestId('impact-callout')).toBeInTheDocument()
     expect(screen.getByTestId('download-csv')).toBeInTheDocument()
   })

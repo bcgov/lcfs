@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Box, Stack } from '@mui/material'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
 
 import BCTypography from '@/components/BCTypography'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'

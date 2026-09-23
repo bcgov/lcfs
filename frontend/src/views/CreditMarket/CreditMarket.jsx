@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react'
-import {
-  Card,
-  CardContent,
-  Grid,
-  ToggleButton,
-  ToggleButtonGroup,
-  CircularProgress
-} from '@mui/material'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Grid from '@mui/material/Grid'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
+import CircularProgress from '@mui/material/CircularProgress'
 import ReactECharts from 'echarts-for-react'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'

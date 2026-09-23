@@ -1,7 +1,7 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { Organizations } from '../Organizations'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 import { ROUTES } from '@/routes/routes'
 
 const navigateMock = vi.fn()
@@ -163,8 +163,8 @@ vi.mock('@/components/BCTypography', () => ({
   default: ({ children }) => <span data-test="bc-typography">{children}</span>
 }))
 
-vi.mock('@mui/material', () => ({
-  Stack: ({ children, direction, spacing, useFlexGap, flexWrap }) => (
+vi.mock('@mui/material/Stack', () => ({
+  default: ({ children, direction, spacing, useFlexGap, flexWrap }) => (
     <div
       data-test="mui-stack"
       style={{
@@ -176,15 +176,6 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </div>
-  ),
-  TextField: ({ value, onChange, label, disabled }) => (
-    <input
-      data-test="mui-textfield"
-      value={value}
-      onChange={(e) => onChange && onChange(e)}
-      placeholder={label}
-      disabled={disabled}
-    />
   )
 }))
 
@@ -237,15 +228,15 @@ describe('Organizations Component', () => {
   })
 
   describe('Component Rendering', () => {
-    it('renders the component with correct title', () => {
-      render(<Organizations />, { wrapper })
+    test('renders the component with correct title', ({ render }) => {
+      render(<Organizations />)
 
       expect(screen.getByText('Organizations')).toBeInTheDocument()
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
 
-    it('renders all main UI elements', () => {
-      render(<Organizations />, { wrapper })
+    test('renders all main UI elements', ({ render }) => {
+      render(<Organizations />)
 
       expect(screen.getByText('Organizations')).toBeInTheDocument()
       expect(screen.getByText('Add Organization')).toBeInTheDocument()
@@ -257,8 +248,10 @@ describe('Organizations Component', () => {
   })
 
   describe('Navigation Functions', () => {
-    it('navigates to add organization page when add button is clicked', async () => {
-      render(<Organizations />, { wrapper })
+    test('navigates to add organization page when add button is clicked', async ({
+      render
+    }) => {
+      render(<Organizations />)
 
       const addButton = screen.getByText('Add Organization')
       fireEvent.click(addButton)
@@ -270,8 +263,8 @@ describe('Organizations Component', () => {
   })
 
   describe('Download Functions', () => {
-    it('handles organization download successfully', async () => {
-      render(<Organizations />, { wrapper })
+    test('handles organization download successfully', async ({ render }) => {
+      render(<Organizations />)
 
       const downloadOrgButton = screen.getByText('Download Organizations')
       fireEvent.click(downloadOrgButton)
@@ -283,8 +276,8 @@ describe('Organizations Component', () => {
       })
     })
 
-    it('handles user download successfully', async () => {
-      render(<Organizations />, { wrapper })
+    test('handles user download successfully', async ({ render }) => {
+      render(<Organizations />)
 
       const downloadUserButton = screen.getByText('Download Users')
       fireEvent.click(downloadUserButton)
@@ -294,20 +287,22 @@ describe('Organizations Component', () => {
       })
     })
 
-    it('displays alert message when location state contains message', () => {
+    test('displays alert message when location state contains message', ({
+      render
+    }) => {
       mockLocationValue.state = {
         message: 'Test message',
         severity: 'success'
       }
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
       expect(screen.getByText('Test message')).toBeInTheDocument()
     })
 
-    it('displays error alert when download fails', async () => {
+    test('displays error alert when download fails', async ({ render }) => {
       mockDownload.mockRejectedValue(new Error('Download failed'))
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
 
       const downloadOrgButton = screen.getByText('Download Organizations')
       fireEvent.click(downloadOrgButton)
@@ -321,10 +316,10 @@ describe('Organizations Component', () => {
       })
     })
 
-    it('shows error alert when user download fails', async () => {
+    test('shows error alert when user download fails', async ({ render }) => {
       mockDownload.mockRejectedValueOnce(new Error('User download failed'))
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
 
       const downloadUserButton = screen.getByText('Download Users')
       fireEvent.click(downloadUserButton)
@@ -340,13 +335,15 @@ describe('Organizations Component', () => {
   })
 
   describe('useEffect Location State Handling', () => {
-    it('sets alert message when location state contains message', async () => {
+    test('sets alert message when location state contains message', async ({
+      render
+    }) => {
       mockLocationValue.state = {
         message: 'Success message',
         severity: 'success'
       }
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
 
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
@@ -356,12 +353,14 @@ describe('Organizations Component', () => {
       })
     })
 
-    it('defaults to info severity when severity not provided', async () => {
+    test('defaults to info severity when severity not provided', async ({
+      render
+    }) => {
       mockLocationValue.state = {
         message: 'Info message'
       }
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
 
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
@@ -370,48 +369,50 @@ describe('Organizations Component', () => {
       })
     })
 
-    it('does not show alert when no location state message', () => {
+    test('does not show alert when no location state message', ({ render }) => {
       mockLocationValue.state = null
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
 
       expect(screen.queryByTestId('alert-box')).not.toBeInTheDocument()
     })
 
-    it('does not show alert when location state exists but no message', () => {
+    test('does not show alert when location state exists but no message', ({
+      render
+    }) => {
       mockLocationValue.state = {
         someOtherProperty: 'value'
       }
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
 
       expect(screen.queryByTestId('alert-box')).not.toBeInTheDocument()
     })
   })
 
   describe('Conditional Rendering', () => {
-    it('hides alert when alertMessage is empty', () => {
+    test('hides alert when alertMessage is empty', ({ render }) => {
       mockLocationValue.state = null
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
 
       expect(screen.queryByTestId('alert-box')).not.toBeInTheDocument()
     })
 
-    it('shows alert when alertMessage exists', async () => {
+    test('shows alert when alertMessage exists', async ({ render }) => {
       mockLocationValue.state = {
         message: 'Test alert message'
       }
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
 
       await waitFor(() => {
         expect(screen.getByTestId('alert-box')).toBeInTheDocument()
       })
     })
 
-    it('shows add organization button for admin users', () => {
-      render(<Organizations />, { wrapper })
+    test('shows add organization button for admin users', ({ render }) => {
+      render(<Organizations />)
 
       const roleComponent = screen.getByTestId('role-component')
       expect(roleComponent).toBeInTheDocument()
@@ -423,50 +424,52 @@ describe('Organizations Component', () => {
   })
 
   describe('Grid Configuration', () => {
-    it('renders data grid with correct configuration', () => {
-      render(<Organizations />, { wrapper })
+    test('renders data grid with correct configuration', ({ render }) => {
+      render(<Organizations />)
       const grid = screen.getByTestId('bc-grid-viewer')
       expect(grid).toBeInTheDocument()
       expect(grid.textContent).toBe('BCGridViewer')
     })
 
-    it('provides getRowId function that works correctly', () => {
-      render(<Organizations />, { wrapper })
+    test('provides getRowId function that works correctly', ({ render }) => {
+      render(<Organizations />)
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
   })
 
   describe('Memoized Values', () => {
-    it('renders with correct API endpoint configuration', () => {
-      render(<Organizations />, { wrapper })
+    test('renders with correct API endpoint configuration', ({ render }) => {
+      render(<Organizations />)
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
 
-    it('renders with correct grid options', () => {
-      render(<Organizations />, { wrapper })
+    test('renders with correct grid options', ({ render }) => {
+      render(<Organizations />)
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
 
-    it('renders with correct default column definition', () => {
-      render(<Organizations />, { wrapper })
+    test('renders with correct default column definition', ({ render }) => {
+      render(<Organizations />)
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
 
-    it('renders with correct default sort model', () => {
-      render(<Organizations />, { wrapper })
+    test('renders with correct default sort model', ({ render }) => {
+      render(<Organizations />)
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
   })
 
   describe('Button State Management', () => {
-    it('shows loading state during organization download', async () => {
+    test('shows loading state during organization download', async ({
+      render
+    }) => {
       let resolveDownload
       const downloadPromise = new Promise((resolve) => {
         resolveDownload = resolve
       })
       mockDownload.mockReturnValue(downloadPromise)
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
 
       const downloadButton = screen.getByText('Download Organizations')
       fireEvent.click(downloadButton)
@@ -482,14 +485,14 @@ describe('Organizations Component', () => {
       await downloadPromise
     })
 
-    it('shows loading state during user download', async () => {
+    test('shows loading state during user download', async ({ render }) => {
       let resolveDownload
       const downloadPromise = new Promise((resolve) => {
         resolveDownload = resolve
       })
       mockDownload.mockReturnValue(downloadPromise)
 
-      render(<Organizations />, { wrapper })
+      render(<Organizations />)
 
       const downloadButton = screen.getByText('Download Users')
       fireEvent.click(downloadButton)

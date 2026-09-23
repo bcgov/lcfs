@@ -1,9 +1,9 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import { vi } from 'vitest'
 import { OrgTransactionDetails } from '@/views/Transactions/components'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 import { useDocuments, useDownloadDocument } from '@/hooks/useDocuments.js'
 
 // Mock hooks
@@ -26,7 +26,8 @@ vi.mock('react-i18next', () => ({
         'txn:effectiveDateLabel': 'Effective date',
         'txn:commentsTextLabel': 'Comments',
         'txn:approvedLabel': 'Approved',
-        'txn:approvedByDirector': 'by the director under the Low Carbon Fuels Act',
+        'txn:approvedByDirector':
+          'by the director under the Low Carbon Fuels Act',
         'txn:for': 'for',
         'txn:adminAdjustmentId': 'Administrative adjustment — ID:',
         'txn:initiativeAgreementId': 'Initiative agreement — ID:',
@@ -39,9 +40,9 @@ vi.mock('react-i18next', () => ({
 
 // Mock formatters
 vi.mock('@/utils/formatters', () => ({
-  dateFormatter: ({ value }) => value ? '2024-01-01' : '',
-  formatDateWithTimezoneAbbr: (value) => value ? 'January 1, 2024' : '',
-  numberFormatter: ({ value }) => value ? value.toLocaleString() : '0'
+  dateFormatter: ({ value }) => (value ? '2024-01-01' : ''),
+  formatDateWithTimezoneAbbr: (value) => (value ? 'January 1, 2024' : ''),
+  numberFormatter: ({ value }) => (value ? value.toLocaleString() : '0')
 }))
 
 // Test data fixtures
@@ -94,320 +95,411 @@ describe('OrgTransactionDetails Component', () => {
   })
 
   describe('Transaction Type Conditional Logic', () => {
-    it('renders admin adjustment type correctly', () => {
+    test('renders admin adjustment type correctly', ({
+      render,
+      theme,
+      router
+    }) => {
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={adminAdjustmentData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
-      expect(screen.getByText('Administrative adjustment for Test Organization')).toBeInTheDocument()
-      expect(screen.getByText(/Administrative adjustment — ID: AA123/)).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Administrative adjustment for Test Organization')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Administrative adjustment — ID: AA123/)
+      ).toBeInTheDocument()
     })
 
-    it('renders initiative agreement type correctly', () => {
+    test('renders initiative agreement type correctly', ({
+      render,
+      theme,
+      router
+    }) => {
       render(
         <OrgTransactionDetails
           transactionType="INITIATIVE_AGREEMENT"
           transactionData={initiativeAgreementData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
-      expect(screen.getByText('Initiative agreement for Test Organization')).toBeInTheDocument()
-      expect(screen.getByText(/Initiative agreement — ID: IA456/)).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Initiative agreement for Test Organization')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Initiative agreement — ID: IA456/)
+      ).toBeInTheDocument()
     })
   })
 
   describe('Status Field Selection', () => {
-    it('uses adminAdjustmentStatus for admin adjustment type', () => {
+    test('uses adminAdjustmentStatus for admin adjustment type', ({
+      render,
+      theme,
+      router
+    }) => {
       const dataWithHistory = {
         ...adminAdjustmentData,
         history: historyWithApproved
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={dataWithHistory}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
-      expect(screen.getByText('Administrative adjustment for Test Organization')).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Administrative adjustment for Test Organization')
+      ).toBeInTheDocument()
     })
 
-    it('uses initiativeAgreementStatus for initiative agreement type', () => {
+    test('uses initiativeAgreementStatus for initiative agreement type', ({
+      render,
+      theme,
+      router
+    }) => {
       const dataWithHistory = {
         ...initiativeAgreementData,
-        history: [{
-          createDate: '2024-01-03T10:00:00Z',
-          initiativeAgreementStatus: { status: 'Approved' }
-        }]
+        history: [
+          {
+            createDate: '2024-01-03T10:00:00Z',
+            initiativeAgreementStatus: { status: 'Approved' }
+          }
+        ]
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType="INITIATIVE_AGREEMENT"
           transactionData={dataWithHistory}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
-      expect(screen.getByText('Initiative agreement for Test Organization')).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Initiative agreement for Test Organization')
+      ).toBeInTheDocument()
     })
   })
 
   describe('Date Calculation Logic', () => {
-    it('finds approved date from history when available', () => {
+    test('finds approved date from history when available', ({
+      render,
+      theme,
+      router
+    }) => {
       const dataWithHistory = {
         ...adminAdjustmentData,
         history: historyWithApproved
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={dataWithHistory}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(screen.getByText(/January 1, 2024/)).toBeInTheDocument()
     })
 
-    it('uses createDate when no approved history found', () => {
+    test('uses createDate when no approved history found', ({
+      render,
+      theme,
+      router
+    }) => {
       const dataWithHistory = {
         ...adminAdjustmentData,
         history: historyWithoutApproved
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={dataWithHistory}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(screen.getByText(/January 1, 2024/)).toBeInTheDocument()
     })
 
-    it('uses createDate when history is null', () => {
+    test('uses createDate when history is null', ({
+      render,
+      theme,
+      router
+    }) => {
       const dataWithoutHistory = {
         ...adminAdjustmentData,
         history: null
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={dataWithoutHistory}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(screen.getByText(/January 1, 2024/)).toBeInTheDocument()
     })
 
-    it('uses transactionEffectiveDate when available', () => {
+    test('uses transactionEffectiveDate when available', ({
+      render,
+      theme,
+      router
+    }) => {
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={adminAdjustmentData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(screen.getByText('2024-01-01')).toBeInTheDocument()
     })
 
-    it('falls back to approved date when no effective date', () => {
+    test('falls back to approved date when no effective date', ({
+      render,
+      theme,
+      router
+    }) => {
       const dataWithoutEffectiveDate = {
         ...adminAdjustmentData,
         transactionEffectiveDate: null
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={dataWithoutEffectiveDate}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(screen.getByText('2024-01-01')).toBeInTheDocument()
     })
   })
 
   describe('File Attachment Rendering', () => {
-    it('renders file attachments when files exist', () => {
+    test('renders file attachments when files exist', ({
+      render,
+      theme,
+      router
+    }) => {
       mockUseDocuments.mockReturnValue({ data: mockFiles })
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={adminAdjustmentData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(screen.getByText('Attachments')).toBeInTheDocument()
       expect(screen.getByText('file1.pdf')).toBeInTheDocument()
       expect(screen.getByText('file2.doc')).toBeInTheDocument()
     })
 
-    it('does not render attachments when no files', () => {
+    test('does not render attachments when no files', ({
+      render,
+      theme,
+      router
+    }) => {
       mockUseDocuments.mockReturnValue({ data: [] })
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={adminAdjustmentData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(screen.queryByText('Attachments')).not.toBeInTheDocument()
     })
 
-    it('does not render attachments when data is null', () => {
+    test('does not render attachments when data is null', ({
+      render,
+      theme,
+      router
+    }) => {
       mockUseDocuments.mockReturnValue({ data: null })
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={adminAdjustmentData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(screen.queryByText('Attachments')).not.toBeInTheDocument()
     })
 
-    it('calls viewDocument when file is clicked', () => {
+    test('calls viewDocument when file is clicked', ({
+      render,
+      theme,
+      router
+    }) => {
       const mockViewDocument = vi.fn()
       mockUseDownloadDocument.mockReturnValue(mockViewDocument)
       mockUseDocuments.mockReturnValue({ data: mockFiles })
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={adminAdjustmentData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       fireEvent.click(screen.getByText('file1.pdf'))
       expect(mockViewDocument).toHaveBeenCalledWith(1)
     })
   })
 
   describe('Government Comment Rendering', () => {
-    it('renders gov comment when present', () => {
+    test('renders gov comment when present', ({ render, theme, router }) => {
       const dataWithComment = {
         ...adminAdjustmentData,
         govComment: 'Test government comment'
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={dataWithComment}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(screen.getByText('Comments')).toBeInTheDocument()
       expect(screen.getByText('Test government comment')).toBeInTheDocument()
     })
 
-    it('does not render comment section when no comment', () => {
+    test('does not render comment section when no comment', ({
+      render,
+      theme,
+      router
+    }) => {
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={adminAdjustmentData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(screen.queryByText('Comments')).not.toBeInTheDocument()
     })
   })
 
   describe('Hook Usage', () => {
-    it('calls useDocuments with correct parameters for admin adjustment', () => {
+    test('calls useDocuments with correct parameters for admin adjustment', ({
+      render,
+      theme,
+      router
+    }) => {
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={adminAdjustmentData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(mockUseDocuments).toHaveBeenCalledWith(ADMIN_ADJUSTMENT, 123)
     })
 
-    it('calls useDocuments with correct parameters for initiative agreement', () => {
+    test('calls useDocuments with correct parameters for initiative agreement', ({
+      render,
+      theme,
+      router
+    }) => {
       render(
         <OrgTransactionDetails
           transactionType="INITIATIVE_AGREEMENT"
           transactionData={initiativeAgreementData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
+
       expect(mockUseDocuments).toHaveBeenCalledWith('INITIATIVE_AGREEMENT', 456)
     })
 
-    it('calls useDownloadDocument with correct parameters', () => {
+    test('calls useDownloadDocument with correct parameters', ({
+      render,
+      theme,
+      router
+    }) => {
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={adminAdjustmentData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
-      expect(mockUseDownloadDocument).toHaveBeenCalledWith(ADMIN_ADJUSTMENT, 123)
+
+      expect(mockUseDownloadDocument).toHaveBeenCalledWith(
+        ADMIN_ADJUSTMENT,
+        123
+      )
     })
   })
 
   describe('Component Rendering', () => {
-    it('renders all required elements', () => {
+    test('renders all required elements', ({ render, theme, router }) => {
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={adminAdjustmentData}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
-      expect(screen.getByText('Administrative adjustment for Test Organization')).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Administrative adjustment for Test Organization')
+      ).toBeInTheDocument()
       expect(screen.getByText('Compliance units')).toBeInTheDocument()
       expect(screen.getByText('1,000')).toBeInTheDocument()
       expect(screen.getByText('Effective date')).toBeInTheDocument()
       expect(screen.getByText('Approved')).toBeInTheDocument()
-      expect(screen.getByText(/by the director under the Low Carbon Fuels Act/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/by the director under the Low Carbon Fuels Act/)
+      ).toBeInTheDocument()
     })
 
-    it('renders with empty history array', () => {
+    test('renders with empty history array', ({ render, theme, router }) => {
       const dataWithEmptyHistory = {
         ...adminAdjustmentData,
         history: []
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
           transactionData={dataWithEmptyHistory}
         />,
-        { wrapper }
+        [theme, router]
       )
-      
-      expect(screen.getByText('Administrative adjustment for Test Organization')).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Administrative adjustment for Test Organization')
+      ).toBeInTheDocument()
     })
   })
 })
