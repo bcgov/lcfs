@@ -114,6 +114,27 @@ async def search_facility_locations(
 
 
 @router.get(
+    "/fuel-code-field-search",
+    response_model=List[str],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def search_fuel_code_field_options(
+    request: Request,
+    field: str = Query(
+        ..., description="FuelCode field to search: feedstock or feedstockLocation"
+    ),
+    query: str = Query("", description="Predictive-text search input"),
+    service: CIApplicationServices = Depends(),
+) -> List[str]:
+    """FuelCode-backed typeahead for proposed pathway text fields."""
+    logger.info("Searching CI FuelCode field options", field=field)
+    return await service.search_fuel_code_field_options(field, query)
+
+
+@router.get(
     "/analysts",
     response_model=list[CIApplicationUserSchema],
     status_code=status.HTTP_200_OK,

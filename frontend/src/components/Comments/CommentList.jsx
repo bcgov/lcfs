@@ -248,7 +248,7 @@ const CommentList = ({
             paddingLeft: '35px',
             marginTop: '0'
           },
-          'comment-content li': {
+          '.comment-content li': {
             lineHeight: '1.6'
           }
         }}
