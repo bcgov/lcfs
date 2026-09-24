@@ -1,17 +1,16 @@
 """Add project location to initiative agreement
 
 Revision ID: e1f2a3b4c5d6
-Revises: f3b5d7e9a1c4
-Create Date: 2026-09-15 10:00:00.000000
+Revises: 7cdd9e9a16c4
+Create Date: 2026-09-24 10:00:00
 
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-# revision identifiers, used by Alembic.
 revision = "e1f2a3b4c5d6"
-down_revision = "f3b5d7e9a1c4"
+down_revision = "7cdd9e9a16c4"
 branch_labels = None
 depends_on = None
 
@@ -23,9 +22,7 @@ def upgrade() -> None:
             "project_location",
             sa.Text(),
             nullable=True,
-            comment=(
-                "Project location"
-            ),
+            comment="Project location",
         ),
     )
 
