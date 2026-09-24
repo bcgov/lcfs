@@ -26,6 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.3.0
+        with:
+          node-version-file: frontend/.nvmrc
+
       - name: Build Backend Service
         run: docker build -t backend-service -f ./backend/Dockerfile ./backend
 
