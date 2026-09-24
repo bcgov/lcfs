@@ -40,7 +40,9 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
 const mockDocuments = vi.fn()
 vi.mock('@/hooks/useDocuments', () => ({
   useDocuments: () => mockDocuments(),
-  useDownloadDocument: () => vi.fn()
+  useDownloadDocument: () => vi.fn(),
+  // The document list's preview button (from develop) fetches through this.
+  useFetchDocument: () => vi.fn()
 }))
 
 const commentsProps = vi.fn()
