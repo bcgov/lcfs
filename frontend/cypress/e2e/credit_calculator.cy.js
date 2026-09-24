@@ -93,6 +93,44 @@ const lookupTableFixture = {
   ]
 }
 
+const calculatorDescription = [
+  'Use this calculator to estimate the compliance units that may be generated or required under the Low Carbon Fuel Standard (LCFS) in compliance reporting. By entering fuel and carbon intensity information, you can explore how different fuel supplies and scenarios may affect your compliance position.',
+  'The calculator is provided as an informational tool to support planning. Results are estimates only and do not represent an official compliance assessment or compliance unit balance. Official compliance outcomes are determined through the reporting and assessment processes established under the Low Carbon Fuels Act and associated regulations.'
+]
+
+const calculationDataDescription = [
+  'Use this table to identify the inputs used in LCFS compliance unit calculations. Search or filter the table to find the values that apply to a specific fuel and reporting scenario and use them as a reference when completing a calculation in the Compliance Unit Calculator. The examples shown on this page are based on prescribed or default carbon intensity values. For your own calculations, use the applicable fuel code and the corresponding values.',
+  'The example calculations generated from these inputs are for illustrative purposes only and do not represent an official compliance assessment or compliance unit balance. Official compliance outcomes are determined through reporting and assessment processes under the Low Carbon Fuels Act and associated regulations.'
+]
+
+const assertDescription = (paragraphs, nextContentSelector) => {
+  cy.getByDataTest('public-calculator-description')
+    .should('be.visible')
+    .within(() => {
+      cy.get('p').should('have.length', 2)
+      paragraphs.forEach((paragraph) => cy.contains('p', paragraph))
+    })
+    .then(($description) => {
+      const nextContent = $description[0].ownerDocument.querySelector(
+        nextContentSelector
+      )
+      expect(
+        $description[0].compareDocumentPosition(nextContent) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).to.equal(Node.DOCUMENT_POSITION_FOLLOWING)
+    })
+}
+
+const checkDescriptionAccessibility = () => {
+  cy.injectAxe()
+  cy.checkA11y('[data-test="public-calculator-description"]', {
+    runOnly: {
+      type: 'tag',
+      values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
+    }
+  })
+}
+
 // --- Intercept helpers -------------------------------------------------------
 
 // `pathname` regexes match the request path only (ignoring the `/api` base
@@ -161,8 +199,23 @@ describe('Public Credit Calculator and Calculation Data (#4089)', () => {
       // The protected login screen must never appear on a public page.
       cy.getByDataTest('login-container').should('not.exist')
       cy.contains('Compliance unit calculator').should('be.visible')
+      assertDescription(calculatorDescription, '#compliance-year')
+      checkDescriptionAccessibility()
       cy.get('#compliance-year').should('exist')
       cy.getByDataTest('quantity').should('exist')
+    })
+
+    it('reflows the description at 200% and 400% zoom-equivalent widths', () => {
+      for (const width of [640, 320]) {
+        cy.viewport(width, 800)
+        cy.getByDataTest('public-calculator-description')
+          .should('be.visible')
+          .then(($description) => {
+            expect($description[0].scrollWidth).to.be.at.most(
+              $description[0].clientWidth
+            )
+          })
+      }
     })
 
     it('cascades dropdowns: compliance year → fuel category → fuel type → end use/provision', () => {
@@ -261,6 +314,8 @@ describe('Public Credit Calculator and Calculation Data (#4089)', () => {
       cy.url().should('include', '/calculation-data')
       cy.getByDataTest('login-container').should('not.exist')
       cy.contains('Calculation data').should('be.visible')
+      assertDescription(calculationDataDescription, '.ag-root')
+      checkDescriptionAccessibility()
 
       // Both stubbed reference rows render in the grid.
       cy.get('.ag-center-cols-container .ag-row', { timeout: 15000 }).should(
@@ -269,6 +324,19 @@ describe('Public Credit Calculator and Calculation Data (#4089)', () => {
       )
       cy.contains('.ag-cell', 'Biodiesel').should('exist')
       cy.contains('.ag-cell', 'Ethanol').should('exist')
+    })
+
+    it('reflows the description at 200% and 400% zoom-equivalent widths', () => {
+      for (const width of [640, 320]) {
+        cy.viewport(width, 800)
+        cy.getByDataTest('public-calculator-description')
+          .should('be.visible')
+          .then(($description) => {
+            expect($description[0].scrollWidth).to.be.at.most(
+              $description[0].clientWidth
+            )
+          })
+      }
     })
 
     it('displays the expected reference columns (CI, TCI, EER, energy density)', () => {
