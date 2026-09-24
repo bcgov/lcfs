@@ -10,6 +10,7 @@ import {
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
 import { useDocuments, useDownloadDocument } from '@/hooks/useDocuments.js'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
   const { t } = useTranslation([
@@ -96,6 +97,14 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
                 >
                   {file.fileName}
                 </BCTypography>
+                <DocumentPreviewButton
+                  parentType={transactionType}
+                  parentID={
+                    transactionData.adminAdjustmentId ??
+                    transactionData.initiativeAgreementId
+                  }
+                  document={file}
+                />
               </ListItemButton>
             ))}
           </List>

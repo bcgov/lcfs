@@ -15,9 +15,10 @@ from sqlalchemy import (
     exists,
     text,
     bindparam,
+    update,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased, joinedload, selectinload
+from sqlalchemy.orm import aliased, contains_eager, joinedload, selectinload
 from typing import List, Optional, TypedDict, Type, Sequence
 
 from lcfs.db.base import ActionTypeEnum
@@ -48,7 +49,6 @@ from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.fuel.FuelCode import FuelCode
-from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.web.api.base import (
@@ -65,6 +65,7 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.role.schema import user_has_roles, is_government_user
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -81,23 +82,17 @@ class ComplianceReportRepository:
 
     def _get_base_report_options(self, include_transaction: bool = True):
         """
-        Get common joinedload options for compliance reports.
+        Get common eager-load options for compliance reports.
+
+        Many-to-one relationships are joined; the ``history`` collection is
+        loaded with a separate IN query (see ``_get_history_load_option``).
 
         Args:
             include_transaction: Whether to include transaction relationship (default: True)
         """
         options = [
-            joinedload(ComplianceReport.organization),
-            joinedload(ComplianceReport.compliance_period),
-            joinedload(ComplianceReport.current_status),
-            joinedload(ComplianceReport.summary),
-            joinedload(ComplianceReport.history).joinedload(
-                ComplianceReportHistory.status
-            ),
-            joinedload(ComplianceReport.history)
-            .joinedload(ComplianceReportHistory.user_profile)
-            .joinedload(UserProfile.organization),
-            joinedload(ComplianceReport.assigned_analyst),
+            *self._get_minimal_report_options(),
+            self._get_history_load_option(),
         ]
 
         if include_transaction:
@@ -105,9 +100,32 @@ class ComplianceReportRepository:
 
         return options
 
+    @staticmethod
+    def _get_history_load_option():
+        """
+        Load ``history`` with a second SELECT ... WHERE compliance_report_id IN (...)
+        instead of a LEFT OUTER JOIN on the report query.
+
+        ``history`` is the only collection on the report loaders. Joining it
+        repeated every report row (including the ~100-column summary) once per
+        history entry, and combined with the joined schedule collections in the
+        changelog query it produced a cartesian product. The many-to-one hops
+        off each history row cannot fan out, so they stay joined inside the
+        second query.
+        """
+        return selectinload(ComplianceReport.history).options(
+            joinedload(ComplianceReportHistory.status),
+            joinedload(ComplianceReportHistory.user_profile).joinedload(
+                UserProfile.organization
+            ),
+        )
+
     def _get_minimal_report_options(self):
         """
         Get minimal joinedload options for basic compliance report queries.
+
+        Every relationship here is many-to-one or one-to-one, so joining them
+        cannot multiply the report rows.
         """
         return [
             joinedload(ComplianceReport.organization),
@@ -209,8 +227,8 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def get_assessed_compliance_report_by_period(
-        self, organization_id: int, period: int, exclude_report_id: int = None
-    ):
+        self, organization_id: int, period: int, exclude_report_id: int | None = None
+    ) -> ComplianceReport | None:
         """
         Identify and retrieve the latest assessed compliance report of an organization for the given compliance period
         """
@@ -226,7 +244,76 @@ class ComplianceReportRepository:
         ]
 
         # Exclude the current report to avoid circular reference
-        if exclude_report_id:
+        if exclude_report_id is not None:
+            where_conditions.append(
+                ComplianceReport.compliance_report_id != exclude_report_id
+            )
+
+        result = (
+            (
+                await self.db.execute(
+                    select(ComplianceReport)
+                    # compliance_period and current_status are joined below
+                    # for the WHERE clause, so load them from those joins
+                    # rather than adding a second aliased copy of each table.
+                    .options(
+                        joinedload(ComplianceReport.organization),
+                        contains_eager(ComplianceReport.compliance_period),
+                        contains_eager(ComplianceReport.current_status),
+                        joinedload(ComplianceReport.summary),
+                        joinedload(ComplianceReport.assigned_analyst),
+                    )
+                    .join(
+                        CompliancePeriod,
+                        ComplianceReport.compliance_period_id
+                        == CompliancePeriod.compliance_period_id,
+                    )
+                    .join(
+                        ComplianceReportStatus,
+                        ComplianceReport.current_status_id
+                        == ComplianceReportStatus.compliance_report_status_id,
+                    )
+                    .where(and_(*where_conditions))
+                    .order_by(ComplianceReport.version.desc())
+                )
+            )
+            .unique()
+            .scalars()
+            .first()  # Gets the latest assessed report (excluding current)
+        )
+        return result
+
+    @repo_handler
+    async def get_prior_assessed_compliance_report_in_group(
+        self,
+        compliance_report_group_uuid: str,
+        organization_id: int,
+        period: int,
+        before_version: int,
+        exclude_report_id: int | None = None,
+    ) -> ComplianceReport | None:
+        """
+        Retrieve the latest assessed/exempted report in the same report group
+        before the current version.
+
+        This avoids treating a later assessed supplemental as the assessment
+        baseline for an earlier locked report in the same chain.
+        """
+        where_conditions = [
+            ComplianceReport.compliance_report_group_uuid
+            == compliance_report_group_uuid,
+            ComplianceReport.organization_id == organization_id,
+            CompliancePeriod.description == str(period),
+            ComplianceReport.version < before_version,
+            ComplianceReportStatus.status.in_(
+                [
+                    ComplianceReportStatusEnum.Assessed,
+                    ComplianceReportStatusEnum.Exempted,
+                ]
+            ),
+        ]
+
+        if exclude_report_id is not None:
             where_conditions.append(
                 ComplianceReport.compliance_report_id != exclude_report_id
             )
@@ -247,11 +334,6 @@ class ComplianceReportRepository:
                         == CompliancePeriod.compliance_period_id,
                     )
                     .join(
-                        Organization,
-                        ComplianceReport.organization_id
-                        == Organization.organization_id,
-                    )
-                    .join(
                         ComplianceReportStatus,
                         ComplianceReport.current_status_id
                         == ComplianceReportStatus.compliance_report_status_id,
@@ -267,7 +349,7 @@ class ComplianceReportRepository:
             )
             .unique()
             .scalars()
-            .first()  # Gets the latest assessed report (excluding current)
+            .first()
         )
         return result
 
@@ -427,7 +509,7 @@ class ComplianceReportRepository:
 
         is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
         is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
-        if not is_analyst and not is_supplier:
+        if not is_analyst:
             excluded_statuses.append(ComplianceReportStatusEnum.Analyst_adjustment)
 
         if not is_supplier:
@@ -783,18 +865,10 @@ class ComplianceReportRepository:
         result = await self.db.execute(
             select(ComplianceReport)
             .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.organization_snapshot),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history)
-                .joinedload(ComplianceReportHistory.user_profile)
-                .joinedload(UserProfile.organization),
-                joinedload(ComplianceReport.transaction),
+                *self._get_base_report_options(),
+                # organization_snapshot is a collection on the model; keep it
+                # out of the joined query so it cannot multiply rows.
+                selectinload(ComplianceReport.organization_snapshot),
             )
             .where(ComplianceReport.compliance_report_id == report_id)
         )
@@ -886,14 +960,10 @@ class ComplianceReportRepository:
         group_uuid, version, _ = anchor
         chain_report_ids = self._get_chain_report_ids_subquery(group_uuid, version)
 
-        latest_version_per_group = (
-            select(
-                model.group_uuid,
-                func.max(model.version).label("max_version"),
-            )
-            .where(model.compliance_report_id.in_(chain_report_ids))
-            .group_by(model.group_uuid)
-            .subquery()
+        latest_version_per_group = VersioningQueryHelper.latest_version_subquery(
+            model,
+            version_label="max_version",
+            where_clauses=[model.compliance_report_id.in_(chain_report_ids)],
         )
 
         latest_records = (
@@ -939,14 +1009,10 @@ class ComplianceReportRepository:
         group_uuid, version, _ = anchor
         chain_report_ids = self._get_chain_report_ids_subquery(group_uuid, version)
 
-        latest_version_per_group = (
-            select(
-                model.group_uuid,
-                func.max(model.version).label("max_version"),
-            )
-            .where(model.compliance_report_id.in_(chain_report_ids))
-            .group_by(model.group_uuid)
-            .subquery()
+        latest_version_per_group = VersioningQueryHelper.latest_version_subquery(
+            model,
+            version_label="max_version",
+            where_clauses=[model.compliance_report_id.in_(chain_report_ids)],
         )
 
         options = []
@@ -1548,6 +1614,77 @@ class ComplianceReportRepository:
         )
         return result.scalars().first()
 
+    async def _reassign_internal_comments(self, compliance_report_id: int) -> None:
+        """
+        Move a report's internal comment links to the newest surviving version of
+        the same chain before the report itself is deleted (#5087).
+
+        Internal comments are the record of a report's review history, so they have
+        to outlive the version they happened to be written on: deleting an analyst
+        adjustment used to take the recommend and return comments with it. Comment
+        reads already span the whole chain (``get_related_compliance_report_ids``),
+        so re-pointing the association is enough for the comments to keep showing.
+
+        When no other version survives there is nothing left to hold the links, so
+        they are deleted as before.
+        """
+        group_uuid = await self.db.scalar(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
+        )
+
+        target_id = None
+        if group_uuid:
+            target_id = await self.db.scalar(
+                select(ComplianceReport.compliance_report_id)
+                .where(
+                    ComplianceReport.compliance_report_group_uuid == group_uuid,
+                    ComplianceReport.compliance_report_id != compliance_report_id,
+                )
+                .order_by(ComplianceReport.version.desc())
+                .limit(1)
+            )
+
+        if target_id is None:
+            await self.db.execute(
+                delete(ComplianceReportInternalComment).where(
+                    ComplianceReportInternalComment.compliance_report_id
+                    == compliance_report_id
+                )
+            )
+            return
+
+        # The composite primary key allows one row per (report, comment) pair, so
+        # drop any link the target already holds before re-pointing the rest.
+        already_linked = select(
+            ComplianceReportInternalComment.internal_comment_id
+        ).where(ComplianceReportInternalComment.compliance_report_id == target_id)
+        await self.db.execute(
+            delete(ComplianceReportInternalComment).where(
+                ComplianceReportInternalComment.compliance_report_id
+                == compliance_report_id,
+                ComplianceReportInternalComment.internal_comment_id.in_(already_linked),
+            )
+        )
+
+        result = await self.db.execute(
+            update(ComplianceReportInternalComment)
+            .where(
+                ComplianceReportInternalComment.compliance_report_id
+                == compliance_report_id
+            )
+            .values(
+                compliance_report_id=target_id,
+                compliance_report_group_uuid=group_uuid,
+            )
+        )
+        if result.rowcount:
+            logger.info(
+                f"Moved {result.rowcount} internal comment(s) from compliance report "
+                f"{compliance_report_id} to {target_id} before deletion"
+            )
+
     @repo_handler
     async def delete_compliance_report(self, compliance_report_id: int) -> bool:
         """
@@ -1556,7 +1693,8 @@ class ComplianceReportRepository:
         This performs a cascading delete of all related entities including:
         - ComplianceReportSummary
         - ComplianceReportHistory
-        - ComplianceReportInternalComment
+        - ComplianceReportInternalComment (moved to a surviving version when the
+          chain has one, rather than deleted - see _reassign_internal_comments)
         - NotionalTransfer
         - FuelSupply
         - FuelExport
@@ -1566,6 +1704,10 @@ class ComplianceReportRepository:
         - ComplianceReportOrganizationSnapshot
         - Document associations
         """
+        # Internal comments are preserved on a surviving version of the chain
+        # where possible, so this runs before (and instead of) deleting them.
+        await self._reassign_internal_comments(compliance_report_id)
+
         # Create a list of delete operations
         delete_operations = [
             # Child tables with no interdependencies
@@ -1589,12 +1731,6 @@ class ComplianceReportRepository:
             self.db.execute(
                 delete(ComplianceReportHistory).where(
                     ComplianceReportHistory.compliance_report_id == compliance_report_id
-                )
-            ),
-            self.db.execute(
-                delete(ComplianceReportInternalComment).where(
-                    ComplianceReportInternalComment.compliance_report_id
-                    == compliance_report_id
                 )
             ),
             self.db.execute(
@@ -1778,28 +1914,21 @@ class ComplianceReportRepository:
                 select(ComplianceReport)
                 .where(and_(*query_conditions))
                 .options(
-                    joinedload(ComplianceReport.organization),
-                    joinedload(ComplianceReport.compliance_period),
-                    joinedload(ComplianceReport.current_status),
-                    joinedload(ComplianceReport.summary),
-                    joinedload(ComplianceReport.history).joinedload(
-                        ComplianceReportHistory.status
-                    ),
-                    joinedload(ComplianceReport.history)
-                    .joinedload(ComplianceReportHistory.user_profile)
-                    .joinedload(UserProfile.organization),
-                    joinedload(ComplianceReport.transaction),
-                    # Load the base schedule relationships first
+                    *self._get_base_report_options(),
+                    # Each schedule collection is loaded with its own IN query.
+                    # Joining it alongside history multiplied the row count by
+                    # (history entries x schedule rows) per report. The
+                    # sub-relationships are many-to-one and stay joined inside
+                    # that IN query.
                     *[
-                        joinedload(getattr(ComplianceReport, rel))
-                        for rel in schedule_relationships
-                    ],
-                    # Then load their sub-relationships
-                    *[
-                        joinedload(getattr(ComplianceReport, rel)).joinedload(
-                            getattr(model, sub_rel)
+                        selectinload(getattr(ComplianceReport, rel)).options(
+                            *[
+                                joinedload(getattr(model, sub_rel))
+                                for parent_rel, sub_rel in relationships
+                                if parent_rel == rel
+                            ]
                         )
-                        for rel, sub_rel in relationships
+                        for rel in schedule_relationships
                     ],
                 )
                 .order_by(ComplianceReport.version.desc())
