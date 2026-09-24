@@ -88,11 +88,9 @@ class OrganizationsService:
             custom_filters={
                 "has_early_issuance": self._early_issuance_filter,
                 "registration_status": self._registration_status_filter,
-                "org_type": lambda f: apply_filter_conditions(
-                    get_field_for_filter(OrganizationType, "org_type"),
-                    f.filter,
-                    f.type,
-                    f.filter_type,
+                # Has-type semantics across the organization's types (#4565)
+                "org_type": lambda f: Organization.org_types.any(
+                    OrganizationType.org_type == f.filter
                 ),
                 "status": lambda f: apply_filter_conditions(
                     get_field_for_filter(OrganizationStatus, "status"),
