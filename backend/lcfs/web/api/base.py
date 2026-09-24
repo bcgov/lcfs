@@ -461,14 +461,14 @@ class PaginatedQueryBuilder:
                         continue
                     filter_value = filter_model.date_from
 
-            conditions.append(
-                apply_filter_conditions(
-                    self._field(filter_model.field),
-                    filter_value,
-                    filter_model.type,
-                    filter_model.filter_type,
-                )
+            condition = apply_filter_conditions(
+                self._field(filter_model.field),
+                filter_value,
+                filter_model.type,
+                filter_model.filter_type,
             )
+            if condition is not None:
+                conditions.append(condition)
         return conditions
 
     def apply_filters(self, query, filters: List["FilterModel"]):
