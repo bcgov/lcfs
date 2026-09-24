@@ -15,6 +15,7 @@ import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 import RenameableFileName from '@/components/Documents/RenameableFileName'
 import {
   useDeleteDocument,
@@ -203,19 +204,33 @@ export const DocumentsModellingStep = ({
                     {formatDate(doc.createDate)}
                   </BCTypography>
                   {!readOnly && (
-                    <Tooltip title={t('common:deleteBtn')}>
-                      <span>
-                        <IconButton
-                          aria-label="delete document"
-                          size="small"
-                          onClick={() => handleDeleteClick(doc)}
-                          disabled={isDeletingDoc}
-                          data-test="ci-step3-delete-doc"
-                        >
-                          <DeleteIcon fontSize="small" color="error" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <DocumentPreviewButton
+                        parentType={PARENT_TYPE}
+                        parentID={ciApplicationId}
+                        document={doc}
+                      />
+                      <Tooltip title={t('common:deleteBtn')}>
+                        <span>
+                          <IconButton
+                            aria-label="delete document"
+                            size="small"
+                            onClick={() => handleDeleteClick(doc)}
+                            disabled={isDeletingDoc}
+                            data-test="ci-step3-delete-doc"
+                          >
+                            <DeleteIcon fontSize="small" color="error" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Box>
+                  )}
+                  {readOnly && (
+                    <DocumentPreviewButton
+                      parentType={PARENT_TYPE}
+                      parentID={ciApplicationId}
+                      document={doc}
+                    />
                   )}
                 </Box>
               )

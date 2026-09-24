@@ -18,6 +18,15 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDownloadDocument: () => vi.fn()
 }))
 
+vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
+  __esModule: true,
+  default: ({ document }) => (
+    <button type="button" data-test="document-preview-button">
+      Preview document
+    </button>
+  )
+}))
+
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   __esModule: true,
   default: ({ open, close }) =>

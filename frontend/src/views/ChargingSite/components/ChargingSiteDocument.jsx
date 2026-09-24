@@ -16,6 +16,7 @@ import { timezoneFormatter } from '@/utils/formatters'
 import { useParams } from 'react-router-dom'
 import { useDownloadDocument } from '@/hooks/useDocuments'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 const accordionStyles = {
   '& .Mui-disabled': {
@@ -126,6 +127,11 @@ export const ChargingSiteDocument = ({ attachments }) => {
                   >
                     {file.fileName}
                   </BCTypography>
+                  <DocumentPreviewButton
+                    parentType="charging_site"
+                    parentID={siteId}
+                    document={file}
+                  />
                   <BCTypography
                     component="span"
                     variant="subtitle2"

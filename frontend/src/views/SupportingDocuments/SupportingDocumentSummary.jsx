@@ -4,6 +4,7 @@ import BCTypography from '@/components/BCTypography'
 import { useDownloadDocument } from '@/hooks/useDocuments.js'
 import { timezoneFormatter } from '@/utils/formatters'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 export const SupportingDocumentSummary = ({ parentID, parentType, data }) => {
   const downloadDocument = useDownloadDocument(parentType, parentID)
@@ -33,6 +34,11 @@ export const SupportingDocumentSummary = ({ parentID, parentType, data }) => {
             >
               {file.fileName}
             </BCTypography>
+            <DocumentPreviewButton
+              parentType={parentType}
+              parentID={parentID}
+              document={file}
+            />
             <BCTypography
               component="span"
               variant="subtitle2"

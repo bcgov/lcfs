@@ -27,6 +27,15 @@ vi.mock('@/hooks/useDocuments.js', () => ({
   useDownloadDocument: mockUseDownloadDocument
 }))
 
+vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
+  __esModule: true,
+  default: ({ document }) => (
+    <button type="button" data-test="document-preview-button">
+      Preview document
+    </button>
+  )
+}))
+
 vi.mock('@/utils/formatters', () => ({
   numberFormatter: mockNumberFormatter
 }))
