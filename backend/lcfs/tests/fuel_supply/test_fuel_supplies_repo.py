@@ -301,9 +301,7 @@ async def test_get_fuel_supply_table_options_excludes_other_fuel_types_pre_2024(
     mock_db_session.execute = mock_execute
 
     def compiled_sql():
-        return str(
-            captured["query"].compile(compile_kwargs={"literal_binds": True})
-        )
+        return str(captured["query"].compile(compile_kwargs={"literal_binds": True}))
 
     # Pre-2024: exclusion clause for both "Other" fuel types must be present
     await fuel_supply_repo.get_fuel_supply_table_options("2023")
@@ -336,9 +334,7 @@ async def test_get_fuel_supply_table_options_legacy_petroleum_provision_by_categ
     mock_db_session.execute = mock_execute
 
     await fuel_supply_repo.get_fuel_supply_table_options("2020")
-    legacy_sql = str(
-        captured["query"].compile(compile_kwargs={"literal_binds": True})
-    )
+    legacy_sql = str(captured["query"].compile(compile_kwargs={"literal_binds": True}))
 
     # The category-aware pairing is present: Gasoline -> 4, Diesel -> 5.
     assert "category = 'Gasoline'" in legacy_sql
@@ -737,9 +733,7 @@ async def test_get_organization_fuel_supply_analytics_filters_no_duplicate_join(
 
     for field in ("fuelType", "fuelCategory", "provisionOfTheAct", "fuelCode"):
         filters = [
-            FilterModel(
-                field=field, filter="x", type="contains", filter_type="text"
-            )
+            FilterModel(field=field, filter="x", type="contains", filter_type="text")
         ]
 
         # Analytics (charts) path.
@@ -751,8 +745,66 @@ async def test_get_organization_fuel_supply_analytics_filters_no_duplicate_join(
         pagination = PaginationRequestSchema(
             page=1, size=10, filters=filters, sort_orders=[]
         )
-        rows, total = await repo.get_organization_fuel_supply_paginated(
-            1, pagination
-        )
+        rows, total = await repo.get_organization_fuel_supply_paginated(1, pagination)
         assert isinstance(rows, list)
         assert isinstance(total, int)
+
+
+def test_renewable_liquid_fuel_grouping_rules():
+    """Renewable vs non-renewable chart includes only liquid target fuels."""
+    from types import SimpleNamespace
+
+    from lcfs.web.api.fuel_supply.repo import (
+        _get_renewable_liquid_fuel_category_label,
+        _get_renewable_liquid_fuel_group,
+    )
+
+    def fuel_supply(fuel_type, category, renewable=True, unit_name="Litres"):
+        unit_value = "L" if unit_name == "Litres" else "kWh"
+        return SimpleNamespace(
+            fuel_type=SimpleNamespace(
+                fuel_type=fuel_type,
+                renewable=renewable,
+                units=SimpleNamespace(name=unit_name, value=unit_value),
+            ),
+            fuel_category=SimpleNamespace(category=category),
+        )
+
+    renewable_gasoline_fuels = [
+        "Renewable gasoline",
+        "Ethanol",
+        "Renewable naphtha",
+    ]
+    for fuel_type in renewable_gasoline_fuels:
+        supply = fuel_supply(fuel_type, "Gasoline")
+        assert _get_renewable_liquid_fuel_group(supply) == "Renewable"
+        assert _get_renewable_liquid_fuel_category_label(supply) == "Renewable gasoline"
+
+    renewable_diesel_fuels = ["Biodiesel", "HDRD", "Other diesel fuel"]
+    for fuel_type in renewable_diesel_fuels:
+        supply = fuel_supply(fuel_type, "Diesel")
+        assert _get_renewable_liquid_fuel_group(supply) == "Renewable"
+        assert _get_renewable_liquid_fuel_category_label(supply) == "Renewable diesel"
+
+    renewable_jet = fuel_supply("Alternative jet fuel", "Jet fuel")
+    assert _get_renewable_liquid_fuel_group(renewable_jet) == "Renewable"
+    assert (
+        _get_renewable_liquid_fuel_category_label(renewable_jet) == "Renewable jet fuel"
+    )
+
+    non_renewable_diesel = fuel_supply(
+        "Fossil-derived diesel", "Diesel", renewable=False
+    )
+    assert _get_renewable_liquid_fuel_group(non_renewable_diesel) == "Non-renewable"
+    assert (
+        _get_renewable_liquid_fuel_category_label(non_renewable_diesel)
+        == "Non-renewable diesel"
+    )
+
+    electricity = fuel_supply("Electricity", "Diesel", unit_name="Kilowatt_hour")
+    assert _get_renewable_liquid_fuel_group(electricity) is None
+    assert _get_renewable_liquid_fuel_category_label(electricity) is None
+
+    propane = fuel_supply("Propane", "Other", renewable=False)
+    assert _get_renewable_liquid_fuel_group(propane) is None
+    assert _get_renewable_liquid_fuel_category_label(propane) is None

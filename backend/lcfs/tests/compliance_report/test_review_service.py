@@ -167,6 +167,80 @@ def test_fse_usage_utilization_series_hides_when_no_usage_or_utilization_data():
     assert "FSE equipment counts" in titles
 
 
+def test_renewable_liquid_fuel_volume_series_uses_liquid_target_fuels_only():
+    service = _service()
+
+    def fuel_supply(fuel_type, category, quantity, renewable, unit):
+        return SimpleNamespace(
+            fuel_type=SimpleNamespace(fuel_type=fuel_type, renewable=renewable),
+            fuel_category=SimpleNamespace(category=category),
+            quantity=quantity,
+            q1_quantity=None,
+            q2_quantity=None,
+            q3_quantity=None,
+            q4_quantity=None,
+            units=unit,
+        )
+
+    current = {
+        "fuel_supplies": [
+            fuel_supply("Ethanol", "Gasoline", 1000, True, QuantityUnitsEnum.Litres),
+            fuel_supply("HDRD", "Diesel", 2000, True, QuantityUnitsEnum.Litres),
+            fuel_supply(
+                "Alternative jet fuel",
+                "Jet fuel",
+                3000,
+                True,
+                QuantityUnitsEnum.Litres,
+            ),
+            fuel_supply(
+                "Fossil-derived gasoline",
+                "Gasoline",
+                4000,
+                False,
+                QuantityUnitsEnum.Litres,
+            ),
+            fuel_supply(
+                "Electricity",
+                "Diesel",
+                5000,
+                True,
+                QuantityUnitsEnum.Kilowatt_hour,
+            ),
+            fuel_supply("Propane", "Other", 6000, False, QuantityUnitsEnum.Litres),
+        ]
+    }
+    prior = {
+        "fuel_supplies": [
+            fuel_supply("Biodiesel", "Diesel", 250, True, QuantityUnitsEnum.Litres),
+            fuel_supply(
+                "Fossil-derived diesel",
+                "Diesel",
+                750,
+                False,
+                QuantityUnitsEnum.Litres,
+            ),
+        ]
+    }
+    prior_report = SimpleNamespace(
+        compliance_period=SimpleNamespace(description="2024")
+    )
+
+    series = service._build_renewable_liquid_fuel_volume_series(
+        current,
+        [(prior_report, prior)],
+        "2025",
+    )
+
+    assert len(series) == 1
+    assert series[0].title == "Renewable vs non-renewable liquid fuel supply"
+    points = {point.label: point for point in series[0].points}
+    assert points["Renewable"].current_value == 6000
+    assert points["Renewable"].comparison_value == 250
+    assert points["Non-renewable"].current_value == 4000
+    assert points["Non-renewable"].comparison_value == 750
+
+
 def test_supplemental_line_20_finding_uses_magnitude_gap_delta():
     service = _service()
     current_summary = SimpleNamespace(

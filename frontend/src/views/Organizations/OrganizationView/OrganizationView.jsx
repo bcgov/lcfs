@@ -3,13 +3,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
-import { OrganizationDetailsCard } from './OrganizationDetailsCard'
-import { OrganizationUsers } from './OrganizationUsers'
-import { CreditLedger } from './CreditLedger'
-import { PenaltyLog } from './components/PenaltyLog/PenaltyLog'
-import PenaltyLogManage from './components/PenaltyLog/PenaltyLogManage'
-import SupplyHistory from './components/SupplyHistory'
-import ComplianceTracking from './components/ComplianceTracking'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import {
@@ -19,19 +12,8 @@ import {
 import { useOrganization } from '@/hooks/useOrganization'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 import { AppBar, Tab, Tabs } from '@mui/material'
-
-function TabPanel({ children, value, index }) {
-  return (
-    <BCBox
-      role="tabpanel"
-      hidden={value !== index}
-      id={`organization-tabpanel-${index}`}
-      aria-labelledby={`organization-tab-${index}`}
-    >
-      {value === index && children}
-    </BCBox>
-  )
-}
+import { useTranslation } from 'react-i18next'
+import OrganizationList from '@/views/Transactions/components/OrganizationList'
 
 function a11yProps(index) {
   return {
@@ -43,6 +25,7 @@ function a11yProps(index) {
 export const OrganizationView = ({ addMode = false }) => {
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useTranslation(['org'])
   const { orgID } = useParams()
   const [alert, setAlert] = useState(null)
 
@@ -106,6 +89,26 @@ export const OrganizationView = ({ addMode = false }) => {
       navigate(targetPath)
     }
   }
+
+  const handleOrganizationChange = useCallback(
+    ({ id }) => {
+      if (!id) {
+        return
+      }
+
+      const currentPath = location.pathname || ''
+      const nextPath =
+        organizationId && currentPath.includes(`/organizations/${organizationId}`)
+          ? currentPath.replace(
+              `/organizations/${organizationId}`,
+              `/organizations/${id}`
+            )
+          : orgDashboardRoutes(String(id), true)[0]?.path
+
+      navigate(nextPath)
+    },
+    [location.pathname, navigate, organizationId]
+  )
 
   // Render content based on current route
   const renderContent = useCallback(() => {
@@ -194,10 +197,34 @@ export const OrganizationView = ({ addMode = false }) => {
             ))}
           </Tabs>
         </AppBar>
-        {organizationTitle && (
-          <BCTypography variant="h5" color="primary" mt={3}>
-            {organizationTitle}
-          </BCTypography>
+        {(organizationTitle || showOrganizationHeader) && (
+          <BCBox
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              alignItems: { xs: 'flex-start', md: 'center' },
+              justifyContent: 'space-between',
+              gap: 2,
+              mt: 3
+            }}
+          >
+            {organizationTitle && (
+              <BCTypography variant="h5" color="primary">
+                {organizationTitle}
+              </BCTypography>
+            )}
+            {showOrganizationHeader && (
+              <OrganizationList
+                selectedOrg={{ id: organizationId }}
+                onOrgChange={handleOrganizationChange}
+                onlyRegistered={false}
+                includeAllOption={false}
+                label={t('org:supplyHistory.showOrganization')}
+                placeholder={t('org:supplyHistory.selectOrganization')}
+                showSelectedLabel={false}
+              />
+            )}
+          </BCBox>
         )}
         <BCBox sx={{ pt: 3 }}>{renderContent()}</BCBox>
       </BCBox>

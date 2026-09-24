@@ -378,6 +378,9 @@ class ComplianceReportReviewChartDataSchema(BaseSchema):
     historical_variance: List[ComplianceReportReviewComparisonSeriesSchema] = Field(
         default_factory=list
     )
+    renewable_liquid_fuel_volume: List[ComplianceReportReviewComparisonSeriesSchema] = (
+        Field(default_factory=list)
+    )
     supplemental_impact: List[ComplianceReportReviewComparisonSeriesSchema] = Field(
         default_factory=list
     )
