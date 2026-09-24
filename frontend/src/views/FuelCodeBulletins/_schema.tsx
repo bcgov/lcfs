@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { ColDef } from '@ag-grid-community/core'
+import { ColDef } from 'ag-grid-community'
 import { TFunction } from 'i18next'
 import { Link } from 'react-router-dom'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components'
