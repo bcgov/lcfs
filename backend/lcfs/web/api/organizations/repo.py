@@ -345,7 +345,7 @@ class OrganizationsRepository:
             custom_sorts={
                 "status": OrganizationStatus.status,
                 "org_type": OrganizationType.description,
-                "registrationStatus": registration_case,
+                "registration_status": registration_case,
                 "has_early_issuance": (
                     lambda order: (
                         OrganizationEarlyIssuanceByYear.has_early_issuance
