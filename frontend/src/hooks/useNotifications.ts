@@ -67,6 +67,31 @@ export const useDeleteNotificationMessages = (options: ExtMutationOptions<unknow
   })
 }
 
+export const useTargetUserNotificationSubscriptions = (
+  userId: number | null | undefined,
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['notification-subscriptions-user-v2', userId],
+    queryFn: async () => {
+      if (!userId) return []
+      try {
+        const response = await client.get(
+          `${apiRoutes.getUserNotificationSubscriptions}/${userId}`
+        )
+        return response.data
+      } catch (error) {
+        if ((error as any).response?.status === 404) return []
+        throw error
+      }
+    },
+    enabled: !!userId,
+    staleTime: 0,
+    ...options
+  })
+}
+
 export const useNotificationSubscriptions = (options: QueryOptions<unknown>) => {
   const client = useApiService()
   return useQuery({
