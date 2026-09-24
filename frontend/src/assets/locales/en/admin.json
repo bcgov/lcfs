@@ -109,6 +109,24 @@
     "notSafe": "User cannot be deleted due to existing activities.",
     "success": "User has been successfully deleted."
   },
+  "impactModal": {
+    "titleNew": "Confirm new user",
+    "titleEdit": "Review changes",
+    "currentLabel": "Current",
+    "afterLabel": "After",
+    "accountStatus": "Status",
+    "assignedRoles": "Roles",
+    "sectionNotifications": "Notification impact",
+    "noNotifChanges": "No notification changes for this role assignment.",
+    "notificationReviewAdvice": "Review notification preferences after saving —",
+    "notificationSettingsLink": "Notification Configuration",
+    "notificationSettingsLinkAriaLabel": "Open Notification Configuration (opens in new tab)",
+    "deactivateWarning": "Deactivating removes all notification subscriptions and may leave assigned reports or transfers without an active owner.",
+    "noRoleStatusChanges": "No role or status changes — only profile information will be updated.",
+    "backBtn": "Back",
+    "confirmBtnNew": "Create user",
+    "confirmBtnEdit": "Confirm changes"
+  },
   "editSuccessMessage": "User has been updated successfully.",
   "createSuccessMessage": "User has been created successfully.",
   "releaseNotesAdmin": {
