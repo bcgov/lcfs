@@ -3,9 +3,12 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Create comprehensive mocks
-vi.mock('@mui/material', () => ({
-  FormControl: ({ children }) => <div role="group" data-test="form-control">{children}</div>,
-  Select: ({ children, onChange, value, 'aria-label': ariaLabel, displayEmpty, variant, sx, ...props }) => (
+vi.mock('@mui/material/FormControl', () => ({
+    default: ({ children }) => <div role="group" data-test="form-control">{children}</div>
+}))
+
+vi.mock('@mui/material/Select', () => ({
+    default: ({ children, onChange, value, 'aria-label': ariaLabel, displayEmpty, variant, sx, ...props }) => (
     <select
       role="combobox"
       value={value}
@@ -16,13 +19,19 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </select>
-  ),
-  MenuItem: ({ children, value, disabled, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/MenuItem', () => ({
+    default: ({ children, value, disabled, ...props }) => (
     <option value={value} disabled={disabled} {...props}>
       {children}
     </option>
-  ),
-  IconButton: ({ children, onClick, disabled, color, size, 'aria-label': ariaLabel, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/IconButton', () => ({
+    default: ({ children, onClick, disabled, color, size, 'aria-label': ariaLabel, ...props }) => (
     <button 
       onClick={onClick} 
       disabled={disabled} 
@@ -34,30 +43,60 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </button>
-  ),
-  Dialog: ({ open, children, onClose }) =>
+  )
+}))
+
+vi.mock('@mui/material/Dialog', () => ({
+    default: ({ open, children, onClose }) =>
     open ? (
       <div role="dialog" data-test="dialog" onKeyDown={(e) => e.key === 'Escape' && onClose?.()}>
         {children}
       </div>
-    ) : null,
-  DialogActions: ({ children }) => <div data-test="dialog-actions">{children}</div>,
-  DialogContent: ({ children }) => <div data-test="dialog-content">{children}</div>,
-  DialogContentText: ({ children }) => <div data-test="dialog-content-text">{children}</div>,
-  DialogTitle: ({ children }) => <div data-test="dialog-title">{children}</div>,
-  Box: ({ children, sx }) => <div data-test="box" style={sx}>{children}</div>,
-  Skeleton: ({ variant, width, height }) => (
+    ) : null
+}))
+
+vi.mock('@mui/material/DialogActions', () => ({
+    default: ({ children }) => <div data-test="dialog-actions">{children}</div>
+}))
+
+vi.mock('@mui/material/DialogContent', () => ({
+    default: ({ children }) => <div data-test="dialog-content">{children}</div>
+}))
+
+vi.mock('@mui/material/DialogContentText', () => ({
+    default: ({ children }) => <div data-test="dialog-content-text">{children}</div>
+}))
+
+vi.mock('@mui/material/DialogTitle', () => ({
+    default: ({ children }) => <div data-test="dialog-title">{children}</div>
+}))
+
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children, sx }) => <div data-test="box" style={sx}>{children}</div>
+}))
+
+vi.mock('@mui/material/Skeleton', () => ({
+    default: ({ variant, width, height }) => (
     <div data-test="skeleton" data-variant={variant} style={{ width, height }}>
       Loading...
     </div>
   )
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  ContentCopy: () => <span data-test="copy-icon">Copy</span>,
-  Refresh: () => <span data-test="refresh-icon">Refresh</span>,
-  AddCircleOutline: () => <span data-test="add-icon">Add</span>,
-  Warning: () => <span data-test="warning-icon">Warning</span>
+vi.mock('@mui/icons-material/ContentCopy', () => ({
+    default: () => <span data-test="copy-icon">Copy</span>
+}))
+
+vi.mock('@mui/icons-material/Refresh', () => ({
+    default: () => <span data-test="refresh-icon">Refresh</span>
+}))
+
+vi.mock('@mui/icons-material/AddCircleOutline', () => ({
+    default: () => <span data-test="add-icon">Add</span>
+}))
+
+vi.mock('@mui/icons-material/Warning', () => ({
+    default: () => <span data-test="warning-icon">Warning</span>
 }))
 
 vi.mock('@/components/BCBox', () => ({

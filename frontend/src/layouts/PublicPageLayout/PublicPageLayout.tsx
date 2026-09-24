@@ -1,5 +1,6 @@
 import { Outlet, useMatches } from 'react-router-dom'
-import { Container, Stack } from '@mui/material'
+import Container from '@mui/material/Container'
+import Stack from '@mui/material/Stack'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 import Footer from '@/components/Footer'

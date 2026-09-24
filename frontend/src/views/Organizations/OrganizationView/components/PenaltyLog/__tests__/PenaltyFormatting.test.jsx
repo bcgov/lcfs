@@ -24,10 +24,16 @@ vi.mock('@/components/BCDataGrid/columns', () => ({
   validation: {}
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  AutocompleteCellEditor: () => null,
-  BCSelectFloatingFilter: () => null,
-  RequiredHeader: () => null
+vi.mock('@/components/BCDataGrid/components/Editors/AutocompleteCellEditor', () => ({
+    AutocompleteCellEditor: () => null
+}))
+
+vi.mock('@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter', () => ({
+    BCSelectFloatingFilter: () => null
+}))
+
+vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
+    RequiredHeader: () => null
 }))
 
 vi.mock('@/utils/grid/eventHandlers', () => ({

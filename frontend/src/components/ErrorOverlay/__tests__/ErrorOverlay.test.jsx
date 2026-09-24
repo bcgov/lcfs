@@ -24,12 +24,15 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Box: ({ children, onClick, sx, component, ...props }) => {
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children, onClick, sx, component, ...props }) => {
     const Component = component || 'div'
     return <Component onClick={onClick} {...props}>{children}</Component>
-  },
-  IconButton: ({ children, onClick, 'aria-label': ariaLabel, size, sx, ...props }) => (
+  }
+}))
+
+vi.mock('@mui/material/IconButton', () => ({
+    default: ({ children, onClick, 'aria-label': ariaLabel, size, sx, ...props }) => (
     <button onClick={onClick} aria-label={ariaLabel} {...props}>
       {children}
     </button>

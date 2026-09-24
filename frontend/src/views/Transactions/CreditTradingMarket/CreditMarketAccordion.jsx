@@ -1,11 +1,9 @@
 import React, { useState } from 'react'
-import {
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Box
-} from '@mui/material'
-import { ExpandMore } from '@mui/icons-material'
+import Accordion from '@mui/material/Accordion'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import Box from '@mui/material/Box'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 

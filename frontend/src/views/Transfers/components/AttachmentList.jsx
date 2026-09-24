@@ -1,8 +1,10 @@
 import PropTypes from 'prop-types'
 import BCBox from '@/components/BCBox'
-import { List, ListItemButton, ListItemText } from '@mui/material'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import ListItemText from '@mui/material/ListItemText'
 import BCTypography from '@/components/BCTypography'
-import { AttachFile } from '@mui/icons-material'
+import AttachFile from '@mui/icons-material/AttachFile'
 
 export const AttachmentList = ({ attachments = [] }) => {
   return (

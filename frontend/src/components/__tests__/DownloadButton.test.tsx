@@ -48,8 +48,8 @@ vi.mock('@fortawesome/free-solid-svg-icons', () => ({
 }))
 
 // Mock Material-UI CircularProgress
-vi.mock('@mui/material', () => ({
-  CircularProgress: vi.fn(({ size }) => (
+vi.mock('@mui/material/CircularProgress', () => ({
+    default: vi.fn(({ size }) => (
     <div data-test="circular-progress" data-size={size}>Loading...</div>
   ))
 }))

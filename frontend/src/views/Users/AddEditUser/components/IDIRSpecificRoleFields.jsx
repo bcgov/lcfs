@@ -1,14 +1,13 @@
-import {
-  Box,
-  Button,
-  FormControl,
-  FormControlLabel,
-  Radio,
-  RadioGroup
-} from '@mui/material'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
 import { Controller } from 'react-hook-form'
 import BCTypography from '@/components/BCTypography'
-import { BCFormCheckbox, BCFormRadio } from '@/components/BCForm'
+import { BCFormCheckbox } from '@/components/BCForm/BCFormCheckbox'
+import { BCFormRadio } from '@/components/BCForm/BCFormRadio'
 import { CustomLabel } from '@/components/BCForm/CustomLabel'
 import { roles } from '@/constants/roles'
 import { adminRoleOptions, iaRoleOptions } from '../_schema'

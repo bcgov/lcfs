@@ -29,14 +29,20 @@ vi.mock('@/components/Loading', () => ({
   default: ({ message }) => <div data-test="loading">{message}</div>
 }))
 
-vi.mock('@mui/material', () => ({
-  Box: ({ children, paddingTop, paddingBottom, flexDirection, alignItems, justifyContent, ...domProps }) => <div data-test="box" {...domProps}>{children}</div>,
-  Tooltip: ({ children, title }) => <div data-test="tooltip" title={title}>{children}</div>,
-  Fade: () => <div data-test="fade" />
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children, paddingTop, paddingBottom, flexDirection, alignItems, justifyContent, ...domProps }) => <div data-test="box" {...domProps}>{children}</div>
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  Info: () => <div data-test="info-icon" />
+vi.mock('@mui/material/Tooltip', () => ({
+    default: ({ children, title }) => <div data-test="tooltip" title={title}>{children}</div>
+}))
+
+vi.mock('@mui/material/Fade', () => ({
+    default: () => <div data-test="fade" />
+}))
+
+vi.mock('@mui/icons-material/Info', () => ({
+    default: () => <div data-test="info-icon" />
 }))
 
 describe('OrgBalanceCard', () => {

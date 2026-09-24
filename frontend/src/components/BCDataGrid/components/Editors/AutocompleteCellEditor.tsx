@@ -8,16 +8,15 @@ import React, {
 } from 'react'
 import type { ClipboardEvent, FocusEvent, KeyboardEvent } from 'react'
 import PropTypes from 'prop-types'
-import {
-  Autocomplete,
-  TextField,
-  Checkbox,
-  Box,
-  Chip,
-  Stack,
-  Divider
-} from '@mui/material'
-import { CheckBox, CheckBoxOutlineBlank } from '@mui/icons-material'
+import Autocomplete from '@mui/material/Autocomplete'
+import TextField from '@mui/material/TextField'
+import Checkbox from '@mui/material/Checkbox'
+import Box from '@mui/material/Box'
+import Chip from '@mui/material/Chip'
+import Stack from '@mui/material/Stack'
+import Divider from '@mui/material/Divider'
+import CheckBox from '@mui/icons-material/CheckBox'
+import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank'
 
 const icon = <CheckBoxOutlineBlank fontSize="medium" />
 const checkedIcon = <CheckBox fontSize="medium" />

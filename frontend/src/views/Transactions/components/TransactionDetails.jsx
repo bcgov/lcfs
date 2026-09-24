@@ -3,17 +3,15 @@ import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { LabelBox } from './LabelBox'
-import {
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  FormControl,
-  Select,
-  MenuItem,
-  TextField,
-  Grid,
-  InputLabel
-} from '@mui/material'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import FormControl from '@mui/material/FormControl'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import TextField from '@mui/material/TextField'
+import Grid from '@mui/material/Grid'
+import InputLabel from '@mui/material/InputLabel'
 import { dateFormatter, numberFormatter } from '@/utils/formatters'
 import { useFormContext, Controller } from 'react-hook-form'
 import { useOrganizationNames } from '@/hooks/useOrganizations'

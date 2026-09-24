@@ -30,13 +30,16 @@ vi.mock('@/utils/formatters', () => ({
   timezoneFormatter: 'timezoneFormatter'
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  BCDateFloatingFilter: 'BCDateFloatingFilter',
-  BCSelectFloatingFilter: 'BCSelectFloatingFilter'
+vi.mock('@/components/BCDataGrid/components/Filters/BCDateFloatingFilter', () => ({
+    BCDateFloatingFilter: 'BCDateFloatingFilter'
 }))
 
-vi.mock('@mui/material', () => ({
-  Tooltip: ({ children, title }) => (
+vi.mock('@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter', () => ({
+    BCSelectFloatingFilter: 'BCSelectFloatingFilter'
+}))
+
+vi.mock('@mui/material/Tooltip', () => ({
+    default: ({ children, title }) => (
     <div data-testid="tooltip" title={title}>
       {children}
     </div>

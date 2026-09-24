@@ -1,5 +1,5 @@
 import BCTypography from '@/components/BCTypography'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import colors from '@/themes/base/colors'
 import PropTypes from 'prop-types'
 

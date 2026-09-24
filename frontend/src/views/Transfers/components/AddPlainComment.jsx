@@ -1,11 +1,15 @@
-import { Box, Collapse, IconButton, TextField } from '@mui/material'
+import Box from '@mui/material/Box'
+import Collapse from '@mui/material/Collapse'
+import IconButton from '@mui/material/IconButton'
+import TextField from '@mui/material/TextField'
 import { useState } from 'react'
 import PropTypes from 'prop-types'
 // MUI Icons
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { ExpandLess, ExpandMore } from '@mui/icons-material'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 
 export const AddPlainComment = ({
   toOrgId,

@@ -1,4 +1,4 @@
-import { Stack } from '@mui/material'
+import Stack from '@mui/material/Stack'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -20,7 +20,7 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
 import BCButton from '@/components/BCButton'
-import { CalculateOutlined } from '@mui/icons-material'
+import CalculateOutlined from '@mui/icons-material/CalculateOutlined'
 
 const initialPaginationOptions = {
   page: 1,

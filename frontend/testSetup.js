@@ -202,8 +202,8 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 // Mock form components
-vi.mock('@/components/BCForm', () => ({
-  BCFormText: ({ name, control, label, optional, checkbox, checkboxLabel, onCheckboxChange, isChecked, disabled, ...props }) => {
+vi.mock('@/components/BCForm/BCFormText', () => ({
+    BCFormText: ({ name, control, label, optional, checkbox, checkboxLabel, onCheckboxChange, isChecked, disabled, ...props }) => {
     const { variant, fullWidth, ...domProps } = props
     // Create a properly labeled input that Testing Library can find by accessible name
     // Also handle form values correctly for React Hook Form integration
@@ -220,8 +220,11 @@ vi.mock('@/components/BCForm', () => ({
       placeholder: label, // Also add as placeholder for additional context
       ...domProps
     })
-  },
-  BCFormRadio: ({ name, control, options = [], ...props }) => {
+  }
+}))
+
+vi.mock('@/components/BCForm/BCFormRadio', () => ({
+    BCFormRadio: ({ name, control, options = [], ...props }) => {
     return React.createElement(
       'div',
       { 'data-test': `${name}-radio-group` },
@@ -236,20 +239,30 @@ vi.mock('@/components/BCForm', () => ({
         })
       )
     )
-  },
-  BCFormCheckbox: ({ name, form, options = [], ...props }) => {
+  }
+}))
+
+vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
+  BCFormCheckbox: ({ name, form, options = [] }) => {
     return React.createElement('div', { 'data-test': `${name}-checkbox-group` },
       options.map((option, index) =>
-        React.createElement('input', {
-          key: `${name}-${index}`,
-          type: 'checkbox',
-          'data-test': option.dataTestId || `${name}${index + 1}`,
-          'data-testid': option.dataTestId || `${name}${index + 1}`
-        })
+        React.createElement(
+          'label',
+          { key: `${name}-${index}` },
+          React.createElement('input', {
+            type: 'checkbox',
+            'data-test': option.dataTestId || `${name}${index + 1}`,
+            'data-testid': option.dataTestId || `${name}${index + 1}`
+          }),
+          option.label
+        )
       )
     )
-  },
-  BCFormAddressAutocomplete: ({ name, control, label, checkbox, checkboxLabel, onCheckboxChange, isChecked, disabled, onSelectAddress, ...props }) => {
+  }
+}))
+
+vi.mock('@/components/BCForm/BCFormAddressAutocomplete', () => ({
+    BCFormAddressAutocomplete: ({ name, control, label, checkbox, checkboxLabel, onCheckboxChange, isChecked, disabled, onSelectAddress, ...props }) => {
     return React.createElement('input', {
       'data-test': name,
       'data-name': name,
@@ -289,7 +302,7 @@ vi.mock('@/components/BCModal', () => ({
 
 // Mock AddressAutocomplete component
 vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
-  default: ({ name, ...props }) => {
+  AddressAutocomplete: ({ name, ...props }) => {
     return React.createElement('input', {
       'data-test': 'address-autocomplete',
       'data-name': name,

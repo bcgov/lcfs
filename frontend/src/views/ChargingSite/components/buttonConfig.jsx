@@ -1,4 +1,5 @@
-import { CheckBox, CheckBoxOutlineBlank } from '@mui/icons-material'
+import CheckBox from '@mui/icons-material/CheckBox'
+import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { roles, govRoles } from '@/constants/roles'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'

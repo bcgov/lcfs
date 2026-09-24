@@ -43,10 +43,13 @@ vi.mock('@/components/BCTypography', () => ({
   )
 }))
 
-vi.mock('@mui/material', () => ({
-  Menu: ({ children, open }) =>
-    open ? <div data-test="menu">{children}</div> : null,
-  MenuItem: ({ children, onClick }) => (
+vi.mock('@mui/material/Menu', () => ({
+    default: ({ children, open }) =>
+    open ? <div data-test="menu">{children}</div> : null
+}))
+
+vi.mock('@mui/material/MenuItem', () => ({
+    default: ({ children, onClick }) => (
     <div data-test="menu-item" onClick={onClick}>
       {children}
     </div>
@@ -58,10 +61,16 @@ vi.mock('@/components/BCModal', () => ({
     open ? <div data-test="bc-modal">{data?.title}</div> : null
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  RequiredHeader: () => <div data-test="required-header">Required</div>,
-  AccessibleHeader: () => <div data-test="accessible-header">Accessible</div>,
-  BCPagination: ({ handleChangePage, handleChangeRowsPerPage, ...props }) => {
+vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
+    RequiredHeader: () => <div data-test="required-header">Required</div>
+}))
+
+vi.mock('@/components/BCDataGrid/components/Renderers/AccessibleHeader', () => ({
+    AccessibleHeader: () => <div data-test="accessible-header">Accessible</div>
+}))
+
+vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
+    BCPagination: ({ handleChangePage, handleChangeRowsPerPage, ...props }) => {
     return (
       <div data-test="bc-pagination">
         <button

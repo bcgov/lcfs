@@ -171,40 +171,88 @@ vi.mock('../buttonConfigs', () => ({
 }))
 
 // Mock Material-UI components
-vi.mock('@mui/material', () => ({
-  Fab: ({ children, onClick }) => (
+vi.mock('@mui/material/Fab', () => ({
+    default: ({ children, onClick }) => (
     <button data-test="fab" onClick={onClick}>
       {children}
     </button>
-  ),
-  Stack: ({ children }) => <div data-test="stack">{children}</div>,
-  Tooltip: ({ children, title }) => (
+  )
+}))
+
+vi.mock('@mui/material/Stack', () => ({
+    default: ({ children }) => <div data-test="stack">{children}</div>
+}))
+
+vi.mock('@mui/material/Tooltip', () => ({
+    default: ({ children, title }) => (
     <div data-test="tooltip" title={title}>
       {children}
     </div>
-  ),
-  Alert: ({ children, severity }) => (
+  )
+}))
+
+vi.mock('@mui/material/Alert', () => ({
+    default: ({ children, severity }) => (
     <div data-test="alert" data-severity={severity}>
       {children}
     </div>
-  ),
-  AlertTitle: ({ children }) => <div data-test="alert-title">{children}</div>
+  )
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  AutoAwesome: () => <div data-test="auto-awesome-icon" />,
-  Description: () => <div data-test="description-icon" />,
-  ElectricBolt: () => <div data-test="electric-bolt-icon" />,
-  FactCheck: () => <div data-test="fact-check-icon" />,
-  Gavel: () => <div data-test="gavel-icon" />,
-  Handshake: () => <div data-test="handshake-icon" />,
-  KeyboardArrowDown: () => <div data-test="arrow-down" />,
-  KeyboardArrowUp: () => <div data-test="arrow-up" />,
-  LocalGasStation: () => <div data-test="local-gas-station-icon" />,
-  Recycling: () => <div data-test="recycling-icon" />,
-  Summarize: () => <div data-test="summarize-icon" />,
-  SwapHoriz: () => <div data-test="swap-horiz-icon" />,
-  UploadFile: () => <div data-test="upload-file-icon" />
+vi.mock('@mui/material/AlertTitle', () => ({
+    default: ({ children }) => <div data-test="alert-title">{children}</div>
+}))
+
+vi.mock('@mui/icons-material/AutoAwesome', () => ({
+    default: () => <div data-test="auto-awesome-icon" />
+}))
+
+vi.mock('@mui/icons-material/Description', () => ({
+    default: () => <div data-test="description-icon" />
+}))
+
+vi.mock('@mui/icons-material/ElectricBolt', () => ({
+    default: () => <div data-test="electric-bolt-icon" />
+}))
+
+vi.mock('@mui/icons-material/FactCheck', () => ({
+    default: () => <div data-test="fact-check-icon" />
+}))
+
+vi.mock('@mui/icons-material/Gavel', () => ({
+    default: () => <div data-test="gavel-icon" />
+}))
+
+vi.mock('@mui/icons-material/Handshake', () => ({
+    default: () => <div data-test="handshake-icon" />
+}))
+
+vi.mock('@mui/icons-material/KeyboardArrowDown', () => ({
+    default: () => <div data-test="arrow-down" />
+}))
+
+vi.mock('@mui/icons-material/KeyboardArrowUp', () => ({
+    default: () => <div data-test="arrow-up" />
+}))
+
+vi.mock('@mui/icons-material/LocalGasStation', () => ({
+    default: () => <div data-test="local-gas-station-icon" />
+}))
+
+vi.mock('@mui/icons-material/Recycling', () => ({
+    default: () => <div data-test="recycling-icon" />
+}))
+
+vi.mock('@mui/icons-material/Summarize', () => ({
+    default: () => <div data-test="summarize-icon" />
+}))
+
+vi.mock('@mui/icons-material/SwapHoriz', () => ({
+    default: () => <div data-test="swap-horiz-icon" />
+}))
+
+vi.mock('@mui/icons-material/UploadFile', () => ({
+    default: () => <div data-test="upload-file-icon" />
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({

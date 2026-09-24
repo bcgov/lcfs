@@ -12,12 +12,24 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 // Mock Material-UI icons
-vi.mock('@mui/icons-material', () => ({
-  Cancel: () => <div data-test="cancel-icon" />,
-  Delete: () => <div data-test="delete-icon" />,
-  Edit: () => <div data-test="edit-icon" />,
-  Queue: () => <div data-test="queue-icon" />,
-  Replay: () => <div data-test="replay-icon" />
+vi.mock('@mui/icons-material/Cancel', () => ({
+    default: () => <div data-test="cancel-icon" />
+}))
+
+vi.mock('@mui/icons-material/Delete', () => ({
+    default: () => <div data-test="delete-icon" />
+}))
+
+vi.mock('@mui/icons-material/Edit', () => ({
+    default: () => <div data-test="edit-icon" />
+}))
+
+vi.mock('@mui/icons-material/Queue', () => ({
+    default: () => <div data-test="queue-icon" />
+}))
+
+vi.mock('@mui/icons-material/Replay', () => ({
+    default: () => <div data-test="replay-icon" />
 }))
 
 describe('ActionsRenderer', () => {

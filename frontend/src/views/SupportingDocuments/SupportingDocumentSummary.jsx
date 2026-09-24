@@ -1,5 +1,5 @@
 import Box from '@mui/material/Box'
-import { List } from '@mui/material'
+import List from '@mui/material/List'
 import BCTypography from '@/components/BCTypography'
 import { useDownloadDocument } from '@/hooks/useDocuments.js'
 import { timezoneFormatter } from '@/utils/formatters'

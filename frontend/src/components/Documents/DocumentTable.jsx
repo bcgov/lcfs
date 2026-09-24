@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  Box,
-  Card,
-  CardContent,
-  CircularProgress,
-  Icon,
-  IconButton,
-  Tooltip
-} from '@mui/material'
-import { CloudUpload, Delete } from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import CircularProgress from '@mui/material/CircularProgress'
+import Icon from '@mui/material/Icon'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
+import CloudUpload from '@mui/icons-material/CloudUpload'
+import Delete from '@mui/icons-material/Delete'
 import { useTranslation } from 'react-i18next'
 import { styled } from '@mui/system'
 import BCTypography from '@/components/BCTypography'

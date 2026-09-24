@@ -8,8 +8,8 @@ vi.mock('react-i18next', () => ({
   useTranslation: vi.fn()
 }))
 
-vi.mock('@mui/material', () => ({
-  Box: vi.fn(({ children, paddingTop, paddingBottom, flexDirection, alignItems, justifyContent, p, bgcolor, display, ...domProps }) => (
+vi.mock('@mui/material/Box', () => ({
+    default: vi.fn(({ children, paddingTop, paddingBottom, flexDirection, alignItems, justifyContent, p, bgcolor, display, ...domProps }) => (
     <div 
       data-test="box" 
       data-paddingtop={paddingTop}
@@ -24,14 +24,17 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </div>
-  )),
-  Icon: vi.fn(({ children, sx, ...props }) => (
+  ))
+}))
+
+vi.mock('@mui/material/Icon', () => ({
+    default: vi.fn(({ children, sx, ...props }) => (
     <div data-test="icon" data-sx={JSON.stringify(sx)} {...props}>{children}</div>
   ))
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  Mail: vi.fn(() => <div data-test="mail-icon">Mail</div>)
+vi.mock('@mui/icons-material/Mail', () => ({
+    default: vi.fn(() => <div data-test="mail-icon">Mail</div>)
 }))
 
 vi.mock('@/components/BCTypography', () => ({

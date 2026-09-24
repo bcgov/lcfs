@@ -6,7 +6,9 @@ import {
   renewableFuelColumns
 } from '@/views/CompareReports/_schema'
 import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
-import { Icon, MenuItem, Select } from '@mui/material'
+import Icon from '@mui/material/Icon'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
 import Box from '@mui/material/Box'
 import Loading from '@/components/Loading'
 import CompareTable from '@/views/CompareReports/components/CompareTable'

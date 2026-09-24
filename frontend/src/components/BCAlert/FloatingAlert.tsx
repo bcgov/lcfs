@@ -9,13 +9,11 @@ import {
   type ForwardedRef
 } from 'react'
 import Fade from '@mui/material/Fade'
-import {
-  Info as InfoIcon,
-  Error as ErrorIcon,
-  Warning as WarningIcon,
-  CheckCircle as CheckCircleIcon,
-  Close as CloseIcon
-} from '@mui/icons-material'
+import InfoIcon from '@mui/icons-material/Info'
+import ErrorIcon from '@mui/icons-material/Error'
+import WarningIcon from '@mui/icons-material/Warning'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import CloseIcon from '@mui/icons-material/Close'
 import type { BoxProps } from '@mui/material/Box'
 import type { AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
 

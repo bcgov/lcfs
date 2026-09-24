@@ -2,17 +2,15 @@ import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useForm, FormProvider, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import {
-  Checkbox,
-  TextField,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
-  InputLabel,
-  Tooltip
-} from '@mui/material'
+import Checkbox from '@mui/material/Checkbox'
+import TextField from '@mui/material/TextField'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableRow from '@mui/material/TableRow'
+import InputLabel from '@mui/material/InputLabel'
+import Tooltip from '@mui/material/Tooltip'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as Yup from 'yup'
 import Loading from '@/components/Loading'
@@ -30,7 +28,9 @@ import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
-import { Mail, Notifications, Info } from '@mui/icons-material'
+import Mail from '@mui/icons-material/Mail'
+import Notifications from '@mui/icons-material/Notifications'
+import Info from '@mui/icons-material/Info'
 
 const EMAIL_ONLY_NOTIFICATION_TYPES = new Set([
   'PUBLIC__CREDIT_MARKET_MONTHLY_REPORT'

@@ -81,28 +81,40 @@ vi.mock('@/components/BCModal.jsx', () => ({
 }))
 
 // Mock Material-UI components
-vi.mock('@mui/material', () => ({
-  Tooltip: ({ children }) => children,
-  FormControlLabel: ({ control, label }) => (
+vi.mock('@mui/material/Tooltip', () => ({
+    default: ({ children }) => children
+}))
+
+vi.mock('@mui/material/FormControlLabel', () => ({
+    default: ({ control, label }) => (
     <label>
       {control}
       <span>{label}</span>
     </label>
-  ),
-  Checkbox: ({ checked, onChange, disabled }) => (
+  )
+}))
+
+vi.mock('@mui/material/Checkbox', () => ({
+    default: ({ checked, onChange, disabled }) => (
     <input
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange?.(e)}
       disabled={disabled}
     />
-  ),
-  Fade: ({ children, in: fadeIn }) => (fadeIn ? <div>{children}</div> : null)
+  )
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  Assignment: () => <span>Assignment Icon</span>,
-  CheckCircle: () => <span>CheckCircle Icon</span>
+vi.mock('@mui/material/Fade', () => ({
+    default: ({ children, in: fadeIn }) => (fadeIn ? <div>{children}</div> : null)
+}))
+
+vi.mock('@mui/icons-material/Assignment', () => ({
+    default: () => <span>Assignment Icon</span>
+}))
+
+vi.mock('@mui/icons-material/CheckCircle', () => ({
+    default: () => <span>CheckCircle Icon</span>
 }))
 
 describe('AssessmentRecommendation', () => {
