@@ -124,6 +124,13 @@ class CIApplicationAssignmentHistorySchema(BaseSchema):
     changed_by: Optional[str] = None
 
 
+class CIApplicationReturnHistorySchema(BaseSchema):
+    event: str
+    return_reason: str
+    changed_at: datetime
+    changed_by: Optional[str] = None
+
+
 class PathwayApplicationTypeSchema(BaseSchema):
     pathway_application_type_id: int
     type: str
@@ -542,6 +549,7 @@ class CIApplicationSchema(BaseSchema):
     priority_score: Optional[int] = None
     assigned_analyst: Optional[CIApplicationUserSchema] = None
     assignment_history: Optional[List[CIApplicationAssignmentHistorySchema]] = None
+    return_history: Optional[List[CIApplicationReturnHistorySchema]] = None
     verification_1_user: Optional[CIApplicationUserSchema] = None
     verification_1_date: Optional[datetime] = None
     verification_2_user: Optional[CIApplicationUserSchema] = None

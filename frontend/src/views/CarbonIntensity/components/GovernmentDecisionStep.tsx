@@ -16,6 +16,7 @@ import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import Comments from '@/components/Comments'
 import { Role } from '@/components/Role'
+import { CIApplicationReturnHistory } from './CIApplicationReturnHistory'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import {
@@ -45,6 +46,22 @@ type GovernmentDecisionStepProps = {
 
 const normalizeRisk = (risk?: string | null) =>
   risk === 'Moderate' ? 'Medium' : risk
+
+const isReturnToFirstVerificationPending = (ciApplication: any = {}) => {
+  const returnHistory = ciApplication.returnHistory
+  if (!Array.isArray(returnHistory) || returnHistory.length === 0) return false
+  if (!ciApplication.verification1Date) return true
+
+  const verification1Time = new Date(ciApplication.verification1Date).getTime()
+  if (Number.isNaN(verification1Time)) return true
+
+  const latestReturnTime = returnHistory.reduce((latest, entry) => {
+    const changedAt = new Date(entry.changedAt).getTime()
+    return Number.isNaN(changedAt) ? latest : Math.max(latest, changedAt)
+  }, 0)
+
+  return latestReturnTime > 0 && verification1Time <= latestReturnTime
+}
 
 export const GovernmentDecisionStep = ({
   ciApplication,
@@ -833,6 +850,10 @@ export const GovernmentDecisionStep = ({
                 </>
               )}
             </Stack>
+            <CIApplicationReturnHistory
+              returnHistory={ciApplication?.returnHistory}
+              highlightPending={isReturnToFirstVerificationPending(ciApplication)}
+            />
           </Box>
         </Role>
       )}
@@ -903,7 +924,7 @@ export const GovernmentDecisionStep = ({
           secondaryButtonText: t('common:cancelBtn'),
           content: (
             <Stack spacing={2}>
-              <BCTypography variant="body1">
+              <BCTypography variant="body2">
                 {t('carbonIntensity:step5.returnToFirstVerificationConfirmText')}
               </BCTypography>
               <OutlinedInput

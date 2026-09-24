@@ -47,6 +47,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
     CIApplicationRiskAssessmentDraftSchema,
+    CIApplicationReturnHistorySchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationStatusEnum,
@@ -801,6 +802,11 @@ def _to_full_schema(
             if include_assignment_history
             else None
         ),
+        return_history=(
+            _return_history_from_records(history_records)
+            if include_assignment_history
+            else None
+        ),
         verification_1_user=CIApplicationUserSchema.model_validate(
             getattr(ci, "verification_1_user", None)
         ),
@@ -870,6 +876,32 @@ def _assignment_history_from_records(
                     snapshot.get("previous_analyst")
                 ),
                 new_analyst=_assignment_user_from_snapshot(snapshot.get("new_analyst")),
+                changed_at=changed_at,
+                changed_by=snapshot.get("changed_by"),
+            )
+        )
+    return sorted(events, key=lambda event: event.changed_at, reverse=True)
+
+
+def _return_history_from_records(
+    history_records: List,
+) -> List[CIApplicationReturnHistorySchema]:
+    events = []
+    for history in history_records:
+        snapshot = getattr(history, "ci_application_snapshot", None)
+        if (
+            not isinstance(snapshot, dict)
+            or snapshot.get("event") != "verification_returned_to_first_verification"
+        ):
+            continue
+        changed_at = snapshot.get("changed_at") or getattr(history, "create_date", None)
+        return_reason = (snapshot.get("return_reason") or "").strip()
+        if not changed_at or not return_reason:
+            continue
+        events.append(
+            CIApplicationReturnHistorySchema(
+                event=snapshot["event"],
+                return_reason=return_reason,
                 changed_at=changed_at,
                 changed_by=snapshot.get("changed_by"),
             )

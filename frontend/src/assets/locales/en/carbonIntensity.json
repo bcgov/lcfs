@@ -243,6 +243,8 @@
       "analyst_reassigned": "Reassigned analyst",
       "analyst_unassigned": "Removed analyst assignment"
     },
+    "returnHistoryHeader": "Return to first verification history",
+    "returnedToFirstVerification": "Returned to first verification",
     "unassigned": "Unassigned",
     "signingAuthorityHeader": "Signing authority declaration",
     "signedLabel": "Signed:",

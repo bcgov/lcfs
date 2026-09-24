@@ -166,4 +166,5 @@ describe('ApplicationSummary', () => {
       screen.queryByTestId('ci-summary-assignment-history')
     ).not.toBeInTheDocument()
   })
+
 })
