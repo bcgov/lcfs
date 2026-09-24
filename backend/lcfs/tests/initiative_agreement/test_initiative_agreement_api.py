@@ -817,3 +817,62 @@ async def test_create_agreement_is_closed_to_a_proponent(
     )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_a_legacy_credit_award_is_still_created_and_approved(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The Transactions page's "initiative agreement" award flow shares this
+    table with the module's agreements. Creating and approving an award
+    through its own endpoints must work exactly as before: a legacy award
+    row, no lifecycle, and a ledger transaction on approval."""
+    from lcfs.db.models.transaction.Transaction import Transaction
+
+    org1, _ = await _two_org_ids(dbsession)
+    # One user for both steps: the mock user cannot change mid-test.
+    set_mock_user(
+        fastapi_app, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.DIRECTOR]
+    )
+
+    created = await client.post(
+        fastapi_app.url_path_for("create_initiative_agreement"),
+        json={
+            "complianceUnits": 500,
+            "currentStatus": "Recommended",
+            "toOrganizationId": org1,
+            "govComment": "Award for the pilot project.",
+        },
+    )
+    assert created.status_code == status.HTTP_201_CREATED, created.text
+    award_id = created.json()["initiativeAgreementId"]
+
+    approved = await client.put(
+        fastapi_app.url_path_for("update_initiative_agreement"),
+        json={
+            "initiativeAgreementId": award_id,
+            "complianceUnits": 500,
+            "currentStatus": "Approved",
+            "toOrganizationId": org1,
+            "govComment": "Award for the pilot project.",
+        },
+    )
+    assert approved.status_code == status.HTTP_200_OK, approved.text
+    assert approved.json()["currentStatus"]["status"] == "Approved"
+
+    award = await dbsession.get(InitiativeAgreement, award_id)
+    await dbsession.refresh(award)
+    assert award.record_kind == RECORD_KIND_LEGACY_AWARD
+    assert award.lifecycle_status_id is None
+    assert award.ia_code is None
+    transaction = await dbsession.get(Transaction, award.transaction_id)
+    assert transaction.compliance_units == 500
+    assert transaction.organization_id == org1
+
+    fetched = await client.get(
+        fastapi_app.url_path_for(
+            "get_initiative_agreement", initiative_agreement_id=award_id
+        )
+    )
+    assert fetched.status_code == status.HTTP_200_OK
+    assert fetched.json()["complianceUnits"] == 500
