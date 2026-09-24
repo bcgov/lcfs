@@ -1568,6 +1568,18 @@ class CIApplicationServices:
         return suggestions
 
     @service_handler
+    async def search_fuel_code_field_options(
+        self, field: str, query: str
+    ) -> List[str]:
+        normalized_field = field.strip()
+        search_text = (query or "").strip()
+        if normalized_field == "feedstock":
+            return await self.fuel_repo.get_distinct_feedstocks(search_text)
+        if normalized_field == "feedstockLocation":
+            return await self.fuel_repo.get_distinct_feedstock_locations(search_text)
+        raise ValueError("Invalid FuelCode suggestion field")
+
+    @service_handler
     async def get_table_options(
         self, organization_id: Optional[int] = None
     ) -> CITableOptionsSchema:
@@ -1583,19 +1595,6 @@ class CIApplicationServices:
         # Renewal iterations are scoped to the caller's organization for
         # supplier/CI-applicant users; government callers pass None (all).
         fuel_codes = await self.repo.get_approved_fuel_codes(organization_id)
-        field_options_results = await self.fuel_repo.get_fuel_code_field_options()
-        feedstock_values = set()
-        feedstock_region_values = set()
-        for row in field_options_results:
-            mapping = row._mapping
-            if mapping.get("feedstock"):
-                feedstock_values.add(mapping["feedstock"])
-            if mapping.get("feedstock_location"):
-                feedstock_region_values.add(mapping["feedstock_location"])
-        field_options = {
-            "feedstock": sorted(feedstock_values),
-            "feedstock_region": sorted(feedstock_region_values),
-        }
 
         return CITableOptionsSchema(
             statuses=[CIApplicationStatusSchema.model_validate(s) for s in statuses],
@@ -1617,7 +1616,6 @@ class CIApplicationServices:
             ],
             transport_modes=[tm.transport_mode for tm in transport_modes],
             fuel_codes=[_to_fuel_code_option(fc) for fc in fuel_codes],
-            field_options=field_options,
         )
 
     # ------------------------------------------------------------------

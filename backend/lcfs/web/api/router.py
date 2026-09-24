@@ -41,6 +41,7 @@ from lcfs.web.api import (
     charging_site,
     login_bg_image,
     release_notes,
+    search,
 )
 
 api_router = APIRouter()
@@ -150,3 +151,4 @@ api_router.include_router(
 api_router.include_router(
     release_notes.router, prefix="/release-notes", tags=["release_notes"]
 )
+api_router.include_router(search.router, prefix="/search", tags=["search"])

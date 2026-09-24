@@ -17,6 +17,7 @@ from sqlalchemy import (
     exists,
     text,
     bindparam,
+    update,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, contains_eager, joinedload, selectinload
@@ -1638,6 +1639,77 @@ class ComplianceReportRepository:
         )
         return result.scalars().first()
 
+    async def _reassign_internal_comments(self, compliance_report_id: int) -> None:
+        """
+        Move a report's internal comment links to the newest surviving version of
+        the same chain before the report itself is deleted (#5087).
+
+        Internal comments are the record of a report's review history, so they have
+        to outlive the version they happened to be written on: deleting an analyst
+        adjustment used to take the recommend and return comments with it. Comment
+        reads already span the whole chain (``get_related_compliance_report_ids``),
+        so re-pointing the association is enough for the comments to keep showing.
+
+        When no other version survives there is nothing left to hold the links, so
+        they are deleted as before.
+        """
+        group_uuid = await self.db.scalar(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
+        )
+
+        target_id = None
+        if group_uuid:
+            target_id = await self.db.scalar(
+                select(ComplianceReport.compliance_report_id)
+                .where(
+                    ComplianceReport.compliance_report_group_uuid == group_uuid,
+                    ComplianceReport.compliance_report_id != compliance_report_id,
+                )
+                .order_by(ComplianceReport.version.desc())
+                .limit(1)
+            )
+
+        if target_id is None:
+            await self.db.execute(
+                delete(ComplianceReportInternalComment).where(
+                    ComplianceReportInternalComment.compliance_report_id
+                    == compliance_report_id
+                )
+            )
+            return
+
+        # The composite primary key allows one row per (report, comment) pair, so
+        # drop any link the target already holds before re-pointing the rest.
+        already_linked = select(
+            ComplianceReportInternalComment.internal_comment_id
+        ).where(ComplianceReportInternalComment.compliance_report_id == target_id)
+        await self.db.execute(
+            delete(ComplianceReportInternalComment).where(
+                ComplianceReportInternalComment.compliance_report_id
+                == compliance_report_id,
+                ComplianceReportInternalComment.internal_comment_id.in_(already_linked),
+            )
+        )
+
+        result = await self.db.execute(
+            update(ComplianceReportInternalComment)
+            .where(
+                ComplianceReportInternalComment.compliance_report_id
+                == compliance_report_id
+            )
+            .values(
+                compliance_report_id=target_id,
+                compliance_report_group_uuid=group_uuid,
+            )
+        )
+        if result.rowcount:
+            logger.info(
+                f"Moved {result.rowcount} internal comment(s) from compliance report "
+                f"{compliance_report_id} to {target_id} before deletion"
+            )
+
     @repo_handler
     async def delete_compliance_report(self, compliance_report_id: int) -> bool:
         """
@@ -1646,7 +1718,8 @@ class ComplianceReportRepository:
         This performs a cascading delete of all related entities including:
         - ComplianceReportSummary
         - ComplianceReportHistory
-        - ComplianceReportInternalComment
+        - ComplianceReportInternalComment (moved to a surviving version when the
+          chain has one, rather than deleted - see _reassign_internal_comments)
         - NotionalTransfer
         - FuelSupply
         - FuelExport
@@ -1656,6 +1729,10 @@ class ComplianceReportRepository:
         - ComplianceReportOrganizationSnapshot
         - Document associations
         """
+        # Internal comments are preserved on a surviving version of the chain
+        # where possible, so this runs before (and instead of) deleting them.
+        await self._reassign_internal_comments(compliance_report_id)
+
         # Create a list of delete operations
         delete_operations = [
             # Child tables with no interdependencies
@@ -1679,12 +1756,6 @@ class ComplianceReportRepository:
             self.db.execute(
                 delete(ComplianceReportHistory).where(
                     ComplianceReportHistory.compliance_report_id == compliance_report_id
-                )
-            ),
-            self.db.execute(
-                delete(ComplianceReportInternalComment).where(
-                    ComplianceReportInternalComment.compliance_report_id
-                    == compliance_report_id
                 )
             ),
             self.db.execute(

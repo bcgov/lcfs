@@ -7,6 +7,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HeaderComponent } from './HeaderComponent'
 import { UserProfileActions } from './UserProfileActions'
+import { GlobalSearch } from '@/components/GlobalSearch/GlobalSearch'
 import { useMediaQuery, useTheme } from '@mui/material'
 
 type NavItem = {
@@ -110,6 +111,7 @@ export const Navbar = () => {
       beta={false}
       data-test="main-layout-navbar"
       headerRightPart={<HeaderComponent key="headerRight" />}
+      headerUtilityPart={<GlobalSearch key="headerSearch" />}
       menuRightPart={<UserProfileActions key="menuRight" />}
     />
   )

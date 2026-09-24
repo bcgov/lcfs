@@ -445,7 +445,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6.3.0
         with:
-          node-version: "20"
+          node-version-file: frontend/.nvmrc
 
       - name: Cache node_modules
         uses: actions/cache@v5.0.4
@@ -535,7 +535,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6.3.0
         with:
-          node-version: "20"
+          node-version-file: frontend/.nvmrc
 
       - name: Restore node_modules cache
         id: cache-restore
@@ -632,7 +632,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6.3.0
         with:
-          node-version: 20
+          node-version-file: frontend/.nvmrc
 
       # NOTE: previously this step did `npm install vitest@$VITEST_VERSION --no-save`,
       # which re-resolved vitest to the latest matching patch (e.g. 3.2.6) while

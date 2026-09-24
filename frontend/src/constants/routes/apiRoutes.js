@@ -16,6 +16,7 @@ export const apiRoutes = {
   seededTestUsers: '/users/seeded-test-users',
   resolveOrgName: '/users/anonymizer/resolve-org-name',
   getUserActivities: '/users/:userID/activity',
+  getUserAssignedWork: '/users/:userID/assigned-work',
   getAllUserActivities: '/users/activities/all',
   trackUserLogin: '/users/logged-in',
   getUserLoginHistories: '/users/login-history',
@@ -130,6 +131,7 @@ export const apiRoutes = {
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',
+  ciApplicationFuelCodeFieldSearch: '/ci-applications/fuel-code-field-search?',
   ciApplicationLocationSearch: '/ci-applications/location-search?',
   getCIApplications: '/ci-applications/list',
   getCIApplication: '/ci-applications/:ciApplicationId',
@@ -319,6 +321,7 @@ export const apiRoutes = {
   getNotifications: '/notifications/list',
   getNotificationsCount: '/notifications/count',
   getNotificationSubscriptions: '/notifications/subscriptions',
+  getUserNotificationSubscriptions: '/notifications/subscriptions/user',
   saveNotificationSubscriptions: '/notifications/subscriptions/save',
 
   // government notifications

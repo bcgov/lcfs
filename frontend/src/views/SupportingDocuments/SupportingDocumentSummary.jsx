@@ -6,6 +6,7 @@ import BCTypography from '@/components/BCTypography'
 import { useDownloadDocument } from '@/hooks/useDocuments.js'
 import { timezoneFormatter } from '@/utils/formatters'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 // `detailed` adds the file size and the uploading organization's code to
 // each row (initiative agreement wireframes); other callers keep the
@@ -52,6 +53,11 @@ export const SupportingDocumentSummary = ({
             >
               {file.fileName}
             </BCTypography>
+            <DocumentPreviewButton
+              parentType={parentType}
+              parentID={parentID}
+              document={file}
+            />
             <BCTypography
               component="span"
               variant="subtitle2"
