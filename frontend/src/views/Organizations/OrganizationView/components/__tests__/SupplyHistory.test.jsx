@@ -3,7 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
-import { SupplyHistory } from '../SupplyHistory'
+import {
+  SupplyHistory,
+  normalizeFuelTypeVolumeTrendRows
+} from '../SupplyHistory'
 import { roles } from '@/constants/roles'
 import theme from '@/themes'
 
@@ -120,5 +123,48 @@ describe('SupplyHistory', () => {
     expect(mockNavigate).toHaveBeenCalledWith(
       '/organizations/3/supply-history'
     )
+  })
+
+  it('normalizes petroleum fuel types for supply history chart calculations', () => {
+    expect(
+      normalizeFuelTypeVolumeTrendRows([
+        {
+          reportingYear: '2023',
+          fuelType: 'Petroleum-based diesel',
+          fuelCategory: 'Diesel',
+          totalVolume: 100,
+          fossilDerived: false
+        },
+        {
+          reportingYear: '2023',
+          fuelType: 'Fossil-derived diesel',
+          fuelCategory: 'Diesel',
+          totalVolume: 50,
+          fossilDerived: true
+        },
+        {
+          reportingYear: '2024',
+          fuelType: 'Fossil-derived diesel',
+          fuelCategory: 'Diesel',
+          totalVolume: 200,
+          fossilDerived: true
+        }
+      ])
+    ).toEqual([
+      {
+        reportingYear: '2023',
+        fuelType: 'Fossil-derived diesel',
+        fuelCategory: 'Diesel',
+        totalVolume: 150,
+        fossilDerived: true
+      },
+      {
+        reportingYear: '2024',
+        fuelType: 'Fossil-derived diesel',
+        fuelCategory: 'Diesel',
+        totalVolume: 200,
+        fossilDerived: true
+      }
+    ])
   })
 })

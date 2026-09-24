@@ -153,6 +153,76 @@ describe('ReviewCharts', () => {
     )
   })
 
+  it('normalizes petroleum fuel labels in analyst review historical charts', () => {
+    const chartData: ReviewChartData = {
+      historicalVariance: [
+        {
+          title: 'Fuel supply by fuel category and type',
+          currentLabel: '2024',
+          comparisonLabel: '2023',
+          points: [
+            {
+              label: 'Diesel - Fossil-derived diesel',
+              currentValue: 150,
+              comparisonValue: 0,
+              delta: 150,
+              units: 'reported units'
+            },
+            {
+              label: 'Diesel - Petroleum-based diesel',
+              currentValue: 0,
+              comparisonValue: 100,
+              delta: -100,
+              units: 'reported units'
+            }
+          ]
+        }
+      ]
+    }
+
+    render(<ReviewCharts chartData={chartData} />)
+
+    const option = chartProps[0].option
+    expect(option.xAxis.data).toEqual(['Diesel - Fossil-derived diesel'])
+    expect(option.series).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: '2023',
+          data: [100]
+        }),
+        expect.objectContaining({
+          name: '2024',
+          data: [150]
+        })
+      ])
+    )
+  })
+
+  it('normalizes petroleum fuel labels in compliance unit charts', () => {
+    const chartData: ReviewChartData = {
+      complianceUnitsByFuel: [
+        {
+          fuelCategory: 'Gasoline',
+          fuelType: 'Petroleum-based gasoline',
+          schedule: 'Fuel supply',
+          complianceUnits: 120
+        },
+        {
+          fuelCategory: 'Gasoline',
+          fuelType: 'Fossil-derived gasoline',
+          schedule: 'Fuel supply',
+          complianceUnits: 40
+        }
+      ]
+    }
+
+    render(<ReviewCharts chartData={chartData} />)
+
+    const option = chartProps[0].option
+    expect(option.xAxis.data).toEqual(['Gasoline - Fossil-derived gasoline'])
+    expect(option.series[0].data).toEqual([160])
+  })
+
   it('renders the supply and FSE correlation trend as a dual-axis chart', () => {
     const chartData: ReviewChartData = {
       historicalVariance: [
@@ -236,6 +306,9 @@ describe('ReviewCharts', () => {
     ).toBeInTheDocument()
 
     const option = chartProps[0].option
+    expect(option.tooltip.appendToBody).toBe(true)
+    expect(option.tooltip.position([20, 40])).toEqual([32, 56])
+    expect(option.tooltip.position([20, 140])).toEqual([32, 68])
     expect(option.series[0].type).toBe('heatmap')
     expect(option.visualMap.text).toEqual(['Higher volume', 'Missing'])
     expect(option.visualMap.dimension).toBe(3)

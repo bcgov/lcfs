@@ -204,6 +204,35 @@ def test_comparison_point_can_use_magnitude_gap_delta_mode():
     assert point.delta == 710
 
 
+def test_comparison_points_normalize_petroleum_fuel_labels():
+    service = _service()
+
+    points = service._comparison_points(
+        {
+            "Diesel - Fossil-derived diesel": 150,
+            "Gasoline - Fossil-derived gasoline": 100,
+        },
+        {
+            "Diesel - Petroleum-based diesel": 100,
+            "Gasoline - Petroleum-based gasoline": 200,
+        },
+        units="reported units",
+    )
+
+    by_label = {point.label: point for point in points}
+
+    assert set(by_label) == {
+        "Diesel - Fossil-derived diesel",
+        "Gasoline - Fossil-derived gasoline",
+    }
+    assert by_label["Diesel - Fossil-derived diesel"].current_value == 150
+    assert by_label["Diesel - Fossil-derived diesel"].comparison_value == 100
+    assert by_label["Diesel - Fossil-derived diesel"].percent_change == 50
+    assert by_label["Gasoline - Fossil-derived gasoline"].current_value == 100
+    assert by_label["Gasoline - Fossil-derived gasoline"].comparison_value == 200
+    assert by_label["Gasoline - Fossil-derived gasoline"].percent_change == -50
+
+
 def test_correlation_findings_identify_aligned_supply_and_fse_trends():
     service = _service()
 

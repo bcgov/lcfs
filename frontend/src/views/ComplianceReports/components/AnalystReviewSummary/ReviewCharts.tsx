@@ -11,6 +11,10 @@ import {
 } from '@/components/charts/chartStyles'
 import { FormControl, InputLabel, MenuItem, Select, Stack } from '@mui/material'
 import { useMemo, useState } from 'react'
+import {
+  normalizeFuelLabelForDisplay,
+  normalizeFuelTypeForDisplay
+} from '@/utils/fuelTypeNormalization'
 import type {
   ComparisonSeries,
   ComplianceUnitPoint,
@@ -260,6 +264,18 @@ const buildSupplementalImpactChartOptions = (series: ComparisonSeries) =>
     ]
   })
 
+const normalizeHistoricalPointLabel = (seriesTitle: string, label: string) => {
+  if (seriesTitle === 'Fuel supply by fuel code') {
+    return label.replace(
+      /^(.*?) \((.*?) - (.*?)\)$/,
+      (_match, fuelCode, fuelCategory, fuelType) =>
+        `${fuelCode} (${fuelCategory} - ${normalizeFuelTypeForDisplay(fuelType)})`
+    )
+  }
+
+  return normalizeFuelLabelForDisplay(label)
+}
+
 const groupHistoricalSeries = (
   historicalSeries: ComparisonSeries[]
 ): HistoricalChartGroup[] => {
@@ -289,13 +305,20 @@ const groupHistoricalSeries = (
     }
 
     series.points.forEach((point) => {
-      group.labels.add(point.label)
-      group.periods
-        .get(series.currentLabel)!
-        .set(point.label, point.currentValue)
-      group.periods
-        .get(series.comparisonLabel)!
-        .set(point.label, point.comparisonValue)
+      const label = normalizeHistoricalPointLabel(series.title, point.label)
+      group.labels.add(label)
+
+      const currentPeriod = group.periods.get(series.currentLabel)!
+      currentPeriod.set(
+        label,
+        (currentPeriod.get(label) || 0) + point.currentValue
+      )
+
+      const comparisonPeriod = group.periods.get(series.comparisonLabel)!
+      comparisonPeriod.set(
+        label,
+        (comparisonPeriod.get(label) || 0) + point.comparisonValue
+      )
     })
   })
 
@@ -549,7 +572,12 @@ const buildFuelPresenceHeatmapOptions = (group: HistoricalChartGroup) => {
 
   return getStandardChartOptions({
     tooltip: {
-      position: 'top',
+      appendToBody: true,
+      confine: false,
+      position: (point: [number, number]) => {
+        const [x, y] = point
+        return [x + 12, y < 96 ? y + 16 : y - 72]
+      },
       formatter: (params: any) => {
         const [xIndex, yIndex, quantity] = params.value || []
         const period = group.periodLabels[xIndex]
@@ -625,7 +653,7 @@ const parseFuelCodeLabel = (label: string) => {
   }
 
   return {
-    fuelType: `${match[2]} - ${match[3]}`,
+    fuelType: `${match[2]} - ${normalizeFuelTypeForDisplay(match[3])}`,
     fuelCode: match[1]
   }
 }
@@ -865,7 +893,9 @@ const groupComplianceUnitSeries = (
 
   points.forEach((point) => {
     const fuelCategory = point.fuelCategory || 'Unknown fuel category'
-    const fuelLabel = `${fuelCategory} - ${point.fuelType || 'Unknown fuel type'}`
+    const fuelLabel = `${fuelCategory} - ${normalizeFuelTypeForDisplay(
+      point.fuelType || 'Unknown fuel type'
+    )}`
     fuelLabels.add(fuelLabel)
     schedules.add(point.schedule)
     const valueKey = `${point.schedule}|${fuelLabel}`
