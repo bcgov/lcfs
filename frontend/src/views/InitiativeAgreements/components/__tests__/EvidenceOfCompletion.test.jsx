@@ -133,9 +133,9 @@ describe('EvidenceOfCompletion', () => {
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
     expect(screen.getByTestId('eoc-heading-1')).toHaveTextContent('1. Permits')
-    expect(screen.getByTestId('eoc-review-1')).toBeInTheDocument()
-    // Outside edit mode the text is read-only, not editable in place.
-    expect(screen.getByTestId('eoc-review-1')).toHaveAttribute('readonly')
+    // Editable in place: there is no Edit step (#5118).
+    expect(screen.getByTestId('eoc-review-1')).not.toHaveAttribute('readonly')
+    expect(screen.queryByTestId('eoc-edit-1')).not.toBeInTheDocument()
   })
 
   it('falls back to the description as the heading when there is no title', () => {
@@ -150,23 +150,96 @@ describe('EvidenceOfCompletion', () => {
     )
   })
 
-  it('offers a labelled Edit button, with the text read-only until it is used', () => {
-    // A bare pencil beside the remove icon read as two unlabelled
-    // controls (#5118); the button says what it does.
+  it('saves the evaluation when the field is left, and not while typing', () => {
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
-    const edit = screen.getByTestId('eoc-edit-1')
-    expect(edit).toHaveTextContent('common:editBtn')
-    expect(edit).toHaveAccessibleName(
-      'initiativeAgreement:evidence.editRequirement'
+    const evaluation = screen.getByTestId('eoc-review-1')
+    fireEvent.focus(evaluation)
+    fireEvent.change(evaluation, { target: { value: 'Permits verified.' } })
+    expect(mockUpdate).not.toHaveBeenCalled()
+
+    fireEvent.blur(evaluation)
+
+    expect(mockUpdate).toHaveBeenCalledWith({
+      evidenceRequirementId: 1,
+      analystReview: 'Permits verified.'
+    })
+    // The save is visible, not silent.
+    expect(screen.getByTestId('eoc-saved-1')).toBeInTheDocument()
+  })
+
+  it('does not save a field that was left unchanged', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    const description = screen.getByTestId('eoc-description-1')
+    fireEvent.focus(description)
+    fireEvent.blur(description)
+
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('saves the description when the field is left', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    const description = screen.getByTestId('eoc-description-1')
+    fireEvent.focus(description)
+    fireEvent.change(description, {
+      target: { value: '  Every permit the project needs.  ' }
+    })
+    fireEvent.blur(description)
+
+    expect(mockUpdate).toHaveBeenCalledWith({
+      evidenceRequirementId: 1,
+      description: 'Every permit the project needs.'
+    })
+  })
+
+  it('puts a blanked description back instead of saving it', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    const description = screen.getByTestId('eoc-description-1')
+    fireEvent.focus(description)
+    fireEvent.change(description, { target: { value: '   ' } })
+    fireEvent.blur(description)
+
+    expect(mockUpdate).not.toHaveBeenCalled()
+    expect(description).toHaveValue('List of major permits and approvals')
+  })
+
+  it('saves notes when the field is left', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+    fireEvent.click(
+      screen.getByTestId('eoc-notes-toggle-1').querySelector('input')
     )
-    expect(screen.getByTestId('eoc-review-1')).toHaveAttribute('readonly')
 
-    fireEvent.click(edit)
+    const notes = screen.getByTestId('eoc-notes-1')
+    fireEvent.focus(notes)
+    fireEvent.change(notes, { target: { value: 'Copies filed.' } })
+    fireEvent.blur(notes)
 
-    expect(screen.getByTestId('eoc-review-1')).not.toHaveAttribute('readonly')
-    expect(screen.queryByTestId('eoc-edit-1')).not.toBeInTheDocument()
-    expect(screen.getByTestId('eoc-save-1')).toBeInTheDocument()
+    expect(mockUpdate).toHaveBeenCalledWith({
+      evidenceRequirementId: 1,
+      reviewNotes: 'Copies filed.'
+    })
+  })
+
+  it('keeps what is being typed when the list refreshes underneath it', () => {
+    const { rerender } = render(
+      <EvidenceOfCompletion designatedActionId="9" />,
+      { wrapper }
+    )
+    const evaluation = screen.getByTestId('eoc-review-1')
+    fireEvent.focus(evaluation)
+    fireEvent.change(evaluation, { target: { value: 'Half a thought' } })
+
+    // Another save refetches the list while this field is still focused.
+    mockList.mockReturnValue({
+      data: [requirement({ analystReview: 'Saved elsewhere' })],
+      isLoading: false
+    })
+    rerender(<EvidenceOfCompletion designatedActionId="9" />)
+
+    expect(screen.getByTestId('eoc-review-1')).toHaveValue('Half a thought')
   })
 
   it('offers no editing to someone who cannot edit', () => {
@@ -174,60 +247,12 @@ describe('EvidenceOfCompletion', () => {
       wrapper
     })
 
-    expect(screen.queryByTestId('eoc-edit-1')).not.toBeInTheDocument()
     expect(screen.queryByTestId('eoc-remove-1')).not.toBeInTheDocument()
     expect(screen.getByTestId('eoc-review-1')).toHaveAttribute('readonly')
+    expect(screen.getByTestId('eoc-description-1')).toHaveAttribute('readonly')
     expect(
       screen.getByTestId('eoc-satisfactory-1').querySelector('input')
     ).toBeDisabled()
-  })
-
-  it('writes nothing until Save, then only what changed', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
-
-    fireEvent.click(screen.getByTestId('eoc-edit-1'))
-    fireEvent.change(screen.getByTestId('eoc-review-1'), {
-      target: { value: 'Permits verified.' }
-    })
-    fireEvent.change(screen.getByTestId('eoc-title-1'), {
-      target: { value: 'Permits and approvals' }
-    })
-    // Typing is not saving.
-    expect(mockUpdate).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByTestId('eoc-save-1'))
-
-    // The untouched description is not sent.
-    expect(mockUpdate).toHaveBeenCalledWith({
-      evidenceRequirementId: 1,
-      title: 'Permits and approvals',
-      analystReview: 'Permits verified.'
-    })
-  })
-
-  it('Cancel restores what was there and writes nothing', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
-
-    fireEvent.click(screen.getByTestId('eoc-edit-1'))
-    fireEvent.change(screen.getByTestId('eoc-review-1'), {
-      target: { value: 'Half a thought' }
-    })
-    fireEvent.click(screen.getByTestId('eoc-cancel-1'))
-
-    expect(mockUpdate).not.toHaveBeenCalled()
-    expect(screen.getByTestId('eoc-review-1')).toHaveValue('')
-    expect(screen.queryByTestId('eoc-save-1')).not.toBeInTheDocument()
-  })
-
-  it('will not save an item with its title blanked', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
-
-    fireEvent.click(screen.getByTestId('eoc-edit-1'))
-    fireEvent.change(screen.getByTestId('eoc-title-1'), {
-      target: { value: '   ' }
-    })
-
-    expect(screen.getByTestId('eoc-save-1')).toBeDisabled()
   })
 
   it('shows the notes box only when notes are toggled on', () => {
@@ -313,12 +338,31 @@ describe('EvidenceOfCompletion', () => {
     expect(screen.getByTestId('eoc-saved-1')).toBeInTheDocument()
   })
 
-  it('removes a requirement', () => {
+  it('asks before removing a requirement, and removes it on confirm', () => {
     render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
 
     fireEvent.click(screen.getByTestId('eoc-remove-1'))
 
+    // Nothing is removed until the user confirms.
+    expect(mockRemove).not.toHaveBeenCalled()
+    expect(screen.getByTestId('eoc-remove-confirm-1')).toHaveTextContent(
+      'initiativeAgreement:evidence.confirmRemoveBody'
+    )
+
+    fireEvent.click(
+      screen.getByText('initiativeAgreement:evidence.confirmRemove')
+    )
+
     expect(mockRemove).toHaveBeenCalledWith(1)
+  })
+
+  it('cancelling the removal keeps the requirement', () => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+
+    fireEvent.click(screen.getByTestId('eoc-remove-1'))
+    fireEvent.click(screen.getByText('common:cancelBtn'))
+
+    expect(mockRemove).not.toHaveBeenCalled()
   })
 
   it('hides Add EOC from a director', () => {

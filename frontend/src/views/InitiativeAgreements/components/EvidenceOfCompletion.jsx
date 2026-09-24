@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Box,
@@ -15,7 +15,6 @@ import AddIcon from '@mui/icons-material/Add'
 import CheckIcon from '@mui/icons-material/Check'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
@@ -68,45 +67,69 @@ const OutstandingIcon = ({ titleAccess, sx }) => (
   </SvgIcon>
 )
 
-// The text of a requirement — title, description and evaluation — is
-// edited deliberately: Edit opens the fields, Save writes them, Cancel
-// puts back what was there. Testing found save-as-you-type unclear;
-// nobody could tell whether a half-finished evaluation had been kept.
-// The outcome boxes and notes are decisions, not prose, and still take
-// effect at once.
-//
-// Edit is a labelled button where Save and Cancel appear, not a pencil
-// beside the remove icon: the pencil read as one of two unlabelled
-// controls, and the × as "cancel" (#5118).
+// Long entries grow the box with the text up to 1000px, then scroll
+// inside it (#5118). The autosizing textarea sets overflow inline, so
+// the scroll needs !important to win.
+const GROWING_TEXT_SX = {
+  '& textarea': { maxHeight: 1000, overflowY: 'auto !important' }
+}
+
+// A text field that saves itself when the user leaves it (#5118), the
+// way these fields worked before #5079's edit mode. A refetch while the
+// user is typing (after an outcome box saves, say) must not overwrite
+// what they have typed, so the saved value only flows in while the
+// field is not focused.
+const useAutosaveField = (savedValue, onCommit) => {
+  const [value, setValue] = useState(savedValue ?? '')
+  const focused = useRef(false)
+  useEffect(() => {
+    if (!focused.current) setValue(savedValue ?? '')
+  }, [savedValue])
+  return {
+    value,
+    onChange: (event) => setValue(event.target.value),
+    onFocus: () => {
+      focused.current = true
+    },
+    onBlur: () => {
+      focused.current = false
+      if (value === (savedValue ?? '')) return
+      // onCommit may refuse the value (a blanked description) and hand
+      // back what to show instead.
+      const replacement = onCommit(value)
+      if (replacement !== undefined) setValue(replacement)
+    }
+  }
+}
+
+// Each requirement's description, evaluation and notes save as the user
+// leaves them, with a brief "Saved" so the save is visible; the outcome
+// boxes take effect at once. The title is set when the requirement is
+// added. Removing asks first: the requirement leaves the list and there
+// is no way back from this page.
 const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [justSaved, setJustSaved] = useState(false)
-  const acknowledge = () => {
+  const save = (payload) => {
+    onSave(payload)
     setJustSaved(true)
     setTimeout(() => setJustSaved(false), 1800)
   }
-
-  const [editing, setEditing] = useState(false)
-  const [title, setTitle] = useState(requirement.title || '')
-  const [description, setDescription] = useState(requirement.description)
-  const [evaluation, setEvaluation] = useState(requirement.analystReview || '')
-  const [reviewNotes, setReviewNotes] = useState(requirement.reviewNotes || '')
+  const [confirmingRemove, setConfirmingRemove] = useState(false)
   const [notesShown, setNotesShown] = useState(!!requirement.reviewNotes)
 
-  // A refetch after someone else's save must not overwrite an edit in
-  // progress; outside edit mode the card mirrors the record.
-  useEffect(() => {
-    if (!editing) {
-      setTitle(requirement.title || '')
-      setDescription(requirement.description)
-      setEvaluation(requirement.analystReview || '')
-    }
-  }, [
-    editing,
-    requirement.title,
-    requirement.description,
-    requirement.analystReview
-  ])
+  const description = useAutosaveField(requirement.description, (next) => {
+    // A requirement must say what evidence it needs; a blanked
+    // description is put back rather than saved.
+    if (!next.trim()) return requirement.description
+    save({ description: next.trim() })
+  })
+  const evaluation = useAutosaveField(requirement.analystReview, (next) => {
+    save({ analystReview: next })
+  })
+  const notes = useAutosaveField(requirement.reviewNotes, (next) => {
+    save({ reviewNotes: next })
+  })
 
   const outcome = requirement.reviewOutcome
   const heading = requirementHeading(requirement)
@@ -114,38 +137,9 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
   // Clicking the box that is already ticked returns the requirement to
   // unreviewed, which is how an analyst undoes a decision.
   const setOutcome = (next) => {
-    onSave(
+    save(
       next === outcome ? { clearReviewOutcome: true } : { reviewOutcome: next }
     )
-    acknowledge()
-  }
-
-  const startEditing = () => {
-    setTitle(requirement.title || '')
-    setDescription(requirement.description)
-    setEvaluation(requirement.analystReview || '')
-    setEditing(true)
-  }
-
-  const cancelEditing = () => setEditing(false)
-
-  const canSave = description.trim().length > 0 && title.trim().length > 0
-
-  const saveEdits = () => {
-    if (!canSave) return
-    const payload = {}
-    if (title.trim() !== (requirement.title || '')) payload.title = title.trim()
-    if (description.trim() !== requirement.description) {
-      payload.description = description.trim()
-    }
-    if (evaluation !== (requirement.analystReview || '')) {
-      payload.analystReview = evaluation
-    }
-    if (Object.keys(payload).length) {
-      onSave(payload)
-      acknowledge()
-    }
-    setEditing(false)
   }
 
   const textFieldProps = (testId, label) => ({
@@ -153,9 +147,10 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
     size: 'small',
     multiline: true,
     minRows: 2,
+    sx: GROWING_TEXT_SX,
     // Read-only, not disabled: disabled text is dimmed below AA contrast
     // and is skipped by screen readers.
-    InputProps: { readOnly: !editing },
+    InputProps: { readOnly: !canEdit },
     inputProps: { 'data-test': testId, 'aria-label': label }
   })
 
@@ -174,28 +169,14 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
     >
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
         <BCBox sx={{ flexGrow: 1 }}>
-          {editing ? (
-            <TextField
-              fullWidth
-              size="small"
-              autoFocus
-              value={title}
-              inputProps={{
-                'data-test': `eoc-title-${requirement.evidenceRequirementId}`,
-                'aria-label': t('initiativeAgreement:evidence.titleLabel')
-              }}
-              onChange={(event) => setTitle(event.target.value)}
-            />
-          ) : (
-            <BCTypography
-              variant="body4"
-              component="p"
-              sx={{ fontWeight: 700, m: 0 }}
-              data-test={`eoc-heading-${requirement.evidenceRequirementId}`}
-            >
-              {requirement.requirementNumber}. {heading}
-            </BCTypography>
-          )}
+          <BCTypography
+            variant="body4"
+            component="p"
+            sx={{ fontWeight: 700, m: 0 }}
+            data-test={`eoc-heading-${requirement.evidenceRequirementId}`}
+          >
+            {requirement.requirementNumber}. {heading}
+          </BCTypography>
         </BCBox>
         {justSaved && (
           <BCBox
@@ -220,7 +201,7 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
               size="small"
               data-test={`eoc-remove-${requirement.evidenceRequirementId}`}
               aria-label={t('initiativeAgreement:evidence.removeRequirement')}
-              onClick={onRemove}
+              onClick={() => setConfirmingRemove(true)}
             >
               <CloseIcon fontSize="inherit" />
             </IconButton>
@@ -245,8 +226,7 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
                 name: heading
               })
             )}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            {...description}
           />
           {notesShown && (
             <>
@@ -254,25 +234,11 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
                 {t('initiativeAgreement:evidence.notesLabel')}
               </BCTypography>
               <TextField
-                multiline
-                minRows={2}
-                fullWidth
-                size="small"
-                disabled={!canEdit}
-                value={reviewNotes}
-                inputProps={{
-                  'data-test': `eoc-notes-${requirement.evidenceRequirementId}`,
-                  'aria-label': t('initiativeAgreement:evidence.notesFor', {
-                    name: heading
-                  })
-                }}
-                onChange={(event) => setReviewNotes(event.target.value)}
-                onBlur={() => {
-                  if (reviewNotes !== (requirement.reviewNotes || '')) {
-                    onSave({ reviewNotes })
-                    acknowledge()
-                  }
-                }}
+                {...textFieldProps(
+                  `eoc-notes-${requirement.evidenceRequirementId}`,
+                  t('initiativeAgreement:evidence.notesFor', { name: heading })
+                )}
+                {...notes}
               />
             </>
           )}
@@ -284,63 +250,13 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
               `eoc-review-${requirement.evidenceRequirementId}`,
               t('initiativeAgreement:evidence.evaluationFor', { name: heading })
             )}
-            value={evaluation}
             placeholder={
-              editing
+              canEdit
                 ? t('initiativeAgreement:evidence.evidencePlaceholder')
                 : ''
             }
-            onChange={(event) => setEvaluation(event.target.value)}
+            {...evaluation}
           />
-          {canEdit && (
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-              {editing ? (
-                <>
-                  <BCButton
-                    type="button"
-                    variant="outlined"
-                    color="primary"
-                    size="small"
-                    data-test={`eoc-cancel-${requirement.evidenceRequirementId}`}
-                    onClick={cancelEditing}
-                  >
-                    {t('common:cancelBtn')}
-                  </BCButton>
-                  <BCButton
-                    type="button"
-                    variant="contained"
-                    color="primary"
-                    size="small"
-                    data-test={`eoc-save-${requirement.evidenceRequirementId}`}
-                    disabled={!canSave}
-                    onClick={saveEdits}
-                  >
-                    {t('common:saveBtn')}
-                  </BCButton>
-                </>
-              ) : (
-                // The accessible name starts with the visible label, so
-                // speech input can say "Edit" and still reach it.
-                <BCButton
-                  type="button"
-                  variant="outlined"
-                  color="primary"
-                  size="small"
-                  startIcon={<EditOutlinedIcon />}
-                  data-test={`eoc-edit-${requirement.evidenceRequirementId}`}
-                  aria-label={t(
-                    'initiativeAgreement:evidence.editRequirement',
-                    {
-                      name: heading
-                    }
-                  )}
-                  onClick={startEditing}
-                >
-                  {t('common:editBtn')}
-                </BCButton>
-              )}
-            </Box>
-          )}
         </BCBox>
 
         <BCBox
@@ -401,6 +317,32 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
           />
         </BCBox>
       </Box>
+
+      <BCModal
+        open={confirmingRemove}
+        onClose={() => setConfirmingRemove(false)}
+        data={{
+          title: t('initiativeAgreement:evidence.confirmRemoveTitle'),
+          primaryButtonText: t('initiativeAgreement:evidence.confirmRemove'),
+          primaryButtonColor: 'error',
+          primaryButtonAction: () => {
+            setConfirmingRemove(false)
+            onRemove()
+          },
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <BCTypography
+              variant="body4"
+              component="p"
+              data-test={`eoc-remove-confirm-${requirement.evidenceRequirementId}`}
+            >
+              {t('initiativeAgreement:evidence.confirmRemoveBody', {
+                name: heading
+              })}
+            </BCTypography>
+          )
+        }}
+      />
     </Paper>
   )
 }
@@ -507,6 +449,7 @@ const MissingInformation = ({ value, onChange, onBlur, readOnly }) => {
         minRows={2}
         fullWidth
         size="small"
+        sx={GROWING_TEXT_SX}
         value={value}
         placeholder={
           readOnly

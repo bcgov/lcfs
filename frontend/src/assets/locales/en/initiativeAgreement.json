@@ -163,6 +163,9 @@
     "sectionTitle": "Evidence of completion of designated action:",
     "addEoc": "Add EOC",
     "removeRequirement": "Remove this requirement",
+    "confirmRemoveTitle": "Remove this evidence requirement?",
+    "confirmRemoveBody": "{{name}} and its evaluation will be removed from this designated action's review. This cannot be undone from this page.",
+    "confirmRemove": "Remove",
     "evidencePlaceholder": "Enter evidence of completion...",
     "notesLabel": "Notes",
     "satisfactory": "Evidence is satisfactory",
@@ -184,8 +187,7 @@
     "descriptionLabel": "Description of the evidence required",
     "descriptionFor": "Description of {{name}}",
     "evaluationLabel": "Evaluation",
-    "evaluationFor": "Evaluation of {{name}}",
-    "editRequirement": "Edit {{name}}"
+    "evaluationFor": "Evaluation of {{name}}"
   },
   "workflow": {
     "accept": "Accept",
