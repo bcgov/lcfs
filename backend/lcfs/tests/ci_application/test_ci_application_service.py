@@ -518,8 +518,38 @@ async def test_get_table_options_returns_lookup_data(service, repo, fuel_repo):
     ]
     assert set(result.units_of_measure) == {u.value for u in QuantityUnitsEnum}
     assert [ft.fuel_type for ft in result.fuel_types] == ["Biodiesel", "Electricity"]
+    assert result.field_options == {}
     fuel_repo.get_fuel_types.assert_awaited_once()
+    fuel_repo.get_fuel_code_field_options.assert_not_called()
     repo.get_fuel_types.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_search_fuel_code_field_options_uses_fuel_code_feedstock_columns(
+    service, fuel_repo
+):
+    fuel_repo.get_distinct_feedstocks.return_value = ["Canola", "Corn"]
+    fuel_repo.get_distinct_feedstock_locations.return_value = [
+        "Ontario",
+        "Saskatchewan",
+    ]
+
+    assert await service.search_fuel_code_field_options("feedstock", "Ca") == [
+        "Canola",
+        "Corn",
+    ]
+    assert await service.search_fuel_code_field_options(
+        "feedstockLocation", "Sa"
+    ) == ["Ontario", "Saskatchewan"]
+
+    fuel_repo.get_distinct_feedstocks.assert_awaited_once_with("Ca")
+    fuel_repo.get_distinct_feedstock_locations.assert_awaited_once_with("Sa")
+
+
+@pytest.mark.anyio
+async def test_search_fuel_code_field_options_rejects_unknown_field(service):
+    with pytest.raises(ValueError):
+        await service.search_fuel_code_field_options("pathwayFeedstockRegion", "Sa")
 
 
 @pytest.mark.anyio

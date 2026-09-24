@@ -1,4 +1,5 @@
 import BCBox from '@/components/BCBox'
+import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/routes/routes'
 import { AppBar, Tab, Tabs } from '@mui/material'
 import { PropTypes } from 'prop-types'
@@ -8,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { CreditCalculator } from './CreditCalculator'
 import { LookupTableView } from '@/views/LookupTable/LookupTableView'
 
-function TabPanel({ children, value, index }) {
+function TabPanel({ children, description, value, index }) {
   return (
     <BCBox
       role="tabpanel"
@@ -16,13 +17,40 @@ function TabPanel({ children, value, index }) {
       id={`calculator-tabpanel-${index}`}
       aria-labelledby={`calculator-tab-${index}`}
     >
-      {value === index && children}
+      {value === index && (
+        <>
+          <BCBox
+            data-test="public-calculator-description"
+            sx={{
+              mb: 3,
+              px: { xs: 2, md: 3 },
+              py: { xs: 2, md: 2.5 },
+              borderLeft: '4px solid',
+              borderColor: 'primary.main',
+              bgcolor: 'grey.100'
+            }}
+          >
+            {description.map((paragraph, paragraphIndex) => (
+              <BCTypography
+                key={paragraphIndex}
+                component="p"
+                variant="body1"
+                sx={paragraphIndex > 0 ? { mt: 1 } : undefined}
+              >
+                {paragraph}
+              </BCTypography>
+            ))}
+          </BCBox>
+          {children}
+        </>
+      )}
     </BCBox>
   )
 }
 
 TabPanel.propTypes = {
   children: PropTypes.node,
+  description: PropTypes.arrayOf(PropTypes.string).isRequired,
   value: PropTypes.number.isRequired,
   index: PropTypes.number.isRequired
 }
@@ -47,10 +75,18 @@ export function CalculatorMenu({ tabIndex }) {
     () => [
       {
         label: t('common:publicDashboard.links.calculator'),
+        description: [
+          t('common:publicCalculator.calculatorIntro'),
+          t('common:publicCalculator.calculatorDisclaimer')
+        ],
         content: <CreditCalculator />
       },
       {
         label: t('common:publicDashboard.links.calculationData'),
+        description: [
+          t('common:publicCalculator.calculationDataIntro'),
+          t('common:publicCalculator.calculationDataDisclaimer')
+        ],
         content: <LookupTableView />
       }
     ],
@@ -104,7 +140,12 @@ export function CalculatorMenu({ tabIndex }) {
       </BCBox>
 
       {tabs.map((tab, idx) => (
-        <TabPanel key={idx} value={tabIndex} index={idx}>
+        <TabPanel
+          key={idx}
+          description={tab.description}
+          value={tabIndex}
+          index={idx}
+        >
           {tab.content}
         </TabPanel>
       ))}
