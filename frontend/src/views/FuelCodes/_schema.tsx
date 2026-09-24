@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef } from 'ag-grid-community'
 import {
   CommonArrayRenderer,
   FuelCodePrefixRenderer,
