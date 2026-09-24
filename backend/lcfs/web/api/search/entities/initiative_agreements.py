@@ -3,7 +3,10 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    RECORD_KIND_LEGACY_AWARD,
+    InitiativeAgreement,
+)
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatus,
 )
@@ -81,6 +84,11 @@ async def search_initiative_agreements(
     )
     statement = where_present(
         statement,
+        # Credit awards only. The table also holds the Initiative Agreements
+        # module's agreements, which have no award status and open on a
+        # different page; the status join already drops them, but the
+        # result's route is the award page, so say so outright.
+        InitiativeAgreement.record_kind == RECORD_KIND_LEGACY_AWARD,
         clause,
         equals_any(InitiativeAgreementStatus.status, query.values("status")),
         date_years(

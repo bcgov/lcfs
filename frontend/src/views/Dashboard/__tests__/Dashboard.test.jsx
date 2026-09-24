@@ -72,6 +72,12 @@ vi.mock('../components/cards/idir/CIApplicationCard', () => ({
   )
 }))
 
+vi.mock('../components/cards/idir/InitiativeAgreementsCard', () => ({
+  InitiativeAgreementsCard: () => (
+    <div data-test="initiative-agreements-card">Initiative Agreements Card</div>
+  )
+}))
+
 vi.mock('../components/cards/idir/ComplianceReportCard', () => ({
   ComplianceReportCard: () => (
     <div data-test="compliance-report-card">Compliance Report Card</div>
