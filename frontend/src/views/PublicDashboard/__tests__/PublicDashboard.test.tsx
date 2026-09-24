@@ -161,5 +161,16 @@ describe('PublicDashboard', () => {
     )
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    const css = [...document.querySelectorAll('style')]
+      .map((node) => node.textContent ?? '')
+      .join('\n')
+    const rule = link.className
+      .split(' ')
+      .map((name) => {
+        const start = css.indexOf(`.${name}:link`)
+        return start === -1 ? '' : css.slice(start, start + 240)
+      })
+      .find(Boolean)
+    expect(rule).toContain('text-decoration:underline!important')
   })
 })

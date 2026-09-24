@@ -421,8 +421,9 @@ export const PublicDashboard = () => {
                 sx={{
                   fontSize: 14,
                   color: 'rgba(255,255,255,.78)',
-                  '&&': {
-                    textDecoration: 'underline',
+                  // Global `a:link, a:visited` strips underlines with !important.
+                  '&:link, &:visited, &:hover': {
+                    textDecoration: 'underline !important',
                     textUnderlineOffset: '3px',
                     textDecorationColor: 'rgba(255,255,255,.78)'
                   },
