@@ -244,6 +244,43 @@ export const useDownloadDocument = (
   }
 }
 
+export const useFetchDocument = (
+  parentType: string,
+  parentID: number | string | undefined | null,
+  options: Record<string, any> = {}
+) => {
+  const client = useApiService()
+
+  const { onSuccess, onError, ...requestOptions } = options
+
+  return async (documentID: any) => {
+    try {
+      if (!documentID) {
+        throw new Error('Document ID is required for preview')
+      }
+      if (!parentID || !parentType) {
+        throw new Error('Parent ID and Parent Type are required')
+      }
+
+      const path = apiRoutes.getDocument
+        .replace(':parentID', String(parentID ?? ''))
+        .replace(':parentType', String(parentType ?? ''))
+        .replace(':documentID', String(documentID ?? ''))
+
+      const response = await client.get(path, {
+        ...requestOptions,
+        responseType: 'blob'
+      })
+
+      onSuccess?.(response.data, response)
+      return response
+    } catch (error) {
+      onError?.(error)
+      throw error
+    }
+  }
+}
+
 export const useGetDocumentInfo = (
   parentType: string,
   parentID: number | string | undefined | null,
