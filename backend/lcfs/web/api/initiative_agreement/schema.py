@@ -371,6 +371,7 @@ class InitiativeAgreementProfileSchema(InitiativeAgreementListItemSchema):
     # Overrides the grid's lean organization payload with the detail card's.
     organization: AgreementOrganizationSchema
     project_description: Optional[str] = None
+    project_location: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     create_date: datetime
@@ -391,6 +392,7 @@ class AgreementCreateSchema(BaseSchema):
     agreement_type: str = AGREEMENT_TYPE_INITIATIVE_AGREEMENT
     title: Optional[str] = None
     project_description: Optional[str] = None
+    project_location: Optional[str] = None
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
