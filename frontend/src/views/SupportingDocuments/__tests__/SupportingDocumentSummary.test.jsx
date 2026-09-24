@@ -24,6 +24,10 @@ vi.mock('@/utils/formatters', () => ({
   timezoneFormatter: vi.fn()
 }))
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key) => key })
+}))
+
 vi.mock('@/components/BCTypography', () => ({
   default: ({ children, onClick, ...props }) => (
     <span data-test="bc-typography" onClick={onClick} {...props}>
@@ -232,5 +236,61 @@ describe('SupportingDocumentSummary', () => {
     render(<SupportingDocumentSummary {...defaultProps} />)
 
     expect(useCurrentUser).toHaveBeenCalled()
+  })
+})
+describe('SupportingDocumentSummary detailed mode', () => {
+  const detailedFile = {
+    documentId: 9,
+    fileName: 'signed-agreement.pdf',
+    fileSize: 1000000,
+    createDate: '2026-06-01T00:00:00Z',
+    createUser: 'LCFS1_bat',
+    uploadingOrganizationCode: 'BETZ'
+  }
+
+  beforeEach(async () => {
+    const { useDownloadDocument } = await import('@/hooks/useDocuments.js')
+    const { useCurrentUser } = await import('@/hooks/useCurrentUser')
+    const { timezoneFormatter } = await import('@/utils/formatters')
+    vi.mocked(useDownloadDocument).mockReturnValue(vi.fn())
+    vi.mocked(useCurrentUser).mockReturnValue({ hasRoles: () => false })
+    vi.mocked(timezoneFormatter).mockReturnValue('2026-06-01 12:00')
+  })
+
+  it('shows size and uploading organization code when detailed', () => {
+    render(
+      <SupportingDocumentSummary
+        parentID={5}
+        parentType="initiativeAgreement"
+        data={[detailedFile]}
+        detailed
+      />
+    )
+    expect(screen.getByText(/1 MB/)).toBeInTheDocument()
+    expect(screen.getByText(/BETZ/)).toBeInTheDocument()
+  })
+
+  it('labels government uploads when the uploader has no organization', () => {
+    render(
+      <SupportingDocumentSummary
+        parentID={5}
+        parentType="initiativeAgreement"
+        data={[{ ...detailedFile, uploadingOrganizationCode: null }]}
+        detailed
+      />
+    )
+    expect(screen.getByText(/gov/)).toBeInTheDocument()
+  })
+
+  it('keeps the compact line for existing callers', () => {
+    render(
+      <SupportingDocumentSummary
+        parentID={5}
+        parentType="compliance_report"
+        data={[detailedFile]}
+      />
+    )
+    expect(screen.queryByText(/1 MB/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/BETZ/)).not.toBeInTheDocument()
   })
 })

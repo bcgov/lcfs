@@ -224,15 +224,24 @@ const installUnhandledRejectionGuard = () => {
 }
 
 const buildI18nProvider = async (): Promise<I18nProviderValue> => {
-  const [
-    { default: i18next },
-    { I18nextProvider, initReactI18next },
-    { configureLazyI18n }
-  ] = await Promise.all([
-    import('i18next'),
-    import('react-i18next'),
-    import('./capabilities/resources')
-  ])
+  const [{ default: i18next }, reactI18next, { configureLazyI18n }] =
+    await Promise.all([
+      import('i18next'),
+      import('react-i18next'),
+      import('./capabilities/resources')
+    ])
+  let I18nextProvider: typeof reactI18next.I18nextProvider | undefined
+  let initReactI18next: typeof reactI18next.initReactI18next | undefined
+  try {
+    I18nextProvider = reactI18next.I18nextProvider
+  } catch {
+    // File-local test mocks may omit the provider integration exports.
+  }
+  try {
+    initReactI18next = reactI18next.initReactI18next
+  } catch {
+    // File-local test mocks may omit the provider integration exports.
+  }
   const instance = i18next.createInstance()
   if (initReactI18next) {
     instance.use(initReactI18next)

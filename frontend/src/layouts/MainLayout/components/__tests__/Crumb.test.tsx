@@ -4,6 +4,7 @@ import { vi, describe, expect, type Mock } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
 import { useLocation, useMatches, useParams } from 'react-router-dom'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
+import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 
 // Mock router hooks
 vi.mock('react-router-dom', async () => {
@@ -41,10 +42,14 @@ describe('Crumb', () => {
   test.beforeEach(() => {
     setupRouterMocks()
     useOrganizationPageStore.getState().resetOrganizationContext()
+    useInitiativeAgreementPageStore.getState().setAgreementCrumb(null)
+    useInitiativeAgreementPageStore.getState().setParentCrumb(null)
   })
 
   test.afterEach(() => {
     useOrganizationPageStore.getState().resetOrganizationContext()
+    useInitiativeAgreementPageStore.getState().setAgreementCrumb(null)
+    useInitiativeAgreementPageStore.getState().setParentCrumb(null)
   })
 
   test('renders the home link when on a path', ({
@@ -106,6 +111,92 @@ describe('Crumb', () => {
     render(<Crumb />, [query, theme, router])
 
     expect(screen.getByText('Admin Dashboard')).toBeInTheDocument()
+  })
+
+  test('shows the agreement code for an initiative agreement detail path', ({
+    render,
+    app
+  }) => {
+    setupRouterMocks({
+      pathname: '/initiative-agreements/5',
+      matches: [{ handle: { title: 'Initiative agreement' } }]
+    })
+    useInitiativeAgreementPageStore.getState().setAgreementCrumb('IA-26ORG1')
+
+    render(<Crumb />, app)
+
+    expect(screen.getByText('Initiative agreements')).toBeInTheDocument()
+    expect(screen.getByText('IA-26ORG1')).toBeInTheDocument()
+  })
+
+  test('reads a designated action trail as module, agreement, action', ({
+    render,
+    app
+  }) => {
+    setupRouterMocks({
+      pathname: '/initiative-agreements/5/designated-actions/9',
+      matches: [{ handle: { title: 'Designated action' } }]
+    })
+    useInitiativeAgreementPageStore.getState().setAgreementCrumb('DA1-IA5')
+    useInitiativeAgreementPageStore.getState().setParentCrumb('IA-26ORG1')
+
+    render(<Crumb />, app)
+
+    expect(screen.getByText('Initiative agreements')).toBeInTheDocument()
+    const agreement = screen.getByText('IA-26ORG1')
+    expect(agreement.closest('a')).toHaveAttribute(
+      'href',
+      '/initiative-agreements/5'
+    )
+    expect(screen.queryByText('Designated actions')).not.toBeInTheDocument()
+    expect(screen.queryByText('ID: 5')).not.toBeInTheDocument()
+    expect(screen.getByText('DA1-IA5')).toBeInTheDocument()
+  })
+
+  test('falls back to the agreement id while its code is still loading', ({
+    render,
+    app
+  }) => {
+    setupRouterMocks({
+      pathname: '/initiative-agreements/5/designated-actions/9',
+      matches: [{ handle: { title: 'Designated action' } }]
+    })
+
+    render(<Crumb />, app)
+
+    expect(screen.getByText('IA5').closest('a')).toHaveAttribute(
+      'href',
+      '/initiative-agreements/5'
+    )
+  })
+
+  test('keeps the crumb for the module-wide Designated actions tab', ({
+    render,
+    app
+  }) => {
+    setupRouterMocks({
+      pathname: '/initiative-agreements/designated-actions',
+      matches: [{ handle: { title: 'Designated actions' } }]
+    })
+
+    render(<Crumb />, app)
+
+    expect(screen.getByText('Initiative agreements')).toBeInTheDocument()
+    expect(screen.getByText('Designated actions')).toBeInTheDocument()
+  })
+
+  test('falls back to the route title when no agreement code is set', ({
+    render,
+    app
+  }) => {
+    setupRouterMocks({
+      pathname: '/initiative-agreements/5',
+      matches: [{ handle: { title: 'Initiative agreement' } }]
+    })
+
+    render(<Crumb />, app)
+
+    expect(screen.getByText('Initiative agreement')).toBeInTheDocument()
   })
 
   test('displays numeric IDs with ID prefix', ({
