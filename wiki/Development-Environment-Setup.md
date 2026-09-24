@@ -8,9 +8,7 @@ Before you begin, ensure you have the following installed on your system:
 
 *   **Git**: For cloning the repository and version control.
 *   **Docker and Docker Compose**: For running the application services in containers. ([Install Docker](https://docs.docker.com/get-docker/), Docker Compose is typically included).
-*   **Node.js and npm**: For frontend development.
-    *   It's recommended to use a Node version manager like `nvm` to easily switch Node versions.
-    *   Check `frontend/.nvmrc` (if it exists) or `frontend/package.json` (`engines` field) for the specific Node.js version recommended for the project. If not specified, a recent LTS version is generally a good choice.
+*   **Node.js 24.21.0 and npm**: Required for frontend development. Use `frontend/.nvmrc` with a Node version manager such as `nvm`; `frontend/package.json` enforces Node.js 24 or newer.
     *   npm (Node Package Manager) is included with Node.js.
 *   **Python and Poetry**: For backend development.
     *   Python version is specified in `backend/.python-version` (e.g., 3.9+).
