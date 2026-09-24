@@ -1,10 +1,10 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { screen, waitFor } from '@testing-library/react'
+import { describe, expect, beforeEach, vi } from 'vitest'
 import { ComplianceReportViewSelector } from '../ComplianceReportViewSelector.jsx'
 import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Create mock functions at the top level
 const mockUseParams = vi.fn()
@@ -46,7 +46,8 @@ vi.mock('@/components/Loading.jsx', () => ({
 vi.mock('@/views/ComplianceReports/EditViewComplianceReport.jsx', () => ({
   EditViewComplianceReport: ({ reportData, error, isError }) => (
     <div data-test="edit-report">
-      EditViewComplianceReport - {JSON.stringify({ reportData, error, isError })}
+      EditViewComplianceReport -{' '}
+      {JSON.stringify({ reportData, error, isError })}
     </div>
   )
 }))
@@ -114,41 +115,71 @@ describe('ComplianceReportViewSelector', () => {
   }
 
   describe('Component rendering', () => {
-    it('renders the component function correctly', () => {
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+    test('renders the component function correctly', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(screen.getByTestId('edit-report')).toBeInTheDocument()
     })
   })
 
   describe('Hook integrations', () => {
-    it('calls useParams and extracts complianceReportId', () => {
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+    test('calls useParams and extracts complianceReportId', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockUseParams).toHaveBeenCalled()
     })
 
-    it('calls useCurrentUser hook', () => {
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+    test('calls useCurrentUser hook', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockUseCurrentUser).toHaveBeenCalled()
     })
 
-    it('calls useLocation hook', () => {
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+    test('calls useLocation hook', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockUseLocation).toHaveBeenCalled()
     })
 
-    it('calls useQueryClient hook', () => {
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+    test('calls useQueryClient hook', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockUseQueryClient).toHaveBeenCalled()
     })
 
-    it('calls useGetComplianceReport with correct parameters', () => {
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+    test('calls useGetComplianceReport with correct parameters', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockUseGetComplianceReport).toHaveBeenCalledWith(
         'org-123',
         'test-report-id',
@@ -156,14 +187,19 @@ describe('ComplianceReportViewSelector', () => {
       )
     })
 
-    it('calls useGetComplianceReport with enabled false when currentUser is loading', () => {
+    test('calls useGetComplianceReport with enabled false when currentUser is loading', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseCurrentUser.mockReturnValue({
         data: null,
         isLoading: true
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockUseGetComplianceReport).toHaveBeenCalledWith(
         undefined,
         'test-report-id',
@@ -173,42 +209,62 @@ describe('ComplianceReportViewSelector', () => {
   })
 
   describe('Loading states', () => {
-    it('renders Loading component when isReportLoading is true', () => {
+    test('renders Loading component when isReportLoading is true', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseGetComplianceReport.mockReturnValue({
         ...defaultReportData,
         isLoading: true
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(screen.getByTestId('loading')).toBeInTheDocument()
       expect(screen.queryByTestId('edit-report')).not.toBeInTheDocument()
       expect(screen.queryByTestId('legacy-report')).not.toBeInTheDocument()
     })
 
-    it('renders Loading component when isCurrentUserLoading is true', () => {
+    test('renders Loading component when isCurrentUserLoading is true', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseCurrentUser.mockReturnValue({
         data: null,
         isLoading: true
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(screen.getByTestId('loading')).toBeInTheDocument()
       expect(screen.queryByTestId('edit-report')).not.toBeInTheDocument()
       expect(screen.queryByTestId('legacy-report')).not.toBeInTheDocument()
     })
 
-    it('renders main content when both loading states are false', () => {
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+    test('renders main content when both loading states are false', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(screen.queryByTestId('loading')).not.toBeInTheDocument()
       expect(screen.getByTestId('edit-report')).toBeInTheDocument()
     })
   })
 
   describe('Report type rendering', () => {
-    it('renders EditViewComplianceReport for all reports including historical TFRS-migrated reports', () => {
+    test('renders EditViewComplianceReport for all reports including historical TFRS-migrated reports', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       // TFRS data is migrated into existing LCFS tables, so all reports use the same view
       const historicalReport = {
         ...defaultReportData,
@@ -221,12 +277,17 @@ describe('ComplianceReportViewSelector', () => {
       }
       mockUseGetComplianceReport.mockReturnValue(historicalReport)
 
-      render(<ComplianceReportViewSelector />, { wrapper })
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
 
       expect(screen.getByTestId('edit-report')).toBeInTheDocument()
     })
 
-    it('renders EditViewComplianceReport for 2024+ reports', () => {
+    test('renders EditViewComplianceReport for 2024+ reports', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       const report2024Plus = {
         ...defaultReportData,
         data: {
@@ -238,14 +299,19 @@ describe('ComplianceReportViewSelector', () => {
       }
       mockUseGetComplianceReport.mockReturnValue(report2024Plus)
 
-      render(<ComplianceReportViewSelector />, { wrapper })
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
 
       expect(screen.getByTestId('edit-report')).toBeInTheDocument()
     })
   })
 
   describe('Props passing', () => {
-    it('passes error and isError props to the rendered component', async () => {
+    test('passes error and isError props to the rendered component', async ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       const testError = { message: 'Test error' }
       setupMocks({
         isError: true,
@@ -260,14 +326,21 @@ describe('ComplianceReportViewSelector', () => {
         }
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       const editReportElement = screen.getByTestId('edit-report')
-      expect(editReportElement.textContent).toContain('"error":{"message":"Test error"}')
+      expect(editReportElement.textContent).toContain(
+        '"error":{"message":"Test error"}'
+      )
       expect(editReportElement.textContent).toContain('"isError":true')
     })
 
-    it('passes correct props to EditViewComplianceReport', () => {
+    test('passes correct props to EditViewComplianceReport', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       const reportData = {
         data: {
           report: {
@@ -282,8 +355,8 @@ describe('ComplianceReportViewSelector', () => {
       }
       mockUseGetComplianceReport.mockReturnValue(reportData)
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       const editReportElement = screen.getByTestId('edit-report')
       expect(editReportElement.textContent).toContain('"error":"Test error"')
       expect(editReportElement.textContent).toContain('"isError":true')
@@ -291,7 +364,12 @@ describe('ComplianceReportViewSelector', () => {
   })
 
   describe('useEffect cache invalidation logic', () => {
-    it('does NOT call invalidateQueries when reportData is null', () => {
+    test('does NOT call invalidateQueries when reportData is null', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseGetComplianceReport.mockReturnValue({
         ...defaultReportData,
         data: null
@@ -300,41 +378,56 @@ describe('ComplianceReportViewSelector', () => {
         state: { reportStatus: 'Submitted' }
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled()
       expect(mockRefetch).not.toHaveBeenCalled()
     })
 
-    it('does NOT call invalidateQueries when location.state.reportStatus is null', () => {
+    test('does NOT call invalidateQueries when location.state.reportStatus is null', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseLocation.mockReturnValue({
         state: null
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled()
       expect(mockRefetch).not.toHaveBeenCalled()
     })
 
-    it('does NOT call invalidateQueries when reportStatus matches current status', () => {
+    test('does NOT call invalidateQueries when reportStatus matches current status', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseLocation.mockReturnValue({
         state: { reportStatus: 'Draft' }
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled()
       expect(mockRefetch).not.toHaveBeenCalled()
     })
 
-    it('calls invalidateQueries and refetch when all conditions are true', () => {
+    test('calls invalidateQueries and refetch when all conditions are true', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseLocation.mockReturnValue({
         state: { reportStatus: 'Submitted' }
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith([
         'compliance-report',
         'test-report-id'
@@ -342,31 +435,46 @@ describe('ComplianceReportViewSelector', () => {
       expect(mockRefetch).toHaveBeenCalled()
     })
 
-    it('handles undefined location.state gracefully', () => {
+    test('handles undefined location.state gracefully', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseLocation.mockReturnValue({
         state: undefined
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled()
       expect(mockRefetch).not.toHaveBeenCalled()
     })
 
-    it('handles missing reportStatus in location.state', () => {
+    test('handles missing reportStatus in location.state', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseLocation.mockReturnValue({
         state: { otherProperty: 'value' }
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled()
       expect(mockRefetch).not.toHaveBeenCalled()
     })
   })
 
   describe('Edge cases', () => {
-    it('handles undefined reportData gracefully', () => {
+    test('handles undefined reportData gracefully', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseGetComplianceReport.mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -375,12 +483,17 @@ describe('ComplianceReportViewSelector', () => {
         refetch: mockRefetch
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(screen.getByTestId('edit-report')).toBeInTheDocument()
     })
 
-    it('handles undefined currentUser organization gracefully', () => {
+    test('handles undefined currentUser organization gracefully', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseCurrentUser.mockReturnValue({
         data: {
           organization: null
@@ -388,8 +501,8 @@ describe('ComplianceReportViewSelector', () => {
         isLoading: false
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockUseGetComplianceReport).toHaveBeenCalledWith(
         undefined,
         'test-report-id',
@@ -397,14 +510,19 @@ describe('ComplianceReportViewSelector', () => {
       )
     })
 
-    it('handles completely undefined currentUser', () => {
+    test('handles completely undefined currentUser', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseCurrentUser.mockReturnValue({
         data: null,
         isLoading: false
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(mockUseGetComplianceReport).toHaveBeenCalledWith(
         undefined,
         'test-report-id',
@@ -412,7 +530,12 @@ describe('ComplianceReportViewSelector', () => {
       )
     })
 
-    it('handles missing report in reportData', () => {
+    test('handles missing report in reportData', ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseGetComplianceReport.mockReturnValue({
         data: {
           report: null
@@ -423,15 +546,19 @@ describe('ComplianceReportViewSelector', () => {
         refetch: mockRefetch
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
-      
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
+
       expect(screen.getByTestId('edit-report')).toBeInTheDocument()
     })
-
   })
 
   describe('Cache invalidation tests', () => {
-    it('does not invalidate cache when location state is null', async () => {
+    test('does not invalidate cache when location state is null', async ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
       setupMocks({
         reportData: {
           data: {
@@ -444,7 +571,7 @@ describe('ComplianceReportViewSelector', () => {
         locationState: null // No location state
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-report')).toBeInTheDocument()
@@ -457,8 +584,16 @@ describe('ComplianceReportViewSelector', () => {
   })
 
   describe('Hook integration tests', () => {
-    it('calls useGetComplianceReport with correct parameters', async () => {
-      const currentUser = { data: { organization: { organizationId: '456' } }, isLoading: false }
+    test('calls useGetComplianceReport with correct parameters', async ({
+      render,
+      theme,
+      localization,
+      router
+    }) => {
+      const currentUser = {
+        data: { organization: { organizationId: '456' } },
+        isLoading: false
+      }
       const complianceReportId = '789'
 
       setupMocks({
@@ -466,7 +601,7 @@ describe('ComplianceReportViewSelector', () => {
         complianceReportId
       })
 
-      render(<ComplianceReportViewSelector />, { wrapper })
+      render(<ComplianceReportViewSelector />, [theme, localization, router])
 
       expect(mockUseGetComplianceReport).toHaveBeenCalledWith(
         '456', // organizationId

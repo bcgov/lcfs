@@ -1,8 +1,8 @@
 import React, { createRef } from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { NewComplianceReportButton } from '../NewComplianceReportButton'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
 
@@ -64,19 +64,39 @@ describe('NewComplianceReportButton', () => {
     setIsButtonLoading: setIsButtonLoadingMock
   })
 
-  it('renders the primary button and forwards refs', () => {
+  test('renders the primary button and forwards refs', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const ref = createRef()
 
-    render(<NewComplianceReportButton {...getDefaultProps()} ref={ref} />, {
-      wrapper
-    })
+    render(<NewComplianceReportButton {...getDefaultProps()} ref={ref} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByRole('button')).toHaveTextContent('report:newReportBtn')
     expect(ref.current).not.toBeNull()
   })
 
-  it('opens the menu and lists available years that are ready', async () => {
-    render(<NewComplianceReportButton {...getDefaultProps()} />, { wrapper })
+  test('opens the menu and lists available years that are ready', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<NewComplianceReportButton {...getDefaultProps()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     fireEvent.click(screen.getByRole('button'))
 
@@ -86,20 +106,42 @@ describe('NewComplianceReportButton', () => {
     expect(screen.queryByText('2025')).not.toBeInTheDocument()
   })
 
-  it('disables periods that have already been reported', async () => {
+  test('disables periods that have already been reported', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockHooks({
       reportedPeriods: [{ compliancePeriodId: 1 }]
     })
 
-    render(<NewComplianceReportButton {...getDefaultProps()} />, { wrapper })
+    render(<NewComplianceReportButton {...getDefaultProps()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     fireEvent.click(screen.getByRole('button'))
 
     const menuItem = await screen.findByText('2024')
     expect(menuItem).toHaveAttribute('aria-disabled', 'true')
   })
 
-  it('calls handlers when a period is selected', async () => {
-    render(<NewComplianceReportButton {...getDefaultProps()} />, { wrapper })
+  test('calls handlers when a period is selected', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<NewComplianceReportButton {...getDefaultProps()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     fireEvent.click(screen.getByRole('button'))
 
     const option = await screen.findByText('2024')
@@ -111,7 +153,13 @@ describe('NewComplianceReportButton', () => {
     )
   })
 
-  it('shows an informational message when no periods are available', async () => {
+  test('shows an informational message when no periods are available', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockHooks({
       periods: {
         data: [],
@@ -120,7 +168,12 @@ describe('NewComplianceReportButton', () => {
       }
     })
 
-    render(<NewComplianceReportButton {...getDefaultProps()} />, { wrapper })
+    render(<NewComplianceReportButton {...getDefaultProps()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     fireEvent.click(screen.getByRole('button'))
 
     await waitFor(() => {
@@ -128,12 +181,23 @@ describe('NewComplianceReportButton', () => {
     })
   })
 
-  it('does not render the menu when data has not finished loading', () => {
+  test('does not render the menu when data has not finished loading', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockHooks({
       periods: { data: basePeriods, isLoading: false, isFetched: false }
     })
 
-    render(<NewComplianceReportButton {...getDefaultProps()} />, { wrapper })
+    render(<NewComplianceReportButton {...getDefaultProps()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     fireEvent.click(screen.getByRole('button'))
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()

@@ -1,8 +1,17 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 import { LoginScreenBackground } from '../LoginScreenBackground'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test as fixtureTest } from '@/tests/utils/fixtures'
+
+const test = (name, callback) =>
+  fixtureTest(name, ({ render, theme }) =>
+    callback({
+      render: (ui, providers = [], options = {}) =>
+        render(ui, [theme, ...providers], options),
+      theme
+    })
+  )
 
 // ---------------------------------------------------------------------------
 // Hook mocks
@@ -20,7 +29,7 @@ const MOCK_IMAGES = [
     fileName: 'photo1.jpg',
     displayName: 'Mountain Sunrise',
     caption: 'Rockies, BC',
-    isActive: true,
+    isActive: true
   },
   {
     loginBgImageId: 2,
@@ -28,42 +37,42 @@ const MOCK_IMAGES = [
     fileName: 'photo2.jpg',
     displayName: 'Ocean View',
     caption: null,
-    isActive: false,
-  },
+    isActive: false
+  }
 ]
 
 vi.mock('@/hooks/useLoginBgImage', () => ({
   useLoginBgImages: () => ({ data: MOCK_IMAGES, isLoading: false }),
   useUploadLoginBgImage: () => ({
     mutateAsync: mockUploadMutateAsync,
-    isPending: false,
+    isPending: false
   }),
   useUpdateLoginBgImage: () => ({
     mutateAsync: mockUpdateMutateAsync,
-    isPending: false,
+    isPending: false
   }),
   useActivateLoginBgImage: () => ({
     mutateAsync: mockActivateMutateAsync,
-    isPending: false,
+    isPending: false
   }),
   useDeleteLoginBgImage: () => ({
     mutateAsync: mockDeleteMutateAsync,
-    isPending: false,
-  }),
+    isPending: false
+  })
 }))
 
 vi.mock('@/constants/config', () => ({
-  CONFIG: { API_BASE: 'http://localhost:8000/api' },
+  CONFIG: { API_BASE: 'http://localhost:8000/api' }
 }))
 
 vi.mock('@/constants/routes', () => ({
   apiRoutes: {
-    loginBgImageStream: '/login-bg-images/:imageId/stream',
-  },
+    loginBgImageStream: '/login-bg-images/:imageId/stream'
+  }
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key }),
+  useTranslation: () => ({ t: (key) => key })
 }))
 
 // ---------------------------------------------------------------------------
@@ -76,59 +85,68 @@ describe('LoginScreenBackground', () => {
   })
 
   describe('Rendering', () => {
-    it('renders the page heading', () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('renders the page heading', ({ render }) => {
+      render(<LoginScreenBackground />)
       expect(screen.getByText('loginBg.title')).toBeInTheDocument()
     })
 
-    it('renders description text', () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('renders description text', ({ render }) => {
+      render(<LoginScreenBackground />)
       expect(screen.getByText('loginBg.description')).toBeInTheDocument()
       expect(screen.getByText('loginBg.recommended')).toBeInTheDocument()
     })
 
-    it('renders all images from the API', () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('renders all images from the API', ({ render }) => {
+      render(<LoginScreenBackground />)
       expect(screen.getByAltText('Mountain Sunrise')).toBeInTheDocument()
       expect(screen.getByAltText('Ocean View')).toBeInTheDocument()
     })
 
-    it('shows Active badge on the active image', () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('shows Active badge on the active image', ({ render }) => {
+      render(<LoginScreenBackground />)
       expect(screen.getByText('loginBg.active')).toBeInTheDocument()
     })
 
-    it('renders displayName and caption in card footer', () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('renders displayName and caption in card footer', ({ render }) => {
+      render(<LoginScreenBackground />)
       expect(screen.getByText('Mountain Sunrise')).toBeInTheDocument()
       expect(screen.getByText('Rockies, BC')).toBeInTheDocument()
     })
 
-    it('renders Upload image and Set background image buttons', () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('renders Upload image and Set background image buttons', ({
+      render
+    }) => {
+      render(<LoginScreenBackground />)
       expect(screen.getByText('loginBg.uploadImageBtn')).toBeInTheDocument()
       expect(screen.getByText('loginBg.setBackgroundBtn')).toBeInTheDocument()
     })
 
-    it('"Set background image" is disabled when nothing is selected', () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('"Set background image" is disabled when nothing is selected', ({
+      render
+    }) => {
+      render(<LoginScreenBackground />)
       const btn = screen.getByText('loginBg.setBackgroundBtn').closest('button')
       expect(btn).toBeDisabled()
     })
   })
 
   describe('Image selection', () => {
-    it('enables "Set background image" after selecting an image', () => {
-      render(<LoginScreenBackground />, { wrapper })
-      const card = screen.getByAltText('Ocean View').closest('.MuiCard-root') ||
+    test('enables "Set background image" after selecting an image', ({
+      render
+    }) => {
+      render(<LoginScreenBackground />)
+      const card =
+        screen.getByAltText('Ocean View').closest('.MuiCard-root') ||
         screen.getByAltText('Ocean View').parentElement.parentElement
       fireEvent.click(card)
       const btn = screen.getByText('loginBg.setBackgroundBtn').closest('button')
       expect(btn).not.toBeDisabled()
     })
 
-    it('calls activate mutation when "Set background image" is clicked', async () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('calls activate mutation when "Set background image" is clicked', async ({
+      render
+    }) => {
+      render(<LoginScreenBackground />)
       // Click the card for image id=2
       fireEvent.click(screen.getByAltText('Ocean View').closest('[class]'))
 
@@ -142,19 +160,23 @@ describe('LoginScreenBackground', () => {
   })
 
   describe('Upload modal', () => {
-    it('opens upload modal when "Upload image" is clicked', () => {
-      render(<LoginScreenBackground />, { wrapper })
-      fireEvent.click(screen.getByText('loginBg.uploadImageBtn').closest('button'))
-      expect(
-        screen.getByText('loginBg.uploadTitle')
-      ).toBeInTheDocument()
+    test('opens upload modal when "Upload image" is clicked', ({ render }) => {
+      render(<LoginScreenBackground />)
+      fireEvent.click(
+        screen.getByText('loginBg.uploadImageBtn').closest('button')
+      )
+      expect(screen.getByText('loginBg.uploadTitle')).toBeInTheDocument()
     })
 
-    it('closes upload modal when Cancel is clicked', async () => {
-      render(<LoginScreenBackground />, { wrapper })
-      fireEvent.click(screen.getByText('loginBg.uploadImageBtn').closest('button'))
+    test('closes upload modal when Cancel is clicked', async ({ render }) => {
+      render(<LoginScreenBackground />)
+      fireEvent.click(
+        screen.getByText('loginBg.uploadImageBtn').closest('button')
+      )
 
-      const cancelBtn = screen.getByRole('button', { name: 'loginBg.cancelBtn' })
+      const cancelBtn = screen.getByRole('button', {
+        name: 'loginBg.cancelBtn'
+      })
       fireEvent.click(cancelBtn)
 
       await waitFor(() => {
@@ -166,62 +188,68 @@ describe('LoginScreenBackground', () => {
   })
 
   describe('Edit modal', () => {
-    it('opens edit modal when "Edit Image" is clicked', () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('opens edit modal when "Edit Image" is clicked', ({ render }) => {
+      render(<LoginScreenBackground />)
       const editButtons = screen.getAllByText('loginBg.editImageBtn')
       fireEvent.click(editButtons[0])
       expect(screen.getByText('loginBg.editTitle')).toBeInTheDocument()
     })
 
-    it('pre-fills name and caption fields with image data', () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('pre-fills name and caption fields with image data', ({ render }) => {
+      render(<LoginScreenBackground />)
       const editButtons = screen.getAllByText('loginBg.editImageBtn')
       fireEvent.click(editButtons[0])
 
       const nameInput = screen.getByPlaceholderText('loginBg.namePlaceholder')
-      const captionInput = screen.getByPlaceholderText('loginBg.captionPlaceholder')
+      const captionInput = screen.getByPlaceholderText(
+        'loginBg.captionPlaceholder'
+      )
 
       expect(nameInput.value).toBe('Mountain Sunrise')
       expect(captionInput.value).toBe('Rockies, BC')
     })
 
-    it('calls update mutation with correct args on Save changes', async () => {
+    test('calls update mutation with correct args on Save changes', async ({
+      render
+    }) => {
       mockUpdateMutateAsync.mockResolvedValue({})
-      render(<LoginScreenBackground />, { wrapper })
+      render(<LoginScreenBackground />)
 
       const editButtons = screen.getAllByText('loginBg.editImageBtn')
       fireEvent.click(editButtons[0])
 
-      fireEvent.click(screen.getByRole('button', { name: 'loginBg.saveChangesBtn' }))
+      fireEvent.click(
+        screen.getByRole('button', { name: 'loginBg.saveChangesBtn' })
+      )
 
       await waitFor(() => {
         expect(mockUpdateMutateAsync).toHaveBeenCalledWith({
           imageId: 1,
           displayName: 'Mountain Sunrise',
-          caption: 'Rockies, BC',
+          caption: 'Rockies, BC'
         })
       })
     })
   })
 
   describe('Delete confirmation', () => {
-    it('opens delete confirm dialog when Delete is clicked', () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('opens delete confirm dialog when Delete is clicked', ({ render }) => {
+      render(<LoginScreenBackground />)
       const deleteLinks = screen.getAllByText('loginBg.delete')
       fireEvent.click(deleteLinks[0])
       expect(screen.getByText('loginBg.deleteConfirmTitle')).toBeInTheDocument()
     })
 
-    it('calls delete mutation on confirm', async () => {
+    test('calls delete mutation on confirm', async ({ render }) => {
       mockDeleteMutateAsync.mockResolvedValue({})
-      render(<LoginScreenBackground />, { wrapper })
+      render(<LoginScreenBackground />)
 
       fireEvent.click(screen.getAllByText('loginBg.delete')[0])
 
       // Click the confirm Delete button inside the dialog
-      const confirmBtn = screen.getAllByRole('button', { name: 'loginBg.deleteBtn' }).find(
-        (b) => b.closest('[role="dialog"]')
-      )
+      const confirmBtn = screen
+        .getAllByRole('button', { name: 'loginBg.deleteBtn' })
+        .find((b) => b.closest('[role="dialog"]'))
       fireEvent.click(confirmBtn)
 
       await waitFor(() => {
@@ -229,27 +257,43 @@ describe('LoginScreenBackground', () => {
       })
     })
 
-    it('closes dialog without deleting when Cancel is clicked', async () => {
-      render(<LoginScreenBackground />, { wrapper })
+    test('closes dialog without deleting when Cancel is clicked', async ({
+      render
+    }) => {
+      render(<LoginScreenBackground />)
       fireEvent.click(screen.getAllByText('loginBg.delete')[0])
 
       fireEvent.click(screen.getByRole('button', { name: 'loginBg.cancelBtn' }))
 
       await waitFor(() => {
-        expect(screen.queryByText('loginBg.deleteConfirmTitle')).not.toBeInTheDocument()
+        expect(
+          screen.queryByText('loginBg.deleteConfirmTitle')
+        ).not.toBeInTheDocument()
       })
       expect(mockDeleteMutateAsync).not.toHaveBeenCalled()
     })
   })
 
   describe('Loading state', () => {
-    it('renders loading indicator when isLoading is true', () => {
+    test('renders loading indicator when isLoading is true', () => {
       vi.doMock('@/hooks/useLoginBgImage', () => ({
         useLoginBgImages: () => ({ data: [], isLoading: true }),
-        useUploadLoginBgImage: () => ({ mutateAsync: vi.fn(), isPending: false }),
-        useUpdateLoginBgImage: () => ({ mutateAsync: vi.fn(), isPending: false }),
-        useActivateLoginBgImage: () => ({ mutateAsync: vi.fn(), isPending: false }),
-        useDeleteLoginBgImage: () => ({ mutateAsync: vi.fn(), isPending: false }),
+        useUploadLoginBgImage: () => ({
+          mutateAsync: vi.fn(),
+          isPending: false
+        }),
+        useUpdateLoginBgImage: () => ({
+          mutateAsync: vi.fn(),
+          isPending: false
+        }),
+        useActivateLoginBgImage: () => ({
+          mutateAsync: vi.fn(),
+          isPending: false
+        }),
+        useDeleteLoginBgImage: () => ({
+          mutateAsync: vi.fn(),
+          isPending: false
+        })
       }))
       // Loading component is rendered at module scope — this tests the guard
       // The component returns <Loading /> early when isLoading is true

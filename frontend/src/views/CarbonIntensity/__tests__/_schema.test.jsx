@@ -1,3 +1,4 @@
+import { test } from '@/tests/utils/fixtures'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
@@ -7,11 +8,14 @@ import {
   getVerificationColumnValue,
   getResumeStep
 } from '@/views/CarbonIntensity/_schema'
-import { wrapper } from '@/tests/utils/wrapper'
-
 vi.mock('@/hooks/useCIApplication', () => ({
   useCIApplicationStatuses: () => ({ data: [] }),
   useGetCIApplicationAnalysts: () => ({ data: [] })
+}))
+
+vi.mock('@/components/BCDataGrid/components', () => ({
+  BCDateFloatingFilter: () => null,
+  BCSelectFloatingFilter: () => null
 }))
 
 const t = (key) => key
@@ -76,7 +80,13 @@ describe('ciApplicationsColDefs (IDIR)', () => {
     expect(status.sortable).toBe(false)
   })
 
-  it('displays sentence-case copy when supplemental pathway edits are enabled', () => {
+  test('displays sentence-case copy when supplemental pathway edits are enabled', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const cols = ciApplicationsColDefs(t, { isGovernment: true })
     const status = cols.find((c) => c.field === 'status.status')
     const rendererElement = status.cellRenderer({
@@ -86,7 +96,7 @@ describe('ciApplicationsColDefs (IDIR)', () => {
       }
     })
 
-    render(rendererElement, { wrapper })
+    render(rendererElement, [query, theme, localization, router])
     expect(screen.getByText('Changes requested')).toBeInTheDocument()
   })
 

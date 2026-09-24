@@ -1,3 +1,4 @@
+import { test } from '@/tests/utils/fixtures'
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -9,8 +10,6 @@ import {
 } from '@testing-library/react'
 
 import { DocumentsModellingStep } from '@/views/CarbonIntensity/components/DocumentsModellingStep'
-import { wrapper } from '@/tests/utils/wrapper'
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key, options = {}) => {
@@ -81,14 +80,20 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
   })
   afterEach(cleanup)
 
-  it('renders a single upload control, description input, and Save/Delete', () => {
+  test('renders a single upload control, description input, and Save/Delete', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <DocumentsModellingStep
         ciApplication={baseCi}
         onSave={vi.fn()}
         onDelete={vi.fn()}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
     expect(screen.getByTestId('ci-step3-upload-supporting')).toBeInTheDocument()
     // The separate GHGenius upload control was removed by the simplification.
@@ -101,16 +106,31 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     expect(screen.getByTestId('ci-step3-delete-btn')).toBeInTheDocument()
   })
 
-  it('hides the uploaded-documents list until a document exists', () => {
-    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
-      wrapper
-    })
+  test('hides the uploaded-documents list until a document exists', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(
       screen.queryByTestId('ci-step3-uploaded-list')
     ).not.toBeInTheDocument()
   })
 
-  it('shows the uploaded-documents list once a document exists', () => {
+  test('shows the uploaded-documents list once a document exists', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockDocs = [
       {
         documentId: 1,
@@ -119,14 +139,23 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
         documentCategory: 'supporting'
       }
     ]
-    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
-      wrapper
-    })
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByTestId('ci-step3-uploaded-list')).toBeInTheDocument()
     expect(screen.getByTestId('ci-step3-uploaded-row')).toBeInTheDocument()
   })
 
-  it('downloads the document when its file name is clicked (#4645)', () => {
+  test('downloads the document when its file name is clicked (#4645)', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockDocs = [
       {
         documentId: 7,
@@ -135,14 +164,23 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
         documentCategory: 'supporting'
       }
     ]
-    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
-      wrapper
-    })
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     fireEvent.click(screen.getByTestId('ci-step3-download-doc'))
     expect(mockDownloadDoc).toHaveBeenCalledWith(7, 'tech.pdf')
   })
 
-  it('downloads a renamed document using its display name', () => {
+  test('downloads a renamed document using its display name', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockDocs = [
       {
         documentId: 8,
@@ -152,14 +190,23 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
         documentCategory: 'supporting'
       }
     ]
-    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
-      wrapper
-    })
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     fireEvent.click(screen.getByTestId('ci-step3-download-doc'))
     expect(mockDownloadDoc).toHaveBeenCalledWith(8, 'My Renamed Report.pdf')
   })
 
-  it('shows a confirmation modal before deleting a document', () => {
+  test('shows a confirmation modal before deleting a document', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockDocs = [
       {
         documentId: 7,
@@ -168,9 +215,12 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
         documentCategory: 'supporting'
       }
     ]
-    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
-      wrapper
-    })
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     fireEvent.click(screen.getByTestId('ci-step3-delete-doc'))
 
@@ -183,7 +233,13 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     expect(mockDelete).not.toHaveBeenCalled()
   })
 
-  it('deletes a document after confirmation', async () => {
+  test('deletes a document after confirmation', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockDocs = [
       {
         documentId: 7,
@@ -192,9 +248,12 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
         documentCategory: 'supporting'
       }
     ]
-    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
-      wrapper
-    })
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     fireEvent.click(screen.getByTestId('ci-step3-delete-doc'))
     fireEvent.click(screen.getByText('common:deleteBtn'))
@@ -202,7 +261,13 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     await waitFor(() => expect(mockDelete).toHaveBeenCalledWith(7))
   })
 
-  it('does not delete a document when confirmation is cancelled', () => {
+  test('does not delete a document when confirmation is cancelled', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockDocs = [
       {
         documentId: 7,
@@ -211,9 +276,12 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
         documentCategory: 'supporting'
       }
     ]
-    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
-      wrapper
-    })
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     fireEvent.click(screen.getByTestId('ci-step3-delete-doc'))
     fireEvent.click(screen.getByText('common:cancelBtn'))
@@ -224,14 +292,20 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('allows Save & proceed with no uploads (required-doc validation disabled)', async () => {
+  test('allows Save & proceed with no uploads (required-doc validation disabled)', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn().mockResolvedValue(undefined)
     render(
       <DocumentsModellingStep
         ciApplication={{ ...baseCi, supportingDocumentOther: 'CCS notes' }}
         onSave={onSave}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
     const btn = screen.getByTestId('ci-step3-save-btn')
     expect(btn).not.toBeDisabled()
@@ -240,10 +314,19 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     expect(onSave.mock.calls[0][0].supportingDocumentOther).toBe('CCS notes')
   })
 
-  it('opens the shared upload modal instead of the OS file browser (#4740)', () => {
-    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, {
-      wrapper
-    })
+  test('opens the shared upload modal instead of the OS file browser (#4740)', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<DocumentsModellingStep ciApplication={baseCi} onSave={vi.fn()} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     // The modal is not open (and the browser is not triggered) until the user
     // clicks the upload control.
     expect(
@@ -259,14 +342,20 @@ describe('DocumentsModellingStep (simplified upload — #4669)', () => {
     expect(dialog).toHaveAttribute('data-parent-id', '99')
   })
 
-  it('does not open the upload modal while the upload control is disabled (readOnly)', () => {
+  test('does not open the upload modal while the upload control is disabled (readOnly)', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <DocumentsModellingStep
         ciApplication={baseCi}
         onSave={vi.fn()}
         readOnly
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
     fireEvent.click(screen.getByTestId('ci-step3-upload-supporting'))
     expect(

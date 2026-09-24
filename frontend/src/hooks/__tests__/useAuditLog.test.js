@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useAuditLog, useAuditLogs } from '../useAuditLog'
 
 vi.mock('@/services/useApiService')
@@ -22,7 +22,10 @@ describe('useAuditLog', () => {
     vi.clearAllMocks()
   })
 
-  it('should fetch audit log successfully by ID', async () => {
+  test('should fetch audit log successfully by ID', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       auditLogId: 123,
       tableName: 'compliance_reports',
@@ -34,7 +37,7 @@ describe('useAuditLog', () => {
     }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useAuditLog(123), { wrapper })
+    const { result } = renderHook(() => useAuditLog(123), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -44,29 +47,36 @@ describe('useAuditLog', () => {
     expect(mockGet).toHaveBeenCalledWith('/audit-log/123')
   })
 
-  it('should not fetch when auditLogId is missing', async () => {
-    const { result } = renderHook(() => useAuditLog(), { wrapper })
+  test('should not fetch when auditLogId is missing', async ({
+    renderHook,
+    query
+  }) => {
+    const { result } = renderHook(() => useAuditLog(), [query])
 
     expect(result.current.isLoading).toBe(false)
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should not fetch when auditLogId is null', async () => {
-    const { result } = renderHook(() => useAuditLog(null), { wrapper })
+  test('should not fetch when auditLogId is null', async ({
+    renderHook,
+    query
+  }) => {
+    const { result } = renderHook(() => useAuditLog(null), [query])
 
     expect(result.current.isLoading).toBe(false)
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should handle API errors', async () => {
+  test('should handle API errors', async ({ renderHook, query }) => {
     const errorMessage = 'Failed to fetch audit log'
     mockGet.mockRejectedValue(new Error(errorMessage))
 
-    const { result } = renderHook(() => useAuditLog(123, { retry: false }), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useAuditLog(123, { retry: false }),
+      [query]
+    )
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true)
@@ -76,7 +86,7 @@ describe('useAuditLog', () => {
     expect(mockGet).toHaveBeenCalledWith('/audit-log/123')
   })
 
-  it('should pass through custom options', async () => {
+  test('should pass through custom options', async ({ renderHook, query }) => {
     const mockData = {
       auditLogId: 123,
       tableName: 'compliance_reports',
@@ -84,9 +94,10 @@ describe('useAuditLog', () => {
     }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useAuditLog(123, { staleTime: 5000 }), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useAuditLog(123, { staleTime: 5000 }),
+      [query]
+    )
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -95,7 +106,10 @@ describe('useAuditLog', () => {
     expect(result.current.data).toEqual(mockData)
   })
 
-  it('should handle complex audit log data structure', async () => {
+  test('should handle complex audit log data structure', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       auditLogId: 1,
       tableName: 'compliance_reports',
@@ -109,7 +123,7 @@ describe('useAuditLog', () => {
     }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useAuditLog(1), { wrapper })
+    const { result } = renderHook(() => useAuditLog(1), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -133,7 +147,10 @@ describe('useAuditLogs', () => {
     vi.clearAllMocks()
   })
 
-  it('should fetch audit logs successfully with all parameters', async () => {
+  test('should fetch audit logs successfully with all parameters', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       auditLogs: [
         { auditLogId: 1, operation: 'CREATE', createDate: '2023-01-01' },
@@ -151,7 +168,7 @@ describe('useAuditLogs', () => {
           sortOrders: [{ field: 'createDate', direction: 'desc' }],
           filters: [{ field: 'operation', value: 'CREATE' }]
         }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => {
@@ -167,7 +184,10 @@ describe('useAuditLogs', () => {
     })
   })
 
-  it('should fetch audit logs with default parameters', async () => {
+  test('should fetch audit logs with default parameters', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       auditLogs: [
         { auditLogId: 1, operation: 'CREATE', createDate: '2023-01-01' }
@@ -176,7 +196,7 @@ describe('useAuditLogs', () => {
     }
     mockPost.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useAuditLogs(), { wrapper })
+    const { result } = renderHook(() => useAuditLogs(), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -191,7 +211,10 @@ describe('useAuditLogs', () => {
     })
   })
 
-  it('should handle pagination parameters correctly', async () => {
+  test('should handle pagination parameters correctly', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       auditLogs: [
         { auditLogId: 1, operation: 'CREATE', createDate: '2023-01-01' }
@@ -200,9 +223,10 @@ describe('useAuditLogs', () => {
     }
     mockPost.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useAuditLogs({ page: 2, size: 20 }), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useAuditLogs({ page: 2, size: 20 }),
+      [query]
+    )
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -217,7 +241,7 @@ describe('useAuditLogs', () => {
     })
   })
 
-  it('should handle sort orders correctly', async () => {
+  test('should handle sort orders correctly', async ({ renderHook, query }) => {
     const mockData = {
       auditLogs: [
         { auditLogId: 1, operation: 'CREATE', createDate: '2023-01-01' }
@@ -231,9 +255,7 @@ describe('useAuditLogs', () => {
       { field: 'operation', direction: 'asc' }
     ]
 
-    const { result } = renderHook(() => useAuditLogs({ sortOrders }), {
-      wrapper
-    })
+    const { result } = renderHook(() => useAuditLogs({ sortOrders }), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -248,7 +270,7 @@ describe('useAuditLogs', () => {
     })
   })
 
-  it('should handle filters correctly', async () => {
+  test('should handle filters correctly', async ({ renderHook, query }) => {
     const mockData = {
       auditLogs: [
         { auditLogId: 1, operation: 'CREATE', createDate: '2023-01-01' }
@@ -262,7 +284,7 @@ describe('useAuditLogs', () => {
       { field: 'createUser', value: 'admin' }
     ]
 
-    const { result } = renderHook(() => useAuditLogs({ filters }), { wrapper })
+    const { result } = renderHook(() => useAuditLogs({ filters }), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -277,13 +299,11 @@ describe('useAuditLogs', () => {
     })
   })
 
-  it('should handle API errors', async () => {
+  test('should handle API errors', async ({ renderHook, query }) => {
     const errorMessage = 'Failed to fetch audit logs'
     mockPost.mockRejectedValue(new Error(errorMessage))
 
-    const { result } = renderHook(() => useAuditLogs({ retry: false }), {
-      wrapper
-    })
+    const { result } = renderHook(() => useAuditLogs({ retry: false }), [query])
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true)

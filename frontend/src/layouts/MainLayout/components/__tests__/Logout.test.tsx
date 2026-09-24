@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
+import { screen, fireEvent } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import { UserProfileActions } from '@/layouts/MainLayout/components/UserProfileActions'
-import { wrapper } from '@/tests/utils/wrapper'
 import * as keycloakUtils from '@/utils/keycloak'
 import * as currentUserHooks from '@/hooks/useCurrentUser'
 import * as notificationHooks from '@/hooks/useNotifications'
@@ -25,9 +25,10 @@ vi.mock('@/layouts/MainLayout/components/RoleSwitcher', () => ({
 }))
 
 vi.mock('@/constants/config', async () => {
-  const actual = await vi.importActual<typeof import('@/constants/config')>(
-    '@/constants/config'
-  )
+  const actual =
+    await vi.importActual<typeof import('@/constants/config')>(
+      '@/constants/config'
+    )
   return {
     ...actual,
     isFeatureEnabled: vi.fn(() => false)
@@ -73,54 +74,89 @@ describe('UserProfileActions (Logout)', () => {
     vi.clearAllMocks()
   })
 
-  it('renders nothing when keycloak is not authenticated', () => {
+  test('renders nothing when keycloak is not authenticated', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupMocks({ authenticated: false })
-    const { container } = render(<UserProfileActions />, { wrapper })
+    const { container } = render(<UserProfileActions />, [query, theme, router])
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders the user full name when authenticated', () => {
+  test('renders the user full name when authenticated', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupMocks({ firstName: 'Alice', lastName: 'Smith' })
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
     expect(screen.getByText('Alice Smith')).toBeInTheDocument()
   })
 
-  it('renders a logout button with data-test attribute', () => {
+  test('renders a logout button with data-test attribute', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupMocks()
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
     const logoutBtn = screen.getByTestId('logout-button')
     expect(logoutBtn).toBeInTheDocument()
   })
 
-  it('calls the keycloak logout utility when the logout button is clicked', () => {
+  test('calls the keycloak logout utility when the logout button is clicked', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupMocks()
     const logoutSpy = vi
       .spyOn(keycloakUtils, 'logout')
       .mockImplementation(() => {})
 
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
     fireEvent.click(screen.getByTestId('logout-button'))
 
     expect(logoutSpy).toHaveBeenCalledTimes(1)
     logoutSpy.mockRestore()
   })
 
-  it('renders a notifications link when loaded', () => {
+  test('renders a notifications link when loaded', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupMocks({ isLoading: false, notificationsCount: 3 })
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
     expect(screen.getByLabelText('Notifications')).toBeInTheDocument()
   })
 
-  it('shows a loading spinner instead of notifications when isLoading is true', () => {
+  test('shows a loading spinner instead of notifications when isLoading is true', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupMocks({ isLoading: true })
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
     // CircularProgress is rendered when isLoading is true
     expect(screen.queryByLabelText('Notifications')).not.toBeInTheDocument()
   })
 
-  it('does not render role switcher when feature flag is off', () => {
+  test('does not render role switcher when feature flag is off', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupMocks({ isGovernmentUser: true })
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
     expect(screen.queryByTestId('role-switcher')).not.toBeInTheDocument()
   })
 })

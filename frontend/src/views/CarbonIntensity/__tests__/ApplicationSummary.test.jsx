@@ -1,8 +1,8 @@
+import { test } from '@/tests/utils/fixtures'
 import React from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
-import { wrapper } from '@/tests/utils/wrapper'
 import { ApplicationSummary } from '@/views/CarbonIntensity/components/ApplicationSummary'
 
 vi.mock('react-i18next', () => ({
@@ -46,7 +46,13 @@ const baseApplication = {
 describe('ApplicationSummary', () => {
   afterEach(cleanup)
 
-  it('downloads an un-renamed document using its original file name', () => {
+  test('downloads an un-renamed document using its original file name', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <ApplicationSummary
         ciApplication={{
@@ -54,14 +60,20 @@ describe('ApplicationSummary', () => {
           documents: [{ documentId: 1, fileName: 'tech.pdf', fileSize: 100 }]
         }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     fireEvent.click(screen.getByText('tech.pdf'))
     expect(mockDownloadDocument).toHaveBeenCalledWith(1, 'tech.pdf')
   })
 
-  it('downloads a renamed document using its display name', () => {
+  test('downloads a renamed document using its display name', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <ApplicationSummary
         ciApplication={{
@@ -76,14 +88,20 @@ describe('ApplicationSummary', () => {
           ]
         }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     fireEvent.click(screen.getByText('My Report.pdf'))
     expect(mockDownloadDocument).toHaveBeenCalledWith(2, 'My Report.pdf')
   })
 
-  it('displays the pathway description above the pathway content', () => {
+  test('displays the pathway description above the pathway content', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <ApplicationSummary
         ciApplication={{
@@ -91,7 +109,7 @@ describe('ApplicationSummary', () => {
           pathwayDescription: 'Uses carbon capture and sequestration.'
         }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     const description = screen.getByTestId('ci-summary-pathway-description')
@@ -110,23 +128,34 @@ describe('ApplicationSummary', () => {
     ).toBeTruthy()
   })
 
-  it.each([null, '', '   '])(
-    'does not display the pathway description when its value is %p',
-    (pathwayDescription) => {
+  for (const pathwayDescription of [null, '', '   ']) {
+    test(`does not display the pathway description when its value is ${JSON.stringify(pathwayDescription)}`, ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ApplicationSummary
           ciApplication={{ ...baseApplication, pathwayDescription }}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(
         screen.queryByTestId('ci-summary-pathway-description')
       ).not.toBeInTheDocument()
-    }
-  )
+    })
+  }
 
-  it('displays analyst assignment history with previous and new analysts', () => {
+  test('displays analyst assignment history with previous and new analysts', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <ApplicationSummary
         ciApplication={{
@@ -149,7 +178,7 @@ describe('ApplicationSummary', () => {
           ]
         }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(screen.getByTestId('ci-summary-assignment-history')).toBeVisible()
@@ -168,8 +197,19 @@ describe('ApplicationSummary', () => {
     ).toHaveTextContent('Formatted: 2026-08-19T18:45:00Z')
   })
 
-  it('does not expose assignment history when it is omitted from the response', () => {
-    render(<ApplicationSummary ciApplication={baseApplication} />, { wrapper })
+  test('does not expose assignment history when it is omitted from the response', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ApplicationSummary ciApplication={baseApplication} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(
       screen.queryByTestId('ci-summary-assignment-history')
