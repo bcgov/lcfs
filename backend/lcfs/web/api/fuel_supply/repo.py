@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import Depends
 from sqlalchemy import and_, or_, select, delete, func, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload, aliased
+from sqlalchemy.orm import aliased, contains_eager, joinedload
 from typing import List, Optional, Sequence, Any
 
 from lcfs.db.base import ActionTypeEnum
@@ -51,27 +51,56 @@ def _get_filter_values(filter_item):
     return []
 
 
+def _scalar_reference_options(fuel_category_loader, fuel_type_loader):
+    """
+    Attach the collection overrides described in
+    ``FuelSupplyRepository._row_load_options`` to a fuel_category loader and
+    a fuel_type loader (``joinedload`` or ``contains_eager``).
+    """
+    return [
+        fuel_category_loader.raiseload(FuelCategory.category_carbon_intensities),
+        fuel_type_loader.raiseload(FuelType.default_carbon_intensities),
+    ]
+
+
 class FuelSupplyRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
-        self.query = select(FuelSupply).options(
+        self.query = select(FuelSupply).options(*self._row_load_options())
+
+    @staticmethod
+    def _row_load_options():
+        """
+        Eager-load options for FuelSupply rows.
+
+        Only many-to-one relationships are joined. The reference-data
+        collections hanging off fuel_type and fuel_category (energy density,
+        energy effectiveness ratios, additional/target carbon intensities) are
+        served to the form by ``get_fuel_supply_table_options`` and are never
+        read from a FuelSupply row. Joining them multiplied each row by the
+        product of the collection sizes: loading one fuel supply by id
+        produced ~11.6 million rows on a development database and timed out.
+
+        ``FuelType.default_carbon_intensities`` and
+        ``FuelCategory.category_carbon_intensities`` are ``lazy="selectin"``
+        on the mapping, so without an override every load of these rows also
+        fired one extra IN query per collection. Nothing reads them off a
+        fuel supply row either, so the loaders below switch them off for
+        these rows. ``raiseload`` rather than ``noload`` so that a future
+        consumer gets an error instead of a silently empty list.
+        """
+        return [
             joinedload(FuelSupply.fuel_code).options(
                 joinedload(FuelCode.fuel_code_status),
                 joinedload(FuelCode.fuel_code_prefix),
             ),
-            joinedload(FuelSupply.fuel_category).options(
-                joinedload(FuelCategory.target_carbon_intensities),
-                joinedload(FuelCategory.energy_effectiveness_ratio),
-            ),
-            joinedload(FuelSupply.fuel_type).options(
-                joinedload(FuelType.energy_density),
-                joinedload(FuelType.additional_carbon_intensity),
-                joinedload(FuelType.energy_effectiveness_ratio),
-                joinedload(FuelType.default_carbon_intensities),
+            *_scalar_reference_options(
+                joinedload(FuelSupply.fuel_category),
+                joinedload(FuelSupply.fuel_type),
             ),
             joinedload(FuelSupply.provision_of_the_act),
             joinedload(FuelSupply.end_use_type),
-        )
+        ]
 
     @repo_handler
     async def get_fuel_supply_table_options(self, compliance_period: str):
@@ -93,14 +122,14 @@ class FuelSupplyRepository:
 
         # Match both new (Section 19) and legacy (Section 6) fuel code provisions
         # so fuel codes are available for both pre-2024 and 2024+ reports
-        subquery_fuel_code_provision_ids = (
-            select(ProvisionOfTheAct.provision_of_the_act_id).where(
-                ProvisionOfTheAct.name.in_(
-                    [
-                        "Fuel code - section 19 (b) (i)",
-                        "Approved fuel code - Section 6 (5) (c)",
-                    ]
-                )
+        subquery_fuel_code_provision_ids = select(
+            ProvisionOfTheAct.provision_of_the_act_id
+        ).where(
+            ProvisionOfTheAct.name.in_(
+                [
+                    "Fuel code - section 19 (b) (i)",
+                    "Approved fuel code - Section 6 (5) (c)",
+                ]
             )
         )
 
@@ -231,9 +260,7 @@ class FuelSupplyRepository:
                             current_year
                             < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
                             FuelType.is_legacy == False,
-                            ProvisionOfTheAct.provision_of_the_act_id.notin_(
-                                [1, 4, 5]
-                            ),
+                            ProvisionOfTheAct.provision_of_the_act_id.notin_([1, 4, 5]),
                         ),
                     ),
                 ),
@@ -443,18 +470,12 @@ class FuelSupplyRepository:
         """
         Retrieve the list of fuel supplies for a given report (compliance or supplemental).
         """
-        query = select(FuelSupply).options(
-            joinedload(FuelSupply.fuel_code),
-            joinedload(FuelSupply.fuel_category),
-            joinedload(FuelSupply.fuel_type),
-            joinedload(FuelSupply.provision_of_the_act),
-            joinedload(FuelSupply.end_use_type),
-        )
-
-        query = query.where(FuelSupply.compliance_report_id == report_id)
+        # Same row graph as get_effective_fuel_supplies; the two feed the
+        # same list response through get_fuel_supply_list.
+        query = self.query.where(FuelSupply.compliance_report_id == report_id)
 
         result = await self.db.execute(query)
-        return result.scalars().all()
+        return result.unique().scalars().all()
 
     @repo_handler
     async def check_duplicate(self, fuel_supply: FuelSupplyCreateUpdateSchema):
@@ -640,23 +661,7 @@ class FuelSupplyRepository:
         # Get the actual records with their related data
         query = (
             select(FuelSupply)
-            .options(
-                selectinload(FuelSupply.fuel_code).options(
-                    selectinload(FuelCode.fuel_code_status),
-                    selectinload(FuelCode.fuel_code_prefix),
-                ),
-                selectinload(FuelSupply.fuel_category).options(
-                    selectinload(FuelCategory.target_carbon_intensities),
-                    selectinload(FuelCategory.energy_effectiveness_ratio),
-                ),
-                joinedload(FuelSupply.fuel_type).options(
-                    joinedload(FuelType.energy_density),
-                    joinedload(FuelType.additional_carbon_intensity),
-                    joinedload(FuelType.energy_effectiveness_ratio),
-                ),
-                joinedload(FuelSupply.provision_of_the_act),
-                selectinload(FuelSupply.end_use_type),
-            )
+            .options(*self._row_load_options())
             .join(
                 valid_fuel_supplies_subq,
                 and_(
@@ -702,11 +707,13 @@ class FuelSupplyRepository:
             select(FuelSupply)
             .join(
                 ComplianceReport,
-                FuelSupply.compliance_report_id == ComplianceReport.compliance_report_id,
+                FuelSupply.compliance_report_id
+                == ComplianceReport.compliance_report_id,
             )
             .join(
                 CompliancePeriod,
-                ComplianceReport.compliance_period_id == CompliancePeriod.compliance_period_id,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
             )
             .outerjoin(FuelType, FuelSupply.fuel_type_id == FuelType.fuel_type_id)
             .outerjoin(
@@ -719,15 +726,26 @@ class FuelSupplyRepository:
                 == ProvisionOfTheAct.provision_of_the_act_id,
             )
             .outerjoin(FuelCode, FuelSupply.fuel_code_id == FuelCode.fuel_code_id)
+            # The tables joined above are also the ones we want populated on
+            # the rows, so point the loaders at those joins instead of letting
+            # joinedload add a second, aliased copy of each table.
             .options(
-                joinedload(FuelSupply.fuel_type),
-                joinedload(FuelSupply.fuel_category),
-                joinedload(FuelSupply.provision_of_the_act),
-                joinedload(FuelSupply.fuel_code),
-                joinedload(FuelSupply.compliance_report).joinedload(ComplianceReport.compliance_period)
+                *_scalar_reference_options(
+                    contains_eager(FuelSupply.fuel_category),
+                    contains_eager(FuelSupply.fuel_type),
+                ),
+                contains_eager(FuelSupply.provision_of_the_act),
+                contains_eager(FuelSupply.fuel_code),
+                contains_eager(FuelSupply.compliance_report).contains_eager(
+                    ComplianceReport.compliance_period
+                ),
             )
             .where(ComplianceReport.organization_id == organization_id)
-            .where(FuelSupply.action_type.in_([ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]))
+            .where(
+                FuelSupply.action_type.in_(
+                    [ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]
+                )
+            )
         )
 
         # Apply filters if provided
@@ -750,16 +768,12 @@ class FuelSupplyRepository:
                             CompliancePeriod.description.ilike(f"%{filter_value}%")
                         )
                 elif field == "fuel_type":
-                    query = query.where(
-                        FuelType.fuel_type.ilike(f"%{filter_value}%")
-                    )
+                    query = query.where(FuelType.fuel_type.ilike(f"%{filter_value}%"))
                 elif field == "fuel_category":
                     # category is a Postgres enum; cast to text so ILIKE works
                     # (otherwise the pattern is cast to the enum type and fails).
                     query = query.where(
-                        cast(FuelCategory.category, String).ilike(
-                            f"%{filter_value}%"
-                        )
+                        cast(FuelCategory.category, String).ilike(f"%{filter_value}%")
                     )
                 elif field == "provision_of_the_act":
                     query = query.where(
@@ -773,9 +787,9 @@ class FuelSupplyRepository:
                         FuelCodePrefix,
                         FuelCode.prefix_id == FuelCodePrefix.fuel_code_prefix_id,
                     ).where(
-                        func.concat(
-                            FuelCodePrefix.prefix, FuelCode.fuel_suffix
-                        ).ilike(f"%{filter_value}%")
+                        func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix).ilike(
+                            f"%{filter_value}%"
+                        )
                     )
 
         # Get total count before pagination
@@ -837,11 +851,13 @@ class FuelSupplyRepository:
             select(FuelSupply)
             .join(
                 ComplianceReport,
-                FuelSupply.compliance_report_id == ComplianceReport.compliance_report_id,
+                FuelSupply.compliance_report_id
+                == ComplianceReport.compliance_report_id,
             )
             .join(
                 CompliancePeriod,
-                ComplianceReport.compliance_period_id == CompliancePeriod.compliance_period_id,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
             )
             .outerjoin(FuelType, FuelSupply.fuel_type_id == FuelType.fuel_type_id)
             .outerjoin(
@@ -855,13 +871,15 @@ class FuelSupplyRepository:
             )
             .outerjoin(FuelCode, FuelSupply.fuel_code_id == FuelCode.fuel_code_id)
             .options(
-                joinedload(FuelSupply.fuel_type),
-                joinedload(FuelSupply.fuel_category),
-                joinedload(FuelSupply.provision_of_the_act),
-                joinedload(FuelSupply.fuel_code).joinedload(
+                *_scalar_reference_options(
+                    contains_eager(FuelSupply.fuel_category),
+                    contains_eager(FuelSupply.fuel_type),
+                ),
+                contains_eager(FuelSupply.provision_of_the_act),
+                contains_eager(FuelSupply.fuel_code).joinedload(
                     FuelCode.fuel_code_prefix
                 ),
-                joinedload(FuelSupply.compliance_report).joinedload(
+                contains_eager(FuelSupply.compliance_report).contains_eager(
                     ComplianceReport.compliance_period
                 ),
             )
@@ -895,16 +913,12 @@ class FuelSupplyRepository:
                 if field == "compliance_period":
                     selected_year_filter = set(filter_values)
                 elif field == "fuel_type":
-                    query = query.where(
-                        FuelType.fuel_type.ilike(f"%{filter_value}%")
-                    )
+                    query = query.where(FuelType.fuel_type.ilike(f"%{filter_value}%"))
                 elif field == "fuel_category":
                     # category is a Postgres enum; cast to text so ILIKE works
                     # (otherwise the pattern is cast to the enum type and fails).
                     query = query.where(
-                        cast(FuelCategory.category, String).ilike(
-                            f"%{filter_value}%"
-                        )
+                        cast(FuelCategory.category, String).ilike(f"%{filter_value}%")
                     )
                 elif field == "provision_of_the_act":
                     query = query.where(
@@ -918,9 +932,9 @@ class FuelSupplyRepository:
                         FuelCodePrefix,
                         FuelCode.prefix_id == FuelCodePrefix.fuel_code_prefix_id,
                     ).where(
-                        func.concat(
-                            FuelCodePrefix.prefix, FuelCode.fuel_suffix
-                        ).ilike(f"%{filter_value}%")
+                        func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix).ilike(
+                            f"%{filter_value}%"
+                        )
                     )
 
         # Execute query
@@ -1029,9 +1043,7 @@ class FuelSupplyRepository:
                 yearly[year]["positive_compliance_units"] += compliance_units
                 yearly[year]["positive_cu_volume"] += quantity
             else:
-                yearly[year][
-                    "zero_or_negative_compliance_units"
-                ] += compliance_units
+                yearly[year]["zero_or_negative_compliance_units"] += compliance_units
                 yearly[year]["non_positive_cu_volume"] += quantity
 
             fuel_type_name = fs.fuel_type.fuel_type
@@ -1060,7 +1072,9 @@ class FuelSupplyRepository:
                 ] = True
 
         # Calculate most recent submission
-        most_recent_submission = max(submission_dates_set).isoformat() if submission_dates_set else None
+        most_recent_submission = (
+            max(submission_dates_set).isoformat() if submission_dates_set else None
+        )
 
         sorted_years = sorted(
             [year for year in yearly.keys() if str(year).isdigit()],
@@ -1097,9 +1111,7 @@ class FuelSupplyRepository:
             else None
         )
         prior_compliance_units_per_unit = (
-            _round(prior_compliance_units / prior_volume, 6)
-            if prior_volume
-            else None
+            _round(prior_compliance_units / prior_volume, 6) if prior_volume else None
         )
 
         fuel_type_yoy = []
@@ -1124,9 +1136,7 @@ class FuelSupplyRepository:
                     "totalVolume": current_type_volume,
                     "priorYearVolume": prior_type_volume or None,
                     "volumeChange": current_type_volume - prior_type_volume,
-                    "pctChangeYoy": _pct_change(
-                        current_type_volume, prior_type_volume
-                    ),
+                    "pctChangeYoy": _pct_change(current_type_volume, prior_type_volume),
                     "totalComplianceUnits": _round(
                         current_type.get("total_compliance_units", 0)
                     ),
@@ -1145,9 +1155,7 @@ class FuelSupplyRepository:
                 }
             )
 
-        fuel_type_yoy.sort(
-            key=lambda row: abs(row["pctChangeYoy"] or 0), reverse=True
-        )
+        fuel_type_yoy.sort(key=lambda row: abs(row["pctChangeYoy"] or 0), reverse=True)
         negative_yoy_count = len(
             [
                 row
@@ -1194,11 +1202,11 @@ class FuelSupplyRepository:
             compliance_units_per_unit_trend.append(
                 {
                     "reportingYear": year,
-                    "complianceUnitsPerUnitSupply": _round(
-                        year_data["total_compliance_units"] / year_volume, 6
-                    )
-                    if year_volume
-                    else None,
+                    "complianceUnitsPerUnitSupply": (
+                        _round(year_data["total_compliance_units"] / year_volume, 6)
+                        if year_volume
+                        else None
+                    ),
                 }
             )
             for fuel_type_name, fuel_type_data in yearly_fuel_type.get(
@@ -1210,9 +1218,7 @@ class FuelSupplyRepository:
                         "fuelType": fuel_type_name,
                         "fuelCategory": fuel_type_data.get("fuel_category"),
                         "totalVolume": fuel_type_data.get("total_volume", 0),
-                        "fossilDerived": fuel_type_data.get(
-                            "fossil_derived", False
-                        ),
+                        "fossilDerived": fuel_type_data.get("fossil_derived", False),
                     }
                 )
 
@@ -1233,27 +1239,29 @@ class FuelSupplyRepository:
                 "volumeChange": current_volume - prior_volume,
                 "volumePctChangeYoy": _pct_change(current_volume, prior_volume),
                 "totalComplianceUnits": _round(current_compliance_units),
-                "priorYearComplianceUnits": _round(prior_compliance_units)
-                if prior_year
-                else None,
-                "complianceUnitsChange": _round(
-                    current_compliance_units - prior_compliance_units
-                )
-                if prior_year
-                else None,
+                "priorYearComplianceUnits": (
+                    _round(prior_compliance_units) if prior_year else None
+                ),
+                "complianceUnitsChange": (
+                    _round(current_compliance_units - prior_compliance_units)
+                    if prior_year
+                    else None
+                ),
                 "complianceUnitsPctChangeYoy": _pct_change(
                     current_compliance_units, prior_compliance_units
                 ),
                 "complianceUnitsPerUnitSupply": current_compliance_units_per_unit,
                 "priorYearComplianceUnitsPerUnitSupply": prior_compliance_units_per_unit,
-                "complianceUnitsPerUnitSupplyChange": _round(
-                    current_compliance_units_per_unit
-                    - prior_compliance_units_per_unit,
-                    6,
-                )
-                if current_compliance_units_per_unit is not None
-                and prior_compliance_units_per_unit is not None
-                else None,
+                "complianceUnitsPerUnitSupplyChange": (
+                    _round(
+                        current_compliance_units_per_unit
+                        - prior_compliance_units_per_unit,
+                        6,
+                    )
+                    if current_compliance_units_per_unit is not None
+                    and prior_compliance_units_per_unit is not None
+                    else None
+                ),
                 "negativeYoyFuelTypeCount": negative_yoy_count,
                 "newFuelTypeCount": len(new_fuel_types),
                 "newFuelTypes": [row["fuelType"] for row in new_fuel_types],
