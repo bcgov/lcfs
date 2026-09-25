@@ -1,4 +1,5 @@
 import BCNavbar from '@/components/BCNavbar'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { nonGovRoles, roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -6,6 +7,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HeaderComponent } from './HeaderComponent'
 import { UserProfileActions } from './UserProfileActions'
+import { GlobalSearch } from '@/components/GlobalSearch/GlobalSearch'
 import { useMediaQuery, useTheme } from '@mui/material'
 
 type NavItem = {
@@ -29,12 +31,14 @@ export const Navbar = () => {
       roles.compliance_reporting
     )
     const canSeeFuelCodeBulletins = hasAnyRole(...nonGovRoles)
-    const canSeeInitiativeAgreementsIdir = hasAnyRole(
-      roles.ia_analyst,
-      roles.ia_manager,
-      roles.director
+    const initiativeAgreementsEnabled = isFeatureEnabled(
+      FEATURE_FLAGS.INITIATIVE_AGREEMENTS
     )
-    const canSeeInitiativeAgreementsBceid = hasAnyRole(roles.ia_proponent)
+    const canSeeInitiativeAgreementsIdir =
+      initiativeAgreementsEnabled &&
+      hasAnyRole(roles.ia_analyst, roles.ia_manager, roles.director)
+    const canSeeInitiativeAgreementsBceid =
+      initiativeAgreementsEnabled && hasAnyRole(roles.ia_proponent)
     const idirRoutes: NavItem[] = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
       { name: t('Organizations'), route: ROUTES.ORGANIZATIONS.LIST },
@@ -107,6 +111,7 @@ export const Navbar = () => {
       beta={false}
       data-test="main-layout-navbar"
       headerRightPart={<HeaderComponent key="headerRight" />}
+      headerUtilityPart={<GlobalSearch key="headerSearch" />}
       menuRightPart={<UserProfileActions key="menuRight" />}
     />
   )

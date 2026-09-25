@@ -67,12 +67,19 @@ vi.mock('react-i18next', () => ({
 }))
 
 const mockUseGetFuelCodeGroup = vi.fn()
+const mockUseGetFuelCode = vi.fn()
+const mockUseCurrentUser = vi.fn()
 
 vi.mock('@/hooks/useFuelCode', () => ({
   useGetFuelCodeGroup: (...args) => mockUseGetFuelCodeGroup(...args),
+  useGetFuelCode: (...args) => mockUseGetFuelCode(...args),
   useFuelCodeStatuses: vi.fn(() => ({
     data: [{ status: 'Approved' }, { status: 'Draft' }]
   }))
+}))
+
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => mockUseCurrentUser()
 }))
 
 vi.mock('@/stores/useFuelCodePageStore', () => ({
@@ -147,8 +154,17 @@ const groupData = {
 describe('FuelCodeDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseCurrentUser.mockReturnValue({
+      data: { isGovernmentUser: true }
+    })
     mockUseGetFuelCodeGroup.mockReturnValue({
       data: groupData,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    mockUseGetFuelCode.mockReturnValue({
+      data: latestIteration,
       isLoading: false,
       isError: false,
       error: null
@@ -232,5 +248,34 @@ describe('FuelCodeDetail', () => {
     expect(
       screen.queryByText('Zimmerman@fuelproducerltd.ar')
     ).not.toBeInTheDocument()
+  })
+
+  it('uses the single-record endpoint and renders a read-only view for BCeID', () => {
+    mockUseCurrentUser.mockReturnValue({
+      data: { isGovernmentUser: false }
+    })
+
+    render(<FuelCodeDetail />, { wrapper })
+
+    expect(mockUseGetFuelCode).toHaveBeenCalledWith('100', { enabled: true })
+    expect(mockUseGetFuelCodeGroup).toHaveBeenCalledWith('100', {
+      enabled: false
+    })
+    expect(screen.getByText('C-BCLCF-100')).toBeInTheDocument()
+    expect(screen.getByText('Fuel Producer Ltd.')).toBeInTheDocument()
+    expect(screen.queryByTestId('iterations-grid')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('volume-chart')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('compliance-units-chart')
+    ).not.toBeInTheDocument()
+  })
+
+  it('uses the group endpoint for IDIR users', () => {
+    render(<FuelCodeDetail />, { wrapper })
+
+    expect(mockUseGetFuelCodeGroup).toHaveBeenCalledWith('100', {
+      enabled: true
+    })
+    expect(mockUseGetFuelCode).toHaveBeenCalledWith('100', { enabled: false })
   })
 })

@@ -114,6 +114,27 @@ async def search_facility_locations(
 
 
 @router.get(
+    "/fuel-code-field-search",
+    response_model=List[str],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def search_fuel_code_field_options(
+    request: Request,
+    field: str = Query(
+        ..., description="FuelCode field to search: feedstock or feedstockLocation"
+    ),
+    query: str = Query("", description="Predictive-text search input"),
+    service: CIApplicationServices = Depends(),
+) -> List[str]:
+    """FuelCode-backed typeahead for proposed pathway text fields."""
+    logger.info("Searching CI FuelCode field options", field=field)
+    return await service.search_fuel_code_field_options(field, query)
+
+
+@router.get(
     "/analysts",
     response_model=list[CIApplicationUserSchema],
     status_code=status.HTTP_200_OK,
@@ -198,7 +219,7 @@ GHGENIUS_TEMPLATE_SHEETS = {
 )
 @view_handler([RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT])
 async def download_ghgenius_template(request: Request) -> StreamingResponse:
-    """Return the empty GHGenius input/output xlsx template used in Step 3."""
+    """Return the empty GHGenius Inputs Template xlsx used in Step 3."""
     builder = SpreadsheetBuilder(file_format="xlsx")
     for sheet_name, columns in GHGENIUS_TEMPLATE_SHEETS.items():
         builder.add_sheet(
@@ -210,7 +231,7 @@ async def download_ghgenius_template(request: Request) -> StreamingResponse:
     file_content = builder.build_spreadsheet()
     headers = {
         "Content-Disposition": (
-            'attachment; filename="GHGenius-Input-Output-Template.xlsx"'
+            'attachment; filename="GHGenius-Inputs-Template.xlsx"'
         )
     }
     return StreamingResponse(
@@ -335,7 +356,7 @@ async def update_ci_application_step3(
     service: CIApplicationServices = Depends(),
     validate: CIApplicationValidation = Depends(),
 ) -> CIApplicationSchema:
-    """Step 3 — Documents & GHGenius template.
+    """Step 3 — Documents & GHGenius Inputs Template.
 
     Persists the optional supporting-document description. The mandatory
     Technical report / GHGenius upload validation is disabled for the simplified

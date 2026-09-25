@@ -490,6 +490,10 @@ class TransactionRepository:
                     ),
                     else_=None,
                 ).label("admin_effective_date"),
+                # Linked transfer ids, so a transfer with no usable date can
+                # be told apart from a transaction with no parent at all
+                Transfer.transfer_id.label("transfer_from_id"),
+                TransferTo.transfer_id.label("transfer_to_id"),
                 # Include status checks
                 Transfer.current_status_id.label("transfer_from_status"),
                 TransferTo.current_status_id.label("transfer_to_status"),
@@ -563,13 +567,25 @@ class TransactionRepository:
         for row in result:
             transaction_id = row.transaction_id
             compliance_units = row.compliance_units
-            create_date = row.create_date
             # update_date reflects when the transaction was last modified.
             # For compliance report transactions, this is when the transaction
             # action was changed to Adjustment (i.e., the assessment time),
             # which may differ from create_date if the transaction was initially
             # created as Reserved during an earlier pipeline step.
             update_date = row.update_date
+
+            # A transfer with neither an effective date nor a Recorded history
+            # row can't be placed in any period. Leave it out entirely, as
+            # Lines 12/13 do, instead of letting it fall through to the
+            # undated historical branch below and count in every period.
+            if (
+                row.transfer_from_id is not None
+                and row.transfer_from_effective_date is None
+            ) or (
+                row.transfer_to_id is not None
+                and row.transfer_to_effective_date is None
+            ):
+                continue
 
             # Determine if this transaction should be counted as past or future
             count_as_past = False
@@ -658,9 +674,15 @@ class TransactionRepository:
             # Apply the transaction to the appropriate balance
             if count_as_past:
                 past_balance += compliance_units
-            elif create_date > compliance_period_end_local and compliance_units < 0:
-                # This is a future negative transaction - but only count it if it's not
-                # associated with any parent entity that has a future effective date
+            elif compliance_units < 0:
+                # Any finalized debit that did not land in the past balance is a
+                # future debit and still reduces the available balance (FIFO).
+                # Do not gate this on create_date: a compliance report reduction
+                # is created as Reserved at submission and only flips to
+                # Adjustment at assessment, so a supplemental submitted before
+                # the deadline but assessed after it would otherwise be dropped
+                # from both branches. Only skip it when its parent entity has a
+                # future effective date.
                 is_future_debit = True
 
                 # Check if this transaction belongs to a transfer with future effective date
@@ -712,10 +734,12 @@ class TransactionRepository:
         compliance_period: int,
     ) -> int:
         """
-        Sum Adjustment transactions that are linked to other compliance reports
-        in the same report group but are excluded from the Line 17 available
-        balance because their transaction was finalized (Reserved -> Adjustment)
-        after the compliance period end date (March 31, year + 1).
+        Sum positive Adjustment transactions that are linked to other compliance
+        reports in the same report group but are excluded from the Line 17
+        available balance because their transaction was finalized
+        (Reserved -> Adjustment) after the compliance period end date
+        (March 31, year + 1). Negative adjustments are not included: Line 17
+        already subtracts every finalized debit regardless of timing.
 
         These represent compliance units the organization actually holds from
         prior assessments that Line 17 does not capture because of the period-
@@ -733,8 +757,8 @@ class TransactionRepository:
             tzinfo=vancouver_timezone,
         )
 
-        result = await self.db.scalar(
-            select(func.coalesce(func.sum(Transaction.compliance_units), 0))
+        distinct_transactions = (
+            select(Transaction.transaction_id, Transaction.compliance_units)
             .select_from(Transaction)
             .join(
                 ComplianceReport,
@@ -749,8 +773,81 @@ class TransactionRepository:
                     Transaction.transaction_action
                     == TransactionActionEnum.Adjustment,
                     Transaction.update_date > compliance_period_end_local,
+                    # Only credits are ever excluded from Line 17 by the
+                    # cutoff; post-deadline debits are already subtracted
+                    # there as future debits, so adding them back here would
+                    # double-count the reduction.
+                    Transaction.compliance_units > 0,
                 )
             )
+            .group_by(Transaction.transaction_id, Transaction.compliance_units)
+            .subquery()
+        )
+
+        result = await self.db.scalar(
+            select(func.coalesce(func.sum(distinct_transactions.c.compliance_units), 0))
+        )
+        return int(result or 0)
+
+    @repo_handler
+    async def get_prior_group_adjustments_excluded_from_line_17(
+        self,
+        compliance_report_group_uuid: str,
+        organization_id: int,
+        exclude_report_id: int,
+        compliance_period: int,
+        before_version: int,
+    ) -> int:
+        """
+        Sum post-deadline positive Adjustment transactions in the same report
+        group from versions before the current report.
+
+        This is the locked-summary counterpart to
+        get_group_adjustments_excluded_from_line_17, with an explicit version
+        ceiling so later assessed supplementals are not pulled backward into an
+        earlier report's Line 22.
+        """
+        vancouver_timezone = zoneinfo.ZoneInfo("America/Vancouver")
+        compliance_period_end_local = datetime.strptime(
+            f"{str(compliance_period + 1)}-03-31", "%Y-%m-%d"
+        ).replace(
+            hour=23,
+            minute=59,
+            second=59,
+            microsecond=999999,
+            tzinfo=vancouver_timezone,
+        )
+
+        distinct_transactions = (
+            select(Transaction.transaction_id, Transaction.compliance_units)
+            .select_from(Transaction)
+            .join(
+                ComplianceReport,
+                Transaction.transaction_id == ComplianceReport.transaction_id,
+            )
+            .where(
+                and_(
+                    ComplianceReport.compliance_report_group_uuid
+                    == compliance_report_group_uuid,
+                    ComplianceReport.compliance_report_id != exclude_report_id,
+                    ComplianceReport.version < before_version,
+                    Transaction.organization_id == organization_id,
+                    Transaction.transaction_action
+                    == TransactionActionEnum.Adjustment,
+                    Transaction.update_date > compliance_period_end_local,
+                    # Only credits are ever excluded from Line 17 by the
+                    # cutoff; post-deadline debits are already subtracted
+                    # there as future debits, so adding them back here would
+                    # double-count the reduction.
+                    Transaction.compliance_units > 0,
+                )
+            )
+            .group_by(Transaction.transaction_id, Transaction.compliance_units)
+            .subquery()
+        )
+
+        result = await self.db.scalar(
+            select(func.coalesce(func.sum(distinct_transactions.c.compliance_units), 0))
         )
         return int(result or 0)
 

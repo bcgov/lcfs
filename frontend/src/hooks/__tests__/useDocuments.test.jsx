@@ -36,6 +36,7 @@ import {
   useUploadDocument,
   useDeleteDocument,
   useDownloadDocument,
+  useFetchDocument,
   useGetDocumentInfo,
   useUpdateDocument
 } from '../useDocuments'
@@ -310,6 +311,34 @@ describe('useDocuments', () => {
 
       await expect(downloadFn(null)).rejects.toThrow(
         'Document ID is required for download'
+      )
+    })
+  })
+
+  describe('useFetchDocument', () => {
+    it('should fetch document blob successfully', async () => {
+      const mockBlob = new Blob(['file content'], { type: 'application/pdf' })
+      const mockResponse = {
+        data: mockBlob,
+        headers: { 'content-type': 'application/pdf' }
+      }
+      mockApiService.get.mockResolvedValue(mockResponse)
+
+      const fetchFn = useFetchDocument('compliance_report', 123)
+      const result = await fetchFn(456)
+
+      expect(mockApiService.get).toHaveBeenCalledWith(
+        '/documents/compliance_report/123/456',
+        { responseType: 'blob' }
+      )
+      expect(result).toBe(mockResponse)
+    })
+
+    it('should throw error when preview documentID is missing', async () => {
+      const fetchFn = useFetchDocument('compliance_report', 123)
+
+      await expect(fetchFn(null)).rejects.toThrow(
+        'Document ID is required for preview'
       )
     })
   })
