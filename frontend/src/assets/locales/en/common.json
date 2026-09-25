@@ -144,6 +144,10 @@
   },
   "publicCalculator": {
     "tabsAriaLabel": "Calculator tabs",
+    "calculatorIntro": "Use this calculator to estimate the compliance units that may be generated or required under the Low Carbon Fuel Standard (LCFS) in compliance reporting. By entering fuel and carbon intensity information, you can explore how different fuel supplies and scenarios may affect your compliance position.",
+    "calculatorDisclaimer": "The calculator is provided as an informational tool to support planning. Results are estimates only and do not represent an official compliance assessment or compliance unit balance. Official compliance outcomes are determined through the reporting and assessment processes established under the Low Carbon Fuels Act and associated regulations.",
+    "calculationDataIntro": "Use this table to identify the inputs used in LCFS compliance unit calculations. Search or filter the table to find the values that apply to a specific fuel and reporting scenario and use them as a reference when completing a calculation in the Compliance Unit Calculator. The examples shown on this page are based on prescribed or default carbon intensity values. For your own calculations, use the applicable fuel code and the corresponding values.",
+    "calculationDataDisclaimer": "The example calculations generated from these inputs are for illustrative purposes only and do not represent an official compliance assessment or compliance unit balance. Official compliance outcomes are determined through reporting and assessment processes under the Low Carbon Fuels Act and associated regulations.",
     "previousComplianceYear": "Previous compliance year",
     "nextComplianceYear": "Next compliance year",
     "noCalculationData": "No data available for the selected year.",

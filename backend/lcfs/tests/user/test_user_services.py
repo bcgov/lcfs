@@ -558,3 +558,44 @@ async def test_government_caller_can_grant_ia_signer():
 
     submitted = fake_repo.update_user.call_args[0][1].roles
     assert RoleEnum.IA_SIGNER.value in submitted
+
+
+@pytest.mark.anyio
+async def test_get_user_assigned_work_returns_schema():
+    raw = {
+        "compliance_reports": [
+            {"compliance_report_id": 1, "organization": "Acme Corp", "period": "2024", "status": "Submitted"}
+        ],
+        "ci_applications": [
+            {"ci_application_id": 10, "organization": "Acme Corp", "status": "In Review"}
+        ],
+    }
+    fake_repo = MagicMock()
+    fake_repo.get_user_assigned_work = AsyncMock(return_value=raw)
+
+    service = UserServices()
+    service.repo = fake_repo
+
+    result = await service.get_user_assigned_work(user_id=5)
+
+    fake_repo.get_user_assigned_work.assert_awaited_once_with(5)
+    assert len(result.compliance_reports) == 1
+    assert result.compliance_reports[0].organization == "Acme Corp"
+    assert result.compliance_reports[0].status == "Submitted"
+    assert len(result.ci_applications) == 1
+    assert result.ci_applications[0].ci_application_id == 10
+
+
+@pytest.mark.anyio
+async def test_get_user_assigned_work_empty():
+    raw = {"compliance_reports": [], "ci_applications": []}
+    fake_repo = MagicMock()
+    fake_repo.get_user_assigned_work = AsyncMock(return_value=raw)
+
+    service = UserServices()
+    service.repo = fake_repo
+
+    result = await service.get_user_assigned_work(user_id=99)
+
+    assert result.compliance_reports == []
+    assert result.ci_applications == []

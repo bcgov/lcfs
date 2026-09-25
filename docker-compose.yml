@@ -1,6 +1,5 @@
 services:
   db:
-    container_name: db
     restart: "no"
     image: postgres:17
     environment:
@@ -8,14 +7,13 @@ services:
       POSTGRES_USER: lcfs
       POSTGRES_PASSWORD: development_only
     ports:
-      - 5432:5432
+      - "${LCFS_DB_PUBLISHED_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - shared_network
 
   redis:
-    container_name: redis
     restart: "no"
     image: redis:8.2.1
     environment:
@@ -28,7 +26,7 @@ services:
       timeout: 3s
       retries: 5
     ports:
-      - '6379:6379'
+      - "${LCFS_REDIS_PUBLISHED_PORT:-6379}:6379"
     volumes:
       - redis_data:/bitnami/redis/data
     networks:
@@ -55,22 +53,21 @@ services:
     volumes:
       - s3:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${LCFS_MINIO_PUBLISHED_PORT:-9000}:9000"
+      - "${LCFS_MINIO_CONSOLE_PUBLISHED_PORT:-9001}:9001"
     networks:
       - shared_network
 
   create_bucket:
     image: minio/mc
     restart: "no"
-    container_name: minio_init
     entrypoint: >
       /bin/sh -c "
       until mc alias set myminio http://minio:9000 s3_access_key development_only; do
         echo 'Waiting for MinIO...';
         sleep 5;
       done;
-      mc mb myminio/lcfs
+      mc mb --ignore-existing myminio/lcfs
       "
     networks:
       - shared_network
@@ -78,7 +75,6 @@ services:
       - minio
 
   backend:
-    container_name: backend
     restart: "no"
     build:
       context: ./backend
@@ -98,11 +94,12 @@ services:
       LCFS_REDIS_HOST: redis
       LCFS_REDIS_PORT: 6379
       LCFS_REDIS_PASSWORD: development_only
+      LCFS_FRONTEND_PUBLISHED_PORT: "${LCFS_FRONTEND_PUBLISHED_PORT:-3000}"
       LCFS_RELOAD: true
       APP_ENVIRONMENT: dev
     ports:
-      - '8000:8000' # Application port
-      - '5678:5678' # Debugger port
+      - "${LCFS_BACKEND_PUBLISHED_PORT:-8000}:8000" # Application port
+      - "${LCFS_BACKEND_DEBUG_PUBLISHED_PORT:-5678}:5678" # Debugger port
     depends_on:
       - db
       - redis
@@ -112,14 +109,15 @@ services:
       - shared_network
 
   frontend:
-    container_name: frontend
     restart: "no"
     build:
       dockerfile: Dockerfile.dev
       context: ./frontend
     command: npm run dev --force
+    environment:
+      VITE_API_BASE_URL: "http://localhost:${LCFS_BACKEND_PUBLISHED_PORT:-8000}/api"
     ports:
-      - "3000:3000"
+      - "${LCFS_FRONTEND_PUBLISHED_PORT:-3000}:3000"
     volumes:
       - type: bind
         source: ./frontend
@@ -156,19 +154,12 @@ services:
   #     - "lcfs.description=Model Context Protocol server for local development"
 
 volumes:
-  postgres_data:
-    name: lcfs_postgres_data
-  redis_data:
-    name: lcfs_redis_data
-  node_modules:
-    name: lcfs_node_data
-  s3:
-    name: lcfs_s3_data
-  clamav:
-    name: clamav
-  clamsocket:
-    name: clamsocket
+  postgres_data: {}
+  redis_data: {}
+  node_modules: {}
+  s3: {}
+  clamav: {}
+  clamsocket: {}
 
 networks:
-  shared_network:
-    name: shared_network
+  shared_network: {}

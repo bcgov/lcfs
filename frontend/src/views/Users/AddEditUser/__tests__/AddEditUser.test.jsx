@@ -78,6 +78,12 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useUser')
 vi.mock('@/hooks/useOrganization')
+vi.mock('@/hooks/useNotifications', () => ({
+  useTargetUserNotificationSubscriptions: vi.fn(() => ({
+    data: [],
+    isFetching: false
+  }))
+}))
 
 // Mock child components to simplify testing focus on parent logic
 // Mock child components to simplify testing focus on parent logic.
@@ -231,6 +237,12 @@ describe('AddEditUser', () => {
       mutate: mockDeleteUser,
       isPending: false
     })
+
+    vi.mocked(userHooks.useUserAssignedWork).mockReturnValue({
+      data: null,
+      isFetching: false,
+      isError: false
+    })
   })
 
   // Mock handleCancelEdit function for all tests
@@ -333,6 +345,7 @@ describe('AddEditUser', () => {
 
     // Submit the form - the mocked useForm will provide valid form data automatically
     fireEvent.click(screen.getByTestId('saveUser'))
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
     await waitFor(() => {
       expect(mockCreateUser).toHaveBeenCalled()
@@ -380,6 +393,7 @@ describe('AddEditUser', () => {
 
       // Submit the form
       fireEvent.click(screen.getByTestId('saveUser'))
+      fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
       await waitFor(() => {
         expect(mockCreateUser).toHaveBeenCalled()
@@ -434,6 +448,7 @@ describe('AddEditUser', () => {
 
     // Submit the form
     fireEvent.click(screen.getByTestId('saveUser'))
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
     await waitFor(() => {
       expect(mockUpdateUser).toHaveBeenCalledWith({
@@ -488,6 +503,7 @@ describe('AddEditUser', () => {
 
       // Submit the form
       fireEvent.click(screen.getByTestId('saveUser'))
+      fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
       await waitFor(() => {
         expect(mockCreateUser).toHaveBeenCalledWith(
@@ -543,6 +559,7 @@ describe('AddEditUser', () => {
 
       // Submit the form
       fireEvent.click(screen.getByTestId('saveUser'))
+      fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
       await waitFor(() => {
         expect(mockCreateUser).toHaveBeenCalledWith(
@@ -1187,6 +1204,7 @@ describe('AddEditUser', () => {
 
     // Submit the form
     fireEvent.click(screen.getByTestId('saveUser'))
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
     await waitFor(() => {
       expect(mockUpdateUser).toHaveBeenCalledWith({
