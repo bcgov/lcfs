@@ -13,6 +13,9 @@ from lcfs.db.models.compliance import (
     FuelSupply,
     ComplianceReport,
 )
+from lcfs.db.models.compliance.ComplianceReport import (
+    QuantityUnitsEnum as FuelSupplyUnitsEnum,
+)
 from lcfs.db.models.fuel import (
     CategoryCarbonIntensity,
     DefaultCarbonIntensity,
@@ -979,6 +982,7 @@ class FuelSupplyRepository:
         total_by_fuel_code = {}
         yearly = {}
         yearly_fuel_type = {}
+        yearly_fuel_category = {}
 
         for fs in all_fuel_supplies:
             quantity = _quantity(fs)
@@ -1070,6 +1074,20 @@ class FuelSupplyRepository:
                 yearly_fuel_type[year][fuel_type_name][
                     "positive_compliance_units"
                 ] = True
+
+            # Quantities are in mixed units (L, kg, kWh, m³) within a category,
+            # so energy (MJ) is the comparable total and volume only counts
+            # litre-denominated rows. fs.units is the row's reported unit (it
+            # is user-selected for "Other" fuel types); its enum is not the
+            # same class as fuel_type.units', so compare against the alias.
+            category_totals = yearly_fuel_category.setdefault(year, {}).setdefault(
+                category,
+                {"total_energy": 0, "total_litres": 0, "total_compliance_units": 0},
+            )
+            category_totals["total_energy"] += float(fs.energy or 0)
+            if fs.units == FuelSupplyUnitsEnum.Litres:
+                category_totals["total_litres"] += quantity
+            category_totals["total_compliance_units"] += compliance_units
 
         # Calculate most recent submission
         most_recent_submission = (
@@ -1172,6 +1190,7 @@ class FuelSupplyRepository:
         compliance_unit_credit_debit_trend = []
         compliance_units_per_unit_trend = []
         fuel_type_volume_trend = []
+        fuel_category_trend = []
         top_fuel_codes = [
             {"fuelCode": fuel_code, "totalVolume": volume}
             for fuel_code, volume in sorted(
@@ -1219,6 +1238,18 @@ class FuelSupplyRepository:
                         "fuelCategory": fuel_type_data.get("fuel_category"),
                         "totalVolume": fuel_type_data.get("total_volume", 0),
                         "fossilDerived": fuel_type_data.get("fossil_derived", False),
+                    }
+                )
+            for category, category_data in yearly_fuel_category.get(year, {}).items():
+                fuel_category_trend.append(
+                    {
+                        "reportingYear": year,
+                        "fuelCategory": category,
+                        "totalEnergy": _round(category_data["total_energy"]),
+                        "totalLitres": category_data["total_litres"],
+                        "totalComplianceUnits": _round(
+                            category_data["total_compliance_units"]
+                        ),
                     }
                 )
 
@@ -1271,5 +1302,6 @@ class FuelSupplyRepository:
             "compliance_unit_credit_debit_trend": compliance_unit_credit_debit_trend,
             "compliance_units_per_unit_trend": compliance_units_per_unit_trend,
             "fuel_type_volume_trend": fuel_type_volume_trend,
+            "fuel_category_trend": fuel_category_trend,
             "top_fuel_codes": top_fuel_codes,
         }
