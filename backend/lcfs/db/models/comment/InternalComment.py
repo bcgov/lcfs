@@ -142,6 +142,9 @@ class InternalComment(BaseModel, Auditable):
     organization_internal_comments = relationship(
         "OrganizationInternalComment", back_populates="internal_comment"
     )
+    designated_action_internal_comments = relationship(
+        "DesignatedActionInternalComment", back_populates="internal_comment"
+    )
     documents = relationship(
         "Document",
         secondary=internal_comment_document_association,

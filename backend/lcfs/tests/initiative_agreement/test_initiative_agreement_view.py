@@ -3,9 +3,10 @@ import datetime
 import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementCreateSchema,
     InitiativeAgreementSchema,
@@ -19,6 +20,14 @@ from unittest.mock import patch
 @pytest.fixture
 def mock_initiative_agreement_services():
     return MagicMock(spec=InitiativeAgreementServices)
+
+
+@pytest.fixture
+def mock_initiative_agreement_repo():
+    # validate_organization_access loads the agreement through the repository
+    repo = MagicMock(spec=InitiativeAgreementRepository)
+    repo.get_initiative_agreement_by_id = AsyncMock(return_value=MagicMock())
+    return repo
 
 
 @pytest.fixture
@@ -37,6 +46,7 @@ async def test_get_initiative_agreement(
     fastapi_app: FastAPI,
     set_mock_user,
     mock_initiative_agreement_services,
+    mock_initiative_agreement_repo,
 ):
     with patch(
         "lcfs.web.api.initiative_agreement.services.InitiativeAgreementServices",
@@ -65,6 +75,9 @@ async def test_get_initiative_agreement(
         # Use dependency override
         fastapi_app.dependency_overrides[InitiativeAgreementServices] = (
             lambda: mock_initiative_agreement_services
+        )
+        fastapi_app.dependency_overrides[InitiativeAgreementRepository] = (
+            lambda: mock_initiative_agreement_repo
         )
 
         url = fastapi_app.url_path_for(
