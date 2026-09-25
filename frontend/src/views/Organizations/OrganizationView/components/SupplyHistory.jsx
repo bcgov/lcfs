@@ -523,30 +523,28 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
         ]
       },
       {
-        key: 'cu-efficiency',
-        hasData: hasNumericValue(
-          selectedYearSummary.complianceUnitsPerUnitSupply
-        ),
-        title: t('org:supplyHistory.analytics.complianceUnitsPerUnitSupply'),
-        value: formatPlainNumber(
-          selectedYearSummary.complianceUnitsPerUnitSupply,
-          6
-        ),
+        key: 'renewable-volume',
+        hasData: hasNumericValue(selectedYearSummary.totalRenewableVolume),
+        title: t('org:supplyHistory.analytics.totalRenewableLiquidVolume'),
+        value: abbreviateNumber(selectedYearSummary.totalRenewableVolume, {
+          unitLabel: 'L'
+        }),
         period: year,
         comparisons: [
           {
-            label: `${formatPlainNumber(
-              selectedYearSummary.complianceUnitsPerUnitSupplyChange,
-              6
+            label: `${formatSignedPercent(
+              selectedYearSummary.renewableVolumePctChangeYoy
             )} ${t('org:supplyHistory.analytics.vsPreviousYear')}`,
             color: getComparisonColor(
-              selectedYearSummary.complianceUnitsPerUnitSupplyChange
+              selectedYearSummary.renewableVolumePctChangeYoy
             )
           },
           {
-            label: `${t('org:supplyHistory.analytics.previousYear')}: ${formatPlainNumber(
-              selectedYearSummary.priorYearComplianceUnitsPerUnitSupply,
-              6
+            label: `${t('org:supplyHistory.analytics.previousYear')}: ${
+              priorYear || t('org:supplyHistory.analytics.noData')
+            } • ${abbreviateNumber(
+              selectedYearSummary.priorYearRenewableVolume,
+              { unitLabel: 'L' }
             )}`,
             color: 'text'
           }
