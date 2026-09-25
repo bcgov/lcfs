@@ -7,6 +7,7 @@ import {
   useMarkNotificationAsRead,
   useDeleteNotificationMessages,
   useNotificationSubscriptions,
+  useTargetUserNotificationSubscriptions,
   useCreateSubscription,
   useDeleteSubscription,
   useUpdateNotificationsEmail
@@ -32,6 +33,7 @@ vi.mock('@/constants/routes', () => ({
     getNotifications: '/notifications/list',
     notifications: '/notifications',
     getNotificationSubscriptions: '/notifications/subscriptions',
+    getUserNotificationSubscriptions: '/notifications/subscriptions/user',
     saveNotificationSubscriptions: '/notifications/subscriptions/save',
     updateNotificationsEmail: '/notifications/email/update'
   }
@@ -410,5 +412,60 @@ describe('useNotifications', () => {
 
       expect(result.current.error).toEqual(mockError)
     }, 30000)
+  })
+
+  describe('useTargetUserNotificationSubscriptions', () => {
+    it('fetches subscriptions for a given userId', async () => {
+      const mockSubs = [
+        { notificationChannelSubscriptionId: 1, isEnabled: true, notificationTypeName: 'IDIR_ANALYST__GOVERNMENT_NOTIFICATION', notificationChannelName: 'EMAIL' },
+        { notificationChannelSubscriptionId: 2, isEnabled: false, notificationTypeName: 'IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW', notificationChannelName: 'IN_APP' }
+      ]
+      mockApiService.get.mockResolvedValue({ data: mockSubs })
+
+      const { result } = renderHook(
+        () => useTargetUserNotificationSubscriptions(42),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+      expect(result.current.data).toEqual(mockSubs)
+      expect(mockApiService.get).toHaveBeenCalledWith('/notifications/subscriptions/user/42')
+    })
+
+    it('is disabled and returns empty array when userId is null', async () => {
+      const { result } = renderHook(
+        () => useTargetUserNotificationSubscriptions(null),
+        { wrapper: createWrapper() }
+      )
+
+      // query stays idle (disabled)
+      expect(result.current.fetchStatus).toBe('idle')
+      expect(mockApiService.get).not.toHaveBeenCalled()
+    })
+
+    it('returns empty array on 404', async () => {
+      mockApiService.get.mockRejectedValue({ response: { status: 404 } })
+
+      const { result } = renderHook(
+        () => useTargetUserNotificationSubscriptions(7),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+      expect(result.current.data).toEqual([])
+    })
+
+    it('propagates non-404 errors', async () => {
+      mockApiService.get.mockRejectedValue({ response: { status: 500 } })
+
+      const { result } = renderHook(
+        () => useTargetUserNotificationSubscriptions(7),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => expect(result.current.isError).toBe(true))
+    })
   })
 })
