@@ -153,7 +153,13 @@ export const ROUTES = {
   },
 
   INITIATIVE_AGREEMENTS: {
-    LIST: '/initiative-agreements'
+    LIST: '/initiative-agreements',
+    // Static, so the router ranks it above the :initiativeAgreementId
+    // pattern beneath it.
+    ACTIONS_LIST: '/initiative-agreements/designated-actions',
+    VIEW: '/initiative-agreements/:initiativeAgreementId',
+    ACTION_VIEW:
+      '/initiative-agreements/:initiativeAgreementId/designated-actions/:designatedActionId'
   },
 
   FORMS: {

@@ -201,6 +201,22 @@ async def save_subscription(
 
 
 @router.get(
+    "/subscriptions/user/{user_id}",
+    response_model=List[SubscriptionSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_notification_channel_subscriptions_for_user(
+    request: Request,
+    user_id: int,
+    service: NotificationService = Depends(),
+):
+    return await service.get_notification_channel_subscriptions_by_user_id(
+        user_id=user_id
+    )
+
+
+@router.get(
     "/subscriptions/{notification_channel_subscription_id}",
     status_code=status.HTTP_200_OK,
 )

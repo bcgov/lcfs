@@ -1,4 +1,5 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Index, Integer, String, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel
@@ -65,10 +66,28 @@ class CreditMarketAuditLog(BaseModel):
         nullable=True,
         comment="Credit market contact email.",
     )
+    display_in_credit_market = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="Whether the listing was displayed in the credit market after the change.",
+    )
+    action = Column(
+        String(20),
+        nullable=True,
+        comment="Type of listing change: Added, Updated or Removed.",
+    )
+    changes = Column(
+        JSONB,
+        nullable=True,
+        comment="Field-level diff of the change: {field: {from, to}}.",
+    )
     changed_by = Column(
         String(255),
         nullable=True,
         comment="BCeID/IDIR username that performed the listing change.",
     )
 
-    organization = relationship("Organization", back_populates="credit_market_audit_logs")
+    organization = relationship(
+        "Organization", back_populates="credit_market_audit_logs"
+    )

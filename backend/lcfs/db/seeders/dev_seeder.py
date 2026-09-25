@@ -14,6 +14,9 @@ from lcfs.db.seeders.dev.organization_early_issuance_seeder import (
     seed_organization_early_issuance,
 )
 from lcfs.db.seeders.dev.admin_adjustment_seeder import seed_admin_adjustments
+from lcfs.db.seeders.dev.initiative_agreement_seeder import (
+    seed_initiative_agreements,
+)
 from lcfs.db.seeders.dev.admin_adjustment_history_seeder import (
     seed_admin_adjustment_history,
 )
@@ -25,6 +28,9 @@ from lcfs.db.seeders.dev.feedstock_fuel_transfer_mode_seeder import (
 )
 from lcfs.db.seeders.dev.notification_channel_subscription_seeder import (
     seed_notification_channel_subscriptions,
+)
+from lcfs.db.seeders.org_association_seeder import (
+    seed_org_type_and_available_role_associations,
 )
 from lcfs.db.seeders.seed_charging_power_output import seed_charging_power_output
 from lcfs.db.seeders.staging.test_allocation_agreement_seeder import (
@@ -116,13 +122,15 @@ async def seed_dev(session: AsyncSession):
     await seed_organization_attorney_addresses(session)
     await seed_organizations(session)
     await seed_organization_early_issuance(session)
-    
+
     # Seed user-related entities
     await seed_user_profiles(session)
     await seed_user_roles(session)
+    await seed_org_type_and_available_role_associations(session)
     # seed transactions and adjustments
     await seed_test_transactions(session)
     await seed_admin_adjustments(session)
+    await seed_initiative_agreements(session)
     # Seed fuel codes
     await seed_test_fuel_codes(session)
     # Seed compliance-related entities
@@ -137,7 +145,7 @@ async def seed_dev(session: AsyncSession):
     await seed_test_charging_sites(session)
     await seed_test_charging_equipment(session)
     await seed_test_compliance_report_history(session)
-    
+
     # Seed documents after compliance reports (dependency)
     await seed_test_documents(session)
 
@@ -145,7 +153,7 @@ async def seed_dev(session: AsyncSession):
     await seed_test_transfers(session)
     await seed_test_transfer_history(session)
 
-    # Seed remaining 
+    # Seed remaining
     await seed_finished_fuel_transfer_modes(session)
     await seed_feedstock_fuel_transfer_modes(session)
     await seed_charging_power_output(session)

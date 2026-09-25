@@ -11,6 +11,16 @@ class InitiativeAgreementStatusEnum(enum.Enum):
 
 
 class InitiativeAgreementStatus(BaseModel, Auditable, DisplayOrder):
+    """
+    Credit-award transaction status (the outgoing award flow).
+
+    Do NOT add agreement lifecycle values here. Every row of this table is
+    surfaced by ``transaction_status_view`` (an unfiltered
+    ``SELECT DISTINCT status::text`` across the status tables) and validated
+    against ``TransactionStatusEnum``, so a value that is not a transaction
+    status breaks ``GET /api/transactions/statuses/`` for every caller.
+    Agreement lifecycle lives in ``initiative_agreement_lifecycle_status``.
+    """
 
     __tablename__ = "initiative_agreement_status"
     __table_args__ = {"comment": "Represents a InitiativeAgreement Status"}

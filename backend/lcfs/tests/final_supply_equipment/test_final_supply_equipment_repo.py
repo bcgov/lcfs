@@ -1103,7 +1103,9 @@ async def test_get_fse_reporting_list_paginated_can_use_vw_fse_base(repo, fake_d
 
 
 def test_vw_fse_base_projects_capacity_from_preferred_materialized_view():
-    metabase_sql = Path("lcfs/db/sql/views/metabase.sql").read_text()
+    metabase_sql = Path("lcfs/db/sql/views/metabase.sql").read_text(
+        encoding="utf-8", errors="replace"
+    )
     start = metabase_sql.index("CREATE OR REPLACE VIEW vw_fse_base AS")
     end = metabase_sql.index("GRANT SELECT ON vw_fse_base", start)
     view_sql = metabase_sql[start:end]

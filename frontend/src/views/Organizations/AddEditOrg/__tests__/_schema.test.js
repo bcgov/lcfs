@@ -44,7 +44,7 @@ describe('Organization Form Schema Validation', () => {
         orgOperatingName: 'Test Co',
         orgEmailAddress: 'test@example.com',
         orgPhoneNumber: '(604) 123-4567',
-        orgType: '1',
+        orgTypeIds: ['1'],
         orgRegForTransfers: '1',
         orgStreetAddress: '123 Test St',
         orgCity: 'Vancouver',
@@ -59,7 +59,7 @@ describe('Organization Form Schema Validation', () => {
 
   // Test dynamic schema for BCeID organization types
   describe('Dynamic Schema - BCeID Organizations', () => {
-    const bceidSchema = createValidationSchema(mockOrgTypes, '1') // Fuel supplier
+    const bceidSchema = createValidationSchema(mockOrgTypes, ['1']) // Fuel supplier
 
     it('validates BCeID org with all required fields', async () => {
       const validData = {
@@ -67,7 +67,7 @@ describe('Organization Form Schema Validation', () => {
         orgOperatingName: 'Test Co',
         orgEmailAddress: 'test@example.com',
         orgPhoneNumber: '(604) 123-4567',
-        orgType: '1',
+        orgTypeIds: ['1'],
         orgRegForTransfers: '1',
         orgStreetAddress: '123 Test St',
         orgCity: 'Vancouver',
@@ -84,7 +84,7 @@ describe('Organization Form Schema Validation', () => {
         orgOperatingName: 'Test Co',
         orgEmailAddress: 'test@example.com',
         // orgPhoneNumber: '(604) 123-4567', // Missing phone
-        orgType: '1',
+        orgTypeIds: ['1'],
         orgRegForTransfers: '1',
         orgStreetAddress: '123 Test St',
         orgCity: 'Vancouver',
@@ -103,7 +103,7 @@ describe('Organization Form Schema Validation', () => {
         orgOperatingName: 'Test Co',
         orgEmailAddress: 'test@example.com',
         orgPhoneNumber: '(604) 123-4567',
-        orgType: '1',
+        orgTypeIds: ['1'],
         orgRegForTransfers: '1',
         // orgStreetAddress: '123 Test St', // Missing address
         orgCity: 'Vancouver',
@@ -119,14 +119,14 @@ describe('Organization Form Schema Validation', () => {
 
   // Test dynamic schema for non-BCeID organization types
   describe('Dynamic Schema - Non-BCeID Organizations', () => {
-    const nonBceidSchema = createValidationSchema(mockOrgTypes, '3') // Fuel producer
+    const nonBceidSchema = createValidationSchema(mockOrgTypes, ['3']) // Fuel producer
 
     it('validates non-BCeID org with minimal required fields', async () => {
       const validData = {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
-        orgType: '3',
+        orgTypeIds: ['3'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
       }
@@ -139,7 +139,7 @@ describe('Organization Form Schema Validation', () => {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
-        orgType: '3',
+        orgTypeIds: ['3'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
         // No phone number provided
@@ -153,7 +153,7 @@ describe('Organization Form Schema Validation', () => {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
-        orgType: '3',
+        orgTypeIds: ['3'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
         // No address fields provided
@@ -167,7 +167,7 @@ describe('Organization Form Schema Validation', () => {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         // orgEmailAddress: 'producer@example.com', // Missing email
-        orgType: '3',
+        orgTypeIds: ['3'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
       }
@@ -183,7 +183,7 @@ describe('Organization Form Schema Validation', () => {
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
         orgPhoneNumber: 'invalid-phone-format!',
-        orgType: '3',
+        orgTypeIds: ['3'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
       }
@@ -198,7 +198,7 @@ describe('Organization Form Schema Validation', () => {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
-        orgType: '3',
+        orgTypeIds: ['3'],
         orgRegForTransfers: '1',
         orgCity: 'Vancouver',
         orgPostalCodeZipCode: 'INVALID-FORMAT',
@@ -214,8 +214,8 @@ describe('Organization Form Schema Validation', () => {
   // Test cross-org-type validation scenarios
   describe('Validation Scenarios', () => {
     it('validates switching from BCeID to non-BCeID type', async () => {
-      const bceidSchema = createValidationSchema(mockOrgTypes, '1')
-      const nonBceidSchema = createValidationSchema(mockOrgTypes, '3')
+      const bceidSchema = createValidationSchema(mockOrgTypes, ['1'])
+      const nonBceidSchema = createValidationSchema(mockOrgTypes, ['3'])
 
       // Start with BCeID data (all required fields filled)
       const bceidData = {
@@ -223,7 +223,7 @@ describe('Organization Form Schema Validation', () => {
         orgOperatingName: 'Test Co',
         orgEmailAddress: 'test@example.com',
         orgPhoneNumber: '(604) 123-4567',
-        orgType: '1',
+        orgTypeIds: ['1'],
         orgRegForTransfers: '1',
         orgStreetAddress: '123 Test St',
         orgCity: 'Vancouver',
@@ -234,20 +234,20 @@ describe('Organization Form Schema Validation', () => {
       await expect(bceidSchema.validate(bceidData)).resolves.not.toThrow()
 
       // Switch to non-BCeID type - should still pass even with address/phone
-      const nonBceidData = { ...bceidData, orgType: '3' }
+      const nonBceidData = { ...bceidData, orgTypeIds: ['3'] }
       await expect(nonBceidSchema.validate(nonBceidData)).resolves.not.toThrow()
     })
 
     it('validates switching from non-BCeID to BCeID type', async () => {
-      const nonBceidSchema = createValidationSchema(mockOrgTypes, '3')
-      const bceidSchema = createValidationSchema(mockOrgTypes, '1')
+      const nonBceidSchema = createValidationSchema(mockOrgTypes, ['3'])
+      const bceidSchema = createValidationSchema(mockOrgTypes, ['1'])
 
       // Start with minimal non-BCeID data
       const nonBceidData = {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
-        orgType: '3',
+        orgTypeIds: ['3'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
       }
@@ -255,8 +255,46 @@ describe('Organization Form Schema Validation', () => {
       await expect(nonBceidSchema.validate(nonBceidData)).resolves.not.toThrow()
 
       // Switch to BCeID type - should fail due to missing required fields
-      const bceidData = { ...nonBceidData, orgType: '1' }
+      const bceidData = { ...nonBceidData, orgTypeIds: ['1'] }
       await expect(bceidSchema.validate(bceidData)).rejects.toThrow()
+    })
+
+    it('applies BCeID rules when any selected type is a BCeID type', async () => {
+      // fuel producer (non-BCeID) + fuel supplier (BCeID) => BCeID rules
+      const mixedSchema = createValidationSchema(mockOrgTypes, ['3', '1'])
+      const missingPhone = {
+        orgLegalName: 'Test Company Inc.',
+        orgOperatingName: 'Test Co',
+        orgEmailAddress: 'test@example.com',
+        orgTypeIds: ['3', '1'],
+        orgRegForTransfers: '1',
+        orgStreetAddress: '123 Test St',
+        orgCity: 'Vancouver',
+        orgPostalCodeZipCode: 'V6B3K9',
+        hasEarlyIssuance: 'yes'
+      }
+      await expect(mixedSchema.validate(missingPhone)).rejects.toThrow(
+        'Phone number is required.'
+      )
+    })
+
+    it('requires at least one organization type', async () => {
+      const schema = createValidationSchema(mockOrgTypes, [])
+      const noTypes = {
+        orgLegalName: 'Test Company Inc.',
+        orgOperatingName: 'Test Co',
+        orgEmailAddress: 'test@example.com',
+        orgPhoneNumber: '(604) 123-4567',
+        orgTypeIds: [],
+        orgRegForTransfers: '1',
+        orgStreetAddress: '123 Test St',
+        orgCity: 'Vancouver',
+        orgPostalCodeZipCode: 'V6B3K9',
+        hasEarlyIssuance: 'yes'
+      }
+      await expect(schema.validate(noTypes)).rejects.toThrow(
+        'At least one organization type is required.'
+      )
     })
   })
 })

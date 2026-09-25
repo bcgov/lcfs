@@ -12,6 +12,7 @@ from lcfs.web.api.base import (
     AudienceType,
     NotificationTypeEnum,
     PaginationRequestSchema,
+    PaginatedQueryBuilder,
     apply_filter_conditions,
     get_field_for_filter,
     validate_pagination,
@@ -23,7 +24,7 @@ from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-from sqlalchemy import asc, delete, desc, or_, select, func, update
+from sqlalchemy import delete, or_, select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload, aliased
 
@@ -126,49 +127,35 @@ class NotificationRepository:
         # Import locally to avoid circular import
         from lcfs.db.models.user.UserProfile import UserProfile
 
-        for filter in pagination.filters:
-            filter_value = filter.filter
-            filter_option = filter.type
-            filter_type = filter.filter_type
+        def _date_filter(filter_model):
+            field = get_field_for_filter(NotificationMessage, "create_date")
+            return apply_filter_conditions(
+                field,
+                filter_model.date_from,
+                filter_model.type,
+                filter_model.filter_type,
+            )
 
-            # Handle date filters
-            if filter.field == "date":
-                filter_value = filter.date_from
-                field = get_field_for_filter(NotificationMessage, "create_date")
-                conditions.append(
-                    apply_filter_conditions(
-                        field, filter_value, filter_option, filter_type
-                    )
-                )
-            elif filter.field == "user":
-                conditions.append(
-                    NotificationMessage.origin_user_profile.has(
-                        UserProfile.first_name.like(f"%{filter_value}%")
-                    )
-                )
-            elif filter.field == "organization":
-                conditions.append(
-                    NotificationMessage.related_organization.has(
-                        Organization.name.like(f"%{filter_value}%")
-                    )
-                )
-            elif filter.field == "transaction_id":
-                field = get_field_for_filter(
-                    NotificationMessage, "related_transaction_id"
-                )
-                conditions.append(
-                    apply_filter_conditions(
-                        field, filter_value, filter_option, filter_type
-                    )
-                )
-            else:
-                field = get_field_for_filter(NotificationMessage, filter.field)
-                conditions.append(
-                    apply_filter_conditions(
-                        field, filter_value, filter_option, filter_type
-                    )
-                )
+        def _user_filter(filter_model):
+            return NotificationMessage.origin_user_profile.has(
+                UserProfile.first_name.like(f"%{filter_model.filter}%")
+            )
 
+        def _organization_filter(filter_model):
+            return NotificationMessage.related_organization.has(
+                Organization.name.like(f"%{filter_model.filter}%")
+            )
+
+        builder = PaginatedQueryBuilder(
+            NotificationMessage,
+            field_map={"transaction_id": "related_transaction_id"},
+            custom_filters={
+                "date": _date_filter,
+                "user": _user_filter,
+                "organization": _organization_filter,
+            },
+        )
+        conditions.extend(builder.build_conditions(pagination.filters))
         return conditions
 
     @repo_handler
@@ -223,32 +210,19 @@ class NotificationRepository:
             .where(and_(*conditions))
         )
 
-        # Apply sorting
-        order_clauses = []
-        if not pagination.sort_orders:
-            order_clauses.append(desc(NotificationMessage.create_date))
-        else:
-            for order in pagination.sort_orders:
-                direction = asc if order.direction == "asc" else desc
-                if order.field == "date":
-                    field = NotificationMessage.create_date
-                elif order.field == "user":
-                    field = user_alias.first_name
-                elif order.field == "organization":
-                    field = org_alias.name
-                elif order.field == "transaction_id":
-                    field = NotificationMessage.related_transaction_id
-                elif order.field == "action":
-                    # Action column is not sortable, skip it
-                    field = None
-                elif order.field == "type":
-                    field = NotificationMessage.type
-                else:
-                    # Only try to get attribute if it exists on the model
-                    field = getattr(NotificationMessage, order.field, None)
-                if field is not None:
-                    order_clauses.append(direction(field))
-        query = query.order_by(*order_clauses)
+        sort_builder = PaginatedQueryBuilder(
+            NotificationMessage,
+            field_map={"transaction_id": "related_transaction_id"},
+            custom_sorts={
+                "date": NotificationMessage.create_date,
+                "user": user_alias.first_name,
+                "organization": org_alias.name,
+                "action": lambda order: None,  # not sortable
+            },
+        )
+        query = sort_builder.apply_sorting(
+            query, pagination.sort_orders, default_field="create_date"
+        )
 
         # Execute the count query to get the total count
         count_query = query.with_only_columns(func.count()).order_by(None)
