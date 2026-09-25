@@ -11,6 +11,7 @@ import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 type RouteHandle = {
   title?: string
   hideBreadcrumb?: boolean
+  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
 }
 
 export const PublicPageLayout = () => {
@@ -20,6 +21,7 @@ export const PublicPageLayout = () => {
     | undefined
   const pageTitle = lastMatchHandle?.title || 'LCFS'
   const hideBreadcrumb = lastMatchHandle?.hideBreadcrumb ?? false
+  const maxWidth = lastMatchHandle?.maxWidth ?? 'lg'
 
   return (
     <BCBox display="flex" flexDirection="column" minHeight="100vh">
@@ -27,10 +29,12 @@ export const PublicPageLayout = () => {
         {pageTitle}
       </BCTypography>
 
-      <PublicHeader />
+      <BCBox sx={{ '@media print': { display: 'none !important' } }}>
+        <PublicHeader />
+      </BCBox>
 
       <Container
-        maxWidth="lg"
+        maxWidth={maxWidth}
         sx={{
           marginTop: hideBreadcrumb ? 0 : '1px',
           paddingX: '40px',
@@ -39,13 +43,20 @@ export const PublicPageLayout = () => {
           flexDirection: 'column',
           '@media (max-width: 920px)': {
             marginTop: hideBreadcrumb ? 0 : '2rem'
+          },
+          '@media print': {
+            marginTop: 0,
+            paddingX: 0
           }
         }}
         disableGutters
       >
         <Stack spacing={2} sx={{ flexGrow: 1 }}>
           {!hideBreadcrumb && (
-            <BCBox size={12}>
+            <BCBox
+              size={12}
+              sx={{ '@media print': { display: 'none !important' } }}
+            >
               {isFeatureEnabled(FEATURE_FLAGS.CREDIT_MARKET_LOGIN_PAGE) ? (
                 <PublicBreadcrumb
                   rootLabel="Home"
@@ -66,7 +77,8 @@ export const PublicPageLayout = () => {
               minHeight: 'auto',
               flexGrow: 1,
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              '@media print': { padding: 0 }
             }}
           >
             <Outlet />
@@ -74,7 +86,9 @@ export const PublicPageLayout = () => {
         </Stack>
       </Container>
 
-      <Footer />
+      <BCBox sx={{ '@media print': { display: 'none !important' } }}>
+        <Footer />
+      </BCBox>
     </BCBox>
   )
 }
