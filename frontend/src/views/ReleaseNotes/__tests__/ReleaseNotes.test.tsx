@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { ReleaseNotes } from '../ReleaseNotes'
 
 // ── i18n mock ────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ vi.mock('react-i18next', () => ({
 // ── Hook mocks ───────────────────────────────────────────────────────────────
 // Following the established pattern (see LoginScreenBackground.test.jsx) of
 // mocking the data hooks directly rather than the underlying auth/HTTP
-// context, which isn't wired up in the lightweight `wrapper` test utility.
+// context, which isn't wired up in the test render providers.
 const mockUseReleaseNotes = vi.fn()
 const mockUpdateMutate = vi.fn()
 const mockResetMutate = vi.fn()
@@ -116,8 +116,12 @@ beforeEach(() => {
 })
 
 describe('ReleaseNotes', () => {
-  it('renders the page title and subtitle', async () => {
-    render(<ReleaseNotes />, { wrapper })
+  test('renders the page title and subtitle', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<ReleaseNotes />, [theme, router])
 
     expect(screen.getByText('Release notes')).toBeInTheDocument()
     expect(
@@ -125,16 +129,24 @@ describe('ReleaseNotes', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows loading skeletons while fetching', () => {
+  test('shows loading skeletons while fetching', ({
+    render,
+    theme,
+    router
+  }) => {
     setReleaseNotes({ data: undefined, isLoading: true })
-    render(<ReleaseNotes />, { wrapper })
+    render(<ReleaseNotes />, [theme, router])
 
     expect(screen.getByTestId('release-notes-loading')).toBeInTheDocument()
   })
 
-  it('shows error alert when fetch fails', async () => {
+  test('shows error alert when fetch fails', async ({
+    render,
+    theme,
+    router
+  }) => {
     setReleaseNotes({ data: undefined, isError: true })
-    render(<ReleaseNotes />, { wrapper })
+    render(<ReleaseNotes />, [theme, router])
 
     await waitFor(() =>
       expect(
@@ -143,9 +155,13 @@ describe('ReleaseNotes', () => {
     )
   })
 
-  it('shows empty state when response is an empty array', async () => {
+  test('shows empty state when response is an empty array', async ({
+    render,
+    theme,
+    router
+  }) => {
     setReleaseNotes({ data: [] })
-    render(<ReleaseNotes />, { wrapper })
+    render(<ReleaseNotes />, [theme, router])
 
     await waitFor(() =>
       expect(
@@ -154,8 +170,12 @@ describe('ReleaseNotes', () => {
     )
   })
 
-  it('renders release version and date', async () => {
-    render(<ReleaseNotes />, { wrapper })
+  test('renders release version and date', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<ReleaseNotes />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByText('v1.0.0')).toBeInTheDocument()
@@ -163,22 +183,34 @@ describe('ReleaseNotes', () => {
     })
   })
 
-  it('shows LATEST badge on the most recent release', async () => {
-    render(<ReleaseNotes />, { wrapper })
+  test('shows LATEST badge on the most recent release', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<ReleaseNotes />, [theme, router])
 
     await waitFor(() => expect(screen.getByText('LATEST')).toBeInTheDocument())
   })
 
-  it('first release is expanded by default', async () => {
-    render(<ReleaseNotes />, { wrapper })
+  test('first release is expanded by default', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<ReleaseNotes />, [theme, router])
 
     await waitFor(() =>
       expect(screen.getByText('Added bulk import for fuel codes')).toBeVisible()
     )
   })
 
-  it('renders feature and fix change items', async () => {
-    render(<ReleaseNotes />, { wrapper })
+  test('renders feature and fix change items', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<ReleaseNotes />, [theme, router])
 
     await waitFor(() => {
       expect(
@@ -188,8 +220,12 @@ describe('ReleaseNotes', () => {
     })
   })
 
-  it('auto-links ticket references in change items to GitHub', async () => {
-    render(<ReleaseNotes />, { wrapper })
+  test('auto-links ticket references in change items to GitHub', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<ReleaseNotes />, [theme, router])
 
     await waitFor(() => {
       const ticketLink = screen.getByText('#4482').closest('a')
@@ -202,8 +238,12 @@ describe('ReleaseNotes', () => {
     })
   })
 
-  it('does not render contributor chips (feature removed)', async () => {
-    render(<ReleaseNotes />, { wrapper })
+  test('does not render contributor chips (feature removed)', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<ReleaseNotes />, [theme, router])
 
     await waitFor(() => {
       expect(screen.queryByText('@dev1')).not.toBeInTheDocument()
@@ -211,8 +251,12 @@ describe('ReleaseNotes', () => {
     })
   })
 
-  it('renders the GitHub release and full changelog links', async () => {
-    render(<ReleaseNotes />, { wrapper })
+  test('renders the GitHub release and full changelog links', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<ReleaseNotes />, [theme, router])
 
     await waitFor(() => {
       const releaseLink = screen
@@ -227,8 +271,12 @@ describe('ReleaseNotes', () => {
     })
   })
 
-  it('collapses a release when its header is clicked again', async () => {
-    render(<ReleaseNotes />, { wrapper })
+  test('collapses a release when its header is clicked again', async ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<ReleaseNotes />, [theme, router])
 
     const header = await screen.findByText('v1.0.0')
     fireEvent.click(header)
@@ -240,7 +288,11 @@ describe('ReleaseNotes', () => {
     )
   })
 
-  it('renders multiple releases, LATEST only on the first', async () => {
+  test('renders multiple releases, LATEST only on the first', async ({
+    render,
+    theme,
+    router
+  }) => {
     const olderRelease = {
       ...mockRelease,
       version: '0.9.0',
@@ -254,7 +306,7 @@ describe('ReleaseNotes', () => {
       contributors: []
     }
     setReleaseNotes({ data: [mockRelease, olderRelease] })
-    render(<ReleaseNotes />, { wrapper })
+    render(<ReleaseNotes />, [theme, router])
 
     await waitFor(() => {
       expect(screen.getByText('v1.0.0')).toBeInTheDocument()
@@ -267,9 +319,13 @@ describe('ReleaseNotes', () => {
   // ── System Admin edit permissions ─────────────────────────────────────────
 
   describe('System Admin editing', () => {
-    it('does not render an edit control for non-System-Admin users', async () => {
+    test('does not render an edit control for non-System-Admin users', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(false)
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       await screen.findByText('v1.0.0')
       expect(
@@ -277,9 +333,13 @@ describe('ReleaseNotes', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('renders an edit control for System Admin users', async () => {
+    test('renders an edit control for System Admin users', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(true)
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       await waitFor(() =>
         expect(
@@ -288,9 +348,13 @@ describe('ReleaseNotes', () => {
       )
     })
 
-    it('opens an edit form pre-filled with the current summary and sections', async () => {
+    test('opens an edit form pre-filled with the current summary and sections', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(true)
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       fireEvent.click(
         await screen.findByTestId(`edit-release-${mockRelease.tag}`)
@@ -309,9 +373,13 @@ describe('ReleaseNotes', () => {
       ).toBeInTheDocument()
     })
 
-    it('saves edited content and calls the update mutation with the new values', async () => {
+    test('saves edited content and calls the update mutation with the new values', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(true)
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       fireEvent.click(
         await screen.findByTestId(`edit-release-${mockRelease.tag}`)
@@ -320,7 +388,9 @@ describe('ReleaseNotes', () => {
       const summaryField = screen.getByDisplayValue(
         'User-friendly AI-enhanced summary.'
       )
-      fireEvent.change(summaryField, { target: { value: 'Corrected summary.' } })
+      fireEvent.change(summaryField, {
+        target: { value: 'Corrected summary.' }
+      })
 
       const firstFeatureField = screen.getByDisplayValue(
         'Added bulk import for fuel codes'
@@ -336,7 +406,10 @@ describe('ReleaseNotes', () => {
           version: '1.0.0',
           summary: 'Corrected summary.',
           sections: {
-            features: ['Edited feature description', 'New compliance dashboard'],
+            features: [
+              'Edited feature description',
+              'New compliance dashboard'
+            ],
             fixes: ['Fixed date calculation in compliance reports (#4482).'],
             security: [],
             breaking: [],
@@ -354,9 +427,13 @@ describe('ReleaseNotes', () => {
       )
     })
 
-    it('discards changes and exits edit mode without saving when Cancel is clicked', async () => {
+    test('discards changes and exits edit mode without saving when Cancel is clicked', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(true)
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       fireEvent.click(
         await screen.findByTestId(`edit-release-${mockRelease.tag}`)
@@ -371,7 +448,9 @@ describe('ReleaseNotes', () => {
 
       expect(mockUpdateMutate).not.toHaveBeenCalled()
       await waitFor(() =>
-        expect(screen.queryByDisplayValue('Unsaved edit.')).not.toBeInTheDocument()
+        expect(
+          screen.queryByDisplayValue('Unsaved edit.')
+        ).not.toBeInTheDocument()
       )
       // Original content is shown again, unedited
       expect(
@@ -379,9 +458,13 @@ describe('ReleaseNotes', () => {
       ).toBeInTheDocument()
     })
 
-    it('adds and removes section line items while editing', async () => {
+    test('adds and removes section line items while editing', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(true)
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       fireEvent.click(
         await screen.findByTestId(`edit-release-${mockRelease.tag}`)
@@ -398,17 +481,23 @@ describe('ReleaseNotes', () => {
 
       await waitFor(() =>
         expect(mockUpdateMutate).toHaveBeenCalledWith(
-          expect.objectContaining({ sections: expect.objectContaining({ fixes: [] }) })
+          expect.objectContaining({
+            sections: expect.objectContaining({ fixes: [] })
+          })
         )
       )
     })
   })
 
   describe('Reset to default', () => {
-    it('does not show a reset button when the release has no override', async () => {
+    test('does not show a reset button when the release has no override', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(true)
       setReleaseNotes({ overriddenVersions: new Set() })
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       fireEvent.click(
         await screen.findByTestId(`edit-release-${mockRelease.tag}`)
@@ -419,10 +508,14 @@ describe('ReleaseNotes', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('shows a reset button for a release with an active override', async () => {
+    test('shows a reset button for a release with an active override', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(true)
       setReleaseNotes({ overriddenVersions: new Set([mockRelease.version]) })
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       fireEvent.click(
         await screen.findByTestId(`edit-release-${mockRelease.tag}`)
@@ -433,10 +526,14 @@ describe('ReleaseNotes', () => {
       ).toBeInTheDocument()
     })
 
-    it('opens a confirmation modal instead of resetting immediately', async () => {
+    test('opens a confirmation modal instead of resetting immediately', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(true)
       setReleaseNotes({ overriddenVersions: new Set([mockRelease.version]) })
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       fireEvent.click(
         await screen.findByTestId(`edit-release-${mockRelease.tag}`)
@@ -448,10 +545,14 @@ describe('ReleaseNotes', () => {
       expect(screen.getByText('Reset to default?')).toBeInTheDocument()
     })
 
-    it('resets the release note when the modal is confirmed', async () => {
+    test('resets the release note when the modal is confirmed', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(true)
       setReleaseNotes({ overriddenVersions: new Set([mockRelease.version]) })
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       fireEvent.click(
         await screen.findByTestId(`edit-release-${mockRelease.tag}`)
@@ -475,10 +576,14 @@ describe('ReleaseNotes', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('does not reset when the modal is cancelled', async () => {
+    test('does not reset when the modal is cancelled', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockHasAnyRole.mockReturnValue(true)
       setReleaseNotes({ overriddenVersions: new Set([mockRelease.version]) })
-      render(<ReleaseNotes />, { wrapper })
+      render(<ReleaseNotes />, [theme, router])
 
       fireEvent.click(
         await screen.findByTestId(`edit-release-${mockRelease.tag}`)

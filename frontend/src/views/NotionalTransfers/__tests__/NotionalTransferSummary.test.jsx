@@ -1,9 +1,17 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { describe, expect, beforeEach, vi } from 'vitest'
 import { NotionalTransferSummary } from '../NotionalTransferSummary'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+
+let render
+const fixtureOptions = undefined
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [theme], options)
+    return fn()
+  })
 
 // Mock BCGridViewer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -25,15 +33,11 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
       <div data-test="row-count">
         {queryData?.data?.[dataKey]?.length || 0} rows
       </div>
-      <div data-test="pagination-suppressed">
-        {String(suppressPagination)}
-      </div>
+      <div data-test="pagination-suppressed">{String(suppressPagination)}</div>
       <div data-test="has-cell-renderer">
         {defaultColDef?.cellRenderer ? 'true' : 'false'}
       </div>
-      <div data-test="column-defs-length">
-        {columnDefs?.length || 0}
-      </div>
+      <div data-test="column-defs-length">{columnDefs?.length || 0}</div>
       <button
         data-test="pagination-change-button"
         onClick={() => onPaginationChange?.({ page: 2, size: 20 })}
@@ -56,11 +60,19 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock other components
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@mui/material/Grid2', () => ({
-  default: ({ children, ...props }) => <div data-test="grid2" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="grid2" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 // Mock the schema
@@ -128,7 +140,7 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('grid2')).toBeInTheDocument()
@@ -142,11 +154,15 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
-      expect(screen.getByTestId('grid-key')).toHaveTextContent('notional-transfers')
-      expect(screen.getByTestId('data-key')).toHaveTextContent('notionalTransfers')
+      expect(screen.getByTestId('grid-key')).toHaveTextContent(
+        'notional-transfers'
+      )
+      expect(screen.getByTestId('data-key')).toHaveTextContent(
+        'notionalTransfers'
+      )
     })
   })
 
@@ -157,7 +173,7 @@ describe('NotionalTransferSummary', () => {
           data={null}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -169,7 +185,7 @@ describe('NotionalTransferSummary', () => {
           data={undefined}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -181,7 +197,7 @@ describe('NotionalTransferSummary', () => {
           data={{}}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -201,7 +217,7 @@ describe('NotionalTransferSummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
@@ -222,12 +238,11 @@ describe('NotionalTransferSummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('row-count')).toHaveTextContent('4 rows')
     })
-
   })
 
   describe('getRowId Function', () => {
@@ -237,7 +252,7 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       const promise = new Promise((resolve) => {
@@ -247,7 +262,7 @@ describe('NotionalTransferSummary', () => {
       })
 
       fireEvent.click(screen.getByTestId('get-row-id-button'))
-      
+
       const result = await promise
       expect(result).toBe('123')
     })
@@ -260,7 +275,7 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('has-cell-renderer')).toHaveTextContent('true')
@@ -272,7 +287,7 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('has-cell-renderer')).toHaveTextContent('false')
@@ -284,7 +299,7 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.APPROVED}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('has-cell-renderer')).toHaveTextContent('false')
@@ -306,7 +321,7 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('column-defs-length')).toHaveTextContent('3')
@@ -326,7 +341,7 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('column-defs-length')).toHaveTextContent('2')
@@ -342,7 +357,7 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -359,7 +374,7 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -376,7 +391,7 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -399,10 +414,12 @@ describe('NotionalTransferSummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
-      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('true')
+      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+        'true'
+      )
     })
 
     it('enables pagination when data length is greater than 10', () => {
@@ -419,10 +436,12 @@ describe('NotionalTransferSummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
-      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('false')
+      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+        'false'
+      )
     })
 
     it('handles onPaginationChange callback correctly', () => {
@@ -437,7 +456,7 @@ describe('NotionalTransferSummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       fireEvent.click(screen.getByTestId('pagination-change-button'))
@@ -452,11 +471,13 @@ describe('NotionalTransferSummary', () => {
           data={{ notionalTransfers: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
-      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('true')
+      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+        'true'
+      )
     })
 
     it('handles large dataset with pagination', () => {
@@ -473,12 +494,14 @@ describe('NotionalTransferSummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       // With client-side pagination, should show first page (10 items) of 100 total
       expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows')
-      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('false')
+      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+        'false'
+      )
     })
 
     it('handles mixed actionTypes including DELETE', () => {
@@ -497,7 +520,7 @@ describe('NotionalTransferSummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         />,
-        { wrapper }
+        { fixtureOptions }
       )
 
       expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')

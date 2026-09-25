@@ -1,12 +1,11 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
 import { router } from '../index'
 import { useKeycloak } from '@react-keycloak/web'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { testQueryClient } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Simplified mocks but keep Outlet for routing functionality
 vi.mock('@/layouts/MainLayout', () => {
@@ -268,13 +267,8 @@ vi.mock('@/components/Role', () => ({
 }))
 
 // Helper function to create test router with providers
-const renderRouterWithProviders = (testRouter) => {
-  return render(
-    <QueryClientProvider client={testQueryClient}>
-      <RouterProvider router={testRouter} />
-    </QueryClientProvider>
-  )
-}
+const renderRouterWithProviders = (testRouter, render, query) =>
+  render(<RouterProvider router={testRouter} />, [query])
 
 // Helper function to create test router
 const createTestRouter = (initialEntries = ['/']) => {
@@ -318,27 +312,28 @@ describe('Router Configuration', () => {
     vi.clearAllMocks()
     // Clear any potential router state
     sessionStorage.clear()
-    // Reset query client to prevent state leakage
-    testQueryClient.clear()
   })
 
   describe('Router Creation', () => {
-    it('should create router without errors', () => {
+    test('should create router without errors', () => {
       expect(router).toBeDefined()
       expect(router.routes).toBeDefined()
       expect(Array.isArray(router.routes)).toBe(true)
     })
 
-    it('should have correct number of top-level routes', () => {
+    test('should have correct number of top-level routes', () => {
       // Public layout, Public page layout, Main layout, API docs, logout, and 404 fallback
       expect(router.routes).toHaveLength(7)
     })
   })
 
   describe('Public Routes', () => {
-    it('should render login page for /login route', async () => {
+    test('should render login page for /login route', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/login'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('public-layout')).toBeInTheDocument()
@@ -346,9 +341,12 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should render unauthorized page for /unauthorized route', async () => {
+    test('should render unauthorized page for /unauthorized route', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/unauthorized'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('public-layout')).toBeInTheDocument()
@@ -362,9 +360,12 @@ describe('Router Configuration', () => {
       mockKeycloak.authenticated = false
     })
 
-    it('should render main layout for dashboard route (auth testing would require integration setup)', async () => {
+    test('should render main layout for dashboard route (auth testing would require integration setup)', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -374,9 +375,12 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should render main layout for admin routes (auth testing would require integration setup)', async () => {
+    test('should render main layout for admin routes (auth testing would require integration setup)', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/admin/users'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -385,9 +389,12 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should render main layout for transactions route (auth testing would require integration setup)', async () => {
+    test('should render main layout for transactions route (auth testing would require integration setup)', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/transactions'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -402,9 +409,12 @@ describe('Router Configuration', () => {
       mockKeycloak.authenticated = true
     })
 
-    it('should render dashboard for authenticated user on root route', async () => {
+    test('should render dashboard for authenticated user on root route', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -412,9 +422,9 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should render transactions list', async () => {
+    test('should render transactions list', async ({ render, query }) => {
       const testRouter = createTestRouter(['/transactions'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -422,9 +432,9 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should render organizations list', async () => {
+    test('should render organizations list', async ({ render, query }) => {
       const testRouter = createTestRouter(['/organizations'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -432,9 +442,9 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should render compliance reports list', async () => {
+    test('should render compliance reports list', async ({ render, query }) => {
       const testRouter = createTestRouter(['/compliance-reporting'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -442,9 +452,9 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should render fuel codes list', async () => {
+    test('should render fuel codes list', async ({ render, query }) => {
       const testRouter = createTestRouter(['/fuel-codes'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -452,7 +462,7 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should handle transfers route (has redirect configuration issue)', () => {
+    test('should handle transfers route (has redirect configuration issue)', () => {
       // Verify the transfers route exists and is configured as a redirect
       // Note: Navigation testing avoided due to AbortSignal compatibility issues
       // between MSW interceptors and react-router data router
@@ -467,9 +477,9 @@ describe('Router Configuration', () => {
       expect(transfersRoute.element?.type?.name).toBe('Navigate')
     })
 
-    it('should render notifications', async () => {
+    test('should render notifications', async ({ render, query }) => {
       const testRouter = createTestRouter(['/notifications'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -483,7 +493,7 @@ describe('Router Configuration', () => {
       mockKeycloak.authenticated = true
     })
 
-    it('should resolve /admin to a role-aware landing page', () => {
+    test('should resolve /admin to a role-aware landing page', () => {
       // The /admin route delegates to a landing component that redirects
       // based on whether the current user is an Administrator or System Admin.
       const mainLayoutRoute = router.routes.find(
@@ -496,45 +506,48 @@ describe('Router Configuration', () => {
       expect(adminRoute.element).toBeDefined()
     })
 
-    it('should render admin users tab', async () => {
+    test('should render admin users tab', async ({ render, query }) => {
       const testRouter = createTestRouter(['/admin/users'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('admin-menu')).toBeInTheDocument()
       })
     })
 
-    it('should render user activity tab', async () => {
+    test('should render user activity tab', async ({ render, query }) => {
       const testRouter = createTestRouter(['/admin/user-activity'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('admin-menu')).toBeInTheDocument()
       })
     })
 
-    it('should render audit log tab', async () => {
+    test('should render audit log tab', async ({ render, query }) => {
       const testRouter = createTestRouter(['/admin/audit-log'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('admin-menu')).toBeInTheDocument()
       })
     })
 
-    it('should render view audit log page', async () => {
+    test('should render view audit log page', async ({ render, query }) => {
       const testRouter = createTestRouter(['/admin/audit-log/123'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('view-audit-log')).toBeInTheDocument()
       })
     })
 
-    it('should render add user page with UserDetailsCard', async () => {
+    test('should render add user page with UserDetailsCard', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/admin/users/add-user'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(
@@ -544,9 +557,12 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should render view user page with UserDetailsCard', async () => {
+    test('should render view user page with UserDetailsCard', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/admin/users/123'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('user-details-card-view')).toBeInTheDocument()
@@ -560,9 +576,12 @@ describe('Router Configuration', () => {
       mockKeycloak.authenticated = true
     })
 
-    it('should handle transaction route with ID parameter', async () => {
+    test('should handle transaction route with ID parameter', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/transactions/123'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(
@@ -571,27 +590,36 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should handle transfer route with ID parameter', async () => {
+    test('should handle transfer route with ID parameter', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/transfers/456'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('add-edit-view-transfer')).toBeInTheDocument()
       })
     })
 
-    it('should handle organization route with ID parameter', async () => {
+    test('should handle organization route with ID parameter', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/organizations/789'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('view-organization')).toBeInTheDocument()
       })
     })
 
-    it('should handle compliance report route with multiple parameters', async () => {
+    test('should handle compliance report route with multiple parameters', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/compliance-reporting/2024/123'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(
@@ -602,25 +630,31 @@ describe('Router Configuration', () => {
   })
 
   describe('Special Routes', () => {
-    it('should render API docs for /docs route', async () => {
+    test('should render API docs for /docs route', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/docs'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('api-docs')).toBeInTheDocument()
       })
     })
 
-    it('should render 404 page for invalid routes', async () => {
+    test('should render 404 page for invalid routes', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/invalid-route'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('not-found')).toBeInTheDocument()
       })
     })
 
-    it('should handle logout route', () => {
+    test('should handle logout route', () => {
       // Verify the logout route exists and has a loader function
       const logoutRoute = router.routes.find(
         (route) => route.path === '/log-out'
@@ -631,14 +665,14 @@ describe('Router Configuration', () => {
   })
 
   describe('Route Metadata', () => {
-    it('should have correct handle metadata for API docs route', () => {
+    test('should have correct handle metadata for API docs route', () => {
       const apiDocsRoute = router.routes.find((route) => route.path === '/docs')
       expect(apiDocsRoute).toBeDefined()
       expect(apiDocsRoute.handle).toBeDefined()
       expect(apiDocsRoute.handle.crumb()).toBe('API Docs')
     })
 
-    it('should have handle metadata for login route', () => {
+    test('should have handle metadata for login route', () => {
       const publicLayoutRoute = router.routes.find(
         (route) => route.element?.type?.name === 'default'
       )
@@ -656,27 +690,36 @@ describe('Router Configuration', () => {
       mockKeycloak.authenticated = true
     })
 
-    it('should render MainLayout for authenticated routes', async () => {
+    test('should render MainLayout for authenticated routes', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
       })
     })
 
-    it('should render PublicLayout for public routes', async () => {
+    test('should render PublicLayout for public routes', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/login'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('public-layout')).toBeInTheDocument()
       })
     })
 
-    it('should not render any layout for standalone routes', async () => {
+    test('should not render any layout for standalone routes', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/docs'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('api-docs')).toBeInTheDocument()

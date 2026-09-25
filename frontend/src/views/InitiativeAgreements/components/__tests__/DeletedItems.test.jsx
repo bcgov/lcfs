@@ -1,9 +1,11 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, screen } from '@testing-library/react'
+
+import { describe, expect, vi, beforeEach } from 'vitest'
+
 import axe from 'axe-core'
 import { DeletedItems } from '../DeletedItems'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -44,10 +46,8 @@ describe('DeletedItems', () => {
     })
   })
 
-  it('shows the count while collapsed', () => {
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('shows the count while collapsed', ({ render, app }) => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
 
     expect(screen.getByTestId('deleted-items-count')).toHaveTextContent('1')
     expect(screen.getByTestId('deleted-items-header')).toHaveAttribute(
@@ -58,10 +58,11 @@ describe('DeletedItems', () => {
     expect(screen.queryByTestId('deleted-item-88')).not.toBeVisible()
   })
 
-  it('lists what was removed, by whom, and where it returns to', () => {
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('lists what was removed, by whom, and where it returns to', ({
+    render,
+    app
+  }) => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
     fireEvent.click(screen.getByTestId('deleted-items-header'))
 
     const row = screen.getByTestId('deleted-item-88')
@@ -71,16 +72,17 @@ describe('DeletedItems', () => {
     expect(row).toHaveTextContent('Permits')
   })
 
-  it('says a file returns to the top level when its folder has gone', () => {
+  test('says a file returns to the top level when its folder has gone', ({
+    render,
+    app
+  }) => {
     mockDeleted.mockReturnValue({
       data: {
         documents: [binned({ restoreFolderId: null, restoreFolderName: null })],
         total: 1
       }
     })
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
     fireEvent.click(screen.getByTestId('deleted-items-header'))
 
     expect(screen.getByTestId('deleted-item-88')).toHaveTextContent(
@@ -88,33 +90,30 @@ describe('DeletedItems', () => {
     )
   })
 
-  it('restores a document', () => {
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('restores a document', ({ render, app }) => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
     fireEvent.click(screen.getByTestId('deleted-items-header'))
     fireEvent.click(screen.getByTestId('restore-88'))
 
     expect(mockRestore).toHaveBeenCalledWith(88)
   })
 
-  it('falls back to the username when no name resolved', () => {
+  test('falls back to the username when no name resolved', ({
+    render,
+    app
+  }) => {
     mockDeleted.mockReturnValue({
       data: { documents: [binned({ deletedByName: null })], total: 1 }
     })
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
     fireEvent.click(screen.getByTestId('deleted-items-header'))
 
     expect(screen.getByTestId('deleted-item-88')).toHaveTextContent('ALZORKIN')
   })
 
-  it('shows an empty bin honestly', () => {
+  test('shows an empty bin honestly', ({ render, app }) => {
     mockDeleted.mockReturnValue({ data: { documents: [], total: 0 } })
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
     fireEvent.click(screen.getByTestId('deleted-items-header'))
 
     expect(screen.getByTestId('deleted-items-count')).toHaveTextContent('0')
@@ -123,10 +122,11 @@ describe('DeletedItems', () => {
     ).toBeInTheDocument()
   })
 
-  it('toggles from anywhere on the header row, not just the chevron', () => {
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('toggles from anywhere on the header row, not just the chevron', ({
+    render,
+    app
+  }) => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
 
     const header = screen.getByTestId('deleted-items-header')
     expect(header).toHaveAttribute('aria-expanded', 'false')
@@ -138,10 +138,10 @@ describe('DeletedItems', () => {
     expect(header).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('has no accessibility violations', async () => {
+  test('has no accessibility violations', async ({ render, app }) => {
     const { container } = render(
       <DeletedItems parentType="designatedAction" parentID="9" />,
-      { wrapper }
+      app
     )
     fireEvent.click(screen.getByTestId('deleted-items-header'))
 
@@ -208,10 +208,11 @@ describe('DeletedItems folders', () => {
 
   const open = () => fireEvent.click(screen.getByTestId('deleted-items-header'))
 
-  it('lists a deleted folder with what it holds and where it returns to', () => {
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('lists a deleted folder with what it holds and where it returns to', ({
+    render,
+    app
+  }) => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
     open()
 
     const row = screen.getByTestId('deleted-folder-12')
@@ -221,10 +222,11 @@ describe('DeletedItems folders', () => {
     expect(row).toHaveTextContent('Evidence / 2026')
   })
 
-  it('says a folder returns to the top level when it has no path', () => {
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('says a folder returns to the top level when it has no path', ({
+    render,
+    app
+  }) => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
     open()
 
     expect(screen.getByTestId('deleted-folder-13')).toHaveTextContent(
@@ -232,10 +234,8 @@ describe('DeletedItems folders', () => {
     )
   })
 
-  it('restores a folder', () => {
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('restores a folder', ({ render, app }) => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
     open()
 
     fireEvent.click(screen.getByTestId('restore-folder-12'))
@@ -246,10 +246,11 @@ describe('DeletedItems folders', () => {
     expect(mockRestore).not.toHaveBeenCalled()
   })
 
-  it('previews what a folder restore brings back, on request', () => {
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('previews what a folder restore brings back, on request', ({
+    render,
+    app
+  }) => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
     open()
 
     // Closed by default: the row is a summary, the list is detail.
@@ -270,10 +271,8 @@ describe('DeletedItems folders', () => {
     )
   })
 
-  it('is not empty when only folders are in the bin', () => {
-    render(<DeletedItems parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('is not empty when only folders are in the bin', ({ render, app }) => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
     open()
 
     expect(

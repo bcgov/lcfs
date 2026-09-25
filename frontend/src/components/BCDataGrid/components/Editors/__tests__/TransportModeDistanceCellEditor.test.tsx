@@ -1,12 +1,16 @@
 import { createRef } from 'react'
 import type { ElementRef } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, screen } from '@testing-library/react'
+import { describe, expect, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 
 import { TransportModeDistanceCellEditor } from '../TransportModeDistanceCellEditor'
 
 describe('TransportModeDistanceCellEditor', () => {
-  it('returns null for selected modes with blank distance', () => {
+  test('returns null for selected modes with blank distance', ({
+    render,
+    i18n
+  }) => {
     const ref = createRef<ElementRef<typeof TransportModeDistanceCellEditor>>()
 
     render(
@@ -15,7 +19,8 @@ describe('TransportModeDistanceCellEditor', () => {
         value={[]}
         options={['Truck']}
         api={{ stopEditing: vi.fn() }}
-      />
+      />,
+      [i18n]
     )
 
     fireEvent.click(screen.getByLabelText('Select Truck'))
@@ -24,5 +29,4 @@ describe('TransportModeDistanceCellEditor', () => {
       { transportMode: 'Truck', distance: null }
     ])
   })
-
 })

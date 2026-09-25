@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import {
   useOtherUsesOptions,
   useGetAllOtherUses,
@@ -34,7 +34,7 @@ vi.mock('@/constants/routes', () => ({
   }
 }))
 
-// Using the standard test wrapper from utils
+// Using the native test fixtures from utils
 
 describe('useOtherUses', () => {
   beforeEach(() => {
@@ -42,7 +42,10 @@ describe('useOtherUses', () => {
   })
 
   describe('useOtherUsesOptions', () => {
-    it('should fetch other uses options successfully', async () => {
+    test('should fetch other uses options successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockOptions = {
         useTypes: ['Type A', 'Type B'],
         categories: ['Category 1', 'Category 2']
@@ -51,7 +54,7 @@ describe('useOtherUses', () => {
 
       const { result } = renderHook(
         () => useOtherUsesOptions({ compliancePeriod: 2024 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -64,33 +67,34 @@ describe('useOtherUses', () => {
       )
     })
 
-    it('should not fetch when compliancePeriod is missing', () => {
-      const { result } = renderHook(() => useOtherUsesOptions({}), {
-        wrapper: wrapper
-      })
+    test('should not fetch when compliancePeriod is missing', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useOtherUsesOptions({}), [query])
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should handle enabled option', () => {
+    test('should handle enabled option', ({ renderHook, query }) => {
       const { result } = renderHook(
         () =>
           useOtherUsesOptions({ compliancePeriod: 2024 }, { enabled: false }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('API Error')
       mockApiService.get.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useOtherUsesOptions({ compliancePeriod: 2024 }, { retry: 0 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -102,7 +106,10 @@ describe('useOtherUses', () => {
   })
 
   describe('useGetAllOtherUses', () => {
-    it('should fetch all other uses successfully', async () => {
+    test('should fetch all other uses successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockOtherUses = {
         otherUses: [
           { id: 1, useType: 'Type A' },
@@ -113,9 +120,10 @@ describe('useOtherUses', () => {
       mockApiService.post.mockResolvedValue({ data: mockOtherUses })
 
       const pagination = { page: 1, size: 10 }
-      const { result } = renderHook(() => useGetAllOtherUses(123, pagination), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(
+        () => useGetAllOtherUses(123, pagination),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -128,21 +136,24 @@ describe('useOtherUses', () => {
       })
     })
 
-    it('should not fetch when complianceReportId is missing', () => {
+    test('should not fetch when complianceReportId is missing', ({
+      renderHook,
+      query
+    }) => {
       const { result } = renderHook(
         () => useGetAllOtherUses(null, { page: 1, size: 10 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.post).not.toHaveBeenCalled()
     })
 
-    it('should handle enabled option', () => {
+    test('should handle enabled option', ({ renderHook, query }) => {
       const { result } = renderHook(
         () =>
           useGetAllOtherUses(123, { page: 1, size: 10 }, { enabled: false }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
@@ -151,7 +162,10 @@ describe('useOtherUses', () => {
   })
 
   describe('useGetAllOtherUsesList', () => {
-    it('should fetch other uses list successfully', async () => {
+    test('should fetch other uses list successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockOtherUses = {
         otherUses: [
           { id: 1, useType: 'Type A' },
@@ -162,7 +176,7 @@ describe('useOtherUses', () => {
 
       const { result } = renderHook(
         () => useGetAllOtherUsesList({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -176,14 +190,17 @@ describe('useOtherUses', () => {
       })
     })
 
-    it('should fetch other uses list with changelog', async () => {
+    test('should fetch other uses list with changelog', async ({
+      renderHook,
+      query
+    }) => {
       const mockOtherUses = { otherUses: [] }
       mockApiService.post.mockResolvedValue({ data: mockOtherUses })
 
       const { result } = renderHook(
         () =>
           useGetAllOtherUsesList({ complianceReportId: 123, changelog: true }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -196,13 +213,16 @@ describe('useOtherUses', () => {
       })
     })
 
-    it('should handle data without otherUses property', async () => {
+    test('should handle data without otherUses property', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = [{ id: 1, useType: 'Type A' }]
       mockApiService.post.mockResolvedValue({ data: mockData })
 
       const { result } = renderHook(
         () => useGetAllOtherUsesList({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -212,10 +232,11 @@ describe('useOtherUses', () => {
       expect(result.current.data).toEqual(mockData)
     })
 
-    it('should not fetch when complianceReportId is missing', () => {
-      const { result } = renderHook(() => useGetAllOtherUsesList({}), {
-        wrapper: wrapper
-      })
+    test('should not fetch when complianceReportId is missing', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useGetAllOtherUsesList({}), [query])
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.post).not.toHaveBeenCalled()
@@ -223,7 +244,10 @@ describe('useOtherUses', () => {
   })
 
   describe('useGetOtherUses', () => {
-    it('should fetch filtered other uses successfully', async () => {
+    test('should fetch filtered other uses successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockOtherUses = {
         otherUses: [{ id: 1, useType: 'Type A' }],
         pagination: { total: 1, page: 1 }
@@ -238,9 +262,7 @@ describe('useOtherUses', () => {
         complianceReportId: 123
       }
 
-      const { result } = renderHook(() => useGetOtherUses(params), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useGetOtherUses(params), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -253,10 +275,13 @@ describe('useOtherUses', () => {
       )
     })
 
-    it('should not fetch when complianceReportId is missing', () => {
+    test('should not fetch when complianceReportId is missing', ({
+      renderHook,
+      query
+    }) => {
       const { result } = renderHook(
         () => useGetOtherUses({ page: 1, size: 10 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
@@ -265,13 +290,14 @@ describe('useOtherUses', () => {
   })
 
   describe('useSaveOtherUses', () => {
-    it('should save other uses successfully', async () => {
+    test('should save other uses successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { id: 1, useType: 'Type A' } }
       mockApiService.post.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useSaveOtherUses(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useSaveOtherUses(123), [query])
 
       const otherUsesData = {
         useType: 'Type A',
@@ -290,13 +316,11 @@ describe('useOtherUses', () => {
       })
     })
 
-    it('should handle save errors', async () => {
+    test('should handle save errors', async ({ renderHook, query }) => {
       const mockError = new Error('Save failed')
       mockApiService.post.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useSaveOtherUses(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useSaveOtherUses(123), [query])
 
       result.current.mutate({ useType: 'Type A' })
 
@@ -309,13 +333,14 @@ describe('useOtherUses', () => {
   })
 
   describe('useUpdateOtherUses', () => {
-    it('should update other uses successfully', async () => {
+    test('should update other uses successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { id: 1, useType: 'Updated Type' } }
       mockApiService.put.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useUpdateOtherUses(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useUpdateOtherUses(123), [query])
 
       const otherUsesData = {
         id: 1,
@@ -335,13 +360,11 @@ describe('useOtherUses', () => {
       })
     })
 
-    it('should handle update errors', async () => {
+    test('should handle update errors', async ({ renderHook, query }) => {
       const mockError = new Error('Update failed')
       mockApiService.put.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useUpdateOtherUses(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useUpdateOtherUses(123), [query])
 
       result.current.mutate({ id: 1, useType: 'Type A' })
 
@@ -354,12 +377,13 @@ describe('useOtherUses', () => {
   })
 
   describe('useDeleteOtherUses', () => {
-    it('should delete other uses successfully', async () => {
+    test('should delete other uses successfully', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.delete.mockResolvedValue({ data: {} })
 
-      const { result } = renderHook(() => useDeleteOtherUses(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useDeleteOtherUses(123), [query])
 
       result.current.mutate(1)
 
@@ -370,13 +394,11 @@ describe('useOtherUses', () => {
       expect(mockApiService.delete).toHaveBeenCalledWith('/other-uses/1')
     })
 
-    it('should handle delete errors', async () => {
+    test('should handle delete errors', async ({ renderHook, query }) => {
       const mockError = new Error('Delete failed')
       mockApiService.delete.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useDeleteOtherUses(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useDeleteOtherUses(123), [query])
 
       result.current.mutate(1)
 
@@ -389,13 +411,14 @@ describe('useOtherUses', () => {
   })
 
   describe('useImportOtherUses', () => {
-    it('should import other uses successfully', async () => {
+    test('should import other uses successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { jobId: 'job-123', status: 'started' } }
       mockApiService.post.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useImportOtherUses(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useImportOtherUses(123), [query])
 
       const file = new File(['csv content'], 'other-uses.csv', {
         type: 'text/csv'
@@ -415,13 +438,11 @@ describe('useOtherUses', () => {
       )
     })
 
-    it('should handle import errors', async () => {
+    test('should handle import errors', async ({ renderHook, query }) => {
       const mockError = new Error('Import failed')
       mockApiService.post.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useImportOtherUses(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useImportOtherUses(123), [query])
 
       const file = new File(['csv content'], 'other-uses.csv', {
         type: 'text/csv'

@@ -1,20 +1,29 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
+import { cleanup, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useForm, FormProvider } from 'react-hook-form'
 import {
   addressHasPostalCode,
   BCFormAddressAutocomplete
 } from '../BCFormAddressAutocomplete'
-import { AppWrapper, getByDataTest } from '@/tests/utils'
+import { test as fixtureTest } from '@/tests/utils/fixtures'
+
+const test = (name, callback) =>
+  fixtureTest(name, ({ render: fixtureRender, theme }) =>
+    callback({
+      render: (ui, providers = [], options = {}) =>
+        fixtureRender(ui, providers.filter(Boolean), options),
+      theme
+    })
+  )
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
   default: ({ variant, component, color, children, ...props }) => (
-    <span 
+    <span
       data-test="bc-typography"
       data-variant={variant}
       data-component={component}
@@ -28,7 +37,13 @@ vi.mock('@/components/BCTypography', () => ({
 
 // Mock AddressAutocomplete
 vi.mock('../AddressAutocomplete', () => ({
-  AddressAutocomplete: ({ value, onChange, onSelectAddress, disabled, ...props }) => (
+  AddressAutocomplete: ({
+    value,
+    onChange,
+    onSelectAddress,
+    disabled,
+    ...props
+  }) => (
     <div data-test="address-autocomplete" {...props}>
       <input
         type="text"
@@ -51,12 +66,12 @@ vi.mock('../AddressAutocomplete', () => ({
   )
 }))
 
-describe('BCFormAddressAutocomplete', () => {
+describe.sequential('BCFormAddressAutocomplete', () => {
   let mockSetTimeout, mockClearTimeout
 
   // Form wrapper for integration tests
   const FormWrapper = ({ children, defaultValues = {} }) => {
-    const methods = useForm({ 
+    const methods = useForm({
       defaultValues,
       mode: 'onChange'
     })
@@ -69,17 +84,22 @@ describe('BCFormAddressAutocomplete', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Mock setTimeout and clearTimeout for tooltip functionality
-    mockSetTimeout = vi.spyOn(global, 'setTimeout').mockImplementation((fn, delay) => {
-      // Execute immediately for testing
-      fn()
-      return 123
-    })
-    mockClearTimeout = vi.spyOn(global, 'clearTimeout').mockImplementation(() => {})
+    mockSetTimeout = vi
+      .spyOn(global, 'setTimeout')
+      .mockImplementation((fn, delay) => {
+        // Execute immediately for testing
+        fn()
+        return 123
+      })
+    mockClearTimeout = vi
+      .spyOn(global, 'clearTimeout')
+      .mockImplementation(() => {})
   })
 
   afterEach(() => {
+    cleanup()
     mockSetTimeout?.mockRestore()
     mockClearTimeout?.mockRestore()
   })
@@ -90,7 +110,7 @@ describe('BCFormAddressAutocomplete', () => {
   }
 
   describe('Postal code detection', () => {
-    it('recognizes Canadian postal codes in address strings', () => {
+    test('recognizes Canadian postal codes in address strings', (_fixtures) => {
       expect(addressHasPostalCode('123 Test St, Vancouver, BC V6B 1A1')).toBe(
         true
       )
@@ -105,327 +125,557 @@ describe('BCFormAddressAutocomplete', () => {
       ).toBe(true)
     })
 
-    it('does not treat addresses without postal codes as complete', () => {
+    test('does not treat addresses without postal codes as complete', (_fixtures) => {
       expect(addressHasPostalCode('123 Test St, Vancouver, BC')).toBe(false)
       expect(addressHasPostalCode('')).toBe(false)
       expect(addressHasPostalCode(undefined)).toBe(false)
     })
   })
 
-  const renderBCFormAddressAutocomplete = (props = {}, formDefaults = {}) => {
-    const finalDefaults = { [props.name || defaultProps.name]: '', ...formDefaults }
+  const renderBCFormAddressAutocomplete = (
+    { render, query, theme, localization, router, i18n },
+    props = {},
+    formDefaults = {}
+  ) => {
+    const finalDefaults = {
+      [props.name || defaultProps.name]: '',
+      ...formDefaults
+    }
     return render(
       <FormWrapper defaultValues={finalDefaults}>
         {({ control }) => (
-          <BCFormAddressAutocomplete control={control} {...defaultProps} {...props} />
+          <BCFormAddressAutocomplete
+            control={control}
+            {...defaultProps}
+            {...props}
+          />
         )}
       </FormWrapper>,
-      { wrapper: AppWrapper }
+      [theme]
     )
   }
 
   describe('Basic Rendering', () => {
-    it('renders form address autocomplete with correct structure', () => {
-      renderBCFormAddressAutocomplete()
-      
+    test('renders form address autocomplete with correct structure', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const label = screen.getByText('Test Address:')
       expect(label).toBeInTheDocument()
-      
+
       const addressAutocomplete = screen.getByTestId('address-autocomplete')
       expect(addressAutocomplete).toBeInTheDocument()
     })
 
-    it('renders label with correct text and formatting', () => {
-      renderBCFormAddressAutocomplete()
-      
+    test('renders label with correct text and formatting', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const label = screen.getByText('Test Address:')
       expect(label).toBeInTheDocument()
-      
-      const typography = getByDataTest('bc-typography')
+
+      const typography = document.querySelector('[data-test="bc-typography"]')
       expect(typography).toHaveAttribute('data-variant', 'label')
       expect(typography).toHaveAttribute('data-component', 'span')
     })
 
-    it('displays optional indicator when optional prop is true', () => {
-      renderBCFormAddressAutocomplete({ optional: true })
-      
+    test('displays optional indicator when optional prop is true', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { optional: true }
+      )
+
       const optionalText = screen.getByText('(optional)')
       expect(optionalText).toBeInTheDocument()
     })
-
-
   })
 
   describe('Form Integration with React Hook Form', () => {
-    it('integrates with react-hook-form control', () => {
-      renderBCFormAddressAutocomplete({}, { testAddress: '123 Initial St' })
-      
+    test('integrates with react-hook-form control', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        {},
+        { testAddress: '123 Initial St' }
+      )
+
       const input = screen.getByTestId('mock-address-input')
       expect(input).toHaveValue('123 Initial St')
     })
 
-
-    it('updates form state when address changes', async () => {
+    test('updates form state when address changes', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
-      
-      renderBCFormAddressAutocomplete()
-      
+
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const input = screen.getByTestId('mock-address-input')
       await user.type(input, '456 New Address')
-      
+
       expect(input).toHaveValue('456 New Address')
     })
 
-    it('handles form validation errors', () => {
+    test('handles form validation errors', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       // Test with form that has validation error
       const FormWithError = () => {
         const methods = useForm({
           defaultValues: { testError: '' },
           mode: 'onChange'
         })
-        
+
         // Manually set an error to test error display
         methods.setError('testError', { message: 'Address is required' })
-        
+
         return (
           <FormProvider {...methods}>
-            <BCFormAddressAutocomplete 
-              name="testError" 
-              control={methods.control} 
-              label="Test Address" 
+            <BCFormAddressAutocomplete
+              name="testError"
+              control={methods.control}
+              label="Test Address"
             />
           </FormProvider>
         )
       }
-      
-      render(<FormWithError />, { wrapper: AppWrapper })
-      
+
+      render(<FormWithError />, [theme])
+
       // Check if error message is displayed
       const errorText = screen.getByText('Address is required')
       expect(errorText).toBeInTheDocument()
-      
+
       const errorTypography = errorText.closest('[data-test="bc-typography"]')
       expect(errorTypography).toHaveAttribute('data-color', 'error')
     })
   })
 
   describe('Checkbox Integration', () => {
-    it('renders checkbox when checkbox prop is true', () => {
-      renderBCFormAddressAutocomplete({ 
-        checkbox: true, 
-        checkboxLabel: 'Same as billing address',
-        isChecked: false,
-        onCheckboxChange: vi.fn()
-      })
-      
+    test('renders checkbox when checkbox prop is true', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        {
+          checkbox: true,
+          checkboxLabel: 'Same as billing address',
+          isChecked: false,
+          onCheckboxChange: vi.fn()
+        }
+      )
+
       const checkbox = screen.getByRole('checkbox')
       expect(checkbox).toBeInTheDocument()
-      
+
       const checkboxLabel = screen.getByText('Same as billing address')
       expect(checkboxLabel).toBeInTheDocument()
     })
 
+    test('checkbox reflects checked state correctly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        {
+          checkbox: true,
+          checkboxLabel: 'Test checkbox',
+          isChecked: true,
+          onCheckboxChange: vi.fn()
+        }
+      )
 
-    it('checkbox reflects checked state correctly', () => {
-      renderBCFormAddressAutocomplete({ 
-        checkbox: true, 
-        checkboxLabel: 'Test checkbox',
-        isChecked: true,
-        onCheckboxChange: vi.fn()
-      })
-      
       const checkbox = screen.getByRole('checkbox')
       expect(checkbox).toBeChecked()
     })
 
-    it('calls onCheckboxChange when checkbox is clicked', async () => {
+    test('calls onCheckboxChange when checkbox is clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
       const onCheckboxChangeMock = vi.fn()
-      
-      renderBCFormAddressAutocomplete({ 
-        checkbox: true, 
-        checkboxLabel: 'Test checkbox',
-        isChecked: false,
-        onCheckboxChange: onCheckboxChangeMock
-      })
-      
+
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        {
+          checkbox: true,
+          checkboxLabel: 'Test checkbox',
+          isChecked: false,
+          onCheckboxChange: onCheckboxChangeMock
+        }
+      )
+
       const checkbox = screen.getByRole('checkbox')
       await user.click(checkbox)
-      
+
       expect(onCheckboxChangeMock).toHaveBeenCalled()
     })
-
-
   })
 
   describe('Tooltip Functionality', () => {
-    it('shows tooltip when address is changed', async () => {
+    test('shows tooltip when address is changed', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
-      
-      renderBCFormAddressAutocomplete()
-      
+
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const input = screen.getByTestId('mock-address-input')
       await user.type(input, 'new address')
-      
+
       // Verify that the input shows the new value
       expect(input).toHaveValue('new address')
-      
+
       // Note: Tooltip display logic is handled by component's internal state
       // The mock setTimeout executes immediately in tests
       // Tooltip functionality is tested through component behavior
     })
 
-    it('shows tooltip when address is selected from autocomplete', async () => {
+    test('shows tooltip when address is selected from autocomplete', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
       const onSelectAddressMock = vi.fn()
-      
-      renderBCFormAddressAutocomplete({ onSelectAddress: onSelectAddressMock })
-      
+
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { onSelectAddress: onSelectAddressMock }
+      )
+
       const input = screen.getByTestId('mock-address-input')
       // Trigger focus which simulates address selection in mock
       await user.click(input)
-      
+
       // Verify the address selection callback is set up
       expect(onSelectAddressMock).toBeDefined()
-      
+
       // Focus should work correctly
       expect(input).toHaveFocus()
     })
 
-
-    it('tooltip calls setTimeout to hide after 5 seconds', async () => {
+    test('tooltip calls setTimeout to hide after 5 seconds', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
-      
-      renderBCFormAddressAutocomplete()
-      
+
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const input = screen.getByTestId('mock-address-input')
       await user.type(input, 'test')
-      
+
       // Verify that input handling works correctly
       expect(input).toHaveValue('test')
-      
+
       // setTimeout is mocked to execute immediately for testing
       // The component's tooltip timing logic is verified through this behavior
       expect(mockSetTimeout).toHaveBeenCalled()
     })
-
   })
 
   describe('Address Selection Callbacks', () => {
-    it('calls onSelectAddress when provided and address is selected', async () => {
+    test('calls onSelectAddress when provided and address is selected', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
       const onSelectAddressMock = vi.fn()
-      
-      renderBCFormAddressAutocomplete({ onSelectAddress: onSelectAddressMock })
-      
+
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { onSelectAddress: onSelectAddressMock }
+      )
+
       const input = screen.getByTestId('mock-address-input')
       await user.click(input) // Triggers onSelectAddress in mock
-      
+
       expect(onSelectAddressMock).toHaveBeenCalledWith({
         fullAddress: '123 Test St, Vancouver, BC',
         streetAddress: '123 Test St',
         city: 'Vancouver'
       })
     })
-
-
   })
 
   describe('Disabled State', () => {
-    it('disables address autocomplete when disabled prop is true', () => {
-      renderBCFormAddressAutocomplete({ disabled: true })
-      
+    test('disables address autocomplete when disabled prop is true', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { disabled: true }
+      )
+
       const input = screen.getByTestId('mock-address-input')
       expect(input).toBeDisabled()
     })
-
-
   })
 
   describe('Accessibility', () => {
-    it('associates label with input correctly', () => {
-      renderBCFormAddressAutocomplete()
-      
+    test('associates label with input correctly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const label = document.querySelector('label[for="testAddress"]')
       expect(label).toBeInTheDocument()
-      
+
       const labelText = screen.getByText('Test Address:')
       expect(label).toContainElement(labelText)
     })
 
-    it('provides proper ARIA structure for form field', () => {
-      renderBCFormAddressAutocomplete()
-      
+    test('provides proper ARIA structure for form field', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const label = document.querySelector('label')
       expect(label).toHaveAttribute('for', 'testAddress')
       expect(label).toHaveClass('form-label')
     })
 
-    it('maintains accessibility when checkbox is present', () => {
-      renderBCFormAddressAutocomplete({ 
-        checkbox: true, 
-        checkboxLabel: 'Accessible checkbox',
-        isChecked: false,
-        onCheckboxChange: vi.fn()
-      })
-      
+    test('maintains accessibility when checkbox is present', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        {
+          checkbox: true,
+          checkboxLabel: 'Accessible checkbox',
+          isChecked: false,
+          onCheckboxChange: vi.fn()
+        }
+      )
+
       const checkbox = screen.getByRole('checkbox')
       const checkboxLabel = screen.getByText('Accessible checkbox')
-      
+
       expect(checkbox).toBeInTheDocument()
       expect(checkboxLabel).toBeInTheDocument()
-      
+
       // Checkbox should be properly labeled
       const formControlLabel = checkbox.closest('.MuiFormControlLabel-root')
       expect(formControlLabel).toBeInTheDocument()
     })
 
-    it('provides proper error announcement for screen readers', () => {
+    test('provides proper error announcement for screen readers', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const FormWithError = () => {
         const methods = useForm({
           defaultValues: { testError: '' },
           mode: 'onChange'
         })
-        
+
         methods.setError('testError', { message: 'Invalid address format' })
-        
+
         return (
           <FormProvider {...methods}>
-            <BCFormAddressAutocomplete 
-              name="testError" 
-              control={methods.control} 
-              label="Address Field" 
+            <BCFormAddressAutocomplete
+              name="testError"
+              control={methods.control}
+              label="Address Field"
             />
           </FormProvider>
         )
       }
-      
-      render(<FormWithError />, { wrapper: AppWrapper })
-      
+
+      render(<FormWithError />, [theme])
+
       const errorMessage = screen.getByText('Invalid address format')
       expect(errorMessage).toBeInTheDocument()
-      
+
       // Error should be properly styled for accessibility
-      const errorTypography = errorMessage.closest('[data-test="bc-typography"]')
+      const errorTypography = errorMessage.closest(
+        '[data-test="bc-typography"]'
+      )
       expect(errorTypography).toHaveAttribute('data-variant', 'body4')
       expect(errorTypography).toHaveAttribute('data-color', 'error')
     })
   })
 
   describe('Layout and Styling', () => {
-    it('applies correct Stack layout properties', () => {
-      renderBCFormAddressAutocomplete()
-      
+    test('applies correct Stack layout properties', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const stack = document.querySelector('.MuiStack-root')
       expect(stack).toBeInTheDocument()
       expect(stack).toHaveStyle('min-width: 800px')
     })
 
+    test('applies proper InputLabel styling', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
 
-
-    it('applies proper InputLabel styling', () => {
-      renderBCFormAddressAutocomplete()
-      
       const inputLabel = document.querySelector('.MuiInputLabel-root')
       expect(inputLabel).toBeInTheDocument()
       expect(inputLabel).toHaveClass('form-label')
@@ -433,92 +683,165 @@ describe('BCFormAddressAutocomplete', () => {
   })
 
   describe('Edge Cases and Error Handling', () => {
-    it('handles undefined control prop gracefully', () => {
+    test('handles undefined control prop gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       expect(() => {
         render(
-          <BCFormAddressAutocomplete 
-            name="test" 
-            control={undefined} 
-            label="Test" 
+          <BCFormAddressAutocomplete
+            name="test"
+            control={undefined}
+            label="Test"
           />,
-          { wrapper: AppWrapper }
+          [theme]
         )
       }).toThrow() // Should throw as control is required
     })
 
-    it('handles missing label gracefully', () => {
-      renderBCFormAddressAutocomplete({ label: undefined })
-      
+    test('handles missing label gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { label: undefined }
+      )
+
       const addressAutocomplete = screen.getByTestId('address-autocomplete')
       expect(addressAutocomplete).toBeInTheDocument()
     })
 
-    it('handles undefined name prop', () => {
+    test('handles undefined name prop', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       expect(() => {
         render(
           <FormWrapper>
             {({ control }) => (
-              <BCFormAddressAutocomplete 
-                name={undefined} 
-                control={control} 
-                label="Test" 
+              <BCFormAddressAutocomplete
+                name={undefined}
+                control={control}
+                label="Test"
               />
             )}
           </FormWrapper>,
-          { wrapper: AppWrapper }
+          [theme]
         )
       }).toThrow() // Should throw as name is required for form control
     })
 
-    it('handles rapid tooltip show/hide operations', async () => {
+    test('handles rapid tooltip show/hide operations', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
-      
-      renderBCFormAddressAutocomplete()
-      
+
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const input = screen.getByTestId('mock-address-input')
-      
+
       // Rapidly trigger tooltip
       await user.type(input, 'a')
       await user.clear(input)
       await user.type(input, 'b')
-      
+
       // Should handle rapid operations without errors
       expect(input).toBeInTheDocument()
     })
 
-    it('handles component unmounting cleanly', () => {
-      const { unmount } = renderBCFormAddressAutocomplete()
-      
+    test('handles component unmounting cleanly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      const { unmount } = renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       expect(() => unmount()).not.toThrow()
     })
 
-    it('handles special characters in field name', () => {
-      renderBCFormAddressAutocomplete({ name: 'field-with-special_chars.123' })
-      
+    test('handles special characters in field name', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { name: 'field-with-special_chars.123' }
+      )
+
       const addressAutocomplete = screen.getByTestId('address-autocomplete')
       expect(addressAutocomplete).toBeInTheDocument()
     })
   })
 
   describe('PropTypes and API', () => {
-    it('renders with minimal required props', () => {
+    test('renders with minimal required props', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       render(
         <FormWrapper>
           {({ control }) => (
-            <BCFormAddressAutocomplete 
-              name="minimal" 
-              control={control} 
-            />
+            <BCFormAddressAutocomplete name="minimal" control={control} />
           )}
         </FormWrapper>,
-        { wrapper: AppWrapper }
+        [theme]
       )
-      
+
       const addressAutocomplete = screen.getByTestId('address-autocomplete')
       expect(addressAutocomplete).toBeInTheDocument()
     })
 
-    it('accepts all documented props without errors', () => {
+    test('accepts all documented props without errors', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const allProps = {
         name: 'fullTest',
         label: 'Full Test Address',
@@ -530,16 +853,28 @@ describe('BCFormAddressAutocomplete', () => {
         disabled: false,
         onSelectAddress: vi.fn()
       }
-      
-      expect(() => renderBCFormAddressAutocomplete(allProps)).not.toThrow()
-      
+
+      expect(() =>
+        renderBCFormAddressAutocomplete(
+          { render, query, theme, localization, router, i18n },
+          allProps
+        )
+      ).not.toThrow()
+
       expect(screen.getByText('Full Test Address:')).toBeInTheDocument()
       expect(screen.getByText('(optional)')).toBeInTheDocument()
       expect(screen.getByRole('checkbox')).toBeInTheDocument()
       expect(screen.getByText('Same as above')).toBeInTheDocument()
     })
 
-    it('validates PropTypes correctly', () => {
+    test('validates PropTypes correctly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       // This would be tested in a real scenario with PropTypes validation
       const validProps = {
         name: 'test',
@@ -552,81 +887,127 @@ describe('BCFormAddressAutocomplete', () => {
         disabled: false,
         onSelectAddress: vi.fn()
       }
-      
-      expect(() => renderBCFormAddressAutocomplete(validProps)).not.toThrow()
+
+      expect(() =>
+        renderBCFormAddressAutocomplete(
+          { render, query, theme, localization, router, i18n },
+          validProps
+        )
+      ).not.toThrow()
     })
   })
 
   describe('Performance and Optimization', () => {
-    it('does not cause unnecessary re-renders', () => {
+    test('does not cause unnecessary re-renders', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const renderSpy = vi.fn()
-      
+
       const TestComponentWrapper = (props) => {
         renderSpy()
         return (
           <FormWrapper>
             {({ control }) => (
-              <BCFormAddressAutocomplete 
-                {...defaultProps} 
+              <BCFormAddressAutocomplete
+                {...defaultProps}
                 control={control}
-                {...props} 
+                {...props}
               />
             )}
           </FormWrapper>
         )
       }
-      
-      const { rerender } = render(<TestComponentWrapper />, { wrapper: AppWrapper })
-      
+
+      const { rerender } = render(<TestComponentWrapper />, [
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      ])
+
       expect(renderSpy).toHaveBeenCalledTimes(1)
-      
+
       // Re-render with same props
       rerender(<TestComponentWrapper />)
-      
+
       // Should only be called twice (initial + rerender)
       expect(renderSpy).toHaveBeenCalledTimes(2)
     })
 
-    it('handles multiple tooltip operations efficiently', async () => {
+    test('handles multiple tooltip operations efficiently', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
-      
-      renderBCFormAddressAutocomplete()
-      
+
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const input = screen.getByTestId('mock-address-input')
-      
+
       // Multiple rapid operations
       for (let i = 0; i < 5; i++) {
         await user.type(input, `address${i}`)
         await user.clear(input)
       }
-      
+
       // Should handle efficiently without performance issues
       expect(input).toBeInTheDocument()
     })
 
-    it('maintains focus during form updates', async () => {
+    test('maintains focus during form updates', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
-      
-      const { rerender } = renderBCFormAddressAutocomplete()
-      
+
+      const { rerender } = renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const input = screen.getByTestId('mock-address-input')
       await user.click(input)
-      
+
       expect(input).toHaveFocus()
-      
+
       // Re-render component
       rerender(
         <FormWrapper>
           {({ control }) => (
-            <BCFormAddressAutocomplete 
-              {...defaultProps} 
+            <BCFormAddressAutocomplete
+              {...defaultProps}
               control={control}
               label="Updated Label"
             />
           )}
         </FormWrapper>
       )
-      
+
       // Focus should be maintained
       const updatedInput = screen.getByTestId('mock-address-input')
       expect(updatedInput).toHaveFocus()
@@ -634,46 +1015,80 @@ describe('BCFormAddressAutocomplete', () => {
   })
 
   describe('Integration with AddressAutocomplete', () => {
-    it('passes correct props to AddressAutocomplete component', () => {
-      renderBCFormAddressAutocomplete({ disabled: true })
-      
+    test('passes correct props to AddressAutocomplete component', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { disabled: true }
+      )
+
       const addressAutocomplete = screen.getByTestId('address-autocomplete')
       expect(addressAutocomplete).toBeInTheDocument()
-      
+
       const input = screen.getByTestId('mock-address-input')
       expect(input).toBeDisabled()
     })
 
-    it('handles onChange from AddressAutocomplete correctly', async () => {
+    test('handles onChange from AddressAutocomplete correctly', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
-      
-      renderBCFormAddressAutocomplete()
-      
+
+      renderBCFormAddressAutocomplete({
+        render,
+        query,
+        theme,
+        localization,
+        router,
+        i18n
+      })
+
       const input = screen.getByTestId('mock-address-input')
       await user.type(input, 'new value')
-      
+
       // Verify onChange integration works correctly
       expect(input).toHaveValue('new value')
-      
+
       // Component integrates with AddressAutocomplete's onChange
       const addressAutocomplete = screen.getByTestId('address-autocomplete')
       expect(addressAutocomplete).toBeInTheDocument()
     })
 
-    it('integrates onSelectAddress callback properly', async () => {
+    test('integrates onSelectAddress callback properly', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const user = userEvent.setup()
       const onSelectAddressMock = vi.fn()
-      
-      renderBCFormAddressAutocomplete({ onSelectAddress: onSelectAddressMock })
-      
+
+      renderBCFormAddressAutocomplete(
+        { render, query, theme, localization, router, i18n },
+        { onSelectAddress: onSelectAddressMock }
+      )
+
       const input = screen.getByTestId('mock-address-input')
       await user.click(input)
-      
+
       expect(onSelectAddressMock).toHaveBeenCalled()
-      
+
       // Verify callback integration and focus behavior
       expect(input).toHaveFocus()
-      
+
       // Component properly integrates onSelectAddress with AddressAutocomplete
       const addressAutocomplete = screen.getByTestId('address-autocomplete')
       expect(addressAutocomplete).toBeInTheDocument()

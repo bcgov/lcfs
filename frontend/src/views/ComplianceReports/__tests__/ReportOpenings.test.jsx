@@ -1,9 +1,9 @@
 import React, { forwardRef } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { ReportOpenings } from '../ReportOpenings/ReportOpenings'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 import {
   useReportOpenings,
   useUpdateReportOpenings
@@ -51,8 +51,15 @@ describe('ReportOpenings', () => {
     })
   })
 
-  it('renders years from the API and enables save on change', async () => {
-    render(<ReportOpenings />, { wrapper })
+  test('renders years from the API and enables save on change', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
+    render(<ReportOpenings />, [query, theme, localization, router, i18n])
 
     await waitFor(() => {
       expect(screen.getByText('2019')).toBeInTheDocument()
@@ -63,14 +70,23 @@ describe('ReportOpenings', () => {
 
     expect(saveButton).toBeDisabled()
 
-    const complianceToggle2020 = screen.getByLabelText(/compliance reporting availability.*2020/i)
+    const complianceToggle2020 = screen.getByLabelText(
+      /compliance reporting availability.*2020/i
+    )
     await userEvent.click(complianceToggle2020)
 
     expect(saveButton).not.toBeDisabled()
   })
 
-  it('renders a create supplemental checkbox per year and enables save on toggle', async () => {
-    render(<ReportOpenings />, { wrapper })
+  test('renders a create supplemental checkbox per year and enables save on toggle', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
+    render(<ReportOpenings />, [query, theme, localization, router, i18n])
 
     const supplementalToggle2019 = await screen.findByLabelText(
       /create supplemental report availability.*2019/i

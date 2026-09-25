@@ -1,9 +1,8 @@
+import { test } from '@/tests/utils/fixtures'
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import { UserImpactSummaryModal } from '../UserImpactSummaryModal'
-import { wrapper } from '@/tests/utils/wrapper'
-
 // ── Module mocks ────────────────────────────────────────────────────────────
 
 vi.mock('react-i18next', () => ({
@@ -29,12 +28,25 @@ vi.mock('@/hooks/useUser', () => ({
 
 vi.mock('@/constants/notificationCategories', () => ({
   ROLE_NOTIF_TYPES: {
-    analyst: new Set(['IDIR_ANALYST__GOVERNMENT_NOTIFICATION', 'IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW']),
-    compliance_manager: new Set(['IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION'])
+    analyst: new Set([
+      'IDIR_ANALYST__GOVERNMENT_NOTIFICATION',
+      'IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW'
+    ]),
+    compliance_manager: new Set([
+      'IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION'
+    ])
   },
   NOTIF_TYPE_CONFIG: {
-    IDIR_ANALYST__GOVERNMENT_NOTIFICATION: ['idirAnalyst.categories.governmentNotifications', 'subscription', 0],
-    IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW: ['idirAnalyst.categories.transfers', 'submittedForReview', 1]
+    IDIR_ANALYST__GOVERNMENT_NOTIFICATION: [
+      'idirAnalyst.categories.governmentNotifications',
+      'subscription',
+      0
+    ],
+    IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW: [
+      'idirAnalyst.categories.transfers',
+      'submittedForReview',
+      1
+    ]
   },
   ROLE_ACCESS: {
     analyst: 'Make recommendations on transfers and compliance reports'
@@ -83,8 +95,11 @@ const baseProps = {
   isCurrentUserGovernment: true
 }
 
-const renderModal = (props = {}) =>
-  render(<UserImpactSummaryModal {...baseProps} {...props} />, { wrapper })
+const renderModal = (render, theme, props = {}, providers = []) =>
+  render(<UserImpactSummaryModal {...baseProps} {...props} />, [
+    theme,
+    ...providers
+  ])
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -93,39 +108,53 @@ describe('UserImpactSummaryModal', () => {
     vi.clearAllMocks()
   })
 
-  it('renders nothing when open is false', () => {
-    const { container } = renderModal({ open: false })
+  test('renders nothing when open is false', ({ render, theme }) => {
+    const { container } = renderModal(render, theme, { open: false })
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('shows the user full name in the identity card', () => {
-    renderModal()
+  test('shows the user full name in the identity card', ({ render, theme }) => {
+    renderModal(render, theme)
     expect(screen.getByText('Jane Smith')).toBeInTheDocument()
   })
 
-  it('calls onClose when the close button is clicked', () => {
+  test('calls onClose when the close button is clicked', ({
+    render,
+    theme
+  }) => {
     const onClose = vi.fn()
-    renderModal({ onClose })
+    renderModal(render, theme, { onClose })
     fireEvent.click(screen.getByTestId('impact-modal-close-btn'))
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('calls onConfirm when the confirm button is clicked', () => {
+  test('calls onConfirm when the confirm button is clicked', ({
+    render,
+    theme
+  }) => {
     const onConfirm = vi.fn()
-    renderModal({ onConfirm })
+    renderModal(render, theme, { onConfirm })
     fireEvent.click(screen.getByTestId('impact-modal-confirm-btn'))
     expect(onConfirm).toHaveBeenCalledOnce()
   })
 
-  it('shows profile-only notice when no role or status changes', () => {
-    renderModal()
+  test('shows profile-only notice when no role or status changes', ({
+    render,
+    theme
+  }) => {
+    renderModal(render, theme)
     expect(
-      screen.getByText('No role or status changes. Only profile information will be updated.')
+      screen.getByText(
+        'No role or status changes. Only profile information will be updated.'
+      )
     ).toBeInTheDocument()
   })
 
-  it('shows roles being added when new roles are introduced', () => {
-    renderModal({
+  test('shows roles being added when new roles are introduced', ({
+    render,
+    theme
+  }) => {
+    renderModal(render, theme, {
       currentUserData: {
         ...baseProps.currentUserData,
         roles: [{ name: 'Government' }]
@@ -136,8 +165,11 @@ describe('UserImpactSummaryModal', () => {
     expect(screen.getByText('Roles being added')).toBeInTheDocument()
   })
 
-  it('shows roles being removed when roles are taken away', () => {
-    renderModal({
+  test('shows roles being removed when roles are taken away', ({
+    render,
+    theme
+  }) => {
+    renderModal(render, theme, {
       currentUserData: {
         ...baseProps.currentUserData,
         roles: [{ name: 'Government' }, { name: 'Analyst' }]
@@ -147,24 +179,33 @@ describe('UserImpactSummaryModal', () => {
     expect(screen.getByText('Roles being removed')).toBeInTheDocument()
   })
 
-  it('shows account status section when status changes', () => {
-    renderModal({
+  test('shows account status section when status changes', ({
+    render,
+    theme
+  }) => {
+    renderModal(render, theme, {
       currentUserData: { ...baseProps.currentUserData, isActive: true },
       proposedIsActive: false
     })
     expect(screen.getByText('Account status')).toBeInTheDocument()
   })
 
-  it('shows deactivation warning when account is being deactivated', () => {
-    renderModal({
+  test('shows deactivation warning when account is being deactivated', ({
+    render,
+    theme
+  }) => {
+    renderModal(render, theme, {
       currentUserData: { ...baseProps.currentUserData, isActive: true },
       proposedIsActive: false
     })
     expect(screen.getByText(/Deactivating this account/i)).toBeInTheDocument()
   })
 
-  it('does NOT show assigned work panel for BCeID (non-government) users', () => {
-    renderModal({
+  test('does NOT show assigned work panel for BCeID (non-government) users', ({
+    render,
+    theme
+  }) => {
+    renderModal(render, theme, {
       isCurrentUserGovernment: false,
       currentUserData: {
         ...baseProps.currentUserData,
@@ -176,12 +217,21 @@ describe('UserImpactSummaryModal', () => {
     expect(screen.queryByText('Assigned work affected')).not.toBeInTheDocument()
   })
 
-  it('shows assigned work panel when government user loses analyst role and has assigned items', async () => {
+  test('shows assigned work panel when government user loses analyst role and has assigned items', async ({
+    render,
+    theme,
+    router
+  }) => {
     const { useUserAssignedWork } = await import('@/hooks/useUser')
     useUserAssignedWork.mockReturnValue({
       data: {
         complianceReports: [
-          { complianceReportId: 1, organization: 'Acme', period: '2024', status: 'Submitted' }
+          {
+            complianceReportId: 1,
+            organization: 'Acme',
+            period: '2024',
+            status: 'Submitted'
+          }
         ],
         ciApplications: []
       },
@@ -189,19 +239,28 @@ describe('UserImpactSummaryModal', () => {
       isError: false
     })
 
-    renderModal({
-      currentUserData: {
-        ...baseProps.currentUserData,
-        roles: [{ name: 'Government' }, { name: 'Analyst' }]
+    renderModal(
+      render,
+      theme,
+      {
+        currentUserData: {
+          ...baseProps.currentUserData,
+          roles: [{ name: 'Government' }, { name: 'Analyst' }]
+        },
+        proposedRoles: ['government']
       },
-      proposedRoles: ['government']
-    })
+      [router]
+    )
 
     expect(screen.getByText('Assigned work affected')).toBeInTheDocument()
     expect(screen.getByText('Compliance reports (1)')).toBeInTheDocument()
   })
 
-  it('shows subscriptions that will be removed when role-linked subs exist', async () => {
+  test('shows subscriptions that will be removed when role-linked subs exist', async ({
+    render,
+    theme,
+    router
+  }) => {
     const { useTargetUserNotificationSubscriptions } = await import(
       '@/hooks/useNotifications'
     )
@@ -216,30 +275,43 @@ describe('UserImpactSummaryModal', () => {
       isFetching: false
     })
 
-    renderModal({
-      currentUserData: {
-        ...baseProps.currentUserData,
-        roles: [{ name: 'Government' }, { name: 'Analyst' }]
+    renderModal(
+      render,
+      theme,
+      {
+        currentUserData: {
+          ...baseProps.currentUserData,
+          roles: [{ name: 'Government' }, { name: 'Analyst' }]
+        },
+        proposedRoles: ['government']
       },
-      proposedRoles: ['government']
-    })
+      [router]
+    )
 
-    expect(screen.getByText('Subscriptions that will be removed')).toBeInTheDocument()
+    expect(
+      screen.getByText('Subscriptions that will be removed')
+    ).toBeInTheDocument()
   })
 
-  it('does NOT call government APIs when isCurrentUserGovernment is false', async () => {
+  test('does NOT call government APIs when isCurrentUserGovernment is false', async ({
+    render,
+    theme
+  }) => {
     const { useTargetUserNotificationSubscriptions } = await import(
       '@/hooks/useNotifications'
     )
     const { useUserAssignedWork } = await import('@/hooks/useUser')
 
-    renderModal({ isCurrentUserGovernment: false })
+    renderModal(render, theme, { isCurrentUserGovernment: false })
 
     expect(useTargetUserNotificationSubscriptions).toHaveBeenCalledWith(null)
     expect(useUserAssignedWork).toHaveBeenCalledWith(null)
   })
 
-  it('shows a loading spinner while impact data is loading', async () => {
+  test('shows a loading spinner while impact data is loading', async ({
+    render,
+    theme
+  }) => {
     const { useTargetUserNotificationSubscriptions } = await import(
       '@/hooks/useNotifications'
     )
@@ -248,25 +320,27 @@ describe('UserImpactSummaryModal', () => {
       isFetching: true
     })
 
-    renderModal()
+    renderModal(render, theme)
 
     expect(screen.getByRole('status')).toBeInTheDocument()
   })
 
-  it('uses title for new user', () => {
-    renderModal({ isNewUser: true, currentUserData: null })
+  test('uses title for new user', ({ render, theme }) => {
+    renderModal(render, theme, { isNewUser: true, currentUserData: null })
     expect(screen.getByText('admin:impactModal.titleNew')).toBeInTheDocument()
   })
 
-  it('uses title for existing user', () => {
-    renderModal({ isNewUser: false })
+  test('uses title for existing user', ({ render, theme }) => {
+    renderModal(render, theme, { isNewUser: false })
     expect(screen.getByText('admin:impactModal.titleEdit')).toBeInTheDocument()
   })
 
-  it('confirm button has no arrow icon', () => {
-    renderModal()
+  test('confirm button has no arrow icon', ({ render, theme }) => {
+    renderModal(render, theme)
     const confirmBtn = screen.getByTestId('impact-modal-confirm-btn')
     // ArrowForward renders an svg with data-testid="ArrowForwardIcon" in MUI
-    expect(confirmBtn.querySelector('[data-testid="ArrowForwardIcon"]')).toBeNull()
+    expect(
+      confirmBtn.querySelector('[data-testid="ArrowForwardIcon"]')
+    ).toBeNull()
   })
 })

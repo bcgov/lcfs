@@ -1,13 +1,15 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, screen } from '@testing-library/react'
+
+import { describe, expect, vi, beforeEach } from 'vitest'
+
 import {
   EvidenceOfCompletion,
   OUTCOME_INFORMATION_REQUESTED,
   OUTCOME_SATISFACTORY
 } from '../EvidenceOfCompletion'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -58,8 +60,11 @@ describe('EvidenceOfCompletion', () => {
     mockList.mockReturnValue({ data: [requirement()], isLoading: false })
   })
 
-  it('renders a requirement card and the review summary', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('renders a requirement card and the review summary', ({
+    render,
+    app
+  }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     // The title appears twice on purpose: once as the card's heading,
     // once in the review summary, matching the wireframe. The description
@@ -73,8 +78,8 @@ describe('EvidenceOfCompletion', () => {
     )
   })
 
-  it('records a satisfactory assessment', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('records a satisfactory assessment', ({ render, app }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     fireEvent.click(
       screen.getByTestId('eoc-satisfactory-1').querySelector('input')
@@ -86,8 +91,8 @@ describe('EvidenceOfCompletion', () => {
     })
   })
 
-  it('records a request for information', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('records a request for information', ({ render, app }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     fireEvent.click(screen.getByTestId('eoc-request-1').querySelector('input'))
 
@@ -97,12 +102,15 @@ describe('EvidenceOfCompletion', () => {
     })
   })
 
-  it('clicking the ticked outcome returns it to unreviewed', () => {
+  test('clicking the ticked outcome returns it to unreviewed', ({
+    render,
+    app
+  }) => {
     mockList.mockReturnValue({
       data: [requirement({ reviewOutcome: OUTCOME_SATISFACTORY })],
       isLoading: false
     })
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     fireEvent.click(
       screen.getByTestId('eoc-satisfactory-1').querySelector('input')
@@ -114,12 +122,12 @@ describe('EvidenceOfCompletion', () => {
     })
   })
 
-  it('the two outcomes are mutually exclusive', () => {
+  test('the two outcomes are mutually exclusive', ({ render, app }) => {
     mockList.mockReturnValue({
       data: [requirement({ reviewOutcome: OUTCOME_SATISFACTORY })],
       isLoading: false
     })
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     expect(
       screen.getByTestId('eoc-satisfactory-1').querySelector('input')
@@ -129,8 +137,11 @@ describe('EvidenceOfCompletion', () => {
     ).not.toBeChecked()
   })
 
-  it('shows the number and title as the heading, with the evaluation always present', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('shows the number and title as the heading, with the evaluation always present', ({
+    render,
+    app
+  }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     expect(screen.getByTestId('eoc-heading-1')).toHaveTextContent('1. Permits')
     // Editable in place: there is no Edit step (#5118).
@@ -138,20 +149,26 @@ describe('EvidenceOfCompletion', () => {
     expect(screen.queryByTestId('eoc-edit-1')).not.toBeInTheDocument()
   })
 
-  it('falls back to the description as the heading when there is no title', () => {
+  test('falls back to the description as the heading when there is no title', ({
+    render,
+    app
+  }) => {
     mockList.mockReturnValue({
       data: [requirement({ title: null })],
       isLoading: false
     })
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     expect(screen.getByTestId('eoc-heading-1')).toHaveTextContent(
       '1. List of major permits and approvals'
     )
   })
 
-  it('saves the evaluation when the field is left, and not while typing', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('saves the evaluation when the field is left, and not while typing', ({
+    render,
+    app
+  }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     const evaluation = screen.getByTestId('eoc-review-1')
     fireEvent.focus(evaluation)
@@ -168,8 +185,8 @@ describe('EvidenceOfCompletion', () => {
     expect(screen.getByTestId('eoc-saved-1')).toBeInTheDocument()
   })
 
-  it('does not save a field that was left unchanged', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('does not save a field that was left unchanged', ({ render, app }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     const description = screen.getByTestId('eoc-description-1')
     fireEvent.focus(description)
@@ -178,8 +195,8 @@ describe('EvidenceOfCompletion', () => {
     expect(mockUpdate).not.toHaveBeenCalled()
   })
 
-  it('saves the description when the field is left', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('saves the description when the field is left', ({ render, app }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     const description = screen.getByTestId('eoc-description-1')
     fireEvent.focus(description)
@@ -194,8 +211,11 @@ describe('EvidenceOfCompletion', () => {
     })
   })
 
-  it('puts a blanked description back instead of saving it', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('puts a blanked description back instead of saving it', ({
+    render,
+    app
+  }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     const description = screen.getByTestId('eoc-description-1')
     fireEvent.focus(description)
@@ -206,8 +226,8 @@ describe('EvidenceOfCompletion', () => {
     expect(description).toHaveValue('List of major permits and approvals')
   })
 
-  it('saves notes when the field is left', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('saves notes when the field is left', ({ render, app }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
     fireEvent.click(
       screen.getByTestId('eoc-notes-toggle-1').querySelector('input')
     )
@@ -223,10 +243,13 @@ describe('EvidenceOfCompletion', () => {
     })
   })
 
-  it('keeps what is being typed when the list refreshes underneath it', () => {
+  test('keeps what is being typed when the list refreshes underneath it', ({
+    render,
+    app
+  }) => {
     const { rerender } = render(
       <EvidenceOfCompletion designatedActionId="9" />,
-      { wrapper }
+      app
     )
     const evaluation = screen.getByTestId('eoc-review-1')
     fireEvent.focus(evaluation)
@@ -242,10 +265,8 @@ describe('EvidenceOfCompletion', () => {
     expect(screen.getByTestId('eoc-review-1')).toHaveValue('Half a thought')
   })
 
-  it('offers no editing to someone who cannot edit', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" canEdit={false} />, {
-      wrapper
-    })
+  test('offers no editing to someone who cannot edit', ({ render, app }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" canEdit={false} />, app)
 
     expect(screen.queryByTestId('eoc-remove-1')).not.toBeInTheDocument()
     expect(screen.getByTestId('eoc-review-1')).toHaveAttribute('readonly')
@@ -255,8 +276,11 @@ describe('EvidenceOfCompletion', () => {
     ).toBeDisabled()
   })
 
-  it('shows the notes box only when notes are toggled on', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('shows the notes box only when notes are toggled on', ({
+    render,
+    app
+  }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
     expect(screen.queryByTestId('eoc-notes-1')).not.toBeInTheDocument()
 
     fireEvent.click(
@@ -266,18 +290,24 @@ describe('EvidenceOfCompletion', () => {
     expect(screen.getByTestId('eoc-notes-1')).toBeInTheDocument()
   })
 
-  it('opens the notes box already for a requirement that has notes', () => {
+  test('opens the notes box already for a requirement that has notes', ({
+    render,
+    app
+  }) => {
     mockList.mockReturnValue({
       data: [requirement({ reviewNotes: 'Copies filed.' })],
       isLoading: false
     })
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     expect(screen.getByTestId('eoc-notes-1')).toBeInTheDocument()
   })
 
-  it('creates a requirement from the modal with a title and description', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('creates a requirement from the modal with a title and description', ({
+    render,
+    app
+  }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     fireEvent.click(screen.getByTestId('eoc-add-button'))
     fireEvent.change(screen.getByTestId('eoc-new-title'), {
@@ -296,8 +326,11 @@ describe('EvidenceOfCompletion', () => {
     })
   })
 
-  it('will not create a requirement without both a title and a description', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('will not create a requirement without both a title and a description', ({
+    render,
+    app
+  }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     fireEvent.click(screen.getByTestId('eoc-add-button'))
     fireEvent.change(screen.getByTestId('eoc-new-title'), {
@@ -312,8 +345,8 @@ describe('EvidenceOfCompletion', () => {
     expect(mockCreate).not.toHaveBeenCalled()
   })
 
-  it('cancelling the modal creates nothing', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('cancelling the modal creates nothing', ({ render, app }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     fireEvent.click(screen.getByTestId('eoc-add-button'))
     fireEvent.change(screen.getByTestId('eoc-new-title'), {
@@ -327,8 +360,11 @@ describe('EvidenceOfCompletion', () => {
     expect(mockCreate).not.toHaveBeenCalled()
   })
 
-  it('acknowledges an outcome decision, which still takes effect at once', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('acknowledges an outcome decision, which still takes effect at once', ({
+    render,
+    app
+  }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     expect(screen.queryByTestId('eoc-saved-1')).not.toBeInTheDocument()
     fireEvent.click(
@@ -338,8 +374,11 @@ describe('EvidenceOfCompletion', () => {
     expect(screen.getByTestId('eoc-saved-1')).toBeInTheDocument()
   })
 
-  it('asks before removing a requirement, and removes it on confirm', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('asks before removing a requirement, and removes it on confirm', ({
+    render,
+    app
+  }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     fireEvent.click(screen.getByTestId('eoc-remove-1'))
 
@@ -356,8 +395,8 @@ describe('EvidenceOfCompletion', () => {
     expect(mockRemove).toHaveBeenCalledWith(1)
   })
 
-  it('cancelling the removal keeps the requirement', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('cancelling the removal keeps the requirement', ({ render, app }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     fireEvent.click(screen.getByTestId('eoc-remove-1'))
     fireEvent.click(screen.getByText('common:cancelBtn'))
@@ -365,15 +404,15 @@ describe('EvidenceOfCompletion', () => {
     expect(mockRemove).not.toHaveBeenCalled()
   })
 
-  it('hides Add EOC from a director', () => {
+  test('hides Add EOC from a director', ({ render, app }) => {
     mockRoles = [roles.director]
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     expect(screen.queryByTestId('eoc-add-button')).not.toBeInTheDocument()
   })
 
-  it('collapses the section', () => {
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+  test('collapses the section', ({ render, app }) => {
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     const toggle = screen.getByTestId('eoc-toggle')
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
@@ -381,23 +420,29 @@ describe('EvidenceOfCompletion', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('shows an empty state when nothing has been added', () => {
+  test('shows an empty state when nothing has been added', ({
+    render,
+    app
+  }) => {
     mockList.mockReturnValue({ data: [], isLoading: false })
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     expect(
       screen.getByText('initiativeAgreement:evidence.empty')
     ).toBeInTheDocument()
   })
 
-  it('always shows the Missing information box, even with nothing added (#5118)', () => {
+  test('always shows the Missing information box, even with nothing added (#5118)', ({
+    render,
+    app
+  }) => {
     mockList.mockReturnValue({ data: [], isLoading: false })
     render(
       <EvidenceOfCompletion
         designatedActionId="9"
         missingInformation="The signed stage two permit."
       />,
-      { wrapper }
+      app
     )
 
     expect(screen.getByTestId('eoc-missing-information')).toBeInTheDocument()
@@ -406,7 +451,10 @@ describe('EvidenceOfCompletion', () => {
     ).toHaveValue('The signed stage two permit.')
   })
 
-  it('hands edits to the Missing information box back to the page', () => {
+  test('hands edits to the Missing information box back to the page', ({
+    render,
+    app
+  }) => {
     const onChange = vi.fn()
     const onBlur = vi.fn()
     render(
@@ -416,7 +464,7 @@ describe('EvidenceOfCompletion', () => {
         onMissingInformationChange={onChange}
         onMissingInformationBlur={onBlur}
       />,
-      { wrapper }
+      app
     )
 
     const box = screen.getByTestId('eoc-missing-information-input')
@@ -427,14 +475,17 @@ describe('EvidenceOfCompletion', () => {
     expect(onBlur).toHaveBeenCalled()
   })
 
-  it('shows the Missing information read-only when the page says so', () => {
+  test('shows the Missing information read-only when the page says so', ({
+    render,
+    app
+  }) => {
     render(
       <EvidenceOfCompletion
         designatedActionId="9"
         missingInformation="The signed stage two permit."
         missingInformationReadOnly
       />,
-      { wrapper }
+      app
     )
 
     // Read-only rather than disabled, so it keeps its contrast.
@@ -443,7 +494,7 @@ describe('EvidenceOfCompletion', () => {
     expect(box).not.toBeDisabled()
   })
 
-  it('names each outcome in the review summary', () => {
+  test('names each outcome in the review summary', ({ render, app }) => {
     mockList.mockReturnValue({
       data: [
         requirement({ reviewOutcome: OUTCOME_SATISFACTORY }),
@@ -461,7 +512,7 @@ describe('EvidenceOfCompletion', () => {
       ],
       isLoading: false
     })
-    render(<EvidenceOfCompletion designatedActionId="9" />, { wrapper })
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     // The icons carry the outcome, so each needs a name, and the gold
     // one still says which kind of outstanding.

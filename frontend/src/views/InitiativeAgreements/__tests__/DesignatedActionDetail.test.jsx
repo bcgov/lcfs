@@ -1,10 +1,10 @@
 import React from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { cleanup, fireEvent, screen } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
 import { DesignatedActionDetail } from '../DesignatedActionDetail'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -149,8 +149,11 @@ describe('DesignatedActionDetail', () => {
     mockDocuments.mockReturnValue({ data: [], refetch: vi.fn() })
   })
 
-  it('renders the card with name, status, credits and dates', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('renders the card with name, status, credits and dates', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
 
     expect(
       screen.getByTestId('designated-action-detail-title')
@@ -167,8 +170,11 @@ describe('DesignatedActionDetail', () => {
     expect(screen.getByText('DA1-IA5')).toBeInTheDocument()
   })
 
-  it('completes stepper milestones up to the current status', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('completes stepper milestones up to the current status', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
 
     const stepper = screen.getByTestId('designated-action-stepper')
     const completed = stepper.querySelectorAll('.Mui-completed')
@@ -179,8 +185,11 @@ describe('DesignatedActionDetail', () => {
     ).toBeInTheDocument()
   })
 
-  it('navigates between sibling actions and disables the edges', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('navigates between sibling actions and disables the edges', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
 
     const previous = screen.getByTestId('previous-action-button')
     const next = screen.getByTestId('next-action-button')
@@ -193,8 +202,11 @@ describe('DesignatedActionDetail', () => {
     )
   })
 
-  it('publishes the action identifier and its agreement to the breadcrumb store', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('publishes the action identifier and its agreement to the breadcrumb store', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
     const store = useInitiativeAgreementPageStore.getState()
     expect(store.agreementCrumb).toBe('DA1-IA5')
     // The agreement segment before the action gets the agreement's code,
@@ -202,18 +214,24 @@ describe('DesignatedActionDetail', () => {
     expect(store.parentCrumb).toBe('IA-26ORG1')
   })
 
-  it('offers document upload to IDIR IA roles only', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('offers document upload to IDIR IA roles only', ({ render, app }) => {
+    render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('upload-documents-button')).toBeInTheDocument()
   })
 
-  it('renders the folder tree in the documents section', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('renders the folder tree in the documents section', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('document-tree')).toBeInTheDocument()
   })
 
-  it('turns subfolders on, per the business area (2026-09-01)', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('turns subfolders on, per the business area (2026-09-01)', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
     // The tree defaults nesting off; this page is where the product
     // decision to allow it lives.
     expect(screen.getByTestId('document-tree')).toHaveAttribute(
@@ -222,13 +240,16 @@ describe('DesignatedActionDetail', () => {
     )
   })
 
-  it('renders the evidence of completion section', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('renders the evidence of completion section', ({ render, app }) => {
+    render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('evidence-of-completion')).toBeInTheDocument()
   })
 
-  it('passes the available actions and evidence state to the workflow', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('passes the available actions and evidence state to the workflow', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
 
     // Rendered twice (#5080): the evidence decisions inside the evidence
     // section, the recommendation decisions after it. Both get the same
@@ -255,8 +276,11 @@ describe('DesignatedActionDetail', () => {
     }
   })
 
-  it('puts the evidence review and the recommendation inside the action card (#5118)', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('puts the evidence review and the recommendation inside the action card (#5118)', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
 
     // Box within a box: the evidence section is its own box inside the
     // card, and the recommendation sits beneath it, still in the card.
@@ -271,8 +295,11 @@ describe('DesignatedActionDetail', () => {
     )
   })
 
-  it('shows the saved missing information and saves it on leaving the box', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('shows the saved missing information and saves it on leaving the box', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
 
     const box = screen.getByTestId('missing-information-stub')
     expect(box).toHaveValue('The signed stage two permit.')
@@ -291,26 +318,35 @@ describe('DesignatedActionDetail', () => {
     )
   })
 
-  it('does not save the missing information when it has not changed', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('does not save the missing information when it has not changed', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
 
     fireEvent.blur(screen.getByTestId('missing-information-stub'))
 
     expect(mockSaveMissingInformation).not.toHaveBeenCalled()
   })
 
-  it('shows directors the missing information without letting them edit it', () => {
+  test('shows directors the missing information without letting them edit it', ({
+    render,
+    app
+  }) => {
     mockRoles = [{ name: roles.director }]
-    render(<DesignatedActionDetail />, { wrapper })
+    render(<DesignatedActionDetail />, app)
 
     expect(screen.getByTestId('missing-information-stub')).toHaveAttribute(
       'readonly'
     )
   })
 
-  it('lets analysts and managers edit the evidence, and not directors', () => {
+  test('lets analysts and managers edit the evidence, and not directors', ({
+    render,
+    app
+  }) => {
     // The API takes evidence edits from those two roles only.
-    render(<DesignatedActionDetail />, { wrapper })
+    render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('evidence-of-completion')).toHaveAttribute(
       'data-can-edit',
       'true'
@@ -318,36 +354,36 @@ describe('DesignatedActionDetail', () => {
     cleanup()
 
     mockRoles = [{ name: roles.director }]
-    render(<DesignatedActionDetail />, { wrapper })
+    render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('evidence-of-completion')).toHaveAttribute(
       'data-can-edit',
       'false'
     )
   })
 
-  it('offers the edit control on the action card', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('offers the edit control on the action card', ({ render, app }) => {
+    render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('edit-designated-action')).toBeInTheDocument()
   })
 
-  it('renders the audit trail panel', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('renders the audit trail panel', ({ render, app }) => {
+    render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('designated-action-history')).toBeInTheDocument()
   })
 
-  it('renders the comments thread', () => {
-    render(<DesignatedActionDetail />, { wrapper })
+  test('renders the comments thread', ({ render, app }) => {
+    render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('comments-component')).toBeInTheDocument()
   })
 
-  it('surfaces a load failure', () => {
+  test('surfaces a load failure', ({ render, app }) => {
     mockProfile.mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: true,
       error: { message: 'boom' }
     })
-    render(<DesignatedActionDetail />, { wrapper })
+    render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('alert-box')).toHaveTextContent('boom')
   })
 })

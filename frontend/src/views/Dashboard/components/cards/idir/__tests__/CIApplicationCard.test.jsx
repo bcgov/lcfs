@@ -1,9 +1,9 @@
+import { test } from '@/tests/utils/fixtures'
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { CIApplicationCard } from '../CIApplicationCard'
 import { useCIApplicationCounts } from '@/hooks/useDashboard'
-import { wrapper } from '@/tests/utils/wrapper'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
@@ -51,25 +51,25 @@ describe('CIApplicationCard Component', () => {
     })
   })
 
-  it('renders loading state correctly', () => {
+  test('renders loading state correctly', ({ render, query, theme, i18n }) => {
     useCIApplicationCounts.mockReturnValue({
       data: null,
       isLoading: true
     })
 
-    render(<CIApplicationCard />, { wrapper })
+    render(<CIApplicationCard />, [query, theme, i18n])
 
     const loadingElement = screen.getByText(/Loading.*card/, { exact: false })
     expect(loadingElement).toBeInTheDocument()
   })
 
-  it('renders with counts data', () => {
+  test('renders with counts data', ({ render, query, theme, i18n }) => {
     useCIApplicationCounts.mockReturnValue({
       data: { inProgress: 17 },
       isLoading: false
     })
 
-    render(<CIApplicationCard />, { wrapper })
+    render(<CIApplicationCard />, [query, theme, i18n])
 
     expect(screen.getByText('CI Applications')).toBeInTheDocument()
     expect(screen.getByText('17')).toBeInTheDocument()
@@ -79,13 +79,18 @@ describe('CIApplicationCard Component', () => {
     ).toBeInTheDocument()
   })
 
-  it('navigates to CI applications page on link click with correct filter', () => {
+  test('navigates to CI applications page on link click with correct filter', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useCIApplicationCounts.mockReturnValue({
       data: { inProgress: 17 },
       isLoading: false
     })
 
-    render(<CIApplicationCard />, { wrapper })
+    render(<CIApplicationCard />, [query, theme, i18n])
 
     // Find and click the link
     const link = screen.getByText(/CI Application\(s\) in progress/)
@@ -110,13 +115,13 @@ describe('CIApplicationCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.LIST)
   })
 
-  it('handles zero counts correctly', () => {
+  test('handles zero counts correctly', ({ render, query, theme, i18n }) => {
     useCIApplicationCounts.mockReturnValue({
       data: { inProgress: 0 },
       isLoading: false
     })
 
-    render(<CIApplicationCard />, { wrapper })
+    render(<CIApplicationCard />, [query, theme, i18n])
 
     expect(screen.getByText('0')).toBeInTheDocument()
   })

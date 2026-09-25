@@ -1,15 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import Crumb from '../Crumb'
-import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterEach,
-  type Mock
-} from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { vi, describe, expect, type Mock } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { useLocation, useMatches, useParams } from 'react-router-dom'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
@@ -47,28 +39,42 @@ describe('Crumb', () => {
     mockedUseParams.mockReturnValue(params)
   }
 
-  beforeEach(() => {
+  test.beforeEach(() => {
     setupRouterMocks()
     useOrganizationPageStore.getState().resetOrganizationContext()
+    useInitiativeAgreementPageStore.getState().setAgreementCrumb(null)
+    useInitiativeAgreementPageStore.getState().setParentCrumb(null)
   })
 
-  afterEach(() => {
+  test.afterEach(() => {
     useOrganizationPageStore.getState().resetOrganizationContext()
+    useInitiativeAgreementPageStore.getState().setAgreementCrumb(null)
+    useInitiativeAgreementPageStore.getState().setParentCrumb(null)
   })
 
-  it('renders the home link when on a path', () => {
+  test('renders the home link when on a path', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupRouterMocks({ pathname: '/admin' })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, [query, theme, router])
 
     expect(screen.getByText('Home')).toBeInTheDocument()
     expect(screen.getByText('Administration')).toBeInTheDocument()
   })
 
-  it('does not render breadcrumb items when on the home path', () => {
+  test('does not render breadcrumb items when on the home path', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupRouterMocks({ pathname: '/' })
 
-    const { container } = render(<Crumb />, { wrapper })
+    const { container } = render(<Crumb />, [query, theme, router])
 
     // Verify that breadcrumb nav exists but has no items
     const breadcrumb = container.querySelector('[aria-label="breadcrumb"]')
@@ -78,41 +84,55 @@ describe('Crumb', () => {
     expect(items.length).toBe(0)
   })
 
-  it('displays custom breadcrumb for admin path', () => {
+  test('displays custom breadcrumb for admin path', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupRouterMocks({ pathname: '/admin' })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, [query, theme, router])
 
     expect(screen.getByText('Administration')).toBeInTheDocument()
   })
 
-  it('displays the title from route metadata when available', () => {
+  test('displays the title from route metadata when available', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupRouterMocks({
       pathname: '/admin',
       matches: [{ handle: { title: 'Admin Dashboard' } }]
     })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, [query, theme, router])
 
     expect(screen.getByText('Admin Dashboard')).toBeInTheDocument()
   })
 
-  it('shows the agreement code for an initiative agreement detail path', () => {
+  test('shows the agreement code for an initiative agreement detail path', ({
+    render,
+    app
+  }) => {
     setupRouterMocks({
       pathname: '/initiative-agreements/5',
       matches: [{ handle: { title: 'Initiative agreement' } }]
     })
     useInitiativeAgreementPageStore.getState().setAgreementCrumb('IA-26ORG1')
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, app)
 
     expect(screen.getByText('Initiative agreements')).toBeInTheDocument()
     expect(screen.getByText('IA-26ORG1')).toBeInTheDocument()
-
-    useInitiativeAgreementPageStore.getState().setAgreementCrumb(null)
   })
 
-  it('reads a designated action trail as module, agreement, action', () => {
+  test('reads a designated action trail as module, agreement, action', ({
+    render,
+    app
+  }) => {
     setupRouterMocks({
       pathname: '/initiative-agreements/5/designated-actions/9',
       matches: [{ handle: { title: 'Designated action' } }]
@@ -120,11 +140,9 @@ describe('Crumb', () => {
     useInitiativeAgreementPageStore.getState().setAgreementCrumb('DA1-IA5')
     useInitiativeAgreementPageStore.getState().setParentCrumb('IA-26ORG1')
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, app)
 
     expect(screen.getByText('Initiative agreements')).toBeInTheDocument()
-    // The agreement's own segment, labelled with its code and linking to
-    // its page — not a "Designated actions" link that lands there.
     const agreement = screen.getByText('IA-26ORG1')
     expect(agreement.closest('a')).toHaveAttribute(
       'href',
@@ -133,18 +151,18 @@ describe('Crumb', () => {
     expect(screen.queryByText('Designated actions')).not.toBeInTheDocument()
     expect(screen.queryByText('ID: 5')).not.toBeInTheDocument()
     expect(screen.getByText('DA1-IA5')).toBeInTheDocument()
-
-    useInitiativeAgreementPageStore.getState().setAgreementCrumb(null)
-    useInitiativeAgreementPageStore.getState().setParentCrumb(null)
   })
 
-  it('falls back to the agreement id while its code is still loading', () => {
+  test('falls back to the agreement id while its code is still loading', ({
+    render,
+    app
+  }) => {
     setupRouterMocks({
       pathname: '/initiative-agreements/5/designated-actions/9',
       matches: [{ handle: { title: 'Designated action' } }]
     })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, app)
 
     expect(screen.getByText('IA5').closest('a')).toHaveAttribute(
       'href',
@@ -152,64 +170,90 @@ describe('Crumb', () => {
     )
   })
 
-  it('keeps the crumb for the module-wide Designated actions tab', () => {
+  test('keeps the crumb for the module-wide Designated actions tab', ({
+    render,
+    app
+  }) => {
     setupRouterMocks({
       pathname: '/initiative-agreements/designated-actions',
       matches: [{ handle: { title: 'Designated actions' } }]
     })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, app)
 
     expect(screen.getByText('Initiative agreements')).toBeInTheDocument()
     expect(screen.getByText('Designated actions')).toBeInTheDocument()
   })
 
-  it('falls back to the route title when no agreement code is set', () => {
+  test('falls back to the route title when no agreement code is set', ({
+    render,
+    app
+  }) => {
     setupRouterMocks({
       pathname: '/initiative-agreements/5',
       matches: [{ handle: { title: 'Initiative agreement' } }]
     })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, app)
 
     expect(screen.getByText('Initiative agreement')).toBeInTheDocument()
   })
 
-  it('displays numeric IDs with ID prefix', () => {
+  test('displays numeric IDs with ID prefix', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupRouterMocks({
       pathname: '/transactions/12345',
       matches: [{ handle: {} }]
     })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, [query, theme, router])
 
     expect(screen.getByText('ID: 12345')).toBeInTheDocument()
   })
 
-  it('displays user profile breadcrumb for user ID with edit', () => {
+  test('displays user profile breadcrumb for user ID with edit', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupRouterMocks({
       pathname: '/users/789/edit-user',
       params: { userID: '789' }
     })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, [query, theme, router])
 
     expect(screen.getByText('User profile')).toBeInTheDocument()
   })
 
-  it('displays organization ID in breadcrumb', () => {
+  test('displays organization ID in breadcrumb', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupRouterMocks({
       pathname: '/organizations/456',
       params: { orgID: '456' }
     })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, [query, theme, router])
 
     expect(screen.getByText('ID: 456')).toBeInTheDocument()
     expect(screen.getByText('Organizations')).toBeInTheDocument()
   })
 
-  it('shows organization name with active tab when context is set', () => {
+  test('shows organization name with active tab when context is set', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupRouterMocks({
       pathname: '/organizations/456/users',
       params: { orgID: '456' },
@@ -221,13 +265,18 @@ describe('Crumb', () => {
       activeTabLabel: 'Users'
     })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, [query, theme, router])
 
     expect(screen.getByText('LCFS Org 1 - Users')).toBeInTheDocument()
     expect(screen.queryByText('Organization profile')).not.toBeInTheDocument()
   })
 
-  it('handles compliance report paths correctly', () => {
+  test('handles compliance report paths correctly', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     setupRouterMocks({
       pathname: '/compliance-reporting/2023/123',
       params: {
@@ -236,7 +285,7 @@ describe('Crumb', () => {
       }
     })
 
-    render(<Crumb />, { wrapper })
+    render(<Crumb />, [query, theme, router])
 
     expect(screen.getByText('Compliance reporting')).toBeInTheDocument()
     expect(screen.getByText('2023 Compliance report')).toBeInTheDocument()

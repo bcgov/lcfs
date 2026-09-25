@@ -1,3 +1,4 @@
+import { test } from '@/tests/utils/fixtures'
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
@@ -8,8 +9,6 @@ import {
   addressWithPostalCode,
   OrganizationAddress
 } from '../OrganizationAddress'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
-
 // Mock react-router-dom
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', () => ({
@@ -146,8 +145,19 @@ describe('OrganizationAddress', () => {
 
   // Component Rendering Tests
   describe('Component Rendering', () => {
-    it('renders read-only data when not editing', () => {
-      render(<OrganizationAddress {...defaultProps} />, { wrapper })
+    test('renders read-only data when not editing', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<OrganizationAddress {...defaultProps} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(screen.getByText('org:legalNameLabel:')).toBeInTheDocument()
       expect(screen.getByText(snapshotData.name)).toBeInTheDocument()
@@ -165,13 +175,19 @@ describe('OrganizationAddress', () => {
       ).toBeTruthy()
     })
 
-    it('does not render contact name when it is blank', () => {
+    test('does not render contact name when it is blank', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <OrganizationAddress
           {...defaultProps}
           snapshotData={{ ...snapshotData, contactName: '' }}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(
@@ -179,10 +195,19 @@ describe('OrganizationAddress', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('renders the form in editing mode', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
-        wrapper
-      })
+    test('renders the form in editing mode', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Check that form element exists
       const formElement = document.querySelector('form')
@@ -209,7 +234,13 @@ describe('OrganizationAddress', () => {
       expect(screen.getByText('cancelBtn')).toBeInTheDocument()
     })
 
-    it('shows Required for missing required fields in read-only mode', () => {
+    test('shows Required for missing required fields in read-only mode', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const incompleteData = {
         ...snapshotData,
         name: '',
@@ -220,14 +251,20 @@ describe('OrganizationAddress', () => {
 
       render(
         <OrganizationAddress {...defaultProps} snapshotData={incompleteData} />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       const requiredElements = screen.getAllByText('Required')
       expect(requiredElements.length).toBeGreaterThan(0)
     })
 
-    it('shows update org info button for government user with edited snapshot', () => {
+    test('shows update org info button for government user with edited snapshot', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const editedSnapshot = { ...snapshotData, isEdited: true }
 
       render(
@@ -236,13 +273,19 @@ describe('OrganizationAddress', () => {
           snapshotData={editedSnapshot}
           isGovernmentUser={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(screen.getByText('report:updateOrgInfo')).toBeInTheDocument()
     })
 
-    it('does not show update org info button for non-government user', () => {
+    test('does not show update org info button for non-government user', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const editedSnapshot = { ...snapshotData, isEdited: true }
 
       render(
@@ -251,7 +294,7 @@ describe('OrganizationAddress', () => {
           snapshotData={editedSnapshot}
           isGovernmentUser={false}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(screen.queryByText('report:updateOrgInfo')).not.toBeInTheDocument()
@@ -260,12 +303,21 @@ describe('OrganizationAddress', () => {
 
   // Form Interactions Tests
   describe('Form Interactions', () => {
-    it('clicking Cancel resets form and exits edit mode', async () => {
+    test('clicking Cancel resets form and exits edit mode', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
 
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
-        wrapper
-      })
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const cancelButton = screen.getByText('cancelBtn')
       await user.click(cancelButton)
@@ -274,10 +326,16 @@ describe('OrganizationAddress', () => {
       expect(setIsEditingMock).toHaveBeenCalledWith(false)
     })
 
-    it('resets form data when snapshotData changes', () => {
+    test('resets form data when snapshotData changes', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const { rerender } = render(
         <OrganizationAddress {...defaultProps} isEditing={true} />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       const newSnapshotData = { ...snapshotData, name: 'Updated Corp' }
@@ -292,20 +350,38 @@ describe('OrganizationAddress', () => {
       expect(mockReset).toHaveBeenCalledWith(newSnapshotData)
     })
 
-    it('validates form data properly', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
-        wrapper
-      })
+    test('validates form data properly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // The component should have validation schema defined
       // This test ensures the validation is setup correctly
       expect(mockHandleSubmit).toHaveBeenCalled()
     })
 
-    it('submits contact name when saving edits', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
-        wrapper
-      })
+    test('submits contact name when saving edits', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       fireEvent.submit(document.querySelector('form'))
 
@@ -345,20 +421,37 @@ describe('OrganizationAddress', () => {
       ).toBe('123 Main St, Victoria, BC V8W 2C3')
     })
 
-    it('displayAddressValue returns value when present', () => {
-      render(<OrganizationAddress {...defaultProps} />, { wrapper })
+    test('displayAddressValue returns value when present', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<OrganizationAddress {...defaultProps} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // The function should display the actual address values
       expect(screen.getByText(snapshotData.serviceAddress)).toBeInTheDocument()
       expect(screen.getByText(snapshotData.recordsAddress)).toBeInTheDocument()
     })
 
-    it('displayAddressValue returns empty string when value is empty', () => {
+    test('displayAddressValue returns empty string when value is empty', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const emptySnapshot = { ...snapshotData, recordsAddress: '' }
 
       render(
         <OrganizationAddress {...defaultProps} snapshotData={emptySnapshot} />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       // Should not show "Required" for non-required fields that are empty
@@ -370,7 +463,13 @@ describe('OrganizationAddress', () => {
 
   // Mock Checkbox Functionality Tests (to test internal logic)
   describe('Checkbox Functionality', () => {
-    it('renders component with checkbox states from snapshot data', () => {
+    test('renders component with checkbox states from snapshot data', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const sameNameSnapshot = {
         ...snapshotData,
         name: 'ACME Corp',
@@ -383,7 +482,7 @@ describe('OrganizationAddress', () => {
           snapshotData={sameNameSnapshot}
           isEditing={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       // Component should render with checkboxes based on data equality
@@ -396,10 +495,19 @@ describe('OrganizationAddress', () => {
 
   // Address Selection Tests
   describe('Address Selection', () => {
-    it('renders address form fields in edit mode', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
-        wrapper
-      })
+    test('renders address form fields in edit mode', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Component should have form with checkboxes
       expect(document.querySelector('form')).toBeInTheDocument()
@@ -407,10 +515,19 @@ describe('OrganizationAddress', () => {
       expect(checkboxes.length).toBeGreaterThanOrEqual(0) // Checkboxes may not be present as DOM elements in mocked form
     })
 
-    it('renders address form structure in edit mode', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
-        wrapper
-      })
+    test('renders address form structure in edit mode', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Component should have form with required structure
       expect(document.querySelector('form')).toBeInTheDocument()
@@ -418,7 +535,13 @@ describe('OrganizationAddress', () => {
       expect(screen.getByText('cancelBtn')).toBeInTheDocument()
     })
 
-    it('handles address syncing functionality', () => {
+    test('handles address syncing functionality', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const sameHeadOfficeSnapshot = {
         ...snapshotData,
         serviceAddress: '123 Main St.',
@@ -431,7 +554,7 @@ describe('OrganizationAddress', () => {
           snapshotData={sameHeadOfficeSnapshot}
           isEditing={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       // Component should handle head office address syncing
@@ -442,10 +565,19 @@ describe('OrganizationAddress', () => {
 
   // Additional Coverage Tests
   describe('Additional Coverage', () => {
-    it('renders all form field types correctly', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
-        wrapper
-      })
+    test('renders all form field types correctly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // All text fields should be present - check by input elements instead of role
       const inputs = document.querySelectorAll('input')
@@ -457,10 +589,16 @@ describe('OrganizationAddress', () => {
       expect(screen.getByText('cancelBtn')).toBeInTheDocument()
     })
 
-    it('displays correct labels for read-only vs edit mode', () => {
+    test('displays correct labels for read-only vs edit mode', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const { rerender } = render(
         <OrganizationAddress {...defaultProps} isEditing={false} />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(screen.getByText('report:hoAddrLabelView:')).toBeInTheDocument()

@@ -1,11 +1,10 @@
+import { test } from '@/tests/utils/fixtures'
 import React from 'react'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { AddEditUser } from '../AddEditUser'
-import { wrapper } from '@/tests/utils/wrapper'
 import { HttpResponse } from 'msw'
-import { httpOverwrite } from '@/tests/utils/handlers'
 import * as currentUserHooks from '@/hooks/useCurrentUser'
 import * as userHooks from '@/hooks/useUser'
 import * as organizationUserHooks from '@/hooks/useOrganization'
@@ -346,28 +345,31 @@ describe('AddEditUser', () => {
   }
 
   // --- Rendering Tests ---
-  it('renders loading state for current user', () => {
+  test('renders loading state for current user', ({ render, theme }) => {
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: undefined,
       hasRoles: vi.fn(),
       isLoading: true
     })
-    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, [theme])
     expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
-  it('renders loading state for user data (edit mode)', () => {
+  test('renders loading state for user data (edit mode)', ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({ userID: '123' })
     vi.mocked(userHooks.useUser).mockReturnValue({
       data: undefined,
       isLoading: true,
       isFetched: false
     })
-    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, [theme])
     expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
-  it('renders loading state when updating user', () => {
+  test('renders loading state when updating user', ({ render, theme }) => {
     // Mock userID to trigger edit mode
     mockUseParams.mockReturnValue({ userID: 'user123' })
 
@@ -376,11 +378,11 @@ describe('AddEditUser', () => {
       isPending: true, // User is being updated
       isError: false
     })
-    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, [theme])
     expect(screen.getByText('Updating user...')).toBeInTheDocument()
   })
 
-  it('renders loading state when creating user', () => {
+  test('renders loading state when creating user', ({ render, theme }) => {
     // No userID means add mode
     mockUseParams.mockReturnValue({})
 
@@ -389,36 +391,39 @@ describe('AddEditUser', () => {
       isPending: true, // User is being created
       isError: false
     })
-    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, [theme])
     expect(screen.getByText('Adding user...')).toBeInTheDocument()
   })
 
-  it('renders error alert when update fails', () => {
+  test('renders error alert when update fails', ({ render, theme }) => {
     vi.mocked(userHooks.useUpdateUser).mockReturnValue({
       mutate: mockUpdateUser,
       isPending: false,
       isError: true // Update failed
     })
-    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, [theme])
     expect(
       screen.getByText('An error occurred during submission.')
     ).toBeInTheDocument()
   })
 
-  it('renders error alert when create fails', () => {
+  test('renders error alert when create fails', ({ render, theme }) => {
     vi.mocked(userHooks.useCreateUser).mockReturnValue({
       mutate: mockCreateUser,
       isPending: false,
       isError: true // Create failed
     })
-    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, [theme])
     expect(
       screen.getByText('An error occurred during submission.')
     ).toBeInTheDocument()
   })
 
   // --- Form Submission Tests ---
-  it('calls createUser when submitting in add mode', async () => {
+  test('calls createUser when submitting in add mode', async ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({}) // Add mode (no userID)
 
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
@@ -433,7 +438,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     fillRequiredIdirFields()
@@ -447,7 +452,10 @@ describe('AddEditUser', () => {
     })
   })
 
-  it('calls createUser for BCeID user with correct required fields', async () => {
+  test('calls createUser for BCeID user with correct required fields', async ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({ orgID: 'org123' }) // BCeID context with orgID
 
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
@@ -462,7 +470,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // For BCeID: firstName, lastName, userName, keycloakEmail are required (jobTitle is optional)
@@ -477,7 +485,10 @@ describe('AddEditUser', () => {
     })
   })
 
-  it('calls updateUser when submitting in edit mode', async () => {
+  test('calls updateUser when submitting in edit mode', async ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({ userID: 'user123' }) // Edit mode
 
     vi.mocked(userHooks.useUser).mockReturnValue({
@@ -511,7 +522,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     await waitFor(() => {
@@ -536,7 +547,10 @@ describe('AddEditUser', () => {
     })
   })
 
-  it('includes correct payload structure for government user', async () => {
+  test('includes correct payload structure for government user', async ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({}) // Add mode
 
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
@@ -551,7 +565,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     fillRequiredIdirFields()
@@ -573,7 +587,10 @@ describe('AddEditUser', () => {
     })
   })
 
-  it('includes correct payload structure for supplier user', async () => {
+  test('includes correct payload structure for supplier user', async ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({ orgID: 'org123' }) // Supplier context
 
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
@@ -588,7 +605,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     fillRequiredBceidFields()
@@ -610,12 +627,15 @@ describe('AddEditUser', () => {
     })
   })
 
-  it('handles form validation errors for missing required fields', async () => {
+  test('handles form validation errors for missing required fields', async ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({}) // Add mode
 
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Try to submit form without filling required fields
@@ -627,7 +647,7 @@ describe('AddEditUser', () => {
     })
   })
 
-  it('validates email format correctly', async () => {
+  test('validates email format correctly', async ({ render, theme }) => {
     mockUseParams.mockReturnValue({}) // Add mode
 
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
@@ -642,7 +662,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     fillRequiredIdirFields({ keycloakEmail: 'invalid-email' })
@@ -654,7 +674,7 @@ describe('AddEditUser', () => {
   })
 
   // --- Deletion Tests ---
-  it('hides delete button for IDIR users', () => {
+  test('hides delete button for IDIR users', ({ render, theme }) => {
     mockUseParams.mockReturnValue({ userID: 'idirUser123' })
     vi.mocked(userHooks.useUser).mockReturnValue({
       data: {
@@ -669,25 +689,31 @@ describe('AddEditUser', () => {
     })
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
     expect(screen.queryByTestId('delete-user-btn')).not.toBeInTheDocument()
   })
 
-  it('hides delete button for BCeID users in Add mode', () => {
+  test('hides delete button for BCeID users in Add mode', ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({}) // Add mode
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
     expect(screen.queryByTestId('delete-user-btn')).not.toBeInTheDocument()
   })
 
   // --- Form State Tests ---
-  it('disables role fields when status is Inactive', async () => {
+  test('disables role fields when status is Inactive', async ({
+    render,
+    theme
+  }) => {
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Set status to Inactive
@@ -706,10 +732,13 @@ describe('AddEditUser', () => {
     }
   })
 
-  it('enables role fields when status is Active', async () => {
+  test('enables role fields when status is Active', async ({
+    render,
+    theme
+  }) => {
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Status should be Active by default, but let's explicitly set it
@@ -731,10 +760,10 @@ describe('AddEditUser', () => {
   // Form state is observed via data-idir-role / data-ia-role attributes on the mock
   // wrapper, kept in sync by useWatch inside the mock component.
 
-  it('clears iaRole when Director is selected', async () => {
+  test('clears iaRole when Director is selected', async ({ render, theme }) => {
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Set an IA role first
@@ -760,10 +789,13 @@ describe('AddEditUser', () => {
     })
   })
 
-  it('clears Director when an IA role is selected', async () => {
+  test('clears Director when an IA role is selected', async ({
+    render,
+    theme
+  }) => {
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Set Director first
@@ -790,7 +822,10 @@ describe('AddEditUser', () => {
   })
 
   // --- Delete Functionality Tests ---
-  it('shows delete button for BCeID users that are safe to delete', () => {
+  test('shows delete button for BCeID users that are safe to delete', ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({ userID: 'bceidUser123' })
     vi.mocked(userHooks.useUser).mockReturnValue({
       data: {
@@ -817,13 +852,16 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
     expect(screen.getByTestId('delete-user-btn')).toBeInTheDocument()
     expect(screen.getByTestId('delete-user-btn')).not.toBeDisabled()
   })
 
-  it('shows disabled delete button for BCeID users that are not safe to delete', () => {
+  test('shows disabled delete button for BCeID users that are not safe to delete', ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({ userID: 'bceidUser123' })
     vi.mocked(userHooks.useUser).mockReturnValue({
       data: {
@@ -849,13 +887,16 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
     expect(screen.getByTestId('delete-user-btn')).toBeInTheDocument()
     expect(screen.getByTestId('delete-user-btn')).toBeDisabled()
   })
 
-  it('opens confirmation dialog when delete button is clicked', async () => {
+  test('opens confirmation dialog when delete button is clicked', async ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({ userID: 'bceidUser123' })
     vi.mocked(userHooks.useUser).mockReturnValue({
       data: {
@@ -881,7 +922,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     fireEvent.click(screen.getByTestId('delete-user-btn'))
@@ -894,7 +935,10 @@ describe('AddEditUser', () => {
     })
   })
 
-  it('closes confirmation dialog when cancel is clicked', async () => {
+  test('closes confirmation dialog when cancel is clicked', async ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({ userID: 'bceidUser123' })
     vi.mocked(userHooks.useUser).mockReturnValue({
       data: {
@@ -920,7 +964,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Open dialog
@@ -938,7 +982,10 @@ describe('AddEditUser', () => {
     })
   })
 
-  it('calls deleteUser when confirmation is clicked', async () => {
+  test('calls deleteUser when confirmation is clicked', async ({
+    render,
+    theme
+  }) => {
     const orgId = 'org456'
     mockUseParams.mockReturnValue({ userID: 'bceidUser123' })
     vi.mocked(userHooks.useUser).mockReturnValue({
@@ -966,7 +1013,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Open dialog
@@ -992,10 +1039,10 @@ describe('AddEditUser', () => {
   })
 
   // --- Form Rendering Tests ---
-  it('renders form components correctly', async () => {
+  test('renders form components correctly', async ({ render, theme }) => {
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Verify basic form elements are present
@@ -1004,7 +1051,10 @@ describe('AddEditUser', () => {
     // Note: AddEditUser component doesn't render page titles
   })
 
-  it('populates form with government user data', async () => {
+  test('populates form with government user data', async ({
+    render,
+    theme
+  }) => {
     mockUseParams.mockReturnValue({ userID: 'govUser123' })
     vi.mocked(userHooks.useUser).mockReturnValue({
       data: {
@@ -1027,7 +1077,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Wait for the component to render with user data loaded
@@ -1045,7 +1095,7 @@ describe('AddEditUser', () => {
     expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
   })
 
-  it('populates form with supplier user data', async () => {
+  test('populates form with supplier user data', async ({ render, theme }) => {
     mockUseParams.mockReturnValue({
       userID: 'supplierUser123',
       orgID: 'org456'
@@ -1078,7 +1128,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     await waitFor(() => {
@@ -1096,7 +1146,10 @@ describe('AddEditUser', () => {
   })
 
   // --- Simple Error Callback Test ---
-  it('calls console.error when onUserOperationError is triggered', () => {
+  test('calls console.error when onUserOperationError is triggered', ({
+    render,
+    theme
+  }) => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     // Create a simple error for the callback to use
@@ -1105,7 +1158,7 @@ describe('AddEditUser', () => {
     // Mock the hook to get access to the callback
     render(
       <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Get the error callback from the hook - it should be defined
@@ -1120,7 +1173,10 @@ describe('AddEditUser', () => {
     consoleSpy.mockRestore()
   })
 
-  it('navigates to organization page on successful operation for supplier user', () => {
+  test('navigates to organization page on successful operation for supplier user', ({
+    render,
+    theme
+  }) => {
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' },
@@ -1132,7 +1188,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     // Note: This test was checking internal hook callback mechanics
@@ -1140,7 +1196,7 @@ describe('AddEditUser', () => {
     expect(screen.getByTestId('saveUser')).toBeInTheDocument()
   })
 
-  it('handles payload with empty altEmail', async () => {
+  test('handles payload with empty altEmail', async ({ render, theme }) => {
     // BCeID edit: empty altEmail is sent as null (IDIR copies keycloakEmail instead)
     mockUseParams.mockReturnValue({ userID: 'user123', orgID: 'org123' })
 
@@ -1175,7 +1231,7 @@ describe('AddEditUser', () => {
 
     render(
       <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
-      { wrapper }
+      [theme]
     )
 
     await waitFor(() => {

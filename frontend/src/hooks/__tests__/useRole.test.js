@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useRoleList } from '../useRole'
 
 vi.mock('@/services/useApiService')
@@ -21,7 +21,10 @@ describe('useRole', () => {
   })
 
   describe('useRoleList', () => {
-    it('should fetch roles successfully without parameters', async () => {
+    test('should fetch roles successfully without parameters', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         roles: [
           { roleId: 1, name: 'Admin', description: 'Administrator role' },
@@ -30,7 +33,7 @@ describe('useRole', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useRoleList(), { wrapper })
+      const { result } = renderHook(() => useRoleList(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -40,14 +43,17 @@ describe('useRole', () => {
       expect(mockGet).toHaveBeenCalledWith('/roles/')
     })
 
-    it('should fetch roles successfully with parameters', async () => {
+    test('should fetch roles successfully with parameters', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         roles: [{ roleId: 1, name: 'Admin', description: 'Administrator role' }]
       }
       const params = 'status=active&type=admin'
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useRoleList(params), { wrapper })
+      const { result } = renderHook(() => useRoleList(params), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -57,11 +63,11 @@ describe('useRole', () => {
       expect(mockGet).toHaveBeenCalledWith('/roles/?status=active&type=admin')
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch roles')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useRoleList(), { wrapper })
+      const { result } = renderHook(() => useRoleList(), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -71,11 +77,11 @@ describe('useRole', () => {
       expect(mockGet).toHaveBeenCalledWith('/roles/')
     })
 
-    it('should cache data with staleTime', async () => {
+    test('should cache data with staleTime', async ({ renderHook, query }) => {
       const mockData = { roles: [] }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useRoleList(), { wrapper })
+      const { result } = renderHook(() => useRoleList(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -85,11 +91,14 @@ describe('useRole', () => {
       expect(result.current.isStale).toBe(false)
     })
 
-    it('should handle empty parameters as "all"', async () => {
+    test('should handle empty parameters as "all"', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { roles: [] }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useRoleList(''), { wrapper })
+      const { result } = renderHook(() => useRoleList(''), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -98,14 +107,18 @@ describe('useRole', () => {
       expect(mockGet).toHaveBeenCalledWith('/roles/')
     })
 
-    it('should pass through custom options', async () => {
+    test('should pass through custom options', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { roles: [] }
       mockGet.mockResolvedValue({ data: mockData })
       const customOptions = { retry: 3 }
 
-      const { result } = renderHook(() => useRoleList(null, customOptions), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useRoleList(null, customOptions),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -114,13 +127,14 @@ describe('useRole', () => {
       expect(mockGet).toHaveBeenCalledWith('/roles/')
     })
 
-    it('should use correct query key for caching', async () => {
+    test('should use correct query key for caching', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { roles: [] }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useRoleList('test=param'), {
-        wrapper
-      })
+      const { result } = renderHook(() => useRoleList('test=param'), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)

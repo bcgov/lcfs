@@ -1,8 +1,8 @@
 import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, vi } from 'vitest'
+import { screen } from '@testing-library/react'
 import { Introduction } from '../Introduction'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 import * as reactI18next from 'react-i18next'
 
 // Create a more complete mock for react-i18next
@@ -54,28 +54,55 @@ vi.mock('react-i18next', () => {
 })
 
 describe('Introduction component', () => {
-  it('renders the accordion with introduction header', () => {
-    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
-      wrapper
-    })
+  test('renders the accordion with introduction header', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Introduction Header')).toBeInTheDocument()
     expect(screen.getByTestId('compliance-report-intro')).toBeInTheDocument()
   })
 
-  it('renders with expanded=false', () => {
-    render(<Introduction expanded={false} compliancePeriod={'2024'} />, {
-      wrapper
-    })
+  test('renders with expanded=false', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<Introduction expanded={false} compliancePeriod={'2024'} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Introduction Header')).toBeInTheDocument()
     expect(screen.getByTestId('compliance-report-intro')).toBeInTheDocument()
   })
 
-  it('renders regular sections correctly when isEarlyIssuance is not set', () => {
-    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
-      wrapper
-    })
+  test('renders regular sections correctly when isEarlyIssuance is not set', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Section 1')).toBeInTheDocument()
     expect(screen.getByText('Content for section 1.')).toBeInTheDocument()
@@ -84,16 +111,20 @@ describe('Introduction component', () => {
     expect(screen.getByText('Content for section 2.')).toBeInTheDocument()
   })
 
-  it('renders early issuance sections when isEarlyIssuance is true', () => {
+  test('renders early issuance sections when isEarlyIssuance is true', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <Introduction
         expanded={true}
         compliancePeriod={'2024'}
         isEarlyIssuance={true}
       />,
-      {
-        wrapper
-      }
+      [query, theme, localization, router]
     )
 
     expect(screen.getByText('Early Issuance Section 1')).toBeInTheDocument()
@@ -107,10 +138,19 @@ describe('Introduction component', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders questions and contact information correctly', () => {
-    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
-      wrapper
-    })
+  test('renders questions and contact information correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Questions Header')).toBeInTheDocument()
     expect(
@@ -119,7 +159,13 @@ describe('Introduction component', () => {
   })
 
   // This test verifies that compliance period values are passed correctly
-  it('passes compliancePeriod to translations', () => {
+  test('passes compliancePeriod to translations', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     // Temporarily spy on the useTranslation hook
     const tSpy = vi.fn((key, options) => {
       if (key === 'report:sections') {
@@ -136,9 +182,12 @@ describe('Introduction component', () => {
       t: tSpy
     })
 
-    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
-      wrapper
-    })
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Check if t was called with the correct parameters
     expect(tSpy).toHaveBeenCalledWith(
@@ -154,7 +203,13 @@ describe('Introduction component', () => {
     useTranslationSpy.mockRestore()
   })
 
-  it('handles different compliancePeriod formats correctly', () => {
+  test('handles different compliancePeriod formats correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const tSpy = vi.fn((key, options) => {
       if (key === 'report:sections') {
         return [
@@ -167,9 +222,12 @@ describe('Introduction component', () => {
     const useTranslationSpy = vi.spyOn(reactI18next, 'useTranslation')
     useTranslationSpy.mockReturnValue({ t: tSpy })
 
-    render(<Introduction expanded={true} compliancePeriod={2023} />, {
-      wrapper
-    })
+    render(<Introduction expanded={true} compliancePeriod={2023} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(tSpy).toHaveBeenCalledWith(
       'report:sections',
@@ -183,7 +241,13 @@ describe('Introduction component', () => {
     useTranslationSpy.mockRestore()
   })
 
-  it('handles empty sections array', () => {
+  test('handles empty sections array', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const tSpy = vi.fn((key, options) => {
       if (key === 'report:sections') {
         return []
@@ -197,9 +261,12 @@ describe('Introduction component', () => {
     const useTranslationSpy = vi.spyOn(reactI18next, 'useTranslation')
     useTranslationSpy.mockReturnValue({ t: tSpy })
 
-    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
-      wrapper
-    })
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Introduction Header')).toBeInTheDocument()
     expect(screen.getByText('Questions Header')).toBeInTheDocument()
@@ -207,12 +274,16 @@ describe('Introduction component', () => {
     useTranslationSpy.mockRestore()
   })
 
-  it('handles section with empty content array', () => {
+  test('handles section with empty content array', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const tSpy = vi.fn((key, options) => {
       if (key === 'report:sections') {
-        return [
-          { header: 'Empty Section', content: [] }
-        ]
+        return [{ header: 'Empty Section', content: [] }]
       }
       if (key === 'report:introduction') return 'Introduction Header'
       return key
@@ -221,22 +292,35 @@ describe('Introduction component', () => {
     const useTranslationSpy = vi.spyOn(reactI18next, 'useTranslation')
     useTranslationSpy.mockReturnValue({ t: tSpy })
 
-    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
-      wrapper
-    })
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Empty Section')).toBeInTheDocument()
 
     useTranslationSpy.mockRestore()
   })
 
-  it('handles section with multiple content items', () => {
+  test('handles section with multiple content items', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const tSpy = vi.fn((key, options) => {
       if (key === 'report:sections') {
         return [
-          { 
-            header: 'Multi Content Section', 
-            content: ['<p>First content.</p>', '<p>Second content.</p>', '<p>Third content.</p>'] 
+          {
+            header: 'Multi Content Section',
+            content: [
+              '<p>First content.</p>',
+              '<p>Second content.</p>',
+              '<p>Third content.</p>'
+            ]
           }
         ]
       }
@@ -247,9 +331,12 @@ describe('Introduction component', () => {
     const useTranslationSpy = vi.spyOn(reactI18next, 'useTranslation')
     useTranslationSpy.mockReturnValue({ t: tSpy })
 
-    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
-      wrapper
-    })
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Multi Content Section')).toBeInTheDocument()
     expect(screen.getByText('First content.')).toBeInTheDocument()
@@ -259,10 +346,19 @@ describe('Introduction component', () => {
     useTranslationSpy.mockRestore()
   })
 
-  it('renders intro-details test id', () => {
-    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
-      wrapper
-    })
+  test('renders intro-details test id', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('intro-details')).toBeInTheDocument()
   })
