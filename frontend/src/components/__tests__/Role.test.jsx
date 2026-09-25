@@ -4,7 +4,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
 import { render, renderHook, screen, waitFor } from '@testing-library/react'
 import { HttpResponse } from 'msw'
-import { httpOverwrite } from '@/tests/utils/handlers'
+import { httpOverwrite } from '@/tests/utils/server'
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: vi.fn().mockReturnValue({

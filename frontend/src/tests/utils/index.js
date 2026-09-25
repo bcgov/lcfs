@@ -12,7 +12,8 @@ export { getByDataTest } from './testHelpers.js'
 
 // Existing wrapper and MSW handlers  
 export { wrapper as AppWrapper, testQueryClient } from './wrapper.jsx'
-export { handlers, httpOverwrite } from './handlers.jsx'
+export { handlers } from './handlers.jsx'
+export { httpOverwrite, testServer } from './server.js'
 
 // Mock utilities (only Material UI mocks that are used)
 export { mockMaterialUi } from './mocks/materialUi.jsx'

@@ -1,39 +1,16 @@
-import { handlers } from '@/tests/utils/handlers'
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
-import { setupServer } from 'msw/node'
 import { afterEach, vi } from 'vitest'
 import { config } from './public/config/config'
 import '@/i18n'
 import { testQueryClient } from '@/tests/utils/wrapper'
+import { setupMsw } from '@/tests/utils/server'
 import React from 'react'
 
 configure({ testIdAttribute: 'data-test' })
 
-export const testServer = setupServer(...handlers)
-
 beforeAll(async () => {
   vi.stubGlobal('lcfs_config', config)
-
-  // Suppress unhandled AbortSignal errors from MSW/undici compatibility issues
-  // These occur when React Router creates requests that MSW intercepts
-  const originalUnhandledRejection = process.listeners('unhandledRejection')
-  process.removeAllListeners('unhandledRejection')
-  process.on('unhandledRejection', (reason) => {
-    // Suppress specific AbortSignal instanceof errors from undici
-    if (reason?.message?.includes('Expected signal') && reason?.message?.includes('AbortSignal')) {
-      // Silently ignore this specific MSW/undici compatibility issue
-      return
-    }
-    // Re-throw other unhandled rejections
-    originalUnhandledRejection.forEach(listener => listener(reason))
-  })
-
-  // Start MSW server with onUnhandledRequest set to 'bypass' to avoid AbortSignal issues
-  // The 'warn' option causes AbortSignal compatibility issues with undici
-  testServer.listen({
-    onUnhandledRequest: 'bypass'
-  })
 })
 
 vi.mock('react-snowfall')
@@ -302,9 +279,6 @@ vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
 afterEach(() => {
   cleanup()
   testQueryClient.clear()
-  testServer.resetHandlers()
 })
 
-afterAll(() => {
-  testServer.close()
-})
+setupMsw()
