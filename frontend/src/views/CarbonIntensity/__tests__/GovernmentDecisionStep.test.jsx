@@ -1090,4 +1090,72 @@ describe('GovernmentDecisionStep', () => {
       expect(value.closest('dl')).not.toBeNull()
     })
   })
+
+  describe('return to first verification history', () => {
+    it('shows the return reason below workflow buttons while first verification is pending', () => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={{
+            ...baseCi,
+            verification2Date: '2026-08-19T18:45:00Z',
+            returnHistory: [
+              {
+                event: 'verification_returned_to_first_verification',
+                changedAt: '2026-08-20T18:45:00Z',
+                changedBy: 'Morgan Verifier',
+                returnReason: 'Verification 2 finding changed assumptions.'
+              }
+            ]
+          }}
+          isGovernment={true}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByTestId('ci-summary-return-history')).toBeVisible()
+      expect(screen.getByTestId('ci-summary-return-history-row')).toHaveAttribute(
+        'data-pending-return',
+        'true'
+      )
+      expect(
+        screen.getByText(/Verification 2 finding changed assumptions/)
+      ).toBeVisible()
+      expect(screen.getByText('Morgan Verifier')).toBeVisible()
+      expect(
+        screen
+          .getByTestId('ci-return-to-first-verification-btn')
+          .compareDocumentPosition(
+            screen.getByTestId('ci-summary-return-history')
+          ) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+    })
+
+    it('stops highlighting the return reason after first verification runs again', () => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={{
+            ...baseCi,
+            verification1Date: '2026-08-21T18:45:00Z',
+            returnHistory: [
+              {
+                event: 'verification_returned_to_first_verification',
+                changedAt: '2026-08-20T18:45:00Z',
+                changedBy: 'Morgan Verifier',
+                returnReason: 'Verification 2 finding changed assumptions.'
+              }
+            ]
+          }}
+          isGovernment={true}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByTestId('ci-summary-return-history-row')).toHaveAttribute(
+        'data-pending-return',
+        'false'
+      )
+    })
+  })
 })

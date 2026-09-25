@@ -818,7 +818,7 @@ async def test_assign_analyst_rejects_inactive_idir_analyst(
 
 
 @pytest.mark.anyio
-async def test_assignment_history_is_only_serialized_for_idir_users(service, repo):
+async def test_internal_history_is_only_serialized_for_idir_users(service, repo):
     ci = _ci_application(status=_status("Submitted", 2))
     ci.history_records = [
         SimpleNamespace(
@@ -841,7 +841,15 @@ async def test_assignment_history_is_only_serialized_for_idir_users(service, rep
                 "changed_at": "2026-08-19T18:45:00+00:00",
                 "changed_by": "Casey Reviewer",
             }
-        )
+        ),
+        SimpleNamespace(
+            ci_application_snapshot={
+                "event": "verification_returned_to_first_verification",
+                "return_reason": "Verification 2 finding changed assumptions.",
+                "changed_at": "2026-08-20T18:45:00+00:00",
+                "changed_by": "Morgan Verifier",
+            }
+        ),
     ]
     repo.get_by_id.return_value = ci
     idir_user = SimpleNamespace(role_names={RoleEnum.GOVERNMENT})
@@ -855,7 +863,14 @@ async def test_assignment_history_is_only_serialized_for_idir_users(service, rep
         idir_result.assignment_history[0].previous_analyst.full_name == "Alex Analyst"
     )
     assert idir_result.assignment_history[0].new_analyst.full_name == "Sam Reviewer"
+    assert len(idir_result.return_history) == 1
+    assert (
+        idir_result.return_history[0].return_reason
+        == "Verification 2 finding changed assumptions."
+    )
+    assert idir_result.return_history[0].changed_by == "Morgan Verifier"
     assert supplier_result.assignment_history is None
+    assert supplier_result.return_history is None
 
 
 # ---------------------------------------------------------------------------
@@ -2162,10 +2177,20 @@ async def test_step4_schema_requires_consultant_fields_when_consented():
 # ---------------------------------------------------------------------------
 
 
-def _decision_payload(status_value="Completed", comment=None):
+def _decision_payload(
+    status_value="Completed",
+    comment=None,
+    reason=None,
+    return_to_first_verification=False,
+):
     from lcfs.web.api.ci_application.schema import CIApplicationDecisionSchema
 
-    return CIApplicationDecisionSchema(status=status_value, comment=comment)
+    return CIApplicationDecisionSchema(
+        status=status_value,
+        comment=comment,
+        reason=reason,
+        return_to_first_verification=return_to_first_verification,
+    )
 
 
 @pytest.mark.anyio
@@ -2457,6 +2482,159 @@ async def test_step5_decision_can_return_recommended_to_submitted(
     assert ci.recommendation_user_id is None
     assert ci.recommendation_date is None
     assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step5_decision_can_return_verification_2_to_verification_1(
+    service, repo, notification_service, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = "High"
+    ci.priority_score = 511
+    ci.verification_1_user_id = 22
+    ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
+    ci.verification_2_user_id = 33
+    ci.verification_2_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
+    ci.verification_2_risk_assessment = "Medium"
+    ci.verification_2_priority_score = 426
+    ci.recommendation_user_id = 44
+    ci.recommendation_date = datetime(2026, 5, 21, tzinfo=timezone.utc)
+    submitted = _status("Submitted", 2)
+    repo.get_status_by_name.return_value = submitted
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.record_decision(
+        ci,
+        _decision_payload(
+            "Submitted",
+            reason="Verification 2 finding changes modelling assumptions.",
+            return_to_first_verification=True,
+        ),
+        mock_user,
+        is_government=True,
+    )
+
+    assert ci.status_id == submitted.ci_application_status_id
+    assert ci.preliminary_risk_assessment == "Medium"
+    assert ci.priority_score == 426
+    assert ci.verification_1_user_id is None
+    assert ci.verification_1_date is None
+    assert ci.verification_2_user_id is None
+    assert ci.verification_2_date is None
+    assert ci.verification_2_risk_assessment is None
+    assert ci.verification_2_priority_score is None
+    assert ci.recommendation_user_id is None
+    assert ci.recommendation_date is None
+    assert ci.approval_user_id is None
+    assert ci.approval_date is None
+    snapshot = repo.add_history.await_args.kwargs["snapshot"]
+    assert snapshot["event"] == "verification_returned_to_first_verification"
+    assert (
+        snapshot["return_reason"]
+        == "Verification 2 finding changes modelling assumptions."
+    )
+    assert snapshot["return_to_first_verification"] is True
+    notification_service.send_notification.assert_awaited_once()
+    request = notification_service.send_notification.await_args.args[0]
+    assert request.notification_types == [
+        NotificationTypeEnum.BCEID__CI_APPLICATION__GOVERNMENT_ACTION
+    ]
+    assert (
+        request.notification_data.type
+        == "CI Application Returned to First Verification"
+    )
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step5_return_to_first_verification_rejects_non_submitted_target(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.verification_2_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.record_decision(
+            ci,
+            _decision_payload(
+                "Completed",
+                reason="Needs first verification rework.",
+                return_to_first_verification=True,
+            ),
+            mock_user,
+            is_government=True,
+        )
+
+    assert exc.value.status_code == 400
+    assert "must keep the application in Submitted status" in exc.value.detail
+    repo.update.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_step5_return_to_first_verification_requires_submitted_current_status(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Recommended", 3))
+    ci.verification_2_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.record_decision(
+            ci,
+            _decision_payload(
+                "Submitted",
+                reason="Needs first verification rework.",
+                return_to_first_verification=True,
+            ),
+            mock_user,
+            is_government=True,
+        )
+
+    assert exc.value.status_code == 400
+    assert "Only Submitted applications" in exc.value.detail
+    repo.update.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_step5_return_to_first_verification_requires_verification_2_complete(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.record_decision(
+            ci,
+            _decision_payload(
+                "Submitted",
+                reason="Needs first verification rework.",
+                return_to_first_verification=True,
+            ),
+            mock_user,
+            is_government=True,
+        )
+
+    assert exc.value.status_code == 400
+    assert "after Verification 2 is complete" in exc.value.detail
+    repo.update.assert_not_awaited()
+
+
+def test_step5_decision_schema_requires_return_reason():
+    from lcfs.web.api.ci_application.schema import CIApplicationDecisionSchema
+
+    with pytest.raises(ValidationError) as exc:
+        CIApplicationDecisionSchema(
+            status="Submitted",
+            reason="  ",
+            return_to_first_verification=True,
+        )
+
+    assert "return reason is required" in str(exc.value)
 
 
 @pytest.mark.anyio

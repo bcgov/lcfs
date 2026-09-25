@@ -16,6 +16,7 @@ import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import Comments from '@/components/Comments'
 import { Role } from '@/components/Role'
+import { CIApplicationReturnHistory } from './CIApplicationReturnHistory'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import {
@@ -45,6 +46,22 @@ type GovernmentDecisionStepProps = {
 
 const normalizeRisk = (risk?: string | null) =>
   risk === 'Moderate' ? 'Medium' : risk
+
+const isReturnToFirstVerificationPending = (ciApplication: any = {}) => {
+  const returnHistory = ciApplication.returnHistory
+  if (!Array.isArray(returnHistory) || returnHistory.length === 0) return false
+  if (!ciApplication.verification1Date) return true
+
+  const verification1Time = new Date(ciApplication.verification1Date).getTime()
+  if (Number.isNaN(verification1Time)) return true
+
+  const latestReturnTime = returnHistory.reduce((latest, entry) => {
+    const changedAt = new Date(entry.changedAt).getTime()
+    return Number.isNaN(changedAt) ? latest : Math.max(latest, changedAt)
+  }, 0)
+
+  return latestReturnTime > 0 && verification1Time <= latestReturnTime
+}
 
 export const GovernmentDecisionStep = ({
   ciApplication,
@@ -110,6 +127,8 @@ export const GovernmentDecisionStep = ({
   )
   const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
   const [requestedDocumentation, setRequestedDocumentation] = useState(false)
+  const [returnReason, setReturnReason] = useState('')
+  const [returnReasonError, setReturnReasonError] = useState<string | null>(null)
   const [
     isRequestDocumentationConfirmOpen,
     setIsRequestDocumentationConfirmOpen
@@ -117,6 +136,10 @@ export const GovernmentDecisionStep = ({
   const [
     isRequestPathwayChangesConfirmOpen,
     setIsRequestPathwayChangesConfirmOpen
+  ] = useState(false)
+  const [
+    isReturnToFirstVerificationConfirmOpen,
+    setIsReturnToFirstVerificationConfirmOpen
   ] = useState(false)
   const [priorityScoreTouched, setPriorityScoreTouched] = useState(false)
   const [
@@ -170,11 +193,14 @@ export const GovernmentDecisionStep = ({
       return value !== undefined && value !== null && value !== ''
     })
 
-  const recordDecisionFor = async (nextStatus: string) => {
+  const recordDecisionFor = async (
+    nextStatus: string,
+    additionalData: Record<string, any> = {}
+  ) => {
     setError(null)
     setSuccess(null)
     try {
-      await recordDecision({ status: nextStatus })
+      await recordDecision({ status: nextStatus, ...additionalData })
       setSuccess(t('carbonIntensity:step5.decisionSuccess'))
     } catch (err: any) {
       setError(
@@ -244,6 +270,11 @@ export const GovernmentDecisionStep = ({
     !ciApplication?.recommendationDate &&
     generatedFuelCodesCount === 0
   const showDirectorDecisionPanel = isDirector && isRecommended
+  const showReturnToFirstVerificationButton =
+    hasWorkflowRole &&
+    isSubmitted &&
+    !!ciApplication?.verification2Date &&
+    !ciApplication?.recommendationDate
   const activeVerificationLabel = showVerification2Panel
     ? 'Verification 2'
     : 'Verification 1'
@@ -346,6 +377,32 @@ export const GovernmentDecisionStep = ({
     // utility or firing silently (#4651). Cancelling leaves the button enabled;
     // only confirming performs the action and disables it.
     setIsRequestDocumentationConfirmOpen(true)
+  }
+
+  const handleReturnToFirstVerification = () => {
+    setReturnReasonError(null)
+    setReturnReason('')
+    setIsReturnToFirstVerificationConfirmOpen(true)
+  }
+
+  const confirmReturnToFirstVerification = () => {
+    const trimmedReason = returnReason.trim()
+    if (!trimmedReason) {
+      setReturnReasonError(t('carbonIntensity:step5.returnReasonRequired'))
+      return
+    }
+
+    setIsReturnToFirstVerificationConfirmOpen(false)
+    setReturnReasonError(null)
+    recordWorkflowAction(
+      async () =>
+        recordDecisionFor('Submitted', {
+          returnToFirstVerification: true,
+          reason: trimmedReason,
+          comment: trimmedReason
+        }),
+      t('carbonIntensity:step5.workflowSuccess')
+    )
   }
 
   const confirmRequestDocumentation = () => {
@@ -691,6 +748,19 @@ export const GovernmentDecisionStep = ({
                   {t('carbonIntensity:step5.recommendToDirector')}
                 </BCButton>
               )}
+              {showReturnToFirstVerificationButton && (
+                <BCButton
+                  type="button"
+                  variant="outlined"
+                  color="primary"
+                  sx={workflowButtonSx}
+                  disabled={readOnly || isDeciding}
+                  onClick={handleReturnToFirstVerification}
+                  data-test="ci-return-to-first-verification-btn"
+                >
+                  {t('carbonIntensity:step5.returnToFirstVerification')}
+                </BCButton>
+              )}
               {hasWorkflowRole && isSubmitted && (
                 <>
                   <BCButton
@@ -780,6 +850,10 @@ export const GovernmentDecisionStep = ({
                 </>
               )}
             </Stack>
+            <CIApplicationReturnHistory
+              returnHistory={ciApplication?.returnHistory}
+              highlightPending={isReturnToFirstVerificationPending(ciApplication)}
+            />
           </Box>
         </Role>
       )}
@@ -834,6 +908,52 @@ export const GovernmentDecisionStep = ({
             <BCTypography variant="body1">
               {t('carbonIntensity:step5.requestPathwayChangesConfirmText')}
             </BCTypography>
+          )
+        }}
+      />
+      <BCModal
+        open={isReturnToFirstVerificationConfirmOpen}
+        onClose={() => {
+          setIsReturnToFirstVerificationConfirmOpen(false)
+          setReturnReasonError(null)
+        }}
+        data={{
+          title: t('carbonIntensity:step5.returnToFirstVerificationConfirmTitle'),
+          primaryButtonText: t('carbonIntensity:step5.returnToFirstVerification'),
+          primaryButtonAction: confirmReturnToFirstVerification,
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <Stack spacing={2}>
+              <BCTypography variant="body2">
+                {t('carbonIntensity:step5.returnToFirstVerificationConfirmText')}
+              </BCTypography>
+              <OutlinedInput
+                multiline
+                minRows={3}
+                value={returnReason}
+                error={!!returnReasonError}
+                onChange={(event) => {
+                  setReturnReason(event.target.value)
+                  if (returnReasonError) setReturnReasonError(null)
+                }}
+                placeholder={t(
+                  'carbonIntensity:step5.returnToFirstVerificationReasonPlaceholder'
+                )}
+                sx={{
+                  width: '100%',
+                  bgcolor: 'common.white',
+                  borderRadius: 1,
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: returnReasonError ? 'error.main' : 'grey.400'
+                  }
+                }}
+              />
+              {returnReasonError && (
+                <FormHelperText error sx={{ mt: 0 }}>
+                  {returnReasonError}
+                </FormHelperText>
+              )}
+            </Stack>
           )
         }}
       />

@@ -47,6 +47,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
     CIApplicationRiskAssessmentDraftSchema,
+    CIApplicationReturnHistorySchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationStatusEnum,
@@ -801,6 +802,11 @@ def _to_full_schema(
             if include_assignment_history
             else None
         ),
+        return_history=(
+            _return_history_from_records(history_records)
+            if include_assignment_history
+            else None
+        ),
         verification_1_user=CIApplicationUserSchema.model_validate(
             getattr(ci, "verification_1_user", None)
         ),
@@ -870,6 +876,32 @@ def _assignment_history_from_records(
                     snapshot.get("previous_analyst")
                 ),
                 new_analyst=_assignment_user_from_snapshot(snapshot.get("new_analyst")),
+                changed_at=changed_at,
+                changed_by=snapshot.get("changed_by"),
+            )
+        )
+    return sorted(events, key=lambda event: event.changed_at, reverse=True)
+
+
+def _return_history_from_records(
+    history_records: List,
+) -> List[CIApplicationReturnHistorySchema]:
+    events = []
+    for history in history_records:
+        snapshot = getattr(history, "ci_application_snapshot", None)
+        if (
+            not isinstance(snapshot, dict)
+            or snapshot.get("event") != "verification_returned_to_first_verification"
+        ):
+            continue
+        changed_at = snapshot.get("changed_at") or getattr(history, "create_date", None)
+        return_reason = (snapshot.get("return_reason") or "").strip()
+        if not changed_at or not return_reason:
+            continue
+        events.append(
+            CIApplicationReturnHistorySchema(
+                event=snapshot["event"],
+                return_reason=return_reason,
                 changed_at=changed_at,
                 changed_by=snapshot.get("changed_by"),
             )
@@ -2682,12 +2714,15 @@ class CIApplicationServices:
         """
         Government-side workflow actions transition a CI application
         between Submitted, Recommended, Completed, and Withdrawn according
-        to role-specific rules. The optional inline comment
-        remains ignored in favor of the shared internal_comments thread.
+        to role-specific rules. A second verifier may also return a Submitted
+        application from Verification 2 back to Verification 1 with a required
+        reason tracked in the history snapshot.
         """
         is_director = user_has_roles(user, [RoleEnum.DIRECTOR])
         is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
         is_compliance_manager = user_has_roles(user, [RoleEnum.COMPLIANCE_MANAGER])
+        return_to_first_verification = bool(data.return_to_first_verification)
+        return_reason = (data.reason or data.comment or "").strip()
 
         if not (is_government or is_director or is_analyst or is_compliance_manager):
             raise HTTPException(
@@ -2697,7 +2732,28 @@ class CIApplicationServices:
 
         current_status = ci_application.ci_application_status.status
 
-        if data.status == CIApplicationStatusEnum.Completed:
+        if return_to_first_verification:
+            if data.status != CIApplicationStatusEnum.Submitted:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Returning to first verification must keep the application in Submitted status.",
+                )
+            if current_status != CIApplicationStatusEnum.Submitted.value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only Submitted applications can be returned to first verification.",
+                )
+            if not ci_application.verification_2_date:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Applications can only be returned from second verification to first verification after Verification 2 is complete.",
+                )
+            if not return_reason:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="A return reason is required when returning an application to first verification.",
+                )
+        elif data.status == CIApplicationStatusEnum.Completed:
             if not is_director:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -2762,16 +2818,27 @@ class CIApplicationServices:
             ci_application.recommendation_date = None
             ci_application.approval_user_id = None
             ci_application.approval_date = None
+        elif return_to_first_verification:
+            self._reset_government_workflow_review(ci_application)
+            ci_application.approval_user_id = None
+            ci_application.approval_date = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
-        await self.repo.add_history(ci_application)
 
-        # NOTE: the optional `data.comment` field is intentionally ignored —
-        # the Step 5 comment thread now lives in the shared internal_comments
-        # framework (entityType="ciApplication"). Government reviewers who
-        # want to attach a comment to a decision should post it through that
-        # widget before/after recording the decision.
+        history_snapshot = None
+        if return_to_first_verification:
+            history_snapshot = {
+                "event": "verification_returned_to_first_verification",
+                "changed_at": datetime.now(timezone.utc).isoformat(),
+                "changed_by": user.keycloak_username,
+                "return_reason": return_reason,
+                "return_to_first_verification": True,
+            }
+        if history_snapshot is None:
+            await self.repo.add_history(ci_application)
+        else:
+            await self.repo.add_history(ci_application, snapshot=history_snapshot)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
         if is_director_approval:
@@ -2792,6 +2859,13 @@ class CIApplicationServices:
                 ci,
                 "director_returned",
                 "CI Application Director Returned",
+                origin_user_profile_id=user.user_profile_id,
+            )
+        elif return_to_first_verification:
+            await self._send_ci_notification(
+                ci,
+                "government_action",
+                "CI Application Returned to First Verification",
                 origin_user_profile_id=user.user_profile_id,
             )
         return await self._to_full_schema_with_user(ci, user)
