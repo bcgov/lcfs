@@ -29,6 +29,7 @@ from lcfs.db.models.fuel import (
     UnitOfMeasure,
     EndUseType,
 )
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema, camel_to_snake
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema, ModeEnum
@@ -968,6 +969,12 @@ class FuelSupplyRepository:
                 return None
             return round(float(value), digits)
 
+        def _is_renewable_liquid(fuel_supply):
+            fuel_type = fuel_supply.fuel_type
+            return bool(fuel_type.renewable) and (
+                fuel_type.units == QuantityUnitsEnum.Litres
+            )
+
         # Calculate analytics from FuelSupply objects
         total_volume = 0
         fuel_types_set = set()
@@ -1035,9 +1042,12 @@ class FuelSupplyRepository:
                     "zero_or_negative_compliance_units": 0,
                     "positive_cu_volume": 0,
                     "non_positive_cu_volume": 0,
+                    "renewable_volume": 0,
                 },
             )
             yearly[year]["total_volume"] += quantity
+            if _is_renewable_liquid(fs):
+                yearly[year]["renewable_volume"] += quantity
             yearly[year]["total_compliance_units"] += compliance_units
             if compliance_units > 0:
                 yearly[year]["positive_compliance_units"] += compliance_units
@@ -1105,14 +1115,8 @@ class FuelSupplyRepository:
         prior_volume = prior_year_data.get("total_volume", 0)
         current_compliance_units = current_year_data.get("total_compliance_units", 0)
         prior_compliance_units = prior_year_data.get("total_compliance_units", 0)
-        current_compliance_units_per_unit = (
-            _round(current_compliance_units / current_volume, 6)
-            if current_volume
-            else None
-        )
-        prior_compliance_units_per_unit = (
-            _round(prior_compliance_units / prior_volume, 6) if prior_volume else None
-        )
+        current_renewable_volume = current_year_data.get("renewable_volume", 0)
+        prior_renewable_volume = prior_year_data.get("renewable_volume", 0)
 
         fuel_type_yoy = []
         current_fuel_types = yearly_fuel_type.get(selected_year, {})
@@ -1170,7 +1174,6 @@ class FuelSupplyRepository:
         )
 
         compliance_unit_credit_debit_trend = []
-        compliance_units_per_unit_trend = []
         fuel_type_volume_trend = []
         top_fuel_codes = [
             {"fuelCode": fuel_code, "totalVolume": volume}
@@ -1180,7 +1183,6 @@ class FuelSupplyRepository:
         ]
         for year in filtered_sorted_years:
             year_data = yearly[year]
-            year_volume = year_data["total_volume"]
             compliance_unit_credit_debit_trend.extend(
                 [
                     {
@@ -1198,16 +1200,6 @@ class FuelSupplyRepository:
                         ),
                     },
                 ]
-            )
-            compliance_units_per_unit_trend.append(
-                {
-                    "reportingYear": year,
-                    "complianceUnitsPerUnitSupply": (
-                        _round(year_data["total_compliance_units"] / year_volume, 6)
-                        if year_volume
-                        else None
-                    ),
-                }
             )
             for fuel_type_name, fuel_type_data in yearly_fuel_type.get(
                 year, {}
@@ -1250,17 +1242,17 @@ class FuelSupplyRepository:
                 "complianceUnitsPctChangeYoy": _pct_change(
                     current_compliance_units, prior_compliance_units
                 ),
-                "complianceUnitsPerUnitSupply": current_compliance_units_per_unit,
-                "priorYearComplianceUnitsPerUnitSupply": prior_compliance_units_per_unit,
-                "complianceUnitsPerUnitSupplyChange": (
-                    _round(
-                        current_compliance_units_per_unit
-                        - prior_compliance_units_per_unit,
-                        6,
-                    )
-                    if current_compliance_units_per_unit is not None
-                    and prior_compliance_units_per_unit is not None
+                "totalRenewableVolume": current_renewable_volume,
+                "priorYearRenewableVolume": (
+                    prior_renewable_volume if prior_year else None
+                ),
+                "renewableVolumeChange": (
+                    current_renewable_volume - prior_renewable_volume
+                    if prior_year
                     else None
+                ),
+                "renewableVolumePctChangeYoy": _pct_change(
+                    current_renewable_volume, prior_renewable_volume
                 ),
                 "negativeYoyFuelTypeCount": negative_yoy_count,
                 "newFuelTypeCount": len(new_fuel_types),
@@ -1269,7 +1261,6 @@ class FuelSupplyRepository:
             },
             "fuel_type_yoy": fuel_type_yoy,
             "compliance_unit_credit_debit_trend": compliance_unit_credit_debit_trend,
-            "compliance_units_per_unit_trend": compliance_units_per_unit_trend,
             "fuel_type_volume_trend": fuel_type_volume_trend,
             "top_fuel_codes": top_fuel_codes,
         }
