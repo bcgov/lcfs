@@ -694,17 +694,44 @@ class FuelSupplyRepository:
             delete(FuelSupply).where(FuelSupply.fuel_supply_id == fuel_supply_id)
         )
 
-    @repo_handler
-    async def get_organization_fuel_supply_paginated(
-        self, organization_id: int, pagination: PaginationRequestSchema
+    def _organization_effective_fuel_supply_query(
+        self, organization_id: int, include_fuel_code_prefix: bool = False
     ):
         """
-        Get paginated fuel supply records for an organization across all compliance reports.
-        Returns FuelSupply objects with relationships loaded.
+        Base select for an organization's Supply History across every one of
+        its compliance reports, with the row's reference data eager-loaded.
+
+        A supplemental report re-versions each schedule row it touches under
+        the same ``group_uuid``, so the naive "all CREATE/UPDATE rows for the
+        org" query returns the original report's row *and* the supplemental's
+        row and the Supply History tab double counts the volume (issue #5045).
+        Keep only the latest version of each ``group_uuid`` — scoped to the
+        organization's reports — and drop groups whose latest version is a
+        DELETE, mirroring ``get_effective_fuel_supplies`` for a single chain.
         """
-        # Build base query with eager loading of relationships
-        query = (
+        organization_report_ids = select(ComplianceReport.compliance_report_id).where(
+            ComplianceReport.organization_id == organization_id
+        )
+        latest_version_subq = VersioningQueryHelper.latest_version_subquery(
+            FuelSupply,
+            version_label="max_version",
+            where_clauses=[
+                FuelSupply.compliance_report_id.in_(organization_report_ids)
+            ],
+        )
+        fuel_code_loader = contains_eager(FuelSupply.fuel_code)
+        if include_fuel_code_prefix:
+            fuel_code_loader = fuel_code_loader.joinedload(FuelCode.fuel_code_prefix)
+
+        return (
             select(FuelSupply)
+            .join(
+                latest_version_subq,
+                and_(
+                    FuelSupply.group_uuid == latest_version_subq.c.group_uuid,
+                    FuelSupply.version == latest_version_subq.c.max_version,
+                ),
+            )
             .join(
                 ComplianceReport,
                 FuelSupply.compliance_report_id
@@ -735,7 +762,7 @@ class FuelSupplyRepository:
                     contains_eager(FuelSupply.fuel_type),
                 ),
                 contains_eager(FuelSupply.provision_of_the_act),
-                contains_eager(FuelSupply.fuel_code),
+                fuel_code_loader,
                 contains_eager(FuelSupply.compliance_report).contains_eager(
                     ComplianceReport.compliance_period
                 ),
@@ -747,6 +774,17 @@ class FuelSupplyRepository:
                 )
             )
         )
+
+    @repo_handler
+    async def get_organization_fuel_supply_paginated(
+        self, organization_id: int, pagination: PaginationRequestSchema
+    ):
+        """
+        Get paginated fuel supply records for an organization across all compliance reports.
+        Returns FuelSupply objects with relationships loaded.
+        """
+        # Effective (latest-version) rows only, with eager-loaded relationships
+        query = self._organization_effective_fuel_supply_query(organization_id)
 
         # Apply filters if provided
         if pagination.filters:
@@ -846,49 +884,9 @@ class FuelSupplyRepository:
         Get analytics data for organization fuel supply.
         Calculates totals by fuel type, year, category, and provision.
         """
-        # Base query - get all fuel supplies with relationships
-        query = (
-            select(FuelSupply)
-            .join(
-                ComplianceReport,
-                FuelSupply.compliance_report_id
-                == ComplianceReport.compliance_report_id,
-            )
-            .join(
-                CompliancePeriod,
-                ComplianceReport.compliance_period_id
-                == CompliancePeriod.compliance_period_id,
-            )
-            .outerjoin(FuelType, FuelSupply.fuel_type_id == FuelType.fuel_type_id)
-            .outerjoin(
-                FuelCategory,
-                FuelSupply.fuel_category_id == FuelCategory.fuel_category_id,
-            )
-            .outerjoin(
-                ProvisionOfTheAct,
-                FuelSupply.provision_of_the_act_id
-                == ProvisionOfTheAct.provision_of_the_act_id,
-            )
-            .outerjoin(FuelCode, FuelSupply.fuel_code_id == FuelCode.fuel_code_id)
-            .options(
-                *_scalar_reference_options(
-                    contains_eager(FuelSupply.fuel_category),
-                    contains_eager(FuelSupply.fuel_type),
-                ),
-                contains_eager(FuelSupply.provision_of_the_act),
-                contains_eager(FuelSupply.fuel_code).joinedload(
-                    FuelCode.fuel_code_prefix
-                ),
-                contains_eager(FuelSupply.compliance_report).contains_eager(
-                    ComplianceReport.compliance_period
-                ),
-            )
-            .where(ComplianceReport.organization_id == organization_id)
-            .where(
-                FuelSupply.action_type.in_(
-                    [ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]
-                )
-            )
+        # Effective (latest-version) rows only, with eager-loaded relationships
+        query = self._organization_effective_fuel_supply_query(
+            organization_id, include_fuel_code_prefix=True
         )
 
         selected_year_filter = None
