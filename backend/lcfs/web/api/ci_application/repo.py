@@ -46,7 +46,11 @@ from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
-from lcfs.web.api.base import PaginationRequestSchema, apply_filter_conditions
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    PaginatedQueryBuilder,
+    apply_filter_conditions,
+)
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -472,31 +476,27 @@ class CIApplicationRepository:
     # ------------------------------------------------------------------
 
     def _apply_filters(self, pagination: PaginationRequestSchema) -> list:
-        conditions = []
-        for f in pagination.filters:
-            if f.field == "ci_application_id":
-                cond = _build_ci_application_id_condition(f)
-                if cond is not None:
-                    conditions.append(cond)
-                continue
+        # Only the allow-listed fields below are filterable; anything else is
+        # silently dropped rather than erroring on a stale/removed field name.
+        known_fields = set(_DIRECT_FILTER_COLUMNS) | set(_NESTED_FILTER_BUILDERS)
+        relevant_filters = [f for f in pagination.filters if f.field in known_fields]
 
-            nested_builder = _NESTED_FILTER_BUILDERS.get(f.field)
-            if nested_builder is not None:
-                cond = nested_builder(f)
-                if cond is not None:
-                    conditions.append(cond)
-                continue
-
-            column = _DIRECT_FILTER_COLUMNS.get(f.field)
-            if column is None:
-                continue
-
-            cond = apply_filter_conditions(
+        def _direct_filter(column):
+            return lambda f: apply_filter_conditions(
                 column, _resolve_value(f), f.type, f.filter_type
             )
-            if cond is not None:
-                conditions.append(cond)
-        return conditions
+
+        custom_filters = {
+            **_NESTED_FILTER_BUILDERS,
+            "ci_application_id": _build_ci_application_id_condition,
+            **{
+                field: _direct_filter(column)
+                for field, column in _DIRECT_FILTER_COLUMNS.items()
+                if field != "ci_application_id"
+            },
+        }
+        builder = PaginatedQueryBuilder(CIApplication, custom_filters=custom_filters)
+        return builder.build_conditions(relevant_filters)
 
     def _apply_sorting(self, pagination: PaginationRequestSchema):
         if not pagination.sort_orders:

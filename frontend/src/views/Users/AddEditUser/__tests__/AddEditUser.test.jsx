@@ -30,7 +30,6 @@ vi.mock('react-router-dom', async (importOriginal) => {
   }
 })
 
-
 // Mocking react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -81,6 +80,12 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useUser')
 vi.mock('@/hooks/useOrganization')
+vi.mock('@/hooks/useNotifications', () => ({
+  useTargetUserNotificationSubscriptions: vi.fn(() => ({
+    data: [],
+    isFetching: false
+  }))
+}))
 
 // Override the global BCFormText mock so inputs are wired to react-hook-form.
 vi.mock('@/components/BCForm/BCFormText', async () => {
@@ -151,7 +156,12 @@ vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
 
 vi.mock('@/components/BCForm/BCFormAddressAutocomplete', () => ({
     BCFormAddressAutocomplete: ({ name, label, disabled, ...props }) => (
-      <input data-test={name} aria-label={label} disabled={disabled} {...props} />
+      <input
+        data-test={name}
+        aria-label={label}
+        disabled={disabled}
+        {...props}
+      />
     )
 }))
 
@@ -196,7 +206,10 @@ vi.mock('../components/IDIRSpecificRoleFields', () => ({
           data-test="idir-admin-checkbox"
           type="checkbox"
           onChange={(e) =>
-            form.setValue('adminRole', e.target.checked ? ['administrator'] : [])
+            form.setValue(
+              'adminRole',
+              e.target.checked ? ['administrator'] : []
+            )
           }
           disabled={disabled}
         />
@@ -224,7 +237,9 @@ vi.mock('../components/BCeIDSpecificRoleFields', () => ({
           data-test="bceid-analyst-checkbox"
           type="checkbox"
           onChange={(e) => {
-            const currentRoles = Array.isArray(form.watch('bceidRoles')) ? form.watch('bceidRoles') : []
+            const currentRoles = Array.isArray(form.watch('bceidRoles'))
+              ? form.watch('bceidRoles')
+              : []
             form.setValue(
               'bceidRoles',
               e.target.checked
@@ -232,7 +247,10 @@ vi.mock('../components/BCeIDSpecificRoleFields', () => ({
                 : currentRoles.filter((r) => r !== 'analyst')
             )
           }}
-          checked={Array.isArray(form.watch('bceidRoles')) && form.watch('bceidRoles').includes('analyst')}
+          checked={
+            Array.isArray(form.watch('bceidRoles')) &&
+            form.watch('bceidRoles').includes('analyst')
+          }
           disabled={disabled}
         />
         <span>BCeID Analyst</span>
@@ -298,6 +316,12 @@ describe('AddEditUser', () => {
     vi.mocked(userHooks.useDeleteUser).mockReturnValue({
       mutate: mockDeleteUser,
       isPending: false
+    })
+
+    vi.mocked(userHooks.useUserAssignedWork).mockReturnValue({
+      data: null,
+      isFetching: false,
+      isError: false
     })
   })
 
@@ -419,10 +443,15 @@ describe('AddEditUser', () => {
       isLoading: false
     })
 
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     fillRequiredIdirFields()
     fireEvent.click(screen.getByTestId('saveUser'))
+
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
     await waitFor(() => {
       expect(mockCreateUser).toHaveBeenCalled()
@@ -443,11 +472,16 @@ describe('AddEditUser', () => {
       isLoading: false
     })
 
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     // For BCeID: firstName, lastName, userName, keycloakEmail are required (jobTitle is optional)
     fillRequiredBceidFields()
     fireEvent.click(screen.getByTestId('saveUser'))
+
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
     await waitFor(() => {
       expect(mockCreateUser).toHaveBeenCalled()
@@ -487,7 +521,10 @@ describe('AddEditUser', () => {
       isLoading: false
     })
 
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     await waitFor(() => {
       expect(document.getElementById('firstName')).toHaveValue('John')
@@ -495,6 +532,8 @@ describe('AddEditUser', () => {
     })
 
     fireEvent.click(screen.getByTestId('saveUser'))
+
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
     await waitFor(() => {
       expect(mockUpdateUser).toHaveBeenCalledWith({
@@ -522,10 +561,15 @@ describe('AddEditUser', () => {
       isLoading: false
     })
 
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     fillRequiredIdirFields()
     fireEvent.click(screen.getByTestId('saveUser'))
+
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
     await waitFor(() => {
       expect(mockCreateUser).toHaveBeenCalledWith(
@@ -554,10 +598,15 @@ describe('AddEditUser', () => {
       isLoading: false
     })
 
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     fillRequiredBceidFields()
     fireEvent.click(screen.getByTestId('saveUser'))
+
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
     await waitFor(() => {
       expect(mockCreateUser).toHaveBeenCalledWith(
@@ -576,7 +625,10 @@ describe('AddEditUser', () => {
   it('handles form validation errors for missing required fields', async () => {
     mockUseParams.mockReturnValue({}) // Add mode
 
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     // Try to submit form without filling required fields
     fireEvent.click(screen.getByTestId('saveUser'))
@@ -600,7 +652,10 @@ describe('AddEditUser', () => {
       isLoading: false
     })
 
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     fillRequiredIdirFields({ keycloakEmail: 'invalid-email' })
     fireEvent.click(screen.getByTestId('saveUser'))
@@ -624,19 +679,28 @@ describe('AddEditUser', () => {
       isLoading: false,
       isFetched: true
     })
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
     expect(screen.queryByTestId('delete-user-btn')).not.toBeInTheDocument()
   })
 
   it('hides delete button for BCeID users in Add mode', () => {
     mockUseParams.mockReturnValue({}) // Add mode
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
     expect(screen.queryByTestId('delete-user-btn')).not.toBeInTheDocument()
   })
 
   // --- Form State Tests ---
   it('disables role fields when status is Inactive', async () => {
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     // Set status to Inactive
     const statusRadios = screen.getAllByRole('radio')
@@ -655,7 +719,10 @@ describe('AddEditUser', () => {
   })
 
   it('enables role fields when status is Active', async () => {
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     // Status should be Active by default, but let's explicitly set it
     const statusRadios = screen.getAllByRole('radio')
@@ -677,36 +744,60 @@ describe('AddEditUser', () => {
   // wrapper, kept in sync by useWatch inside the mock component.
 
   it('clears iaRole when Director is selected', async () => {
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     // Set an IA role first
     fireEvent.click(screen.getByTestId('idir-ia-role-radio'))
     await waitFor(() => {
-      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-ia-role', 'ia analyst')
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute(
+        'data-ia-role',
+        'ia analyst'
+      )
     })
 
     // Select Director — the existing useEffect must clear iaRole
     fireEvent.click(screen.getByTestId('idir-director-radio'))
     await waitFor(() => {
-      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-idir-role', 'director')
-      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-ia-role', '')
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute(
+        'data-idir-role',
+        'director'
+      )
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute(
+        'data-ia-role',
+        ''
+      )
     })
   })
 
   it('clears Director when an IA role is selected', async () => {
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     // Set Director first
     fireEvent.click(screen.getByTestId('idir-director-radio'))
     await waitFor(() => {
-      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-idir-role', 'director')
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute(
+        'data-idir-role',
+        'director'
+      )
     })
 
     // Select an IA role — the new useEffect must clear idirRole (Director)
     fireEvent.click(screen.getByTestId('idir-ia-role-radio'))
     await waitFor(() => {
-      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-ia-role', 'ia analyst')
-      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-idir-role', '')
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute(
+        'data-ia-role',
+        'ia analyst'
+      )
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute(
+        'data-idir-role',
+        ''
+      )
     })
   })
 
@@ -724,7 +815,7 @@ describe('AddEditUser', () => {
       isLoading: false,
       isFetched: true
     })
-    
+
     // Government user viewing BCeID user
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
@@ -735,8 +826,11 @@ describe('AddEditUser', () => {
       hasRoles: vi.fn((role) => role === roles.government),
       isLoading: false
     })
-    
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
     expect(screen.getByTestId('delete-user-btn')).toBeInTheDocument()
     expect(screen.getByTestId('delete-user-btn')).not.toBeDisabled()
   })
@@ -754,7 +848,7 @@ describe('AddEditUser', () => {
       isLoading: false,
       isFetched: true
     })
-    
+
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' },
@@ -764,8 +858,11 @@ describe('AddEditUser', () => {
       hasRoles: vi.fn((role) => role === roles.government),
       isLoading: false
     })
-    
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
     expect(screen.getByTestId('delete-user-btn')).toBeInTheDocument()
     expect(screen.getByTestId('delete-user-btn')).toBeDisabled()
   })
@@ -783,7 +880,7 @@ describe('AddEditUser', () => {
       isLoading: false,
       isFetched: true
     })
-    
+
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' },
@@ -793,14 +890,19 @@ describe('AddEditUser', () => {
       hasRoles: vi.fn((role) => role === roles.government),
       isLoading: false
     })
-    
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
-    
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
+
     fireEvent.click(screen.getByTestId('delete-user-btn'))
-    
+
     await waitFor(() => {
       expect(screen.getByText('Confirm deletion')).toBeInTheDocument()
-      expect(screen.getByText('Are you sure you want to delete this user?')).toBeInTheDocument()
+      expect(
+        screen.getByText('Are you sure you want to delete this user?')
+      ).toBeInTheDocument()
     })
   })
 
@@ -817,7 +919,7 @@ describe('AddEditUser', () => {
       isLoading: false,
       isFetched: true
     })
-    
+
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' },
@@ -827,19 +929,22 @@ describe('AddEditUser', () => {
       hasRoles: vi.fn((role) => role === roles.government),
       isLoading: false
     })
-    
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
-    
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
+
     // Open dialog
     fireEvent.click(screen.getByTestId('delete-user-btn'))
-    
+
     await waitFor(() => {
       expect(screen.getByText('Confirm deletion')).toBeInTheDocument()
     })
-    
+
     // Close dialog - the cancel button in dialog has data-test="back-btn"
     fireEvent.click(screen.getByTestId('back-btn'))
-    
+
     await waitFor(() => {
       expect(screen.queryByText('Confirm deletion')).not.toBeInTheDocument()
     })
@@ -860,7 +965,7 @@ describe('AddEditUser', () => {
       isLoading: false,
       isFetched: true
     })
-    
+
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' },
@@ -870,32 +975,41 @@ describe('AddEditUser', () => {
       hasRoles: vi.fn((role) => role === roles.government),
       isLoading: false
     })
-    
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
-    
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
+
     // Open dialog
     fireEvent.click(screen.getByTestId('delete-user-btn'))
-    
+
     await waitFor(() => {
       expect(screen.getByText('Confirm deletion')).toBeInTheDocument()
     })
-    
+
     // Confirm deletion - look for the button specifically in the dialog
     const deleteButtons = screen.getAllByText('Delete User')
-    const confirmDeleteButton = deleteButtons.find(button => 
+    const confirmDeleteButton = deleteButtons.find((button) =>
       button.closest('[role="dialog"]')
     )
     fireEvent.click(confirmDeleteButton)
-    
+
     await waitFor(() => {
-      expect(mockDeleteUser).toHaveBeenCalledWith('bceidUser123', expect.any(Object))
+      expect(mockDeleteUser).toHaveBeenCalledWith(
+        'bceidUser123',
+        expect.any(Object)
+      )
     })
   })
 
   // --- Form Rendering Tests ---
   it('renders form components correctly', async () => {
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
-    
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
+
     // Verify basic form elements are present
     expect(screen.getByTestId('saveUser')).toBeInTheDocument()
     expect(screen.getByTestId('cancel-btn')).toBeInTheDocument()
@@ -922,9 +1036,12 @@ describe('AddEditUser', () => {
       isLoading: false,
       isFetched: true
     })
-    
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
-    
+
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
+
     // Wait for the component to render with user data loaded
     await waitFor(() => {
       // Verify form fields are present and rendered correctly
@@ -934,14 +1051,17 @@ describe('AddEditUser', () => {
       expect(screen.getByTestId('keycloakEmail')).toBeInTheDocument()
       expect(screen.getByTestId('userName')).toBeInTheDocument()
     })
-    
+
     // Verify the form renders properly with user context
     expect(screen.getByTestId('saveUser')).toBeInTheDocument()
     expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
   })
 
   it('populates form with supplier user data', async () => {
-    mockUseParams.mockReturnValue({ userID: 'supplierUser123', orgID: 'org456' })
+    mockUseParams.mockReturnValue({
+      userID: 'supplierUser123',
+      orgID: 'org456'
+    })
     vi.mocked(organizationUserHooks.useOrganizationUser).mockReturnValue({
       data: {
         userProfileId: 'supplierUser123',
@@ -958,7 +1078,7 @@ describe('AddEditUser', () => {
       isLoading: false,
       isFetched: true
     })
-    
+
     vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' },
@@ -967,16 +1087,19 @@ describe('AddEditUser', () => {
       hasRoles: vi.fn((role) => role === roles.supplier),
       isLoading: false
     })
-    
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
-    
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
+
     await waitFor(() => {
       // Verify form fields are present and rendered correctly for supplier user
       expect(screen.getByTestId('firstName')).toBeInTheDocument()
       expect(screen.getByTestId('lastName')).toBeInTheDocument()
       expect(screen.getByTestId('keycloakEmail')).toBeInTheDocument()
     })
-    
+
     // Verify BCeID role fields are rendered by checking individual components
     expect(screen.getByTestId('bceid-roles')).toBeInTheDocument()
     expect(screen.getByTestId('bceid-read-only-radio')).toBeInTheDocument()
@@ -987,21 +1110,24 @@ describe('AddEditUser', () => {
   // --- Simple Error Callback Test ---
   it('calls console.error when onUserOperationError is triggered', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    
+
     // Create a simple error for the callback to use
     const testError = new Error('Test error')
-    
+
     // Mock the hook to get access to the callback
-    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
-    
+    render(
+      <AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
+
     // Get the error callback from the hook - it should be defined
     const createUserCall = vi.mocked(userHooks.useCreateUser).mock.calls[0]
     const errorCallback = createUserCall[0].onError
-    
+
     // Verify callback exists and call it
     expect(errorCallback).toBeDefined()
     errorCallback(testError)
-    
+
     expect(consoleSpy).toHaveBeenCalledWith('Error saving user:', testError)
     consoleSpy.mockRestore()
   })
@@ -1015,9 +1141,12 @@ describe('AddEditUser', () => {
       hasRoles: vi.fn((role) => role === roles.supplier),
       isLoading: false
     })
-    
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
-    
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
+
     // Note: This test was checking internal hook callback mechanics
     // that are not directly testable with the current mock structure
     expect(screen.getByTestId('saveUser')).toBeInTheDocument()
@@ -1056,13 +1185,18 @@ describe('AddEditUser', () => {
       isLoading: false
     })
 
-    render(<AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      { wrapper }
+    )
 
     await waitFor(() => {
       expect(document.getElementById('firstName')).toHaveValue('Jane')
     })
 
     fireEvent.click(screen.getByTestId('saveUser'))
+
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
 
     await waitFor(() => {
       expect(mockUpdateUser).toHaveBeenCalledWith({

@@ -12,6 +12,7 @@ from lcfs.web.api.user.schema import (
     UserCreateSchema,
     UserBaseSchema,
     UserLoginHistoryResponseSchema,
+    UserAssignedWorkSchema,
     UsersSchema,
     UserActivitiesResponseSchema,
     UpdateEmailSchema,
@@ -232,6 +233,20 @@ async def get_user_roles(
     Endpoint to get the roles of a user
     """
     return await service.get_user_roles(user_id)
+
+
+@router.get(
+    "/{user_id}/assigned-work",
+    response_model=UserAssignedWorkSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_user_assigned_work(
+    request: Request,
+    user_id: int,
+    service: UserServices = Depends(),
+) -> UserAssignedWorkSchema:
+    return await service.get_user_assigned_work(user_id)
 
 
 @router.post(

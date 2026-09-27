@@ -15,6 +15,7 @@ import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 import { useDownloadDocument } from '@/hooks/useDocuments'
 import colors from '@/themes/base/colors'
 import {
@@ -678,7 +679,7 @@ export const ApplicationSummary = ({
                 key={d.documentId}
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 2fr) 96px 140px 120px',
+                  gridTemplateColumns: 'minmax(0, 2fr) 96px 140px 120px 48px',
                   alignItems: 'center',
                   gap: 2,
                   py: 0.75,
@@ -733,6 +734,11 @@ export const ApplicationSummary = ({
                 <BCTypography variant="body2" color="text.secondary">
                   {formatDate(d.createDate)}
                 </BCTypography>
+                <DocumentPreviewButton
+                  parentType="ci_application"
+                  parentID={ciApplication?.ciApplicationId}
+                  document={d}
+                />
               </Box>
             )
           })
