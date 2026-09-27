@@ -7,10 +7,24 @@ import {
   useUsers,
   useCreateUser,
   useUpdateUser,
-  useDeleteUser
+  useDeleteUser,
+  useUserAssignedWork
 } from '../useUser'
 
 vi.mock('@/services/useApiService')
+
+vi.mock('@/constants/routes', () => ({
+  apiRoutes: {
+    listUsers: '/users/list',
+    getUserActivities: '/users/:userID/activity',
+    getUserAssignedWork: '/users/:userID/assigned-work',
+    getAllUserActivities: '/users/activities/all',
+    getUserLoginHistories: '/users/login-history',
+    seededTestUsers: '/users/seeded-test-users',
+    resolveOrgName: '/users/anonymizer/resolve-org-name',
+    deleteUser: '/users/:userID'
+  }
+}))
 
 describe('useUser', () => {
   const mockGet = vi.fn()
@@ -247,6 +261,54 @@ describe('useUser', () => {
       })
 
       expect(mockPost).toHaveBeenCalledWith('/users/')
+    })
+  })
+
+  describe('useUserAssignedWork', () => {
+    const mockAssignedWork = {
+      complianceReports: [
+        { complianceReportId: 1, organization: 'Acme Corp', period: '2024', status: 'Submitted' }
+      ],
+      ciApplications: [
+        { ciApplicationId: 10, organization: 'Acme Corp', status: 'In Review' }
+      ]
+    }
+
+    it('fetches assigned work for a given userId', async () => {
+      mockGet.mockResolvedValue({ data: mockAssignedWork })
+
+      const { result } = renderHook(() => useUserAssignedWork(99), { wrapper })
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+      expect(result.current.data).toEqual(mockAssignedWork)
+      expect(mockGet).toHaveBeenCalledWith('/users/99/assigned-work')
+    })
+
+    it('is disabled and does not fetch when userId is null', () => {
+      const { result } = renderHook(() => useUserAssignedWork(null), { wrapper })
+
+      expect(result.current.fetchStatus).toBe('idle')
+      expect(mockGet).not.toHaveBeenCalled()
+    })
+
+    it('handles API errors', async () => {
+      mockGet.mockRejectedValue(new Error('Server error'))
+
+      const { result } = renderHook(() => useUserAssignedWork(99), { wrapper })
+
+      await waitFor(() => expect(result.current.isError).toBe(true))
+    })
+
+    it('returns empty arrays when no work is assigned', async () => {
+      mockGet.mockResolvedValue({ data: { complianceReports: [], ciApplications: [] } })
+
+      const { result } = renderHook(() => useUserAssignedWork(99), { wrapper })
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+      expect(result.current.data.complianceReports).toHaveLength(0)
+      expect(result.current.data.ciApplications).toHaveLength(0)
     })
   })
 })

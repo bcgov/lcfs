@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within
+} from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper'
 import { roles } from '@/constants/roles'
@@ -10,10 +16,11 @@ const mockUserState = vi.hoisted(() => ({
 }))
 
 vi.mock('react-quill', () => {
-  const ReactQuill = ({ value, onChange }) => (
+  const ReactQuill = ({ value, onChange, placeholder }) => (
     <textarea
       aria-label="Comment editor"
       value={value}
+      placeholder={placeholder}
       onChange={(event) => onChange?.(event.target.value)}
     />
   )
@@ -34,11 +41,25 @@ vi.mock('react-i18next', () => ({
         'internalComment:edit': 'Edit',
         'internalComment:edited': 'Edited',
         'internalComment:internal': 'Internal',
+        'internalComment:internalOnly': 'Internal only',
+        'internalComment:commentVisibility': 'Comment visibility',
+        'internalComment:internalVisibilityMessage':
+          'Internal only - visible to government users only.',
+        'internalComment:publicVisibilityMessage':
+          'Public - visible to everyone, including external parties.',
+        'internalComment:internalCommentPlaceholder':
+          'Write an internal note (government users only)',
+        'internalComment:publicCommentPlaceholder':
+          'Write a public comment (visible to external parties)',
+        'internalComment:addInternalComment': 'Add internal comment',
+        'internalComment:addPublicComment': 'Add public comment',
         'internalComment:internalComments': 'Internal comments',
         'internalComment:public': 'Public',
         'internalComment:publicComments': 'Public comments',
         'internalComment:cancel': 'Cancel',
         'internalComment:editComment': 'Edit comment:',
+        'internalComment:newInternalComment': 'New internal comment',
+        'internalComment:newPublicComment': 'New public comment',
         'internalComment:postComment': 'Post comment',
         'internalComment:publicCommentConfirmText':
           'This comment will be visible outside the internal team.',
@@ -113,6 +134,70 @@ describe('CommentList comment filters', () => {
     expect(screen.getByText('Public comment body')).toBeInTheDocument()
   })
 
+  it('identifies IDIR comment visibility with labelled lock and globe badges', () => {
+    const { container } = render(<CommentList {...baseProps} />, { wrapper })
+    const cards = container.querySelectorAll('[data-test="comment-card"]')
+
+    expect(cards[0]).toHaveAttribute('data-visibility', 'Internal')
+    expect(within(cards[0]).getByText('Internal')).toBeInTheDocument()
+    expect(
+      cards[0].querySelector('[data-testid="LockOutlinedIcon"]')
+    ).toBeInTheDocument()
+    expect(cards[1]).toHaveAttribute('data-visibility', 'Public')
+    expect(within(cards[1]).getByText('Public')).toBeInTheDocument()
+    expect(
+      cards[1].querySelector('[data-testid="LanguageIcon"]')
+    ).toBeInTheDocument()
+  })
+
+  it('updates the visibility message, placeholder, and submit action', () => {
+    const onVisibilityChange = vi.fn()
+    const { rerender } = render(
+      <CommentList
+        {...baseProps}
+        commentInput="Draft"
+        onVisibilityChange={onVisibilityChange}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.getByRole('button', { name: 'Internal only' })
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      screen.getByRole('button', { name: 'Add internal comment' })
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Public' }))
+    expect(onVisibilityChange).toHaveBeenCalledWith('Public')
+
+    rerender(
+      <CommentList
+        {...baseProps}
+        commentInput="Draft"
+        visibility="Public"
+        onVisibilityChange={onVisibilityChange}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Public' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    expect(
+      screen.getByText(
+        'Public - visible to everyone, including external parties.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Comment editor')).toHaveAttribute(
+      'placeholder',
+      'Write a public comment (visible to external parties)'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Add public comment' })
+    ).toBeInTheDocument()
+  })
+
   it('filters between internal, public, and all comments without reloading', () => {
     render(<CommentList {...baseProps} />, { wrapper })
 
@@ -166,7 +251,9 @@ describe('CommentList comment filters', () => {
       screen.getByRole('tab', { name: 'Internal comments' })
     ).toHaveAttribute('aria-selected', 'true')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add comment' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Add internal comment' })
+    )
 
     await waitFor(() => expect(onAddComment).toHaveBeenCalled())
     await waitFor(() =>
@@ -191,7 +278,16 @@ describe('CommentList comment filters', () => {
       { wrapper }
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add comment' }))
+    expect(
+      screen.getByText(
+        'Public - visible to everyone, including external parties.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Comment editor')).toHaveAttribute(
+      'placeholder',
+      'Write a public comment (visible to external parties)'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Add public comment' }))
 
     expect(onAddComment).not.toHaveBeenCalled()
     expect(screen.getByText('Post public comment?')).toBeInTheDocument()
@@ -199,7 +295,7 @@ describe('CommentList comment filters', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onAddComment).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add comment' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add public comment' }))
     fireEvent.click(screen.getByRole('button', { name: 'Post comment' }))
 
     await waitFor(() => expect(onAddComment).toHaveBeenCalled())
@@ -227,7 +323,7 @@ describe('CommentList comment filters', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
-    fireEvent.click(screen.getAllByRole('radio', { name: 'Public' })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: 'Public' })[0])
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
 
     expect(onEditComment).not.toHaveBeenCalled()

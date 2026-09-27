@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: lcfs
       POSTGRES_PASSWORD: development_only
     ports:
-      - 5432:5432
+      - "${LCFS_DB_PUBLISHED_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

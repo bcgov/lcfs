@@ -1,6 +1,7 @@
 import logging
-import uuid
+import os
 import re
+import uuid
 
 import structlog
 from fastapi import FastAPI, HTTPException
@@ -41,9 +42,13 @@ origins = [
     "https://lowcarbonfuels.gov.bc.ca",
 ]
 
-# Regex pattern to match dev environment PR subdomains (e.g., lcfs-dev-3006)
-import re
+if settings.environment == "dev":
+    frontend_port = os.getenv("LCFS_FRONTEND_PUBLISHED_PORT", "3000")
+    frontend_origin = f"http://localhost:{frontend_port}"
+    if frontend_origin not in origins:
+        origins.append(frontend_origin)
 
+# Regex pattern to match dev environment PR subdomains (e.g., lcfs-dev-3006)
 dev_origin_pattern = re.compile(
     r"^https://lcfs-dev-\d+\.apps\.silver\.devops\.gov\.bc\.ca$"
 )

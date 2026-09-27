@@ -13,6 +13,7 @@ import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
 } from '@/views/Transactions/constants.js'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 // Define common inline styles
 const inlineLabelStyle = { display: 'inline', marginRight: 6 }
@@ -120,6 +121,14 @@ export const TransactionView = ({ transaction }) => {
                         >
                           {file.fileName}
                         </BCTypography>
+                        <DocumentPreviewButton
+                          parentType={transactionType}
+                          parentID={
+                            transaction.adminAdjustmentId ??
+                            transaction.initiativeAgreementId
+                          }
+                          document={file}
+                        />
                       </ListItemButton>
                     ))}
                   </List>

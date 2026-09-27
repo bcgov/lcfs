@@ -14,6 +14,7 @@ from lcfs.web.api.base import (
     FilterModel,
     PaginationRequestSchema,
     PaginationResponseSchema,
+    PaginatedQueryBuilder,
     apply_filter_conditions,
     get_field_for_filter,
     validate_pagination,
@@ -51,123 +52,96 @@ class OrganizationService:
         Returns:
             List[Transactions]: The list of transactions after applying the filters.
         """
+        builder = PaginatedQueryBuilder(
+            TransactionView,
+            custom_filters={"transaction_id": self._transaction_id_filter},
+            default_filter=self._generic_transaction_filter,
+        )
+        conditions.extend(builder.build_conditions(pagination.filters))
 
-        for filter in pagination.filters:
-            if filter.field == "transaction_id":
-                filter_value = filter.filter.upper()
-                for (
-                    prefix,
-                    transaction_type,
-                ) in id_prefix_to_transaction_type_map.items():
-                    if filter_value.startswith(prefix):
-                        numeric_part = filter_value[len(prefix) :]
-                        if numeric_part:
-                            if numeric_part.isdigit():
-                                conditions.append(
-                                    and_(
-                                        TransactionView.transaction_type
-                                        == transaction_type,
-                                        TransactionView.transaction_id
-                                        == int(numeric_part),
-                                    )
-                                )
-                            else:
-                                # Invalid numeric part, add a condition that will never match
-                                conditions.append(False)
-                        else:
-                            # Only prefix provided, filter by transaction type only
-                            conditions.append(
-                                TransactionView.transaction_type == transaction_type
-                            )
-                        break
-                else:
-                    # If no prefix matches, treat the whole value as a potential transaction_id
-                    if filter_value.isdigit():
-                        conditions.append(
-                            TransactionView.transaction_id == int(filter_value)
-                        )
-                    else:
-                        # Invalid input, add a condition that will never match
-                        conditions.append(False)
+    @staticmethod
+    def _transaction_id_filter(filter_model):
+        filter_value = filter_model.filter.upper()
+        for prefix, transaction_type in id_prefix_to_transaction_type_map.items():
+            if filter_value.startswith(prefix):
+                numeric_part = filter_value[len(prefix) :]
+                if not numeric_part:
+                    return TransactionView.transaction_type == transaction_type
+                if numeric_part.isdigit():
+                    return and_(
+                        TransactionView.transaction_type == transaction_type,
+                        TransactionView.transaction_id == int(numeric_part),
+                    )
+                return False  # invalid numeric part, never matches
+        if filter_value.isdigit():
+            return TransactionView.transaction_id == int(filter_value)
+        return False  # invalid input, never matches
+
+    @staticmethod
+    def _generic_transaction_filter(filter_model):
+        field = get_field_for_filter(TransactionView, filter_model.field)
+
+        if filter_model.filter_type == "date":
+            if filter_model.type == "inRange":
+                start = filter_model.date_from
+                end = filter_model.date_to
+                if not start and not end:
+                    logger.info(
+                        "Skipping date range filter with no values",
+                        field=filter_model.field,
+                    )
+                    return None
+                filter_value = [v for v in (start, end) if v]
             else:
-                field = get_field_for_filter(TransactionView, filter.field)
-                if filter.filter_type == "date":
-                    if filter.type == "inRange":
-                        start = filter.date_from
-                        end = filter.date_to
-                        if not start and not end:
-                            logger.info(
-                                "Skipping date range filter with no values",
-                                field=filter.field,
-                            )
-                            continue
-                        filter_value = []
-                        if start:
-                            filter_value.append(start)
-                        if end:
-                            filter_value.append(end)
-                    else:
-                        if not filter.date_from:
-                            logger.info(
-                                "Skipping date filter with no value",
-                                field=filter.field,
-                            )
-                            continue
-                        filter_value = filter.date_from
-                else:
-                    filter_value = filter.filter
-
-                if not filter_value and filter_value != 0:
+                if not filter_model.date_from:
                     logger.info(
-                        "Skipping filter due to empty value",
-                        field=filter.field,
-                        filter_type=filter.filter_type,
+                        "Skipping date filter with no value", field=filter_model.field
                     )
-                    continue
+                    return None
+                filter_value = filter_model.date_from
+        else:
+            filter_value = filter_model.filter
 
-                if field.description == "transaction_type":
-                    if not isinstance(filter_value, str):
-                        logger.info(
-                            "Skipping transaction_type filter with non-string value",
-                            value=filter_value,
-                        )
-                        continue
-                    filter_value = filter_value.replace(" ", "").lower()
-                elif filter.field == "status":
-                    field = cast(
-                        get_field_for_filter(TransactionView, "status"),
-                        String,
-                    )
-                    if isinstance(filter_value, str) and "," in filter_value:
-                        filter_value = filter_value.split(",")
-                    if isinstance(filter_value, list):
-                        filter.filter_type = "set"
-                        filter.type = "set"
-                        if not filter_value:
-                            logger.info(
-                                "Skipping status filter with empty values list"
-                            )
-                            continue
+        if not filter_value and filter_value != 0:
+            logger.info(
+                "Skipping filter due to empty value",
+                field=filter_model.field,
+                filter_type=filter_model.filter_type,
+            )
+            return None
 
-                filter_option = filter.type
-                filter_type = filter.filter_type
+        filter_type = filter_model.filter_type
+        filter_option = filter_model.type
 
-                if filter_type == "set" and (
-                    filter_value is None
-                    or isinstance(filter_value, (list, tuple, set))
-                    and len(filter_value) == 0
-                ):
-                    logger.info(
-                        "Skipping set filter due to empty values",
-                        field=filter.field,
-                    )
-                    continue
-
-                conditions.append(
-                    apply_filter_conditions(
-                        field, filter_value, filter_option, filter_type
-                    )
+        if field.description == "transaction_type":
+            if not isinstance(filter_value, str):
+                logger.info(
+                    "Skipping transaction_type filter with non-string value",
+                    value=filter_value,
                 )
+                return None
+            filter_value = filter_value.replace(" ", "").lower()
+        elif filter_model.field == "status":
+            field = cast(get_field_for_filter(TransactionView, "status"), String)
+            if isinstance(filter_value, str) and "," in filter_value:
+                filter_value = filter_value.split(",")
+            if isinstance(filter_value, list):
+                filter_type = "set"
+                filter_option = "set"
+                if not filter_value:
+                    logger.info("Skipping status filter with empty values list")
+                    return None
+
+        if filter_type == "set" and (
+            filter_value is None
+            or (isinstance(filter_value, (list, tuple, set)) and not filter_value)
+        ):
+            logger.info(
+                "Skipping set filter due to empty values", field=filter_model.field
+            )
+            return None
+
+        return apply_filter_conditions(field, filter_value, filter_option, filter_type)
 
     @service_handler
     async def get_organization_users_list(
