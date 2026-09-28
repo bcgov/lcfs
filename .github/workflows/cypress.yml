@@ -18,9 +18,8 @@ jobs:
         ports:
           - 5432:5432
       redis:
-        image: bitnami/redis:6.2.5
-        env:
-          REDIS_PASSWORD: development_only
+        image: redis:8.2.1
+        command: redis-server --requirepass development_only
         ports:
           - 6379:6379
     steps:
