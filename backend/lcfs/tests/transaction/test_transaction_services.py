@@ -5,11 +5,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from starlette.responses import StreamingResponse
 
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import FilterModel, PaginationRequestSchema
 from lcfs.web.api.transaction.schema import (
     TransactionStatusSchema,
     TransactionViewSchema,
 )
+from lcfs.web.exception.exceptions import ServiceException
 from lcfs.web.api.transaction.services import TransactionsService
 
 
@@ -50,6 +51,31 @@ async def test_get_transactions(transactions_service):
     assert transactions_data["pagination"].total == 3
     assert len(transactions_data["transactions"]) == 3
     assert transactions_data["pagination"].total_pages == ceil(3 / 10)
+
+
+def test_aggregator_issuance_filter_targets_transaction_type(transactions_service):
+    pagination = PaginationRequestSchema(
+        page=1,
+        size=10,
+        filters=[
+            FilterModel(
+                field="transactionType",
+                filter="AggregatorIssuance",
+                type="equals",
+                filter_type="text",
+            )
+        ],
+        sort_orders=[],
+    )
+    conditions = []
+
+    transactions_service.apply_transaction_filters(pagination, conditions)
+
+    assert len(conditions) == 1
+    assert "transaction_type" in str(conditions[0])
+    assert "aggregatorissuance" in str(
+        conditions[0].compile(compile_kwargs={"literal_binds": True})
+    ).lower()
 
 
 # Test retrieving transaction statuses
@@ -122,6 +148,99 @@ async def test_export_transactions(transactions_service):
     assert "From Org Comment" in content_str
     assert "To Org Comment" in content_str
     assert "Government Comment" in content_str
+
+
+@pytest.mark.anyio
+async def test_export_formats_aggregator_issuance_type(transactions_service):
+    transactions_service.repo.get_transactions_paginated.return_value = (
+        [
+            MagicMock(
+                transaction_type="AggregatorIssuance",
+                transaction_id=12,
+                compliance_period="2023",
+                from_organization=None,
+                to_organization="Org A",
+                quantity=100,
+                price_per_unit=None,
+                category=None,
+                status="Recorded",
+                transaction_effective_date=datetime(2023, 1, 1),
+                recorded_date=None,
+                approved_date=None,
+                from_org_comment=None,
+                to_org_comment=None,
+                government_comment=None,
+            )
+        ],
+        1,
+    )
+
+    response = await transactions_service.export_transactions(export_format="csv")
+    content = b""
+    async for chunk in response.body_iterator:
+        content += chunk
+
+    rows = content.decode("utf-8").strip().splitlines()
+    assert "Aggregator Issuance" in rows[1]
+    assert "AG12" in rows[1]
+    assert "AggregatorIssuance" not in rows[1]
+
+
+@pytest.mark.anyio
+async def test_export_labels_standalone_transactions_as_legacy(transactions_service):
+    transactions_service.repo.get_transactions_paginated.return_value = (
+        [
+            MagicMock(
+                transaction_type="StandaloneTransaction",
+                transaction_id=91,
+                compliance_period="2023",
+                from_organization=None,
+                to_organization="Org A",
+                quantity=100,
+                price_per_unit=None,
+                category=None,
+                status="Recorded",
+                transaction_effective_date=datetime(2023, 1, 1),
+                recorded_date=None,
+                approved_date=None,
+                from_org_comment=None,
+                to_org_comment=None,
+                government_comment=None,
+            )
+        ],
+        1,
+    )
+
+    response = await transactions_service.export_transactions(export_format="csv")
+    content = b""
+    async for chunk in response.body_iterator:
+        content += chunk
+
+    rows = content.decode("utf-8").strip().splitlines()
+    assert "Legacy Transaction" in rows[1]
+    assert "StandaloneTransaction" not in rows[1]
+
+
+@pytest.mark.anyio
+async def test_export_fails_instead_of_silently_skipping_unformattable_row(
+    transactions_service,
+):
+    transactions_service.repo.get_transactions_paginated.return_value = (
+        [
+            MagicMock(
+                transaction_type="AggregatorIssuance",
+                transaction_id=12,
+                status="Recorded",
+                transaction_effective_date=object(),
+                recorded_date=None,
+                approved_date=None,
+            )
+        ],
+        1,
+    )
+
+    with pytest.raises(ServiceException):
+        await transactions_service.export_transactions(export_format="csv")
 
 
 # -- _to_pacific / recorded-date export tests ----------------------------------

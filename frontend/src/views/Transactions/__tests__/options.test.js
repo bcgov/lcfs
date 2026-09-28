@@ -34,7 +34,10 @@ describe('defaultSortModel', () => {
   })
 
   it('sorts by updateDate descending', () => {
-    expect(defaultSortModel[0]).toEqual({ field: 'updateDate', direction: 'desc' })
+    expect(defaultSortModel[0]).toEqual({
+      field: 'updateDate',
+      direction: 'desc'
+    })
   })
 })
 
@@ -45,12 +48,26 @@ describe('transactionsColDefs — transactionType column', () => {
   const col = colDefs.find((c) => c.colId === 'transactionType')
 
   it('formats StandaloneTransaction as "Legacy Transaction"', () => {
-    const params = makeRow({ transactionType: 'StandaloneTransaction', description: null })
+    const params = makeRow({
+      transactionType: 'StandaloneTransaction',
+      description: null
+    })
     expect(col.valueFormatter(params)).toBe('Legacy Transaction')
   })
 
+  it('formats AggregatorIssuance as "Aggregator Issuance"', () => {
+    const params = makeRow({
+      transactionType: 'AggregatorIssuance',
+      description: null
+    })
+    expect(col.valueFormatter(params)).toBe('Aggregator Issuance')
+  })
+
   it('adds spaces to camelCase type names', () => {
-    const params = makeRow({ transactionType: 'InitiativeAgreement', description: null })
+    const params = makeRow({
+      transactionType: 'InitiativeAgreement',
+      description: null
+    })
     // spacesFormatter adds spaces between camelCase words
     const formatted = col.valueFormatter(params)
     expect(formatted).toMatch(/Initiative/i)
@@ -80,6 +97,10 @@ describe('transactionsColDefs — transactionType column', () => {
     expect(types).toContain('InitiativeAgreement')
     expect(types).toContain('StandaloneTransaction')
     expect(types).toContain('AggregatorIssuance')
+    const aggregatorOption = data.find(
+      (option) => option.type === 'AggregatorIssuance'
+    )
+    expect(aggregatorOption.transactionType).toBe('Aggregator Issuance')
   })
 })
 
@@ -95,7 +116,9 @@ describe('transactionsColDefs — compliancePeriod column', () => {
 
   it('falls back to "N/A" when compliancePeriod is absent', () => {
     expect(col.valueGetter(makeRow({ compliancePeriod: null }))).toBe('N/A')
-    expect(col.valueGetter(makeRow({ compliancePeriod: undefined }))).toBe('N/A')
+    expect(col.valueGetter(makeRow({ compliancePeriod: undefined }))).toBe(
+      'N/A'
+    )
   })
 })
 

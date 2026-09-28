@@ -1,5 +1,6 @@
 import io
 import logging
+import re
 import zoneinfo
 from datetime import datetime, timezone
 from typing import List, Dict, Union
@@ -255,12 +256,16 @@ class TransactionsService:
                     else "NA"
                 )
 
-            row_data = None
-            try:
-                row_data = [
+            transaction_type = (
+                "Legacy Transaction"
+                if result.transaction_type == "StandaloneTransaction"
+                else re.sub(r"(?<!^)(?=[A-Z])", " ", result.transaction_type)
+            )
+            data.append(
+                [
                     f"{prefix}{result.transaction_id}",
                     result.compliance_period,
-                    result.transaction_type,
+                    transaction_type,
                     result.from_organization,
                     result.to_organization,
                     result.quantity,
@@ -286,15 +291,7 @@ class TransactionsService:
                     result.to_org_comment,
                     result.government_comment,
                 ]
-                data.append(row_data)
-            except Exception as exc:
-                logger.error(
-                    "Failed to append transaction %s to export data: %s | data=%s",
-                    result.transaction_id,
-                    exc,
-                    row_data if row_data is not None else vars(result),
-                )
-                continue
+            )
 
         # Create a spreadsheet
         builder = SpreadsheetBuilder(file_format=export_format)
