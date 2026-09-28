@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { forwardRef, useEffect, useRef } from 'react'
-import { TextField } from '@mui/material'
+import TextField from '@mui/material/TextField'
 import InputMask from 'react-input-mask'
 
 export interface TextCellEditorProps {

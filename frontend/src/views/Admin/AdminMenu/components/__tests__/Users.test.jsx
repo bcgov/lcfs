@@ -11,12 +11,12 @@
  * in the source component for parts that are difficult to test in
  * React component test context (third-party grid API interactions).
  */
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
 import { Users } from '../Users.jsx'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock dependencies
 const mockNavigate = vi.fn()
@@ -61,22 +61,25 @@ vi.mock('@/components/BCTypography', () => ({
   )
 }))
 
-vi.mock('@/components/BCButton', () => {
-  const { forwardRef } = require('react')
-  return {
-    default: forwardRef(
-      (
-        { children, onClick, startIcon, variant, size, color, ...props },
-        ref
-      ) => (
-        <button data-test="bc-button" onClick={onClick} ref={ref} {...props}>
-          {startIcon}
-          {children}
-        </button>
+vi.mock(
+  '@/components/BCButton',
+  ({ render, query, theme, localization, router }) => {
+    const { forwardRef } = require('react')
+    return {
+      default: forwardRef(
+        (
+          { children, onClick, startIcon, variant, size, color, ...props },
+          ref
+        ) => (
+          <button data-test="bc-button" onClick={onClick} ref={ref} {...props}>
+            {startIcon}
+            {children}
+          </button>
+        )
       )
-    )
+    }
   }
-})
+)
 
 vi.mock('@/components/BCBox', () => ({
   default: ({
@@ -247,19 +250,37 @@ describe('Users Component', () => {
   })
 
   describe('Rendering', () => {
-    it('renders without crashing', () => {
-      render(<Users />, { wrapper })
+    test('renders without crashing', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<Users />, [query, theme, localization, router])
       expect(screen.getByText('admin:Users')).toBeInTheDocument()
     })
 
-    it('displays the New User button', () => {
-      render(<Users />, { wrapper })
+    test('displays the New User button', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<Users />, [query, theme, localization, router])
       const newUserButton = screen.getByText('admin:newUserBtn')
       expect(newUserButton).toBeInTheDocument()
     })
 
-    it('navigates to add user page when New User button is clicked', async () => {
-      render(<Users />, { wrapper })
+    test('navigates to add user page when New User button is clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<Users />, [query, theme, localization, router])
       const newUserButton = screen.getByText('admin:newUserBtn')
       fireEvent.click(newUserButton)
 
@@ -269,8 +290,14 @@ describe('Users Component', () => {
       })
     })
 
-    it('renders BCGridViewer with correct props', () => {
-      render(<Users />, { wrapper })
+    test('renders BCGridViewer with correct props', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<Users />, [query, theme, localization, router])
       // ✅ Fixed: Updated test id to match the mock
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })

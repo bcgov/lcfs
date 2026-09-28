@@ -1,12 +1,10 @@
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
-import {
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Avatar
-} from '@mui/material'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import ListItemAvatar from '@mui/material/ListItemAvatar'
+import ListItemText from '@mui/material/ListItemText'
+import Avatar from '@mui/material/Avatar'
 import { formatDateWithTimezoneAbbr } from '@/utils/formatters'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'

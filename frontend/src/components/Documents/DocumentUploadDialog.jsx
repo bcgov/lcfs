@@ -1,5 +1,5 @@
 import BCModal from '@/components/BCModal'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 import DocumentTable from '@/components/Documents/DocumentTable.jsx'

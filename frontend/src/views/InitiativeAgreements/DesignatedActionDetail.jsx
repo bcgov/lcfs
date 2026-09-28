@@ -2,15 +2,13 @@ import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import {
-  Divider,
-  IconButton,
-  Stack,
-  Step,
-  StepLabel,
-  Stepper,
-  TextField
-} from '@mui/material'
+import Divider from '@mui/material/Divider'
+import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
+import Stepper from '@mui/material/Stepper'
+import TextField from '@mui/material/TextField'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 

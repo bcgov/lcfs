@@ -1,11 +1,9 @@
 // @ts-nocheck
 import type { ColDef } from '@ag-grid-community/core'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import {
-  AutocompleteCellEditor,
-  BCSelectFloatingFilter,
-  RequiredHeader
-} from '@/components/BCDataGrid/components'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 import i18n from '@/i18n'
 import { currencyFormatter } from '@/utils/formatters'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'

@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { screen, fireEvent, act, waitFor } from '@testing-library/react'
 import OrganizationsSummaryCard from '../OrganizationsSummaryCard'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/hooks/useOrganizations')
 vi.mock('react-i18next', () => ({
@@ -34,14 +34,24 @@ describe('OrganizationsSummaryCard', () => {
     })
   })
 
-  it('calls useOrganizationNames to fetch all organizations', () => {
-    render(<OrganizationsSummaryCard />, { wrapper })
+  test('calls useOrganizationNames to fetch all organizations', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     expect(useOrganizationNames).toHaveBeenCalledWith()
   })
 
-  it('renders correctly with default values and shows all organizations total', () => {
-    render(<OrganizationsSummaryCard />, { wrapper })
+  test('renders correctly with default values and shows all organizations total', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     expect(screen.getAllByText('txn:allOrganizations')).toHaveLength(2) // One in display, one in select
     expect(screen.getByText('3,250')).toBeInTheDocument() // Total balance: 1000 + 1500 + 750
@@ -50,8 +60,13 @@ describe('OrganizationsSummaryCard', () => {
     expect(screen.getByText('Show balance for:')).toBeInTheDocument()
   })
 
-  it('displays organization names in the dropdown', () => {
-    render(<OrganizationsSummaryCard />, { wrapper })
+  test('displays organization names in the dropdown', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     const select = screen.getByRole('combobox')
     fireEvent.mouseDown(select)
@@ -61,8 +76,13 @@ describe('OrganizationsSummaryCard', () => {
     })
   })
 
-  it('updates total balance and reserved balance when a specific organization is selected', () => {
-    render(<OrganizationsSummaryCard />, { wrapper })
+  test('updates total balance and reserved balance when a specific organization is selected', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     const select = screen.getByRole('combobox')
     fireEvent.mouseDown(select)
@@ -74,49 +94,61 @@ describe('OrganizationsSummaryCard', () => {
     expect(screen.getByText('(200 in reserve)')).toBeInTheDocument()
   })
 
-  it('calculates total balance and reserved balance correctly when switching back to all organizations', () => {
-    render(<OrganizationsSummaryCard />, { wrapper })
+  test('calculates total balance and reserved balance correctly when switching back to all organizations', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     const select = screen.getByRole('combobox')
-    
+
     // First select a specific organization
     fireEvent.mouseDown(select)
     fireEvent.click(screen.getByRole('option', { name: 'Org A' }))
-    
+
     // Verify specific org is selected
     expect(screen.getAllByText('Org A')).toHaveLength(3) // One in display, one in select, one in dropdown
     expect(screen.getByText('1,000')).toBeInTheDocument()
-    
+
     // Then switch back to all organizations
     fireEvent.mouseDown(select)
-    fireEvent.click(screen.getByRole('option', { name: 'txn:allOrganizations' }))
+    fireEvent.click(
+      screen.getByRole('option', { name: 'txn:allOrganizations' })
+    )
 
     expect(screen.getAllByText('txn:allOrganizations')).toHaveLength(3) // One in display, one in select, one in dropdown
     expect(screen.getByText('3,250')).toBeInTheDocument() // Total: 1000 + 1500 + 750
     expect(screen.getByText('(650 in reserve)')).toBeInTheDocument() // Total reserved: |200| + |-300| + |150|
   })
 
-  it('renders correctly when loading', () => {
+  test('renders correctly when loading', ({ render, query, theme, router }) => {
     useOrganizationNames.mockReturnValue({
       data: [],
       isLoading: true
     })
 
-    render(<OrganizationsSummaryCard />, { wrapper })
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     // Should show default state with zero values
     expect(screen.getAllByText('txn:allOrganizations')).toHaveLength(2) // One in display, one in select
     expect(screen.getByText('0')).toBeInTheDocument()
     expect(screen.getByText('(0 in reserve)')).toBeInTheDocument()
-    
+
     // Should not show organization options in dropdown when loading
     const select = screen.getByRole('combobox')
     fireEvent.mouseDown(select)
     expect(screen.queryByText('Org A')).not.toBeInTheDocument()
   })
 
-  it('handles organizations with different reserved balance formats', () => {
-    render(<OrganizationsSummaryCard />, { wrapper })
+  test('handles organizations with different reserved balance formats', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     const select = screen.getByRole('combobox')
     fireEvent.mouseDown(select)
@@ -127,55 +159,79 @@ describe('OrganizationsSummaryCard', () => {
     expect(screen.getByText('(300 in reserve)')).toBeInTheDocument() // Should show absolute value
   })
 
-  it('handles organizations with zero balances', () => {
+  test('handles organizations with zero balances', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     const mockOrgsWithZeros = [
       { name: 'Zero Org', totalBalance: 0, reservedBalance: 0 }
     ]
-    
+
     useOrganizationNames.mockReturnValue({
       data: mockOrgsWithZeros,
       isLoading: false
     })
 
-    render(<OrganizationsSummaryCard />, { wrapper })
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     expect(screen.getByText('0')).toBeInTheDocument()
     expect(screen.getByText('(0 in reserve)')).toBeInTheDocument()
   })
 
-  it('handles empty organizations array', () => {
+  test('handles empty organizations array', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     useOrganizationNames.mockReturnValue({
       data: [],
       isLoading: false
     })
 
-    render(<OrganizationsSummaryCard />, { wrapper })
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     expect(screen.getAllByText('txn:allOrganizations')).toHaveLength(2) // One in display, one in select
     expect(screen.getByText('0')).toBeInTheDocument()
     expect(screen.getByText('(0 in reserve)')).toBeInTheDocument()
-    
+
     // Should not show any organization options
     const select = screen.getByRole('combobox')
     fireEvent.mouseDown(select)
     expect(screen.queryByText('Org A')).not.toBeInTheDocument()
   })
 
-  it('handles undefined organizations data', () => {
+  test('handles undefined organizations data', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     useOrganizationNames.mockReturnValue({
       data: undefined,
       isLoading: false
     })
 
-    render(<OrganizationsSummaryCard />, { wrapper })
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     expect(screen.getAllByText('txn:allOrganizations')).toHaveLength(2)
     expect(screen.getByText('0')).toBeInTheDocument()
     expect(screen.getByText('(0 in reserve)')).toBeInTheDocument()
   })
 
-  it('processes organizations data when useEffect dependency changes', async () => {
-    const { rerender } = render(<OrganizationsSummaryCard />, { wrapper })
+  test('processes organizations data when useEffect dependency changes', async ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    const { rerender } = render(<OrganizationsSummaryCard />, [
+      query,
+      theme,
+      router
+    ])
 
     // Initial render with organizations
     expect(screen.getByText('3,250')).toBeInTheDocument()
@@ -211,19 +267,29 @@ describe('OrganizationsSummaryCard', () => {
     expect(screen.getByText('(400 in reserve)')).toBeInTheDocument()
   })
 
-  it('handles select dropdown ARIA attributes correctly', () => {
-    render(<OrganizationsSummaryCard />, { wrapper })
+  test('handles select dropdown ARIA attributes correctly', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     const select = screen.getByRole('combobox')
     expect(select).toHaveAttribute('aria-label', 'Select an organization')
   })
 
-  it('applies correct styling and layout classes', () => {
-    render(<OrganizationsSummaryCard />, { wrapper })
+  test('applies correct styling and layout classes', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<OrganizationsSummaryCard />, [query, theme, router])
 
     // Check for title
     expect(screen.getByText('Summary')).toBeInTheDocument()
-    
+
     // Check for various text elements
     expect(screen.getByText('compliance units')).toBeInTheDocument()
     expect(screen.getByText('Show balance for:')).toBeInTheDocument()

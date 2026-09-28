@@ -29,17 +29,13 @@ export const handlers = [
       organization: { name: 'Test Organization' }
     })
   ),
-  
+
   // Organizations
-  http.get(api + '/organizations/search', () =>
-    HttpResponse.json([])
-  ),
-  
+  http.get(api + '/organizations/search', () => HttpResponse.json([])),
+
   // Transactions
-  http.get(api + apiRoutes.transactions, () =>
-    HttpResponse.json([])
-  ),
-  
+  http.get(api + apiRoutes.transactions, () => HttpResponse.json([])),
+
   // Transfers
   http.put(api + apiRoutes.updateCategory, () =>
     HttpResponse.json({
@@ -51,14 +47,10 @@ export const handlers = [
       transferCategory: null
     })
   ),
-  
+
   // Compliance reports
-  http.get(api + apiRoutes.getComplianceReports, () =>
-    HttpResponse.json([])
-  ),
-  http.get(api + apiRoutes.getCompliancePeriods, () =>
-    HttpResponse.json([])
-  ),
+  http.get(api + apiRoutes.getComplianceReports, () => HttpResponse.json([])),
+  http.get(api + apiRoutes.getCompliancePeriods, () => HttpResponse.json([])),
   http.get(api + apiRoutes.reportOpenings, () =>
     HttpResponse.json(reportOpenings)
   ),
@@ -75,7 +67,8 @@ export const handlers = [
       return {
         ...entry,
         complianceReportingEnabled:
-          override.complianceReportingEnabled ?? entry.complianceReportingEnabled,
+          override.complianceReportingEnabled ??
+          entry.complianceReportingEnabled,
         earlyIssuanceEnabled:
           override.earlyIssuanceEnabled ?? entry.earlyIssuanceEnabled,
         createSupplementalEnabled:
@@ -90,7 +83,7 @@ export const handlers = [
     const url = new URL(request.url)
     const addressString = url.searchParams.get('addressString')
     const maxResults = url.searchParams.get('maxResults') || '5'
-    
+
     // Mock response based on search query
     if (!addressString || addressString.length < 3) {
       return HttpResponse.json({
@@ -131,7 +124,7 @@ export const handlers = [
         }
       },
       {
-        type: 'Feature', 
+        type: 'Feature',
         geometry: {
           type: 'Point',
           coordinates: [-123.1207, 49.2827]
@@ -167,41 +160,27 @@ export const handlers = [
       features: features
     })
   }),
-  
+
   // Fuel codes
-  http.get(api + apiRoutes.getFuelCodes, () =>
-    HttpResponse.json([])
-  ),
-  http.get(api + apiRoutes.fuelCodeOptions, () =>
-    HttpResponse.json({})
-  ),
-  
+  http.get(api + apiRoutes.getFuelCodes, () => HttpResponse.json([])),
+  http.get(api + apiRoutes.fuelCodeOptions, () => HttpResponse.json({})),
+
   // Dashboard
-  http.get(api + apiRoutes.directorReviewCounts, () =>
-    HttpResponse.json({})
-  ),
-  http.get(api + apiRoutes.TransactionCounts, () =>
-    HttpResponse.json({})
-  ),
-  
+  http.get(api + apiRoutes.directorReviewCounts, () => HttpResponse.json({})),
+  http.get(api + apiRoutes.TransactionCounts, () => HttpResponse.json({})),
+
   // Roles
-  http.get(api + apiRoutes.roles, () =>
-    HttpResponse.json([])
-  ),
-  
+  http.get(api + apiRoutes.roles, () => HttpResponse.json([])),
+
   // Notifications
-  http.get(api + apiRoutes.getNotifications, () =>
-    HttpResponse.json([])
-  ),
+  http.get(api + apiRoutes.getNotifications, () => HttpResponse.json([])),
   http.get(api + apiRoutes.getNotificationsCount, () =>
     HttpResponse.json({ count: 0 })
   ),
-  
+
   // Audit logs
-  http.get(api + apiRoutes.getAuditLogs, () =>
-    HttpResponse.json([])
-  ),
-  
+  http.get(api + apiRoutes.getAuditLogs, () => HttpResponse.json([])),
+
   // Fallback handler for any unhandled API calls
   http.get(`${api}/*`, () => {
     return HttpResponse.json({}, { status: 200 })
@@ -215,7 +194,7 @@ export const handlers = [
   http.delete(`${api}/*`, () => {
     return HttpResponse.json({}, { status: 200 })
   }),
-  
+
   // Catch-all handlers for any external requests to prevent AggregateErrors
   http.get('*', ({ request }) => {
     // Only handle external requests, not our API

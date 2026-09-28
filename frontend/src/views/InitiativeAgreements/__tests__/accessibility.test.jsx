@@ -11,17 +11,16 @@
  * a floor, not a substitute for driving the pages with a keyboard.
  */
 import React from 'react'
-import { render } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import axe from 'axe-core'
 
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
 import { EvidenceOfCompletion } from '../components/EvidenceOfCompletion'
 import { DesignatedActionWorkflow } from '../components/DesignatedActionWorkflow'
 import { DesignatedActionHistoryPanel } from '../components/DesignatedActionHistoryPanel'
 import { DocumentTree } from '../components/DocumentTree'
 import { DAAssignedAnalystCell } from '../components/DAAssignedAnalystCell'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -155,8 +154,8 @@ vi.mock('@/hooks/useDocumentFolders', () => ({
   useRestoreFolder: () => ({ mutate: mockRestoreFolder })
 }))
 
-const check = async (ui) => {
-  const { container } = render(ui, { wrapper })
+const check = async (ui, render, app) => {
+  const { container } = render(ui, app)
   const results = await axe.run(container, {
     rules: {
       // jsdom does not paint, so contrast cannot be judged here.
@@ -177,13 +176,13 @@ const check = async (ui) => {
 describe('Initiative Agreements accessibility', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('evidence of completion has no violations', async () => {
+  test('evidence of completion has no violations', async ({ render, app }) => {
     expect(
-      await check(<EvidenceOfCompletion designatedActionId="9" />)
+      await check(<EvidenceOfCompletion designatedActionId="9" />, render, app)
     ).toEqual([])
   })
 
-  it('the workflow actions have no violations', async () => {
+  test('the workflow actions have no violations', async ({ render, app }) => {
     expect(
       await check(
         <DesignatedActionWorkflow
@@ -197,29 +196,44 @@ describe('Initiative Agreements accessibility', () => {
           canEditCredits
           recommendedCredits={null}
           creditAllocation={1850}
-        />
+        />,
+        render,
+        app
       )
     ).toEqual([])
   })
 
-  it('the activity panel has no violations', async () => {
+  test('the activity panel has no violations', async ({ render, app }) => {
     expect(
-      await check(<DesignatedActionHistoryPanel designatedActionId="9" />)
+      await check(
+        <DesignatedActionHistoryPanel designatedActionId="9" />,
+        render,
+        app
+      )
     ).toEqual([])
   })
 
-  it('the document tree has no violations', async () => {
+  test('the document tree has no violations', async ({ render, app }) => {
     expect(
-      await check(<DocumentTree parentType="designatedAction" parentID="9" />)
+      await check(
+        <DocumentTree parentType="designatedAction" parentID="9" />,
+        render,
+        app
+      )
     ).toEqual([])
   })
 
-  it('the analyst assignment cell has no violations', async () => {
+  test('the analyst assignment cell has no violations', async ({
+    render,
+    app
+  }) => {
     expect(
       await check(
         <DAAssignedAnalystCell
           data={{ designatedActionId: 9, assignedAnalyst: null }}
-        />
+        />,
+        render,
+        app
       )
     ).toEqual([])
   })

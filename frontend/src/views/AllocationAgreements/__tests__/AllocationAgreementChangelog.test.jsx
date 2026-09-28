@@ -1,7 +1,7 @@
-import { render, screen, waitFor, act } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { screen, waitFor, act } from '@testing-library/react'
+import { describe, expect, beforeEach, vi } from 'vitest'
 import { AllocationAgreementChangelog } from '../AllocationAgreementChangelog'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useState } from 'react'
 
 // Mock hooks
@@ -42,28 +42,28 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     // Actually call functions to increase coverage
     let rowIds = []
     let rowStyles = []
-    
+
     if (queryData?.data?.items && getRowId) {
       rowIds = queryData.data.items.map((item) => {
         const params = { data: item }
         return getRowId(params)
       })
     }
-    
+
     if (queryData?.data?.items && gridOptions?.getRowStyle) {
       rowStyles = queryData.data.items.map((item) => {
         const params = { data: item }
         return gridOptions.getRowStyle(params)
       })
     }
-    
+
     // Simulate pagination change for testing
     const handleTestPaginationChange = () => {
       if (onPaginationChange) {
         onPaginationChange({ page: 2, size: 10 })
       }
     }
-    
+
     return (
       <div data-test="bc-grid-viewer">
         <div data-test="grid-key">{gridKey}</div>
@@ -87,10 +87,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
           {gridOptions?.getRowStyle ? 'has-row-style' : 'no-row-style'}
         </div>
         <div data-test="row-ids">{rowIds.join(',')}</div>
-        <div data-test="row-styles-count">{rowStyles.filter(Boolean).length}</div>
+        <div data-test="row-styles-count">
+          {rowStyles.filter(Boolean).length}
+        </div>
         {onPaginationChange && (
-          <button 
-            data-test="pagination-change-trigger" 
+          <button
+            data-test="pagination-change-trigger"
             onClick={handleTestPaginationChange}
           >
             Change Page
@@ -110,7 +112,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
   default: ({ children, variant, color, component, ...props }) => (
-    <div data-test="bc-typography" data-variant={variant} data-color={color} {...props}>
+    <div
+      data-test="bc-typography"
+      data-variant={variant}
+      data-color={color}
+      {...props}
+    >
       {children}
     </div>
   )
@@ -155,17 +162,25 @@ vi.mock('@/constants/schedules', () => ({
 }))
 
 // Mock colors
-vi.mock('@/themes/base/colors', () => ({
-  default: {
-    alerts: {
-      error: { background: '#ffebee' },
-      success: { background: '#e8f5e8' }
+vi.mock('@/themes/base/colors', async () => {
+  const actual = await vi.importActual('@/themes/base/colors')
+  return {
+    ...actual,
+    default: {
+      ...actual.default,
+      alerts: {
+        error: { background: '#ffebee' },
+        success: { background: '#e8f5e8' }
+      }
     }
   }
-}))
+})
 
 // Import the actual hooks to mock them
-import { useComplianceReportWithCache, useGetChangeLog } from '@/hooks/useComplianceReports'
+import {
+  useComplianceReportWithCache,
+  useGetChangeLog
+} from '@/hooks/useComplianceReports'
 import { useParams } from 'react-router-dom'
 
 // Mock useState for testing
@@ -180,7 +195,7 @@ vi.mock('react', async () => {
 describe('AllocationAgreementChangelog', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    
+
     // Default mock implementations
     vi.mocked(useParams).mockReturnValue({
       complianceReportId: '123',
@@ -200,45 +215,84 @@ describe('AllocationAgreementChangelog', () => {
       data: [],
       isLoading: false
     })
-    
+
     // Default useState mock
     vi.mocked(useState).mockReturnValue([{}, vi.fn()])
   })
 
   // Basic rendering tests
-  it('shows loading component when changelog data is loading', () => {
+  test('shows loading component when changelog data is loading', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.mocked(useGetChangeLog).mockReturnValue({
       data: null,
       isLoading: true
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByTestId('loading-component')).toBeInTheDocument()
   })
 
-  it('shows loading component when current report is loading', () => {
+  test('shows loading component when current report is loading', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.mocked(useComplianceReportWithCache).mockReturnValue({
       data: null,
       isLoading: true
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByTestId('loading-component')).toBeInTheDocument()
   })
 
-  it('renders empty state when no changelog data', () => {
+  test('renders empty state when no changelog data', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.mocked(useGetChangeLog).mockReturnValue({
       data: [],
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const grids = screen.queryAllByTestId('bc-grid-viewer')
     expect(grids).toHaveLength(0)
   })
 
-  it('renders single changelog item correctly', () => {
+  test('renders single changelog item correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -263,14 +317,25 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Version 1.0')).toBeInTheDocument()
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
   })
 
-  it('renders multiple changelog items correctly', () => {
+  test('renders multiple changelog items correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -301,7 +366,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Current Version')).toBeInTheDocument()
     expect(screen.getByText('Original Version')).toBeInTheDocument()
@@ -311,7 +381,13 @@ describe('AllocationAgreementChangelog', () => {
   })
 
   // Pagination tests
-  it('suppresses pagination for small datasets', () => {
+  test('suppresses pagination for small datasets', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -329,7 +405,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
       'pagination-suppressed'
@@ -342,7 +423,13 @@ describe('AllocationAgreementChangelog', () => {
     )
   })
 
-  it('enables pagination for large datasets', () => {
+  test('enables pagination for large datasets', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -360,7 +447,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
       'pagination-enabled'
@@ -373,7 +465,13 @@ describe('AllocationAgreementChangelog', () => {
     )
   })
 
-  it('suppresses pagination for current version with small dataset', () => {
+  test('suppresses pagination for current version with small dataset', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -391,7 +489,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Small dataset should suppress pagination even for current version
     expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
@@ -399,7 +502,13 @@ describe('AllocationAgreementChangelog', () => {
     )
   })
 
-  it('suppresses pagination for original version with small dataset', () => {
+  test('suppresses pagination for original version with small dataset', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -426,7 +535,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const paginationElements = screen.getAllByTestId('pagination-suppressed')
     // Both should be suppressed due to small datasets
@@ -435,7 +549,13 @@ describe('AllocationAgreementChangelog', () => {
   })
 
   // Column definition tests
-  it('uses different column definitions for current/original vs other versions', () => {
+  test('uses different column definitions for current/original vs other versions', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -477,7 +597,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const grids = screen.getAllByTestId('bc-grid-viewer')
     expect(grids).toHaveLength(3)
@@ -491,12 +616,18 @@ describe('AllocationAgreementChangelog', () => {
     // Check column definitions - current and original should have different columns than middle
     const columnDefElements = screen.getAllByTestId('column-defs-length')
     expect(columnDefElements[0]).toHaveTextContent('13') // current version uses changelogCommonColDefs (13 columns)
-    expect(columnDefElements[1]).toHaveTextContent('17') // middle version uses changelogColDefs (21 columns)  
+    expect(columnDefElements[1]).toHaveTextContent('17') // middle version uses changelogColDefs (21 columns)
     expect(columnDefElements[2]).toHaveTextContent('13') // original version uses changelogCommonColDefs (17 columns)
   })
 
   // Grid styling tests
-  it('applies different grid styling for current/original vs other versions', () => {
+  test('applies different grid styling for current/original vs other versions', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -527,7 +658,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const gridStyleElements = screen.getAllByTestId('grid-options-highlight')
     expect(gridStyleElements[0]).toHaveTextContent('has-row-style') // current version uses gridOptions(false) but still has getRowStyle function
@@ -535,7 +671,13 @@ describe('AllocationAgreementChangelog', () => {
   })
 
   // Edge cases
-  it('handles empty allocation agreements array', () => {
+  test('handles empty allocation agreements array', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -549,7 +691,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Empty Version')).toBeInTheDocument()
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -558,32 +705,60 @@ describe('AllocationAgreementChangelog', () => {
     )
   })
 
-  it('handles undefined changelog data', () => {
+  test('handles undefined changelog data', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.mocked(useGetChangeLog).mockReturnValue({
       data: undefined,
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const grids = screen.queryAllByTestId('bc-grid-viewer')
     expect(grids).toHaveLength(0)
   })
 
-  it('handles null changelog data', () => {
+  test('handles null changelog data', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.mocked(useGetChangeLog).mockReturnValue({
       data: null,
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const grids = screen.queryAllByTestId('bc-grid-viewer')
     expect(grids).toHaveLength(0)
   })
 
   // Grid key generation tests
-  it('generates unique grid keys for multiple versions', () => {
+  test('generates unique grid keys for multiple versions', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -614,7 +789,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const gridKeys = screen.getAllByTestId('grid-key')
     expect(gridKeys[0]).toHaveTextContent('allocation-agreements-changelog-0')
@@ -622,7 +802,13 @@ describe('AllocationAgreementChangelog', () => {
   })
 
   // Version identification tests
-  it('correctly identifies current and original versions', async () => {
+  test('correctly identifies current and original versions', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 2, // Current (index 0)
@@ -664,7 +850,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     await waitFor(() => {
       const grids = screen.getAllByTestId('bc-grid-viewer')
@@ -679,7 +870,13 @@ describe('AllocationAgreementChangelog', () => {
   })
 
   // Pagination with different data sizes
-  it('handles pagination state management correctly', () => {
+  test('handles pagination state management correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -697,7 +894,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Should show first 10 items (default page size)
     expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows')
@@ -707,7 +909,13 @@ describe('AllocationAgreementChangelog', () => {
   })
 
   // Mixed dataset size scenarios
-  it('handles mixed large and small datasets correctly', () => {
+  test('handles mixed large and small datasets correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -734,7 +942,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const paginationElements = screen.getAllByTestId('pagination-suppressed')
     expect(paginationElements[0]).toHaveTextContent('pagination-enabled') // large dataset
@@ -742,7 +955,13 @@ describe('AllocationAgreementChangelog', () => {
   })
 
   // Hook params tests
-  it('passes correct params to useGetChangeLog hook', () => {
+  test('passes correct params to useGetChangeLog hook', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockParams = {
       complianceReportId: '456',
       compliancePeriod: '2023'
@@ -761,7 +980,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(useGetChangeLog).toHaveBeenCalledWith({
       complianceReportGroupUuid: 'different-group-uuid',
@@ -769,7 +993,13 @@ describe('AllocationAgreementChangelog', () => {
     })
   })
 
-  it('handles missing current report data gracefully', () => {
+  test('handles missing current report data gracefully', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.mocked(useComplianceReportWithCache).mockReturnValue({
       data: null,
       isLoading: false
@@ -780,7 +1010,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(useGetChangeLog).toHaveBeenCalledWith({
       complianceReportGroupUuid: undefined,
@@ -792,7 +1027,13 @@ describe('AllocationAgreementChangelog', () => {
   })
 
   // Function-specific tests for better coverage
-  it('tests getRowId function with different ID types', () => {
+  test('tests getRowId function with different ID types', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -817,7 +1058,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Check that getRowId function works for different items
     const gridItems = screen.getAllByTestId('grid-item')
@@ -826,7 +1072,13 @@ describe('AllocationAgreementChangelog', () => {
     expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
   })
 
-  it('tests pagination with complex data scenarios', () => {
+  test('tests pagination with complex data scenarios', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -845,18 +1097,35 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Should enable pagination for large datasets
-    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-enabled')
-    expect(screen.getByTestId('has-pagination-options')).toHaveTextContent('has-pagination')
-    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent('has-change-handler')
-    
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-enabled'
+    )
+    expect(screen.getByTestId('has-pagination-options')).toHaveTextContent(
+      'has-pagination'
+    )
+    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
+      'has-change-handler'
+    )
+
     // Should show paginated results (first 10 items)
     expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows')
   })
 
-  it('tests grid styling with different action types', () => {
+  test('tests grid styling with different action types', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 2, // Not current or original version
@@ -886,11 +1155,18 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Should have row styling for non-current/original versions
-    expect(screen.getByTestId('grid-options-highlight')).toHaveTextContent('has-row-style')
-    
+    expect(screen.getByTestId('grid-options-highlight')).toHaveTextContent(
+      'has-row-style'
+    )
+
     // Check all action types are rendered
     const gridItems = screen.getAllByTestId('grid-item')
     expect(gridItems[0]).toHaveTextContent('1 - DELETE')
@@ -899,7 +1175,13 @@ describe('AllocationAgreementChangelog', () => {
   })
 
   // Component integration tests
-  it('integrates all components correctly with real data flow', async () => {
+  test('integrates all components correctly with real data flow', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -919,23 +1201,36 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Check that all expected elements are present and working together
     expect(screen.getByText('Integration Test Version')).toBeInTheDocument()
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-    expect(screen.getByTestId('grid-key')).toHaveTextContent('allocation-agreements-changelog-0')
+    expect(screen.getByTestId('grid-key')).toHaveTextContent(
+      'allocation-agreements-changelog-0'
+    )
     expect(screen.getByTestId('grid-item')).toHaveTextContent('100 - CREATE')
 
     await waitFor(() => {
-      expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
+      expect(screen.getByTestId('get-row-id')).toHaveTextContent(
+        'has-get-row-id'
+      )
     })
   })
 
-
-
-  // Test sorting logic coverage  
-  it('tests sorting logic with pagination sort orders', () => {
+  // Test sorting logic coverage
+  test('tests sorting logic with pagination sort orders', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -960,24 +1255,32 @@ describe('AllocationAgreementChangelog', () => {
       ]
     }
 
-    vi.mocked(useState).mockReturnValue([
-      { 0: mockPaginationState },
-      vi.fn()
-    ])
+    vi.mocked(useState).mockReturnValue([{ 0: mockPaginationState }, vi.fn()])
 
     vi.mocked(useGetChangeLog).mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Should apply sorting - results will be sorted by agreementName ascending
     expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows')
   })
 
   // Test handlePaginationChange function coverage
-  it('tests handlePaginationChange function execution', async () => {
+  test('tests handlePaginationChange function execution', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockChangelogData = [
       {
         version: 1,
@@ -998,7 +1301,12 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    render(<AllocationAgreementChangelog />, { wrapper })
+    render(<AllocationAgreementChangelog />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Should have pagination change button for large datasets
     const paginationButton = screen.getByTestId('pagination-change-trigger')

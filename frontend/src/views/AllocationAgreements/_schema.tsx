@@ -2,12 +2,10 @@
 import type { ColDef } from '@ag-grid-community/core'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import {
-  AsyncSuggestionEditor,
-  AutocompleteCellEditor,
-  NumberEditor,
-  RequiredHeader
-} from '@/components/BCDataGrid/components'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { NumberEditor } from '@/components/BCDataGrid/components/Editors/NumberEditor'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 import BCTypography from '@/components/BCTypography'
 import { apiRoutes } from '@/constants/routes'
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
