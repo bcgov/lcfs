@@ -36,14 +36,17 @@ jobs:
       - name: Run Backend Service
         run: docker run -d --name backend --network=host -e LCFS_DB_HOST=localhost -e LCFS_REDIS_HOST=localhost -e LCFS_CHES_ENABLED=False backend-service
 
-      - name: Wait for DB to be Ready
-        run: sleep 20
-
-      - name: Run Alembic Migrations
-        run: docker exec backend poetry run alembic upgrade head
-
-      - name: Data Seeding
-        run: docker exec backend poetry run python /app/lcfs/db/seeders/seed_database.py
+      # The backend's start.sh runs the migrations and the dev seed before the API starts
+      - name: Wait for Backend to be Ready
+        timeout-minutes: 10
+        run: |
+          until curl -sf --max-time 5 http://localhost:8000/api/health > /dev/null; do
+            if [ "$(docker inspect -f '{{.State.Running}}' backend)" != "true" ]; then
+              echo "Backend container stopped before it was ready"
+              exit 1
+            fi
+            sleep 5
+          done
 
       - name: Build Frontend Service
         run: docker build -t frontend-service -f ./frontend/Dockerfile.dev ./frontend
