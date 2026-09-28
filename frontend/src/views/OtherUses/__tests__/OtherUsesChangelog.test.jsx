@@ -141,48 +141,72 @@ vi.mock('@/themes/base/colors', () => ({
 }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Box: ({ children, ...props }) => (
+vi.mock('@mui/material/Box', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="mui-box" {...props}>
       {children}
     </div>
-  ),
-  TextField: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+  default: ({ children, ...props }) => (
     <input data-test="mui-textfield" {...props}>
       {children}
     </input>
-  ),
-  Button: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Button', () => ({
+  default: ({ children, ...props }) => (
     <button data-test="mui-button" {...props}>
       {children}
     </button>
-  ),
-  IconButton: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/IconButton', () => ({
+  default: ({ children, ...props }) => (
     <button data-test="mui-icon-button" {...props}>
       {children}
     </button>
-  ),
-  Typography: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Typography', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="mui-typography" {...props}>
       {children}
     </div>
-  ),
-  Grid: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Grid', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="mui-grid" {...props}>
       {children}
     </div>
-  ),
-  Paper: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Paper', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="mui-paper" {...props}>
       {children}
     </div>
-  ),
-  Card: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Card', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="mui-card" {...props}>
       {children}
     </div>
-  ),
-  CardContent: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/CardContent', () => ({
+  default: ({ children, ...props }) => (
     <div data-test="mui-card-content" {...props}>
       {children}
     </div>

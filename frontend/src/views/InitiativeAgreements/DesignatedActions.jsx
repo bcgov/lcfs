@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Divider } from '@mui/material'
+import Divider from '@mui/material/Divider'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'

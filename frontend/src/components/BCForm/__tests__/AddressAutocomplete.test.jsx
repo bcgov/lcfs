@@ -4,7 +4,7 @@
 import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { AddressAutocomplete } from '../AddressAutocomplete'
+import { AddressAutocomplete } from '@/components/BCForm/AddressAutocomplete'
 import { test as fixtureTest } from '@/tests/utils/fixtures'
 
 const test = (name, callback) =>

@@ -1,4 +1,4 @@
-import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 
 export const DEFAULT_QUANTITY = 100000
 

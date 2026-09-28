@@ -77,8 +77,8 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 // Mock Material-UI Box
-vi.mock('@mui/material', () => ({
-  Box: ({ children, component, sx, ...props }) => (
+vi.mock('@mui/material/Box', () => ({
+  default: ({ children, component, sx, ...props }) => (
     <div data-test="mui-box" {...props}>
       {children}
     </div>

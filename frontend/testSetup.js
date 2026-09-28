@@ -234,7 +234,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 // Mock form components
-vi.mock('@/components/BCForm', () => ({
+vi.mock('@/components/BCForm/BCFormText', () => ({
   BCFormText: ({
     name,
     control,
@@ -263,7 +263,10 @@ vi.mock('@/components/BCForm', () => ({
       placeholder: label, // Also add as placeholder for additional context
       ...domProps
     })
-  },
+  }
+}))
+
+vi.mock('@/components/BCForm/BCFormRadio', () => ({
   BCFormRadio: ({ name, control, options = [], ...props }) => {
     return React.createElement(
       'div',
@@ -279,21 +282,31 @@ vi.mock('@/components/BCForm', () => ({
         })
       )
     )
-  },
-  BCFormCheckbox: ({ name, form, options = [], ...props }) => {
+  }
+}))
+
+vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
+  BCFormCheckbox: ({ name, form, options = [] }) => {
     return React.createElement(
       'div',
       { 'data-test': `${name}-checkbox-group` },
       options.map((option, index) =>
-        React.createElement('input', {
-          key: `${name}-${index}`,
-          type: 'checkbox',
-          'data-test': option.dataTestId || `${name}${index + 1}`,
-          'data-testid': option.dataTestId || `${name}${index + 1}`
-        })
+        React.createElement(
+          'label',
+          { key: `${name}-${index}` },
+          React.createElement('input', {
+            type: 'checkbox',
+            'data-test': option.dataTestId || `${name}${index + 1}`,
+            'data-testid': option.dataTestId || `${name}${index + 1}`
+          }),
+          option.label
+        )
       )
     )
-  },
+  }
+}))
+
+vi.mock('@/components/BCForm/BCFormAddressAutocomplete', () => ({
   BCFormAddressAutocomplete: ({
     name,
     control,
@@ -354,7 +367,7 @@ vi.mock('@/components/BCModal', () => ({
 
 // Mock AddressAutocomplete component
 vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
-  default: ({ name, ...props }) => {
+  AddressAutocomplete: ({ name, ...props }) => {
     return React.createElement('input', {
       'data-test': 'address-autocomplete',
       'data-name': name,

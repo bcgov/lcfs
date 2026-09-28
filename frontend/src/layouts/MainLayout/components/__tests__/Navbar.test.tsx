@@ -2,7 +2,8 @@ import { screen } from '@testing-library/react'
 import { Navbar } from '../Navbar'
 import { vi, describe, expect, type Mock } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useMediaQuery, useTheme } from '@mui/material'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import useTheme from '@mui/material/styles/useTheme'
 import { test } from '@/tests/utils/fixtures'
 import { roles } from '@/constants/roles'
 
@@ -12,12 +13,19 @@ vi.mock('react-i18next', () => ({
     t: (key) => key
   })
 }))
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material')
+vi.mock('@mui/material/styles/useTheme', async (importOriginal) => {
+  const actual = await importOriginal()
   return {
     ...actual,
-    useTheme: vi.fn(),
-    useMediaQuery: vi.fn()
+    default: vi.fn()
+  }
+})
+
+vi.mock('@mui/material/useMediaQuery', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    default: vi.fn()
   }
 })
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
-import { Divider, Stack } from '@mui/material'
+import Divider from '@mui/material/Divider'
+import Stack from '@mui/material/Stack'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'

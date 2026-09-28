@@ -8,7 +8,7 @@ import { useForm, FormProvider } from 'react-hook-form'
 import {
   addressHasPostalCode,
   BCFormAddressAutocomplete
-} from '../BCFormAddressAutocomplete'
+} from '@/components/BCForm/BCFormAddressAutocomplete'
 import { test as fixtureTest } from '@/tests/utils/fixtures'
 
 const test = (name, callback) =>
@@ -21,6 +21,8 @@ const test = (name, callback) =>
   )
 
 // Mock BCTypography
+vi.unmock('@/components/BCForm/BCFormAddressAutocomplete')
+
 vi.mock('@/components/BCTypography', () => ({
   default: ({ variant, component, color, children, ...props }) => (
     <span
