@@ -1,5 +1,9 @@
-import { IconButton, Tooltip, Stack } from '@mui/material'
-import { Warning, DoneAll, Save } from '@mui/icons-material'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
+import Stack from '@mui/material/Stack'
+import Warning from '@mui/icons-material/Warning'
+import DoneAll from '@mui/icons-material/DoneAll'
+import Save from '@mui/icons-material/Save'
 
 export interface ValidationRendererProps {
   data: {

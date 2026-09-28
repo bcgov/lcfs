@@ -2,7 +2,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import { Card, CardContent, Divider, Skeleton } from '@mui/material'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Divider from '@mui/material/Divider'
+import Skeleton from '@mui/material/Skeleton'
 import ReactECharts from 'echarts-for-react'
 
 import BCBox from '@/components/BCBox'

@@ -1,7 +1,7 @@
+import { test } from '@/tests/utils/fixtures'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { wrapper } from '@/tests/utils/wrapper'
 import { CommentRow } from '../CommentRow'
 
 vi.mock('@/components/Comments/CommentForm', () => ({
@@ -19,7 +19,10 @@ const comment = (id, html) => ({
 })
 
 describe('CommentRow search highlighting', () => {
-  it('highlights every matching occurrence across returned comments', () => {
+  test('highlights every matching occurrence across returned comments', ({
+    render,
+    app
+  }) => {
     render(
       <>
         <CommentRow
@@ -33,7 +36,7 @@ describe('CommentRow search highlighting', () => {
           searchQuery="fuel credit"
         />
       </>,
-      { wrapper }
+      [...app]
     )
 
     const bodies = screen.getAllByTestId('comment-body')

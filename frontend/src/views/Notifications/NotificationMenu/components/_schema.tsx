@@ -3,7 +3,7 @@ import type { ColDef } from '@ag-grid-community/core'
 import { dateFormatter } from '@/utils/formatters'
 import { actions } from '@/components/BCDataGrid/columns'
 import { ROUTES } from '@/routes/routes'
-import { BCDateFloatingFilter } from '@/components/BCDataGrid/components'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 
 export const columnDefs = (
   t: (key: string) => string,

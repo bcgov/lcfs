@@ -1,9 +1,11 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, screen } from '@testing-library/react'
+
+import { describe, expect, vi, beforeEach } from 'vitest'
+
 import { DAAssignedAnalystCell } from '../DAAssignedAnalystCell'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -46,8 +48,11 @@ describe('DAAssignedAnalystCell', () => {
     mockRoleNames = [roles.government, roles.ia_manager]
   })
 
-  it('lets an IA manager assign an analyst from the cell', () => {
-    render(<DAAssignedAnalystCell data={row} />, { wrapper })
+  test('lets an IA manager assign an analyst from the cell', ({
+    render,
+    app
+  }) => {
+    render(<DAAssignedAnalystCell data={row} />, app)
 
     const select = screen.getByTestId('da-analyst-select')
     fireEvent.mouseDown(select.querySelector('[role="combobox"]') || select)
@@ -56,7 +61,7 @@ describe('DAAssignedAnalystCell', () => {
     expect(mockMutate).toHaveBeenCalledWith(7)
   })
 
-  it('shows a read-only chip to an IA analyst', () => {
+  test('shows a read-only chip to an IA analyst', ({ render, app }) => {
     mockRoleNames = [roles.government, roles.ia_analyst]
     render(
       <DAAssignedAnalystCell
@@ -65,7 +70,7 @@ describe('DAAssignedAnalystCell', () => {
           assignedAnalyst: { firstName: 'Erin', lastName: 'Fong' }
         }}
       />,
-      { wrapper }
+      app
     )
 
     expect(screen.getByTestId('da-analyst-readonly')).toBeInTheDocument()
