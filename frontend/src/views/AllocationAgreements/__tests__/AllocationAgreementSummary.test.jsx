@@ -1,7 +1,7 @@
-import { render, screen, act } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { screen, act } from '@testing-library/react'
+import { describe, expect, beforeEach, vi } from 'vitest'
 import { AllocationAgreementSummary } from '../AllocationAgreementSummary'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 // Mock react-router-dom
@@ -61,12 +61,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
       <div data-test="current-page">
         {queryData?.data?.pagination?.page || 1}
       </div>
-      <div data-test="page-size">
-        {queryData?.data?.pagination?.size || 10}
-      </div>
+      <div data-test="page-size">{queryData?.data?.pagination?.size || 10}</div>
       <button
-        data-test="simulate-pagination-change" 
-        onClick={() => onPaginationChange && onPaginationChange({ page: 2, size: 20 })}
+        data-test="simulate-pagination-change"
+        onClick={() =>
+          onPaginationChange && onPaginationChange({ page: 2, size: 20 })
+        }
       >
         Simulate Pagination Change
       </button>
@@ -115,19 +115,42 @@ describe('AllocationAgreementSummary', () => {
   })
 
   // Test 1: Component renders with minimal props
-  it('renders the component with minimal props', () => {
-    render(<AllocationAgreementSummary {...defaultProps} />, { wrapper })
+  test('renders the component with minimal props', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<AllocationAgreementSummary {...defaultProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-    expect(screen.getByTestId('grid-key')).toHaveTextContent('allocation-agreements')
-    expect(screen.getByTestId('data-key')).toHaveTextContent('allocationAgreements')
+    expect(screen.getByTestId('grid-key')).toHaveTextContent(
+      'allocation-agreements'
+    )
+    expect(screen.getByTestId('data-key')).toHaveTextContent(
+      'allocationAgreements'
+    )
     expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
     expect(screen.getByTestId('copy-button')).toHaveTextContent('copy-disabled')
-    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent('has-change-handler')
+    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
+      'has-change-handler'
+    )
   })
 
   // Test 2: Component renders with full data
-  it('renders with full data correctly', () => {
+  test('renders with full data correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockData = {
       allocationAgreements: [
         {
@@ -147,29 +170,47 @@ describe('AllocationAgreementSummary', () => {
       ]
     }
 
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={mockData} />,
-      { wrapper }
-    )
+    render(<AllocationAgreementSummary {...defaultProps} data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
     expect(screen.getByTestId('total-count')).toHaveTextContent('2 total')
   })
 
   // Test 3: No data scenario returns empty structure
-  it('handles no data scenario correctly', () => {
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={null} />,
-      { wrapper }
-    )
+  test('handles no data scenario correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<AllocationAgreementSummary {...defaultProps} data={null} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
     expect(screen.getByTestId('total-count')).toHaveTextContent('0 total')
-    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent('true')
+    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent(
+      'true'
+    )
   })
 
   // Test 4: Filters out DELETE action types
-  it('filters out DELETE action types', () => {
+  test('filters out DELETE action types', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockData = {
       allocationAgreements: [
         {
@@ -193,10 +234,12 @@ describe('AllocationAgreementSummary', () => {
       ]
     }
 
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={mockData} />,
-      { wrapper }
-    )
+    render(<AllocationAgreementSummary {...defaultProps} data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Should show 2 rows (excluding the deleted one)
     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
@@ -207,7 +250,13 @@ describe('AllocationAgreementSummary', () => {
   // These tests verify the component behavior with different data configurations
 
   // Test 9: Pagination calculation logic
-  it('calculates pagination correctly', () => {
+  test('calculates pagination correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockData = {
       allocationAgreements: Array.from({ length: 25 }, (_, i) => ({
         allocationAgreementId: i + 1,
@@ -218,10 +267,12 @@ describe('AllocationAgreementSummary', () => {
       }))
     }
 
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={mockData} />,
-      { wrapper }
-    )
+    render(<AllocationAgreementSummary {...defaultProps} data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // First page should show 10 items (default page size)
     expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows')
@@ -231,54 +282,86 @@ describe('AllocationAgreementSummary', () => {
   })
 
   // Test 10: gridOptions memoization
-  it('configures gridOptions correctly', () => {
-    render(<AllocationAgreementSummary {...defaultProps} />, { wrapper })
+  test('configures gridOptions correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<AllocationAgreementSummary {...defaultProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     // Component should render without errors, indicating gridOptions is properly configured
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   // Test 11: defaultColDef with DRAFT status (LinkRenderer)
-  it('sets LinkRenderer for DRAFT status', () => {
+  test('sets LinkRenderer for DRAFT status', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
-      <AllocationAgreementSummary 
-        {...defaultProps} 
-        status={COMPLIANCE_REPORT_STATUSES.DRAFT} 
+      <AllocationAgreementSummary
+        {...defaultProps}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   // Test 12: defaultColDef with non-DRAFT status (no renderer)
-  it('does not set LinkRenderer for non-DRAFT status', () => {
+  test('does not set LinkRenderer for non-DRAFT status', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
-      <AllocationAgreementSummary 
-        {...defaultProps} 
-        status={COMPLIANCE_REPORT_STATUSES.SUBMITTED} 
+      <AllocationAgreementSummary
+        {...defaultProps}
+        status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   // Test 13: columns memoization with isEarlyIssuance
-  it('passes isEarlyIssuance to column definitions', () => {
+  test('passes isEarlyIssuance to column definitions', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
-      <AllocationAgreementSummary 
-        {...defaultProps} 
-        isEarlyIssuance={true} 
-      />,
-      { wrapper }
+      <AllocationAgreementSummary {...defaultProps} isEarlyIssuance={true} />,
+      [query, theme, localization, router]
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   // Test 14: getRowId function
-  it('implements getRowId function correctly', () => {
+  test('implements getRowId function correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockData = {
       allocationAgreements: [
         {
@@ -290,31 +373,50 @@ describe('AllocationAgreementSummary', () => {
       ]
     }
 
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={mockData} />,
-      { wrapper }
-    )
+    render(<AllocationAgreementSummary {...defaultProps} data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
   })
 
   // Test 15: onPaginationChange callback
-  it('handles pagination change correctly', async () => {
-    render(<AllocationAgreementSummary {...defaultProps} />, { wrapper })
+  test('handles pagination change correctly', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<AllocationAgreementSummary {...defaultProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const paginationButton = screen.getByTestId('simulate-pagination-change')
     expect(paginationButton).toBeInTheDocument()
-    
+
     // Simulate pagination change - should not throw error
     await act(async () => {
       paginationButton.click()
     })
-    
+
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   // Test 16: suppressPagination logic (≤10 items)
-  it('suppresses pagination when 10 or fewer items', () => {
+  test('suppresses pagination when 10 or fewer items', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockData = {
       allocationAgreements: Array.from({ length: 8 }, (_, i) => ({
         allocationAgreementId: i + 1,
@@ -325,17 +427,29 @@ describe('AllocationAgreementSummary', () => {
       }))
     }
 
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={mockData} />,
-      { wrapper }
-    )
+    render(<AllocationAgreementSummary {...defaultProps} data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
-    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-suppressed')
-    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent('true')
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-suppressed'
+    )
+    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent(
+      'true'
+    )
   })
 
   // Test 17: suppressPagination logic (>10 items)
-  it('enables pagination when more than 10 items', () => {
+  test('enables pagination when more than 10 items', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockData = {
       allocationAgreements: Array.from({ length: 15 }, (_, i) => ({
         allocationAgreementId: i + 1,
@@ -346,17 +460,29 @@ describe('AllocationAgreementSummary', () => {
       }))
     }
 
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={mockData} />,
-      { wrapper }
-    )
+    render(<AllocationAgreementSummary {...defaultProps} data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
-    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-enabled')
-    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent('false')
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-enabled'
+    )
+    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent(
+      'false'
+    )
   })
 
   // Test 18: Filter field value edge cases
-  it('handles edge cases in data', () => {
+  test('handles edge cases in data', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockData = {
       allocationAgreements: [
         {
@@ -376,72 +502,120 @@ describe('AllocationAgreementSummary', () => {
       ]
     }
 
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={mockData} />,
-      { wrapper }
-    )
+    render(<AllocationAgreementSummary {...defaultProps} data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
     expect(screen.getByTestId('total-count')).toHaveTextContent('2 total')
   })
 
   // Test 19: Sort comparison edge cases
-  it('handles empty data arrays', () => {
+  test('handles empty data arrays', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockData = {
       allocationAgreements: []
     }
 
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={mockData} />,
-      { wrapper }
-    )
+    render(<AllocationAgreementSummary {...defaultProps} data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
     expect(screen.getByTestId('total-count')).toHaveTextContent('0 total')
-    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent('true')
+    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent(
+      'true'
+    )
   })
 
   // Test 20: Pagination edge cases
-  it('handles missing data structure', () => {
-    render(
-      <AllocationAgreementSummary 
-        {...defaultProps} 
-        data={{}} 
-      />,
-      { wrapper }
-    )
+  test('handles missing data structure', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<AllocationAgreementSummary {...defaultProps} data={{}} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
     expect(screen.getByTestId('total-count')).toHaveTextContent('0 total')
-    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent('true')
+    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent(
+      'true'
+    )
   })
 
   // Additional comprehensive coverage tests
-  it('maintains grid configuration consistency', () => {
-    render(<AllocationAgreementSummary {...defaultProps} />, { wrapper })
+  test('maintains grid configuration consistency', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<AllocationAgreementSummary {...defaultProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
-    expect(screen.getByTestId('grid-key')).toHaveTextContent('allocation-agreements')
-    expect(screen.getByTestId('data-key')).toHaveTextContent('allocationAgreements')
+    expect(screen.getByTestId('grid-key')).toHaveTextContent(
+      'allocation-agreements'
+    )
+    expect(screen.getByTestId('data-key')).toHaveTextContent(
+      'allocationAgreements'
+    )
     expect(screen.getByTestId('copy-button')).toHaveTextContent('copy-disabled')
-    expect(screen.getByTestId('has-pagination-options')).toHaveTextContent('has-pagination')
+    expect(screen.getByTestId('has-pagination-options')).toHaveTextContent(
+      'has-pagination'
+    )
   })
 
-  it('handles undefined props gracefully', () => {
+  test('handles undefined props gracefully', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     expect(() => {
       render(
-        <AllocationAgreementSummary 
+        <AllocationAgreementSummary
           data={undefined}
           status={undefined}
           isEarlyIssuance={undefined}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
     }).not.toThrow()
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
-  it('handles exactly 10 items boundary condition', () => {
+  test('handles exactly 10 items boundary condition', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockData = {
       allocationAgreements: Array.from({ length: 10 }, (_, i) => ({
         allocationAgreementId: i + 1,
@@ -452,16 +626,26 @@ describe('AllocationAgreementSummary', () => {
       }))
     }
 
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={mockData} />,
-      { wrapper }
-    )
+    render(<AllocationAgreementSummary {...defaultProps} data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
-    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-suppressed')
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-suppressed'
+    )
     expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows')
   })
 
-  it('handles exactly 11 items boundary condition', () => {
+  test('handles exactly 11 items boundary condition', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const mockData = {
       allocationAgreements: Array.from({ length: 11 }, (_, i) => ({
         allocationAgreementId: i + 1,
@@ -472,12 +656,16 @@ describe('AllocationAgreementSummary', () => {
       }))
     }
 
-    render(
-      <AllocationAgreementSummary {...defaultProps} data={mockData} />,
-      { wrapper }
-    )
+    render(<AllocationAgreementSummary {...defaultProps} data={mockData} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
-    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-enabled')
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-enabled'
+    )
     expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows')
     expect(screen.getByTestId('total-count')).toHaveTextContent('11 total')
   })

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, vi } from 'vitest'
+import { screen } from '@testing-library/react'
 import {
   YesNoTextRenderer,
   TextRenderer,
@@ -11,7 +11,7 @@ import {
   ChargingSiteStatusRenderer,
   createStatusRenderer
 } from '../grid/cellRenderers'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock ResizeObserver
 global.ResizeObserver = vi.fn().mockImplementation(function () {
@@ -28,54 +28,54 @@ vi.mock('react-router-dom', () => ({
 }))
 
 describe('YesNoTextRenderer', () => {
-  it('renders "Yes" when value is true', () => {
-    render(<YesNoTextRenderer value={true} />, { wrapper })
+  test('renders "Yes" when value is true', ({ render }) => {
+    render(<YesNoTextRenderer value={true} />, [])
     expect(screen.getByText('Yes')).toBeInTheDocument()
   })
 
-  it('renders "No" when value is false', () => {
-    render(<YesNoTextRenderer value={false} />, { wrapper })
+  test('renders "No" when value is false', ({ render }) => {
+    render(<YesNoTextRenderer value={false} />, [])
     expect(screen.getByText('No')).toBeInTheDocument()
   })
 
-  it('renders "No" when value is falsy', () => {
-    render(<YesNoTextRenderer value={0} />, { wrapper })
+  test('renders "No" when value is falsy', ({ render }) => {
+    render(<YesNoTextRenderer value={0} />, [])
     expect(screen.getByText('No')).toBeInTheDocument()
   })
 })
 
 describe('TextRenderer', () => {
-  it('renders value', () => {
-    render(<TextRenderer value="Test Text" />, { wrapper })
+  test('renders value', ({ render }) => {
+    render(<TextRenderer value="Test Text" />, [])
     expect(screen.getByText('Test Text')).toBeInTheDocument()
   })
 
-  it('renders formatted value', () => {
-    render(<TextRenderer valueFormatted="Formatted" value="Raw" />, { wrapper })
+  test('renders formatted value', ({ render }) => {
+    render(<TextRenderer valueFormatted="Formatted" value="Raw" />, [])
     expect(screen.getByText('Formatted')).toBeInTheDocument()
   })
 })
 
 describe('LinkRenderer', () => {
-  it('renders link with value', () => {
+  test('renders link with value', ({ render }) => {
     const props = { value: 'Link Text', node: { id: '123' } }
-    render(<LinkRenderer {...props} />, { wrapper })
+    render(<LinkRenderer {...props} />, [])
     expect(screen.getByText('Link Text')).toBeInTheDocument()
   })
 
-  it('uses custom url function', () => {
+  test('uses custom url function', ({ render }) => {
     const props = {
       value: 'Link',
       url: ({ data }) => `custom/${data.id}`,
       data: { id: '456' }
     }
-    render(<LinkRenderer {...props} />, { wrapper })
+    render(<LinkRenderer {...props} />, [])
     expect(screen.getByRole('link')).toHaveAttribute('href', '/test/custom/456')
   })
 })
 
 describe('SelectRenderer', () => {
-  it('renders select with value', () => {
+  test('renders select with value', ({ render }) => {
     const props = {
       value: 'Selected',
       colDef: {
@@ -83,99 +83,103 @@ describe('SelectRenderer', () => {
         editable: true
       }
     }
-    render(<SelectRenderer {...props} />, { wrapper })
+    render(<SelectRenderer {...props} />, [])
     expect(screen.getByText('Selected')).toBeInTheDocument()
   })
 
-  it('shows Select placeholder when no value', () => {
+  test('shows Select placeholder when no value', ({ render }) => {
     const props = {
       colDef: {
         cellEditorParams: { options: ['A', 'B'] },
         editable: true
       }
     }
-    render(<SelectRenderer {...props} />, { wrapper })
+    render(<SelectRenderer {...props} />, [])
     expect(screen.getByText('Select')).toBeInTheDocument()
   })
 })
 
 describe('MultiSelectRenderer', () => {
-  it('renders array values', () => {
+  test('renders array values', ({ render }) => {
     const props = {
       value: [{ label: 'Item 1' }, { label: 'Item 2' }],
       colDef: { cellEditorParams: { options: [] } }
     }
-    render(<MultiSelectRenderer {...props} />, { wrapper })
+    render(<MultiSelectRenderer {...props} />, [])
     expect(screen.getByText('Item 1')).toBeInTheDocument()
   })
 })
 
 describe('StatusRenderer', () => {
-  it('renders active status', () => {
+  test('renders active status', ({ render, theme }) => {
     const props = { data: { isActive: true } }
-    render(<StatusRenderer {...props} />, { wrapper })
+    render(<StatusRenderer {...props} />, [theme])
     expect(screen.getByText('Active')).toBeInTheDocument()
   })
 
-  it('renders inactive status', () => {
+  test('renders inactive status', ({ render, theme }) => {
     const props = { data: { isActive: false } }
-    render(<StatusRenderer {...props} />, { wrapper })
+    render(<StatusRenderer {...props} />, [theme])
     expect(screen.getByText('Inactive')).toBeInTheDocument()
   })
 })
 
 describe('CommonArrayRenderer', () => {
-  it('renders array of strings', () => {
+  test('renders array of strings', ({ render }) => {
     const props = {
       value: ['Item 1', 'Item 2'],
       colDef: { field: 'test' },
       api: { addEventListener: vi.fn(), removeEventListener: vi.fn() }
     }
-    render(<CommonArrayRenderer {...props} />, { wrapper })
+    render(<CommonArrayRenderer {...props} />, [])
     expect(screen.getByText('Item 1')).toBeInTheDocument()
   })
 
-  it('handles empty array', () => {
+  test('handles empty array', ({ render }) => {
     const props = {
       value: [],
       colDef: { field: 'test' },
       api: { addEventListener: vi.fn(), removeEventListener: vi.fn() }
     }
-    const { container } = render(<CommonArrayRenderer {...props} />, { wrapper })
+    const { container } = render(<CommonArrayRenderer {...props} />, [])
     expect(container.firstChild).toBeInTheDocument()
   })
 })
 
 describe('ChargingSiteStatusRenderer', () => {
-  it('renders draft status', () => {
+  test('renders draft status', ({ render, theme }) => {
     const props = { data: { status: { status: 'Draft' } } }
-    render(<ChargingSiteStatusRenderer {...props} />, { wrapper })
+    render(<ChargingSiteStatusRenderer {...props} />, [theme])
     expect(screen.getByText('Draft')).toBeInTheDocument()
   })
 
-  it('renders validated status', () => {
+  test('renders validated status', ({ render, theme }) => {
     const props = { data: { status: { status: 'Validated' } } }
-    render(<ChargingSiteStatusRenderer {...props} />, { wrapper })
+    render(<ChargingSiteStatusRenderer {...props} />, [theme])
     expect(screen.getByText('Validated')).toBeInTheDocument()
   })
 })
 
 describe('createStatusRenderer', () => {
-  it('creates custom status renderer', () => {
+  test('creates custom status renderer', ({ render, theme }) => {
     const colorMap = { Active: 'success', Inactive: 'error' }
-    const CustomRenderer = createStatusRenderer(colorMap, { statusField: 'customStatus' })
-    
+    const CustomRenderer = createStatusRenderer(colorMap, {
+      statusField: 'customStatus'
+    })
+
     const props = { data: { customStatus: 'Active' } }
-    render(<CustomRenderer {...props} />, { wrapper })
+    render(<CustomRenderer {...props} />, [theme])
     expect(screen.getByText('Active')).toBeInTheDocument()
   })
 
-  it('handles nested status field', () => {
+  test('handles nested status field', ({ render, theme }) => {
     const colorMap = { Draft: 'info' }
-    const CustomRenderer = createStatusRenderer(colorMap, { statusField: 'status.value' })
-    
+    const CustomRenderer = createStatusRenderer(colorMap, {
+      statusField: 'status.value'
+    })
+
     const props = { data: { status: { value: 'Draft' } } }
-    render(<CustomRenderer {...props} />, { wrapper })
+    render(<CustomRenderer {...props} />, [theme])
     expect(screen.getByText('Draft')).toBeInTheDocument()
   })
 })

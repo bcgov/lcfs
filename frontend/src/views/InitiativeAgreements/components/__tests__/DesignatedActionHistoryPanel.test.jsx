@@ -1,8 +1,10 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, screen } from '@testing-library/react'
+
+import { describe, expect, vi, beforeEach } from 'vitest'
+
 import { DesignatedActionHistoryPanel } from '../DesignatedActionHistoryPanel'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -36,8 +38,8 @@ describe('DesignatedActionHistoryPanel', () => {
     mockHistory.mockReturnValue({ data: [entry()], isLoading: false })
   })
 
-  it('shows who did what and when', () => {
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+  test('shows who did what and when', ({ render, app }) => {
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     const row = screen.getByTestId('history-entry-1')
     expect(row).toHaveTextContent('Alex Zorkin')
@@ -46,7 +48,10 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(row).toHaveTextContent('Approved')
   })
 
-  it('names the analyst on an assignment rather than showing an id', () => {
+  test('names the analyst on an assignment rather than showing an id', ({
+    render,
+    app
+  }) => {
     mockHistory.mockReturnValue({
       data: [
         entry({
@@ -63,7 +68,7 @@ describe('DesignatedActionHistoryPanel', () => {
       ],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     const row = screen.getByTestId('history-entry-2')
     expect(row).toHaveTextContent('Harriet Fong')
@@ -71,7 +76,10 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(row).not.toHaveTextContent('from_analyst_id')
   })
 
-  it('shows the reason given with a request for information', () => {
+  test('shows the reason given with a request for information', ({
+    render,
+    app
+  }) => {
     mockHistory.mockReturnValue({
       data: [
         entry({
@@ -83,14 +91,14 @@ describe('DesignatedActionHistoryPanel', () => {
       ],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     expect(screen.getByTestId('history-comment')).toHaveTextContent(
       'Send the signed permit for stage two.'
     )
   })
 
-  it('shows the recommended amount', () => {
+  test('shows the recommended amount', ({ render, app }) => {
     mockHistory.mockReturnValue({
       data: [
         entry({
@@ -102,12 +110,15 @@ describe('DesignatedActionHistoryPanel', () => {
       ],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     expect(screen.getByTestId('history-entry-4')).toHaveTextContent('1,200')
   })
 
-  it('shows a recommendation of nought rather than treating it as absent', () => {
+  test('shows a recommendation of nought rather than treating it as absent', ({
+    render,
+    app
+  }) => {
     mockHistory.mockReturnValue({
       data: [
         entry({
@@ -119,14 +130,14 @@ describe('DesignatedActionHistoryPanel', () => {
       ],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     expect(screen.getByTestId('history-entry-5')).toHaveTextContent(
       'history.recommendedCredits'
     )
   })
 
-  it('keeps the captured evidence behind a toggle', () => {
+  test('keeps the captured evidence behind a toggle', ({ render, app }) => {
     mockHistory.mockReturnValue({
       data: [
         entry({
@@ -154,7 +165,7 @@ describe('DesignatedActionHistoryPanel', () => {
       ],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     // Summary counts are visible without expanding.
     const summary = screen.getByTestId('history-entry-summary-6')
@@ -173,7 +184,10 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(detail).toHaveTextContent('Risk register')
   })
 
-  it('renders an entry whose event it does not recognise', () => {
+  test('renders an entry whose event it does not recognise', ({
+    render,
+    app
+  }) => {
     mockHistory.mockReturnValue({
       data: [
         entry({
@@ -184,14 +198,17 @@ describe('DesignatedActionHistoryPanel', () => {
       ],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     expect(screen.getByTestId('history-entry-7')).toHaveTextContent(
       'history.events.unknown'
     )
   })
 
-  it('groups entries by what kind of thing happened, in a fixed order', () => {
+  test('groups entries by what kind of thing happened, in a fixed order', ({
+    render,
+    app
+  }) => {
     mockHistory.mockReturnValue({
       data: [
         entry({ designatedActionHistoryId: 10, event: 'ANALYST_ASSIGNED' }),
@@ -202,7 +219,7 @@ describe('DesignatedActionHistoryPanel', () => {
       ],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     // Evidence review first: it is what a manager or director reads.
     const groups = screen
@@ -230,12 +247,12 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(ids).toEqual(['history-entry-11', 'history-entry-14'])
   })
 
-  it('shows only the groups that have entries', () => {
+  test('shows only the groups that have entries', ({ render, app }) => {
     mockHistory.mockReturnValue({
       data: [entry({ designatedActionHistoryId: 20, event: 'STATUS_CHANGE' })],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     expect(screen.getByTestId('history-group-workflow')).toBeInTheDocument()
     expect(screen.queryByTestId('history-group-evidenceReview')).toBeNull()
@@ -243,20 +260,23 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(screen.queryByTestId('history-group-recordChanges')).toBeNull()
   })
 
-  it('puts an event it does not recognise under Other rather than dropping it', () => {
+  test('puts an event it does not recognise under Other rather than dropping it', ({
+    render,
+    app
+  }) => {
     mockHistory.mockReturnValue({
       data: [entry({ designatedActionHistoryId: 21, event: 'SOMETHING_NEW' })],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     expect(screen.getByTestId('history-group-other')).toHaveTextContent(
       'history.events.unknown'
     )
   })
 
-  it('a group collapses and expands from its heading', () => {
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+  test('a group collapses and expands from its heading', ({ render, app }) => {
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     const toggle = screen.getByTestId('history-group-toggle-workflow')
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
@@ -273,7 +293,10 @@ describe('DesignatedActionHistoryPanel', () => {
     )
   })
 
-  it('lists each requirement by number and title, falling back to the description', () => {
+  test('lists each requirement by number and title, falling back to the description', ({
+    render,
+    app
+  }) => {
     mockHistory.mockReturnValue({
       data: [
         entry({
@@ -304,7 +327,7 @@ describe('DesignatedActionHistoryPanel', () => {
       ],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
     fireEvent.click(screen.getByTestId('history-entry-toggle-30'))
 
     const detail = screen.getByTestId('history-evidence-detail')
@@ -315,7 +338,7 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(detail).toHaveTextContent('history.notReviewed')
   })
 
-  it('names the evidence item an edit belongs to', () => {
+  test('names the evidence item an edit belongs to', ({ render, app }) => {
     mockHistory.mockReturnValue({
       data: [
         entry({
@@ -334,7 +357,7 @@ describe('DesignatedActionHistoryPanel', () => {
       ],
       isLoading: false
     })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     // The collapsed line says which item; the detail says what changed.
     expect(screen.getByTestId('history-entry-summary-40')).toHaveTextContent(
@@ -346,9 +369,12 @@ describe('DesignatedActionHistoryPanel', () => {
     )
   })
 
-  it('shows an empty state before anything has happened', () => {
+  test('shows an empty state before anything has happened', ({
+    render,
+    app
+  }) => {
     mockHistory.mockReturnValue({ data: [], isLoading: false })
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     expect(
       screen.getByText('initiativeAgreement:history.empty')
@@ -356,8 +382,8 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(screen.queryByTestId('history-entry-1')).not.toBeInTheDocument()
   })
 
-  it('collapses the panel', () => {
-    render(<DesignatedActionHistoryPanel designatedActionId="1" />, { wrapper })
+  test('collapses the panel', ({ render, app }) => {
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     const toggle = screen.getByTestId('history-toggle')
     expect(toggle).toHaveAttribute('aria-expanded', 'true')

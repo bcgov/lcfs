@@ -1,8 +1,16 @@
 import React from 'react'
-import { render, screen, waitFor, act } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { screen, waitFor, act } from '@testing-library/react'
+import { describe, expect, beforeEach, vi } from 'vitest'
 import { OtherUsesChangelog } from '../OtherUsesChangelog'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
+
+let render
+const fixtureOptions = undefined
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender }) => {
+    render = (ui, options) => fixtureRender(ui, [], options)
+    return fn()
+  })
 
 // Mock hooks
 vi.mock('@/hooks/useComplianceReports', () => ({
@@ -85,7 +93,11 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
   default: ({ children, ...props }) => (
-    <div data-test="bc-typography" data-variant={props.variant} data-color={props.color}>
+    <div
+      data-test="bc-typography"
+      data-variant={props.variant}
+      data-color={props.color}
+    >
       {children}
     </div>
   )
@@ -130,39 +142,75 @@ vi.mock('@/themes/base/colors', () => ({
 
 // Mock MUI components
 vi.mock('@mui/material/Box', () => ({
-    default: ({ children, ...props }) => <div data-test="mui-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="mui-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-    default: ({ children, ...props }) => <input data-test="mui-textfield" {...props}>{children}</input>
+  default: ({ children, ...props }) => (
+    <input data-test="mui-textfield" {...props}>
+      {children}
+    </input>
+  )
 }))
 
 vi.mock('@mui/material/Button', () => ({
-    default: ({ children, ...props }) => <button data-test="mui-button" {...props}>{children}</button>
+  default: ({ children, ...props }) => (
+    <button data-test="mui-button" {...props}>
+      {children}
+    </button>
+  )
 }))
 
 vi.mock('@mui/material/IconButton', () => ({
-    default: ({ children, ...props }) => <button data-test="mui-icon-button" {...props}>{children}</button>
+  default: ({ children, ...props }) => (
+    <button data-test="mui-icon-button" {...props}>
+      {children}
+    </button>
+  )
 }))
 
 vi.mock('@mui/material/Typography', () => ({
-    default: ({ children, ...props }) => <div data-test="mui-typography" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="mui-typography" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@mui/material/Grid', () => ({
-    default: ({ children, ...props }) => <div data-test="mui-grid" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="mui-grid" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@mui/material/Paper', () => ({
-    default: ({ children, ...props }) => <div data-test="mui-paper" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="mui-paper" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@mui/material/Card', () => ({
-    default: ({ children, ...props }) => <div data-test="mui-card" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="mui-card" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@mui/material/CardContent', () => ({
-    default: ({ children, ...props }) => <div data-test="mui-card-content" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="mui-card-content" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 // Mock MUI styles
@@ -171,7 +219,10 @@ vi.mock('@mui/material/styles', () => ({
   useTheme: () => ({ spacing: (val) => `${val * 8}px` })
 }))
 
-import { useComplianceReportWithCache, useGetChangeLog } from '@/hooks/useComplianceReports'
+import {
+  useComplianceReportWithCache,
+  useGetChangeLog
+} from '@/hooks/useComplianceReports'
 
 describe('OtherUsesChangelog', () => {
   const mockCurrentReport = {
@@ -195,7 +246,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: true
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
       expect(screen.getByTestId('loading-component')).toBeInTheDocument()
     })
 
@@ -209,7 +260,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
       expect(screen.getByTestId('loading-component')).toBeInTheDocument()
     })
 
@@ -223,7 +274,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: true
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
       expect(screen.getByTestId('loading-component')).toBeInTheDocument()
     })
   })
@@ -235,7 +286,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
       const grids = screen.queryAllByTestId('bc-grid-viewer')
       expect(grids).toHaveLength(0)
     })
@@ -246,7 +297,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
       const grids = screen.queryAllByTestId('bc-grid-viewer')
       expect(grids).toHaveLength(0)
     })
@@ -265,7 +316,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       expect(screen.getByText('Empty Version')).toBeInTheDocument()
       expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -293,7 +344,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       expect(screen.getByText('Version 1.0')).toBeInTheDocument()
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -323,7 +374,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       expect(screen.getByText('Current Version')).toBeInTheDocument()
       expect(screen.getByText('Original Version')).toBeInTheDocument()
@@ -355,7 +406,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       const gridKeys = screen.getAllByTestId('grid-key')
       expect(gridKeys[0]).toHaveTextContent('other-uses-changelog-0')
@@ -380,7 +431,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       expect(screen.getByTestId('row-id-result')).toHaveTextContent('123')
     })
@@ -405,7 +456,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
         'pagination-suppressed'
@@ -436,7 +487,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
         'pagination-enabled'
@@ -467,7 +518,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       // Should show first 10 items (default page size)
       expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows')
@@ -494,7 +545,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       // UI pagination is suppressed if < 10 items, even for current version
       expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
@@ -513,10 +564,12 @@ describe('OtherUsesChangelog', () => {
         {
           version: 2,
           nickname: 'Current Version',
-          otherUses: [{ otherUsesId: 1, fuelType: 'Fuel', actionType: 'CREATE' }]
+          otherUses: [
+            { otherUsesId: 1, fuelType: 'Fuel', actionType: 'CREATE' }
+          ]
         },
         {
-          version: 0, // Original version  
+          version: 0, // Original version
           nickname: 'Original Version',
           otherUses: Array.from({ length: 3 }, (_, i) => ({
             otherUsesId: i + 1,
@@ -531,14 +584,16 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       const grids = screen.getAllByTestId('bc-grid-viewer')
       expect(grids).toHaveLength(2)
-      
+
       // Both should have pagination suppressed (< 10 items each)
-      const paginationSuppressed = screen.getAllByTestId('pagination-suppressed')
-      paginationSuppressed.forEach(element => {
+      const paginationSuppressed = screen.getAllByTestId(
+        'pagination-suppressed'
+      )
+      paginationSuppressed.forEach((element) => {
         expect(element).toHaveTextContent('pagination-suppressed')
       })
     })
@@ -575,7 +630,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       await waitFor(() => {
         const grids = screen.getAllByTestId('bc-grid-viewer')
@@ -613,7 +668,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       const grids = screen.getAllByTestId('bc-grid-viewer')
       expect(grids).toHaveLength(3)
@@ -645,7 +700,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       // Component should render with pagination enabled for filtering/sorting
       expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
@@ -667,7 +722,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       // Should render without errors
       const grids = screen.queryAllByTestId('bc-grid-viewer')
@@ -688,7 +743,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       // Component should render with the correct overlay template
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -712,7 +767,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
@@ -734,7 +789,7 @@ describe('OtherUsesChangelog', () => {
         isLoading: false
       })
 
-      render(<OtherUsesChangelog />, { wrapper })
+      render(<OtherUsesChangelog />, { fixtureOptions })
 
       // Component should render with styling options available
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -785,7 +840,7 @@ describe('OtherUsesChangelog', () => {
           isLoading: false
         })
 
-        render(<OtherUsesChangelog />, { wrapper })
+        render(<OtherUsesChangelog />, { fixtureOptions })
         expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
       })
 
@@ -805,7 +860,7 @@ describe('OtherUsesChangelog', () => {
           isLoading: false
         })
 
-        render(<OtherUsesChangelog />, { wrapper })
+        render(<OtherUsesChangelog />, { fixtureOptions })
         expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
       })
 
@@ -825,7 +880,7 @@ describe('OtherUsesChangelog', () => {
           isLoading: false
         })
 
-        render(<OtherUsesChangelog />, { wrapper })
+        render(<OtherUsesChangelog />, { fixtureOptions })
         expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
       })
 
@@ -845,7 +900,7 @@ describe('OtherUsesChangelog', () => {
           isLoading: false
         })
 
-        render(<OtherUsesChangelog />, { wrapper })
+        render(<OtherUsesChangelog />, { fixtureOptions })
         expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
       })
     })
@@ -869,11 +924,13 @@ describe('OtherUsesChangelog', () => {
           isLoading: false
         })
 
-        render(<OtherUsesChangelog />, { wrapper })
+        render(<OtherUsesChangelog />, { fixtureOptions })
 
         // Should show all 5 items without pagination
         expect(screen.getByTestId('row-count')).toHaveTextContent('5 rows')
-        expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-suppressed')
+        expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+          'pagination-suppressed'
+        )
       })
 
       it('processes data correctly for current version but suppresses UI pagination for small datasets', () => {
@@ -894,12 +951,14 @@ describe('OtherUsesChangelog', () => {
           isLoading: false
         })
 
-        render(<OtherUsesChangelog />, { wrapper })
+        render(<OtherUsesChangelog />, { fixtureOptions })
 
         // Data is processed correctly (all 3 items shown)
         expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
         // But UI pagination is suppressed because < 10 items
-        expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-suppressed')
+        expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+          'pagination-suppressed'
+        )
       })
 
       it('returns paginated data for large datasets', () => {
@@ -920,11 +979,13 @@ describe('OtherUsesChangelog', () => {
           isLoading: false
         })
 
-        render(<OtherUsesChangelog />, { wrapper })
+        render(<OtherUsesChangelog />, { fixtureOptions })
 
         // Should paginate and show first 10 items
         expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows')
-        expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('pagination-enabled')
+        expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+          'pagination-enabled'
+        )
       })
 
       it('handles empty otherUses array', () => {
@@ -941,7 +1002,7 @@ describe('OtherUsesChangelog', () => {
           isLoading: false
         })
 
-        render(<OtherUsesChangelog />, { wrapper })
+        render(<OtherUsesChangelog />, { fixtureOptions })
 
         expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
       })
@@ -951,7 +1012,9 @@ describe('OtherUsesChangelog', () => {
           {
             version: 2,
             nickname: 'Some Version',
-            otherUses: [{ otherUsesId: 1, fuelType: 'Fuel', actionType: 'CREATE' }]
+            otherUses: [
+              { otherUsesId: 1, fuelType: 'Fuel', actionType: 'CREATE' }
+            ]
           },
           {
             version: 0, // Original version
@@ -969,14 +1032,16 @@ describe('OtherUsesChangelog', () => {
           isLoading: false
         })
 
-        render(<OtherUsesChangelog />, { wrapper })
+        render(<OtherUsesChangelog />, { fixtureOptions })
 
         const grids = screen.getAllByTestId('bc-grid-viewer')
         expect(grids).toHaveLength(2)
 
         // Both should have pagination suppressed (< 10 items each)
-        const paginationElements = screen.getAllByTestId('pagination-suppressed')
-        paginationElements.forEach(element => {
+        const paginationElements = screen.getAllByTestId(
+          'pagination-suppressed'
+        )
+        paginationElements.forEach((element) => {
           expect(element).toHaveTextContent('pagination-suppressed')
         })
       })
