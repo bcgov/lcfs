@@ -112,11 +112,13 @@ export const CommentLog = ({ organizationId }) => {
             fontSize: '1rem',
             lineHeight: 1.5
           },
-          '.comment-content p': { margin: '0.25rem 0' },
+          '.comment-content p': { margin: '0.25rem 0', fontSize: '1rem' },
           '.comment-content ul, .comment-content ol': {
             paddingLeft: '1.5rem',
-            margin: '0.25rem 0'
+            margin: '0.25rem 0',
+            fontSize: '1rem'
           },
+          '.comment-content li': { fontSize: '1rem' },
           'mark.comment-search-highlight': {
             backgroundColor: '#ffec99',
             color: '#1a1a1a',
