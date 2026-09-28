@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box, IconButton, Link, Stack, TextField, Tooltip } from '@mui/material'
-import {
-  CloudUpload as CloudUploadIcon,
-  Delete as DeleteIcon
-} from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import Link from '@mui/material/Link'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'

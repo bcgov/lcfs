@@ -1,12 +1,10 @@
 import { ReactNode } from 'react'
-import {
-  Autocomplete,
-  Box,
-  Chip,
-  Stack,
-  TextField,
-  TextFieldProps
-} from '@mui/material'
+import Autocomplete from '@mui/material/Autocomplete'
+import Box from '@mui/material/Box'
+import Chip from '@mui/material/Chip'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import type { TextFieldProps } from '@mui/material/TextField'
 import { alpha } from '@mui/material/styles'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'

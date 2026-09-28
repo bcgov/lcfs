@@ -1,8 +1,8 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { CreditMarketAccordion } from '../CreditMarketAccordion'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock translation hook
 vi.mock('react-i18next', () => ({
@@ -52,16 +52,16 @@ describe('CreditMarketAccordion', () => {
     vi.clearAllMocks()
   })
 
-  it('renders the component with correct title', () => {
-    render(<CreditMarketAccordion />, { wrapper })
+  test('renders the component with correct title', ({ render, theme }) => {
+    render(<CreditMarketAccordion />, [theme])
 
     expect(
       screen.getByText('Information Bulletin RLCF-013 (Credit trading market)')
     ).toBeInTheDocument()
   })
 
-  it('starts expanded by default', () => {
-    render(<CreditMarketAccordion />, { wrapper })
+  test('starts expanded by default', ({ render, theme }) => {
+    render(<CreditMarketAccordion />, [theme])
 
     // Check if accordion is expanded by looking for the content
     expect(screen.getByText('Background')).toBeInTheDocument()
@@ -70,8 +70,8 @@ describe('CreditMarketAccordion', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders all section headings', () => {
-    render(<CreditMarketAccordion />, { wrapper })
+  test('renders all section headings', ({ render, theme }) => {
+    render(<CreditMarketAccordion />, [theme])
 
     expect(screen.getByText('Background')).toBeInTheDocument()
     expect(
@@ -84,8 +84,8 @@ describe('CreditMarketAccordion', () => {
     expect(screen.getByText('Need more information?')).toBeInTheDocument()
   })
 
-  it('renders all section content', () => {
-    render(<CreditMarketAccordion />, { wrapper })
+  test('renders all section content', ({ render, theme }) => {
+    render(<CreditMarketAccordion />, [theme])
 
     expect(
       screen.getByText(/Beginning in 2024, to participate in the credit market/)
@@ -119,8 +119,8 @@ describe('CreditMarketAccordion', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders legal disclaimer', () => {
-    render(<CreditMarketAccordion />, { wrapper })
+  test('renders legal disclaimer', ({ render, theme }) => {
+    render(<CreditMarketAccordion />, [theme])
 
     expect(
       screen.getByText(
@@ -129,8 +129,11 @@ describe('CreditMarketAccordion', () => {
     ).toBeInTheDocument()
   })
 
-  it('can be collapsed and expanded by clicking on the accordion header', () => {
-    render(<CreditMarketAccordion />, { wrapper })
+  test('can be collapsed and expanded by clicking on the accordion header', ({
+    render,
+    theme
+  }) => {
+    render(<CreditMarketAccordion />, [theme])
 
     // Find the accordion button
     const accordionButton = screen.getByRole('button')
@@ -147,17 +150,17 @@ describe('CreditMarketAccordion', () => {
     expect(backgroundText).toBeTruthy() // Still in DOM
   })
 
-  it('has proper accessibility attributes', () => {
-    render(<CreditMarketAccordion />, { wrapper })
+  test('has proper accessibility attributes', ({ render, theme }) => {
+    render(<CreditMarketAccordion />, [theme])
 
     // Check for ARIA attributes on the accordion button
     const accordionButton = screen.getByRole('button')
     expect(accordionButton).toHaveAttribute('aria-expanded', 'true')
   })
 
-  it('handles missing translations gracefully', () => {
+  test('handles missing translations gracefully', ({ render, theme }) => {
     // This test verifies the component renders even with missing translations
-    render(<CreditMarketAccordion />, { wrapper })
+    render(<CreditMarketAccordion />, [theme])
 
     // Should still render with translation keys working
     expect(screen.getByRole('button')).toBeInTheDocument()
@@ -166,8 +169,8 @@ describe('CreditMarketAccordion', () => {
     ).toBeInTheDocument()
   })
 
-  it('maintains proper component structure', () => {
-    render(<CreditMarketAccordion />, { wrapper })
+  test('maintains proper component structure', ({ render, theme }) => {
+    render(<CreditMarketAccordion />, [theme])
 
     // Should have accordion structure
     expect(screen.getByRole('button')).toBeInTheDocument()

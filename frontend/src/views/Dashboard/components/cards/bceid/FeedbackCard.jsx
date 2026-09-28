@@ -1,8 +1,9 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box, Icon } from '@mui/material'
+import Box from '@mui/material/Box'
+import Icon from '@mui/material/Icon'
 import BCTypography from '@/components/BCTypography'
-import { Mail } from '@mui/icons-material'
+import Mail from '@mui/icons-material/Mail'
 
 const FeedbackCard = () => {
   const { t } = useTranslation(['dashboard'])

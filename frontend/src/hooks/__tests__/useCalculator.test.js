@@ -1,5 +1,5 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import {
   useGetCompliancePeriodList,
   useGetFuelTypeList,
@@ -7,7 +7,7 @@ import {
   useCalculateComplianceUnits
 } from '@/hooks/useCalculator'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { LEGISLATION_TRANSITION_YEAR } from '@/constants/common'
 
 vi.mock('@/services/useApiService')
@@ -23,16 +23,17 @@ describe('useGetCompliancePeriodList', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('should fetch compliance period list successfully', async () => {
+  test('should fetch compliance period list successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = [
       { year: 2024, description: '2024 Compliance Period' },
       { year: 2023, description: '2023 Compliance Period' }
     ]
     mockGet.mockResolvedValueOnce({ data: mockData })
 
-    const { result } = renderHook(() => useGetCompliancePeriodList(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useGetCompliancePeriodList(), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -40,28 +41,24 @@ describe('useGetCompliancePeriodList', () => {
     expect(mockGet).toHaveBeenCalledWith(expect.any(String))
   })
 
-  it('should handle API errors', async () => {
+  test('should handle API errors', async ({ renderHook, query }) => {
     const mockError = new Error('Failed to fetch compliance periods')
     mockGet.mockRejectedValueOnce(mockError)
 
-    const { result } = renderHook(() => useGetCompliancePeriodList(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useGetCompliancePeriodList(), [query])
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.error).toEqual(mockError)
   })
 
-  it('should use correct cache configuration', () => {
-    const { result } = renderHook(() => useGetCompliancePeriodList(), {
-      wrapper
-    })
+  test('should use correct cache configuration', ({ renderHook, query }) => {
+    const { result } = renderHook(() => useGetCompliancePeriodList(), [query])
 
     // The hook should be configured with long cache times for static data
     expect(result.current).toBeDefined()
   })
 
-  it('should pass through custom options', async () => {
+  test('should pass through custom options', async ({ renderHook, query }) => {
     const mockData = []
     mockGet.mockResolvedValueOnce({ data: mockData })
 
@@ -72,7 +69,7 @@ describe('useGetCompliancePeriodList', () => {
 
     const { result } = renderHook(
       () => useGetCompliancePeriodList(customOptions),
-      { wrapper }
+      [query]
     )
 
     // With enabled: false, the query should not execute
@@ -89,7 +86,10 @@ describe('useGetFuelTypeList', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('should fetch fuel type list successfully', async () => {
+  test('should fetch fuel type list successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = [
       { id: 1, name: 'Gasoline', category: 'gasoline' },
       { id: 2, name: 'Diesel', category: 'diesel' }
@@ -102,7 +102,7 @@ describe('useGetFuelTypeList', () => {
       lcfsOnly: true
     }
 
-    const { result } = renderHook(() => useGetFuelTypeList(params), { wrapper })
+    const { result } = renderHook(() => useGetFuelTypeList(params), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -115,33 +115,39 @@ describe('useGetFuelTypeList', () => {
     })
   })
 
-  it('should not fetch when fuel category is missing', () => {
+  test('should not fetch when fuel category is missing', ({
+    renderHook,
+    query
+  }) => {
     const params = {
       complianceYear: '2024',
       fuelCategory: '',
       lcfsOnly: true
     }
 
-    const { result } = renderHook(() => useGetFuelTypeList(params), { wrapper })
+    const { result } = renderHook(() => useGetFuelTypeList(params), [query])
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should not fetch when fuel category is null', () => {
+  test('should not fetch when fuel category is null', ({
+    renderHook,
+    query
+  }) => {
     const params = {
       complianceYear: '2024',
       fuelCategory: null,
       lcfsOnly: true
     }
 
-    const { result } = renderHook(() => useGetFuelTypeList(params), { wrapper })
+    const { result } = renderHook(() => useGetFuelTypeList(params), [query])
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should handle API errors', async () => {
+  test('should handle API errors', async ({ renderHook, query }) => {
     const mockError = new Error('Failed to fetch fuel types')
     mockGet.mockRejectedValueOnce(mockError)
 
@@ -151,13 +157,16 @@ describe('useGetFuelTypeList', () => {
       lcfsOnly: true
     }
 
-    const { result } = renderHook(() => useGetFuelTypeList(params), { wrapper })
+    const { result } = renderHook(() => useGetFuelTypeList(params), [query])
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.error).toEqual(mockError)
   })
 
-  it('should handle missing compliance year', async () => {
+  test('should handle missing compliance year', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = []
     mockGet.mockResolvedValueOnce({ data: mockData })
 
@@ -167,7 +176,7 @@ describe('useGetFuelTypeList', () => {
       lcfsOnly: true
     }
 
-    const { result } = renderHook(() => useGetFuelTypeList(params), { wrapper })
+    const { result } = renderHook(() => useGetFuelTypeList(params), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -177,7 +186,10 @@ describe('useGetFuelTypeList', () => {
     )
   })
 
-  it('should handle lcfsOnly parameter variations', async () => {
+  test('should handle lcfsOnly parameter variations', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = []
     mockGet.mockResolvedValueOnce({ data: mockData })
 
@@ -187,7 +199,7 @@ describe('useGetFuelTypeList', () => {
       lcfsOnly: false
     }
 
-    const { result } = renderHook(() => useGetFuelTypeList(params), { wrapper })
+    const { result } = renderHook(() => useGetFuelTypeList(params), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -208,7 +220,10 @@ describe('useGetFuelTypeOptions', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('should fetch fuel type options successfully', async () => {
+  test('should fetch fuel type options successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       endUses: [
         { id: 1, name: 'Transportation' },
@@ -224,9 +239,7 @@ describe('useGetFuelTypeOptions', () => {
       lcfsOnly: true
     }
 
-    const { result } = renderHook(() => useGetFuelTypeOptions(params), {
-      wrapper
-    })
+    const { result } = renderHook(() => useGetFuelTypeOptions(params), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -240,7 +253,10 @@ describe('useGetFuelTypeOptions', () => {
     })
   })
 
-  it('should not fetch when fuel type ID is missing', () => {
+  test('should not fetch when fuel type ID is missing', ({
+    renderHook,
+    query
+  }) => {
     const params = {
       complianceYear: '2024',
       fuelTypeId: '',
@@ -248,15 +264,16 @@ describe('useGetFuelTypeOptions', () => {
       lcfsOnly: true
     }
 
-    const { result } = renderHook(() => useGetFuelTypeOptions(params), {
-      wrapper
-    })
+    const { result } = renderHook(() => useGetFuelTypeOptions(params), [query])
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should not fetch when fuel type ID is null', () => {
+  test('should not fetch when fuel type ID is null', ({
+    renderHook,
+    query
+  }) => {
     const params = {
       complianceYear: '2024',
       fuelTypeId: null,
@@ -264,15 +281,13 @@ describe('useGetFuelTypeOptions', () => {
       lcfsOnly: true
     }
 
-    const { result } = renderHook(() => useGetFuelTypeOptions(params), {
-      wrapper
-    })
+    const { result } = renderHook(() => useGetFuelTypeOptions(params), [query])
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should handle API errors', async () => {
+  test('should handle API errors', async ({ renderHook, query }) => {
     const mockError = new Error('Failed to fetch fuel type options')
     mockGet.mockRejectedValueOnce(mockError)
 
@@ -283,9 +298,7 @@ describe('useGetFuelTypeOptions', () => {
       lcfsOnly: true
     }
 
-    const { result } = renderHook(() => useGetFuelTypeOptions(params), {
-      wrapper
-    })
+    const { result } = renderHook(() => useGetFuelTypeOptions(params), [query])
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.error).toEqual(mockError)
@@ -300,7 +313,10 @@ describe('useCalculateComplianceUnits', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('should calculate compliance units successfully', async () => {
+  test('should calculate compliance units successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       complianceUnits: 1250.75,
       carbonIntensity: 85.5,
@@ -318,9 +334,10 @@ describe('useCalculateComplianceUnits', () => {
       enabled: true
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -337,7 +354,10 @@ describe('useCalculateComplianceUnits', () => {
     })
   })
 
-  it('should handle calculation for transition year and beyond without endUseId', async () => {
+  test('should handle calculation for transition year and beyond without endUseId', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { complianceUnits: 1500 }
     mockGet.mockResolvedValueOnce({ data: mockData })
 
@@ -351,16 +371,20 @@ describe('useCalculateComplianceUnits', () => {
       enabled: true
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(result.current.data.data).toEqual(mockData)
   })
 
-  it('should not fetch when required parameters are missing', () => {
+  test('should not fetch when required parameters are missing', ({
+    renderHook,
+    query
+  }) => {
     const params = {
       compliancePeriod: '',
       fuelCategoryId: '1',
@@ -371,15 +395,19 @@ describe('useCalculateComplianceUnits', () => {
       enabled: true
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should not fetch when fuel category ID is missing', () => {
+  test('should not fetch when fuel category ID is missing', ({
+    renderHook,
+    query
+  }) => {
     const params = {
       compliancePeriod: '2024',
       fuelCategoryId: '',
@@ -390,15 +418,19 @@ describe('useCalculateComplianceUnits', () => {
       enabled: true
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should not fetch when fuel type ID is missing', () => {
+  test('should not fetch when fuel type ID is missing', ({
+    renderHook,
+    query
+  }) => {
     const params = {
       compliancePeriod: '2024',
       fuelCategoryId: '1',
@@ -409,15 +441,16 @@ describe('useCalculateComplianceUnits', () => {
       enabled: true
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should not fetch when quantity is missing', () => {
+  test('should not fetch when quantity is missing', ({ renderHook, query }) => {
     const params = {
       compliancePeriod: '2024',
       fuelCategoryId: '1',
@@ -428,15 +461,19 @@ describe('useCalculateComplianceUnits', () => {
       enabled: true
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should require endUseId for years before transition year', () => {
+  test('should require endUseId for years before transition year', ({
+    renderHook,
+    query
+  }) => {
     const params = {
       compliancePeriod: '2022', // Before LEGISLATION_TRANSITION_YEAR
       fuelCategoryId: '1',
@@ -447,15 +484,16 @@ describe('useCalculateComplianceUnits', () => {
       enabled: true
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should be disabled when enabled is false', () => {
+  test('should be disabled when enabled is false', ({ renderHook, query }) => {
     const params = {
       compliancePeriod: '2024',
       fuelCategoryId: '1',
@@ -466,15 +504,16 @@ describe('useCalculateComplianceUnits', () => {
       enabled: false
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should handle API errors', async () => {
+  test('should handle API errors', async ({ renderHook, query }) => {
     const mockError = new Error('Calculation failed')
     mockGet.mockRejectedValueOnce(mockError)
 
@@ -488,15 +527,16 @@ describe('useCalculateComplianceUnits', () => {
       enabled: true
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.error).toEqual(mockError)
   })
 
-  it('should handle zero quantity', async () => {
+  test('should handle zero quantity', async ({ renderHook, query }) => {
     const mockData = { complianceUnits: 0 }
     mockGet.mockResolvedValueOnce({ data: mockData })
 
@@ -510,16 +550,17 @@ describe('useCalculateComplianceUnits', () => {
       enabled: true
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     // Zero should be treated as falsy, so no fetch
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should handle negative quantity', async () => {
+  test('should handle negative quantity', async ({ renderHook, query }) => {
     const mockData = { complianceUnits: -500 }
     mockGet.mockResolvedValueOnce({ data: mockData })
 
@@ -533,9 +574,10 @@ describe('useCalculateComplianceUnits', () => {
       enabled: true
     }
 
-    const { result } = renderHook(() => useCalculateComplianceUnits(params), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCalculateComplianceUnits(params),
+      [query]
+    )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 

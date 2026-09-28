@@ -7,7 +7,7 @@ import React, {
   forwardRef,
   useImperativeHandle
 } from 'react'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useTranslation } from 'react-i18next'

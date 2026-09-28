@@ -2,7 +2,9 @@ import { useMemo, useState, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { Menu, MenuItem, Box } from '@mui/material'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import Box from '@mui/material/Box'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faCaretDown,

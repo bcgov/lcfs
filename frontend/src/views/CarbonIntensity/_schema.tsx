@@ -2,10 +2,8 @@
 import type { ColDef } from '@ag-grid-community/core'
 import BCBox from '@/components/BCBox'
 import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
-import {
-  BCDateFloatingFilter,
-  BCSelectFloatingFilter
-} from '@/components/BCDataGrid/components'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { dateFormatter } from '@/utils/formatters'
 import {
   useCIApplicationStatuses,
