@@ -88,7 +88,7 @@ vi.mock('@/hooks/useNotifications', () => ({
 }))
 
 // Override the global BCFormText mock so inputs are wired to react-hook-form.
-vi.mock('@/components/BCForm', async () => {
+vi.mock('@/components/BCForm/BCFormText', async () => {
   const { Controller } = await import('react-hook-form')
   return {
     BCFormText: ({ name, control, label, optional, disabled }) => (
@@ -107,7 +107,13 @@ vi.mock('@/components/BCForm', async () => {
           />
         )}
       />
-    ),
+    )
+  }
+})
+
+vi.mock('@/components/BCForm/BCFormRadio', async () => {
+  const { Controller } = await import('react-hook-form')
+  return {
     BCFormRadio: ({ name, control, options = [] }) => (
       <Controller
         name={name}
@@ -130,7 +136,11 @@ vi.mock('@/components/BCForm', async () => {
           </div>
         )}
       />
-    ),
+    )
+  }
+})
+
+vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
     BCFormCheckbox: ({ name, options = [] }) => (
       <div data-test={`${name}-checkbox-group`}>
         {options.map((option, index) => (
@@ -141,7 +151,10 @@ vi.mock('@/components/BCForm', async () => {
           />
         ))}
       </div>
-    ),
+    )
+}))
+
+vi.mock('@/components/BCForm/BCFormAddressAutocomplete', () => ({
     BCFormAddressAutocomplete: ({ name, label, disabled, ...props }) => (
       <input
         data-test={name}
@@ -150,8 +163,7 @@ vi.mock('@/components/BCForm', async () => {
         {...props}
       />
     )
-  }
-})
+}))
 
 // Mock child components to simplify testing focus on parent logic
 // Mock child components to simplify testing focus on parent logic.

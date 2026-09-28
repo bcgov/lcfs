@@ -150,22 +150,31 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Accordion: ({ children, defaultExpanded }) => (
+vi.mock('@mui/material/Accordion', () => ({
+    default: ({ children, defaultExpanded }) => (
     <div data-test="accordion" data-expanded={defaultExpanded}>
       {children}
     </div>
-  ),
-  AccordionSummary: ({ children, expandIcon }) => (
+  )
+}))
+
+vi.mock('@mui/material/AccordionSummary', () => ({
+    default: ({ children, expandIcon }) => (
     <div data-test="accordion-summary">
       {children}
       <div data-test="expand-icon">{expandIcon}</div>
     </div>
-  ),
-  AccordionDetails: ({ children }) => (
+  )
+}))
+
+vi.mock('@mui/material/AccordionDetails', () => ({
+    default: ({ children }) => (
     <div data-test="accordion-details">{children}</div>
-  ),
-  Stack: ({ children, direction, justifyContent, mt, gap }) => (
+  )
+}))
+
+vi.mock('@mui/material/Stack', () => ({
+    default: ({ children, direction, justifyContent, mt, gap }) => (
     <div
       data-test="stack"
       data-direction={direction}
@@ -174,36 +183,54 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </div>
-  ),
-  FormControlLabel: ({ control, label, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/FormControlLabel', () => ({
+    default: ({ control, label, ...props }) => (
     <label data-test="form-control-label" {...props}>
       {control}
       <span>{label}</span>
     </label>
-  ),
-  Checkbox: ({ checked, onChange, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Checkbox', () => ({
+    default: ({ checked, onChange, ...props }) => (
     <input type="checkbox" checked={checked} onChange={onChange} {...props} />
-  ),
-  Box: ({ children, sx, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children, sx, ...props }) => (
     <div data-test="box" {...props}>
       {children}
     </div>
-  ),
-  TextField: (props) => <input {...props} />
+  )
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  ExpandMore: (props) => (
+vi.mock('@mui/material/TextField', () => ({
+    default: (props) => <input {...props} />
+}))
+
+vi.mock('@mui/icons-material/ExpandMore', () => ({
+    default: (props) => (
     <div data-test="expand-more-icon" {...props}>
       ExpandMore
     </div>
-  ),
-  CheckBox: (props) => (
+  )
+}))
+
+vi.mock('@mui/icons-material/CheckBox', () => ({
+    default: (props) => (
     <div data-test="checkbox-icon" {...props}>
       CheckBox
     </div>
-  ),
-  CheckBoxOutlineBlank: (props) => (
+  )
+}))
+
+vi.mock('@mui/icons-material/CheckBoxOutlineBlank', () => ({
+    default: (props) => (
     <div data-test="checkbox-outline-blank-icon" {...props}>
       CheckBoxOutlineBlank
     </div>

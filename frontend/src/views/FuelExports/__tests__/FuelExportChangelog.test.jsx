@@ -46,9 +46,12 @@ vi.mock('@/components/BCTypography', () => ({
   default: ({ children, ...props }) => <div {...props}>{children}</div>
 }))
 
-vi.mock('@mui/material', () => ({
-  Box: ({ children, ...props }) => <div {...props}>{children}</div>,
-  TextField: ({ children, ...props }) => <input {...props}>{children}</input>
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children, ...props }) => <div {...props}>{children}</div>
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+    default: ({ children, ...props }) => <input {...props}>{children}</input>
 }))
 
 vi.mock('./_schema', () => ({

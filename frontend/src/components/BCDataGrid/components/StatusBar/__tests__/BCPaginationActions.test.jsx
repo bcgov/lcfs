@@ -12,11 +12,11 @@ const renderWithTheme = (component) => {
 }
 
 // Mock Material-UI components
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material')
+vi.mock('@mui/material/Pagination', async (importOriginal) => {
+  const actual = await importOriginal()
   return {
     ...actual,
-    Pagination: vi.fn(
+    default: vi.fn(
       ({
         onChange,
         showFirstButton,
@@ -33,21 +33,41 @@ vi.mock('@mui/material', async () => {
           Mock Pagination
         </div>
       )
-    ),
-    IconButton: vi.fn(({ onClick, children, ...props }) => (
+    )
+  }
+})
+
+vi.mock('@mui/material/IconButton', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    default: vi.fn(({ onClick, children, ...props }) => (
       <button data-test={props.id} onClick={onClick} {...props}>
         {children}
       </button>
-    )),
-    Tooltip: vi.fn(({ children }) => <div>{children}</div>)
+    ))
+  }
+})
+
+vi.mock('@mui/material/Tooltip', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    default: vi.fn(({ children }) => <div>{children}</div>)
   }
 })
 
 // Mock Material-UI icons
-vi.mock('@mui/icons-material', () => ({
-  Replay: () => <span>Replay</span>,
-  ContentCopy: () => <span>ContentCopy</span>,
-  FileDownloadOutlined: () => <span>FileDownloadOutlined</span>
+vi.mock('@mui/icons-material/Replay', () => ({
+    default: () => <span>Replay</span>
+}))
+
+vi.mock('@mui/icons-material/ContentCopy', () => ({
+    default: () => <span>ContentCopy</span>
+}))
+
+vi.mock('@mui/icons-material/FileDownloadOutlined', () => ({
+    default: () => <span>FileDownloadOutlined</span>
 }))
 
 // Mock BCBox component
@@ -168,7 +188,7 @@ describe('BCPaginationActions', () => {
     })
 
     it('pagination component receives correct props', async () => {
-      const { Pagination } = await import('@mui/material')
+      const { default: Pagination } = await import('@mui/material/Pagination')
 
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
 

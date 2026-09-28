@@ -47,10 +47,16 @@ vi.mock('@/components/Loading', () => ({
   default: ({ message }) => <div data-test="loading">{message}</div>
 }))
 
-vi.mock('@mui/material', () => ({
-  Stack: ({ children, ...props }) => <div data-test="stack" {...props}>{children}</div>,
-  List: ({ children, ...props }) => <div data-test="list" {...props}>{children}</div>,
-  ListItemButton: ({ children, onClick, ...props }) => (
+vi.mock('@mui/material/Stack', () => ({
+    default: ({ children, ...props }) => <div data-test="stack" {...props}>{children}</div>
+}))
+
+vi.mock('@mui/material/List', () => ({
+    default: ({ children, ...props }) => <div data-test="list" {...props}>{children}</div>
+}))
+
+vi.mock('@mui/material/ListItemButton', () => ({
+    default: ({ children, onClick, ...props }) => (
     <button data-test="list-item-button" onClick={onClick} {...props}>
       {children}
     </button>

@@ -8,8 +8,10 @@ import { useForm, FormProvider } from 'react-hook-form'
 import {
   addressHasPostalCode,
   BCFormAddressAutocomplete
-} from '../BCFormAddressAutocomplete'
+} from '@/components/BCForm/BCFormAddressAutocomplete'
 import { AppWrapper, getByDataTest } from '@/tests/utils'
+
+vi.unmock('@/components/BCForm/BCFormAddressAutocomplete')
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
