@@ -1,7 +1,7 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { screen, fireEvent, act } from '@testing-library/react'
 import { useCallback, useState } from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { CommentLogFilters } from '../CommentLogFilters'
 
 // Predictable translations; keys are fine for querying.
@@ -56,9 +56,12 @@ describe('CommentLogFilters — Clear all filters', () => {
     vi.clearAllMocks()
   })
 
-  it('clears the search input and does not re-apply the stale value', () => {
+  test('clears the search input and does not re-apply the stale value', ({
+    render,
+    theme
+  }) => {
     const onApply = vi.fn()
-    const { container } = render(<Harness onApply={onApply} />, { wrapper })
+    const { container } = render(<Harness onApply={onApply} />, [theme])
     const input = searchInput(container)
 
     // Type and let the debounce commit the search.

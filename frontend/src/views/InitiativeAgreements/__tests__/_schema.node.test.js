@@ -1,4 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/constants/config', () => ({
+  CONFIG: { API_BASE: '', ENVIRONMENT: 'test' },
+  FEATURE_FLAGS: { INITIATIVE_AGREEMENTS: 'initiativeAgreements' },
+  isFeatureEnabled: vi.fn(() => false)
+}))
+
 import {
   allDesignatedActionColDefs,
   defaultSortModel,

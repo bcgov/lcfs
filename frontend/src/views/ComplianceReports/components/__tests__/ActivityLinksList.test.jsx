@@ -1,9 +1,9 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ActivityLinksList } from '../ActivityLinksList'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApiService } from '@/services/useApiService'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -92,14 +92,20 @@ describe('ActivityLinksList', () => {
   })
 
   describe('Component Rendering', () => {
-    it('renders component with all required elements', () => {
+    test('renders component with all required elements', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ActivityLinksList
           currentStatus="Draft"
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.getByText((content, element) => {
@@ -114,26 +120,38 @@ describe('ActivityLinksList', () => {
       expect(screen.getByTestId('download-report')).toBeInTheDocument()
     })
 
-    it('renders without quarterly text for annual reports', () => {
+    test('renders without quarterly text for annual reports', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ActivityLinksList
           currentStatus="Draft"
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(screen.queryByText(/Did Test Org engage/)).not.toBeInTheDocument()
     })
 
-    it('renders quarterly text for quarterly reports', () => {
+    test('renders quarterly text for quarterly reports', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ActivityLinksList
           currentStatus="Draft"
           isQuarterlyReport={true}
           reportQuarter={2}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       const expectedText = screen.getByText((content, element) => {
         const hasText = (node) =>
@@ -150,14 +168,20 @@ describe('ActivityLinksList', () => {
   })
 
   describe('Annual Report Activities', () => {
-    it('renders all activity links for annual reports', () => {
+    test('renders all activity links for annual reports', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ActivityLinksList
           currentStatus="Draft"
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.getByText('report:activityLists.supplyOfFuel')
@@ -181,7 +205,13 @@ describe('ActivityLinksList', () => {
   })
 
   describe('Export fuels link visibility by compliance year', () => {
-    it('shows export fuels link when compliance period is 2024 or later', () => {
+    test('shows export fuels link when compliance period is 2024 or later', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useParams.mockReturnValue({
         compliancePeriod: '2024',
         complianceReportId: '123'
@@ -192,14 +222,20 @@ describe('ActivityLinksList', () => {
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.getByText('report:activityLists.exportFuels')
       ).toBeInTheDocument()
     })
 
-    it('hides export fuels link when compliance period is before 2024', () => {
+    test('hides export fuels link when compliance period is before 2024', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useParams.mockReturnValue({
         compliancePeriod: '2023',
         complianceReportId: '123'
@@ -210,14 +246,20 @@ describe('ActivityLinksList', () => {
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.queryByText('report:activityLists.exportFuels')
       ).not.toBeInTheDocument()
     })
 
-    it('hides export fuels link for 2022 compliance period', () => {
+    test('hides export fuels link for 2022 compliance period', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useParams.mockReturnValue({
         compliancePeriod: '2022',
         complianceReportId: '456'
@@ -228,7 +270,7 @@ describe('ActivityLinksList', () => {
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.queryByText('report:activityLists.exportFuels')
@@ -237,7 +279,13 @@ describe('ActivityLinksList', () => {
   })
 
   describe('FSE link visibility by compliance year', () => {
-    it('shows FSE link when compliance period is 2024 or later', () => {
+    test('shows FSE link when compliance period is 2024 or later', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useParams.mockReturnValue({
         compliancePeriod: '2024',
         complianceReportId: '123'
@@ -248,14 +296,20 @@ describe('ActivityLinksList', () => {
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.getByText('report:activityLists.finalSupplyEquipment')
       ).toBeInTheDocument()
     })
 
-    it('hides FSE link when compliance period is before 2024', () => {
+    test('hides FSE link when compliance period is before 2024', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useParams.mockReturnValue({
         compliancePeriod: '2023',
         complianceReportId: '123'
@@ -266,14 +320,20 @@ describe('ActivityLinksList', () => {
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.queryByText('report:activityLists.finalSupplyEquipment')
       ).not.toBeInTheDocument()
     })
 
-    it('hides FSE link for 2022 compliance period', () => {
+    test('hides FSE link for 2022 compliance period', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useParams.mockReturnValue({
         compliancePeriod: '2022',
         complianceReportId: '456'
@@ -284,7 +344,7 @@ describe('ActivityLinksList', () => {
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.queryByText('report:activityLists.finalSupplyEquipment')
@@ -293,14 +353,20 @@ describe('ActivityLinksList', () => {
   })
 
   describe('Quarterly Report Activities (Q1-Q3)', () => {
-    it('renders filtered links for Q1 (quarterly enabled only)', () => {
+    test('renders filtered links for Q1 (quarterly enabled only)', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ActivityLinksList
           currentStatus="Draft"
           isQuarterlyReport={true}
           reportQuarter={1}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.getByText('report:activityLists.supplyOfFuel')
@@ -322,14 +388,20 @@ describe('ActivityLinksList', () => {
       ).toBeInTheDocument()
     })
 
-    it('renders filtered links for Q2', () => {
+    test('renders filtered links for Q2', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ActivityLinksList
           currentStatus="Draft"
           isQuarterlyReport={true}
           reportQuarter={2}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.getByText('report:activityLists.supplyOfFuel')
@@ -345,14 +417,20 @@ describe('ActivityLinksList', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('renders filtered links for Q3', () => {
+    test('renders filtered links for Q3', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ActivityLinksList
           currentStatus="Draft"
           isQuarterlyReport={true}
           reportQuarter={3}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(
         screen.getByText('report:activityLists.supplyOfFuel')
@@ -370,18 +448,40 @@ describe('ActivityLinksList', () => {
   })
 
   describe('Navigation Functionality', () => {
-    it('navigates to supply of fuel when clicked', async () => {
+    test('navigates to supply of fuel when clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       await user.click(screen.getByText('report:activityLists.supplyOfFuel'))
       expect(mockNavigate).toHaveBeenCalledWith(
         '/compliance-reporting/2025/123/supply-of-fuel'
       )
     })
 
-    it('navigates to notional transfers when clicked', async () => {
+    test('navigates to notional transfers when clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       await user.click(
         screen.getByText('report:activityLists.notionalTransfers')
       )
@@ -390,27 +490,60 @@ describe('ActivityLinksList', () => {
       )
     })
 
-    it('navigates to other use fuels when clicked', async () => {
+    test('navigates to other use fuels when clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       await user.click(screen.getByText('report:activityLists.fuelsOtherUse'))
       expect(mockNavigate).toHaveBeenCalledWith(
         '/compliance-reporting/2025/123/fuels-other-use'
       )
     })
 
-    it('navigates to fuel exports when clicked', async () => {
+    test('navigates to fuel exports when clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       await user.click(screen.getByText('report:activityLists.exportFuels'))
       expect(mockNavigate).toHaveBeenCalledWith(
         '/compliance-reporting/2025/123/fuel-exports'
       )
     })
 
-    it('navigates to allocation agreements when clicked', async () => {
+    test('navigates to allocation agreements when clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       await user.click(
         screen.getByText('report:activityLists.allocationAgreements')
       )
@@ -421,9 +554,20 @@ describe('ActivityLinksList', () => {
   })
 
   describe('Download Functionality', () => {
-    it('triggers report download when download button is clicked', async () => {
+    test('triggers report download when download button is clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       await user.click(screen.getByTestId('download-report'))
       await waitFor(() => {
         expect(mockDownload).toHaveBeenCalledWith({
@@ -432,7 +576,13 @@ describe('ActivityLinksList', () => {
       })
     })
 
-    it('shows loading state during download', async () => {
+    test('shows loading state during download', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
       let resolveDownload
       const downloadPromise = new Promise((resolve) => {
@@ -440,7 +590,12 @@ describe('ActivityLinksList', () => {
       })
       mockDownload.mockReturnValue(downloadPromise)
 
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const downloadButton = screen.getByTestId('download-report')
       await user.click(downloadButton)
@@ -455,9 +610,20 @@ describe('ActivityLinksList', () => {
       })
     })
 
-    it('triggers download when link text is clicked', async () => {
+    test('triggers download when link text is clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       await user.click(screen.getByText('report:activityLists.downloadExcel'))
       await waitFor(() => {
         expect(mockDownload).toHaveBeenCalledWith({
@@ -468,9 +634,20 @@ describe('ActivityLinksList', () => {
   })
 
   describe('Document Upload Functionality', () => {
-    it('opens document upload dialog when clicked', async () => {
+    test('opens document upload dialog when clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await user.click(screen.getByText('report:activityLists.uploadDocuments'))
 
@@ -481,9 +658,20 @@ describe('ActivityLinksList', () => {
       ).toBeInTheDocument()
     })
 
-    it('closes document upload dialog', async () => {
+    test('closes document upload dialog', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await user.click(screen.getByText('report:activityLists.uploadDocuments'))
       expect(screen.getByText('Upload Dialog Open')).toBeInTheDocument()
@@ -492,9 +680,20 @@ describe('ActivityLinksList', () => {
       expect(screen.queryByText('Upload Dialog Open')).not.toBeInTheDocument()
     })
 
-    it('handles upload success callback', async () => {
+    test('handles upload success callback', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
+      render(<ActivityLinksList currentStatus="Draft" />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await user.click(screen.getByText('report:activityLists.uploadDocuments'))
       await user.click(screen.getByText('Upload Success'))
@@ -505,27 +704,39 @@ describe('ActivityLinksList', () => {
   })
 
   describe('Status-based Rendering', () => {
-    it('shows download section when status is Draft', () => {
+    test('shows download section when status is Draft', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ActivityLinksList
           currentStatus="Draft"
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(screen.getByTestId('download-report')).toBeInTheDocument()
       expect(screen.getByText('report:downloadExcel')).toBeInTheDocument()
     })
 
-    it('hides download section when status is not Draft', () => {
+    test('hides download section when status is not Draft', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ActivityLinksList
           currentStatus="Submitted"
           isQuarterlyReport={false}
           reportQuarter={null}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
       expect(screen.queryByTestId('download-report')).not.toBeInTheDocument()
       expect(screen.queryByText('report:downloadExcel')).not.toBeInTheDocument()
@@ -533,7 +744,13 @@ describe('ActivityLinksList', () => {
   })
 
   describe('Edge Cases', () => {
-    it('handles missing currentUser gracefully', () => {
+    test('handles missing currentUser gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useCurrentUser.mockReturnValue({ data: null })
 
       render(
@@ -542,7 +759,7 @@ describe('ActivityLinksList', () => {
           isQuarterlyReport={true}
           reportQuarter={2}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       // Should still render without organization name
@@ -551,14 +768,20 @@ describe('ActivityLinksList', () => {
       ).toBeInTheDocument()
     })
 
-    it('handles undefined reportQuarter for quarterly reports', () => {
+    test('handles undefined reportQuarter for quarterly reports', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       render(
         <ActivityLinksList
           currentStatus="Draft"
           isQuarterlyReport={true}
           reportQuarter={undefined}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       // Should show all activities when reportQuarter is undefined
@@ -570,7 +793,13 @@ describe('ActivityLinksList', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('handles missing currentUser organization', () => {
+    test('handles missing currentUser organization', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useCurrentUser.mockReturnValue({
         data: { organization: null }
       })
@@ -581,7 +810,7 @@ describe('ActivityLinksList', () => {
           isQuarterlyReport={true}
           reportQuarter={2}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(

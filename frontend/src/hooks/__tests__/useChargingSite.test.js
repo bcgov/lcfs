@@ -1,7 +1,7 @@
-import { renderHook, waitFor, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { act, waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '../../services/useApiService'
-import { wrapper } from '../../tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import {
   useGetChargingSiteById,
   useChargingSiteStatuses,
@@ -31,7 +31,10 @@ describe('useChargingSite', () => {
   })
 
   describe('useChargingSite', () => {
-    it('should fetch charging site successfully', async () => {
+    test('should fetch charging site successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         charging_site_id: 1,
         site_name: 'Test Charging Site',
@@ -42,9 +45,7 @@ describe('useChargingSite', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useGetChargingSiteById(1), {
-        wrapper
-      })
+      const { result } = renderHook(() => useGetChargingSiteById(1), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -56,7 +57,10 @@ describe('useChargingSite', () => {
       })
     })
 
-    it('should request history mode when enabled', async () => {
+    test('should request history mode when enabled', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         chargingSiteId: 1,
         siteName: 'Test Charging Site',
@@ -66,7 +70,7 @@ describe('useChargingSite', () => {
 
       const { result } = renderHook(
         () => useGetChargingSiteById(1, { historyMode: true }),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -78,13 +82,14 @@ describe('useChargingSite', () => {
       })
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch charging site')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useGetChargingSiteById(1, { retry: false }), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useGetChargingSiteById(1, { retry: false }),
+        [query]
+      )
 
       await waitFor(
         () => {
@@ -96,26 +101,28 @@ describe('useChargingSite', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should not fetch when siteId is undefined', () => {
-      renderHook(() => useGetChargingSiteById(undefined), {
-        wrapper
-      })
+    test('should not fetch when siteId is undefined', ({
+      renderHook,
+      query
+    }) => {
+      renderHook(() => useGetChargingSiteById(undefined), [query])
 
       expect(mockGet).not.toHaveBeenCalled()
     })
   })
 
   describe('useChargingSiteStatuses', () => {
-    it('should fetch charging site statuses successfully', async () => {
+    test('should fetch charging site statuses successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = [
         { id: 1, status: 'Draft', description: 'Draft status' },
         { id: 2, status: 'Submitted', description: 'Submitted status' }
       ]
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useChargingSiteStatuses(), {
-        wrapper
-      })
+      const { result } = renderHook(() => useChargingSiteStatuses(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -126,13 +133,11 @@ describe('useChargingSite', () => {
       expect(mockGet).toHaveBeenCalledWith('/charging-sites/statuses')
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch statuses')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useChargingSiteStatuses(), {
-        wrapper
-      })
+      const { result } = renderHook(() => useChargingSiteStatuses(), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -143,7 +148,10 @@ describe('useChargingSite', () => {
   })
 
   describe('useBulkUpdateEquipmentStatus', () => {
-    it('should perform bulk update successfully', async () => {
+    test('should perform bulk update successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = {
         data: [
           {
@@ -154,9 +162,10 @@ describe('useChargingSite', () => {
       }
       mockPost.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useBulkUpdateEquipmentStatus(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useBulkUpdateEquipmentStatus(),
+        [query]
+      )
 
       const updateData = {
         siteId: 1,
@@ -177,7 +186,7 @@ describe('useChargingSite', () => {
       )
     })
 
-    it('should handle bulk update errors', async () => {
+    test('should handle bulk update errors', async ({ renderHook, query }) => {
       const mockError = {
         response: {
           data: {
@@ -187,9 +196,10 @@ describe('useChargingSite', () => {
       }
       mockPost.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useBulkUpdateEquipmentStatus(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useBulkUpdateEquipmentStatus(),
+        [query]
+      )
 
       const updateData = {
         siteId: 1,
@@ -214,13 +224,17 @@ describe('useChargingSite', () => {
       )
     }, 10000) // Increased timeout
 
-    it('should invalidate queries on success', async () => {
+    test('should invalidate queries on success', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: [] }
       mockPost.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useBulkUpdateEquipmentStatus(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useBulkUpdateEquipmentStatus(),
+        [query]
+      )
 
       const updateData = {
         siteId: 1,
@@ -237,13 +251,17 @@ describe('useChargingSite', () => {
       })
     })
 
-    it('should handle empty equipment list', async () => {
+    test('should handle empty equipment list', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: [] }
       mockPost.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useBulkUpdateEquipmentStatus(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useBulkUpdateEquipmentStatus(),
+        [query]
+      )
 
       const updateData = {
         siteId: 1,
@@ -264,13 +282,17 @@ describe('useChargingSite', () => {
       )
     })
 
-    it('should handle different status updates', async () => {
+    test('should handle different status updates', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: [] }
       mockPost.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useBulkUpdateEquipmentStatus(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useBulkUpdateEquipmentStatus(),
+        [query]
+      )
 
       // Test Draft status
       await act(async () => {
@@ -309,16 +331,20 @@ describe('useChargingSite', () => {
   })
 
   describe('useUpdateChargingSiteStatus', () => {
-    it('should call PATCH with siteId and new_status', async () => {
+    test('should call PATCH with siteId and new_status', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponseData = {
         chargingSiteId: 1,
         status: { status: 'Validated' }
       }
       mockPatch.mockResolvedValue({ data: mockResponseData })
 
-      const { result } = renderHook(() => useUpdateChargingSiteStatus(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useUpdateChargingSiteStatus(),
+        [query]
+      )
 
       let resolvedData
       await act(async () => {
@@ -328,17 +354,20 @@ describe('useChargingSite', () => {
         })
       })
 
-      expect(mockPatch).toHaveBeenCalledWith(
-        '/charging-sites/57/status',
-        { new_status: 'Validated' }
-      )
+      expect(mockPatch).toHaveBeenCalledWith('/charging-sites/57/status', {
+        new_status: 'Validated'
+      })
       expect(resolvedData).toEqual(mockResponseData)
     })
 
-    it('should throw when siteId is missing', async () => {
-      const { result } = renderHook(() => useUpdateChargingSiteStatus(), {
-        wrapper
-      })
+    test('should throw when siteId is missing', async ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(
+        () => useUpdateChargingSiteStatus(),
+        [query]
+      )
 
       await act(async () => {
         try {
@@ -351,14 +380,19 @@ describe('useChargingSite', () => {
       expect(mockPatch).not.toHaveBeenCalled()
     })
 
-    it('should call onSuccess and invalidate queries on success', async () => {
-      const mockResponse = { data: { chargingSiteId: 1, status: { status: 'Validated' } } }
+    test('should call onSuccess and invalidate queries on success', async ({
+      renderHook,
+      query
+    }) => {
+      const mockResponse = {
+        data: { chargingSiteId: 1, status: { status: 'Validated' } }
+      }
       mockPatch.mockResolvedValue(mockResponse)
 
       const onSuccess = vi.fn()
       const { result } = renderHook(
         () => useUpdateChargingSiteStatus({ onSuccess }),
-        { wrapper }
+        [query]
       )
 
       await act(async () => {
@@ -373,7 +407,10 @@ describe('useChargingSite', () => {
   })
 
   describe('useChargingSiteEquipmentPaginated', () => {
-    it('should fetch paginated equipment successfully', async () => {
+    test('should fetch paginated equipment successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         equipment: [
           {
@@ -407,9 +444,7 @@ describe('useChargingSite', () => {
 
       const { result } = renderHook(
         () => useChargingSiteEquipmentPaginated(1, paginationOptions),
-        {
-          wrapper
-        }
+        [query]
       )
 
       await waitFor(() => {
@@ -425,7 +460,10 @@ describe('useChargingSite', () => {
       )
     })
 
-    it('should request equipment history mode when enabled', async () => {
+    test('should request equipment history mode when enabled', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         equipments: [],
         pagination: {
@@ -449,9 +487,7 @@ describe('useChargingSite', () => {
           useChargingSiteEquipmentPaginated(1, paginationOptions, {
             historyMode: true
           }),
-        {
-          wrapper
-        }
+        [query]
       )
 
       await waitFor(() => {
@@ -465,7 +501,7 @@ describe('useChargingSite', () => {
       )
     })
 
-    it('should handle pagination changes', async () => {
+    test('should handle pagination changes', async ({ renderHook, query }) => {
       const mockData = {
         equipment: [],
         pagination: { total: 0, page: 2, size: 10, totalPages: 1 }
@@ -488,9 +524,7 @@ describe('useChargingSite', () => {
 
       const { result } = renderHook(
         () => useChargingSiteEquipmentPaginated(1, paginationOptions),
-        {
-          wrapper
-        }
+        [query]
       )
 
       await waitFor(() => {
@@ -505,7 +539,10 @@ describe('useChargingSite', () => {
       )
     })
 
-    it('should not fetch when siteId is undefined', () => {
+    test('should not fetch when siteId is undefined', ({
+      renderHook,
+      query
+    }) => {
       const paginationOptions = {
         page: 1,
         size: 10,
@@ -515,15 +552,13 @@ describe('useChargingSite', () => {
 
       renderHook(
         () => useChargingSiteEquipmentPaginated(undefined, paginationOptions),
-        {
-          wrapper
-        }
+        [query]
       )
 
       expect(mockPost).not.toHaveBeenCalled()
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch equipment')
       mockPost.mockRejectedValue(mockError)
 
@@ -535,10 +570,11 @@ describe('useChargingSite', () => {
       }
 
       const { result } = renderHook(
-        () => useChargingSiteEquipmentPaginated(1, paginationOptions, { retry: false }),
-        {
-          wrapper
-        }
+        () =>
+          useChargingSiteEquipmentPaginated(1, paginationOptions, {
+            retry: false
+          }),
+        [query]
       )
 
       await waitFor(

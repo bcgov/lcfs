@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Box, IconButton, TextField, Tooltip } from '@mui/material'
-import { Check, Close, Edit } from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
+import Check from '@mui/icons-material/Check'
+import Close from '@mui/icons-material/Close'
+import Edit from '@mui/icons-material/Edit'
 import { useTranslation } from 'react-i18next'
 
 const splitExtension = (name) => {

@@ -1,8 +1,10 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, screen } from '@testing-library/react'
+
+import { describe, expect, vi, beforeEach } from 'vitest'
+
 import { CreateAgreement } from '../CreateAgreement'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -47,14 +49,17 @@ describe('CreateAgreement', () => {
     vi.clearAllMocks()
   })
 
-  it('offers the control on the index page', () => {
-    render(<CreateAgreement />, { wrapper })
+  test('offers the control on the index page', ({ render, app }) => {
+    render(<CreateAgreement />, app)
 
     expect(screen.getByTestId('create-agreement')).toBeInTheDocument()
   })
 
-  it('will not create without an organization and a code', () => {
-    render(<CreateAgreement />, { wrapper })
+  test('will not create without an organization and a code', ({
+    render,
+    app
+  }) => {
+    render(<CreateAgreement />, app)
     openModal()
 
     fireEvent.click(screen.getByText('initiativeAgreement:create.confirm'))
@@ -62,8 +67,11 @@ describe('CreateAgreement', () => {
     expect(mockCreate).not.toHaveBeenCalled()
   })
 
-  it('creates a draft from the organization and code alone', () => {
-    render(<CreateAgreement />, { wrapper })
+  test('creates a draft from the organization and code alone', ({
+    render,
+    app
+  }) => {
+    render(<CreateAgreement />, app)
     openModal()
     pickFirstOrganization()
     fireEvent.change(screen.getByTestId('create-agreement-code'), {
@@ -88,11 +96,11 @@ describe('CreateAgreement', () => {
     )
   })
 
-  it('lands on the new agreement once it exists', () => {
+  test('lands on the new agreement once it exists', ({ render, app }) => {
     mockCreate.mockImplementation((_payload, handlers) =>
       handlers.onSuccess({ initiativeAgreementId: 42, iaCode: 'IA-26NEW1' })
     )
-    render(<CreateAgreement />, { wrapper })
+    render(<CreateAgreement />, app)
     openModal()
     pickFirstOrganization()
     fireEvent.change(screen.getByTestId('create-agreement-code'), {
@@ -104,7 +112,7 @@ describe('CreateAgreement', () => {
     expect(mockNavigate).toHaveBeenCalledWith('42', expect.anything())
   })
 
-  it('surfaces the reason the API refused', () => {
+  test('surfaces the reason the API refused', ({ render, app }) => {
     mockCreate.mockImplementation((_payload, handlers) =>
       handlers.onError({
         response: {
@@ -112,7 +120,7 @@ describe('CreateAgreement', () => {
         }
       })
     )
-    render(<CreateAgreement />, { wrapper })
+    render(<CreateAgreement />, app)
     openModal()
     pickFirstOrganization()
     fireEvent.change(screen.getByTestId('create-agreement-code'), {

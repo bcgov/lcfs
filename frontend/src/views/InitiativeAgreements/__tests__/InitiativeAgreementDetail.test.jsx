@@ -1,10 +1,10 @@
 import React from 'react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
 import { InitiativeAgreementDetail } from '../InitiativeAgreementDetail'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -105,8 +105,11 @@ describe('InitiativeAgreementDetail', () => {
     mockDocuments.mockReturnValue({ data: [], refetch: vi.fn() })
   })
 
-  it('renders the agreement card with organization, status and dates', () => {
-    render(<InitiativeAgreementDetail />, { wrapper })
+  test('renders the agreement card with organization, status and dates', ({
+    render,
+    app
+  }) => {
+    render(<InitiativeAgreementDetail />, app)
 
     expect(
       screen.getByTestId('initiative-agreement-detail-title')
@@ -120,8 +123,8 @@ describe('InitiativeAgreementDetail', () => {
     expect(screen.getByText('IA5')).toBeInTheDocument()
   })
 
-  it('renders the agreement brief', () => {
-    render(<InitiativeAgreementDetail />, { wrapper })
+  test('renders the agreement brief', ({ render, app }) => {
+    render(<InitiativeAgreementDetail />, app)
     expect(
       screen.getByText('Renewable Fuels Production Facility')
     ).toBeInTheDocument()
@@ -130,38 +133,47 @@ describe('InitiativeAgreementDetail', () => {
     ).toBeInTheDocument()
   })
 
-  it('offers document upload to an IA analyst', () => {
-    render(<InitiativeAgreementDetail />, { wrapper })
+  test('offers document upload to an IA analyst', ({ render, app }) => {
+    render(<InitiativeAgreementDetail />, app)
     expect(screen.getByTestId('upload-documents-button')).toBeInTheDocument()
   })
 
-  it('does not offer document upload to a BCeID proponent', () => {
+  test('does not offer document upload to a BCeID proponent', ({
+    render,
+    app
+  }) => {
     mockRoles = [{ name: roles.ia_proponent }]
-    render(<InitiativeAgreementDetail />, { wrapper })
+    render(<InitiativeAgreementDetail />, app)
     expect(
       screen.queryByTestId('upload-documents-button')
     ).not.toBeInTheDocument()
   })
 
-  it('renders an empty state when the agreement has no documents', () => {
-    render(<InitiativeAgreementDetail />, { wrapper })
+  test('renders an empty state when the agreement has no documents', ({
+    render,
+    app
+  }) => {
+    render(<InitiativeAgreementDetail />, app)
     expect(
       screen.getByText('initiativeAgreement:detail.noDocuments')
     ).toBeInTheDocument()
   })
 
-  it('surfaces a load failure instead of a blank card', () => {
+  test('surfaces a load failure instead of a blank card', ({ render, app }) => {
     mockAgreement.mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: true,
       error: { message: 'boom' }
     })
-    render(<InitiativeAgreementDetail />, { wrapper })
+    render(<InitiativeAgreementDetail />, app)
     expect(screen.getByTestId('alert-box')).toHaveTextContent('boom')
   })
 
-  it('renders document rows with size and uploading organization code', () => {
+  test('renders document rows with size and uploading organization code', ({
+    render,
+    app
+  }) => {
     mockDocuments.mockReturnValue({
       data: [
         {
@@ -183,7 +195,7 @@ describe('InitiativeAgreementDetail', () => {
       ],
       refetch: vi.fn()
     })
-    render(<InitiativeAgreementDetail />, { wrapper })
+    render(<InitiativeAgreementDetail />, app)
 
     expect(screen.getByText('signed-agreement.pdf')).toBeInTheDocument()
     expect(screen.getByText(/1 MB/)).toBeInTheDocument()
@@ -192,33 +204,45 @@ describe('InitiativeAgreementDetail', () => {
     expect(screen.getByText(/gov/)).toBeInTheDocument()
   })
 
-  it('publishes the agreement code to the breadcrumb store', () => {
-    render(<InitiativeAgreementDetail />, { wrapper })
+  test('publishes the agreement code to the breadcrumb store', ({
+    render,
+    app
+  }) => {
+    render(<InitiativeAgreementDetail />, app)
     expect(useInitiativeAgreementPageStore.getState().agreementCrumb).toBe(
       'IA-26ORG1'
     )
   })
 
-  it('does not offer to add an action to an agreement that is underway', () => {
-    render(<InitiativeAgreementDetail />, { wrapper })
+  test('does not offer to add an action to an agreement that is underway', ({
+    render,
+    app
+  }) => {
+    render(<InitiativeAgreementDetail />, app)
     expect(
       screen.queryByTestId('add-designated-action')
     ).not.toBeInTheDocument()
   })
 
-  it('offers to add an action while the agreement is a draft', () => {
+  test('offers to add an action while the agreement is a draft', ({
+    render,
+    app
+  }) => {
     mockAgreement.mockReturnValue({
       data: { ...agreement, lifecycleStatus: { status: 'Draft' } },
       isLoading: false,
       isError: false,
       error: null
     })
-    render(<InitiativeAgreementDetail />, { wrapper })
+    render(<InitiativeAgreementDetail />, app)
     expect(screen.getByTestId('add-designated-action')).toBeInTheDocument()
   })
 
-  it('renders the designated actions grid for IDIR IA roles', () => {
-    render(<InitiativeAgreementDetail />, { wrapper })
+  test('renders the designated actions grid for IDIR IA roles', ({
+    render,
+    app
+  }) => {
+    render(<InitiativeAgreementDetail />, app)
 
     expect(screen.getByTestId('designated-actions-grid')).toBeInTheDocument()
     expect(daGridProps).toHaveBeenCalledWith(
@@ -226,17 +250,23 @@ describe('InitiativeAgreementDetail', () => {
     )
   })
 
-  it('hides the designated actions grid from a BCeID proponent', () => {
+  test('hides the designated actions grid from a BCeID proponent', ({
+    render,
+    app
+  }) => {
     mockRoles = [{ name: roles.ia_proponent }]
-    render(<InitiativeAgreementDetail />, { wrapper })
+    render(<InitiativeAgreementDetail />, app)
 
     expect(
       screen.queryByTestId('designated-actions-grid')
     ).not.toBeInTheDocument()
   })
 
-  it('shows the dual-mode comment thread to IDIR IA roles', () => {
-    render(<InitiativeAgreementDetail />, { wrapper })
+  test('shows the dual-mode comment thread to IDIR IA roles', ({
+    render,
+    app
+  }) => {
+    render(<InitiativeAgreementDetail />, app)
 
     expect(screen.getByTestId('comments-component')).toBeInTheDocument()
     expect(commentsProps).toHaveBeenCalledWith(
@@ -248,14 +278,14 @@ describe('InitiativeAgreementDetail', () => {
     )
   })
 
-  it('hides the comment thread from a BCeID proponent', () => {
+  test('hides the comment thread from a BCeID proponent', ({ render, app }) => {
     mockRoles = [{ name: roles.ia_proponent }]
-    render(<InitiativeAgreementDetail />, { wrapper })
+    render(<InitiativeAgreementDetail />, app)
 
     expect(screen.queryByTestId('comments-component')).not.toBeInTheDocument()
   })
 
-  it('tolerates an organization with no address', () => {
+  test('tolerates an organization with no address', ({ render, app }) => {
     mockAgreement.mockReturnValue({
       data: {
         ...agreement,
@@ -265,7 +295,7 @@ describe('InitiativeAgreementDetail', () => {
       isError: false,
       error: null
     })
-    render(<InitiativeAgreementDetail />, { wrapper })
+    render(<InitiativeAgreementDetail />, app)
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
   })
 })

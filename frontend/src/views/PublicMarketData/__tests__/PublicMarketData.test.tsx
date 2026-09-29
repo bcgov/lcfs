@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { screen } from '@testing-library/react'
+import { describe, expect, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { PublicMarketData } from '../PublicMarketData'
 
 vi.mock('echarts-for-react', () => ({ default: () => null }))
@@ -102,8 +102,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('PublicMarketData', () => {
-  it('renders the title and KPI cards', () => {
-    render(<PublicMarketData />, { wrapper })
+  test('renders the title and KPI cards', ({ render, theme }) => {
+    render(<PublicMarketData />, [theme])
     expect(
       screen.getByText('publicDashboard.marketData.title')
     ).toBeInTheDocument()

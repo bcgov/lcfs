@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
 import { router } from '../index'
 import { useKeycloak } from '@react-keycloak/web'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { testQueryClient } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock special route components
 vi.mock('@/components/ApiDocs', () => ({
@@ -129,13 +128,8 @@ const createTestRouter = (initialEntries = ['/']) => {
 }
 
 // Helper function to render router with providers
-const renderRouterWithProviders = (testRouter) => {
-  return render(
-    <QueryClientProvider client={testQueryClient}>
-      <RouterProvider router={testRouter} />
-    </QueryClientProvider>
-  )
-}
+const renderRouterWithProviders = (testRouter, render, query) =>
+  render(<RouterProvider router={testRouter} />, [query])
 
 describe('Special Routes', () => {
   const mockKeycloak = {
@@ -171,9 +165,12 @@ describe('Special Routes', () => {
   })
 
   describe('API Documentation Route', () => {
-    it('should render API docs component for /docs route', async () => {
+    test('should render API docs component for /docs route', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/docs'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('api-docs')).toBeInTheDocument()
@@ -182,9 +179,12 @@ describe('Special Routes', () => {
       })
     })
 
-    it('should not render layout for API docs route', async () => {
+    test('should not render layout for API docs route', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/docs'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('api-docs')).toBeInTheDocument()
@@ -193,7 +193,7 @@ describe('Special Routes', () => {
       })
     })
 
-    it('should have correct breadcrumb handle for API docs', () => {
+    test('should have correct breadcrumb handle for API docs', () => {
       const apiDocsRoute = router.routes.find((route) => route.path === '/docs')
       expect(apiDocsRoute).toBeDefined()
       expect(apiDocsRoute.handle).toBeDefined()
@@ -201,11 +201,14 @@ describe('Special Routes', () => {
       expect(apiDocsRoute.handle.crumb()).toBe('API Docs')
     })
 
-    it('should be accessible without authentication', async () => {
+    test('should be accessible without authentication', async ({
+      render,
+      query
+    }) => {
       mockKeycloak.authenticated = false
 
       const testRouter = createTestRouter(['/docs'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('api-docs')).toBeInTheDocument()
@@ -217,7 +220,7 @@ describe('Special Routes', () => {
   })
 
   describe('Logout Route', () => {
-    it('should call logout function when accessing /log-out route', () => {
+    test('should call logout function when accessing /log-out route', () => {
       // Verify the logout route exists and has a loader function
       // Note: The loader calls logout() but we can't verify the mock is called
       // because the router captures the original function reference at module load time
@@ -228,7 +231,7 @@ describe('Special Routes', () => {
       expect(logoutRoute.loader).toBeInstanceOf(Function)
     })
 
-    it('should have loader that returns null', async () => {
+    test('should have loader that returns null', async () => {
       const logoutRoute = router.routes.find(
         (route) => route.path === '/log-out'
       )
@@ -239,7 +242,7 @@ describe('Special Routes', () => {
       expect(result).toBeNull()
     })
 
-    it('should call logout even when not authenticated', () => {
+    test('should call logout even when not authenticated', () => {
       // The logout route has no authentication requirement - it just has a loader
       // that calls logout() regardless of auth state
       const logoutRoute = router.routes.find(
@@ -251,7 +254,7 @@ describe('Special Routes', () => {
       expect(logoutRoute.loader).toBeInstanceOf(Function)
     })
 
-    it('should not render any component for logout route', () => {
+    test('should not render any component for logout route', () => {
       // Verify the logout route has no element (only a loader)
       // Note: Navigation testing avoided due to AbortSignal compatibility issues
       // between MSW interceptors and react-router data router
@@ -267,9 +270,12 @@ describe('Special Routes', () => {
   })
 
   describe('404 Not Found Route', () => {
-    it('should render NotFound component for invalid routes', async () => {
+    test('should render NotFound component for invalid routes', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/invalid-route'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('not-found')).toBeInTheDocument()
@@ -277,10 +283,13 @@ describe('Special Routes', () => {
       })
     })
 
-    it('should display the attempted path in the error message', async () => {
+    test('should display the attempted path in the error message', async ({
+      render,
+      query
+    }) => {
       // Note: This test may not work exactly as expected due to MemoryRouter limitations
       const testRouter = createTestRouter(['/some/invalid/path'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('not-found')).toBeInTheDocument()
@@ -288,9 +297,12 @@ describe('Special Routes', () => {
       })
     })
 
-    it('should provide navigation back to home', async () => {
+    test('should provide navigation back to home', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/invalid-route'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('not-found')).toBeInTheDocument()
@@ -299,40 +311,49 @@ describe('Special Routes', () => {
       })
     })
 
-    it('should handle deeply nested invalid routes', async () => {
+    test('should handle deeply nested invalid routes', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter([
         '/admin/users/123/invalid/nested/route'
       ])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('not-found')).toBeInTheDocument()
       })
     })
 
-    it('should handle routes with query parameters', async () => {
+    test('should handle routes with query parameters', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter([
         '/invalid-route?param=value&another=test'
       ])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('not-found')).toBeInTheDocument()
       })
     })
 
-    it('should handle routes with fragments', async () => {
+    test('should handle routes with fragments', async ({ render, query }) => {
       const testRouter = createTestRouter(['/invalid-route#section'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('not-found')).toBeInTheDocument()
       })
     })
 
-    it('should not render layout for 404 route', async () => {
+    test('should not render layout for 404 route', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/invalid-route'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('not-found')).toBeInTheDocument()
@@ -343,9 +364,9 @@ describe('Special Routes', () => {
   })
 
   describe('Route Configuration Edge Cases', () => {
-    it('should handle empty route path', async () => {
+    test('should handle empty route path', async ({ render, query }) => {
       const testRouter = createTestRouter([''])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       // Should redirect to dashboard (root route)
       await waitFor(() => {
@@ -353,9 +374,9 @@ describe('Special Routes', () => {
       })
     })
 
-    it('should handle root route correctly', async () => {
+    test('should handle root route correctly', async ({ render, query }) => {
       const testRouter = createTestRouter(['/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
@@ -363,9 +384,12 @@ describe('Special Routes', () => {
       })
     })
 
-    it('should handle routes with trailing slashes', async () => {
+    test('should handle routes with trailing slashes', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/organizations/'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       // This should match the organizations list route
       await waitFor(() => {
@@ -374,9 +398,9 @@ describe('Special Routes', () => {
       })
     })
 
-    it('should handle case-sensitive routes', async () => {
+    test('should handle case-sensitive routes', async ({ render, query }) => {
       const testRouter = createTestRouter(['/ORGANIZATIONS'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       // React Router v6 is case-insensitive by default, so this should match /organizations
       await waitFor(() => {
@@ -387,7 +411,7 @@ describe('Special Routes', () => {
   })
 
   describe('Route Metadata and Handles', () => {
-    it('should have correct route structure', () => {
+    test('should have correct route structure', () => {
       expect(router.routes).toHaveLength(7) // PublicLayout, PublicPageLayout, MainLayout, API docs, logout, 404, release-notes
 
       // Check for wildcard route
@@ -396,7 +420,7 @@ describe('Special Routes', () => {
       expect(wildcardRoute.element).toBeDefined()
     })
 
-    it('should have logout route with loader', () => {
+    test('should have logout route with loader', () => {
       const logoutRoute = router.routes.find(
         (route) => route.path === '/log-out'
       )
@@ -405,21 +429,21 @@ describe('Special Routes', () => {
       expect(logoutRoute.element).toBeUndefined() // No element for logout route
     })
 
-    it('should have API docs route with handle', () => {
+    test('should have API docs route with handle', () => {
       const apiDocsRoute = router.routes.find((route) => route.path === '/docs')
       expect(apiDocsRoute).toBeDefined()
       expect(apiDocsRoute.handle).toBeDefined()
       expect(apiDocsRoute.handle.crumb).toBeInstanceOf(Function)
     })
 
-    it('should not have handles for fallback routes', () => {
+    test('should not have handles for fallback routes', () => {
       const wildcardRoute = router.routes.find((route) => route.path === '*')
       expect(wildcardRoute.handle).toBeUndefined()
     })
   })
 
   describe('Error Boundaries Integration', () => {
-    it('should handle component loading errors gracefully', async () => {
+    test('should handle component loading errors gracefully', async () => {
       // Mock a component that throws an error
       const ErrorComponent = () => {
         throw new Error('Component failed to load')
@@ -430,7 +454,7 @@ describe('Special Routes', () => {
       expect(router.routes).toBeDefined()
     })
 
-    it('should handle loader errors in special routes', async () => {
+    test('should handle loader errors in special routes', async () => {
       // Test that logout loader handles errors gracefully
       const logoutRoute = router.routes.find(
         (route) => route.path === '/log-out'
@@ -444,9 +468,12 @@ describe('Special Routes', () => {
   })
 
   describe('Browser History Integration', () => {
-    it('should support browser back/forward for special routes', async () => {
+    test('should support browser back/forward for special routes', async ({
+      render,
+      query
+    }) => {
       const testRouter = createTestRouter(['/docs'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       // Should render API docs
       await waitFor(() => {
@@ -454,13 +481,16 @@ describe('Special Routes', () => {
       })
     })
 
-    it('should handle navigation state for special routes', async () => {
+    test('should handle navigation state for special routes', async ({
+      render,
+      query
+    }) => {
       const navigationState = { from: 'dashboard', reason: 'user-action' }
 
       const testRouter = createTestRouter([
         { pathname: '/docs', state: navigationState }
       ])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('api-docs')).toBeInTheDocument()
@@ -469,20 +499,26 @@ describe('Special Routes', () => {
   })
 
   describe('Performance and Loading', () => {
-    it('should load special routes without additional dependencies', async () => {
+    test('should load special routes without additional dependencies', async ({
+      render,
+      query
+    }) => {
       // API docs route should load independently
       const testRouter = createTestRouter(['/docs'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('api-docs')).toBeInTheDocument()
       })
     })
 
-    it('should handle concurrent access to special routes', async () => {
+    test('should handle concurrent access to special routes', async ({
+      render,
+      query
+    }) => {
       // Test access to the special route
       const testRouter = createTestRouter(['/docs'])
-      renderRouterWithProviders(testRouter)
+      renderRouterWithProviders(testRouter, render, query)
 
       await waitFor(() => {
         expect(screen.getByTestId('api-docs')).toBeInTheDocument()

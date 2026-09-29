@@ -1,7 +1,7 @@
 import React from 'react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { wrapper } from '@/tests/utils/wrapper'
+import { vi, describe, expect, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
+import { test } from '@/tests/utils/fixtures'
 import { UserProfile } from '../UserProfile'
 import * as formatters from '@/utils/formatters'
 import * as cellRenderers from '@/utils/grid/cellRenderers'
@@ -82,8 +82,19 @@ describe('UserProfile Component', () => {
   })
 
   describe('User Information Display', () => {
-    it('renders user basic information correctly', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('renders user basic information correctly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Look for user data that should be rendered as plain text
       expect(screen.getByText('John Doe')).toBeInTheDocument()
@@ -92,8 +103,19 @@ describe('UserProfile Component', () => {
       expect(screen.getByText('Test Organization')).toBeInTheDocument()
     })
 
-    it('renders user names with space between first and last name', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('renders user names with space between first and last name', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Check that first and last names are rendered together
       expect(
@@ -103,15 +125,37 @@ describe('UserProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('renders formatted phone numbers', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('renders formatted phone numbers', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(screen.getByText('(123) 456-7890')).toBeInTheDocument()
       expect(screen.getByText('(098) 765-4321')).toBeInTheDocument()
     })
 
-    it('calls phone number formatter with correct parameters', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('calls phone number formatter with correct parameters', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(formatters.phoneNumberFormatter).toHaveBeenCalledWith({
         value: '1234567890'
@@ -121,8 +165,19 @@ describe('UserProfile Component', () => {
       })
     })
 
-    it('renders status using StatusRenderer', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('renders status using StatusRenderer', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(cellRenderers.StatusRenderer).toHaveBeenCalledWith({
         data: mockUser,
@@ -131,8 +186,19 @@ describe('UserProfile Component', () => {
       expect(screen.getByText('Status: Active')).toBeInTheDocument()
     })
 
-    it('renders roles using RoleSpanRenderer', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('renders roles using RoleSpanRenderer', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(cellRenderers.RoleSpanRenderer).toHaveBeenCalledWith({
         data: mockUser
@@ -140,8 +206,19 @@ describe('UserProfile Component', () => {
       expect(screen.getByText('administrator, user')).toBeInTheDocument()
     })
 
-    it('displays all form field labels', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('displays all form field labels', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Use data-test attributes to verify structure instead of text content
       const typographyElements = screen.getAllByTestId('bc-typography')
@@ -150,32 +227,76 @@ describe('UserProfile Component', () => {
   })
 
   describe('Government User Handling', () => {
-    it('displays government organization for users without organization', () => {
-      render(<UserProfile data={mockGovernmentUser} />, { wrapper })
+    test('displays government organization for users without organization', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockGovernmentUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Look for the govOrg text which should be rendered when organization is null
       expect(screen.getByText('govOrg')).toBeInTheDocument()
     })
 
-    it('renders government user information correctly', () => {
-      render(<UserProfile data={mockGovernmentUser} />, { wrapper })
+    test('renders government user information correctly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockGovernmentUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(screen.getByText('Jane Smith')).toBeInTheDocument()
       expect(screen.getByText('Government Official')).toBeInTheDocument()
       expect(screen.getByText('jane.smith@gov.bc.ca')).toBeInTheDocument()
     })
 
-    it('uses organization name when available', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('uses organization name when available', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(screen.getByText('Test Organization')).toBeInTheDocument()
     })
   })
 
   describe('Missing Data Handling', () => {
-    it('handles missing title gracefully', () => {
+    test('handles missing title gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const userWithoutTitle = { ...mockUser, title: undefined }
-      render(<UserProfile data={userWithoutTitle} />, { wrapper })
+      render(<UserProfile data={userWithoutTitle} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(
         screen.getByText((content, element) => {
@@ -187,23 +308,45 @@ describe('UserProfile Component', () => {
       // Should not throw error
     })
 
-    it('handles missing phone numbers gracefully', () => {
+    test('handles missing phone numbers gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const userWithoutPhones = {
         ...mockUser,
         phone: undefined,
         mobilePhone: undefined
       }
 
-      render(<UserProfile data={userWithoutPhones} />, { wrapper })
+      render(<UserProfile data={userWithoutPhones} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(formatters.phoneNumberFormatter).toHaveBeenCalledWith({
         value: undefined
       })
     })
 
-    it('handles missing email gracefully', () => {
+    test('handles missing email gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const userWithoutEmail = { ...mockUser, keycloakEmail: undefined }
-      render(<UserProfile data={userWithoutEmail} />, { wrapper })
+      render(<UserProfile data={userWithoutEmail} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(
         screen.getByText((content, element) => {
@@ -215,16 +358,33 @@ describe('UserProfile Component', () => {
       // Should not throw error
     })
 
-    it('handles empty roles array', () => {
+    test('handles empty roles array', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const userWithoutRoles = { ...mockUser, roles: [] }
-      render(<UserProfile data={userWithoutRoles} />, { wrapper })
+      render(<UserProfile data={userWithoutRoles} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(cellRenderers.RoleSpanRenderer).toHaveBeenCalledWith({
         data: userWithoutRoles
       })
     })
 
-    it('handles partially undefined data properties', () => {
+    test('handles partially undefined data properties', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const partialData = {
         firstName: 'John',
         lastName: undefined,
@@ -232,7 +392,12 @@ describe('UserProfile Component', () => {
         keycloakEmail: 'john@example.com'
       }
 
-      render(<UserProfile data={partialData} />, { wrapper })
+      render(<UserProfile data={partialData} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Should render what's available
       expect(screen.getByText('John')).toBeInTheDocument()
@@ -242,8 +407,19 @@ describe('UserProfile Component', () => {
   })
 
   describe('Translation Keys', () => {
-    it('uses correct translation keys for labels', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('uses correct translation keys for labels', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Use more flexible text matching for labels that are inside strong tags
       expect(
@@ -308,15 +484,37 @@ describe('UserProfile Component', () => {
   })
 
   describe('Grid Layout', () => {
-    it('renders with proper grid structure', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('renders with proper grid structure', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const gridElements = screen.getAllByTestId('bc-box')
       expect(gridElements.length).toBeGreaterThan(0)
     })
 
-    it('applies correct typography variants', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('applies correct typography variants', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const typographyElements = screen.getAllByTestId('bc-typography')
       typographyElements.forEach((element) => {
@@ -326,14 +524,36 @@ describe('UserProfile Component', () => {
   })
 
   describe('Formatter Function Calls', () => {
-    it('calls formatters only when data is available', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('calls formatters only when data is available', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(formatters.phoneNumberFormatter).toHaveBeenCalledTimes(2)
     })
 
-    it('calls cell renderers with correct data', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('calls cell renderers with correct data', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(cellRenderers.StatusRenderer).toHaveBeenCalledTimes(1)
       expect(cellRenderers.RoleSpanRenderer).toHaveBeenCalledTimes(1)
@@ -341,23 +561,56 @@ describe('UserProfile Component', () => {
   })
 
   describe('Component Structure', () => {
-    it('renders main container with correct padding', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('renders main container with correct padding', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const containers = screen.getAllByTestId('bc-box')
       expect(containers[0]).toHaveAttribute('p', '1')
     })
 
-    it('renders grid with responsive columns', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('renders grid with responsive columns', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Check for grid template columns prop
       const gridContainer = screen.getAllByTestId('bc-box')[1]
       expect(gridContainer).toHaveAttribute('display', 'grid')
     })
 
-    it('renders left and right column containers', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('renders left and right column containers', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const flexContainers = screen
         .getAllByTestId('bc-box')
@@ -365,16 +618,38 @@ describe('UserProfile Component', () => {
       expect(flexContainers.length).toBe(2) // Left and right columns
     })
 
-    it('renders correct number of typography elements', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('renders correct number of typography elements', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       const typographyElements = screen.getAllByTestId('bc-typography')
       expect(typographyElements.length).toBe(8) // 8 fields total
     })
 
-    it('renders basic structure even with minimal data', () => {
+    test('renders basic structure even with minimal data', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const minimalData = { firstName: 'Test' }
-      render(<UserProfile data={minimalData} />, { wrapper })
+      render(<UserProfile data={minimalData} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Should still render the basic grid structure
       const boxes = screen.getAllByTestId('bc-box')
@@ -384,8 +659,14 @@ describe('UserProfile Component', () => {
       expect(typographies.length).toBe(8) // Should still render all 8 field containers
     })
 
-    it('renders structure even with completely empty data', () => {
-      render(<UserProfile data={{}} />, { wrapper })
+    test('renders structure even with completely empty data', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={{}} />, [query, theme, localization, router])
 
       // Should render basic structure regardless of data
       const boxes = screen.getAllByTestId('bc-box')
@@ -397,26 +678,59 @@ describe('UserProfile Component', () => {
   })
 
   describe('Data Properties Access', () => {
-    it('safely accesses nested organization properties', () => {
+    test('safely accesses nested organization properties', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const userWithoutOrg = { ...mockUser, organization: undefined }
-      render(<UserProfile data={userWithoutOrg} />, { wrapper })
+      render(<UserProfile data={userWithoutOrg} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(screen.getByText('govOrg')).toBeInTheDocument()
     })
 
-    it('handles organization name correctly', () => {
-      render(<UserProfile data={mockUser} />, { wrapper })
+    test('handles organization name correctly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<UserProfile data={mockUser} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(screen.getByText('Test Organization')).toBeInTheDocument()
     })
 
-    it('safely renders when data object has missing firstName', () => {
+    test('safely renders when data object has missing firstName', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const userWithoutFirstName = {
         ...mockUser,
         firstName: undefined,
         lastName: 'Doe'
       }
-      render(<UserProfile data={userWithoutFirstName} />, { wrapper })
+      render(<UserProfile data={userWithoutFirstName} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Should render lastName even if firstName is missing
       expect(
@@ -424,13 +738,24 @@ describe('UserProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('safely renders when data object has missing lastName', () => {
+    test('safely renders when data object has missing lastName', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const userWithoutLastName = {
         ...mockUser,
         firstName: 'John',
         lastName: undefined
       }
-      render(<UserProfile data={userWithoutLastName} />, { wrapper })
+      render(<UserProfile data={userWithoutLastName} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Should render firstName even if lastName is missing
       expect(
@@ -438,9 +763,20 @@ describe('UserProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('handles completely empty data object', () => {
+    test('handles completely empty data object', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const emptyData = {}
-      render(<UserProfile data={emptyData} />, { wrapper })
+      render(<UserProfile data={emptyData} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Should not crash and should render basic structure
       const containers = screen.getAllByTestId('bc-box')

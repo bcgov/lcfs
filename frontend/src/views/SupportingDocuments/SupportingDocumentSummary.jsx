@@ -1,5 +1,5 @@
 import Box from '@mui/material/Box'
-import { List } from '@mui/material'
+import List from '@mui/material/List'
 import prettyBytes from 'pretty-bytes'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'

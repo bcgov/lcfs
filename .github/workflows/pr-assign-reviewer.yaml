@@ -1,0 +1,128 @@
+name: Assign PR reviewer
+
+# Requests one reviewer from the dev rotation and assigns that same user when
+# a PR is opened or marked ready for review. Picks whoever has the fewest
+# pending review requests across open PRs, never the author; ties rotate by PR
+# number. Run manually to apply the same rule to existing open PRs.
+#
+# pull_request_target so fork and Dependabot PRs get a token that can request
+# reviewers. Safe here because PR code is never checked out or run.
+
+on:
+  workflow_dispatch:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+env:
+  # Edit this list to change the rotation (GitHub usernames, comma-separated).
+  REVIEWERS: AlexZorkin,prv-proton,hamed-valiollahi,mr-moto
+
+jobs:
+  assign-reviewer:
+    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request a reviewer and assign the same user
+        uses: actions/github-script@v8.0.0
+        with:
+          script: |
+            const pool = process.env.REVIEWERS.split(',').map((s) => s.trim()).filter(Boolean);
+            const same = (a, b) => a.toLowerCase() === b.toLowerCase();
+            const inPool = (login) => pool.some((p) => same(p, login));
+
+            const openPrs = await github.paginate(github.rest.pulls.list, {
+              ...context.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const load = Object.fromEntries(pool.map((c) => [c.toLowerCase(), 0]));
+            for (const p of openPrs) {
+              for (const u of p.requested_reviewers) {
+                const key = u.login.toLowerCase();
+                if (key in load) load[key] += 1;
+              }
+            }
+
+            const assignIfNeeded = async (pr, login) => {
+              const assigned = pr.assignees.some((u) => same(u.login, login));
+              if (assigned) {
+                core.info(`PR #${pr.number} is already assigned to ${login}.`);
+                return;
+              }
+
+              await github.rest.issues.addAssignees({
+                ...context.repo,
+                issue_number: pr.number,
+                assignees: [login],
+              });
+              core.info(`Assigned ${login} to PR #${pr.number}.`);
+            };
+
+            const processPr = async (pr) => {
+              const author = pr.user.login;
+
+              // If a reviewer is already requested, keep that user and make
+              // sure they are also assigned instead of adding another reviewer.
+              const requested = pr.requested_reviewers
+                .map((u) => u.login)
+                .filter((login) => !same(login, author));
+              if (requested.length) {
+                core.info(`PR #${pr.number} already has a requested reviewer: ${requested[0]}`);
+                await assignIfNeeded(pr, requested[0]);
+                return;
+              }
+
+              // For existing PR backfills, a submitted review from someone in
+              // the rotation also counts as the reviewer to assign.
+              const reviews = await github.paginate(github.rest.pulls.listReviews, {
+                ...context.repo,
+                pull_number: pr.number,
+                per_page: 100,
+              });
+              const existing = reviews
+                .map((r) => r.user?.login)
+                .filter(Boolean)
+                .filter((login) => !same(login, author) && inPool(login));
+              if (existing.length) {
+                core.info(`PR #${pr.number} already has a reviewer from the rotation: ${existing[0]}`);
+                await assignIfNeeded(pr, existing[0]);
+                return;
+              }
+
+              const candidates = pool.filter((p) => !same(p, author));
+              if (!candidates.length) {
+                core.warning(`No eligible reviewers in the rotation for PR #${pr.number}.`);
+                return;
+              }
+
+              // Fewest pending requests wins; on a tie, start the scan at a
+              // PR-number offset so equal-load picks rotate through the team.
+              const start = pr.number % candidates.length;
+              const order = [...candidates.slice(start), ...candidates.slice(0, start)];
+              const pick = order.reduce((best, c) =>
+                load[c.toLowerCase()] < load[best.toLowerCase()] ? c : best,
+              );
+
+              await github.rest.pulls.requestReviewers({
+                ...context.repo,
+                pull_number: pr.number,
+                reviewers: [pick],
+              });
+              load[pick.toLowerCase()] += 1;
+              core.info(`Requested review from ${pick} on PR #${pr.number}. Pending requests: ${JSON.stringify(load)}`);
+
+              await assignIfNeeded(pr, pick);
+            };
+
+            const targetPrs = context.eventName === 'workflow_dispatch'
+              ? openPrs.filter((pr) => !pr.draft)
+              : [context.payload.pull_request];
+
+            core.info(`Processing ${targetPrs.length} PR(s).`);
+            for (const pr of targetPrs) {
+              await processPr(pr);
+            }

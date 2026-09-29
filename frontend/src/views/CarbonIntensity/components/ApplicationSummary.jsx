@@ -1,14 +1,13 @@
-import { Edit, FileDownloadOutlined } from '@mui/icons-material'
-import {
-  Box,
-  Divider,
-  FormControlLabel,
-  Grid,
-  IconButton,
-  Stack,
-  Switch,
-  Tooltip
-} from '@mui/material'
+import Edit from '@mui/icons-material/Edit'
+import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined'
+import Box from '@mui/material/Box'
+import Divider from '@mui/material/Divider'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Grid from '@mui/material/Grid'
+import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
+import Switch from '@mui/material/Switch'
+import Tooltip from '@mui/material/Tooltip'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 

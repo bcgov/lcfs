@@ -1,5 +1,6 @@
 import React from 'react'
-import { Grid, Box } from '@mui/material'
+import Grid from '@mui/material/Grid'
+import Box from '@mui/material/Box'
 import { Role } from '@/components/Role'
 import { roles, govRoles, nonGovRoles } from '@/constants/roles'
 import {
