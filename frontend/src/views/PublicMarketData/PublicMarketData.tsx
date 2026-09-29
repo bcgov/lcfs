@@ -259,13 +259,13 @@ const DefinitionCard = ({ title, body }: { title: string; body: string }) => (
 const DownloadControls = ({
   reportKey,
   title,
-  onExcel,
-  excelLabel
+  onCsv,
+  csvLabel
 }: {
   reportKey: ReportKey
   title: string
-  onExcel: () => void
-  excelLabel: string
+  onCsv: () => void
+  csvLabel: string
 }) => (
   <BCBox
     className="no-print"
@@ -276,9 +276,9 @@ const DownloadControls = ({
       color="primary"
       size="small"
       startIcon={<DownloadOutlinedIcon sx={{ width: 20, height: 20 }} />}
-      data-test={`download-${reportKey}-xlsx`}
-      aria-label={`${title} ${excelLabel}`}
-      onClick={onExcel}
+      data-test={`download-${reportKey}-csv`}
+      aria-label={`${title} ${csvLabel}`}
+      onClick={onCsv}
       sx={{
         textTransform: 'none',
         borderRadius: '3px',
@@ -286,7 +286,7 @@ const DownloadControls = ({
         '&:hover': { backgroundColor: LINK }
       }}
     >
-      {excelLabel}
+      {csvLabel}
     </BCButton>
   </BCBox>
 )
@@ -297,6 +297,8 @@ type MarketReportTableColumn = {
   value: (row: MarketReportPeriod) => string
   exportValue: (row: MarketReportPeriod) => string | number
 }
+
+type TableExportRow = Record<string, string | number>
 
 const MarketReportTable = ({
   reportKey,
@@ -983,18 +985,132 @@ export const PublicMarketData = () => {
       )
     }))
 
-  const fileNameFor = (key: ReportKey, format: 'xlsx') =>
+  const tableExportHeaders = (key: ReportKey) => [
+    periodHeaderFor(key),
+    ...columnsForReport(key).map((column) => column.header)
+  ]
+
+  const isCurrencyExportHeader = (header: string) => {
+    const lower = header.toLowerCase()
+    return (
+      lower.includes('price') ||
+      lower.includes('cad') ||
+      lower.includes('$') ||
+      lower.includes('transfer value')
+    )
+  }
+
+  const isIntegerExportHeader = (header: string) => {
+    const lower = header.toLowerCase()
+    return (
+      lower.includes('transfer') ||
+      lower.includes('volume') ||
+      lower.includes('credits')
+    )
+  }
+
+  const buildFormattedWorksheet = (
+    key: ReportKey,
+    rows: MarketReportPeriod[]
+  ) => {
+    const exportRows = tableExportRows(key, rows)
+    const headers = tableExportHeaders(key)
+    const worksheet = XLSX.utils.json_to_sheet(exportRows, { header: headers })
+    const ref = worksheet['!ref']
+
+    if (!ref) return worksheet
+
+    const range = XLSX.utils.decode_range(ref)
+    worksheet['!autofilter'] = { ref }
+    worksheet['!cols'] = headers.map((header) => {
+      const values = exportRows
+        .slice(0, 100)
+        .map((row) => String(row[header] ?? ''))
+      return {
+        wch: Math.min(
+          Math.max(header.length, ...values.map((v) => v.length)) + 2,
+          34
+        )
+      }
+    })
+
+    headers.forEach((header, columnIndex) => {
+      const headerCell =
+        worksheet[XLSX.utils.encode_cell({ r: 0, c: columnIndex })]
+      if (headerCell) {
+        headerCell.s = {
+          font: { bold: true, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '003366' } }
+        }
+      }
+
+      for (let rowIndex = 1; rowIndex <= range.e.r; rowIndex += 1) {
+        const cell =
+          worksheet[XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex })]
+        if (!cell || typeof cell.v !== 'number') continue
+        if (isCurrencyExportHeader(header)) {
+          cell.z = '$#,##0.00'
+        } else if (isIntegerExportHeader(header)) {
+          cell.z = '#,##0'
+        }
+      }
+    })
+
+    return worksheet
+  }
+
+  const fileNameFor = (key: ReportKey, format: 'csv' | 'xlsx') =>
     `lcfs-credit-market-${reportTypeName(key)}-report-${todayStamp()}.${format}`
 
-  const downloadExcel = (key: ReportKey, rows: MarketReportPeriod[]) => {
-    const worksheet = XLSX.utils.json_to_sheet(tableExportRows(key, rows))
+  const downloadCsv = (key: ReportKey, rows: MarketReportPeriod[]) => {
+    const exportRows: TableExportRow[] = tableExportRows(key, rows)
+    const headers = tableExportHeaders(key)
+    const escapeCsvValue = (value: string | number) => {
+      const text = String(value ?? '')
+      return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+    }
+    const csv = [
+      headers.map(escapeCsvValue).join(','),
+      ...exportRows.map((row) =>
+        headers
+          .map((header) => escapeCsvValue(row[header] as string | number))
+          .join(',')
+      )
+    ].join('\r\n')
+
+    const blob = new Blob([`\uFEFF${csv}`], {
+      type: 'text/csv;charset=utf-8;'
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileNameFor(key, 'csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const downloadCombinedExcel = () => {
     const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      `${reportTypeName(key)} report`.slice(0, 31)
-    )
-    XLSX.writeFile(workbook, fileNameFor(key, 'xlsx'), { bookType: 'xlsx' })
+    const reports = [
+      { key: 'monthly' as ReportKey, rows: data?.monthly ?? [] },
+      { key: 'quarterly' as ReportKey, rows: data?.quarterly ?? [] },
+      { key: 'annual' as ReportKey, rows: data?.annual ?? [] }
+    ]
+
+    reports.forEach(({ key, rows }) => {
+      const worksheet = buildFormattedWorksheet(key, rows)
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        `${reportTypeName(key)} report`.slice(0, 31)
+      )
+    })
+
+    XLSX.writeFile(workbook, `lcfs-credit-market-report-${todayStamp()}.xlsx`, {
+      bookType: 'xlsx'
+    })
   }
 
   const downloadPdf = async () => {
@@ -1350,6 +1466,26 @@ export const PublicMarketData = () => {
             >
               {t('publicDashboard.marketData.aggregatedNote')}
             </BCBox>
+            <Button
+              disableElevation
+              onClick={downloadCombinedExcel}
+              data-test="download-all-xlsx"
+              startIcon={<DownloadOutlinedIcon sx={{ fontSize: 18 }} />}
+              sx={{
+                backgroundColor: '#fff',
+                color: NAVY,
+                fontWeight: 700,
+                fontSize: 14,
+                textTransform: 'none',
+                px: 2.5,
+                py: 1.1,
+                borderRadius: '4px',
+                border: `1px solid ${NAVY}`,
+                '&:hover': { backgroundColor: '#F2F7FC' }
+              }}
+            >
+              {t('publicDashboard.marketData.downloadAllExcel')}
+            </Button>
             <Button
               disableElevation
               onClick={downloadPdf}
@@ -1734,8 +1870,8 @@ export const PublicMarketData = () => {
                 <DownloadControls
                   reportKey={tbl.key}
                   title={tbl.title}
-                  excelLabel={t('publicDashboard.marketData.downloadExcel')}
-                  onExcel={() => downloadExcel(tbl.key, rows)}
+                  csvLabel={t('publicDashboard.marketData.downloadCsv')}
+                  onCsv={() => downloadCsv(tbl.key, rows)}
                 />
               </BCBox>
             )

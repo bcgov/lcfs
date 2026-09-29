@@ -1,5 +1,6 @@
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import { describe, expect, vi } from 'vitest'
+import * as XLSX from 'xlsx'
 import { test } from '@/tests/utils/fixtures'
 import { PublicMarketData } from '../PublicMarketData'
 
@@ -8,9 +9,17 @@ vi.mock('html2canvas', () => ({ default: vi.fn() }), { virtual: true })
 vi.mock('jspdf', () => ({ default: vi.fn() }), { virtual: true })
 vi.mock('xlsx', () => ({
   utils: {
-    json_to_sheet: vi.fn(),
-    book_new: vi.fn(),
-    book_append_sheet: vi.fn()
+    json_to_sheet: vi.fn(() => ({
+      '!ref': 'A1:B2',
+      A1: { v: 'Period' },
+      B1: { v: 'Transfers' },
+      A2: { v: 'June 2026' },
+      B2: { v: 6 }
+    })),
+    book_new: vi.fn(() => ({})),
+    book_append_sheet: vi.fn(),
+    decode_range: vi.fn(() => ({ s: { r: 0, c: 0 }, e: { r: 1, c: 1 } })),
+    encode_cell: vi.fn(({ r, c }) => `${String.fromCharCode(65 + c)}${r + 1}`)
   },
   writeFile: vi.fn()
 }))
@@ -112,19 +121,51 @@ describe('PublicMarketData', () => {
     expect(screen.queryByTestId('kpi-avgPrice')).not.toBeInTheDocument()
   })
 
-  test('renders the CO2 impact band and report downloads', ({ render, theme }) => {
+  test('renders the CO2 impact band and report downloads', ({
+    render,
+    theme
+  }) => {
     render(<PublicMarketData />, [theme])
     expect(screen.getByTestId('annual-average-price-chart')).toBeInTheDocument()
     expect(screen.getByTestId('transfer-price-trend-chart')).toBeInTheDocument()
     expect(screen.getByTestId('trade-volume-chart')).toBeInTheDocument()
     expect(screen.getByTestId('download-pdf')).toBeInTheDocument()
-    expect(screen.queryByTestId('download-monthly-csv')).not.toBeInTheDocument()
-    expect(screen.getByTestId('download-monthly-xlsx')).toBeInTheDocument()
+    expect(screen.getByTestId('download-all-xlsx')).toBeInTheDocument()
+    expect(screen.getByTestId('download-monthly-csv')).toBeInTheDocument()
     expect(
-      screen.queryByTestId('download-quarterly-csv')
+      screen.queryByTestId('download-monthly-xlsx')
     ).not.toBeInTheDocument()
-    expect(screen.getByTestId('download-quarterly-xlsx')).toBeInTheDocument()
-    expect(screen.queryByTestId('download-annual-csv')).not.toBeInTheDocument()
-    expect(screen.getByTestId('download-annual-xlsx')).toBeInTheDocument()
+    expect(screen.getByTestId('download-quarterly-csv')).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('download-quarterly-xlsx')
+    ).not.toBeInTheDocument()
+    expect(screen.getByTestId('download-annual-csv')).toBeInTheDocument()
+    expect(screen.queryByTestId('download-annual-xlsx')).not.toBeInTheDocument()
+  })
+
+  test('downloads all report tables as a formatted Excel workbook', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+
+    fireEvent.click(screen.getByTestId('download-all-xlsx'))
+
+    expect(XLSX.utils.json_to_sheet).toHaveBeenCalledTimes(3)
+    expect(XLSX.utils.book_append_sheet).toHaveBeenCalledTimes(3)
+    expect(XLSX.writeFile).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.stringMatching(
+        /^lcfs-credit-market-report-\d{4}-\d{2}-\d{2}\.xlsx$/
+      ),
+      { bookType: 'xlsx' }
+    )
+
+    const firstWorksheet = vi.mocked(XLSX.utils.book_append_sheet).mock
+      .calls[0][1]
+    expect(firstWorksheet).toMatchObject({
+      '!autofilter': { ref: 'A1:B2' },
+      '!cols': expect.any(Array)
+    })
   })
 })

@@ -88,6 +88,8 @@
       "subtitle": "Credit transfer activity under the Low Carbon Fuel Standard. Prices are volume-weighted averages across all reported transfers; individual transactions are never shown.",
       "aggregatedNote": "Aggregated · anonymized",
       "downloadExcel": "Download Excel",
+      "downloadAllExcel": "Download all Excel",
+      "downloadCsv": "Download CSV",
       "downloadPdf": "Download PDF",
       "generatingPdf": "Generating PDF…",
       "vsYearAgo": "vs {{period}}",
