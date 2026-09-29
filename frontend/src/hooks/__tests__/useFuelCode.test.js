@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import {
   useFuelCodeOptions,
   useGetFuelCode,
@@ -54,7 +54,10 @@ describe('useFuelCode', () => {
   })
 
   describe('useFuelCodeOptions', () => {
-    it('should fetch fuel code options successfully', async () => {
+    test('should fetch fuel code options successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         options: [
           { id: 1, name: 'Option A' },
@@ -63,7 +66,7 @@ describe('useFuelCode', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useFuelCodeOptions(), { wrapper })
+      const { result } = renderHook(() => useFuelCodeOptions(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -73,11 +76,11 @@ describe('useFuelCode', () => {
       expect(mockGet).toHaveBeenCalledWith('/fuel-codes/table-options')
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch options')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useFuelCodeOptions(), { wrapper })
+      const { result } = renderHook(() => useFuelCodeOptions(), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -88,7 +91,10 @@ describe('useFuelCode', () => {
   })
 
   describe('useGetFuelCode', () => {
-    it('should fetch fuel code successfully when ID provided', async () => {
+    test('should fetch fuel code successfully when ID provided', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeID = 123
       const mockData = {
         fuelCodeId: fuelCodeID,
@@ -97,9 +103,7 @@ describe('useFuelCode', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useGetFuelCode(fuelCodeID), {
-        wrapper
-      })
+      const { result } = renderHook(() => useGetFuelCode(fuelCodeID), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -109,16 +113,19 @@ describe('useFuelCode', () => {
       expect(mockGet).toHaveBeenCalledWith('/fuel-codes/123')
     })
 
-    it('should not fetch when ID is not provided', () => {
-      const { result } = renderHook(() => useGetFuelCode(), { wrapper })
+    test('should not fetch when ID is not provided', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useGetFuelCode(), [query])
 
       expect(result.current.isLoading).toBe(false)
       expect(result.current.fetchStatus).toBe('idle')
       expect(mockGet).not.toHaveBeenCalled()
     })
 
-    it('should not fetch when ID is null', () => {
-      const { result } = renderHook(() => useGetFuelCode(null), { wrapper })
+    test('should not fetch when ID is null', ({ renderHook, query }) => {
+      const { result } = renderHook(() => useGetFuelCode(null), [query])
 
       expect(result.current.isLoading).toBe(false)
       expect(result.current.fetchStatus).toBe('idle')
@@ -127,7 +134,10 @@ describe('useFuelCode', () => {
   })
 
   describe('useFuelCodeStatuses', () => {
-    it('should fetch fuel code statuses successfully', async () => {
+    test('should fetch fuel code statuses successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         statuses: [
           { id: 1, name: 'Draft' },
@@ -136,7 +146,7 @@ describe('useFuelCode', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useFuelCodeStatuses(), { wrapper })
+      const { result } = renderHook(() => useFuelCodeStatuses(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -148,7 +158,10 @@ describe('useFuelCode', () => {
   })
 
   describe('useTransportModes', () => {
-    it('should fetch transport modes successfully', async () => {
+    test('should fetch transport modes successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         transportModes: [
           { id: 1, name: 'Truck' },
@@ -157,7 +170,7 @@ describe('useFuelCode', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useTransportModes(), { wrapper })
+      const { result } = renderHook(() => useTransportModes(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -169,7 +182,10 @@ describe('useFuelCode', () => {
   })
 
   describe('useGetFuelCodes', () => {
-    it('should fetch fuel codes with default parameters', async () => {
+    test('should fetch fuel codes with default parameters', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         fuelCodes: [
           { fuelCodeId: 1, fuelCode: 'FC001' },
@@ -179,7 +195,7 @@ describe('useFuelCode', () => {
       }
       mockPost.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useGetFuelCodes(), { wrapper })
+      const { result } = renderHook(() => useGetFuelCodes(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -198,7 +214,10 @@ describe('useFuelCode', () => {
       )
     })
 
-    it('should fetch fuel codes with custom parameters', async () => {
+    test('should fetch fuel codes with custom parameters', async ({
+      renderHook,
+      query
+    }) => {
       const params = {
         page: 2,
         size: 20,
@@ -211,7 +230,7 @@ describe('useFuelCode', () => {
       }
       mockPost.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useGetFuelCodes(params), { wrapper })
+      const { result } = renderHook(() => useGetFuelCodes(params), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -222,11 +241,11 @@ describe('useFuelCode', () => {
       })
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch fuel codes')
       mockPost.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useGetFuelCodes(), { wrapper })
+      const { result } = renderHook(() => useGetFuelCodes(), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -237,14 +256,17 @@ describe('useFuelCode', () => {
   })
 
   describe('useGetMyFuelCodes', () => {
-    it('posts to /fuel-codes/my-list with default pagination', async () => {
+    test('posts to /fuel-codes/my-list with default pagination', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         fuelCodes: [{ fuelCodeId: 9, fuelCode: 'BCLCF101.0' }],
         pagination: { page: 1, size: 10, total: 1 }
       }
       mockPost.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useGetMyFuelCodes(), { wrapper })
+      const { result } = renderHook(() => useGetMyFuelCodes(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -259,7 +281,10 @@ describe('useFuelCode', () => {
       })
     })
 
-    it('forwards pagination, sort and filter params to the request body', async () => {
+    test('forwards pagination, sort and filter params to the request body', async ({
+      renderHook,
+      query
+    }) => {
       const params = {
         page: 3,
         size: 50,
@@ -277,7 +302,7 @@ describe('useFuelCode', () => {
         data: { fuelCodes: [], pagination: { page: 3, size: 50, total: 0 } }
       })
 
-      const { result } = renderHook(() => useGetMyFuelCodes(params), { wrapper })
+      const { result } = renderHook(() => useGetMyFuelCodes(params), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -286,11 +311,14 @@ describe('useFuelCode', () => {
       expect(mockPost).toHaveBeenCalledWith('/fuel-codes/my-list', params)
     })
 
-    it('surfaces API errors back through the query state', async () => {
+    test('surfaces API errors back through the query state', async ({
+      renderHook,
+      query
+    }) => {
       const mockError = new Error('boom')
       mockPost.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useGetMyFuelCodes(), { wrapper })
+      const { result } = renderHook(() => useGetMyFuelCodes(), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -301,7 +329,10 @@ describe('useFuelCode', () => {
   })
 
   describe('useFuelCodeBulletins', () => {
-    it('should fetch current bulletin rows with pagination payload', async () => {
+    test('should fetch current bulletin rows with pagination payload', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         cutoffDate: '2025-03-31',
         fuelCodes: [{ fuelCode: 'BCLCF101.0' }],
@@ -313,11 +344,18 @@ describe('useFuelCode', () => {
         page: 1,
         size: 25,
         sortOrders: [{ field: 'fuelCode', direction: 'asc' }],
-        filters: [{ field: 'company', filterType: 'text', type: 'contains', filter: 'co' }]
+        filters: [
+          {
+            field: 'company',
+            filterType: 'text',
+            type: 'contains',
+            filter: 'co'
+          }
+        ]
       }
       const { result } = renderHook(
         () => useFuelCodeBulletins('current', pagination),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -331,14 +369,21 @@ describe('useFuelCode', () => {
       )
     })
 
-    it('should use defaults when pagination fields are missing', async () => {
+    test('should use defaults when pagination fields are missing', async ({
+      renderHook,
+      query
+    }) => {
       mockPost.mockResolvedValue({
-        data: { cutoffDate: '2025-03-31', fuelCodes: [], pagination: { total: 0 } }
+        data: {
+          cutoffDate: '2025-03-31',
+          fuelCodes: [],
+          pagination: { total: 0 }
+        }
       })
 
       const { result } = renderHook(
         () => useFuelCodeBulletins('archived', {}),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -358,12 +403,16 @@ describe('useFuelCode', () => {
   })
 
   describe('useDownloadFuelCodeBulletins', () => {
-    it('should call download with the bulletin export endpoint', async () => {
+    test('should call download with the bulletin export endpoint', async ({
+      renderHook,
+      query
+    }) => {
       mockDownload.mockResolvedValue({ data: 'ok' })
 
-      const { result } = renderHook(() => useDownloadFuelCodeBulletins(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useDownloadFuelCodeBulletins(),
+        [query]
+      )
 
       await result.current.mutateAsync({
         bulletinType: 'current',
@@ -381,7 +430,10 @@ describe('useFuelCode', () => {
   })
 
   describe('useFuelCodeMutation', () => {
-    it('should handle create action successfully', async () => {
+    test('should handle create action successfully', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeData = {
         fuelCode: 'FC002',
         fuelType: 'Diesel'
@@ -389,7 +441,7 @@ describe('useFuelCode', () => {
       const mockResponse = { data: { fuelCodeId: 456 } }
       mockPost.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useFuelCodeMutation(), { wrapper })
+      const { result } = renderHook(() => useFuelCodeMutation(), [query])
 
       result.current.mutate({ action: 'create', data: fuelCodeData })
 
@@ -401,13 +453,16 @@ describe('useFuelCode', () => {
       expect(result.current.data).toEqual(mockResponse)
     })
 
-    it('should handle update action successfully', async () => {
+    test('should handle update action successfully', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeId = 123
       const updateData = { fuelType: 'Updated Diesel' }
       const mockResponse = { data: { success: true } }
       mockPut.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useFuelCodeMutation(), { wrapper })
+      const { result } = renderHook(() => useFuelCodeMutation(), [query])
 
       result.current.mutate({ action: 'update', data: updateData, fuelCodeId })
 
@@ -418,12 +473,15 @@ describe('useFuelCode', () => {
       expect(mockPut).toHaveBeenCalledWith('/fuel-codes/123', updateData)
     })
 
-    it('should handle approve action successfully', async () => {
+    test('should handle approve action successfully', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeId = 123
       const mockResponse = { data: { approved: true } }
       mockPut.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useFuelCodeMutation(), { wrapper })
+      const { result } = renderHook(() => useFuelCodeMutation(), [query])
 
       result.current.mutate({ action: 'approve', fuelCodeId })
 
@@ -434,12 +492,15 @@ describe('useFuelCode', () => {
       expect(mockPut).toHaveBeenCalledWith('/fuel-codes/123', undefined)
     })
 
-    it('should handle delete action successfully', async () => {
+    test('should handle delete action successfully', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeId = 123
       const mockResponse = { data: { deleted: true } }
       mockDelete.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useFuelCodeMutation(), { wrapper })
+      const { result } = renderHook(() => useFuelCodeMutation(), [query])
 
       result.current.mutate({ action: 'delete', fuelCodeId })
 
@@ -450,7 +511,10 @@ describe('useFuelCode', () => {
       expect(mockDelete).toHaveBeenCalledWith('/fuel-codes/123')
     })
 
-    it('should handle download action successfully', async () => {
+    test('should handle download action successfully', async ({
+      renderHook,
+      query
+    }) => {
       const downloadData = {
         format: 'xlsx',
         body: { filters: [] }
@@ -458,7 +522,7 @@ describe('useFuelCode', () => {
       const mockResponse = { data: 'file-content' }
       mockDownload.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useFuelCodeMutation(), { wrapper })
+      const { result } = renderHook(() => useFuelCodeMutation(), [query])
 
       result.current.mutate({ action: 'download', data: downloadData })
 
@@ -474,8 +538,11 @@ describe('useFuelCode', () => {
       })
     })
 
-    it('should throw error for unknown action', async () => {
-      const { result } = renderHook(() => useFuelCodeMutation(), { wrapper })
+    test('should throw error for unknown action', async ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useFuelCodeMutation(), [query])
 
       result.current.mutate({ action: 'unknown' })
 
@@ -486,8 +553,11 @@ describe('useFuelCode', () => {
       expect(result.current.error.message).toBe('Unknown action: unknown')
     })
 
-    it('should throw error for update without fuelCodeId', async () => {
-      const { result } = renderHook(() => useFuelCodeMutation(), { wrapper })
+    test('should throw error for update without fuelCodeId', async ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useFuelCodeMutation(), [query])
 
       result.current.mutate({ action: 'update', data: {} })
 
@@ -500,8 +570,11 @@ describe('useFuelCode', () => {
       )
     })
 
-    it('should throw error for delete without fuelCodeId', async () => {
-      const { result } = renderHook(() => useFuelCodeMutation(), { wrapper })
+    test('should throw error for delete without fuelCodeId', async ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useFuelCodeMutation(), [query])
 
       result.current.mutate({ action: 'delete' })
 
@@ -514,8 +587,11 @@ describe('useFuelCode', () => {
       )
     })
 
-    it('should throw error for download without required data', async () => {
-      const { result } = renderHook(() => useFuelCodeMutation(), { wrapper })
+    test('should throw error for download without required data', async ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useFuelCodeMutation(), [query])
 
       result.current.mutate({ action: 'download', data: {} })
 
@@ -530,7 +606,10 @@ describe('useFuelCode', () => {
   })
 
   describe('useCreateFuelCode (backward compatibility)', () => {
-    it('should create fuel code successfully', async () => {
+    test('should create fuel code successfully', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeData = {
         fuelCode: 'FC002',
         fuelType: 'Diesel'
@@ -538,7 +617,7 @@ describe('useFuelCode', () => {
       const mockResponse = { data: { fuelCodeId: 456 } }
       mockPost.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useCreateFuelCode(), { wrapper })
+      const { result } = renderHook(() => useCreateFuelCode(), [query])
 
       // Use mutateAsync since the backward compatibility hook wraps it
       await result.current.mutateAsync(fuelCodeData)
@@ -551,12 +630,15 @@ describe('useFuelCode', () => {
       expect(result.current.data).toEqual(mockResponse)
     })
 
-    it('should handle API errors during creation', async () => {
+    test('should handle API errors during creation', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeData = { fuelCode: 'FC002' }
       const mockError = new Error('Creation failed')
       mockPost.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useCreateFuelCode(), { wrapper })
+      const { result } = renderHook(() => useCreateFuelCode(), [query])
 
       try {
         await result.current.mutateAsync(fuelCodeData)
@@ -573,15 +655,19 @@ describe('useFuelCode', () => {
   })
 
   describe('useUpdateFuelCode (backward compatibility)', () => {
-    it('should update fuel code successfully', async () => {
+    test('should update fuel code successfully', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeID = 123
       const updateData = { fuelType: 'Updated Diesel' }
       const mockResponse = { data: { success: true } }
       mockPut.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useUpdateFuelCode(fuelCodeID), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useUpdateFuelCode(fuelCodeID),
+        [query]
+      )
 
       await result.current.mutateAsync(updateData)
 
@@ -592,15 +678,19 @@ describe('useFuelCode', () => {
       expect(mockPut).toHaveBeenCalledWith('/fuel-codes/123', updateData)
     })
 
-    it('should handle API errors during update', async () => {
+    test('should handle API errors during update', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeID = 123
       const updateData = { fuelType: 'Updated' }
       const mockError = new Error('Update failed')
       mockPut.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useUpdateFuelCode(fuelCodeID), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useUpdateFuelCode(fuelCodeID),
+        [query]
+      )
 
       try {
         await result.current.mutateAsync(updateData)
@@ -617,12 +707,15 @@ describe('useFuelCode', () => {
   })
 
   describe('useApproveFuelCode (backward compatibility)', () => {
-    it('should approve fuel code successfully', async () => {
+    test('should approve fuel code successfully', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeID = 123
       const mockResponse = { data: { approved: true } }
       mockPut.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useApproveFuelCode(), { wrapper })
+      const { result } = renderHook(() => useApproveFuelCode(), [query])
 
       await result.current.mutateAsync(fuelCodeID)
 
@@ -633,12 +726,15 @@ describe('useFuelCode', () => {
       expect(mockPut).toHaveBeenCalledWith('/fuel-codes/123', undefined)
     })
 
-    it('should handle API errors during approval', async () => {
+    test('should handle API errors during approval', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeID = 123
       const mockError = new Error('Approval failed')
       mockPut.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useApproveFuelCode(), { wrapper })
+      const { result } = renderHook(() => useApproveFuelCode(), [query])
 
       try {
         await result.current.mutateAsync(fuelCodeID)
@@ -655,12 +751,15 @@ describe('useFuelCode', () => {
   })
 
   describe('useDeleteFuelCode (backward compatibility)', () => {
-    it('should delete fuel code successfully', async () => {
+    test('should delete fuel code successfully', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeID = 123
       const mockResponse = { data: { deleted: true } }
       mockDelete.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useDeleteFuelCode(), { wrapper })
+      const { result } = renderHook(() => useDeleteFuelCode(), [query])
 
       await result.current.mutateAsync(fuelCodeID)
 
@@ -671,12 +770,15 @@ describe('useFuelCode', () => {
       expect(mockDelete).toHaveBeenCalledWith('/fuel-codes/123')
     })
 
-    it('should handle API errors during deletion', async () => {
+    test('should handle API errors during deletion', async ({
+      renderHook,
+      query
+    }) => {
       const fuelCodeID = 123
       const mockError = new Error('Deletion failed')
       mockDelete.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useDeleteFuelCode(), { wrapper })
+      const { result } = renderHook(() => useDeleteFuelCode(), [query])
 
       try {
         await result.current.mutateAsync(fuelCodeID)
@@ -693,7 +795,10 @@ describe('useFuelCode', () => {
   })
 
   describe('useDownloadFuelCodes (backward compatibility)', () => {
-    it('should download fuel codes successfully', async () => {
+    test('should download fuel codes successfully', async ({
+      renderHook,
+      query
+    }) => {
       const downloadParams = {
         format: 'xlsx',
         body: { filters: [] }
@@ -701,7 +806,7 @@ describe('useFuelCode', () => {
       const mockResponse = { data: 'file-content' }
       mockDownload.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useDownloadFuelCodes(), { wrapper })
+      const { result } = renderHook(() => useDownloadFuelCodes(), [query])
 
       // Use mutateAsync since the backward compatibility hook wraps it
       await result.current.mutateAsync(downloadParams)
@@ -718,12 +823,12 @@ describe('useFuelCode', () => {
       })
     })
 
-    it('should handle download errors', async () => {
+    test('should handle download errors', async ({ renderHook, query }) => {
       const downloadParams = { format: 'csv', body: {} }
       const mockError = new Error('Download failed')
       mockDownload.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useDownloadFuelCodes(), { wrapper })
+      const { result } = renderHook(() => useDownloadFuelCodes(), [query])
 
       try {
         await result.current.mutateAsync(downloadParams)

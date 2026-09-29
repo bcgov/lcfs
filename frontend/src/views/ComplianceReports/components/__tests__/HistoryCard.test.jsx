@@ -1,9 +1,9 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { screen, waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -44,16 +44,14 @@ const defaultReport = {
   }
 }
 
-const renderComponent = (overrides = {}, options = {}) => {
+const renderComponent = (render, providers, overrides = {}, options = {}) => {
   return render(
     <HistoryCard
       report={{ ...defaultReport, ...overrides }}
       defaultExpanded={options.defaultExpanded}
       assessedMessage={options.assessedMessage}
     />,
-    {
-      wrapper
-    }
+    providers
   )
 }
 
@@ -62,16 +60,30 @@ describe('HistoryCard', () => {
     vi.clearAllMocks()
   })
 
-  it('renders without history', async () => {
-    renderComponent()
+  test('renders without history', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
+    renderComponent(render, [query, theme, localization, router, i18n])
     // Only the accordion header should be present
     await waitFor(() => {
       expect(screen.queryByRole('listitem')).not.toBeInTheDocument()
     })
   })
 
-  it('displays compliancePeriod.description and current status if version=0', async () => {
-    renderComponent({
+  test('displays compliancePeriod.description and current status if version=0', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
+    renderComponent(render, [query, theme, localization, router, i18n], {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
     })
     await waitFor(() => {
@@ -81,8 +93,15 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('displays nickname and current status if version > 0', async () => {
-    renderComponent({
+  test('displays nickname and current status if version > 0', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
+    renderComponent(render, [query, theme, localization, router, i18n], {
       version: 1,
       nickname: 'My Cool Nickname',
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
@@ -94,7 +113,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('sorts history in descending order by createDate and filters out DRAFT', async () => {
+  test('sorts history in descending order by createDate and filters out DRAFT', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const history = [
       {
         status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
@@ -109,7 +135,7 @@ describe('HistoryCard', () => {
         displayName: 'Jane Smith'
       }
     ]
-    renderComponent({
+    renderComponent(render, [query, theme, localization, router, i18n], {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
       history
     })
@@ -128,7 +154,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('replaces ASSESSED with AssessedBy if user is not government', async () => {
+  test('replaces ASSESSED with AssessedBy if user is not government', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const history = [
       {
         status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
@@ -137,7 +170,7 @@ describe('HistoryCard', () => {
         displayName: 'John Doe'
       }
     ]
-    renderComponent({
+    renderComponent(render, [query, theme, localization, router, i18n], {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
       history
     })
@@ -151,7 +184,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('shows non-assessment message when isNonAssessment is true', async () => {
+  test('shows non-assessment message when isNonAssessment is true', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const history = [
       {
         status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
@@ -162,6 +202,8 @@ describe('HistoryCard', () => {
 
     // Create a report with isNonAssessment flag and render it
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
         isNonAssessment: true,
@@ -175,7 +217,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('does not replace ASSESSED with AssessedBy if user is government', async () => {
+  test('does not replace ASSESSED with AssessedBy if user is government', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -189,7 +238,7 @@ describe('HistoryCard', () => {
         displayName: 'John Doe'
       }
     ]
-    renderComponent({
+    renderComponent(render, [query, theme, localization, router, i18n], {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
       history
     })
@@ -203,7 +252,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('shows assessment lines for government user BEFORE assessed', async () => {
+  test('shows assessment lines for government user BEFORE assessed', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -220,6 +276,8 @@ describe('HistoryCard', () => {
     ]
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
         history,
@@ -241,7 +299,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('renders has met lines for government user when assessed', async () => {
+  test('renders has met lines for government user when assessed', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -256,6 +321,8 @@ describe('HistoryCard', () => {
       }
     ]
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
         history,
@@ -277,7 +344,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('renders has not met lines for government user when assessed and penalties > 0', async () => {
+  test('renders has not met lines for government user when assessed and penalties > 0', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -291,7 +365,7 @@ describe('HistoryCard', () => {
         displayName: 'John Doe'
       }
     ]
-    renderComponent({
+    renderComponent(render, [query, theme, localization, router, i18n], {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
       history,
       summary: {
@@ -321,7 +395,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('renders only applicable penalty statement when one target is not met', async () => {
+  test('renders only applicable penalty statement when one target is not met', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -335,7 +416,7 @@ describe('HistoryCard', () => {
         displayName: 'John Doe'
       }
     ]
-    renderComponent({
+    renderComponent(render, [query, theme, localization, router, i18n], {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
       history,
       summary: {
@@ -359,7 +440,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('truncates penalty decimals to match summary table display', async () => {
+  test('truncates penalty decimals to match summary table display', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -373,7 +461,7 @@ describe('HistoryCard', () => {
         displayName: 'John Doe'
       }
     ]
-    renderComponent({
+    renderComponent(render, [query, theme, localization, router, i18n], {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
       history,
       summary: {
@@ -398,7 +486,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('does not render assessment lines for non‑government user before assessed', async () => {
+  test('does not render assessment lines for non‑government user before assessed', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const history = [
       {
         status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
@@ -407,7 +502,7 @@ describe('HistoryCard', () => {
         displayName: 'John Doe'
       }
     ]
-    renderComponent({
+    renderComponent(render, [query, theme, localization, router, i18n], {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
       history,
       summary: {
@@ -424,7 +519,14 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('prefers the effective renewable penalty over the stale legacy total in report history', async () => {
+  test('prefers the effective renewable penalty over the stale legacy total in report history', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -441,6 +543,8 @@ describe('HistoryCard', () => {
     ]
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
         history,
@@ -469,7 +573,14 @@ describe('HistoryCard', () => {
 })
 
 describe('Director Statement', () => {
-  it('shows assessment statement to government user with edit permission', async () => {
+  test('shows assessment statement to government user with edit permission', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -477,6 +588,8 @@ describe('Director Statement', () => {
     })
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: 'This is a director statement',
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
@@ -505,7 +618,14 @@ describe('Director Statement', () => {
     })
   })
 
-  it('shows assessment statement to government user without edit permission (assessed)', async () => {
+  test('shows assessment statement to government user without edit permission (assessed)', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -513,6 +633,8 @@ describe('Director Statement', () => {
     })
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: 'This is a director statement',
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
@@ -541,8 +663,17 @@ describe('Director Statement', () => {
     })
   })
 
-  it('shows assessment statement to non-government user only when assessed', async () => {
+  test('shows assessment statement to non-government user only when assessed', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: 'This is a director statement',
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
@@ -571,7 +702,14 @@ describe('Director Statement', () => {
     })
   })
 
-  it('does not show assessment statement when it is empty', async () => {
+  test('does not show assessment statement when it is empty', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -579,6 +717,8 @@ describe('Director Statement', () => {
     })
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: '',
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
@@ -603,8 +743,17 @@ describe('Director Statement', () => {
     })
   })
 
-  it('does not show assessment statement to non-government user when not assessed', async () => {
+  test('does not show assessment statement to non-government user when not assessed', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: 'This is a director statement',
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
@@ -630,7 +779,14 @@ describe('Director Statement', () => {
   })
 
   // BUG FIX TEST: This test specifically validates the fix for issue #2688
-  it('does not show "(can be edited below)" for government users when report is assessed', async () => {
+  test('does not show "(can be edited below)" for government users when report is assessed', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -638,6 +794,8 @@ describe('Director Statement', () => {
     })
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: 'This is an assessment statement',
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
@@ -671,7 +829,14 @@ describe('Director Statement', () => {
   })
 
   // Additional test coverage for different role/status combinations
-  it('shows "(can be edited below)" for compliance manager with RECOMMENDED_BY_ANALYST status', async () => {
+  test('shows "(can be edited below)" for compliance manager with RECOMMENDED_BY_ANALYST status', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -679,6 +844,8 @@ describe('Director Statement', () => {
     })
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: 'This is a director statement',
         currentStatus: {
@@ -708,7 +875,14 @@ describe('Director Statement', () => {
     })
   })
 
-  it('shows "(can be edited below)" for director with RECOMMENDED_BY_MANAGER status', async () => {
+  test('shows "(can be edited below)" for director with RECOMMENDED_BY_MANAGER status', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -716,6 +890,8 @@ describe('Director Statement', () => {
     })
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: 'This is a director statement',
         currentStatus: {
@@ -745,7 +921,14 @@ describe('Director Statement', () => {
     })
   })
 
-  it('shows "(can be edited below)" for analyst with ANALYST_ADJUSTMENT status', async () => {
+  test('shows "(can be edited below)" for analyst with ANALYST_ADJUSTMENT status', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -753,6 +936,8 @@ describe('Director Statement', () => {
     })
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: 'This is a director statement',
         currentStatus: {
@@ -780,7 +965,14 @@ describe('Director Statement', () => {
     })
   })
 
-  it('does not show "(can be edited below)" for wrong role/status combination', async () => {
+  test('does not show "(can be edited below)" for wrong role/status combination', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -788,6 +980,8 @@ describe('Director Statement', () => {
     })
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: 'This is a director statement',
         currentStatus: {
@@ -817,7 +1011,14 @@ describe('Director Statement', () => {
     })
   })
 
-  it('does not show "(can be edited below)" for government user with no roles', async () => {
+  test('does not show "(can be edited below)" for government user with no roles', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false,
@@ -825,6 +1026,8 @@ describe('Director Statement', () => {
     })
 
     renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
       {
         assessmentStatement: 'This is a director statement',
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
@@ -896,19 +1099,39 @@ describe('Non-Assessment Report', () => {
     })
   })
 
-  it('shows non-assessment message when report is marked as non-assessment', () => {
+  test('shows non-assessment message when report is marked as non-assessment', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const reportWithNonAssessment = {
       ...defaultProps.report,
       isNonAssessment: true
     }
 
-    render(<HistoryCard {...defaultProps} report={reportWithNonAssessment} />)
+    render(<HistoryCard {...defaultProps} report={reportWithNonAssessment} />, [
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    ])
 
     expect(screen.getAllByText(/Not Subject to Assessment/i)).toHaveLength(2)
   })
 
   describe('Non-Assessment Message in Report History', () => {
-    it('uses the history-specific translation key without instructional text', () => {
+    test('uses the history-specific translation key without instructional text', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const reportWithNonAssessment = {
         ...defaultProps.report,
         isNonAssessment: true,
@@ -927,7 +1150,8 @@ describe('Non-Assessment Report', () => {
           {...defaultProps}
           report={reportWithNonAssessment}
           defaultExpanded={true}
-        />
+        />,
+        [query, theme, localization, router, i18n]
       )
 
       // Should show the heading
@@ -959,7 +1183,14 @@ describe('Non-Assessment Report', () => {
       ).toBeInTheDocument()
     })
 
-    it('displays non-assessment message for BCeID users in Report History', () => {
+    test('displays non-assessment message for BCeID users in Report History', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       useCurrentUser.mockReturnValue({
         data: { isGovernmentUser: false },
         hasRoles: () => false
@@ -983,7 +1214,8 @@ describe('Non-Assessment Report', () => {
           {...defaultProps}
           report={reportWithNonAssessment}
           defaultExpanded={true}
-        />
+        />,
+        [query, theme, localization, router, i18n]
       )
 
       // BCeID users should see the non-assessment message
@@ -1002,7 +1234,14 @@ describe('Non-Assessment Report', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('displays non-assessment message for IDIR users in Report History', () => {
+    test('displays non-assessment message for IDIR users in Report History', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       useCurrentUser.mockReturnValue({
         data: { isGovernmentUser: true },
         hasRoles: () => true
@@ -1026,7 +1265,8 @@ describe('Non-Assessment Report', () => {
           {...defaultProps}
           report={reportWithNonAssessment}
           defaultExpanded={true}
-        />
+        />,
+        [query, theme, localization, router, i18n]
       )
 
       // IDIR users should see the non-assessment message in Report History
@@ -1046,7 +1286,14 @@ describe('Non-Assessment Report', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('shows non-assessment message nested under Assessed status', () => {
+    test('shows non-assessment message nested under Assessed status', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const reportWithNonAssessment = {
         ...defaultProps.report,
         isNonAssessment: true,
@@ -1070,7 +1317,8 @@ describe('Non-Assessment Report', () => {
           {...defaultProps}
           report={reportWithNonAssessment}
           defaultExpanded={true}
-        />
+        />,
+        [query, theme, localization, router, i18n]
       )
 
       // Should show the non-assessment message under the Assessed status
@@ -1080,7 +1328,14 @@ describe('Non-Assessment Report', () => {
       expect(screen.getAllByText(/Not Subject to Assessment/i)).toHaveLength(2)
     })
 
-    it('does not show standard assessment lines when isNonAssessment is true', () => {
+    test('does not show standard assessment lines when isNonAssessment is true', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       const reportWithNonAssessment = {
         ...defaultProps.report,
         isNonAssessment: true,
@@ -1099,7 +1354,8 @@ describe('Non-Assessment Report', () => {
           {...defaultProps}
           report={reportWithNonAssessment}
           defaultExpanded={true}
-        />
+        />,
+        [query, theme, localization, router, i18n]
       )
 
       // Should NOT show standard assessment lines (renewable target, low carbon target)
@@ -1114,48 +1370,101 @@ describe('Non-Assessment Report', () => {
     })
   })
 
-  it('shows assessment lines when report is not marked as non-assessment', () => {
+  test('shows assessment lines when report is not marked as non-assessment', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const report = {
       ...defaultProps.report,
       isNonAssessment: false
     }
 
     render(
-      <HistoryCard {...defaultProps} report={report} defaultExpanded={true} />
+      <HistoryCard {...defaultProps} report={report} defaultExpanded={true} />,
+      [query, theme, localization, router, i18n]
     )
 
     expect(screen.getAllByText(/has met/i).length).toBe(1)
   })
 
-  it('shows assessment lines for government users before assessment', () => {
+  test('shows assessment lines for government users before assessment', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     // isgovernment is true by default in test setup
-    render(<HistoryCard {...defaultProps} defaultExpanded={true} />)
+    render(<HistoryCard {...defaultProps} defaultExpanded={true} />, [
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    ])
 
     expect(screen.getAllByText(/has met/i).length).toBe(1)
   })
 
-  it('hides assessment lines for non-government users before assessment', () => {
+  test('hides assessment lines for non-government users before assessment', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUser.mockReturnValue({
       data: { isGovernmentUser: false },
       hasRoles: () => false
     })
 
-    render(<HistoryCard {...defaultProps} />)
+    render(<HistoryCard {...defaultProps} />, [
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    ])
 
     expect(screen.queryByText(/has met/i)).not.toBeInTheDocument()
   })
 
-  it('shows director statement when report is assessed', () => {
+  test('shows director statement when report is assessed', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const assessedMessage = 'Assessment statement from the director'
 
-    render(<HistoryCard {...defaultProps} assessedMessage={assessedMessage} />)
+    render(
+      <HistoryCard {...defaultProps} assessedMessage={assessedMessage} />,
+      [query, theme, localization, router, i18n]
+    )
 
     // The director statement should be shown
-    const matches = screen.getAllByText('Assessment statement from the director')
+    const matches = screen.getAllByText(
+      'Assessment statement from the director'
+    )
     expect(matches.length).toBeGreaterThan(0)
   })
 
-  it('shows editable indicator for government users with appropriate role', () => {
+  test('shows editable indicator for government users with appropriate role', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       hasRoles: vi.fn(() => true)
@@ -1171,7 +1480,8 @@ describe('Non-Assessment Report', () => {
         {...defaultProps}
         report={reportWithEditableStatus}
         assessedMessage="Test message"
-      />
+      />,
+      [query, theme, localization, router, i18n]
     )
 
     // Check that the component renders without the editable indicator
@@ -1179,13 +1489,26 @@ describe('Non-Assessment Report', () => {
     expect(screen.queryByText('*')).not.toBeInTheDocument()
   })
 
-  it('hides editable indicator for users without appropriate role', () => {
+  test('hides editable indicator for users without appropriate role', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     useCurrentUser.mockReturnValue({
       data: { isGovernmentUser: true },
       hasRoles: () => false
     })
 
-    render(<HistoryCard {...defaultProps} />)
+    render(<HistoryCard {...defaultProps} />, [
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    ])
 
     // The editable indicator should not be present
     expect(screen.queryByText('*')).not.toBeInTheDocument()
@@ -1201,31 +1524,60 @@ describe('History Processing Logic', () => {
     })
   })
 
-  it('handles null history array', () => {
+  test('handles null history array', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const reportWithNullHistory = {
       ...defaultReport,
       history: null
     }
 
-    renderComponent(reportWithNullHistory)
+    renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
+      reportWithNullHistory
+    )
 
     // Should not crash and should not show any history items
     expect(screen.queryByTestId('list-item')).not.toBeInTheDocument()
   })
 
-  it('handles empty history array', () => {
+  test('handles empty history array', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const reportWithEmptyHistory = {
       ...defaultReport,
       history: []
     }
 
-    renderComponent(reportWithEmptyHistory)
+    renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
+      reportWithEmptyHistory
+    )
 
     // Should not crash and should not show any history items
     expect(screen.queryByTestId('list-item')).not.toBeInTheDocument()
   })
 
-  it('hides history line when current report is draft and history item matches report ID', () => {
+  test('hides history line when current report is draft and history item matches report ID', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const reportId = 123
     const historyWithDraftConflict = {
       ...defaultReport,
@@ -1247,7 +1599,12 @@ describe('History Processing Logic', () => {
       ]
     }
 
-    renderComponent(historyWithDraftConflict, { defaultExpanded: true })
+    renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
+      historyWithDraftConflict,
+      { defaultExpanded: true }
+    )
 
     // Should only show the history item with different ID
     expect(screen.getByTestId('list-item')).toBeInTheDocument()
@@ -1256,7 +1613,14 @@ describe('History Processing Logic', () => {
     expect(screen.queryByText(/Test User/)).not.toBeInTheDocument()
   })
 
-  it('shows history line when current report is draft but history item has draft status', () => {
+  test('shows history line when current report is draft but history item has draft status', ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
     const reportId = 123
     const historyWithDraftStatus = {
       ...defaultReport,
@@ -1272,7 +1636,12 @@ describe('History Processing Logic', () => {
       ]
     }
 
-    renderComponent(historyWithDraftStatus, { defaultExpanded: true })
+    renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
+      historyWithDraftStatus,
+      { defaultExpanded: true }
+    )
 
     // Should show the draft history item
     expect(screen.getByTestId('list-item')).toBeInTheDocument()

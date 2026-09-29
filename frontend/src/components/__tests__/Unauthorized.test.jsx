@@ -1,7 +1,7 @@
 import { Unauthorized } from '@/components/Unauthorized'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
-import { wrapper } from '@/tests/utils/wrapper'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { BrowserRouter } from 'react-router-dom'
 import * as keycloakUtils from '@/utils/keycloak'
 
@@ -84,8 +84,12 @@ describe('Unauthorized Component', () => {
   })
 
   describe('Component Rendering', () => {
-    it('should render the unauthorized component with correct structure', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should render the unauthorized component with correct structure', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       expect(screen.getByText('Access Denied')).toBeInTheDocument()
       expect(
@@ -94,8 +98,12 @@ describe('Unauthorized Component', () => {
       expect(screen.getByText('Return to Login')).toBeInTheDocument()
     })
 
-    it('should display the correct error message', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should display the correct error message', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const message = screen.getByText(
         /You are not authorized to access this application/
@@ -104,8 +112,12 @@ describe('Unauthorized Component', () => {
       // The message spans multiple lines, so style checks may not work as expected
     })
 
-    it('should display the contact information', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should display the contact information', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       expect(
         screen.getByText(/For assistance, please contact/)
@@ -113,8 +125,12 @@ describe('Unauthorized Component', () => {
       expect(screen.getByText('support@example.com')).toBeInTheDocument()
     })
 
-    it('should render the email as a clickable link', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should render the email as a clickable link', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const emailLink = screen.getByRole('link', {
         name: 'support@example.com'
@@ -123,8 +139,12 @@ describe('Unauthorized Component', () => {
       expect(emailLink).toHaveAttribute('href', 'mailto:support@example.com')
     })
 
-    it('should render the return to login button', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should render the return to login button', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       expect(loginButton).toBeInTheDocument()
@@ -133,8 +153,12 @@ describe('Unauthorized Component', () => {
   })
 
   describe('Unauthorized State Display', () => {
-    it('should display unauthorized state with proper styling', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should display unauthorized state with proper styling', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const title = screen.getByText('Access Denied')
       expect(title).toHaveStyle({
@@ -142,16 +166,20 @@ describe('Unauthorized Component', () => {
       })
     })
 
-    it('should center the content properly', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should center the content properly', ({ render, theme, router }) => {
+      render(<Unauthorized />, [theme, router])
 
       // Check if the main container has correct styling attributes
       const container = screen.getByText('Access Denied').closest('div')
       expect(container).toBeInTheDocument()
     })
 
-    it('should display the correct heading level', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should display the correct heading level', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const heading = screen.getByText('Access Denied')
       // Check if it's rendered as h1 (MUI Typography variant="h1")
@@ -160,8 +188,12 @@ describe('Unauthorized Component', () => {
   })
 
   describe('Redirect Functionality', () => {
-    it('should navigate to login page when button is clicked', async () => {
-      render(<Unauthorized />, { wrapper })
+    test('should navigate to login page when button is clicked', async ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       fireEvent.click(loginButton)
@@ -169,8 +201,12 @@ describe('Unauthorized Component', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/login')
     })
 
-    it('should prevent default behavior on button click', async () => {
-      render(<Unauthorized />, { wrapper })
+    test('should prevent default behavior on button click', async ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       const mockEvent = {
@@ -183,8 +219,12 @@ describe('Unauthorized Component', () => {
       expect(mockNavigate).toHaveBeenCalled()
     })
 
-    it('should clear session storage when returning to login', async () => {
-      render(<Unauthorized />, { wrapper })
+    test('should clear session storage when returning to login', async ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       fireEvent.click(loginButton)
@@ -192,8 +232,12 @@ describe('Unauthorized Component', () => {
       expect(window.sessionStorage.clear).toHaveBeenCalled()
     })
 
-    it('should clear local storage when returning to login', async () => {
-      render(<Unauthorized />, { wrapper })
+    test('should clear local storage when returning to login', async ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       fireEvent.click(loginButton)
@@ -203,13 +247,17 @@ describe('Unauthorized Component', () => {
   })
 
   describe('Authentication State Handling', () => {
-    it('should logout authenticated user when returning to login', async () => {
+    test('should logout authenticated user when returning to login', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockKeycloak.authenticated = true
       keycloak.useKeycloak.mockReturnValue({
         keycloak: mockKeycloak
       })
 
-      render(<Unauthorized />, { wrapper })
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       fireEvent.click(loginButton)
@@ -217,13 +265,17 @@ describe('Unauthorized Component', () => {
       expect(keycloakUtils.logout).toHaveBeenCalled()
     })
 
-    it('should not logout unauthenticated user', async () => {
+    test('should not logout unauthenticated user', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockKeycloak.authenticated = false
       keycloak.useKeycloak.mockReturnValue({
         keycloak: mockKeycloak
       })
 
-      render(<Unauthorized />, { wrapper })
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       fireEvent.click(loginButton)
@@ -231,30 +283,42 @@ describe('Unauthorized Component', () => {
       expect(keycloakUtils.logout).not.toHaveBeenCalled()
     })
 
-    it('should handle keycloak context properly', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should handle keycloak context properly', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       expect(keycloak.useKeycloak).toHaveBeenCalled()
     })
   })
 
   describe('Error Handling', () => {
-    it('should handle missing keycloak context gracefully', () => {
+    test('should handle missing keycloak context gracefully', ({
+      render,
+      theme,
+      router
+    }) => {
       keycloak.useKeycloak.mockReturnValue({
         keycloak: null
       })
 
       expect(() => {
-        render(<Unauthorized />, { wrapper })
+        render(<Unauthorized />, [theme, router])
       }).not.toThrow()
     })
 
-    it('should handle undefined keycloak methods gracefully', () => {
+    test('should handle undefined keycloak methods gracefully', ({
+      render,
+      theme,
+      router
+    }) => {
       keycloak.useKeycloak.mockReturnValue({
         keycloak: { authenticated: false }
       })
 
-      render(<Unauthorized />, { wrapper })
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
 
@@ -266,15 +330,23 @@ describe('Unauthorized Component', () => {
   })
 
   describe('Accessibility', () => {
-    it('should have proper button accessibility attributes', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should have proper button accessibility attributes', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       expect(loginButton).toBeInTheDocument()
     })
 
-    it('should have proper link accessibility', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should have proper link accessibility', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const emailLink = screen.getByRole('link', {
         name: 'support@example.com'
@@ -282,8 +354,12 @@ describe('Unauthorized Component', () => {
       expect(emailLink).toHaveAttribute('href', 'mailto:support@example.com')
     })
 
-    it('should have proper text structure for screen readers', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should have proper text structure for screen readers', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       // Check that important content is properly structured
       expect(screen.getByText('Access Denied')).toBeInTheDocument()
@@ -291,8 +367,8 @@ describe('Unauthorized Component', () => {
       expect(screen.getByText(/For assistance/)).toBeInTheDocument()
     })
 
-    it('should have proper focus management', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should have proper focus management', ({ render, theme, router }) => {
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       loginButton.focus()
@@ -302,22 +378,26 @@ describe('Unauthorized Component', () => {
   })
 
   describe('Visual Styling', () => {
-    it('should apply correct color scheme', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should apply correct color scheme', ({ render, theme, router }) => {
+      render(<Unauthorized />, [theme, router])
 
       const title = screen.getByText('Access Denied')
       expect(title).toHaveStyle({ color: '#003366' })
     })
 
-    it('should have proper button styling', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should have proper button styling', ({ render, theme, router }) => {
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       expect(loginButton).toHaveClass('MuiButton-contained')
     })
 
-    it('should display FontAwesome icon in button', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should display FontAwesome icon in button', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
       // Check if button contains an icon (FontAwesome renders as SVG)
@@ -326,17 +406,25 @@ describe('Unauthorized Component', () => {
   })
 
   describe('Integration Tests', () => {
-    it('should work with standalone rendering', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should work with standalone rendering', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       expect(screen.getByText('Access Denied')).toBeInTheDocument()
       expect(screen.getByTestId('return-login-button')).toBeInTheDocument()
     })
 
-    it('should handle complete user flow', async () => {
+    test('should handle complete user flow', async ({
+      render,
+      theme,
+      router
+    }) => {
       mockKeycloak.authenticated = true
 
-      render(<Unauthorized />, { wrapper })
+      render(<Unauthorized />, [theme, router])
 
       // User sees unauthorized message
       expect(screen.getByText('Access Denied')).toBeInTheDocument()
@@ -352,8 +440,12 @@ describe('Unauthorized Component', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/login')
     })
 
-    it('should handle rapid button clicks', async () => {
-      render(<Unauthorized />, { wrapper })
+    test('should handle rapid button clicks', async ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
 
@@ -368,8 +460,12 @@ describe('Unauthorized Component', () => {
   })
 
   describe('Internationalization', () => {
-    it('should use translation keys correctly', () => {
-      render(<Unauthorized />, { wrapper })
+    test('should use translation keys correctly', ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<Unauthorized />, [theme, router])
 
       expect(screen.getByText('Access Denied')).toBeInTheDocument()
       expect(
@@ -379,9 +475,13 @@ describe('Unauthorized Component', () => {
       expect(screen.getByText('support@example.com')).toBeInTheDocument()
     })
 
-    it('should handle missing translations gracefully', () => {
+    test('should handle missing translations gracefully', ({
+      render,
+      theme,
+      router
+    }) => {
       // This would test fallback behavior if translations are missing
-      render(<Unauthorized />, { wrapper })
+      render(<Unauthorized />, [theme, router])
 
       // Component should still render even if some translations are missing
       expect(screen.getByTestId('return-login-button')).toBeInTheDocument()

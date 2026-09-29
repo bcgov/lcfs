@@ -1,5 +1,5 @@
 import React from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 import {
   cleanup,
   fireEvent,
@@ -10,7 +10,7 @@ import {
 
 import { CIApplications } from '@/views/CarbonIntensity/CIApplications'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { ROUTES } from '@/routes/routes'
 
 // ---------------- Mocks ----------------
@@ -85,31 +85,55 @@ describe('CIApplications listing', () => {
 
   afterEach(cleanup)
 
-  it('renders the title and grid for an authorized user', async () => {
-    render(<CIApplications />, { wrapper })
+  test('renders the title and grid for an authorized user', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<CIApplications />, [query, theme, localization, router])
     await waitFor(() => {
       expect(screen.getByTestId('title')).toBeInTheDocument()
       expect(screen.getByTestId('bc-grid-container')).toBeInTheDocument()
     })
   })
 
-  it('shows the "New CI application" button for ci_applicant role', async () => {
-    render(<CIApplications />, { wrapper })
+  test('shows the "New CI application" button for ci_applicant role', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<CIApplications />, [query, theme, localization, router])
     await waitFor(() => {
       expect(screen.getByTestId('new-ci-application-btn')).toBeInTheDocument()
     })
   })
 
-  it('navigates to the add page when "New CI application" is clicked', async () => {
-    render(<CIApplications />, { wrapper })
+  test('navigates to the add page when "New CI application" is clicked', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<CIApplications />, [query, theme, localization, router])
     const btn = await screen.findByTestId('new-ci-application-btn')
     fireEvent.click(btn)
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.ADD)
   })
 
-  it('hides the new button for government users', async () => {
+  test('hides the new button for government users', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = [{ name: roles.government }]
-    render(<CIApplications />, { wrapper })
+    render(<CIApplications />, [query, theme, localization, router])
     await waitFor(() => {
       expect(
         screen.queryByTestId('new-ci-application-btn')
@@ -119,25 +143,53 @@ describe('CIApplications listing', () => {
     })
   })
 
-  it('redirects unauthorized users to dashboard', async () => {
+  test('redirects unauthorized users to dashboard', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = [{ name: 'IA Proponent' }]
-    const { container } = render(<CIApplications />, { wrapper })
+    const { container } = render(<CIApplications />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     // withRole returns <Navigate /> which renders nothing in test env
     await waitFor(() => {
       expect(container.querySelector('[data-test="title"]')).toBeNull()
     })
   })
 
-  it('redirects a signing authority without the CI Applicant role to dashboard', async () => {
+  test('redirects a signing authority without the CI Applicant role to dashboard', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockUserRoles = [{ name: roles.signing_authority }]
-    const { container } = render(<CIApplications />, { wrapper })
+    const { container } = render(<CIApplications />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     // withRole returns <Navigate /> which renders nothing in test env
     await waitFor(() => {
       expect(container.querySelector('[data-test="title"]')).toBeNull()
     })
   })
 
-  it('surfaces errors via the alert box', async () => {
+  test('surfaces errors via the alert box', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockListData = {
       data: undefined,
       isLoading: false,
@@ -145,7 +197,7 @@ describe('CIApplications listing', () => {
       error: { message: 'Network error' },
       refetch: vi.fn()
     }
-    render(<CIApplications />, { wrapper })
+    render(<CIApplications />, [query, theme, localization, router])
     await waitFor(() => {
       expect(screen.getByTestId('alert-box')).toBeInTheDocument()
       expect(screen.getByTestId('alert-box').textContent).toContain(
@@ -165,9 +217,15 @@ describe('CIApplications listing', () => {
     }
   })
 
-  it('shows an alert when location.state.message is set', async () => {
+  test('shows an alert when location.state.message is set', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockLocation.state = { message: 'Saved!', severity: 'success' }
-    render(<CIApplications />, { wrapper })
+    render(<CIApplications />, [query, theme, localization, router])
     await waitFor(() => {
       expect(screen.getByTestId('alert-box').textContent).toContain('Saved!')
     })

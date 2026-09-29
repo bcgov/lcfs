@@ -2,14 +2,15 @@
  * @file PopupComponents.jsx
  * @description Reusable UI components for map popups
  */
-import { Box, IconButton, Stack, Tooltip } from '@mui/material'
-import {
-  Close as CloseIcon,
-  LocationOn as LocationIcon,
-  Map as MapIcon,
-  ContentCopy as CopyIcon,
-  Check as CheckIcon
-} from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
+import Tooltip from '@mui/material/Tooltip'
+import CloseIcon from '@mui/icons-material/Close'
+import LocationIcon from '@mui/icons-material/LocationOn'
+import MapIcon from '@mui/icons-material/Map'
+import CopyIcon from '@mui/icons-material/ContentCopy'
+import CheckIcon from '@mui/icons-material/Check'
 import BCTypography from '@/components/BCTypography'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

@@ -1,22 +1,21 @@
 import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react'
 import { useForm, FormProvider, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import {
-  Grid2 as Grid,
-  Stack,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputAdornment
-} from '@mui/material'
-import { Check, ContentCopy } from '@mui/icons-material'
+import Grid from '@mui/material/Grid2'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import FormControl from '@mui/material/FormControl'
+import InputAdornment from '@mui/material/InputAdornment'
+import Check from '@mui/icons-material/Check'
+import ContentCopy from '@mui/icons-material/ContentCopy'
 import colors from '@/themes/base/colors'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
-import { BCFormRadio } from '@/components/BCForm'
+import { BCFormRadio } from '@/components/BCForm/BCFormRadio'
 import { NumericFormat } from 'react-number-format'
 import {
   useCalculateComplianceUnits,

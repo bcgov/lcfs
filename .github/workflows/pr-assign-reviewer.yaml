@@ -1,0 +1,86 @@
+name: Assign PR reviewer
+
+# Requests one reviewer from the dev rotation when a PR is opened or marked
+# ready for review. Picks whoever has the fewest pending review requests
+# across open PRs, never the author; ties rotate by PR number.
+#
+# pull_request_target so fork and Dependabot PRs get a token that can request
+# reviewers. Safe here because PR code is never checked out or run.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  pull-requests: write
+
+env:
+  # Edit this list to change the rotation (GitHub usernames, comma-separated).
+  REVIEWERS: AlexZorkin,prv-proton,hamed-valiollahi,mr-moto
+
+jobs:
+  assign-reviewer:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request a reviewer from the rotation
+        uses: actions/github-script@v8.0.0
+        with:
+          script: |
+            const pool = process.env.REVIEWERS.split(',').map((s) => s.trim()).filter(Boolean);
+            const pr = context.payload.pull_request;
+            const same = (a, b) => a.toLowerCase() === b.toLowerCase();
+            const inPool = (login) => pool.some((p) => same(p, login));
+            const author = pr.user.login;
+
+            // Leave the PR alone if someone from the rotation is already on it
+            // (picked by the author, or reviewed before a draft/reopen cycle).
+            // Other reviewers such as Copilot don't count.
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              ...context.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            const existing = [
+              ...pr.requested_reviewers.map((u) => u.login),
+              ...reviews.map((r) => r.user?.login).filter(Boolean),
+            ].filter((login) => !same(login, author) && inPool(login));
+            if (existing.length) {
+              core.info(`PR #${pr.number} already has a reviewer from the rotation: ${existing[0]}`);
+              return;
+            }
+
+            const candidates = pool.filter((p) => !same(p, author));
+            if (!candidates.length) {
+              core.warning('No eligible reviewers in the rotation.');
+              return;
+            }
+
+            // Load = pending review requests across all open PRs.
+            const openPrs = await github.paginate(github.rest.pulls.list, {
+              ...context.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const load = Object.fromEntries(candidates.map((c) => [c.toLowerCase(), 0]));
+            for (const p of openPrs) {
+              for (const u of p.requested_reviewers) {
+                const key = u.login.toLowerCase();
+                if (key in load) load[key] += 1;
+              }
+            }
+
+            // Fewest pending requests wins; on a tie, start the scan at a
+            // PR-number offset so equal-load picks rotate through the team.
+            const start = pr.number % candidates.length;
+            const order = [...candidates.slice(start), ...candidates.slice(0, start)];
+            const pick = order.reduce((best, c) =>
+              load[c.toLowerCase()] < load[best.toLowerCase()] ? c : best,
+            );
+
+            await github.rest.pulls.requestReviewers({
+              ...context.repo,
+              pull_number: pr.number,
+              reviewers: [pick],
+            });
+            core.info(`Requested review from ${pick} on PR #${pr.number}. Pending requests: ${JSON.stringify(load)}`);

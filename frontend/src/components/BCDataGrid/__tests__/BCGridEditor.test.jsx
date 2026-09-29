@@ -35,10 +35,16 @@ vi.mock('@/components/BCTypography', () => ({
   )
 }))
 
-vi.mock('@mui/material', () => ({
-  Menu: ({ children, open }) => open ? <div data-test="menu">{children}</div> : null,
-  MenuItem: ({ children, onClick }) => <div data-test="menu-item" onClick={onClick}>{children}</div>,
-  TextField: (props) => <input data-test="textfield" {...props} />
+vi.mock('@mui/material/Menu', () => ({
+    default: ({ children, open }) => open ? <div data-test="menu">{children}</div> : null
+}))
+
+vi.mock('@mui/material/MenuItem', () => ({
+    default: ({ children, onClick }) => <div data-test="menu-item" onClick={onClick}>{children}</div>
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+    default: (props) => <input data-test="textfield" {...props} />
 }))
 
 vi.mock('@mui/material/styles', () => ({ styled: (component) => () => component }))

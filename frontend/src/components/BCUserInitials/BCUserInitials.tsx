@@ -1,4 +1,6 @@
-import { Chip, Tooltip, type ChipProps } from '@mui/material'
+import Chip from '@mui/material/Chip'
+import Tooltip from '@mui/material/Tooltip'
+import type { ChipProps } from '@mui/material/Chip'
 import type { SxProps, Theme } from '@mui/material/styles'
 
 export interface BCUserInitialsProps

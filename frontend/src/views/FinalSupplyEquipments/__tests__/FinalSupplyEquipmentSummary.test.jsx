@@ -1,9 +1,16 @@
-import { render, screen, act } from '@testing-library/react'
+import { screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import { FinalSupplyEquipmentSummary } from '../FinalSupplyEquipmentSummary'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+
+let render
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [theme], options)
+    return fn()
+  })
 
 // -------- mocks -------- //
 vi.mock('react-i18next', () => ({
@@ -153,9 +160,7 @@ const renderComponent = (props = {}) => {
     data: { finalSupplyEquipments: mockEquipmentData },
     status: COMPLIANCE_REPORT_STATUSES.DRAFT
   }
-  return render(<FinalSupplyEquipmentSummary {...defaultProps} {...props} />, {
-    wrapper
-  })
+  return render(<FinalSupplyEquipmentSummary {...defaultProps} {...props} />)
 }
 
 // -------- tests -------- //
@@ -416,7 +421,7 @@ describe('FinalSupplyEquipmentSummary', () => {
 
     it('renders grid viewer with correct configuration', () => {
       renderComponent()
-      
+
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
       expect(gridViewerProps.gridKey).toBe('final-supply-equipments')
       expect(gridViewerProps.enableCopyButton).toBe(false)
@@ -426,7 +431,7 @@ describe('FinalSupplyEquipmentSummary', () => {
   describe('Conditional Rendering', () => {
     it('renders grid with proper data key', () => {
       renderComponent()
-      
+
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
       expect(gridViewerProps.dataKey).toBe('finalSupplyEquipments')
     })

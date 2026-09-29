@@ -19,17 +19,16 @@ import {
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { Menu, MenuItem } from '@mui/material'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import BCModal from '@/components/BCModal'
 import { useTranslation } from 'react-i18next'
 import { FloatingAlert } from '@/components/BCAlert'
-import {
-  RequiredHeader,
-  AccessibleHeader,
-  BCPagination
-} from '@/components/BCDataGrid/components'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import { AccessibleHeader } from '@/components/BCDataGrid/components/Renderers/AccessibleHeader'
+import { BCPagination } from '@/components/BCDataGrid/components/StatusBar/BCPagination'
 import {
   addFlexToColumns,
   getColumnMinWidthSum,

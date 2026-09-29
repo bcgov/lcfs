@@ -4,13 +4,11 @@ import type { GridErrors, GridWarnings } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
-import {
-  AsyncSuggestionEditor,
-  AutocompleteCellEditor,
-  BCSelectFloatingFilter,
-  RequiredHeader,
-  TextCellEditor
-} from '@/components/BCDataGrid/components'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import { TextCellEditor } from '@/components/BCDataGrid/components/Editors/TextCellEditor'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
@@ -28,7 +26,8 @@ import {
 } from '@/hooks/useChargingSite'
 import { StyledChip } from '@/components/StyledChip'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
-import { ExpandLess, ExpandMore } from '@mui/icons-material'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 
 // Helper function for address autocomplete within grid
 const addressAutocompleteQuery = async ({ client, queryKey }) => {

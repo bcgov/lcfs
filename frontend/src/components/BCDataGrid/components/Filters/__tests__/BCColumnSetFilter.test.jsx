@@ -7,8 +7,8 @@ import { createRef } from 'react'
 import { BCColumnSetFilter } from '../BCColumnSetFilter'
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Autocomplete: vi.fn(({ 
+vi.mock('@mui/material/Autocomplete', () => ({
+    default: vi.fn(({
     onChange, 
     isOptionEqualToValue, 
     getOptionLabel, 
@@ -51,25 +51,37 @@ vi.mock('@mui/material', () => ({
         {loading && <span data-test="loading">Loading...</span>}
       </div>
     )
-  }),
-  TextField: vi.fn(({ value, ...props }) => (
+  })
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+    default: vi.fn(({ value, ...props }) => (
     <input
       data-test="textfield"
       value={value || ''}
       {...props}
     />
-  )),
-  Box: vi.fn(({ children, component, ...props }) => (
+  ))
+}))
+
+vi.mock('@mui/material/Box', () => ({
+    default: vi.fn(({ children, component, ...props }) => (
     <div data-test="box" {...props}>{children}</div>
-  )),
-  Checkbox: vi.fn(({ checked, ...props }) => (
+  ))
+}))
+
+vi.mock('@mui/material/Checkbox', () => ({
+    default: vi.fn(({ checked, ...props }) => (
     <input type="checkbox" data-test="checkbox" checked={checked} {...props} />
   ))
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  CheckBox: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>),
-  CheckBoxOutlineBlank: vi.fn(() => <span data-test="checkbox-outline-icon">CheckBoxOutlineBlank</span>)
+vi.mock('@mui/icons-material/CheckBox', () => ({
+    default: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>)
+}))
+
+vi.mock('@mui/icons-material/CheckBoxOutlineBlank', () => ({
+    default: vi.fn(() => <span data-test="checkbox-outline-icon">CheckBoxOutlineBlank</span>)
 }))
 
 describe('BCColumnSetFilter Component', () => {

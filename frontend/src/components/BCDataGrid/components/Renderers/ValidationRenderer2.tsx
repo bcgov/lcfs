@@ -1,6 +1,8 @@
 // @ts-nocheck
-import { DoneAll, Warning } from '@mui/icons-material'
-import { Icon, Tooltip } from '@mui/material'
+import DoneAll from '@mui/icons-material/DoneAll'
+import Warning from '@mui/icons-material/Warning'
+import Icon from '@mui/material/Icon'
+import Tooltip from '@mui/material/Tooltip'
 import CircularProgress from '@mui/material/CircularProgress'
 
 export interface ValidationRenderer2Props {

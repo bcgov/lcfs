@@ -5,7 +5,7 @@ import {
   phoneNumberFormatter,
   timezoneFormatter
 } from '@/utils/formatters'
-import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/index'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { RoleRenderer } from '@/utils/grid/cellRenderers'
 
 // Column definitions for the credit trading market table
