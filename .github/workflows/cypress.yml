@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       db:
-        image: postgres:14.2
+        image: postgres:17
         env:
           POSTGRES_DB: lcfs
           POSTGRES_USER: lcfs
