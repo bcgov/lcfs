@@ -10,6 +10,7 @@ import Tooltip from '@mui/material/Tooltip'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 
 import BCBox from '@/components/BCBox'
+import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import CommentForm from '@/components/Comments/CommentForm'
 
@@ -254,32 +255,6 @@ export const CommentRow = forwardRef(function CommentRow(
                   </>
                 ) : null
               })()}
-              {comment.canEdit && !editing && (
-                <>
-                  {' '}
-                  <BCTypography
-                    variant="body2"
-                    component="a"
-                    role="button"
-                    tabIndex={0}
-                    onClick={startEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        startEdit()
-                      }
-                    }}
-                    sx={{
-                      color: 'link.main',
-                      cursor: 'pointer',
-                      textDecoration: 'none',
-                      '&:hover': { textDecoration: 'underline' }
-                    }}
-                  >
-                    [Edit]
-                  </BCTypography>
-                </>
-              )}
               {edited && (
                 <>
                   {' - '}
@@ -306,6 +281,33 @@ export const CommentRow = forwardRef(function CommentRow(
                 </>
               )}
             </BCTypography>
+            {comment.canEdit && !editing && (
+              <BCButton
+                variant="outlined"
+                size="small"
+                onClick={startEdit}
+                data-test="edit-comment-btn"
+                aria-label={t('internalComment:edit')}
+                sx={{
+                  height: 'auto',
+                  py: 0.25,
+                  px: 1.5,
+                  minWidth: 'auto',
+                  fontSize: '0.8125rem',
+                  lineHeight: 1.4,
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  backgroundColor: '#fff',
+                  '&:hover': {
+                    backgroundColor: 'primary.light',
+                    borderColor: 'primary.main',
+                    color: '#fff'
+                  }
+                }}
+              >
+                {t('internalComment:edit')}
+              </BCButton>
+            )}
           </BCBox>
           <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {renderVisibilityChip && (
@@ -340,13 +342,15 @@ export const CommentRow = forwardRef(function CommentRow(
             wordBreak: 'break-word',
             fontSize: '1rem',
             lineHeight: 1.5,
-            '& p': { margin: '0.25rem 0' },
+            '& p': { margin: '0.25rem 0', fontSize: '1rem' },
             '& ul, & ol': {
               paddingLeft: '1.5rem',
-              margin: '0.25rem 0'
+              margin: '0.25rem 0',
+              fontSize: '1rem'
             },
             '& li': {
-              lineHeight: 1.6
+              lineHeight: 1.6,
+              fontSize: '1rem'
             }
           }}
           dangerouslySetInnerHTML={{ __html: renderedHtml }}
