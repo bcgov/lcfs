@@ -112,8 +112,8 @@ describe('PublicMarketData', () => {
     expect(screen.queryByTestId('kpi-avgPrice')).not.toBeInTheDocument()
   })
 
-  it('renders the CO2 impact band and report downloads', () => {
-    render(<PublicMarketData />, { wrapper })
+  test('renders the CO2 impact band and report downloads', ({ render, theme }) => {
+    render(<PublicMarketData />, [theme])
     expect(screen.getByTestId('annual-average-price-chart')).toBeInTheDocument()
     expect(screen.getByTestId('transfer-price-trend-chart')).toBeInTheDocument()
     expect(screen.getByTestId('trade-volume-chart')).toBeInTheDocument()
