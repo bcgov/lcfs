@@ -31,7 +31,7 @@ This document lists the key software, services, frameworks, and libraries that t
     *   **Integration**: `fastapi-cache2` (`^0.2.1`).
 *   **Message Queuing**: RabbitMQ (`rabbitmq:3-management` via Docker image).
     *   **Client**: `aio-pika` (`^9.4.3`).
-*   **Object Storage**: MinIO (S3-compatible, `latest` image).
+*   **Object Storage**: RustFS (S3-compatible, `rustfs/rustfs:1.0.0` image) for local development.
     *   **Client**: `boto3` (`^1.35.26`).
 *   **Data Validation/Serialization**: Pydantic (`^2.4.2`), `pydantic-settings`.
 *   **Authentication/Security**: `pyjwt` (`^2.8.0`), `cryptography` (`^43.0.1`).

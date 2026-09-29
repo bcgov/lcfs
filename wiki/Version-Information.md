@@ -34,7 +34,7 @@ This page provides guidance on how to find version information for the LCFS appl
 *   **PostgreSQL (LCFS Main DB)**: e.g., `postgres:14.2` (from root `docker-compose.yml`).
 *   **Redis**: e.g., `bitnami/redis:7.4.2` (from root `docker-compose.yml`).
 *   **RabbitMQ**: e.g., `rabbitmq:3-management` (from root `docker-compose.yml`).
-*   **MinIO**: e.g., `minio/minio:latest` (from root `docker-compose.yml` - note that `latest` can change).
+*   **RustFS**: e.g., `rustfs/rustfs:1.0.0` (from root `docker-compose.yml`).
 *   **OpenShift**: The version of the OpenShift Container Platform being used for deployments (Dev, Test, Prod). This is managed by the platform team.
 *   **Keycloak**: The version of Keycloak being used. This might be a centrally managed instance.
 
