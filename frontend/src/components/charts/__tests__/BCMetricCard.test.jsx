@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { screen } from '@testing-library/react'
+import { describe, expect, vi } from 'vitest'
 import { BCMetricCard } from '../BCMetricCard'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('../BCResponsiveEchart', () => ({
   BCResponsiveEChart: ({ option, ariaLabel }) => (
@@ -16,34 +16,31 @@ vi.mock('../BCResponsiveEchart', () => ({
 
 describe('BCMetricCard', () => {
   describe('rendering', () => {
-    it('renders title and value', () => {
-      render(
-        <BCMetricCard title="Total Credits" value="1,234" />,
-        { wrapper }
-      )
+    test('renders title and value', ({ render, theme }) => {
+      render(<BCMetricCard title="Total Credits" value="1,234" />, [theme])
 
       expect(screen.getByText('1,234')).toBeInTheDocument()
       expect(screen.getByText('Total Credits')).toBeInTheDocument()
     })
 
-    it('renders optional subtitle when provided', () => {
+    test('renders optional subtitle when provided', ({ render, theme }) => {
       render(
         <BCMetricCard
           title="Total Credits"
           value="1,234"
           subtitle="Updated today"
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByText('Updated today')).toBeInTheDocument()
     })
 
-    it('uses title as default aria label for the card region', () => {
-      render(
-        <BCMetricCard title="Total Credits" value="1,234" />,
-        { wrapper }
-      )
+    test('uses title as default aria label for the card region', ({
+      render,
+      theme
+    }) => {
+      render(<BCMetricCard title="Total Credits" value="1,234" />, [theme])
 
       expect(
         screen.getByRole('region', { name: 'Total Credits' })
@@ -52,16 +49,13 @@ describe('BCMetricCard', () => {
   })
 
   describe('value display', () => {
-    it('displays numeric and formatted values', () => {
-      render(
-        <BCMetricCard title="Balance" value="$5,678.90" />,
-        { wrapper }
-      )
+    test('displays numeric and formatted values', ({ render, theme }) => {
+      render(<BCMetricCard title="Balance" value="$5,678.90" />, [theme])
 
       expect(screen.getByText('$5,678.90')).toBeInTheDocument()
     })
 
-    it('embeds a chart when an option is provided', () => {
+    test('embeds a chart when an option is provided', ({ render, theme }) => {
       render(
         <BCMetricCard
           title="Trend"
@@ -69,7 +63,7 @@ describe('BCMetricCard', () => {
           option={{ series: [{ data: [1, 2, 3] }] }}
           ariaLabel="Trend chart"
         />,
-        { wrapper }
+        [theme]
       )
 
       const chart = screen.getByTestId('bc-responsive-echart')
@@ -77,60 +71,52 @@ describe('BCMetricCard', () => {
       expect(chart).toHaveAttribute('data-has-option', 'true')
     })
 
-    it('does not render a chart when option is omitted', () => {
-      render(<BCMetricCard title="Trend" value="42" />, { wrapper })
+    test('does not render a chart when option is omitted', ({
+      render,
+      theme
+    }) => {
+      render(<BCMetricCard title="Trend" value="42" />, [theme])
 
-      expect(screen.queryByTestId('bc-responsive-echart')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('bc-responsive-echart')
+      ).not.toBeInTheDocument()
     })
 
-    it('displays large numeric values', () => {
-      render(
-        <BCMetricCard title="Total" value="1,234,567" />,
-        { wrapper }
-      )
+    test('displays large numeric values', ({ render, theme }) => {
+      render(<BCMetricCard title="Total" value="1,234,567" />, [theme])
 
       expect(screen.getByText('1,234,567')).toBeInTheDocument()
     })
 
-    it('displays negative values', () => {
-      render(
-        <BCMetricCard title="Deficit" value="-500" />,
-        { wrapper }
-      )
+    test('displays negative values', ({ render, theme }) => {
+      render(<BCMetricCard title="Deficit" value="-500" />, [theme])
 
       expect(screen.getByText('-500')).toBeInTheDocument()
     })
 
-    it('displays percentage values', () => {
-      render(
-        <BCMetricCard title="Growth" value="15.5%" />,
-        { wrapper }
-      )
+    test('displays percentage values', ({ render, theme }) => {
+      render(<BCMetricCard title="Growth" value="15.5%" />, [theme])
 
       expect(screen.getByText('15.5%')).toBeInTheDocument()
     })
   })
 
   describe('accessibility', () => {
-    it('uses title as aria-label when custom label not provided', () => {
-      render(
-        <BCMetricCard title="Metric Title" value="100" />,
-        { wrapper }
-      )
+    test('uses title as aria-label when custom label not provided', ({
+      render,
+      theme
+    }) => {
+      render(<BCMetricCard title="Metric Title" value="100" />, [theme])
 
       expect(
         screen.getByRole('region', { name: 'Metric Title' })
       ).toBeInTheDocument()
     })
 
-    it('uses custom ariaLabel when provided', () => {
+    test('uses custom ariaLabel when provided', ({ render, theme }) => {
       render(
-        <BCMetricCard
-          title="Metric"
-          value="100"
-          ariaLabel="Custom label"
-        />,
-        { wrapper }
+        <BCMetricCard title="Metric" value="100" ariaLabel="Custom label" />,
+        [theme]
       )
 
       expect(
@@ -138,11 +124,8 @@ describe('BCMetricCard', () => {
       ).toBeInTheDocument()
     })
 
-    it('renders focusable card', () => {
-      render(
-        <BCMetricCard title="Focusable" value="100" />,
-        { wrapper }
-      )
+    test('renders focusable card', ({ render, theme }) => {
+      render(<BCMetricCard title="Focusable" value="100" />, [theme])
 
       const card = screen.getByRole('region', { name: 'Focusable' })
       expect(card).toHaveAttribute('tabindex', '0')
@@ -150,15 +133,13 @@ describe('BCMetricCard', () => {
   })
 
   describe('layout', () => {
-    it('renders title, value, and subtitle in correct order', () => {
-      render(
-        <BCMetricCard
-          title="Title"
-          value="Value"
-          subtitle="Subtitle"
-        />,
-        { wrapper }
-      )
+    test('renders title, value, and subtitle in correct order', ({
+      render,
+      theme
+    }) => {
+      render(<BCMetricCard title="Title" value="Value" subtitle="Subtitle" />, [
+        theme
+      ])
 
       const region = screen.getByRole('region')
       const text = region.textContent
@@ -168,11 +149,8 @@ describe('BCMetricCard', () => {
       expect(text).toContain('Subtitle')
     })
 
-    it('renders without subtitle when not provided', () => {
-      render(
-        <BCMetricCard title="Title" value="Value" />,
-        { wrapper }
-      )
+    test('renders without subtitle when not provided', ({ render, theme }) => {
+      render(<BCMetricCard title="Title" value="Value" />, [theme])
 
       expect(screen.getByText('Title')).toBeInTheDocument()
       expect(screen.getByText('Value')).toBeInTheDocument()
@@ -180,7 +158,7 @@ describe('BCMetricCard', () => {
   })
 
   describe('chart integration', () => {
-    it('passes aria-label to chart component', () => {
+    test('passes aria-label to chart component', ({ render, theme }) => {
       render(
         <BCMetricCard
           title="Trend"
@@ -188,21 +166,21 @@ describe('BCMetricCard', () => {
           option={{ series: [{ data: [1, 2, 3] }] }}
           ariaLabel="Trend visualization"
         />,
-        { wrapper }
+        [theme]
       )
 
       const chart = screen.getByRole('img', { name: 'Trend visualization' })
       expect(chart).toBeInTheDocument()
     })
 
-    it('renders chart with correct height', () => {
+    test('renders chart with correct height', ({ render, theme }) => {
       render(
         <BCMetricCard
           title="Chart Card"
           value="100"
           option={{ series: [{ data: [1, 2, 3] }] }}
         />,
-        { wrapper }
+        [theme]
       )
 
       expect(screen.getByTestId('bc-responsive-echart')).toBeInTheDocument()
@@ -210,11 +188,10 @@ describe('BCMetricCard', () => {
   })
 
   describe('visual presentation', () => {
-    it('renders as a Material-UI Card', () => {
-      const { container } = render(
-        <BCMetricCard title="Card" value="100" />,
-        { wrapper }
-      )
+    test('renders as a Material-UI Card', ({ render, theme }) => {
+      const { container } = render(<BCMetricCard title="Card" value="100" />, [
+        theme
+      ])
 
       expect(container.querySelector('.MuiCard-root')).toBeInTheDocument()
     })

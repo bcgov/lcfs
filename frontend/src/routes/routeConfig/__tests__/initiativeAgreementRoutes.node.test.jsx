@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { initiativeAgreementRoutes } from '../initiativeAgreementRoutes'
 
+vi.mock('@/constants/config', () => ({
+  FEATURE_FLAGS: { INITIATIVE_AGREEMENTS: 'initiativeAgreements' },
+  isFeatureEnabled: vi.fn(() => false)
+}))
+
 // Mock the view components
 vi.mock('@/views/InitiativeAgreements', () => ({
   InitiativeAgreements: () => 'InitiativeAgreements',

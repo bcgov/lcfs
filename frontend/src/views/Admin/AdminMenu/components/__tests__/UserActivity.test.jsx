@@ -1,8 +1,8 @@
 import React from 'react'
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
 import { UserActivity } from '../UserActivity'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 
 vi.mock('react-i18next', () => ({
@@ -60,8 +60,8 @@ describe('UserActivity', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders the heading and the grid', () => {
-    render(<UserActivity />, { wrapper })
+  test('renders the heading and the grid', ({ render }) => {
+    render(<UserActivity />)
 
     // 1. Heading check
     expect(screen.getByText('admin:UserActivity')).toBeInTheDocument()
@@ -70,8 +70,8 @@ describe('UserActivity', () => {
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
-  it('passes the correct props to BCGridViewer', () => {
-    render(<UserActivity />, { wrapper })
+  test('passes the correct props to BCGridViewer', ({ render }) => {
+    render(<UserActivity />)
 
     // BCGridViewer has been mocked, so we can inspect its calls
     expect(BCGridViewer).toHaveBeenCalledTimes(1)
@@ -109,8 +109,8 @@ describe('UserActivity', () => {
     )
   })
 
-  it('generates correct URLs for each transaction type', () => {
-    render(<UserActivity />, { wrapper })
+  test('generates correct URLs for each transaction type', ({ render }) => {
+    render(<UserActivity />)
 
     // Extract the defaultColDef from BCGridViewer props
     const gridProps = BCGridViewer.mock.calls[0][0]
@@ -136,8 +136,10 @@ describe('UserActivity', () => {
   })
 
   // If you want to verify that no rows found message is shown if data is empty
-  it('shows the overlayNoRowsTemplate when there are no activities', () => {
-    render(<UserActivity />, { wrapper })
+  test('shows the overlayNoRowsTemplate when there are no activities', ({
+    render
+  }) => {
+    render(<UserActivity />)
 
     // BCGridViewer props
     const gridProps = BCGridViewer.mock.calls[0][0]
@@ -145,8 +147,10 @@ describe('UserActivity', () => {
     expect(gridProps.overlayNoRowsTemplate).toBe('admin:activitiesNotFound')
   })
 
-  it('handles URL generation for undefined transaction type', () => {
-    render(<UserActivity />, { wrapper })
+  test('handles URL generation for undefined transaction type', ({
+    render
+  }) => {
+    render(<UserActivity />)
 
     // Extract the defaultColDef from BCGridViewer props
     const gridProps = BCGridViewer.mock.calls[0][0]
@@ -167,8 +171,10 @@ describe('UserActivity', () => {
     expect(url(mockDataUnknown)).toBeUndefined()
   })
 
-  it('calls useGetUserActivities with correct initial pagination options', () => {
-    render(<UserActivity />, { wrapper })
+  test('calls useGetUserActivities with correct initial pagination options', ({
+    render
+  }) => {
+    render(<UserActivity />)
 
     // Verify hook is called with initial pagination options
     expect(mockUseGetUserActivities).toHaveBeenCalledWith(
@@ -185,8 +191,8 @@ describe('UserActivity', () => {
     )
   })
 
-  it('has onPaginationChange callback defined', () => {
-    render(<UserActivity />, { wrapper })
+  test('has onPaginationChange callback defined', ({ render }) => {
+    render(<UserActivity />)
 
     // Get the onPaginationChange callback from BCGridViewer props
     const gridProps = BCGridViewer.mock.calls[0][0]
@@ -197,8 +203,8 @@ describe('UserActivity', () => {
     expect(typeof onPaginationChange).toBe('function')
   })
 
-  it('has onClearFilters callback defined in BCGridViewer', () => {
-    render(<UserActivity />, { wrapper })
+  test('has onClearFilters callback defined in BCGridViewer', ({ render }) => {
+    render(<UserActivity />)
 
     // Get the onClearFilters callback from BCGridViewer props
     const gridProps = BCGridViewer.mock.calls[0][0]
@@ -209,8 +215,8 @@ describe('UserActivity', () => {
     expect(typeof onClearFilters).toBe('function')
   })
 
-  it('tests onPaginationChange callback functionality', () => {
-    render(<UserActivity />, { wrapper })
+  test('tests onPaginationChange callback functionality', ({ render }) => {
+    render(<UserActivity />)
 
     // Get the onPaginationChange callback from BCGridViewer props
     const gridProps = BCGridViewer.mock.calls[0][0]
@@ -245,8 +251,8 @@ describe('UserActivity', () => {
     )
   })
 
-  it('renders BCBox components with correct props', () => {
-    render(<UserActivity />, { wrapper })
+  test('renders BCBox components with correct props', ({ render }) => {
+    render(<UserActivity />)
 
     // Verify main container is rendered
     const container = screen.getByTestId('bc-grid-viewer').closest('div')

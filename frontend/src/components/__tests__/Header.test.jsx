@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import HeaderBar from '@/components/BCNavbar/components/HeaderBar'
 
@@ -9,16 +9,23 @@ vi.mock('@/assets/images/logo-banner.svg', () => ({ default: 'logo-banner.svg' }
 
 // Mock MUI components used inside HeaderBar so the test does not require a
 // full theme setup for Toolbar / Icon internals.
-vi.mock('@mui/material', async (importOriginal) => {
+vi.mock('@mui/material/Toolbar', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    Toolbar: ({ children, sx, ...props }) => (
+    default: ({ children, sx, ...props }) => (
       <div data-test="toolbar" {...props}>
         {children}
       </div>
-    ),
-    Icon: ({ children, fontSize }) => (
+    )
+  }
+})
+
+vi.mock('@mui/material/Icon', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    default: ({ children, fontSize }) => (
       <span data-test="menu-icon" data-fontsize={fontSize}>
         {children}
       </span>

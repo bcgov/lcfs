@@ -1,13 +1,13 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { InitiativeAgreementsCard } from '../InitiativeAgreementsCard'
 import { useInitiativeAgreementCounts } from '@/hooks/useDashboard'
 import { isFeatureEnabled } from '@/constants/config'
-import { wrapper } from '@/tests/utils/wrapper'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/hooks/useDashboard')
 vi.mock('react-router-dom', () => ({
@@ -53,23 +53,23 @@ describe('InitiativeAgreementsCard Component', () => {
     })
   })
 
-  it('renders the loading state', () => {
+  test('renders the loading state', ({ render, app }) => {
     useInitiativeAgreementCounts.mockReturnValue({
       data: null,
       isLoading: true
     })
 
-    render(<InitiativeAgreementsCard />, { wrapper })
+    render(<InitiativeAgreementsCard />, app)
     expect(screen.getByTestId('loading')).toBeInTheDocument()
   })
 
-  it('renders the lifecycle counts', () => {
+  test('renders the lifecycle counts', ({ render, app }) => {
     useInitiativeAgreementCounts.mockReturnValue({
       data: { underway: 5, draft: 2 },
       isLoading: false
     })
 
-    render(<InitiativeAgreementsCard />, { wrapper })
+    render(<InitiativeAgreementsCard />, app)
 
     expect(screen.getByTestId('widget-title')).toHaveTextContent(
       'Initiative agreements'
@@ -81,13 +81,13 @@ describe('InitiativeAgreementsCard Component', () => {
     ).toBeInTheDocument()
   })
 
-  it('navigates to the grid pre-filtered to Underway', () => {
+  test('navigates to the grid pre-filtered to Underway', ({ render, app }) => {
     useInitiativeAgreementCounts.mockReturnValue({
       data: { underway: 5, draft: 2 },
       isLoading: false
     })
 
-    render(<InitiativeAgreementsCard />, { wrapper })
+    render(<InitiativeAgreementsCard />, app)
     fireEvent.click(screen.getByText('Initiative agreement(s) underway'))
 
     expect(window.sessionStorage.setItem).toHaveBeenCalledWith(
@@ -103,13 +103,13 @@ describe('InitiativeAgreementsCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.INITIATIVE_AGREEMENTS.LIST)
   })
 
-  it('clears the stored filter for the view-all link', () => {
+  test('clears the stored filter for the view-all link', ({ render, app }) => {
     useInitiativeAgreementCounts.mockReturnValue({
       data: { underway: 5, draft: 2 },
       isLoading: false
     })
 
-    render(<InitiativeAgreementsCard />, { wrapper })
+    render(<InitiativeAgreementsCard />, app)
     fireEvent.click(screen.getByText('View all initiative agreement(s)'))
 
     expect(window.sessionStorage.removeItem).toHaveBeenCalledWith(
@@ -118,14 +118,14 @@ describe('InitiativeAgreementsCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.INITIATIVE_AGREEMENTS.LIST)
   })
 
-  it('renders nothing when the module flag is off', () => {
+  test('renders nothing when the module flag is off', ({ render, app }) => {
     isFeatureEnabled.mockReturnValue(false)
     useInitiativeAgreementCounts.mockReturnValue({
       data: null,
       isLoading: false
     })
 
-    const { container } = render(<InitiativeAgreementsCard />, { wrapper })
+    const { container } = render(<InitiativeAgreementsCard />, app)
     expect(container).toBeEmptyDOMElement()
   })
 })

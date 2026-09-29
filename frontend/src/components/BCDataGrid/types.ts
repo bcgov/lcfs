@@ -1,5 +1,5 @@
-import type { AgGridReact } from '@ag-grid-community/react'
-import type { ColDef, GridOptions, IRowNode } from '@ag-grid-community/core'
+import type { AgGridReact } from 'ag-grid-react'
+import type { ColDef, GridOptions, IRowNode } from 'ag-grid-community'
 import type { CSSProperties, MutableRefObject, ReactNode } from 'react'
 
 export type BCGridRow = Record<string, any>

@@ -1,12 +1,23 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useForm, FormProvider } from 'react-hook-form'
-import { BCFormRadio } from '../BCFormRadio'
-import { AppWrapper, getByDataTest } from '@/tests/utils'
+import { BCFormRadio } from '@/components/BCForm/BCFormRadio'
+import { test as fixtureTest } from '@/tests/utils/fixtures'
+
+vi.unmock('@/components/BCForm/BCFormRadio')
+
+const test = (name, callback) =>
+  fixtureTest(name, ({ render: fixtureRender, theme }) =>
+    callback({
+      render: (ui, providers = [], options = {}) =>
+        fixtureRender(ui, providers.filter(Boolean), options),
+      theme
+    })
+  )
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
@@ -31,7 +42,7 @@ vi.mock('../CustomLabel', () => ({
   )
 }))
 
-describe('BCFormRadio', () => {
+describe.sequential('BCFormRadio', () => {
   // Form wrapper for integration tests
   const FormWrapper = ({ children, defaultValues = {} }) => {
     const methods = useForm({
@@ -61,7 +72,11 @@ describe('BCFormRadio', () => {
     options: defaultOptions
   }
 
-  const renderBCFormRadio = (props = {}, formDefaults = {}) => {
+  const renderBCFormRadio = (
+    { render, query, theme, localization, router, i18n },
+    props = {},
+    formDefaults = {}
+  ) => {
     const finalDefaults = {
       [props.name || defaultProps.name]: '',
       ...formDefaults
@@ -72,30 +87,51 @@ describe('BCFormRadio', () => {
           <BCFormRadio control={control} {...defaultProps} {...props} />
         )}
       </FormWrapper>,
-      { wrapper: AppWrapper }
+      [query, theme, localization, router, i18n].filter(Boolean)
     )
   }
 
   describe('Basic Rendering', () => {
-    it('renders radio group with correct structure', () => {
-      renderBCFormRadio()
+    test('renders radio group with correct structure', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormRadio({ render, query, theme, localization, router, i18n })
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).toBeInTheDocument()
     })
 
-    it('renders group label with correct text', () => {
-      renderBCFormRadio()
+    test('renders group label with correct text', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormRadio({ render, query, theme, localization, router, i18n })
 
       expect(screen.getByText('Test Radio Group')).toBeInTheDocument()
 
-      const typography = getByDataTest('bc-typography')
+      const typography = document.querySelector('[data-test="bc-typography"]')
       expect(typography).toHaveAttribute('data-variant', 'label')
       expect(typography).toHaveAttribute('data-component', 'span')
     })
 
-    it('renders all provided radio options', () => {
-      renderBCFormRadio()
+    test('renders all provided radio options', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
+      renderBCFormRadio({ render, query, theme, localization, router, i18n })
 
       const radios = screen.getAllByRole('radio')
       expect(radios).toHaveLength(3)
@@ -105,8 +141,8 @@ describe('BCFormRadio', () => {
       expect(screen.getByText('Option 3')).toBeInTheDocument()
     })
 
-    it('renders with proper FormControl styling', () => {
-      renderBCFormRadio()
+    test('renders with proper FormControl styling', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme })
 
       const formControl = document.querySelector('.MuiFormControl-root')
       expect(formControl).toBeInTheDocument()
@@ -116,15 +152,21 @@ describe('BCFormRadio', () => {
       expect(fieldset).toBeInTheDocument()
     })
 
-    it('renders with vertical orientation by default', () => {
-      renderBCFormRadio()
+    test('renders with vertical orientation by default', ({
+      render,
+      theme
+    }) => {
+      renderBCFormRadio({ render, theme })
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).not.toHaveAttribute('data-testid', 'row-radiogroup')
     })
 
-    it('renders with horizontal orientation when specified', () => {
-      renderBCFormRadio({ orientation: 'horizontal' })
+    test('renders with horizontal orientation when specified', ({
+      render,
+      theme
+    }) => {
+      renderBCFormRadio({ render, theme }, { orientation: 'horizontal' })
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).toBeInTheDocument()
@@ -133,19 +175,22 @@ describe('BCFormRadio', () => {
   })
 
   describe('Option Rendering', () => {
-    it('renders options with simple labels', () => {
+    test('renders options with simple labels', ({ render, theme }) => {
       const simpleOptions = [
         { value: 'simple1', label: 'Simple Label 1' },
         { value: 'simple2', label: 'Simple Label 2' }
       ]
 
-      renderBCFormRadio({ options: simpleOptions })
+      renderBCFormRadio({ render, theme }, { options: simpleOptions })
 
       expect(screen.getByText('Simple Label 1')).toBeInTheDocument()
       expect(screen.getByText('Simple Label 2')).toBeInTheDocument()
     })
 
-    it('renders options with header and text using CustomLabel', () => {
+    test('renders options with header and text using CustomLabel', ({
+      render,
+      theme
+    }) => {
       const headerOptions = [
         {
           value: 'header1',
@@ -159,7 +204,7 @@ describe('BCFormRadio', () => {
         }
       ]
 
-      renderBCFormRadio({ options: headerOptions })
+      renderBCFormRadio({ render, theme }, { options: headerOptions })
 
       const customLabels = document.querySelectorAll(
         '[data-test="custom-label"]'
@@ -175,8 +220,8 @@ describe('BCFormRadio', () => {
       )
     })
 
-    it('handles empty options array', () => {
-      renderBCFormRadio({ options: [] })
+    test('handles empty options array', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme }, { options: [] })
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).toBeInTheDocument()
@@ -187,8 +232,8 @@ describe('BCFormRadio', () => {
   })
 
   describe('Form Integration with React Hook Form', () => {
-    it('integrates with react-hook-form control', () => {
-      renderBCFormRadio({}, { testRadio: 'option2' })
+    test('integrates with react-hook-form control', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme }, {}, { testRadio: 'option2' })
 
       const radios = screen.getAllByRole('radio')
 
@@ -198,8 +243,11 @@ describe('BCFormRadio', () => {
       expect(radios[2]).not.toBeChecked()
     })
 
-    it('starts with no selection when no default provided', () => {
-      renderBCFormRadio()
+    test('starts with no selection when no default provided', ({
+      render,
+      theme
+    }) => {
+      renderBCFormRadio({ render, theme })
 
       const radios = screen.getAllByRole('radio')
 
@@ -208,10 +256,13 @@ describe('BCFormRadio', () => {
       })
     })
 
-    it('handles user selection and updates form state', async () => {
+    test('handles user selection and updates form state', async ({
+      render,
+      theme
+    }) => {
       const user = userEvent.setup()
 
-      renderBCFormRadio()
+      renderBCFormRadio({ render, theme })
 
       const radios = screen.getAllByRole('radio')
 
@@ -227,10 +278,10 @@ describe('BCFormRadio', () => {
       expect(radios[2]).not.toBeChecked()
     })
 
-    it('handles selection changes correctly', async () => {
+    test('handles selection changes correctly', async ({ render, theme }) => {
       const user = userEvent.setup()
 
-      renderBCFormRadio({}, { testRadio: 'option1' })
+      renderBCFormRadio({ render, theme }, {}, { testRadio: 'option1' })
 
       const radios = screen.getAllByRole('radio')
 
@@ -248,8 +299,11 @@ describe('BCFormRadio', () => {
   })
 
   describe('Disabled State', () => {
-    it('disables all radios when disabled prop is true', () => {
-      renderBCFormRadio({ disabled: true })
+    test('disables all radios when disabled prop is true', ({
+      render,
+      theme
+    }) => {
+      renderBCFormRadio({ render, theme }, { disabled: true })
 
       const radios = screen.getAllByRole('radio')
 
@@ -258,8 +312,8 @@ describe('BCFormRadio', () => {
       })
     })
 
-    it('prevents interaction when disabled', async () => {
-      renderBCFormRadio({ disabled: true })
+    test('prevents interaction when disabled', async ({ render, theme }) => {
+      renderBCFormRadio({ render, theme }, { disabled: true })
 
       const radios = screen.getAllByRole('radio')
 
@@ -272,13 +326,18 @@ describe('BCFormRadio', () => {
   })
 
   describe('Accessibility', () => {
-    it('has proper fieldset structure and typography label', () => {
-      renderBCFormRadio()
+    test('has proper fieldset structure and typography label', ({
+      render,
+      theme
+    }) => {
+      renderBCFormRadio({ render, theme })
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).toBeInTheDocument()
 
-      const typographyLabel = getByDataTest('bc-typography')
+      const typographyLabel = document.querySelector(
+        '[data-test="bc-typography"]'
+      )
       expect(typographyLabel).toBeInTheDocument()
       expect(typographyLabel).toHaveTextContent('Test Radio Group')
 
@@ -286,8 +345,8 @@ describe('BCFormRadio', () => {
       expect(fieldset).toBeInTheDocument()
     })
 
-    it('provides proper ARIA attributes for radios', () => {
-      renderBCFormRadio()
+    test('provides proper ARIA attributes for radios', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme })
 
       const radios = screen.getAllByRole('radio')
 
@@ -297,8 +356,8 @@ describe('BCFormRadio', () => {
       })
     })
 
-    it('associates labels with radios correctly', () => {
-      renderBCFormRadio()
+    test('associates labels with radios correctly', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme })
 
       const option1Radio = screen.getByRole('radio', { name: /Option 1/i })
       const option1Label = screen.getByText('Option 1').closest('label')
@@ -306,10 +365,10 @@ describe('BCFormRadio', () => {
       expect(option1Label).toContainElement(option1Radio)
     })
 
-    it('supports keyboard navigation', async () => {
+    test('supports keyboard navigation', async ({ render, theme }) => {
       const user = userEvent.setup()
 
-      renderBCFormRadio()
+      renderBCFormRadio({ render, theme })
 
       const radios = screen.getAllByRole('radio')
 
@@ -323,10 +382,10 @@ describe('BCFormRadio', () => {
       expect(radios[1]).toBeChecked()
     })
 
-    it('allows selection with the Enter key', async () => {
+    test('allows selection with the Enter key', async ({ render, theme }) => {
       const user = userEvent.setup()
 
-      renderBCFormRadio()
+      renderBCFormRadio({ render, theme })
 
       const radios = screen.getAllByRole('radio')
 
@@ -339,10 +398,10 @@ describe('BCFormRadio', () => {
       expect(radios[0]).toBeChecked()
     })
 
-    it('provides proper focus management', async () => {
+    test('provides proper focus management', async ({ render, theme }) => {
       const user = userEvent.setup()
 
-      renderBCFormRadio()
+      renderBCFormRadio({ render, theme })
 
       const radios = screen.getAllByRole('radio')
 
@@ -356,7 +415,7 @@ describe('BCFormRadio', () => {
   })
 
   describe('Edge Cases and Error Handling', () => {
-    it('handles undefined options gracefully', () => {
+    test('handles undefined options gracefully', ({ render, theme }) => {
       expect(() => {
         render(
           <FormWrapper defaultValues={{ test: '' }}>
@@ -369,19 +428,19 @@ describe('BCFormRadio', () => {
               />
             )}
           </FormWrapper>,
-          { wrapper: AppWrapper }
+          [theme]
         )
       }).not.toThrow()
     })
 
-    it('handles empty options array', () => {
-      renderBCFormRadio({ options: [] })
+    test('handles empty options array', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme }, { options: [] })
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).toBeInTheDocument()
     })
 
-    it('handles options with missing properties', () => {
+    test('handles options with missing properties', ({ render, theme }) => {
       const incompleteOptions = [
         { value: 'has-value', label: 'Has Both' },
         { label: 'Missing Value' },
@@ -389,12 +448,15 @@ describe('BCFormRadio', () => {
       ]
 
       expect(() =>
-        renderBCFormRadio({ options: incompleteOptions })
+        renderBCFormRadio({ render, theme }, { options: incompleteOptions })
       ).not.toThrow()
     })
 
-    it('handles special characters in field name', () => {
-      renderBCFormRadio({ name: 'field-with-special_chars.123' })
+    test('handles special characters in field name', ({ render, theme }) => {
+      renderBCFormRadio(
+        { render, theme },
+        { name: 'field-with-special_chars.123' }
+      )
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).toBeInTheDocument()
@@ -402,14 +464,14 @@ describe('BCFormRadio', () => {
   })
 
   describe('Performance Testing', () => {
-    it('handles large number of options', () => {
+    test('handles large number of options', ({ render, theme }) => {
       const manyOptions = Array.from({ length: 50 }, (_, i) => ({
         value: `option${i}`,
         label: `Option ${i + 1}`
       }))
 
       const startTime = performance.now()
-      renderBCFormRadio({ options: manyOptions })
+      renderBCFormRadio({ render, theme }, { options: manyOptions })
       const endTime = performance.now()
 
       const radios = screen.getAllByRole('radio')
@@ -419,7 +481,7 @@ describe('BCFormRadio', () => {
       expect(endTime - startTime).toBeLessThan(1000)
     })
 
-    it('maintains performance during re-renders', () => {
+    test('maintains performance during re-renders', ({ render, theme }) => {
       const { rerender } = render(
         <FormWrapper defaultValues={{ testRadio: 'option1' }}>
           {({ control }) => (
@@ -431,7 +493,7 @@ describe('BCFormRadio', () => {
             />
           )}
         </FormWrapper>,
-        { wrapper: AppWrapper }
+        [theme]
       )
 
       const radioGroup = screen.getByRole('radiogroup')
@@ -457,7 +519,7 @@ describe('BCFormRadio', () => {
   })
 
   describe('PropTypes and API', () => {
-    it('renders with minimal required props', () => {
+    test('renders with minimal required props', ({ render, theme }) => {
       render(
         <FormWrapper defaultValues={{ minimal: '' }}>
           {({ control }) => (
@@ -468,14 +530,14 @@ describe('BCFormRadio', () => {
             />
           )}
         </FormWrapper>,
-        { wrapper: AppWrapper }
+        [theme]
       )
 
       const radio = screen.getByRole('radio')
       expect(radio).toBeInTheDocument()
     })
 
-    it('accepts all documented props', () => {
+    test('accepts all documented props', ({ render, theme }) => {
       const allProps = {
         name: 'fullTest',
         label: 'Full Test Radio',
@@ -487,7 +549,7 @@ describe('BCFormRadio', () => {
         orientation: 'horizontal'
       }
 
-      expect(() => renderBCFormRadio(allProps)).not.toThrow()
+      expect(() => renderBCFormRadio({ render, theme }, allProps)).not.toThrow()
 
       expect(screen.getByText('Full Test Radio')).toBeInTheDocument()
       expect(screen.getAllByRole('radio')).toHaveLength(2)
@@ -495,8 +557,8 @@ describe('BCFormRadio', () => {
   })
 
   describe('Material-UI Integration', () => {
-    it('applies correct Material-UI classes', () => {
-      renderBCFormRadio()
+    test('applies correct Material-UI classes', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme })
 
       const formControl = document.querySelector('.MuiFormControl-root')
       expect(formControl).toHaveClass('MuiFormControl-root')
@@ -507,8 +569,11 @@ describe('BCFormRadio', () => {
       })
     })
 
-    it('integrates with Material-UI FormControlLabel', () => {
-      renderBCFormRadio()
+    test('integrates with Material-UI FormControlLabel', ({
+      render,
+      theme
+    }) => {
+      renderBCFormRadio({ render, theme })
 
       const labels = screen
         .getAllByRole('radio')
@@ -519,8 +584,8 @@ describe('BCFormRadio', () => {
       })
     })
 
-    it('applies correct spacing with marginTop prop', () => {
-      renderBCFormRadio()
+    test('applies correct spacing with marginTop prop', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme })
 
       const radios = screen.getAllByRole('radio')
 
@@ -530,34 +595,42 @@ describe('BCFormRadio', () => {
       })
     })
 
-    it('renders typography label without FormLabel component', () => {
-      renderBCFormRadio()
+    test('renders typography label without FormLabel component', ({
+      render,
+      theme
+    }) => {
+      renderBCFormRadio({ render, theme })
 
-      const typographyLabel = getByDataTest('bc-typography')
+      const typographyLabel = document.querySelector(
+        '[data-test="bc-typography"]'
+      )
       expect(typographyLabel).toBeInTheDocument()
       expect(document.querySelector('.MuiFormLabel-root')).toBeNull()
     })
   })
 
   describe('Orientation Options', () => {
-    it('renders vertically by default', () => {
-      renderBCFormRadio()
+    test('renders vertically by default', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme })
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).toBeInTheDocument()
       // Vertical is default, no row attribute
     })
 
-    it('renders horizontally when orientation is horizontal', () => {
-      renderBCFormRadio({ orientation: 'horizontal' })
+    test('renders horizontally when orientation is horizontal', ({
+      render,
+      theme
+    }) => {
+      renderBCFormRadio({ render, theme }, { orientation: 'horizontal' })
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).toBeInTheDocument()
       // Material-UI applies row styling for horizontal layout
     })
 
-    it('handles invalid orientation gracefully', () => {
-      renderBCFormRadio({ orientation: 'invalid' })
+    test('handles invalid orientation gracefully', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme }, { orientation: 'invalid' })
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).toBeInTheDocument()
@@ -565,16 +638,16 @@ describe('BCFormRadio', () => {
   })
 
   describe('Custom Styling', () => {
-    it('accepts custom sx prop', () => {
+    test('accepts custom sx prop', ({ render, theme }) => {
       const customSx = { backgroundColor: 'red' }
-      renderBCFormRadio({ sx: customSx })
+      renderBCFormRadio({ render, theme }, { sx: customSx })
 
       const formControl = document.querySelector('.MuiFormControl-root')
       expect(formControl).toBeInTheDocument()
     })
 
-    it('applies custom styling to FormControl', () => {
-      renderBCFormRadio({ sx: { margin: 2 } })
+    test('applies custom styling to FormControl', ({ render, theme }) => {
+      renderBCFormRadio({ render, theme }, { sx: { margin: 2 } })
 
       const formControl = document.querySelector('.MuiFormControl-root')
       expect(formControl).toBeInTheDocument()
