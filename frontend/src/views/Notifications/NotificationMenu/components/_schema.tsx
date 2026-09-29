@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef } from 'ag-grid-community'
 import { dateFormatter } from '@/utils/formatters'
 import { actions } from '@/components/BCDataGrid/columns'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
