@@ -1,13 +1,13 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
 import OrgInitiativeAgreementsCard from '../OrgInitiativeAgreementsCard'
 import { useOrgInitiativeAgreementCounts } from '@/hooks/useDashboard'
-import { wrapper } from '@/tests/utils/wrapper'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
 import { CONFIG } from '@/constants/config'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/hooks/useDashboard')
 vi.mock('react-router-dom', async () => ({
@@ -43,24 +43,30 @@ describe('OrgInitiativeAgreementsCard (BCeID, #4893)', () => {
     }
   })
 
-  it("shows the organization's counts as links into the index", () => {
+  test("shows the organization's counts as links into the index", ({
+    render,
+    app
+  }) => {
     useOrgInitiativeAgreementCounts.mockReturnValue({
       data: { underway: 3, completed: 1 },
       isLoading: false
     })
-    render(<OrgInitiativeAgreementsCard />, { wrapper })
+    render(<OrgInitiativeAgreementsCard />, app)
 
     expect(screen.getByTestId('org-ia-underway')).toHaveTextContent('3')
     expect(screen.getByTestId('org-ia-completed')).toHaveTextContent('1')
     expect(screen.queryByTestId('org-ia-none')).not.toBeInTheDocument()
   })
 
-  it('lands on the index already narrowed to the clicked status', () => {
+  test('lands on the index already narrowed to the clicked status', ({
+    render,
+    app
+  }) => {
     useOrgInitiativeAgreementCounts.mockReturnValue({
       data: { underway: 3, completed: 0 },
       isLoading: false
     })
-    render(<OrgInitiativeAgreementsCard />, { wrapper })
+    render(<OrgInitiativeAgreementsCard />, app)
 
     fireEvent.click(screen.getByTestId('org-ia-underway'))
 
@@ -76,13 +82,13 @@ describe('OrgInitiativeAgreementsCard (BCeID, #4893)', () => {
     })
   })
 
-  it('View all clears any stored status filter', () => {
+  test('View all clears any stored status filter', ({ render, app }) => {
     useOrgInitiativeAgreementCounts.mockReturnValue({
       data: { underway: 1, completed: 0 },
       isLoading: false
     })
     sessionStorage.setItem(FILTER_KEYS.INITIATIVE_AGREEMENTS_GRID, '{}')
-    render(<OrgInitiativeAgreementsCard />, { wrapper })
+    render(<OrgInitiativeAgreementsCard />, app)
 
     fireEvent.click(screen.getByTestId('org-ia-view-all'))
 
@@ -92,19 +98,22 @@ describe('OrgInitiativeAgreementsCard (BCeID, #4893)', () => {
     expect(navigate).toHaveBeenCalledWith(ROUTES.INITIATIVE_AGREEMENTS.LIST)
   })
 
-  it('says so when the organization has no agreements, and hides zero counts', () => {
+  test('says so when the organization has no agreements, and hides zero counts', ({
+    render,
+    app
+  }) => {
     useOrgInitiativeAgreementCounts.mockReturnValue({
       data: { underway: 0, completed: 0 },
       isLoading: false
     })
-    render(<OrgInitiativeAgreementsCard />, { wrapper })
+    render(<OrgInitiativeAgreementsCard />, app)
 
     expect(screen.getByTestId('org-ia-none')).toBeInTheDocument()
     expect(screen.queryByTestId('org-ia-underway')).not.toBeInTheDocument()
     expect(screen.getByTestId('org-ia-view-all')).toBeInTheDocument()
   })
 
-  it('renders nothing when the module flag is off', () => {
+  test('renders nothing when the module flag is off', ({ render, app }) => {
     CONFIG.feature_flags = {
       ...CONFIG.feature_flags,
       initiativeAgreements: false
@@ -113,7 +122,7 @@ describe('OrgInitiativeAgreementsCard (BCeID, #4893)', () => {
       data: { underway: 3, completed: 1 },
       isLoading: false
     })
-    const { container } = render(<OrgInitiativeAgreementsCard />, { wrapper })
+    const { container } = render(<OrgInitiativeAgreementsCard />, app)
 
     expect(container).toBeEmptyDOMElement()
   })

@@ -1,5 +1,6 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { ActionsRenderer, ValidationRenderer2 } from './components'
+import { ActionsRenderer } from './components/Renderers/ActionsRenderer'
+import { ValidationRenderer2 } from './components/Renderers/ValidationRenderer2'
 import colors from '@/themes/base/colors'
 
 export const validation = {

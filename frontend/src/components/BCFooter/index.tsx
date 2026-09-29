@@ -1,8 +1,9 @@
-import { Link } from '@mui/material'
+import Link from '@mui/material/Link'
 import { Link as RouterLink } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import { GitHub, NewReleases } from '@mui/icons-material'
+import GitHub from '@mui/icons-material/GitHub'
+import NewReleases from '@mui/icons-material/NewReleases'
 import typography from '@/themes/base/typography'
 
 type FooterLink = {

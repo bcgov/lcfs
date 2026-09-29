@@ -1,8 +1,10 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
+
+import { describe, expect, vi, beforeEach } from 'vitest'
+
 import { DesignatedActionsGrid } from '../DesignatedActionsGrid'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -49,8 +51,8 @@ describe('DesignatedActionsGrid', () => {
     })
   })
 
-  it('feeds the grid the paginated designated actions', () => {
-    render(<DesignatedActionsGrid initiativeAgreementId="5" />, { wrapper })
+  test('feeds the grid the paginated designated actions', ({ render, app }) => {
+    render(<DesignatedActionsGrid initiativeAgreementId="5" />, app)
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     expect(mockActions).toHaveBeenCalledWith(
@@ -62,8 +64,11 @@ describe('DesignatedActionsGrid', () => {
     expect(props.gridKey).toBe('designated-actions-grid')
   })
 
-  it('builds the wireframe ID and credits formats into the column defs', () => {
-    render(<DesignatedActionsGrid initiativeAgreementId="5" />, { wrapper })
+  test('builds the wireframe ID and credits formats into the column defs', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionsGrid initiativeAgreementId="5" />, app)
 
     const props = gridProps.mock.calls[0][0]
     const cols = props.columnDefs

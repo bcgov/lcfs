@@ -1,8 +1,12 @@
 // @ts-nocheck
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
 import PropTypes from 'prop-types'
-import { Autocomplete, TextField, Box, Checkbox } from '@mui/material'
-import { CheckBox, CheckBoxOutlineBlank } from '@mui/icons-material'
+import Autocomplete from '@mui/material/Autocomplete'
+import TextField from '@mui/material/TextField'
+import Box from '@mui/material/Box'
+import Checkbox from '@mui/material/Checkbox'
+import CheckBox from '@mui/icons-material/CheckBox'
+import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank'
 
 const icon = <CheckBoxOutlineBlank fontSize="small" />
 const checkedIcon = <CheckBox fontSize="small" />

@@ -1,4 +1,5 @@
-import { Alert, CircularProgress } from '@mui/material'
+import Alert from '@mui/material/Alert'
+import CircularProgress from '@mui/material/CircularProgress'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 

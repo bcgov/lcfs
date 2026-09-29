@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
+import { screen, fireEvent } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import * as organizationHooks from '@/hooks/useOrganization'
 
 // Mock hooks
@@ -74,101 +74,119 @@ describe('OrgDetailsCard', () => {
     vi.clearAllMocks()
   })
 
-  const renderCard = async () => {
+  const renderCard = async (render, providers) => {
     // Dynamic import to allow vi.mock to take effect
     const { default: OrgDetailsCard } = await import(
       '@/views/Dashboard/components/cards/bceid/OrgDetailsCard'
     )
-    return render(<OrgDetailsCard />, { wrapper })
+    return render(<OrgDetailsCard />, providers)
   }
 
-  it('renders a loading state while organization data is fetching', async () => {
+  test('renders a loading state while organization data is fetching', async ({
+    render,
+    theme,
+    router
+  }) => {
     vi.mocked(organizationHooks.useOrganization).mockReturnValue({
       data: undefined,
       isLoading: true
     })
-    await renderCard()
+    await renderCard(render, [theme, router])
     expect(screen.getByTestId('loading')).toBeInTheDocument()
     expect(screen.getByText('Loading organization…')).toBeInTheDocument()
   })
 
-  it('renders the widget card with the organisation details title', async () => {
+  test('renders the widget card with the organisation details title', async ({
+    render,
+    theme,
+    router
+  }) => {
     vi.mocked(organizationHooks.useOrganization).mockReturnValue({
       data: mockOrgData,
       isLoading: false
     })
-    await renderCard()
+    await renderCard(render, [theme, router])
     expect(screen.getByTestId('widget-title')).toHaveTextContent(
       'Organization Details'
     )
   })
 
-  it('renders the organisation name', async () => {
+  test('renders the organisation name', async ({ render, theme, router }) => {
     vi.mocked(organizationHooks.useOrganization).mockReturnValue({
       data: mockOrgData,
       isLoading: false
     })
-    await renderCard()
+    await renderCard(render, [theme, router])
     expect(screen.getByText('Acme Fuels Ltd.')).toBeInTheDocument()
   })
 
-  it('renders street address', async () => {
+  test('renders street address', async ({ render, theme, router }) => {
     vi.mocked(organizationHooks.useOrganization).mockReturnValue({
       data: mockOrgData,
       isLoading: false
     })
-    await renderCard()
+    await renderCard(render, [theme, router])
     expect(screen.getByText('100 Industrial Way')).toBeInTheDocument()
   })
 
-  it('renders city and province', async () => {
+  test('renders city and province', async ({ render, theme, router }) => {
     vi.mocked(organizationHooks.useOrganization).mockReturnValue({
       data: mockOrgData,
       isLoading: false
     })
-    await renderCard()
+    await renderCard(render, [theme, router])
     expect(screen.getByText(/Victoria.*BC/)).toBeInTheDocument()
   })
 
-  it('renders phone and email', async () => {
+  test('renders phone and email', async ({ render, theme, router }) => {
     vi.mocked(organizationHooks.useOrganization).mockReturnValue({
       data: mockOrgData,
       isLoading: false
     })
-    await renderCard()
+    await renderCard(render, [theme, router])
     expect(screen.getByText('250-555-0100')).toBeInTheDocument()
     expect(screen.getByText('info@acme.ca')).toBeInTheDocument()
   })
 
-  it('renders a "Users" navigation link', async () => {
+  test('renders a "Users" navigation link', async ({
+    render,
+    theme,
+    router
+  }) => {
     vi.mocked(organizationHooks.useOrganization).mockReturnValue({
       data: mockOrgData,
       isLoading: false
     })
-    await renderCard()
+    await renderCard(render, [theme, router])
     expect(screen.getByText('Users')).toBeInTheDocument()
   })
 
-  it('renders the external BCeID link with icon', async () => {
+  test('renders the external BCeID link with icon', async ({
+    render,
+    theme,
+    router
+  }) => {
     vi.mocked(organizationHooks.useOrganization).mockReturnValue({
       data: mockOrgData,
       isLoading: false
     })
-    await renderCard()
+    await renderCard(render, [theme, router])
     expect(screen.getByText('Create New BCeID User')).toBeInTheDocument()
     expect(screen.getByTestId('external-icon')).toBeInTheDocument()
   })
 
-  it('opens bceid.ca in a new tab when the external link is clicked', async () => {
+  test('opens bceid.ca in a new tab when the external link is clicked', async ({
+    render,
+    theme,
+    router
+  }) => {
     vi.mocked(organizationHooks.useOrganization).mockReturnValue({
       data: mockOrgData,
       isLoading: false
     })
-    const openSpy = vi
-      .spyOn(window, 'open')
-      .mockImplementation(() => null)
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
 
-    await renderCard()
+    await renderCard(render, [theme, router])
     fireEvent.click(screen.getByText('Create New BCeID User'))
 
     expect(openSpy).toHaveBeenCalledWith(

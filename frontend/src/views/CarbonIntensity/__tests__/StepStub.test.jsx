@@ -1,9 +1,9 @@
 import React from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, vi } from 'vitest'
+import { cleanup, screen } from '@testing-library/react'
 
 import { StepStub } from '@/views/CarbonIntensity/components/StepStub'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -12,8 +12,11 @@ vi.mock('react-i18next', () => ({
 describe('StepStub', () => {
   afterEach(cleanup)
 
-  it('renders the title key and the coming-soon alert', () => {
-    render(<StepStub titleKey="carbonIntensity:steps.step2" />, { wrapper })
+  test('renders the title key and the coming-soon alert', ({
+    render,
+    theme
+  }) => {
+    render(<StepStub titleKey="carbonIntensity:steps.step2" />, [theme])
     expect(screen.getByText('carbonIntensity:steps.step2')).toBeInTheDocument()
     expect(
       screen.getByText('carbonIntensity:stepStub.comingSoon')

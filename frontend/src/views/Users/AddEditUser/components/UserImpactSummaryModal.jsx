@@ -1,14 +1,15 @@
-import {
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  IconButton,
-  Link as MuiLink,
-  CircularProgress,
-} from '@mui/material'
-import { ArrowForward, Close, InfoOutlined, WarningAmberOutlined } from '@mui/icons-material'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
+import Divider from '@mui/material/Divider'
+import IconButton from '@mui/material/IconButton'
+import MuiLink from '@mui/material/Link'
+import CircularProgress from '@mui/material/CircularProgress'
+import ArrowForward from '@mui/icons-material/ArrowForward'
+import Close from '@mui/icons-material/Close'
+import InfoOutlined from '@mui/icons-material/InfoOutlined'
+import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined'
 import { Link as RouterLink } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { useMemo } from 'react'

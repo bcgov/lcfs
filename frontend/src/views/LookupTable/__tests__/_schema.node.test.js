@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { lookupTableColumnDefs, DEFAULT_QUANTITY } from '../_schema'
+
+vi.mock('@/components/BCDataGrid/components', () => ({
+  BCSelectFloatingFilter: { displayName: 'BCSelectFloatingFilter' }
+}))
 
 describe('LookupTable schema', () => {
   it('defines expected columns in order', () => {

@@ -6,10 +6,18 @@ import {
   useGetFuelSuppliesList,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
-import { wrapper } from '@/tests/utils/wrapper'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import { AddEditFuelSupplies } from '../AddEditFuelSupplies'
+
+let render
+const fixtureOptions = undefined
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [theme], options)
+    return fn()
+  })
 
 // Mock react-router-dom hooks
 const mockUseLocation = vi.fn()
@@ -416,12 +424,12 @@ describe('AddEditFuelSupplies', () => {
   })
 
   it('renders the component', () => {
-    render(<AddEditFuelSupplies />, { wrapper })
+    render(<AddEditFuelSupplies />, { fixtureOptions })
     expect(screen.getByText('fuelSupply:fuelSupplyTitle')).toBeInTheDocument()
   })
 
   it('initializes with at least one row when there are no existing fuel supplies', () => {
-    render(<AddEditFuelSupplies />, { wrapper })
+    render(<AddEditFuelSupplies />, { fixtureOptions })
     const rows = screen.getAllByTestId('grid-row')
     expect(rows.length).toBe(1)
   })
@@ -437,7 +445,7 @@ describe('AddEditFuelSupplies', () => {
       isLoading: false
     })
 
-    render(<AddEditFuelSupplies />, { wrapper })
+    render(<AddEditFuelSupplies />, { fixtureOptions })
     const rows = await screen.findAllByTestId('grid-row')
     expect(rows.length).toBe(3) // 2 existing + 1 empty row
   })
@@ -453,7 +461,7 @@ describe('AddEditFuelSupplies', () => {
       isLoading: false
     })
 
-    render(<AddEditFuelSupplies />, { wrapper })
+    render(<AddEditFuelSupplies />, { fixtureOptions })
     expect(screen.getByText('fuelSupply:fuelSupplyTitle')).toBeInTheDocument()
   })
 
@@ -468,7 +476,7 @@ describe('AddEditFuelSupplies', () => {
       isLoading: false
     })
 
-    render(<AddEditFuelSupplies />, { wrapper })
+    render(<AddEditFuelSupplies />, { fixtureOptions })
     expect(screen.getByText('fuelSupply:fuelSupplyTitle')).toBeInTheDocument()
   })
 
@@ -483,7 +491,7 @@ describe('AddEditFuelSupplies', () => {
       isLoading: true
     })
 
-    render(<AddEditFuelSupplies />, { wrapper })
+    render(<AddEditFuelSupplies />, { fixtureOptions })
     expect(
       screen.queryByText('fuelSupply:fuelSupplyTitle')
     ).not.toBeInTheDocument()
@@ -496,7 +504,7 @@ describe('AddEditFuelSupplies', () => {
       isFetched: false
     })
 
-    render(<AddEditFuelSupplies />, { wrapper })
+    render(<AddEditFuelSupplies />, { fixtureOptions })
     expect(
       screen.queryByText('fuelSupply:fuelSupplyTitle')
     ).not.toBeInTheDocument()
@@ -508,7 +516,7 @@ describe('AddEditFuelSupplies', () => {
       isLoading: true
     })
 
-    render(<AddEditFuelSupplies />, { wrapper })
+    render(<AddEditFuelSupplies />, { fixtureOptions })
     expect(
       screen.queryByText('fuelSupply:fuelSupplyTitle')
     ).not.toBeInTheDocument()
@@ -523,7 +531,7 @@ describe('AddEditFuelSupplies', () => {
       }
     })
 
-    render(<AddEditFuelSupplies />, { wrapper })
+    render(<AddEditFuelSupplies />, { fixtureOptions })
     expect(screen.getByText('fuelSupply:fuelSupplyTitle')).toBeInTheDocument()
   })
 
@@ -533,7 +541,7 @@ describe('AddEditFuelSupplies', () => {
       compliancePeriod: '2024' // >= NEW_REGULATION_YEAR (2023)
     })
 
-    render(<AddEditFuelSupplies />, { wrapper })
+    render(<AddEditFuelSupplies />, { fixtureOptions })
     expect(screen.getByText('fuelSupply:fuelSupplyNote')).toBeInTheDocument()
   })
 
@@ -542,7 +550,7 @@ describe('AddEditFuelSupplies', () => {
       const { handleFuelTypeChange, updateGridColumnsVisibility } =
         await import('../_utils')
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
 
       await waitFor(() => {
         const button = screen.getByTestId('test-cell-value-changed')
@@ -557,7 +565,7 @@ describe('AddEditFuelSupplies', () => {
       const { handleFuelCategoryChange, updateGridColumnsVisibility } =
         await import('../_utils')
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
 
       await waitFor(() => {
         const button = screen.getByTestId('test-cell-value-changed-category')
@@ -571,11 +579,9 @@ describe('AddEditFuelSupplies', () => {
 
   describe('onCellEditingStopped', () => {
     it('handles cell editing by calling utility function', async () => {
-      const { processCellEditingComplete } = await import(
-        '../_utils'
-      )
+      const { processCellEditingComplete } = await import('../_utils')
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
 
       await waitFor(() => {
         const button = screen.getByTestId('test-cell-editing-stopped')
@@ -586,7 +592,7 @@ describe('AddEditFuelSupplies', () => {
     })
 
     it('skips processing when old value equals new value', async () => {
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
 
       // Mock a case where old and new values are the same
       const gridEditor = screen.getByTestId('bc-grid-editor')
@@ -610,7 +616,7 @@ describe('AddEditFuelSupplies', () => {
     it('handles delete action', async () => {
       const { handleScheduleDelete } = await import('@/utils/schedules.js')
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
 
       await waitFor(() => {
         const button = screen.getByTestId('test-action-delete')
@@ -632,7 +638,7 @@ describe('AddEditFuelSupplies', () => {
       const { handleScheduleDelete } = await import('@/utils/schedules.js')
       handleScheduleDelete.mockRejectedValue(new Error('Delete failed'))
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
 
       await waitFor(() => {
         const button = screen.getByTestId('test-action-delete')
@@ -646,7 +652,7 @@ describe('AddEditFuelSupplies', () => {
 
   describe('handleNavigateBack', () => {
     it('navigates back to report view with success message', async () => {
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
 
       await waitFor(() => {
         const saveButton = screen.getByTestId('save-button')
@@ -675,7 +681,7 @@ describe('AddEditFuelSupplies', () => {
         isLoading: false
       })
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
       const rows = screen.getAllByTestId('grid-row')
       expect(rows.length).toBe(3) // 2 existing + 1 empty
     })
@@ -704,13 +710,13 @@ describe('AddEditFuelSupplies', () => {
         isLoading: false
       })
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
       const rows = screen.getAllByTestId('grid-row')
       expect(rows.length).toBe(2) // 1 existing + 1 empty
     })
 
     it('updates grid options and column definitions when dependencies change', () => {
-      const { rerender } = render(<AddEditFuelSupplies />, { wrapper })
+      const { rerender } = render(<AddEditFuelSupplies />, { fixtureOptions })
 
       vi.mocked(useFuelSupplyOptions).mockReturnValue({
         data: { fuelTypes: [{ fuelType: 'NewFuel' }] },
@@ -725,7 +731,7 @@ describe('AddEditFuelSupplies', () => {
 
   describe('memoized values', () => {
     it('recalculates processedRowData when dependencies change', () => {
-      const { rerender } = render(<AddEditFuelSupplies />, { wrapper })
+      const { rerender } = render(<AddEditFuelSupplies />, { fixtureOptions })
 
       vi.mocked(useGetFuelSuppliesList).mockReturnValue({
         data: { fuelSupplies: [{ fuelSupplyId: 1, fuelType: 'NewFuel' }] },
@@ -737,7 +743,7 @@ describe('AddEditFuelSupplies', () => {
     })
 
     it('recalculates columnVisibility when dependencies change', () => {
-      const { rerender } = render(<AddEditFuelSupplies />, { wrapper })
+      const { rerender } = render(<AddEditFuelSupplies />, { fixtureOptions })
 
       vi.mocked(useFuelSupplyOptions).mockReturnValue({
         data: { fuelTypes: [{ fuelType: 'NewFuel' }] },
@@ -752,7 +758,7 @@ describe('AddEditFuelSupplies', () => {
 
   describe('grid interactions', () => {
     it('starts editing on the last row when grid is ready', async () => {
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
 
       // onGridReady should be called automatically
       await waitFor(() => {
@@ -761,7 +767,7 @@ describe('AddEditFuelSupplies', () => {
     })
 
     it('auto-sizes columns when data is first rendered', async () => {
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
 
       await waitFor(() => {
         expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
@@ -777,7 +783,7 @@ describe('AddEditFuelSupplies', () => {
         isFetched: true
       })
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
@@ -787,7 +793,7 @@ describe('AddEditFuelSupplies', () => {
         isLoading: false
       })
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
@@ -797,7 +803,7 @@ describe('AddEditFuelSupplies', () => {
         isLoading: false
       })
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
@@ -807,7 +813,7 @@ describe('AddEditFuelSupplies', () => {
         isLoading: false
       })
 
-      render(<AddEditFuelSupplies />, { wrapper })
+      render(<AddEditFuelSupplies />, { fixtureOptions })
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
   })
