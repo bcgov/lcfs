@@ -26,13 +26,13 @@ This page provides guidance on how to find version information for the LCFS appl
 
 *   **Apache NiFi Image**: Specified in `etl/docker-compose.yml` (e.g., `apache/nifi:1.27.0`).
 *   **Apache NiFi Registry Image**: Specified in `etl/docker-compose.yml` (e.g., `apache/nifi-registry:1.27.0`).
-*   **Zookeeper Image**: Specified in `etl/docker-compose.yml` (e.g., `bitnami/zookeeper:3.9.2-debian-12-r14`).
+*   **Zookeeper Image**: Specified in `etl/docker-compose.yml` (e.g., `zookeeper:3.9.5`).
 *   **PostgreSQL JDBC Driver**: The specific JAR file version is usually included in `etl/jdbc_drivers/` (e.g., `postgresql-42.7.3.jar`) and mounted into the NiFi container.
 
 ## 5. Infrastructure Service Versions (from `docker-compose.yml` for local dev)
 
 *   **PostgreSQL (LCFS Main DB)**: e.g., `postgres:14.2` (from root `docker-compose.yml`).
-*   **Redis**: e.g., `bitnami/redis:7.4.2` (from root `docker-compose.yml`).
+*   **Redis**: e.g., `redis:8.2.1` (from root `docker-compose.yml`).
 *   **RabbitMQ**: e.g., `rabbitmq:3-management` (from root `docker-compose.yml`).
 *   **RustFS**: e.g., `rustfs/rustfs:1.0.0` (from root `docker-compose.yml`).
 *   **OpenShift**: The version of the OpenShift Container Platform being used for deployments (Dev, Test, Prod). This is managed by the platform team.

@@ -26,7 +26,7 @@ This document lists the key software, services, frameworks, and libraries that t
     *   **Driver**: `asyncpg` (for asyncio with SQLAlchemy).
     *   **ORM**: SQLAlchemy (`^2.0.0`).
     *   **Migrations**: Alembic (`^1.12.1`), `alembic-postgresql-enum`.
-*   **Caching**: Redis (`bitnami/redis:7.4.2` via Docker image).
+*   **Caching**: Redis (`redis:8.2.1` via Docker image).
     *   **Client**: `redis` Python library (`^4.4.2`).
     *   **Integration**: `fastapi-cache2` (`^0.2.1`).
 *   **Message Queuing**: RabbitMQ (`rabbitmq:3-management` via Docker image).
@@ -68,7 +68,7 @@ This document lists the key software, services, frameworks, and libraries that t
 
 *   **Data Flow Automation**: Apache NiFi (`1.27.0`).
 *   **NiFi Flow Version Control**: Apache NiFi Registry (`1.27.0`).
-*   **NiFi Configuration Management**: Apache Zookeeper (`bitnami/zookeeper:3.9.2-debian-12-r14`).
+*   **NiFi Configuration Management**: Apache Zookeeper (`zookeeper:3.9.5`).
 *   **Source Database (ETL context)**: PostgreSQL (`14.2`, named `tfrs`).
 *   **JDBC Drivers**: PostgreSQL JDBC Driver (`postgresql-42.7.3.jar` for NiFi).
 
