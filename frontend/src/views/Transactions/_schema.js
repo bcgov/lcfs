@@ -7,10 +7,8 @@ import {
   parseTransactionIdNumber
 } from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/grid/cellRenderers'
-import {
-  BCSelectFloatingFilter,
-  BCDateFloatingFilter
-} from '@/components/BCDataGrid/components'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
 export const transactionsColDefs = (t) => [

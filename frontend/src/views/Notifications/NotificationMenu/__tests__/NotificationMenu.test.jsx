@@ -39,9 +39,12 @@ vi.mock('@/themes/base/breakpoints', () => ({
   }
 }))
 
-vi.mock('@mui/material', () => ({
-  AppBar: ({ children, ...props }) => <div data-test="app-bar" {...props}>{children}</div>,
-  Tabs: ({ children, onChange, ...props }) => (
+vi.mock('@mui/material/AppBar', () => ({
+    default: ({ children, ...props }) => <div data-test="app-bar" {...props}>{children}</div>
+}))
+
+vi.mock('@mui/material/Tabs', () => ({
+    default: ({ children, onChange, ...props }) => (
     <div 
       data-test="tabs" 
       {...props}
@@ -49,8 +52,11 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </div>
-  ),
-  Tab: ({ label, ...props }) => <button data-test="tab" {...props}>{label}</button>
+  )
+}))
+
+vi.mock('@mui/material/Tab', () => ({
+    default: ({ label, ...props }) => <button data-test="tab" {...props}>{label}</button>
 }))
 
 vi.mock('../components/NotificationTabPanel', () => ({

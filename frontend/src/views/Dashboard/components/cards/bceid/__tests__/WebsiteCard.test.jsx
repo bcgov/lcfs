@@ -21,8 +21,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Box: ({ children, ...props }) => (
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children, ...props }) => (
     <div data-test="box" data-props={JSON.stringify(props)}>
       {children}
     </div>

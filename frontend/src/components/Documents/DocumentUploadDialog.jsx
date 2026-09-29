@@ -1,11 +1,16 @@
 import BCModal from '@/components/BCModal'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 import DocumentTable from '@/components/Documents/DocumentTable.jsx'
 
 function DocumentUploadDialog({ open, close, parentType, parentID }) {
-  const { t } = useTranslation(['report', 'chargingSite', 'carbonIntensity'])
+  const { t } = useTranslation([
+    'report',
+    'chargingSite',
+    'carbonIntensity',
+    'initiativeAgreement'
+  ])
   const onClose = () => {
     close()
   }
@@ -23,6 +28,18 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
           title: t('carbonIntensity:documents.uploadTitle'),
           documentLabel: t('carbonIntensity:documents.documentLabel'),
           returnButton: t('carbonIntensity:documents.returnButton')
+        }
+      case 'initiativeAgreement':
+        return {
+          title: t('initiativeAgreement:documents.uploadTitle'),
+          documentLabel: t('initiativeAgreement:documents.documentLabel'),
+          returnButton: t('initiativeAgreement:documents.returnButton')
+        }
+      case 'designatedAction':
+        return {
+          title: t('initiativeAgreement:actionDocuments.uploadTitle'),
+          documentLabel: t('initiativeAgreement:actionDocuments.documentLabel'),
+          returnButton: t('initiativeAgreement:actionDocuments.returnButton')
         }
       case 'compliance_report':
       default:
