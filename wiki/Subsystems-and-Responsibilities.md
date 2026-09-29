@@ -99,7 +99,7 @@ This document outlines the major subsystems of the LCFS application, their prima
 ## 4. Cache (`redis` service)
 
 *   **Description**: In-memory data store for caching.
-*   **Technology**: Redis (`bitnami/redis:7.4.2` image).
+*   **Technology**: Redis (`redis:8.2.1` image).
 *   **Responsibilities**: Storing frequently accessed data to reduce database load and improve API response times.
 *   **Integration**: Used by the `backend` via `fastapi-cache2`.
 *   **Configuration (from root `docker-compose.yml`)**: Port `6379`, Data Volume `redis_data`.
