@@ -14,15 +14,15 @@ case in production after the equivalent data fix. Nothing references
 energy_effectiveness_ratio by foreign key, so the rows are replaced outright.
 
 Revision ID: b1c3e5a7d9f2
-Revises: aee96beadb45
-Create Date: 2026-09-22 10:00:00.000000
+Revises: e1f2a3b4c5d6
+Create Date: 2026-09-29 10:00:00.000000
 """
 
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "b1c3e5a7d9f2"
-down_revision = "aee96beadb45"
+down_revision = "e1f2a3b4c5d6"
 branch_labels = None
 depends_on = None
 
