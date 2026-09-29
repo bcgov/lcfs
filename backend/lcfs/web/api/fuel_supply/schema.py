@@ -239,7 +239,6 @@ class FuelSupplyAnalyticsSchema(BaseSchema):
     selected_year_summary: dict = {}
     fuel_type_yoy: List[dict] = []
     compliance_unit_credit_debit_trend: List[dict] = []
-    compliance_units_per_unit_trend: List[dict] = []
     fuel_type_volume_trend: List[dict] = []
     top_fuel_codes: List[dict] = []
 
