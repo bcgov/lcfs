@@ -6,8 +6,8 @@ import {
   AccessibleHeader,
   BCPagination
 } from '@/components/BCDataGrid/components'
-import '@ag-grid-community/styles/ag-grid.css'
-import '@ag-grid-community/styles/ag-theme-material.css'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-material.css'
 import { FilterToolbar } from '@/components/FilterToolbar'
 import { createAgGridFilterPills } from '@/components/FilterToolbar/filterUtils'
 import {

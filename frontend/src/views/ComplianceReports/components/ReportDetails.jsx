@@ -1,13 +1,11 @@
 import BCTypography from '@/components/BCTypography'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Chip,
-  CircularProgress,
-  IconButton,
-  Link
-} from '@mui/material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
+import IconButton from '@mui/material/IconButton'
+import Link from '@mui/material/Link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
@@ -48,13 +46,11 @@ import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTrans
 import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog.jsx'
 import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
-import {
-  DeleteOutline,
-  Edit,
-  ExpandMore,
-  InfoOutlined,
-  NewReleasesOutlined
-} from '@mui/icons-material'
+import DeleteOutline from '@mui/icons-material/DeleteOutline'
+import Edit from '@mui/icons-material/Edit'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import InfoOutlined from '@mui/icons-material/InfoOutlined'
+import NewReleasesOutlined from '@mui/icons-material/NewReleasesOutlined'
 
 const chipTypeMap = {
   deleted: 'warning',

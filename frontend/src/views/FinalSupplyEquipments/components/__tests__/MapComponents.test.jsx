@@ -3,7 +3,8 @@ import { render, act } from '@testing-library/react'
 import { createPortal } from 'react-dom'
 import { useMap, Marker, Popup, TileLayer } from 'react-leaflet'
 import { Control, DomEvent, DomUtil } from 'leaflet'
-import { Paper, CircularProgress } from '@mui/material'
+import Paper from '@mui/material/Paper'
+import CircularProgress from '@mui/material/CircularProgress'
 import BCTypography from '@/components/BCTypography'
 import {
   MapControl,
@@ -37,9 +38,12 @@ vi.mock('leaflet', () => ({
   }
 }))
 
-vi.mock('@mui/material', () => ({
-  Paper: ({ children }) => <div data-test="paper">{children}</div>,
-  CircularProgress: () => <div data-test="circular-progress" />
+vi.mock('@mui/material/Paper', () => ({
+    default: ({ children }) => <div data-test="paper">{children}</div>
+}))
+
+vi.mock('@mui/material/CircularProgress', () => ({
+    default: () => <div data-test="circular-progress" />
 }))
 
 vi.mock('@/components/BCTypography', () => ({

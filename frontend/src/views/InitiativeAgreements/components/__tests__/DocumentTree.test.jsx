@@ -1,8 +1,10 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, screen } from '@testing-library/react'
+
+import { describe, expect, vi, beforeEach } from 'vitest'
+
 import { DocumentTree } from '../DocumentTree'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -86,7 +88,7 @@ describe('DocumentTree', () => {
     mockTree.mockReturnValue({ data: tree, isLoading: false })
   })
 
-  it('survives the transition from loading to loaded', () => {
+  test('survives the transition from loading to loaded', ({ render, app }) => {
     // Every hook must run on the loading render too. A hook placed after
     // the loading return renders fine in isolation and then throws React
     // #310 the moment the data arrives — which is how the deployed
@@ -94,7 +96,7 @@ describe('DocumentTree', () => {
     mockTree.mockReturnValue({ data: undefined, isLoading: true })
     const { rerender } = render(
       <DocumentTree parentType="designatedAction" parentID="9" />,
-      { wrapper }
+      app
     )
     expect(screen.queryByText('Permits & Approvals')).not.toBeInTheDocument()
 
@@ -105,10 +107,8 @@ describe('DocumentTree', () => {
     expect(screen.getByText('Permits & Approvals')).toBeInTheDocument()
   })
 
-  it('renders nested folders with counts and files', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('renders nested folders with counts and files', ({ render, app }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     expect(screen.getByText('Permits & Approvals')).toBeInTheDocument()
     expect(screen.getByText('(1)')).toBeInTheDocument()
@@ -117,18 +117,14 @@ describe('DocumentTree', () => {
     expect(screen.getByText('root-letter.pdf')).toBeInTheDocument()
   })
 
-  it('downloads a file from its own button', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('downloads a file from its own button', ({ render, app }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
     fireEvent.click(screen.getByTestId('tree-file-download-88'))
     expect(mockDownload).toHaveBeenCalledWith(88)
   })
 
-  it('lays each file row out in aligned columns', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('lays each file row out in aligned columns', ({ render, app }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     const row = screen.getByTestId('tree-file-88')
     // Name, then size, organisation and date in their own lanes, so the
@@ -138,14 +134,17 @@ describe('DocumentTree', () => {
     expect(row).toHaveTextContent('ORG1')
   })
 
-  it('titles the section and offers folder creation in its header', () => {
+  test('titles the section and offers folder creation in its header', ({
+    render,
+    app
+  }) => {
     render(
       <DocumentTree
         parentType="designatedAction"
         parentID="9"
         title="Evidence submissions"
       />,
-      { wrapper }
+      app
     )
 
     expect(screen.getByTestId('document-tree-title')).toHaveTextContent(
@@ -154,10 +153,8 @@ describe('DocumentTree', () => {
     expect(screen.getByTestId('new-folder-button')).toBeInTheDocument()
   })
 
-  it('renames a file by double-clicking its name', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('renames a file by double-clicking its name', ({ render, app }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.doubleClick(screen.getByText('permit.pdf'))
     const input = screen.getByTestId('folder-name-input')
@@ -171,10 +168,11 @@ describe('DocumentTree', () => {
     })
   })
 
-  it('offers rename from a real button, not only a double-click', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('offers rename from a real button, not only a double-click', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     // Double-click is a mouse shortcut; a keyboard user needs a control.
     fireEvent.click(screen.getByTestId('tree-file-rename-88'))
@@ -188,10 +186,11 @@ describe('DocumentTree', () => {
     })
   })
 
-  it('does not rename when the name comes back unchanged', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('does not rename when the name comes back unchanged', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.doubleClick(screen.getByText('permit.pdf'))
     fireEvent.keyDown(screen.getByTestId('folder-name-input'), { key: 'Enter' })
@@ -199,17 +198,21 @@ describe('DocumentTree', () => {
     expect(mockRename).not.toHaveBeenCalled()
   })
 
-  it('leaves the name alone where renaming is not enabled', () => {
-    render(<DocumentTree parentType="initiativeAgreement" parentID="9" />, {
-      wrapper
-    })
+  test('leaves the name alone where renaming is not enabled', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="initiativeAgreement" parentID="9" />, app)
 
     fireEvent.doubleClick(screen.getByText('permit.pdf'))
 
     expect(screen.queryByTestId('folder-name-input')).not.toBeInTheDocument()
   })
 
-  it('prefers the display name over the stored file name', () => {
+  test('prefers the display name over the stored file name', ({
+    render,
+    app
+  }) => {
     mockTree.mockReturnValue({
       data: {
         ...tree,
@@ -219,18 +222,17 @@ describe('DocumentTree', () => {
       },
       isLoading: false
     })
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     expect(screen.getByText('Cover letter.pdf')).toBeInTheDocument()
     expect(screen.queryByText('root-letter.pdf')).not.toBeInTheDocument()
   })
 
-  it('creates a folder inline with Enter and cancels with Escape', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('creates a folder inline with Enter and cancels with Escape', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('new-folder-button'))
     const input = screen.getByTestId('folder-name-input')
@@ -248,10 +250,8 @@ describe('DocumentTree', () => {
     expect(mockCreate).toHaveBeenCalledTimes(1)
   })
 
-  it('renames a folder from its menu', async () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('renames a folder from its menu', async ({ render, app }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
     fireEvent.click(screen.getByTestId('menu-rename'))
@@ -264,10 +264,11 @@ describe('DocumentTree', () => {
     expect(mockUpdate).toHaveBeenCalledWith({ folderId: 12, name: 'Approvals' })
   })
 
-  it('a rename is abandoned by clicking away, keeping the original name', async () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('a rename is abandoned by clicking away, keeping the original name', async ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
     fireEvent.click(screen.getByTestId('menu-rename'))
@@ -280,10 +281,11 @@ describe('DocumentTree', () => {
     expect(screen.getByText('Permits & Approvals')).toBeInTheDocument()
   })
 
-  it('moves a file in a folder to the top level from its own button', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('moves a file in a folder to the top level from its own button', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('tree-file-to-root-88'))
 
@@ -295,10 +297,11 @@ describe('DocumentTree', () => {
     expect(screen.queryByTestId('tree-file-to-root-90')).not.toBeInTheDocument()
   })
 
-  it('moves a nested folder to the top level from its menu, and offers nothing for a root folder', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('moves a nested folder to the top level from its menu, and offers nothing for a root folder', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     // The root folder's menu has no such item.
     fireEvent.click(screen.getByTestId('folder-menu-12'))
@@ -315,10 +318,11 @@ describe('DocumentTree', () => {
     )
   })
 
-  it('asks before sending a folder and its files to the bin', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('asks before sending a folder and its files to the bin', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
     fireEvent.click(screen.getByTestId('menu-delete'))
@@ -344,24 +348,28 @@ describe('DocumentTree', () => {
     })
   })
 
-  it('offers no subfolder option by default — one level, per the PO', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('offers no subfolder option by default — one level, per the PO', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
 
     expect(screen.queryByTestId('menu-new-subfolder')).not.toBeInTheDocument()
   })
 
-  it('creates a subfolder under the menu folder when nesting is allowed', async () => {
+  test('creates a subfolder under the menu folder when nesting is allowed', async ({
+    render,
+    app
+  }) => {
     render(
       <DocumentTree
         parentType="designatedAction"
         parentID="9"
         allowSubfolders
       />,
-      { wrapper }
+      app
     )
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
@@ -376,10 +384,8 @@ describe('DocumentTree', () => {
     })
   })
 
-  it('uploads into a folder from the menu', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('uploads into a folder from the menu', ({ render, app }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
     fireEvent.click(screen.getByTestId('menu-upload-here'))
@@ -394,10 +400,11 @@ describe('DocumentTree', () => {
     )
   })
 
-  it('refuses a file the server would reject, naming it and why', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('refuses a file the server would reject, naming it and why', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
     fireEvent.click(screen.getByTestId('menu-upload-here'))
@@ -416,10 +423,11 @@ describe('DocumentTree', () => {
     )
   })
 
-  it('uploads the good files and reports only the bad one', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('uploads the good files and reports only the bad one', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
     fireEvent.click(screen.getByTestId('menu-upload-here'))
@@ -442,12 +450,13 @@ describe('DocumentTree', () => {
     )
   })
 
-  it('shows an upload in flight on the folder it was dropped on', () => {
+  test('shows an upload in flight on the folder it was dropped on', ({
+    render,
+    app
+  }) => {
     // Held open: the indicator must survive until the mutation settles.
     mockUpload.mockImplementation(() => {})
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     const file = new File(['x'], 'evidence.pdf', { type: 'application/pdf' })
     fireEvent.drop(screen.getByTestId('tree-folder-12'), {
@@ -459,11 +468,12 @@ describe('DocumentTree', () => {
     expect(screen.queryByTestId('folder-uploading-13')).not.toBeInTheDocument()
   })
 
-  it('clears the in-flight indicator once the upload settles', () => {
+  test('clears the in-flight indicator once the upload settles', ({
+    render,
+    app
+  }) => {
     mockUpload.mockImplementation((_payload, handlers) => handlers.onSettled())
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     const file = new File(['x'], 'evidence.pdf', { type: 'application/pdf' })
     fireEvent.drop(screen.getByTestId('tree-folder-12'), {
@@ -473,16 +483,14 @@ describe('DocumentTree', () => {
     expect(screen.queryByTestId('folder-uploading-12')).not.toBeInTheDocument()
   })
 
-  it('surfaces the reason an upload failed', () => {
+  test('surfaces the reason an upload failed', ({ render, app }) => {
     mockUpload.mockImplementation((_payload, handlers) => {
       handlers.onError({
         message: 'evidence.pdf: File size exceeds the maximum limit of 50 MB'
       })
       handlers.onSettled()
     })
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     const file = new File(['x'], 'evidence.pdf', { type: 'application/pdf' })
     fireEvent.drop(screen.getByTestId('tree-folder-12'), {
@@ -494,10 +502,8 @@ describe('DocumentTree', () => {
     )
   })
 
-  it('asks before moving a file to deleted items', () => {
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+  test('asks before moving a file to deleted items', ({ render, app }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('tree-file-delete-88'))
     // Nothing happens until it is confirmed. (The translation mock in this
@@ -512,14 +518,12 @@ describe('DocumentTree', () => {
     expect(mockSoftDelete).toHaveBeenCalledWith(88)
   })
 
-  it('shows the empty state', () => {
+  test('shows the empty state', ({ render, app }) => {
     mockTree.mockReturnValue({
       data: { folders: [], rootDocuments: [] },
       isLoading: false
     })
-    render(<DocumentTree parentType="designatedAction" parentID="9" />, {
-      wrapper
-    })
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
     expect(
       screen.getByText('initiativeAgreement:folders.empty')
     ).toBeInTheDocument()

@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Box, IconButton, Tooltip, Fade } from '@mui/material'
-import {
-  Close as CloseIcon,
-  ContentCopy as CopyIcon,
-  Visibility as VisibilityIcon
-} from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
+import Fade from '@mui/material/Fade'
+import CloseIcon from '@mui/icons-material/Close'
+import CopyIcon from '@mui/icons-material/ContentCopy'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import BCTypography from '@/components/BCTypography'
 
 const ReferenceCompareBox = ({
