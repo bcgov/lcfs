@@ -331,3 +331,51 @@ async def test_delete_notifications_partial(client, fastapi_app, set_mock_user):
         assert response.status_code == 200
         assert response.json() == [7, 8, 9]
         mock_delete.assert_called_once_with(1, payload=payload)
+
+
+@pytest.mark.anyio
+async def test_get_notification_subscriptions_for_user_government(
+    client, fastapi_app, set_mock_user
+):
+    mock_subs = [
+        {
+            "notificationChannelSubscriptionId": 1,
+            "isEnabled": True,
+            "notificationChannelName": "EMAIL",
+            "notificationTypeName": "IDIR_ANALYST__GOVERNMENT_NOTIFICATION",
+        },
+        {
+            "notificationChannelSubscriptionId": 2,
+            "isEnabled": False,
+            "notificationChannelName": "IN_APP",
+            "notificationTypeName": "IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW",
+        },
+    ]
+    with patch(
+        "lcfs.web.api.notification.views.NotificationService"
+        ".get_notification_channel_subscriptions_by_user_id",
+        return_value=mock_subs,
+    ) as mock_get:
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
+        url = fastapi_app.url_path_for(
+            "get_notification_channel_subscriptions_for_user", user_id=7
+        )
+        response = await client.get(url)
+
+        assert response.status_code == 200
+        mock_get.assert_called_once_with(user_id=7)
+
+
+@pytest.mark.anyio
+async def test_get_notification_subscriptions_for_user_forbidden_for_bceid(
+    client, fastapi_app, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    url = fastapi_app.url_path_for(
+        "get_notification_channel_subscriptions_for_user", user_id=7
+    )
+    response = await client.get(url)
+
+    assert response.status_code == 403

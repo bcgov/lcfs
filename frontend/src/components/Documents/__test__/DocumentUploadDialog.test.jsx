@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import DocumentUploadDialog from '../DocumentUploadDialog'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock dependencies
 vi.mock('@/components/BCModal', () => ({
@@ -79,8 +79,12 @@ describe('DocumentUploadDialog', () => {
 
   // High Priority Tests
 
-  it('should render with initial state and props', () => {
-    render(<DocumentUploadDialog {...defaultProps} />, { wrapper })
+  test('should render with initial state and props', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} />, [theme, router])
 
     expect(screen.getByTestId('bc-modal')).toBeInTheDocument()
     expect(screen.getByTestId('modal-title')).toHaveTextContent(
@@ -92,14 +96,21 @@ describe('DocumentUploadDialog', () => {
     expect(screen.getByTestId('document-table')).toBeInTheDocument()
   })
 
-  it('should not render when open is false', () => {
-    render(<DocumentUploadDialog {...defaultProps} open={false} />, { wrapper })
+  test('should not render when open is false', ({ render, theme, router }) => {
+    render(<DocumentUploadDialog {...defaultProps} open={false} />, [
+      theme,
+      router
+    ])
 
     expect(screen.queryByTestId('bc-modal')).not.toBeInTheDocument()
   })
 
-  it('should pass correct props to DocumentTable', () => {
-    render(<DocumentUploadDialog {...defaultProps} />, { wrapper })
+  test('should pass correct props to DocumentTable', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} />, [theme, router])
 
     const documentTable = screen.getByTestId('document-table')
     expect(documentTable).toHaveAttribute('data-parent-id', '123')
@@ -109,11 +120,16 @@ describe('DocumentUploadDialog', () => {
     )
   })
 
-  it('should handle close action when secondary button is clicked', () => {
+  test('should handle close action when secondary button is clicked', ({
+    render,
+    theme,
+    router
+  }) => {
     const mockClose = vi.fn()
-    render(<DocumentUploadDialog {...defaultProps} close={mockClose} />, {
-      wrapper
-    })
+    render(<DocumentUploadDialog {...defaultProps} close={mockClose} />, [
+      theme,
+      router
+    ])
 
     const secondaryButton = screen.getByTestId('secondary-button')
     fireEvent.click(secondaryButton)
@@ -121,11 +137,16 @@ describe('DocumentUploadDialog', () => {
     expect(mockClose).toHaveBeenCalledTimes(1)
   })
 
-  it('should handle close action when modal onClose is triggered', () => {
+  test('should handle close action when modal onClose is triggered', ({
+    render,
+    theme,
+    router
+  }) => {
     const mockClose = vi.fn()
-    render(<DocumentUploadDialog {...defaultProps} close={mockClose} />, {
-      wrapper
-    })
+    render(<DocumentUploadDialog {...defaultProps} close={mockClose} />, [
+      theme,
+      router
+    ])
 
     const closeButton = screen.getByTestId('close-button')
     fireEvent.click(closeButton)
@@ -133,24 +154,32 @@ describe('DocumentUploadDialog', () => {
     expect(mockClose).toHaveBeenCalledTimes(1)
   })
 
-  it('should display correct modal title', () => {
-    render(<DocumentUploadDialog {...defaultProps} />, { wrapper })
+  test('should display correct modal title', ({ render, theme, router }) => {
+    render(<DocumentUploadDialog {...defaultProps} />, [theme, router])
 
     expect(screen.getByTestId('modal-title')).toHaveTextContent(
       'Upload supporting documents for your compliance report'
     )
   })
 
-  it('should display correct secondary button text', () => {
-    render(<DocumentUploadDialog {...defaultProps} />, { wrapper })
+  test('should display correct secondary button text', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} />, [theme, router])
 
     expect(screen.getByTestId('secondary-button')).toHaveTextContent(
       'Return to compliance report'
     )
   })
 
-  it('should render document label from translation', () => {
-    render(<DocumentUploadDialog {...defaultProps} />, { wrapper })
+  test('should render document label from translation', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} />, [theme, router])
 
     expect(screen.getByTestId('bc-typography')).toHaveTextContent(
       'Add file attachments (maximum file size: 50 MB):'
@@ -159,27 +188,40 @@ describe('DocumentUploadDialog', () => {
 
   // Medium Priority Tests
 
-  it('should handle different parentType values', () => {
+  test('should handle different parentType values', ({
+    render,
+    theme,
+    router
+  }) => {
     render(
       <DocumentUploadDialog {...defaultProps} parentType="fuel-export" />,
-      { wrapper }
+      [theme, router]
     )
 
     const documentTable = screen.getByTestId('document-table')
     expect(documentTable).toHaveAttribute('data-parent-type', 'fuel-export')
   })
 
-  it('should handle different parentID values', () => {
-    render(<DocumentUploadDialog {...defaultProps} parentID="456" />, {
-      wrapper
-    })
+  test('should handle different parentID values', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} parentID="456" />, [
+      theme,
+      router
+    ])
 
     const documentTable = screen.getByTestId('document-table')
     expect(documentTable).toHaveAttribute('data-parent-id', '456')
   })
 
-  it('should maintain component structure and styling', () => {
-    render(<DocumentUploadDialog {...defaultProps} />, { wrapper })
+  test('should maintain component structure and styling', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} />, [theme, router])
 
     const modalContent = screen.getByTestId('modal-content')
     expect(modalContent).toBeInTheDocument()
@@ -189,11 +231,15 @@ describe('DocumentUploadDialog', () => {
     expect(screen.getByTestId('document-table')).toBeInTheDocument()
   })
 
-  it('should handle multiple open/close cycles correctly', () => {
+  test('should handle multiple open/close cycles correctly', ({
+    render,
+    theme,
+    router
+  }) => {
     const mockClose = vi.fn()
     const { rerender } = render(
       <DocumentUploadDialog {...defaultProps} close={mockClose} open={true} />,
-      { wrapper }
+      [theme, router]
     )
 
     expect(screen.getByTestId('bc-modal')).toBeInTheDocument()
@@ -211,8 +257,15 @@ describe('DocumentUploadDialog', () => {
     expect(screen.getByTestId('bc-modal')).toBeInTheDocument()
   })
 
-  it('should handle edge case with empty parentID', () => {
-    render(<DocumentUploadDialog {...defaultProps} parentID="" />, { wrapper })
+  test('should handle edge case with empty parentID', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} parentID="" />, [
+      theme,
+      router
+    ])
 
     const documentTable = screen.getByTestId('document-table')
     expect(documentTable).toHaveAttribute('data-parent-id', '')
@@ -221,8 +274,12 @@ describe('DocumentUploadDialog', () => {
 
   // Low Priority Tests
 
-  it('should render with consistent component hierarchy', () => {
-    render(<DocumentUploadDialog {...defaultProps} />, { wrapper })
+  test('should render with consistent component hierarchy', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} />, [theme, router])
 
     // Verify the component structure is maintained
     const modal = screen.getByTestId('bc-modal')
@@ -235,7 +292,11 @@ describe('DocumentUploadDialog', () => {
     expect(content).toContainElement(table)
   })
 
-  it('should handle translation fallback correctly', () => {
+  test('should handle translation fallback correctly', ({
+    render,
+    theme,
+    router
+  }) => {
     // Mock missing translation
     vi.mocked(vi.doMock)
     vi.doMock('react-i18next', () => ({
@@ -244,16 +305,21 @@ describe('DocumentUploadDialog', () => {
       })
     }))
 
-    render(<DocumentUploadDialog {...defaultProps} />, { wrapper })
+    render(<DocumentUploadDialog {...defaultProps} />, [theme, router])
 
     // Should render the translation key if translation is missing
     expect(screen.getByTestId('bc-typography')).toBeInTheDocument()
   })
 
-  it('should handle numeric parentID correctly', () => {
-    render(<DocumentUploadDialog {...defaultProps} parentID={999} />, {
-      wrapper
-    })
+  test('should handle numeric parentID correctly', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} parentID={999} />, [
+      theme,
+      router
+    ])
 
     const documentTable = screen.getByTestId('document-table')
     expect(documentTable).toHaveAttribute('data-parent-id', '999')
@@ -261,26 +327,40 @@ describe('DocumentUploadDialog', () => {
 
   // Additional Coverage Tests
 
-  it('should handle undefined parentType gracefully', () => {
-    render(<DocumentUploadDialog {...defaultProps} parentType={undefined} />, {
-      wrapper
-    })
+  test('should handle undefined parentType gracefully', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} parentType={undefined} />, [
+      theme,
+      router
+    ])
 
     const documentTable = screen.getByTestId('document-table')
     expect(documentTable).toBeInTheDocument()
   })
 
-  it('should handle undefined parentID gracefully', () => {
-    render(<DocumentUploadDialog {...defaultProps} parentID={undefined} />, {
-      wrapper
-    })
+  test('should handle undefined parentID gracefully', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} parentID={undefined} />, [
+      theme,
+      router
+    ])
 
     const documentTable = screen.getByTestId('document-table')
     expect(documentTable).toBeInTheDocument()
   })
 
-  it('should maintain proper modal data structure', () => {
-    render(<DocumentUploadDialog {...defaultProps} />, { wrapper })
+  test('should maintain proper modal data structure', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentUploadDialog {...defaultProps} />, [theme, router])
 
     // Verify all modal data properties are correctly set
     expect(screen.getByTestId('modal-title')).toHaveTextContent(
@@ -292,22 +372,32 @@ describe('DocumentUploadDialog', () => {
     expect(screen.getByTestId('modal-content')).toBeInTheDocument()
   })
 
-  it('should not call close function on component mount', () => {
+  test('should not call close function on component mount', ({
+    render,
+    theme,
+    router
+  }) => {
     const mockClose = vi.fn()
-    render(<DocumentUploadDialog {...defaultProps} close={mockClose} />, {
-      wrapper
-    })
+    render(<DocumentUploadDialog {...defaultProps} close={mockClose} />, [
+      theme,
+      router
+    ])
 
     // Close function should not be called during initial render
     expect(mockClose).not.toHaveBeenCalled()
   })
 
-  it('should handle close function being undefined', () => {
+  test('should handle close function being undefined', ({
+    render,
+    theme,
+    router
+  }) => {
     // This tests the edge case where close prop might be undefined
     expect(() => {
-      render(<DocumentUploadDialog {...defaultProps} close={undefined} />, {
-        wrapper
-      })
+      render(<DocumentUploadDialog {...defaultProps} close={undefined} />, [
+        theme,
+        router
+      ])
     }).not.toThrow()
   })
 })

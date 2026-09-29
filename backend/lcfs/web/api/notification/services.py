@@ -256,6 +256,7 @@ class NotificationService:
         subscriptions_with_names = [
             {
                 "notification_channel_subscription_id": subscription.notification_channel_subscription_id,
+                "is_enabled": subscription.is_enabled,
                 "notification_channel_name": subscription.notification_channel.channel_name.name,
                 "notification_type_name": subscription.notification_type.name,
             }

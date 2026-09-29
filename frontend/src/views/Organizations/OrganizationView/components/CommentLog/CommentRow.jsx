@@ -1,14 +1,12 @@
 import { forwardRef, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import {
-  Avatar,
-  Chip,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  Tooltip
-} from '@mui/material'
+import Avatar from '@mui/material/Avatar'
+import Chip from '@mui/material/Chip'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import Tooltip from '@mui/material/Tooltip'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 
 import BCBox from '@/components/BCBox'

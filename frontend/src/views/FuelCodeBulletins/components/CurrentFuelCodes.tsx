@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { DownloadButton } from '@/components/DownloadButton'
-import { Stack } from '@mui/material'
+import Stack from '@mui/material/Stack'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'

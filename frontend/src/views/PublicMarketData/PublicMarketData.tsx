@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react'
-import {
-  Box,
-  Button,
-  CircularProgress,
-  ToggleButton,
-  ToggleButtonGroup
-} from '@mui/material'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import CircularProgress from '@mui/material/CircularProgress'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import EnergySavingsLeafOutlinedIcon from '@mui/icons-material/EnergySavingsLeafOutlined'
 import ReactECharts from 'echarts-for-react'
 import { useTranslation } from 'react-i18next'

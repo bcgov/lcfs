@@ -1,9 +1,9 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import DirectorReviewCard from '../DirectorReviewCard'
 import { useDirectorReviewCounts } from '@/hooks/useDashboard'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
@@ -60,19 +60,19 @@ describe('DirectorReviewCard Component', () => {
     })
   })
 
-  it('renders loading state correctly', () => {
+  test('renders loading state correctly', ({ render, query, theme, i18n }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: {}, // Use empty object instead of null to match component expectation
       isLoading: true
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     const loadingElement = screen.getByText(/Loading director review items/)
     expect(loadingElement).toBeInTheDocument()
   })
 
-  it('renders with counts data', () => {
+  test('renders with counts data', ({ render, query, theme, i18n }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: {
         transfers: 2,
@@ -84,7 +84,7 @@ describe('DirectorReviewCard Component', () => {
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     expect(screen.getByText('Director review')).toBeInTheDocument()
     expect(screen.getByText(/There are/)).toBeInTheDocument()
@@ -123,13 +123,18 @@ describe('DirectorReviewCard Component', () => {
     ).toBeInTheDocument()
   })
 
-  it('navigates to transfers page on link click with correct filter', () => {
+  test('navigates to transfers page on link click with correct filter', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: { transfers: 2 },
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Find and click the transfers link
     const link = screen.getByText(
@@ -159,13 +164,18 @@ describe('DirectorReviewCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.TRANSACTIONS.LIST)
   })
 
-  it('navigates to compliance reports page on link click with correct filter', () => {
+  test('navigates to compliance reports page on link click with correct filter', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: { complianceReports: 3 },
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Find and click the compliance reports link
     const link = screen.getByText(/Compliance report\(s\) for your review/, {
@@ -189,13 +199,18 @@ describe('DirectorReviewCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.LIST)
   })
 
-  it('navigates to fuel codes page on link click with correct filter', () => {
+  test('navigates to fuel codes page on link click with correct filter', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: { fuelCodes: 2 },
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Find and click the fuel codes link
     const link = screen.getByText(/Fuel code\(s\) for your review/, {
@@ -219,7 +234,7 @@ describe('DirectorReviewCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.LIST)
   })
 
-  it('handles zero counts correctly', () => {
+  test('handles zero counts correctly', ({ render, query, theme, i18n }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: {
         transfers: 0,
@@ -231,19 +246,24 @@ describe('DirectorReviewCard Component', () => {
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // All counts should show 0
     expect(screen.getAllByText('0').length).toBe(5)
   })
 
-  it('navigates to initiative agreements page on link click with correct filter', () => {
+  test('navigates to initiative agreements page on link click with correct filter', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: { initiativeAgreements: 1 },
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Find and click the initiative agreements link
     const link = screen.getByText(/Initiative agreement\(s\) for your review/, {
@@ -272,18 +292,26 @@ describe('DirectorReviewCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.TRANSACTIONS.LIST)
   })
 
-  it('navigates to admin adjustments page on link click with correct filter', () => {
+  test('navigates to admin adjustments page on link click with correct filter', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: { adminAdjustments: 2 },
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Find and click the admin adjustments link
-    const link = screen.getByText(/Administrative adjustment\(s\) for your review/, {
-      exact: false
-    })
+    const link = screen.getByText(
+      /Administrative adjustment\(s\) for your review/,
+      {
+        exact: false
+      }
+    )
     fireEvent.click(link)
 
     // Check that sessionStorage was updated with the correct filter
@@ -307,37 +335,47 @@ describe('DirectorReviewCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.TRANSACTIONS.LIST)
   })
 
-  it('handles missing data gracefully', () => {
+  test('handles missing data gracefully', ({ render, query, theme, i18n }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: {}, // Empty object - missing counts
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Should default to 0 for missing counts
     expect(screen.getAllByText('0').length).toBe(5)
   })
 
-  it('handles undefined data gracefully', () => {
+  test('handles undefined data gracefully', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: undefined, // Undefined data
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Should default to 0 for undefined data
     expect(screen.getAllByText('0').length).toBe(5)
   })
 
-  it('renders correct component structure and styling', () => {
+  test('renders correct component structure and styling', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: { transfers: 1 },
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Check widget card is rendered
     expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
@@ -345,7 +383,12 @@ describe('DirectorReviewCard Component', () => {
     expect(screen.getByTestId('widget-content')).toBeInTheDocument()
   })
 
-  it('ensures all translation keys are used', () => {
+  test('ensures all translation keys are used', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: {
         transfers: 1,
@@ -357,25 +400,40 @@ describe('DirectorReviewCard Component', () => {
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Verify all the expected translation strings are present
     expect(screen.getByText('Director review')).toBeInTheDocument()
     expect(screen.getByText(/There are/)).toBeInTheDocument()
-    expect(screen.getByText(/Transfer\(s\) for your review and statutory decision/)).toBeInTheDocument()
-    expect(screen.getByText(/Compliance report\(s\) for your review/)).toBeInTheDocument()
-    expect(screen.getByText(/Initiative agreement\(s\) for your review/)).toBeInTheDocument()
-    expect(screen.getByText(/Administrative adjustment\(s\) for your review/)).toBeInTheDocument()
-    expect(screen.getByText(/Fuel code\(s\) for your review/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Transfer\(s\) for your review and statutory decision/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Compliance report\(s\) for your review/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Initiative agreement\(s\) for your review/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Administrative adjustment\(s\) for your review/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Fuel code\(s\) for your review/)
+    ).toBeInTheDocument()
   })
 
-  it('calls both click handlers for each item', () => {
+  test('calls both click handlers for each item', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: { transfers: 1 },
       isLoading: false
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Find the first list item button (transfers)
     const listItemButtons = screen.getAllByRole('button')
@@ -386,29 +444,38 @@ describe('DirectorReviewCard Component', () => {
     expect(window.sessionStorage.setItem).toHaveBeenCalled()
   })
 
-  it('renders loading message with correct translation', () => {
+  test('renders loading message with correct translation', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: {},
       isLoading: true
     })
 
-    render(<DirectorReviewCard />, { wrapper })
+    render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Verify loading component receives translated message
     expect(screen.getByTestId('loading')).toBeInTheDocument()
-    expect(screen.getByText('Loading director review items...')).toBeInTheDocument()
+    expect(
+      screen.getByText('Loading director review items...')
+    ).toBeInTheDocument()
   })
 
-  it('maintains referential equality for memoized callbacks', () => {
+  test('maintains referential equality for memoized callbacks', ({
+    render,
+    query,
+    theme,
+    i18n
+  }) => {
     useDirectorReviewCounts.mockReturnValue({
       data: { transfers: 1 },
       isLoading: false
     })
 
-    const { rerender } = render(
-      <DirectorReviewCard />,
-      { wrapper }
-    )
+    const { rerender } = render(<DirectorReviewCard />, [query, theme, i18n])
 
     // Component should render successfully with initial data
     expect(screen.getByText('Director review')).toBeInTheDocument()

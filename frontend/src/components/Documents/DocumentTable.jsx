@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  Box,
-  Card,
-  CardContent,
-  CircularProgress,
-  Icon,
-  IconButton,
-  Tooltip
-} from '@mui/material'
-import { CloudUpload, Delete } from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import CircularProgress from '@mui/material/CircularProgress'
+import Icon from '@mui/material/Icon'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
+import CloudUpload from '@mui/icons-material/CloudUpload'
+import Delete from '@mui/icons-material/Delete'
 import { useTranslation } from 'react-i18next'
 import { styled } from '@mui/system'
 import BCTypography from '@/components/BCTypography'
@@ -33,6 +32,7 @@ import {
 import { validateFile } from '@/utils/fileValidation'
 import { getDocumentDisplayName } from '@/utils/documents'
 import RenameableFileName from '@/components/Documents/RenameableFileName'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   width: '100%',
@@ -54,7 +54,7 @@ const FileTable = styled(Box)(({ theme }) => ({
   maxWidth: '100%',
   display: 'grid',
   gridTemplateColumns:
-    'minmax(260px, 2fr) 200px minmax(80px, 110px) minmax(90px, 120px) minmax(50px, 70px)',
+    'minmax(260px, 2fr) 200px minmax(80px, 110px) minmax(90px, 120px) minmax(90px, 110px)',
   gridColumnGap: '8px',
   overflow: 'hidden'
 }))
@@ -439,28 +439,41 @@ function DocumentTable({ parentType, parentID }) {
                 )}
               </TableCell>
               <TableCell>
-                <Tooltip title={t('common:deleteBtn')}>
-                  <div>
-                    {!file.deleting &&
-                      !file.virus &&
-                      !file.scanning &&
-                      !file.oversize &&
-                      !file.error &&
-                      file.createUser === currentUser?.keycloakUsername && (
-                        <IconButton
-                          onClick={() => {
-                            handleDeleteClick(file)
-                          }}
-                          aria-label="delete row"
-                          data-test="delete-button"
-                          color="error"
-                        >
-                          <Delete style={{ pointerEvents: 'none' }} />
-                        </IconButton>
-                      )}
-                    {file.deleting && <CircularProgress size={22} />}
-                  </div>
-                </Tooltip>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {!file.deleting &&
+                    !file.virus &&
+                    !file.scanning &&
+                    !file.oversize &&
+                    !file.error && (
+                      <DocumentPreviewButton
+                        parentType={parentType}
+                        parentID={parentID}
+                        document={file}
+                      />
+                    )}
+                  <Tooltip title={t('common:deleteBtn')}>
+                    <div>
+                      {!file.deleting &&
+                        !file.virus &&
+                        !file.scanning &&
+                        !file.oversize &&
+                        !file.error &&
+                        file.createUser === currentUser?.keycloakUsername && (
+                          <IconButton
+                            onClick={() => {
+                              handleDeleteClick(file)
+                            }}
+                            aria-label="delete row"
+                            data-test="delete-button"
+                            color="error"
+                          >
+                            <Delete style={{ pointerEvents: 'none' }} />
+                          </IconButton>
+                        )}
+                      {file.deleting && <CircularProgress size={22} />}
+                    </div>
+                  </Tooltip>
+                </Box>
               </TableCell>
             </div>
           )

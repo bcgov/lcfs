@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box, IconButton, Link, Stack, TextField, Tooltip } from '@mui/material'
-import {
-  CloudUpload as CloudUploadIcon,
-  Delete as DeleteIcon
-} from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import Link from '@mui/material/Link'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
@@ -12,6 +15,7 @@ import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 import RenameableFileName from '@/components/Documents/RenameableFileName'
 import {
   useDeleteDocument,
@@ -22,14 +26,17 @@ import {
 import colors from '@/themes/base/colors'
 import { isDocumentRenameEnabled } from '@/constants/common'
 import { getDocumentDisplayName } from '@/utils/documents'
+import {
+  DOC_CATEGORY_GHGENIUS_MODEL,
+  DOC_CATEGORY_SUPPORTING,
+  DOC_CATEGORY_TECHNICAL_REPORT
+} from './documentCategories'
 
-// CI document-category constants. Uploading no longer tags a category (Step 3
-// now uses the shared upload modal — #4740), but these remain the canonical
-// category values consumed by the resume-step logic (ciResumeStep) and the
-// legacy categorized layout (DocumentsModellingStep.legacy.jsx — see #4669).
-export const DOC_CATEGORY_TECHNICAL_REPORT = 'technical_report'
-export const DOC_CATEGORY_GHGENIUS_MODEL = 'ghgenius_model'
-export const DOC_CATEGORY_SUPPORTING = 'supporting'
+export {
+  DOC_CATEGORY_GHGENIUS_MODEL,
+  DOC_CATEGORY_SUPPORTING,
+  DOC_CATEGORY_TECHNICAL_REPORT
+} from './documentCategories'
 
 const PARENT_TYPE = 'ci_application'
 
@@ -202,19 +209,33 @@ export const DocumentsModellingStep = ({
                     {formatDate(doc.createDate)}
                   </BCTypography>
                   {!readOnly && (
-                    <Tooltip title={t('common:deleteBtn')}>
-                      <span>
-                        <IconButton
-                          aria-label="delete document"
-                          size="small"
-                          onClick={() => handleDeleteClick(doc)}
-                          disabled={isDeletingDoc}
-                          data-test="ci-step3-delete-doc"
-                        >
-                          <DeleteIcon fontSize="small" color="error" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <DocumentPreviewButton
+                        parentType={PARENT_TYPE}
+                        parentID={ciApplicationId}
+                        document={doc}
+                      />
+                      <Tooltip title={t('common:deleteBtn')}>
+                        <span>
+                          <IconButton
+                            aria-label="delete document"
+                            size="small"
+                            onClick={() => handleDeleteClick(doc)}
+                            disabled={isDeletingDoc}
+                            data-test="ci-step3-delete-doc"
+                          >
+                            <DeleteIcon fontSize="small" color="error" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Box>
+                  )}
+                  {readOnly && (
+                    <DocumentPreviewButton
+                      parentType={PARENT_TYPE}
+                      parentID={ciApplicationId}
+                      document={doc}
+                    />
                   )}
                 </Box>
               )

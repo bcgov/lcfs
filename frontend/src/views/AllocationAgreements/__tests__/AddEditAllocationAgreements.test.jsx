@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   AddEditAllocationAgreements,
@@ -8,7 +8,7 @@ import {
 import * as useAllocationAgreementHook from '@/hooks/useAllocationAgreement'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import * as configModule from '@/constants/config'
 import * as schedulesUtils from '@/utils/schedules'
 import { useApiService } from '@/services/useApiService'
@@ -336,14 +336,17 @@ vi.mock('@/components/ImportDialog', () => ({
 }))
 
 // Mock Material-UI components
-vi.mock('@mui/material', () => ({
-  Menu: ({ children, open, onClose }) =>
+vi.mock('@mui/material/Menu', () => ({
+  default: ({ children, open, onClose }) =>
     open ? (
       <div data-test="menu" onClick={onClose}>
         {children}
       </div>
-    ) : null,
-  MenuItem: ({ children, onClick }) => (
+    ) : null
+}))
+
+vi.mock('@mui/material/MenuItem', () => ({
+  default: ({ children, onClick }) => (
     <div data-test="menu-item" onClick={onClick}>
       {children}
     </div>
@@ -535,14 +538,31 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   describe('Component Rendering', () => {
-    it('renders the component', () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('renders the component', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(
         screen.getByText('allocationAgreement:allocationAgreementTitle')
       ).toBeInTheDocument()
     })
 
-    it('renders loading state when data is loading', () => {
+    test('renders loading state when data is loading', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(
         useAllocationAgreementHook.useGetAllocationAgreementsList
       ).mockReturnValue({
@@ -551,15 +571,31 @@ describe('AddEditAllocationAgreements', () => {
         refetch: vi.fn()
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       // Component should not render when loading
       expect(
         screen.queryByText('allocationAgreement:allocationAgreementTitle')
       ).not.toBeInTheDocument()
     })
 
-    it('initializes with at least one row in the empty state', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('initializes with at least one row in the empty state', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Wait for the component to finish rendering and grid to be ready
       await screen.findByTestId('bc-grid-editor')
@@ -568,7 +604,13 @@ describe('AddEditAllocationAgreements', () => {
       expect(rows.length).toBe(1) // Ensure at least one row exists
     })
 
-    it('loads data when allocationAgreements are available', async () => {
+    test('loads data when allocationAgreements are available', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const mockData = {
         allocationAgreements: [
           { allocationAgreementId: 'testId1' },
@@ -584,7 +626,12 @@ describe('AddEditAllocationAgreements', () => {
         refetch: vi.fn()
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Wait for the component to finish rendering
       await screen.findByTestId('bc-grid-editor')
@@ -600,10 +647,21 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   describe('Feature Flag Handling', () => {
-    it('does not show import/export buttons when feature flag is disabled', () => {
+    test('does not show import/export buttons when feature flag is disabled', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(false)
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(
         screen.queryByText('common:importExport.export.btn')
@@ -614,10 +672,21 @@ describe('AddEditAllocationAgreements', () => {
     })
 
     // TODO: Re-enable when import/export feature is re-enabled in the component
-    it.skip('shows import/export buttons when feature flag is enabled', () => {
+    it.skip('shows import/export buttons when feature flag is enabled', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(
         screen.getByText('common:importExport.export.btn')
@@ -627,7 +696,13 @@ describe('AddEditAllocationAgreements', () => {
       ).toBeInTheDocument()
     })
 
-    it('hides import/export buttons for early issuance reports', () => {
+    test('hides import/export buttons for early issuance reports', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
       useComplianceReportWithCache.mockReturnValue({
         data: {
@@ -640,7 +715,12 @@ describe('AddEditAllocationAgreements', () => {
         isLoading: false
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       expect(
         screen.queryByText('common:importExport.export.btn')
@@ -652,12 +732,24 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   // TODO: Re-enable when import/export feature is re-enabled in the component
-  describe.skip('Import/Export Functionality', () => {
+  describe.skip('Import/Export Functionality', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     beforeEach(() => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
     })
 
-    it('hides overwrite option for supplemental reports with existing data', () => {
+    test('hides overwrite option for supplemental reports with existing data', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
@@ -682,7 +774,12 @@ describe('AddEditAllocationAgreements', () => {
         refetch: vi.fn()
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       fireEvent.click(screen.getByText('common:importExport.import.btn'))
 
@@ -697,7 +794,13 @@ describe('AddEditAllocationAgreements', () => {
       ).toBeInTheDocument()
     })
 
-    it('shows both import options for original reports', () => {
+    test('shows both import options for original reports', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
@@ -709,7 +812,12 @@ describe('AddEditAllocationAgreements', () => {
         isLoading: false
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       fireEvent.click(screen.getByText('common:importExport.import.btn'))
 
@@ -722,8 +830,19 @@ describe('AddEditAllocationAgreements', () => {
       ).toBeInTheDocument()
     })
 
-    it('opens import dialog when append option is clicked', () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('opens import dialog when append option is clicked', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       fireEvent.click(screen.getByText('common:importExport.import.btn'))
       fireEvent.click(
@@ -736,8 +855,19 @@ describe('AddEditAllocationAgreements', () => {
       )
     })
 
-    it('handles download with data', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles download with data', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       fireEvent.click(screen.getByText('common:importExport.export.btn'))
 
@@ -752,8 +882,19 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles download without data', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles download without data', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       fireEvent.click(screen.getByText('common:importExport.export.btn'))
 
@@ -770,8 +911,19 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   describe('Grid Event Handlers - Comprehensive Coverage', () => {
-    it('handles onCellValueChanged for fuelType field', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles onCellValueChanged for fuelType field', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await act(async () => {
         fireEvent.click(
@@ -783,8 +935,19 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles onCellValueChanged for provisionOfTheAct field - resets fuelCode', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles onCellValueChanged for provisionOfTheAct field - resets fuelCode', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await act(async () => {
         fireEvent.click(
@@ -796,8 +959,19 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles onCellValueChanged for fuelCategory field with validation', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles onCellValueChanged for fuelCategory field with validation', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await act(async () => {
         fireEvent.click(
@@ -809,8 +983,19 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles onCellEditingStopped with same values (early return)', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles onCellEditingStopped with same values (early return)', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await act(async () => {
         fireEvent.click(
@@ -822,8 +1007,19 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles onCellEditingStopped with transaction partner validation', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles onCellEditingStopped with transaction partner validation', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await act(async () => {
         fireEvent.click(
@@ -837,8 +1033,19 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles onCellEditingStopped with invalid quantity validation', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles onCellEditingStopped with invalid quantity validation', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await act(async () => {
         fireEvent.click(
@@ -850,15 +1057,37 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles onCellEditingStopped with valid data processing', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles onCellEditingStopped with valid data processing', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Test valid data processing without triggering the error
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles delete action', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles delete action', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await act(async () => {
         fireEvent.click(screen.getByTestId('simulate-action-delete'))
@@ -868,8 +1097,19 @@ describe('AddEditAllocationAgreements', () => {
       expect(schedulesUtils.handleScheduleDelete).toHaveBeenCalled()
     })
 
-    it('handles undo action', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles undo action', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       await act(async () => {
         fireEvent.click(screen.getByTestId('simulate-action-undo'))
@@ -881,7 +1121,13 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   describe('Location State Message', () => {
-    it('triggers alert when location state has message', () => {
+    test('triggers alert when location state has message', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseLocation.mockReturnValue({
         pathname: '/test-path',
         state: {
@@ -890,7 +1136,12 @@ describe('AddEditAllocationAgreements', () => {
         }
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // We can't easily test the internal alertRef trigger,
       // but we can verify the component renders without errors when location state has a message
@@ -901,8 +1152,19 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   describe('Navigation', () => {
-    it('navigates back when save button is used', () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('navigates back when save button is used', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // The handleNavigateBack function should be configured properly
       // This is tested through the BCGridEditor saveButtonProps
@@ -911,7 +1173,13 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   describe('Validate Function', () => {
-    it('validates positive numbers correctly', () => {
+    test('validates positive numbers correctly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const mockParams = {
         node: { data: { quantity: 100 } },
         colDef: { field: 'quantity' }
@@ -922,7 +1190,12 @@ describe('AddEditAllocationAgreements', () => {
 
       // We can't test the validate function directly since it's internal,
       // but we can test the validation through the onCellEditingStopped event
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // The validation is tested indirectly through the cell editing events
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
@@ -930,7 +1203,13 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   describe('Additional Coverage Tests - Edge Cases and Branches', () => {
-    it('handles empty allocation agreements data', () => {
+    test('handles empty allocation agreements data', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(
         useAllocationAgreementHook.useGetAllocationAgreementsList
       ).mockReturnValue({
@@ -939,11 +1218,22 @@ describe('AddEditAllocationAgreements', () => {
         refetch: vi.fn()
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles different report versions and states', () => {
+    test('handles different report versions and states', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       // Test supplemental report logic
       useComplianceReportWithCache.mockReturnValue({
         data: {
@@ -956,15 +1246,31 @@ describe('AddEditAllocationAgreements', () => {
         isLoading: false
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
     // TODO: Re-enable when import/export feature is re-enabled in the component
-    it.skip('handles close menu functions with actual state changes', () => {
+    it.skip('handles close menu functions with actual state changes', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Test opening and closing export menu
       fireEvent.click(screen.getByText('common:importExport.export.btn'))
@@ -979,7 +1285,13 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles missing optionsData gracefully', () => {
+    test('handles missing optionsData gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(
         useAllocationAgreementHook.useAllocationAgreementOptions
       ).mockReturnValue({
@@ -988,11 +1300,22 @@ describe('AddEditAllocationAgreements', () => {
         isFetched: true
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles complex fuel type options with multiple provisions', () => {
+    test('handles complex fuel type options with multiple provisions', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(
         useAllocationAgreementHook.useAllocationAgreementOptions
       ).mockReturnValue({
@@ -1019,11 +1342,22 @@ describe('AddEditAllocationAgreements', () => {
         isFetched: true
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles approved fuel code provision branch in onCellValueChanged', async () => {
+    test('handles approved fuel code provision branch in onCellValueChanged', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       // Mock data for approved fuel code scenario
       vi.mocked(
         useAllocationAgreementHook.useAllocationAgreementOptions
@@ -1047,17 +1381,33 @@ describe('AddEditAllocationAgreements', () => {
         isFetched: true
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // This should exercise the approved fuel code branch
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
     // TODO: Re-enable when import/export feature is re-enabled in the component
-    it.skip('handles import dialog overwrite option correctly', () => {
+    it.skip('handles import dialog overwrite option correctly', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       fireEvent.click(screen.getByText('common:importExport.import.btn'))
       fireEvent.click(
@@ -1072,13 +1422,30 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   // TODO: Re-enable when import/export feature is re-enabled in the component
-  describe.skip('Menu State Management Coverage', () => {
+  describe.skip('Menu State Management Coverage', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     beforeEach(() => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
     })
 
-    it('handles download menu anchor state changes', () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles download menu anchor state changes', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Test handleDownloadClick
       const exportButton = screen.getByText('common:importExport.export.btn')
@@ -1090,8 +1457,19 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.queryByTestId('menu')).not.toBeInTheDocument()
     })
 
-    it('handles import menu anchor state changes', () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles import menu anchor state changes', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Test handleImportClick
       const importButton = screen.getByText('common:importExport.import.btn')
@@ -1103,8 +1481,19 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.queryByTestId('menu')).not.toBeInTheDocument()
     })
 
-    it('handles openFileImportDialog function', () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles openFileImportDialog function', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       fireEvent.click(screen.getByText('common:importExport.import.btn'))
 
@@ -1132,7 +1521,13 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   describe('Final Branch Coverage Tests', () => {
-    it('handles options data loading and fetching states', () => {
+    test('handles options data loading and fetching states', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       vi.mocked(
         useAllocationAgreementHook.useAllocationAgreementOptions
       ).mockReturnValue({
@@ -1141,7 +1536,12 @@ describe('AddEditAllocationAgreements', () => {
         isFetched: false
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // This should not render due to isFetched being false
       expect(
@@ -1149,7 +1549,13 @@ describe('AddEditAllocationAgreements', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('handles complex onCellValueChanged branches with fuel code selection', async () => {
+    test('handles complex onCellValueChanged branches with fuel code selection', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       // Mock data with approved fuel code provision
       vi.mocked(
         useAllocationAgreementHook.useAllocationAgreementOptions
@@ -1173,14 +1579,30 @@ describe('AddEditAllocationAgreements', () => {
         isFetched: true
       })
 
-      render(<AddEditAllocationAgreements />, { wrapper })
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // This should exercise more complex fuel code logic branches
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles transaction partner validation with object value', async () => {
-      render(<AddEditAllocationAgreements />, { wrapper })
+    test('handles transaction partner validation with object value', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       // Create a more realistic BCGridEditor mock for this test
       const mockParams = {

@@ -12,8 +12,7 @@ from lcfs.web.api.audit_log.schema import (
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
-    apply_filter_conditions,
-    get_field_for_filter,
+    PaginatedQueryBuilder,
     validate_pagination,
 )
 from lcfs.web.core.decorators import service_handler
@@ -31,30 +30,8 @@ class AuditLogService:
         """
         Apply filters to the audit logs query.
         """
-        for filter in pagination.filters:
-            filter_value = filter.filter
-            filter_option = filter.type
-            filter_type = filter.filter_type
-
-            # Handle date filters
-            if filter.filter_type == "date":
-                filter_value = []
-                if filter.date_from:
-                    filter_value.append(filter.date_from)
-                if filter.date_to:
-                    filter_value.append(filter.date_to)
-                if not filter_value:
-                    continue  # Skip if no valid date is provided
-
-            # Retrieve the correct field based on the filter field name
-            field = get_field_for_filter(AuditLog, filter.field)
-
-            if field is not None:
-                condition = apply_filter_conditions(
-                    field, filter_value, filter_option, filter_type
-                )
-                if condition is not None:
-                    conditions.append(condition)
+        builder = PaginatedQueryBuilder(AuditLog)
+        conditions.extend(builder.build_conditions(pagination.filters))
 
     @service_handler
     async def get_audit_logs_paginated(

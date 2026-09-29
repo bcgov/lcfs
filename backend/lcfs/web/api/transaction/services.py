@@ -24,6 +24,7 @@ from lcfs.web.api.base import (
     SortOrder,
     PaginationRequestSchema,
     PaginationResponseSchema,
+    PaginatedQueryBuilder,
     apply_filter_conditions,
     get_field_for_filter,
     validate_pagination,
@@ -70,75 +71,45 @@ class TransactionsService:
         Returns:
             List[Transactions]: The list of transactions after applying the filters.
         """
+        builder = PaginatedQueryBuilder(
+            TransactionView,
+            custom_filters={
+                "transaction_id": self._transaction_id_filter,
+                "status": self._status_filter,
+            },
+        )
+        conditions.extend(builder.build_conditions(pagination.filters))
 
-        for filter in pagination.filters:
-            if filter.field == "transaction_id":
-                filter_value = filter.filter.upper()
-                for (
-                    prefix,
-                    transaction_type,
-                ) in id_prefix_to_transaction_type_map.items():
-                    if filter_value.startswith(prefix):
-                        numeric_part = filter_value[len(prefix) :]
-                        if numeric_part:
-                            if numeric_part.isdigit():
-                                conditions.append(
-                                    and_(
-                                        TransactionView.transaction_type
-                                        == transaction_type,
-                                        TransactionView.transaction_id
-                                        == int(numeric_part),
-                                    )
-                                )
-                        else:
-                            # Only prefix provided, filter by transaction type only
-                            conditions.append(
-                                TransactionView.transaction_type == transaction_type
-                            )
-                        break
-                else:
-                    # If no prefix matches, treat the whole value as a potential transaction_id
-                    if filter_value.isdigit():
-                        conditions.append(
-                            TransactionView.transaction_id == int(filter_value)
-                        )
-            else:
-                # Handle other filters
-                field = get_field_for_filter(TransactionView, filter.field)
-                filter_value = filter.filter
-                # check if the date string is selected for filter
-                if filter.filter is None:
-                    if not filter.date_from and not filter.date_to:
-                        continue
+    @staticmethod
+    def _transaction_id_filter(filter_model):
+        filter_value = filter_model.filter.upper()
+        for prefix, transaction_type in id_prefix_to_transaction_type_map.items():
+            if filter_value.startswith(prefix):
+                numeric_part = filter_value[len(prefix) :]
+                if not numeric_part:
+                    return TransactionView.transaction_type == transaction_type
+                if numeric_part.isdigit():
+                    return and_(
+                        TransactionView.transaction_type == transaction_type,
+                        TransactionView.transaction_id == int(numeric_part),
+                    )
+                return None
+        if filter_value.isdigit():
+            return TransactionView.transaction_id == int(filter_value)
+        return None
 
-                    filter_value = []
-                    if filter.date_from:
-                        filter_value.append(
-                            datetime.strptime(
-                                filter.date_from, "%Y-%m-%d %H:%M:%S"
-                            ).strftime("%Y-%m-%d")
-                        )
-                    if filter.date_to:
-                        filter_value.append(
-                            datetime.strptime(
-                                filter.date_to, "%Y-%m-%d %H:%M:%S"
-                            ).strftime("%Y-%m-%d")
-                        )
-                if filter.field == "status":
-                    field = cast(
-                        get_field_for_filter(TransactionView, "status"),
-                        String,
-                    )
-                    # Check if filter_value is a comma-separated string
-                    if isinstance(filter_value, str) and "," in filter_value:
-                        filter_value = filter_value.split(",")  # Convert to list
-                    if isinstance(filter_value, list):
-                        filter.filter_type = "set"
-                conditions.append(
-                    apply_filter_conditions(
-                        field, filter_value, filter.type, filter.filter_type
-                    )
-                )
+    @staticmethod
+    def _status_filter(filter_model):
+        field = cast(get_field_for_filter(TransactionView, "status"), String)
+        filter_value = filter_model.filter
+        filter_type = filter_model.filter_type
+        if isinstance(filter_value, str) and "," in filter_value:
+            filter_value = filter_value.split(",")
+        if isinstance(filter_value, list):
+            filter_type = "set"
+        return apply_filter_conditions(
+            field, filter_value, filter_model.type, filter_type
+        )
 
     @service_handler
     async def get_transactions_paginated(
