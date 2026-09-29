@@ -130,4 +130,30 @@ describe('InitiativeAgreements', () => {
 
     expect(screen.getByTestId('alert-box')).toHaveTextContent('boom')
   })
+
+  it('passes onClearFilters to BCGridViewer and removes cached keys when called', () => {
+    mockUseGetInitiativeAgreements.mockReturnValue({
+      data: {
+        initiativeAgreements: [],
+        pagination: { total: 0, page: 1, size: 10, totalPages: 0 }
+      },
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+
+    // Seed session storage with pretend cached state.
+    sessionStorage.setItem('initiative-agreements-grid-filter', '{"status":"Draft"}')
+    sessionStorage.setItem('initiative-agreements-grid-pagination', '{"page":3,"size":25}')
+
+    render(<InitiativeAgreements />, { wrapper })
+
+    const gridProps = mockBCGridViewer.mock.calls.at(-1)[0]
+    expect(typeof gridProps.onClearFilters).toBe('function')
+
+    // Invoke the callback and check sessionStorage is cleared.
+    gridProps.onClearFilters()
+    expect(sessionStorage.getItem('initiative-agreements-grid-filter')).toBeNull()
+    expect(sessionStorage.getItem('initiative-agreements-grid-pagination')).toBeNull()
+  })
 })
