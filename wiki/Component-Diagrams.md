@@ -16,7 +16,7 @@ This page is intended to house component interaction diagrams for the LCFS syste
 !    Backend API --> Database (PostgreSQL)
 !    Backend API --> Cache (Redis)
 !    Backend API --> Message Queue (RabbitMQ)
-!    Backend API --> Object Storage (MinIO)
+!    Backend API --> Object Storage (S3)
 !    
 !    ETL Process (Apache NiFi) -->|JDBC| TFRS DB (PostgreSQL - Source)
 !    ETL Process (Apache NiFi) -->|JDBC| Database (PostgreSQL - LCFS Target)
@@ -34,7 +34,7 @@ This page is intended to house component interaction diagrams for the LCFS syste
     *   Embedded and described here.
 *   **Action**: Create or update detailed diagrams focusing on:
     *   Frontend component interactions.
-    *   Backend service interactions (e.g., with Redis, RabbitMQ, MinIO, Database).
+    *   Backend service interactions (e.g., with Redis, RabbitMQ, object storage, Database).
     *   Authentication flow with Keycloak in more detail.
     *   Data flow through the ETL NiFi pipeline.
 

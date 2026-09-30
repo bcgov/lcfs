@@ -13,12 +13,13 @@ This document outlines the major subsystems of the LCFS application, their prima
     *   Interacting with the `db` (PostgreSQL) for data persistence using SQLAlchemy ORM.
     *   Utilizing `redis` for caching (via `fastapi-cache2`) and potentially session management.
     *   Communicating with `rabbitmq` for asynchronous task processing (using `aio-pika`).
-    *   Interacting with `minio` object storage for file uploads/downloads (using `boto3`).
+    *   Interacting with S3-compatible object storage (`rustfs` locally) for file uploads/downloads (using `boto3`).
     *   Validating incoming data using Pydantic.
     *   Handling API security with JWTs (issued by Keycloak, validated with `pyjwt`).
 *   **Key Configuration (from root `docker-compose.yml` environment variables & `pyproject.toml` analysis)**:
     *   Connects to PostgreSQL (`LCFS_DB_HOST: db`, `LCFS_DB_PORT: 5432`).
     *   Connects to Redis (`LCFS_REDIS_HOST: redis`, `LCFS_REDIS_PORT: 6379`).
+    *   Connects to object storage (`LCFS_S3_ENDPOINT: http://rustfs:9000`).
     *   Application Port: `8000` (local dev).
     *   Debugger Port: `5678` (local dev).
 *   **Directory Structure Snippet (from `02. Code Guidelines Conventions`):**
@@ -112,13 +113,13 @@ This document outlines the major subsystems of the LCFS application, their prima
 *   **Integration**: Used by the `backend` via `aio-pika`.
 *   **Configuration (from root `docker-compose.yml`)**: AMQP Port `5672`, Management UI `15672`.
 
-## 6. Object Storage (`minio` service)
+## 6. Object Storage (`rustfs` service)
 
-*   **Description**: S3-compatible object storage.
-*   **Technology**: MinIO (`minio/minio:latest` image).
+*   **Description**: S3-compatible object storage. Deployed environments use provisioned S3 buckets instead of RustFS.
+*   **Technology**: RustFS (`rustfs/rustfs:1.0.0` image).
 *   **Responsibilities**: Storing user-uploaded files, generated reports, etc.
 *   **Integration**: Used by the `backend` via `boto3`.
-*   **Configuration (from root `docker-compose.yml`)**: API Port `9000`, Console `9001`, Bucket `lcfs`.
+*   **Configuration (from root `docker-compose.yml`)**: API Port `9000`, Console `9001`, Bucket `lcfs` (created by the one-off `create_bucket` job).
 
 ## 7. ETL Subsystem (Extract, Transform, Load - in `etl/` directory)
 
