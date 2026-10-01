@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { routesMapping } from '../_schema'
+import { routesMapping } from '../routeMapping'
 import { ROUTES } from '@/routes/routes'
 
 describe('Fuel Code Notification Logic', () => {

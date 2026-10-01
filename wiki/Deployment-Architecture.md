@@ -12,8 +12,8 @@ The local development setup is defined by Docker Compose files:
     *   `db`: PostgreSQL database for LCFS data.
     *   `redis`: Redis for caching.
     *   `rabbitmq`: RabbitMQ for message queuing.
-    *   `minio`: S3-compatible object storage.
-    *   `create_bucket`: MinIO utility to create the initial bucket.
+    *   `rustfs`: S3-compatible object storage (RustFS).
+    *   `create_bucket`: One-off job that creates the `lcfs` bucket once RustFS is healthy.
     *   All services are connected via a `shared_network`.
 *   **ETL Subsystem (`./etl/docker-compose.yml`)**: Orchestrates the services required for ETL processes:
     *   `nifi`: Apache NiFi for data flow automation.
@@ -39,7 +39,7 @@ The LCFS application is deployed to an OpenShift Container Platform environment.
     *   **Routes**: Expose services (particularly the frontend and backend APIs) externally with hostnames.
     *   **ConfigMaps**: Store non-sensitive configuration data.
     *   **Secrets**: Store sensitive data (database credentials, API keys, JWT secrets for Keycloak integration).
-    *   **Persistent Volumes**: Used for databases (PostgreSQL for LCFS, TFRS if also on OpenShift), MinIO (if on OpenShift), RabbitMQ data, NiFi repositories.
+    *   **Persistent Volumes**: Used for databases (PostgreSQL for LCFS, TFRS if also on OpenShift), MinIO in PR preview environments, RabbitMQ data, NiFi repositories.
     *   **Network Policies**: The `openshift/templates/knps/` directory might contain `NetworkPolicy` resources, possibly for controlling traffic flow between pods, especially concerning Keycloak or other sensitive services.
 *   **Maintenance Page**: The `openshift/templates/maintenance-page/` directory suggests resources for deploying a dedicated maintenance page.
 *   **ETL Deployment**: The ETL components (NiFi, NiFi Registry, Zookeeper, TFRS DB) might also be deployed to OpenShift, or NiFi might connect to an OpenShift-hosted LCFS database from an external NiFi instance. The `data-transfer.sh` script in `etl/` implies interaction between OpenShift and other environments for data.
