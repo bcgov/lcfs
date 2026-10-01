@@ -36,6 +36,7 @@ from lcfs.web.api.compliance_report.summary_service import (
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.utils.constants import LCFS_Constants
 
 
 MATERIAL_PERCENT_THRESHOLD = 25
@@ -43,25 +44,10 @@ MATERIAL_VOLUME_THRESHOLD = 100_000
 
 logger = structlog.get_logger(__name__)
 
-FUEL_TYPE_EQUIVALENTS = {
-    "petroleum diesel": "Fossil-derived diesel",
-    "petroleum-based diesel": "Fossil-derived diesel",
-    "fossil derived diesel": "Fossil-derived diesel",
-    "fossil-derived diesel": "Fossil-derived diesel",
-    "petroleum gasoline": "Fossil-derived gasoline",
-    "petroleum-based gasoline": "Fossil-derived gasoline",
-    "fossil derived gasoline": "Fossil-derived gasoline",
-    "fossil-derived gasoline": "Fossil-derived gasoline",
-}
-
-
-def _fuel_type_equivalence_key(fuel_type_name):
-    return str(fuel_type_name or "").strip().lower().replace("\u2010", "-")
-
 
 def _normalized_review_fuel_type(fuel_type_name):
-    return FUEL_TYPE_EQUIVALENTS.get(
-        _fuel_type_equivalence_key(fuel_type_name), fuel_type_name
+    return LCFS_Constants.LEGACY_FUEL_TYPE_EQUIVALENTS.get(
+        fuel_type_name, fuel_type_name
     )
 
 

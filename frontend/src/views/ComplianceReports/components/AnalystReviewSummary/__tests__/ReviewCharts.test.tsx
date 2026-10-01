@@ -153,57 +153,41 @@ describe('ReviewCharts', () => {
     )
   })
 
-  it('normalizes petroleum fuel labels in analyst review historical charts', () => {
+  it('does not multiply current-year values across prior-year series', () => {
+    const series = (comparisonLabel: string, comparisonValue: number) => ({
+      title: 'Fuel supply by fuel category and type',
+      currentLabel: '2025',
+      comparisonLabel,
+      points: [
+        {
+          label: 'Diesel - Fossil-derived diesel',
+          currentValue: 150,
+          comparisonValue,
+          delta: 150 - comparisonValue,
+          units: 'reported units'
+        }
+      ]
+    })
+
     const chartData: ReviewChartData = {
       historicalVariance: [
-        {
-          title: 'Fuel supply by fuel category and type',
-          currentLabel: '2024',
-          comparisonLabel: '2023',
-          points: [
-            {
-              label: 'Diesel - Fossil-derived diesel',
-              currentValue: 150,
-              comparisonValue: 0,
-              delta: 150,
-              units: 'reported units'
-            },
-            {
-              label: 'Diesel - Petroleum-based diesel',
-              currentValue: 0,
-              comparisonValue: 100,
-              delta: -100,
-              units: 'reported units'
-            }
-          ]
-        }
+        series('2024', 120),
+        series('2023', 110),
+        series('2022', 100)
       ]
     }
 
     render(<ReviewCharts chartData={chartData} />)
 
-    const option = chartProps[0].option
-    expect(option.xAxis.data).toEqual(['Diesel - Fossil-derived diesel'])
-    expect(option.series).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: '2023',
-          data: [100]
-        }),
-        expect.objectContaining({
-          name: '2024',
-          data: [150]
-        })
-      ])
-    )
+    expect(chartProps[0].option.series[0].data).toEqual([100, 110, 120, 150])
   })
 
-  it('normalizes petroleum fuel labels in compliance unit charts', () => {
+  it('sums duplicate compliance unit fuel labels by schedule', () => {
     const chartData: ReviewChartData = {
       complianceUnitsByFuel: [
         {
           fuelCategory: 'Gasoline',
-          fuelType: 'Petroleum-based gasoline',
+          fuelType: 'Fossil-derived gasoline',
           schedule: 'Fuel supply',
           complianceUnits: 120
         },

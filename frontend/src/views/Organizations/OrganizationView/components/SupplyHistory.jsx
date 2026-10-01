@@ -33,10 +33,6 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import OrganizationList from '@/views/Transactions/components/OrganizationList'
 import { formatNumberWithCommas } from '@/utils/formatters'
-import {
-  isEquivalentFossilFuelType,
-  normalizeFuelTypeForDisplay
-} from '@/utils/fuelTypeNormalization'
 import { defaultInitialPagination } from '@/constants/schedules'
 
 import {
@@ -213,7 +209,7 @@ export const normalizeFuelTypeVolumeTrendRows = (rows = []) =>
   Array.from(
     rows
       .reduce((acc, row) => {
-        const fuelType = normalizeFuelTypeForDisplay(row.fuelType)
+        const fuelType = row.fuelType
         const key = `${row.reportingYear}|${fuelType}|${row.fuelCategory || ''}`
         const existing = acc.get(key) || {
           ...row,
@@ -222,10 +218,7 @@ export const normalizeFuelTypeVolumeTrendRows = (rows = []) =>
           fossilDerived: false
         }
         existing.totalVolume += row.totalVolume || 0
-        existing.fossilDerived =
-          existing.fossilDerived ||
-          row.fossilDerived ||
-          isEquivalentFossilFuelType(row.fuelType)
+        existing.fossilDerived = existing.fossilDerived || row.fossilDerived
         acc.set(key, existing)
         return acc
       }, new Map())

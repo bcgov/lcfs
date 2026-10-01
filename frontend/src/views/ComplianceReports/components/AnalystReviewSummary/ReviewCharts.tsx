@@ -11,10 +11,6 @@ import {
 } from '@/components/charts/chartStyles'
 import { FormControl, InputLabel, MenuItem, Select, Stack } from '@mui/material'
 import { useMemo, useState } from 'react'
-import {
-  normalizeFuelLabelForDisplay,
-  normalizeFuelTypeForDisplay
-} from '@/utils/fuelTypeNormalization'
 import type {
   ComparisonSeries,
   ComplianceUnitPoint,
@@ -264,18 +260,6 @@ const buildSupplementalImpactChartOptions = (series: ComparisonSeries) =>
     ]
   })
 
-const normalizeHistoricalPointLabel = (seriesTitle: string, label: string) => {
-  if (seriesTitle === 'Fuel supply by fuel code') {
-    return label.replace(
-      /^(.*?) \((.*?) - (.*?)\)$/,
-      (_match, fuelCode, fuelCategory, fuelType) =>
-        `${fuelCode} (${fuelCategory} - ${normalizeFuelTypeForDisplay(fuelType)})`
-    )
-  }
-
-  return normalizeFuelLabelForDisplay(label)
-}
-
 const groupHistoricalSeries = (
   historicalSeries: ComparisonSeries[]
 ): HistoricalChartGroup[] => {
@@ -305,14 +289,11 @@ const groupHistoricalSeries = (
     }
 
     series.points.forEach((point) => {
-      const label = normalizeHistoricalPointLabel(series.title, point.label)
+      const label = point.label
       group.labels.add(label)
 
       const currentPeriod = group.periods.get(series.currentLabel)!
-      currentPeriod.set(
-        label,
-        (currentPeriod.get(label) || 0) + point.currentValue
-      )
+      currentPeriod.set(label, point.currentValue)
 
       const comparisonPeriod = group.periods.get(series.comparisonLabel)!
       comparisonPeriod.set(
@@ -653,7 +634,7 @@ const parseFuelCodeLabel = (label: string) => {
   }
 
   return {
-    fuelType: `${match[2]} - ${normalizeFuelTypeForDisplay(match[3])}`,
+    fuelType: `${match[2]} - ${match[3]}`,
     fuelCode: match[1]
   }
 }
@@ -893,9 +874,7 @@ const groupComplianceUnitSeries = (
 
   points.forEach((point) => {
     const fuelCategory = point.fuelCategory || 'Unknown fuel category'
-    const fuelLabel = `${fuelCategory} - ${normalizeFuelTypeForDisplay(
-      point.fuelType || 'Unknown fuel type'
-    )}`
+    const fuelLabel = `${fuelCategory} - ${point.fuelType || 'Unknown fuel type'}`
     fuelLabels.add(fuelLabel)
     schedules.add(point.schedule)
     const valueKey = `${point.schedule}|${fuelLabel}`

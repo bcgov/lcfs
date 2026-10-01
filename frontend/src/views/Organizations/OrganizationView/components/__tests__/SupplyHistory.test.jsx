@@ -125,15 +125,15 @@ describe('SupplyHistory', () => {
     )
   })
 
-  it('normalizes petroleum fuel types for supply history chart calculations', () => {
+  it('sums duplicate supply history fuel type rows', () => {
     expect(
       normalizeFuelTypeVolumeTrendRows([
         {
           reportingYear: '2023',
-          fuelType: 'Petroleum-based diesel',
+          fuelType: 'Fossil-derived diesel',
           fuelCategory: 'Diesel',
           totalVolume: 100,
-          fossilDerived: false
+          fossilDerived: true
         },
         {
           reportingYear: '2023',
