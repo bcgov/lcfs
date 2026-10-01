@@ -248,11 +248,11 @@ vi.mock('@/components/BCButton/index.jsx', () => ({
     return <button {...domProps} onClick={onClick} disabled={isLoading}>{children}</button>
   }
 }))
-vi.mock('@mui/material', async (importOriginal) => {
+vi.mock('@mui/material/Menu', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    Menu: ({ children, open, onClose, anchorEl, anchorOrigin, transformOrigin, slotProps, ...props }) => {
+    default: ({ children, open, onClose, anchorEl, anchorOrigin, transformOrigin, slotProps, ...props }) => {
       if (!open) return null
       const domProps = {}
       Object.keys(props).forEach(key => {
@@ -261,8 +261,15 @@ vi.mock('@mui/material', async (importOriginal) => {
         }
       })
       return <div data-test="menu" {...domProps}>{children}</div>
-    },
-    MenuItem: ({ children, onClick, ...props }) => {
+    }
+  }
+})
+
+vi.mock('@mui/material/MenuItem', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    default: ({ children, onClick, ...props }) => {
       const domProps = {}
       Object.keys(props).forEach(key => {
         if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {

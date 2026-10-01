@@ -1,15 +1,14 @@
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  IconButton,
-  List
-} from '@mui/material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import IconButton from '@mui/material/IconButton'
+import List from '@mui/material/List'
 import { useCallback, useMemo, useState } from 'react'
 import colors from '@/themes/base/colors'
-import { Edit, ExpandMore } from '@mui/icons-material'
+import Edit from '@mui/icons-material/Edit'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import BCBox from '@/components/BCBox'
@@ -17,6 +16,7 @@ import { timezoneFormatter } from '@/utils/formatters'
 import { useParams } from 'react-router-dom'
 import { useDownloadDocument } from '@/hooks/useDocuments'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 const accordionStyles = {
   '& .Mui-disabled': {
@@ -127,6 +127,11 @@ export const ChargingSiteDocument = ({ attachments }) => {
                   >
                     {file.fileName}
                   </BCTypography>
+                  <DocumentPreviewButton
+                    parentType="charging_site"
+                    parentID={siteId}
+                    document={file}
+                  />
                   <BCTypography
                     component="span"
                     variant="subtitle2"

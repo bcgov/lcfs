@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { DatePicker } from '@mui/x-date-pickers'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format, isValid, parseISO } from 'date-fns'
 import { useEffect, useRef, useState } from 'react'
 

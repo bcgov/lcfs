@@ -26,7 +26,7 @@ This document describes key data flows within the LCFS system, covering user int
     *   Validates the incoming data using Pydantic models.
     *   Executes business logic (e.g., calculating values, checking rules).
     *   Interacts with the PostgreSQL database (SQLAlchemy) to create or update records.
-    *   May interact with MinIO for file storage (if attachments are involved).
+    *   May interact with S3 object storage for file storage (if attachments are involved).
     *   May publish a message to RabbitMQ if an asynchronous task needs to be triggered (e.g., generating a PDF version of the report).
 5.  **API Response**: Backend sends a response (e.g., success message with the new report ID, or error details).
 6.  **Frontend Update**: Frontend updates the UI based on the API response (e.g., navigates to a success page, displays an error message, React Query updates cache).
@@ -37,7 +37,7 @@ This document describes key data flows within the LCFS system, covering user int
 2.  **Message Queued**: RabbitMQ receives and queues the message.
 3.  **Worker Consumption**: A dedicated worker process (part of the backend or a separate worker service, TBD by inspecting backend code) consumes messages from the queue.
 4.  **Task Execution**: The worker performs the long-running or deferrable task (e.g., generating a complex report, sending an email notification, processing a large dataset).
-    *   This worker may interact with the database, MinIO, or other services.
+    *   This worker may interact with the database, object storage, or other services.
 5.  **Status Update (Optional)**: The worker might update the status of the task in the database or send a notification (e.g., via WebSocket, email, or another RabbitMQ message) upon completion or failure.
 
 ## 4. ETL Data Flow (TFRS to LCFS via Apache NiFi)

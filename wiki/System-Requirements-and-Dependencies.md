@@ -70,7 +70,7 @@ This document lists the key software, services, frameworks, and libraries that t
 
 - **Data Flow Automation**: Apache NiFi (`1.27.0`).
 - **NiFi Flow Version Control**: Apache NiFi Registry (`1.27.0`).
-- **NiFi Configuration Management**: Apache Zookeeper (`bitnami/zookeeper:3.9.2-debian-12-r14`).
+- **NiFi Configuration Management**: Apache Zookeeper (`zookeeper:3.9.5`).
 - **Source Database (ETL context)**: PostgreSQL (`postgres:17`, named `tfrs`).
 - **JDBC Drivers**: PostgreSQL JDBC Driver (`postgresql-42.7.3.jar` for NiFi).
 

@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import {
   useNotionalTransferOptions,
   useGetAllNotionalTransfers,
@@ -34,7 +34,7 @@ vi.mock('@/constants/routes', () => ({
   }
 }))
 
-// Using the standard test wrapper from utils
+// Using the native test fixtures from utils
 
 describe('useNotionalTransfer', () => {
   beforeEach(() => {
@@ -42,16 +42,17 @@ describe('useNotionalTransfer', () => {
   })
 
   describe('useNotionalTransferOptions', () => {
-    it('should fetch notional transfer options successfully', async () => {
+    test('should fetch notional transfer options successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockOptions = {
         transferTypes: ['Type A', 'Type B'],
         categories: ['Category 1', 'Category 2']
       }
       mockApiService.get.mockResolvedValue({ data: mockOptions })
 
-      const { result } = renderHook(() => useNotionalTransferOptions(), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useNotionalTransferOptions(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -63,25 +64,23 @@ describe('useNotionalTransfer', () => {
       )
     })
 
-    it('should handle enabled option', () => {
+    test('should handle enabled option', ({ renderHook, query }) => {
       const { result } = renderHook(
         () => useNotionalTransferOptions({}, { enabled: false }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('API Error')
       mockApiService.get.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useNotionalTransferOptions({}, { retry: 0 }),
-        {
-          wrapper: wrapper
-        }
+        [query]
       )
 
       await waitFor(() => {
@@ -93,7 +92,10 @@ describe('useNotionalTransfer', () => {
   })
 
   describe('useGetAllNotionalTransfers', () => {
-    it('should fetch all notional transfers successfully', async () => {
+    test('should fetch all notional transfers successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockTransfers = {
         notionalTransfers: [
           { id: 1, transferType: 'Type A' },
@@ -106,7 +108,7 @@ describe('useNotionalTransfer', () => {
       const pagination = { page: 1, size: 10 }
       const { result } = renderHook(
         () => useGetAllNotionalTransfers(123, pagination),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -120,17 +122,20 @@ describe('useNotionalTransfer', () => {
       )
     })
 
-    it('should not fetch when complianceReportId is missing', () => {
+    test('should not fetch when complianceReportId is missing', ({
+      renderHook,
+      query
+    }) => {
       const { result } = renderHook(
         () => useGetAllNotionalTransfers(null, { page: 1, size: 10 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.post).not.toHaveBeenCalled()
     })
 
-    it('should handle enabled option', () => {
+    test('should handle enabled option', ({ renderHook, query }) => {
       const { result } = renderHook(
         () =>
           useGetAllNotionalTransfers(
@@ -138,7 +143,7 @@ describe('useNotionalTransfer', () => {
             { page: 1, size: 10 },
             { enabled: false }
           ),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
@@ -147,7 +152,10 @@ describe('useNotionalTransfer', () => {
   })
 
   describe('useGetAllNotionalTransfersList', () => {
-    it('should fetch notional transfers list successfully', async () => {
+    test('should fetch notional transfers list successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockTransfers = {
         notionalTransfers: [
           { id: 1, transferType: 'Type A' },
@@ -158,7 +166,7 @@ describe('useNotionalTransfer', () => {
 
       const { result } = renderHook(
         () => useGetAllNotionalTransfersList({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -172,7 +180,10 @@ describe('useNotionalTransfer', () => {
       )
     })
 
-    it('should fetch notional transfers list with changelog', async () => {
+    test('should fetch notional transfers list with changelog', async ({
+      renderHook,
+      query
+    }) => {
       const mockTransfers = { notionalTransfers: [] }
       mockApiService.post.mockResolvedValue({ data: mockTransfers })
 
@@ -182,7 +193,7 @@ describe('useNotionalTransfer', () => {
             complianceReportId: 123,
             changelog: true
           }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -195,13 +206,16 @@ describe('useNotionalTransfer', () => {
       )
     })
 
-    it('should handle data without notionalTransfers property', async () => {
+    test('should handle data without notionalTransfers property', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = [{ id: 1, transferType: 'Type A' }]
       mockApiService.post.mockResolvedValue({ data: mockData })
 
       const { result } = renderHook(
         () => useGetAllNotionalTransfersList({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -211,10 +225,14 @@ describe('useNotionalTransfer', () => {
       expect(result.current.data).toEqual(mockData)
     })
 
-    it('should not fetch when complianceReportId is missing', () => {
-      const { result } = renderHook(() => useGetAllNotionalTransfersList({}), {
-        wrapper: wrapper
-      })
+    test('should not fetch when complianceReportId is missing', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(
+        () => useGetAllNotionalTransfersList({}),
+        [query]
+      )
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.post).not.toHaveBeenCalled()
@@ -222,7 +240,10 @@ describe('useNotionalTransfer', () => {
   })
 
   describe('useGetNotionalTransfers', () => {
-    it('should fetch filtered notional transfers successfully', async () => {
+    test('should fetch filtered notional transfers successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockTransfers = {
         notionalTransfers: [{ id: 1, transferType: 'Type A' }],
         pagination: { total: 1, page: 1 }
@@ -237,9 +258,10 @@ describe('useNotionalTransfer', () => {
         complianceReportId: 123
       }
 
-      const { result } = renderHook(() => useGetNotionalTransfers(params), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(
+        () => useGetNotionalTransfers(params),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -252,10 +274,13 @@ describe('useNotionalTransfer', () => {
       )
     })
 
-    it('should not fetch when complianceReportId is missing', () => {
+    test('should not fetch when complianceReportId is missing', ({
+      renderHook,
+      query
+    }) => {
       const { result } = renderHook(
         () => useGetNotionalTransfers({ page: 1, size: 10 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
@@ -264,13 +289,14 @@ describe('useNotionalTransfer', () => {
   })
 
   describe('useSaveNotionalTransfer', () => {
-    it('should save notional transfer successfully', async () => {
+    test('should save notional transfer successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { id: 1, transferType: 'Type A' } }
       mockApiService.post.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useSaveNotionalTransfer(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useSaveNotionalTransfer(123), [query])
 
       const transferData = {
         transferType: 'Type A',
@@ -289,13 +315,11 @@ describe('useNotionalTransfer', () => {
       })
     })
 
-    it('should handle save errors', async () => {
+    test('should handle save errors', async ({ renderHook, query }) => {
       const mockError = new Error('Save failed')
       mockApiService.post.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useSaveNotionalTransfer(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useSaveNotionalTransfer(123), [query])
 
       result.current.mutate({ transferType: 'Type A' })
 
@@ -308,13 +332,17 @@ describe('useNotionalTransfer', () => {
   })
 
   describe('useUpdateNotionalTransfer', () => {
-    it('should update notional transfer successfully', async () => {
+    test('should update notional transfer successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { id: 1, transferType: 'Updated Type' } }
       mockApiService.put.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useUpdateNotionalTransfer(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(
+        () => useUpdateNotionalTransfer(123),
+        [query]
+      )
 
       const transferData = {
         id: 1,
@@ -334,13 +362,14 @@ describe('useNotionalTransfer', () => {
       })
     })
 
-    it('should handle update errors', async () => {
+    test('should handle update errors', async ({ renderHook, query }) => {
       const mockError = new Error('Update failed')
       mockApiService.put.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useUpdateNotionalTransfer(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(
+        () => useUpdateNotionalTransfer(123),
+        [query]
+      )
 
       result.current.mutate({ id: 1, transferType: 'Type A' })
 
@@ -353,12 +382,16 @@ describe('useNotionalTransfer', () => {
   })
 
   describe('useDeleteNotionalTransfer', () => {
-    it('should delete notional transfer successfully', async () => {
+    test('should delete notional transfer successfully', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.delete.mockResolvedValue({ data: {} })
 
-      const { result } = renderHook(() => useDeleteNotionalTransfer(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(
+        () => useDeleteNotionalTransfer(123),
+        [query]
+      )
 
       result.current.mutate(1)
 
@@ -371,13 +404,14 @@ describe('useNotionalTransfer', () => {
       )
     })
 
-    it('should handle delete errors', async () => {
+    test('should handle delete errors', async ({ renderHook, query }) => {
       const mockError = new Error('Delete failed')
       mockApiService.delete.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useDeleteNotionalTransfer(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(
+        () => useDeleteNotionalTransfer(123),
+        [query]
+      )
 
       result.current.mutate(1)
 
@@ -390,13 +424,17 @@ describe('useNotionalTransfer', () => {
   })
 
   describe('useImportNotionalTransfers', () => {
-    it('should import notional transfers successfully', async () => {
+    test('should import notional transfers successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { jobId: 'job-123', status: 'started' } }
       mockApiService.post.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useImportNotionalTransfers(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(
+        () => useImportNotionalTransfers(123),
+        [query]
+      )
 
       const file = new File(['csv content'], 'transfers.csv', {
         type: 'text/csv'
@@ -416,13 +454,14 @@ describe('useNotionalTransfer', () => {
       )
     })
 
-    it('should handle import errors', async () => {
+    test('should handle import errors', async ({ renderHook, query }) => {
       const mockError = new Error('File is required for import')
       mockApiService.post.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useImportNotionalTransfers(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(
+        () => useImportNotionalTransfers(123),
+        [query]
+      )
 
       const file = new File(['csv content'], 'transfers.csv', {
         type: 'text/csv'

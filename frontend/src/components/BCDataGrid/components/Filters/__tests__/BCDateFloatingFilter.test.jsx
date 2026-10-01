@@ -22,13 +22,16 @@ vi.mock('date-fns', () => ({
 }))
 
 // Mock @mui/material components
-vi.mock('@mui/material', () => ({
-  FormControl: vi.fn(({ children, fullWidth, size, role, sx, ...props }) => (
+vi.mock('@mui/material/FormControl', () => ({
+    default: vi.fn(({ children, fullWidth, size, role, sx, ...props }) => (
     <div data-test="form-control" {...props}>
       {children}
     </div>
-  )),
-  IconButton: vi.fn(({ children, onClick, onMouseDown, sx, size, edge, ...props }) => (
+  ))
+}))
+
+vi.mock('@mui/material/IconButton', () => ({
+    default: vi.fn(({ children, onClick, onMouseDown, sx, size, edge, ...props }) => (
     <button
       data-test="icon-button"
       onClick={onClick}
@@ -37,8 +40,11 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </button>
-  )),
-  InputAdornment: vi.fn(({ children, position, ...props }) => (
+  ))
+}))
+
+vi.mock('@mui/material/InputAdornment', () => ({
+    default: vi.fn(({ children, position, ...props }) => (
     <div data-test={`input-adornment-${position}`} {...props}>
       {children}
     </div>
@@ -46,15 +52,18 @@ vi.mock('@mui/material', () => ({
 }))
 
 // Mock @mui/icons-material
-vi.mock('@mui/icons-material', () => ({
-  Clear: vi.fn(() => <span data-test="clear-icon">Clear</span>),
-  CalendarToday: vi.fn(() => <span data-test="calendar-icon">Calendar</span>)
+vi.mock('@mui/icons-material/Clear', () => ({
+    default: vi.fn(() => <span data-test="clear-icon">Clear</span>)
+}))
+
+vi.mock('@mui/icons-material/CalendarToday', () => ({
+    default: vi.fn(() => <span data-test="calendar-icon">Calendar</span>)
 }))
 
 // Mock @mui/x-date-pickers
 const mockDatePickerProps = {}
-vi.mock('@mui/x-date-pickers', () => ({
-  DatePicker: vi.fn((props) => {
+vi.mock('@mui/x-date-pickers/DatePicker', () => ({
+    DatePicker: vi.fn((props) => {
     Object.assign(mockDatePickerProps, props)
     const { value, onChange, onOpen, onClose, open, slotProps, minDate, maxDate, disabled, format, sx, id, ...domProps } = props
     
