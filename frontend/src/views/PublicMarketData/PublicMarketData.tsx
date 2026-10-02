@@ -1105,9 +1105,6 @@ export const PublicMarketData = () => {
     setIsExportingPdf(true)
     try {
       const node = reportRef.current
-      // Ranges (in cloned-document CSS px, relative to the report root) of
-      // elements that must never be split across a PDF page boundary, plus
-      // the cloned root's own box so we can convert those px into canvas px.
       let atomicRangesPx: { top: number; bottom: number }[] = []
       let forcedPageBreaksPx: number[] = []
       let clonedRootWidthPx = 0
@@ -1118,10 +1115,6 @@ export const PublicMarketData = () => {
         backgroundColor: '#ffffff',
         windowWidth: Math.max(node.scrollWidth, PDF_EXPORT_MIN_WIDTH_PX),
         onclone: (clonedDoc) => {
-          // Export only the report itself: strip interactive/no-print chrome
-          // and force every accordion section fully open (regardless of its
-          // current on-screen expanded state) so the PDF always contains the
-          // complete report.
           clonedDoc.querySelectorAll<HTMLElement>('.no-print').forEach((el) => {
             el.style.display = 'none'
           })
@@ -1142,8 +1135,6 @@ export const PublicMarketData = () => {
               el.style.maxHeight = 'none'
               el.style.overflow = 'visible'
             })
-          // Keep only the most recent rows per table in the PDF export so
-          // long history tables don't balloon the document.
           clonedDoc
             .querySelectorAll<HTMLElement>('.print-table tbody')
             .forEach((tbody) => {
@@ -1194,8 +1185,6 @@ export const PublicMarketData = () => {
       const pxPerMm = canvas.width / contentWidthMm
       const pageHeightPx = Math.floor(contentHeightMm * pxPerMm)
 
-      // Convert the atomic element ranges from cloned-document CSS px into
-      // canvas px so they can be compared against the slicing cursor below.
       const canvasScale = clonedRootWidthPx
         ? canvas.width / clonedRootWidthPx
         : 1
@@ -1223,10 +1212,6 @@ export const PublicMarketData = () => {
           sliceHeightPx = candidateEnd - renderedPx
         }
 
-        // If this natural page break would cut through the middle of an
-        // atomic block (chart card, KPI card, or table row) that starts on
-        // this page and fits entirely within one page, move the break up
-        // to just before that block instead of slicing through it.
         const breaking = atomicRangesCanvasPx.find(
           (r) =>
             r.top > renderedPx &&
