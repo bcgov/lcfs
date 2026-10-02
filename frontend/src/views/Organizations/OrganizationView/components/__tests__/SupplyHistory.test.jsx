@@ -83,6 +83,39 @@ describe('SupplyHistory', () => {
     mockUseOrganizationFuelSupply.mockReturnValue(queryData)
   })
 
+  it('shows the fuel category breakdown only when category data exists', () => {
+    const { unmount } = renderComponent()
+    expect(
+      screen.queryByText('Fuel category breakdown')
+    ).not.toBeInTheDocument()
+    unmount()
+
+    mockUseOrganizationFuelSupply.mockReturnValue({
+      ...queryData,
+      data: {
+        ...queryData.data,
+        analytics: {
+          ...queryData.data.analytics,
+          fuelCategoryTrend: [
+            {
+              reportingYear: '2025',
+              fuelCategory: 'Diesel',
+              totalEnergy: 1000,
+              totalLitres: 25,
+              totalComplianceUnits: 1
+            }
+          ]
+        }
+      }
+    })
+    renderComponent()
+
+    expect(screen.getByText('Fuel category breakdown')).toBeInTheDocument()
+    expect(screen.getByTestId('fuel-category-toggle-Diesel')).toHaveTextContent(
+      '1k MJ · 100%'
+    )
+  })
+
   it('uses a set compliance period filter for the selected year range', async () => {
     const user = userEvent.setup()
     renderComponent()
