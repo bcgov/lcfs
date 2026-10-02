@@ -7,7 +7,9 @@ import { FuelCodeBulletinsBase } from '@/views/FuelCodeBulletins/FuelCodeBulleti
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { AppRouteObject } from '../types'
 
-const creditMarketPageEnabled = isFeatureEnabled(FEATURE_FLAGS.CREDIT_MARKET_LOGIN_PAGE)
+const creditMarketPageEnabled = isFeatureEnabled(
+  FEATURE_FLAGS.CREDIT_MARKET_LOGIN_PAGE
+)
 
 export const publicPageRoutes: AppRouteObject[] = [
   {
@@ -25,7 +27,7 @@ export const publicPageRoutes: AppRouteObject[] = [
     key: 'public-market-data',
     path: ROUTES.PUBLIC_MARKET_DATA,
     element: <PublicMarketData />,
-    handle: { title: 'Credit market data' }
+    handle: { title: 'Credit market data', maxWidth: 'xl' }
   },
   {
     name: 'Compliance unit calculator',

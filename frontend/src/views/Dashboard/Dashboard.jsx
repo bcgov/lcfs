@@ -51,7 +51,7 @@ export const Dashboard = () => {
             display="flex"
             flexDirection="column"
             gap={3}
-            sx={{ ml: { lg: 3 }, mt: 5 }}
+            sx={{ ml: { lg: 3 }, mt: { lg: 5 } }}
           >
             <Role roles={nonGovRoles}>
               <OrgBalanceCard />

@@ -28,7 +28,7 @@ services:
     ports:
       - "${LCFS_REDIS_PUBLISHED_PORT:-6379}:6379"
     volumes:
-      - redis_data:/bitnami/redis/data
+      - redis_data:/data
     networks:
       - shared_network
 
@@ -42,37 +42,46 @@ services:
   #    networks:
   #    - shared_network
 
-  minio:
-    image: minio/minio:latest
+  rustfs:
+    image: rustfs/rustfs:1.0.0
     restart: "no"
-    command: "server --console-address :9001 --address :9000 /data"
     environment:
-      - MINIO_ROOT_USER=s3_access_key
-      - MINIO_ROOT_PASSWORD=development_only
-      - MINIO_SERVER_URL=http://localhost:9000
+      RUSTFS_ACCESS_KEY: s3_access_key
+      RUSTFS_SECRET_KEY: development_only
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
     volumes:
-      - s3:/data
+      - rustfs_data:/data
     ports:
-      - "${LCFS_MINIO_PUBLISHED_PORT:-9000}:9000"
-      - "${LCFS_MINIO_CONSOLE_PUBLISHED_PORT:-9001}:9001"
+      - "${LCFS_RUSTFS_PUBLISHED_PORT:-9000}:9000"
+      - "${LCFS_RUSTFS_CONSOLE_PUBLISHED_PORT:-9001}:9001"
     networks:
       - shared_network
 
+  # RustFS cannot create buckets on startup, so this one-off job creates the
+  # lcfs bucket once RustFS is healthy, then exits. curl signs the S3 requests
+  # itself (--aws-sigv4), so no S3 client image is needed.
   create_bucket:
-    image: minio/mc
+    image: curlimages/curl:8.22.0
     restart: "no"
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set myminio http://minio:9000 s3_access_key development_only; do
-        echo 'Waiting for MinIO...';
-        sleep 5;
-      done;
-      mc mb --ignore-existing myminio/lcfs
-      "
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        s3() { curl --aws-sigv4 aws:amz:us-east-1:s3 --user s3_access_key:development_only "$$@"; }
+        if s3 -sf -o /dev/null -I http://rustfs:9000/lcfs; then
+          echo "Bucket lcfs already exists"
+        else
+          s3 -fsS -X PUT http://rustfs:9000/lcfs && echo "Created bucket lcfs"
+        fi
     networks:
       - shared_network
     depends_on:
-      - minio
+      rustfs:
+        condition: service_healthy
 
   backend:
     restart: "no"
@@ -94,6 +103,7 @@ services:
       LCFS_REDIS_HOST: redis
       LCFS_REDIS_PORT: 6379
       LCFS_REDIS_PASSWORD: development_only
+      LCFS_S3_ENDPOINT: http://rustfs:9000
       LCFS_FRONTEND_PUBLISHED_PORT: "${LCFS_FRONTEND_PUBLISHED_PORT:-3000}"
       LCFS_RELOAD: true
       APP_ENVIRONMENT: dev
@@ -101,10 +111,14 @@ services:
       - "${LCFS_BACKEND_PUBLISHED_PORT:-8000}:8000" # Application port
       - "${LCFS_BACKEND_DEBUG_PUBLISHED_PORT:-5678}:5678" # Debugger port
     depends_on:
-      - db
-      - redis
-      - create_bucket
-      # - clamav
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      create_bucket:
+        condition: service_completed_successfully
+      # clamav:
+      #   condition: service_started
     networks:
       - shared_network
 
@@ -157,7 +171,7 @@ volumes:
   postgres_data: {}
   redis_data: {}
   node_modules: {}
-  s3: {}
+  rustfs_data: {}
   clamav: {}
   clamsocket: {}
 

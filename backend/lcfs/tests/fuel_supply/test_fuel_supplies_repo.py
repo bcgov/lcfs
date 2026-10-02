@@ -719,6 +719,151 @@ async def test_get_effective_fuel_supplies_empty_result(
 
 
 @pytest.mark.anyio
+async def test_get_organization_fuel_supply_analytics_renewable_liquid_volume(
+    dbsession,
+):
+    """#5046: the Supply History summary reports the selected year's total
+    renewable fuel (liquid) volume with a comparison to the prior year.
+
+    Only fuel types flagged renewable and measured in litres count; fossil
+    fuels and non-liquid fuels (e.g. electricity) are excluded.
+    """
+    from sqlalchemy import select
+
+    from lcfs.db.base import ActionTypeEnum
+    from lcfs.db.models.compliance import (
+        CompliancePeriod,
+        ComplianceReport,
+        ComplianceReportStatus,
+    )
+    from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
+    from lcfs.db.models.fuel import FuelCategory, FuelType, ProvisionOfTheAct
+    from lcfs.db.models.organization import Organization
+
+    # Reference rows come from the migrations' seed data.
+    periods = {
+        period.description: period
+        for period in (
+            await dbsession.execute(
+                select(CompliancePeriod).where(
+                    CompliancePeriod.description.in_(["2024", "2025"])
+                )
+            )
+        ).scalars()
+    }
+    status = (
+        await dbsession.execute(select(ComplianceReportStatus).limit(1))
+    ).scalar_one()
+    fuel_types = {
+        fuel_type.fuel_type: fuel_type
+        for fuel_type in (
+            await dbsession.execute(
+                select(FuelType).where(
+                    FuelType.fuel_type.in_(
+                        ["Biodiesel", "Ethanol", "Fossil-derived diesel", "Electricity"]
+                    )
+                )
+            )
+        ).scalars()
+    }
+    fuel_category = (
+        await dbsession.execute(select(FuelCategory).limit(1))
+    ).scalar_one()
+    provision = (
+        await dbsession.execute(select(ProvisionOfTheAct).limit(1))
+    ).scalar_one()
+
+    org = Organization(
+        organization_id=504600,
+        organization_code="o504600",
+        name="org504600",
+        total_balance=0,
+        reserved_balance=0,
+        count_transfers_in_progress=0,
+    )
+    dbsession.add(org)
+    await dbsession.flush()
+
+    reports = {}
+    for report_id, year in ((504601, "2024"), (504602, "2025")):
+        reports[year] = ComplianceReport(
+            compliance_report_id=report_id,
+            compliance_period_id=periods[year].compliance_period_id,
+            organization_id=org.organization_id,
+            current_status_id=status.compliance_report_status_id,
+            compliance_report_group_uuid=f"5046-{year}",
+            version=0,
+            reporting_frequency=ReportingFrequency.ANNUAL,
+        )
+    dbsession.add_all(reports.values())
+    await dbsession.flush()
+
+    def _row(fuel_supply_id, year, fuel_type_name, quantity):
+        fuel_type = fuel_types[fuel_type_name]
+        return FuelSupply(
+            fuel_supply_id=fuel_supply_id,
+            compliance_report_id=reports[year].compliance_report_id,
+            group_uuid=f"5046-{fuel_supply_id}",
+            version=0,
+            action_type=ActionTypeEnum.CREATE,
+            quantity=quantity,
+            units=fuel_type.units.name,
+            fuel_type_id=fuel_type.fuel_type_id,
+            fuel_category_id=fuel_category.fuel_category_id,
+            provision_of_the_act_id=provision.provision_of_the_act_id,
+        )
+
+    dbsession.add_all(
+        [
+            _row(5046001, "2024", "Biodiesel", 400),
+            _row(5046002, "2024", "Fossil-derived diesel", 1000),
+            _row(5046003, "2025", "Biodiesel", 500),
+            _row(5046004, "2025", "Ethanol", 100),
+            _row(5046005, "2025", "Fossil-derived diesel", 2000),
+            _row(5046006, "2025", "Electricity", 9999),
+        ]
+    )
+    await dbsession.flush()
+
+    repo = FuelSupplyRepository(db=dbsession)
+    analytics = await repo.get_organization_fuel_supply_analytics(
+        org.organization_id, None
+    )
+
+    summary = analytics["selected_year_summary"]
+    assert summary["reportingYear"] == "2025"
+    assert summary["priorYear"] == "2024"
+    assert summary["totalRenewableVolume"] == 600
+    assert summary["priorYearRenewableVolume"] == 400
+    assert summary["renewableVolumeChange"] == 200
+    assert summary["renewableVolumePctChangeYoy"] == 50.0
+    assert "complianceUnitsPerUnitSupply" not in summary
+    assert "compliance_units_per_unit_trend" not in analytics
+
+    # Narrowing the year filter to the prior year reports that year alone.
+    from lcfs.web.api.base import FilterModel
+
+    analytics_2024 = await repo.get_organization_fuel_supply_analytics(
+        org.organization_id,
+        [
+            FilterModel(
+                field="compliancePeriod",
+                filter="2024",
+                type="set",
+                filter_type="set",
+            )
+        ],
+    )
+    summary_2024 = analytics_2024["selected_year_summary"]
+    assert summary_2024["reportingYear"] == "2024"
+    assert summary_2024["priorYear"] is None
+    assert summary_2024["totalRenewableVolume"] == 400
+    assert summary_2024["priorYearRenewableVolume"] is None
+    assert summary_2024["renewableVolumeChange"] is None
+    assert summary_2024["renewableVolumePctChangeYoy"] is None
+
+
+@pytest.mark.anyio
 async def test_get_organization_fuel_supply_analytics_filters_no_duplicate_join(
     dbsession,
 ):
