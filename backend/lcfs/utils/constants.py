@@ -49,6 +49,7 @@ class LCFS_Constants:
         SpreadsheetColumn("Value per unit", "float"),
         SpreadsheetColumn("Category", "text"),
         SpreadsheetColumn("Status", "text"),
+        SpreadsheetColumn("Agreement Date", "date"),
         SpreadsheetColumn("Effective Date", "date"),
         SpreadsheetColumn("Recorded", "date"),
         SpreadsheetColumn("Approved", "date"),
