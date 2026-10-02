@@ -156,7 +156,7 @@
       "chartTitle": "Price and volume over time",
       "chartSubtitle": "Volume-weighted average price per credit and credits traded",
       "trendCharts": {
-        "annualAverageTitle": "Weighted Average Price A1 - annual trend line",
+        "monthlyAverageTitle": "Weighted Average Price A1 - monthly trend line",
         "transferPriceTitle": "Credit Transfer Price Trend",
         "tradeVolumeTitle": "Credit Trade Volume",
         "weightedAverage": "Weighted average",

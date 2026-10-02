@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ROUTES } from '@/routes/routes'
 import { roles } from '@/constants/roles'
+import { CONFIG } from '@/constants/config'
 import { test } from '@/tests/utils/fixtures'
 
 // Mock dependencies
@@ -100,6 +101,7 @@ describe('AdminLinksCard Component', () => {
     vi.resetAllMocks()
     useNavigate.mockReturnValue(mockNavigate)
     useTranslation.mockReturnValue({ t: mockT })
+    CONFIG.feature_flags.publicMarketData = false
     // Default: user has both Administrator and System Admin roles so all
     // admin links (including the System Admin-only login background) show.
     mockHasRoles.mockImplementation(
@@ -120,15 +122,14 @@ describe('AdminLinksCard Component', () => {
   test('renders all admin links correctly', ({ render, query }) => {
     render(<AdminLinksCard />, [query])
 
-    // Check all four admin links are rendered
     expect(screen.getByText('Manage Government Users')).toBeInTheDocument()
     expect(screen.getByText('Add/Edit Organizations')).toBeInTheDocument()
     expect(screen.getByText('User Activity')).toBeInTheDocument()
+    expect(screen.getByText('Credit market data')).toBeInTheDocument()
     expect(screen.getByText('Login Screen Background')).toBeInTheDocument()
 
-    // Check correct number of list item buttons
     const listItemButtons = screen.getAllByTestId('mui-list-item-button')
-    expect(listItemButtons).toHaveLength(4)
+    expect(listItemButtons).toHaveLength(5)
   })
 
   test('uses correct translation keys', ({ render, query }) => {
@@ -258,6 +259,9 @@ describe('AdminLinksCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ADMIN.USER_ACTIVITY)
 
     fireEvent.click(buttons[3])
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.PUBLIC_MARKET_DATA)
+
+    fireEvent.click(buttons[4])
     expect(mockNavigate).toHaveBeenCalledWith(
       ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND
     )
@@ -300,12 +304,13 @@ describe('AdminLinksCard Component', () => {
       expect(screen.getByText('Manage Government Users')).toBeInTheDocument()
       expect(screen.getByText('Add/Edit Organizations')).toBeInTheDocument()
       expect(screen.getByText('User Activity')).toBeInTheDocument()
+      expect(screen.getByText('Credit market data')).toBeInTheDocument()
       expect(
         screen.queryByText('Login Screen Background')
       ).not.toBeInTheDocument()
 
       const listItemButtons = screen.getAllByTestId('mui-list-item-button')
-      expect(listItemButtons).toHaveLength(3)
+      expect(listItemButtons).toHaveLength(4)
     })
 
     test('shows only the login screen background link for system admins', ({
@@ -323,6 +328,7 @@ describe('AdminLinksCard Component', () => {
         screen.queryByText('Add/Edit Organizations')
       ).not.toBeInTheDocument()
       expect(screen.queryByText('User Activity')).not.toBeInTheDocument()
+      expect(screen.queryByText('Credit market data')).not.toBeInTheDocument()
       expect(screen.getByText('Login Screen Background')).toBeInTheDocument()
 
       const listItemButtons = screen.getAllByTestId('mui-list-item-button')
@@ -338,6 +344,21 @@ describe('AdminLinksCard Component', () => {
       const { container } = render(<AdminLinksCard />, [query])
 
       expect(container).toBeEmptyDOMElement()
+    })
+
+    test('shows the credit market data link when the public market data flag is enabled', ({
+      render,
+      query
+    }) => {
+      CONFIG.feature_flags.publicMarketData = true
+      mockHasRoles.mockReturnValue(false)
+
+      render(<AdminLinksCard />, [query])
+
+      expect(screen.getByText('Credit market data')).toBeInTheDocument()
+      const linkButton = screen.getByText('Credit market data').closest('button')
+      fireEvent.click(linkButton)
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.PUBLIC_MARKET_DATA)
     })
   })
 })
