@@ -75,6 +75,7 @@ export const PublicDashboard = () => {
   const navigate = useNavigate()
   const { data } = useCreditMarketPublicOverview('quarter')
   const { data: activeBg } = useActiveLoginBgImage()
+  const publicMarketDataEnabled = CONFIG.feature_flags.publicMarketData
 
   // After login the OIDC callback returns to the app root, which can briefly
   // bounce an authenticated user here (the public landing) before the session
@@ -627,25 +628,27 @@ export const PublicDashboard = () => {
                   {t('publicDashboard.market.volumeSeries')}
                 </BCBox>
               </BCBox>
-              <Box
-                component={Link}
-                to={ROUTES.PUBLIC_MARKET_DATA}
-                data-test="explore-market-data"
-                sx={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: LINK,
-                  textDecoration: 'none',
-                  '&:hover': { color: NAVY },
-                  '&:focus-visible': {
-                    outline: `3px solid ${GOLD}`,
-                    outlineOffset: '3px',
-                    borderRadius: '3px'
-                  }
-                }}
-              >
-                {t('publicDashboard.market.explore')} →
-              </Box>
+              {publicMarketDataEnabled && (
+                <Box
+                  component={Link}
+                  to={ROUTES.PUBLIC_MARKET_DATA}
+                  data-test="explore-market-data"
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: LINK,
+                    textDecoration: 'none',
+                    '&:hover': { color: NAVY },
+                    '&:focus-visible': {
+                      outline: `3px solid ${GOLD}`,
+                      outlineOffset: '3px',
+                      borderRadius: '3px'
+                    }
+                  }}
+                >
+                  {t('publicDashboard.market.explore')} →
+                </Box>
+              )}
             </BCBox>
           </BCBox>
         </BCBox>

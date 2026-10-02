@@ -396,7 +396,7 @@ const MarketReportTable = ({
         }}
       >
         {rows.length === 0 ? (
-          <tr>
+          <tr className="pdf-avoid-row">
             <td
               colSpan={columns.length + 1}
               style={{ textAlign: 'left', color: MUTED }}
@@ -406,7 +406,7 @@ const MarketReportTable = ({
           </tr>
         ) : (
           [...rows].reverse().map((r) => (
-            <tr key={r.period}>
+            <tr key={r.period} className="pdf-avoid-row">
               <td>{fmtPeriod(r.period)}</td>
               {columns.map((column) => (
                 <td
@@ -486,7 +486,7 @@ export const PublicMarketData = () => {
   const [isExportingPdf, setIsExportingPdf] = useState(false)
   const reportRef = useRef<HTMLDivElement | null>(null)
   const mainChartRef = useRef<ReactECharts | null>(null)
-  const annualAvgChartRef = useRef<ReactECharts | null>(null)
+  const monthlyAvgChartRef = useRef<ReactECharts | null>(null)
   const transferPriceChartRef = useRef<ReactECharts | null>(null)
   const tradeVolumeChartRef = useRef<ReactECharts | null>(null)
 
@@ -498,7 +498,7 @@ export const PublicMarketData = () => {
     const resizeCharts = () => {
       ;[
         mainChartRef,
-        annualAvgChartRef,
+        monthlyAvgChartRef,
         transferPriceChartRef,
         tradeVolumeChartRef
       ].forEach((ref) => {
@@ -522,22 +522,7 @@ export const PublicMarketData = () => {
   const kpis = data?.kpis
   const ytdKpis = data?.ytdKpis ?? kpis
   const allTime = data?.allTime
-  const a1AnnualRows = useMemo(() => {
-    const byYear = new Map<string, { volume: number; transferValue: number }>()
-    for (const row of data?.a1Monthly ?? []) {
-      const year = row.period.slice(0, 4)
-      const current = byYear.get(year) ?? { volume: 0, transferValue: 0 }
-      current.volume += row.volume
-      current.transferValue += row.transferValue
-      byYear.set(year, current)
-    }
-    return Array.from(byYear, ([period, values]) => ({
-      period,
-      weightedAvgPrice: values.volume
-        ? values.transferValue / values.volume
-        : null
-    }))
-  }, [data?.a1Monthly])
+  const a1MonthlyChartRows = data?.a1Monthly ?? []
 
   const chartOption = useMemo(() => {
     const priceName = t('publicDashboard.marketData.kpi.avgPrice')
@@ -611,9 +596,8 @@ export const PublicMarketData = () => {
     }
   }, [series, t])
 
-  const annualAverageChartOption = useMemo(() => {
-    const annualRows = a1AnnualRows
-    const title = t('publicDashboard.marketData.trendCharts.annualAverageTitle')
+  const monthlyAverageChartOption = useMemo(() => {
+    const title = t('publicDashboard.marketData.trendCharts.monthlyAverageTitle')
     return {
       tooltip: {
         trigger: 'axis',
@@ -629,7 +613,7 @@ export const PublicMarketData = () => {
       },
       title: { text: title, textStyle: { fontSize: 13, color: DARK } },
       grid: { left: '10%', right: '5%', top: '20%', bottom: '15%' },
-      xAxis: { type: 'category', data: annualRows.map((p) => p.period) },
+      xAxis: { type: 'category', data: a1MonthlyChartRows.map((p) => p.period) },
       yAxis: {
         type: 'value',
         name: 'CA$',
@@ -652,11 +636,11 @@ export const PublicMarketData = () => {
             formatter: (p: { value: number | null }) =>
               p.value == null ? '' : price2Fmt.format(p.value)
           },
-          data: annualRows.map((p) => p.weightedAvgPrice)
+          data: a1MonthlyChartRows.map((p) => p.weightedAvgPrice)
         }
       ]
     }
-  }, [a1AnnualRows, t])
+  }, [a1MonthlyChartRows, t])
 
   const transferPriceChartOption = useMemo(() => {
     const annualRows = data?.annual ?? []
@@ -974,16 +958,19 @@ export const PublicMarketData = () => {
 
   const displayRows = (rows: MarketReportPeriod[]) => [...rows].reverse()
 
-  const tableExportRows = (key: ReportKey, rows: MarketReportPeriod[]) =>
-    displayRows(rows).map((r) => ({
-      [periodHeaderFor(key)]: fmtPeriod(r.period),
-      ...Object.fromEntries(
-        columnsForReport(key).map((column) => [
-          column.header,
-          column.exportValue(r)
-        ])
-      )
-    }))
+  const tableExportRows = (
+    key: ReportKey,
+    rows: MarketReportPeriod[]
+  ): TableExportRow[] =>
+    displayRows(rows).map((r) => {
+      const exportRow: TableExportRow = {
+        [periodHeaderFor(key)]: fmtPeriod(r.period) ?? ''
+      }
+      columnsForReport(key).forEach((column) => {
+        exportRow[column.header] = column.exportValue(r)
+      })
+      return exportRow
+    })
 
   const tableExportHeaders = (key: ReportKey) => [
     periodHeaderFor(key),
@@ -1122,6 +1109,7 @@ export const PublicMarketData = () => {
       // elements that must never be split across a PDF page boundary, plus
       // the cloned root's own box so we can convert those px into canvas px.
       let atomicRangesPx: { top: number; bottom: number }[] = []
+      let forcedPageBreaksPx: number[] = []
       let clonedRootWidthPx = 0
 
       const canvas = await html2canvas(node, {
@@ -1175,14 +1163,23 @@ export const PublicMarketData = () => {
             const rootRect = clonedRoot.getBoundingClientRect()
             clonedRootWidthPx = rootRect.width
             atomicRangesPx = Array.from(
-              clonedRoot.querySelectorAll<HTMLElement>('.pdf-avoid-break')
-            ).map((el) => {
-              const rect = el.getBoundingClientRect()
-              return {
-                top: rect.top - rootRect.top,
-                bottom: rect.bottom - rootRect.top
-              }
-            })
+              clonedRoot.querySelectorAll<HTMLElement>(
+                '.pdf-avoid-break, .pdf-avoid-row'
+              )
+            )
+              .map((el) => {
+                const rect = el.getBoundingClientRect()
+                return {
+                  top: rect.top - rootRect.top,
+                  bottom: rect.bottom - rootRect.top
+                }
+              })
+              .filter((range) => range.bottom > range.top)
+            forcedPageBreaksPx = Array.from(
+              clonedRoot.querySelectorAll<HTMLElement>('.pdf-page-break-before')
+            )
+              .map((el) => el.getBoundingClientRect().top - rootRect.top)
+              .filter((top) => top > 0)
           }
         }
       })
@@ -1202,10 +1199,15 @@ export const PublicMarketData = () => {
       const canvasScale = clonedRootWidthPx
         ? canvas.width / clonedRootWidthPx
         : 1
-      const atomicRangesCanvasPx = atomicRangesPx.map((r) => ({
-        top: r.top * canvasScale,
-        bottom: r.bottom * canvasScale
-      }))
+      const atomicRangesCanvasPx = atomicRangesPx
+        .map((r) => ({
+          top: r.top * canvasScale,
+          bottom: r.bottom * canvasScale
+        }))
+        .sort((a, b) => a.top - b.top)
+      const forcedPageBreaksCanvasPx = forcedPageBreaksPx
+        .map((top) => top * canvasScale)
+        .sort((a, b) => a - b)
 
       let renderedPx = 0
       let pageIndex = 0
@@ -1213,8 +1215,16 @@ export const PublicMarketData = () => {
         let sliceHeightPx = Math.min(pageHeightPx, canvas.height - renderedPx)
         let candidateEnd = renderedPx + sliceHeightPx
 
+        const forcedBreak = forcedPageBreaksCanvasPx.find(
+          (top) => top > renderedPx + 1 && top < candidateEnd
+        )
+        if (forcedBreak) {
+          candidateEnd = forcedBreak
+          sliceHeightPx = candidateEnd - renderedPx
+        }
+
         // If this natural page break would cut through the middle of an
-        // atomic block (a chart card, KPI card, etc.) that both starts on
+        // atomic block (chart card, KPI card, or table row) that starts on
         // this page and fits entirely within one page, move the break up
         // to just before that block instead of slicing through it.
         const breaking = atomicRangesCanvasPx.find(
@@ -1422,6 +1432,14 @@ export const PublicMarketData = () => {
             '& .print-table': {
               maxHeight: 'none !important',
               overflow: 'visible !important'
+            },
+            '& .pdf-avoid-break, & .pdf-avoid-row': {
+              breakInside: 'avoid',
+              pageBreakInside: 'avoid'
+            },
+            '& .pdf-page-break-before': {
+              breakBefore: 'page',
+              pageBreakBefore: 'always'
             }
           }
         }}
@@ -1748,18 +1766,15 @@ export const PublicMarketData = () => {
           <BCBox
             sx={{
               display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                md: 'repeat(2, minmax(0, 1fr))'
-              },
+              gridTemplateColumns: '1fr',
               gap: 1.5,
               mb: 3
             }}
           >
-            <CardShell dataTest="annual-average-price-chart">
+            <CardShell dataTest="monthly-average-price-chart">
               <ReactECharts
-                ref={annualAvgChartRef}
-                option={annualAverageChartOption}
+                ref={monthlyAvgChartRef}
+                option={monthlyAverageChartOption}
                 style={{ height: 250 }}
               />
             </CardShell>
@@ -1838,6 +1853,7 @@ export const PublicMarketData = () => {
 
         <ReportSection
           title={t('publicDashboard.marketData.sections.detailedReports')}
+          className="pdf-page-break-before"
         >
           {reportTables.map((tbl) => {
             const rows = data?.[tbl.key] ?? []
