@@ -6,6 +6,9 @@ import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
 import React from 'react'
+import { createInstance } from 'i18next'
+import { I18nextProvider } from 'react-i18next'
+import internalComment from '@/assets/locales/en/internalComment.json'
 
 import theme from '@/themes'
 import { roles } from '@/constants/roles'
@@ -63,6 +66,13 @@ vi.mock('../CommentLogFilters', () => ({
 
 // ----- Helpers -------------------------------------------------------
 
+const i18n = createInstance()
+i18n.init({
+  lng: 'en',
+  resources: { en: { internalComment } },
+  initImmediate: false
+})
+
 const renderCommentLog = () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } }
@@ -72,7 +82,9 @@ const renderCommentLog = () => {
       <ThemeProvider theme={theme}>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <MemoryRouter>
-            <CommentLog organizationId={123} />
+            <I18nextProvider i18n={i18n}>
+              <CommentLog organizationId={123} />
+            </I18nextProvider>
           </MemoryRouter>
         </LocalizationProvider>
       </ThemeProvider>
@@ -115,6 +127,56 @@ describe('CommentLog', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+  })
+
+  it.each(['', 'fuel'])(
+    'shows each compliance period alongside its category for search %j',
+    (search) => {
+      const state = baseHookState()
+      mockHook.mockReturnValue({
+        ...state,
+        filters: { ...state.filters, search },
+        data: {
+          comments: [2024, 2025, 2026].map((year) =>
+            sampleComment({
+              internalCommentId: year,
+              entityId: year,
+              complianceYear: year
+            })
+          ),
+          pagination: { page: 1, size: 25, total: 3, totalPages: 1 }
+        }
+      })
+      renderCommentLog()
+
+      const rows = screen.getAllByTestId('comment-log-row')
+      rows.forEach((row, index) => {
+        const category = within(row).getByTestId('comment-category-chip')
+        const period = within(row).getByTestId('comment-compliance-period-chip')
+        expect(period).toHaveTextContent(String(2024 + index))
+        expect(period).toHaveAttribute(
+          'aria-label',
+          `Compliance period: ${2024 + index}`
+        )
+        expect(category.nextElementSibling).toBe(period)
+      })
+    }
+  )
+
+  it('shows N/A for a comment without a compliance period', () => {
+    mockHook.mockReturnValue({
+      ...baseHookState(),
+      data: {
+        comments: [
+          sampleComment({ entityType: 'Transfer', complianceYear: null })
+        ],
+        pagination: { page: 1, size: 25, total: 1, totalPages: 1 }
+      }
+    })
+    renderCommentLog()
+    expect(
+      screen.getByTestId('comment-compliance-period-chip')
+    ).toHaveTextContent('N/A')
   })
 
   it('shows a loading skeleton while fetching', () => {
