@@ -115,23 +115,19 @@ _PACIFIC_TZ = ZoneInfo("America/Vancouver")
 
 def _to_pacific_date(value) -> Optional[date]:
     """
-    Convert a UTC date/datetime to the Vancouver calendar date for export.
+    Return the Vancouver calendar date for the full-ledger export.
 
     openpyxl rejects tz-aware datetimes outright ("Excel does not support
-    datetimes with timezones"), and the aggregate view emits a mix of date,
-    naive and tz-aware values — so writing them through untouched fails the
-    whole export for any organization that happens to have one.
-
-    The UI formats backend UTC timestamps in America/Vancouver, and the Excel
-    download should preserve that same displayed calendar date. Naive datetimes
-    from the database are treated as UTC.
+    datetimes with timezones"). The credit-ledger materialized views emit
+    Vancouver-local naive timestamps, so those must not be converted again.
+    Tz-aware datetimes from non-view callers are converted once.
     """
     if value is None:
         return None
     if isinstance(value, datetime):
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-        return value.astimezone(_PACIFIC_TZ).date()
+        if value.tzinfo is not None:
+            return value.astimezone(_PACIFIC_TZ).date()
+        return value.date()
     if isinstance(value, date):
         return value
     return None

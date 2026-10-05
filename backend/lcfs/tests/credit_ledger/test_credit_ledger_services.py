@@ -113,7 +113,7 @@ async def test_export_transactions_generates_stream(credit_ledger_service, mock_
         assert mock_add_sheet.called
         _, kwargs = mock_add_sheet.call_args
         assert kwargs["rows"][0][3] == "Compliance Report – Supplemental 1"
-        assert kwargs["rows"][0][4] == date(2023, 12, 31)
+        assert kwargs["rows"][0][4] == date(2024, 1, 1)
         _, repo_kwargs = mock_repo.get_rows_paginated.call_args
         assert len(repo_kwargs["conditions"]) == 1
 
@@ -123,9 +123,9 @@ async def test_export_transactions_formats_update_date_in_pacific_timezone(
     credit_ledger_service, mock_repo
 ):
     """
-    The legacy Credit Ledger UI formats updateDate in America/Vancouver. The
-    Excel export should write the same local calendar date as an Excel date,
-    not a raw UTC yyyy-mm-dd string.
+    The legacy Credit Ledger UI displays updateDate in America/Vancouver. The
+    materialized view now emits Vancouver-local naive timestamps, while
+    tz-aware datetimes from other callers still need a single conversion.
     """
     mock_repo.get_rows_paginated.return_value = (
         [
@@ -151,8 +151,19 @@ async def test_export_transactions_formats_update_date_in_pacific_timezone(
                 ),
                 None,
             ),
+            (
+                SimpleNamespace(
+                    transaction_type="Transfer",
+                    compliance_period="2026",
+                    organization_id=1,
+                    compliance_units=30,
+                    available_balance=75,
+                    update_date=datetime(2026, 9, 17, 11, 0),
+                ),
+                None,
+            ),
         ],
-        2,
+        3,
     )
 
     with patch(
@@ -166,7 +177,7 @@ async def test_export_transactions_formats_update_date_in_pacific_timezone(
         )
 
     dates = [row[4] for row in mock_add_sheet.call_args[1]["rows"]]
-    assert dates == [date(2026, 2, 10), date(2026, 7, 14)]
+    assert dates == [date(2026, 2, 10), date(2026, 7, 15), date(2026, 9, 17)]
     assert all(not isinstance(d, datetime) for d in dates)
 
 
