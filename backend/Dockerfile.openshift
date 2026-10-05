@@ -1,8 +1,9 @@
 # Base stage for common setup
-FROM artifacts.developer.gov.bc.ca/docker-remote/python:3.11-bullseye as base
+FROM artifacts.developer.gov.bc.ca/docker-remote/python:3.11-bookworm as base
 
 RUN apt-get update && apt-get install -y --no-install-recommends procps \
   gcc \
+  tzdata \
   && rm -rf /var/lib/apt/lists/*
 
 RUN pip install poetry==1.6.1
@@ -33,6 +34,9 @@ COPY . /app/
 # Note: We mount the local directory using docker-compose so ensure these scripts also have execute permissions 
 # by running the following command on your host machine from the root of this project:
 # chmod +x ./backend/wait-for-it.sh ./backend/lcfs/prestart.sh ./backend/lcfs/start.sh ./backend/lcfs/start-reload.sh
+
+# Fail the build if the time zone data predates BC's permanent UTC-7 (IANA tzdb 2026b)
+RUN poetry run python -m lcfs.scripts.check_tzdata
 
 # Update the group ownership and grant the read/write permission for /app
 RUN chgrp -R root /app && \

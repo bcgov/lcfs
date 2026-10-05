@@ -11,7 +11,13 @@ from lcfs.db.models.compliance import (
     ComplianceReportStatus,
     ComplianceReportHistory,
 )
-from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
+from lcfs.db.models.compliance.ComplianceReport import (
+    ReportingFrequency,
+    compliance_report_document_association,
+)
+from lcfs.db.models.comment import ComplianceReportInternalComment
+from lcfs.db.models.comment.InternalComment import InternalComment
+from lcfs.db.models.document.Document import Document
 from lcfs.db.models.user import UserProfile
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -113,6 +119,46 @@ async def test_get_compliance_report_not_found(compliance_report_repo):
     report = await compliance_report_repo.get_compliance_report_by_id(report_id=1000)
 
     assert report is None
+
+
+@pytest.mark.anyio
+async def test_get_supporting_document_count_includes_report_chain_documents(
+    dbsession,
+    compliance_report_repo,
+    compliance_reports,
+):
+    original_report = compliance_reports[0]
+    supplemental_report = ComplianceReport(
+        compliance_report_id=996,
+        compliance_period_id=original_report.compliance_period_id,
+        organization_id=original_report.organization_id,
+        nickname="supplemental",
+        reporting_frequency=original_report.reporting_frequency,
+        current_status_id=original_report.current_status_id,
+        compliance_report_group_uuid=original_report.compliance_report_group_uuid,
+        version=original_report.version + 1,
+    )
+    document = Document(
+        file_key="lcfs-docs/compliance_report/994/supporting.pdf",
+        file_name="supporting.pdf",
+        file_size=2048,
+        mime_type="application/pdf",
+    )
+    dbsession.add_all([supplemental_report, document])
+    await dbsession.flush()
+    await dbsession.execute(
+        compliance_report_document_association.insert().values(
+            compliance_report_id=original_report.compliance_report_id,
+            document_id=document.document_id,
+        )
+    )
+    await dbsession.commit()
+
+    count = await compliance_report_repo.get_supporting_document_count(
+        supplemental_report.compliance_report_id
+    )
+
+    assert count == 1
 
 
 @pytest.mark.anyio
@@ -249,7 +295,7 @@ async def test_get_reports_paginated_sort_by_assigned_analyst(
 
 
 @pytest.mark.anyio
-async def test_get_reports_paginated_keeps_analyst_adjustment_visible_for_supplier(
+async def test_get_reports_paginated_excludes_analyst_adjustment_for_supplier(
     compliance_report_repo, monkeypatch
 ):
     pagination = PaginationRequestSchema(
@@ -273,7 +319,10 @@ async def test_get_reports_paginated_keeps_analyst_adjustment_visible_for_suppli
 
     await compliance_report_repo.get_reports_paginated(pagination, supplier_user)
 
-    latest_visible_query.assert_awaited_once_with([], supplier_user.organization_id)
+    latest_visible_query.assert_awaited_once_with(
+        [ComplianceReportStatusEnum.Analyst_adjustment],
+        supplier_user.organization_id,
+    )
 
 
 @pytest.mark.anyio
@@ -388,6 +437,174 @@ async def test_get_all_org_reported_years_not_found(
     )
 
     assert len(periods) == 0
+
+
+@pytest.fixture
+async def chain_with_comments(
+    dbsession, organizations, compliance_periods, compliance_report_statuses
+):
+    """A two-version chain (v0 surviving, v1 to be deleted) with an internal
+    comment on each version."""
+    group_uuid = str(uuid.uuid4())
+    reports = [
+        ComplianceReport(
+            compliance_report_id=9101,
+            compliance_period_id=compliance_periods[0].compliance_period_id,
+            organization_id=organizations[0].organization_id,
+            nickname="v0",
+            reporting_frequency=ReportingFrequency.ANNUAL,
+            current_status_id=compliance_report_statuses[0].compliance_report_status_id,
+            compliance_report_group_uuid=group_uuid,
+            version=0,
+        ),
+        ComplianceReport(
+            compliance_report_id=9102,
+            compliance_period_id=compliance_periods[0].compliance_period_id,
+            organization_id=organizations[0].organization_id,
+            nickname="v1",
+            reporting_frequency=ReportingFrequency.ANNUAL,
+            current_status_id=compliance_report_statuses[0].compliance_report_status_id,
+            compliance_report_group_uuid=group_uuid,
+            version=1,
+        ),
+    ]
+    comments = [
+        InternalComment(
+            internal_comment_id=9201,
+            comment="on the surviving version",
+            audience_scope="Analyst",
+        ),
+        InternalComment(
+            internal_comment_id=9202,
+            comment="recommend acceptance",
+            audience_scope="Compliance Manager",
+        ),
+        InternalComment(
+            internal_comment_id=9203,
+            comment="returning, see concerns",
+            audience_scope="Director",
+        ),
+    ]
+    dbsession.add_all(reports + comments)
+    await dbsession.flush()
+    dbsession.add_all(
+        [
+            ComplianceReportInternalComment(
+                compliance_report_id=9101, internal_comment_id=9201
+            ),
+            ComplianceReportInternalComment(
+                compliance_report_id=9102, internal_comment_id=9202
+            ),
+            ComplianceReportInternalComment(
+                compliance_report_id=9102, internal_comment_id=9203
+            ),
+        ]
+    )
+    await dbsession.commit()
+    return SimpleNamespace(group_uuid=group_uuid, surviving_id=9101, deleted_id=9102)
+
+
+async def _linked_comment_ids(dbsession, report_id):
+    result = await dbsession.execute(
+        select(ComplianceReportInternalComment.internal_comment_id).where(
+            ComplianceReportInternalComment.compliance_report_id == report_id
+        )
+    )
+    return sorted(result.scalars().all())
+
+
+@pytest.mark.anyio
+async def test_delete_compliance_report_moves_comments_to_surviving_version(
+    compliance_report_repo, dbsession, chain_with_comments
+):
+    """#5087: deleting a version must not take its internal comments with it -
+    they move to the newest surviving version of the same chain."""
+    await compliance_report_repo.delete_compliance_report(
+        chain_with_comments.deleted_id
+    )
+    await dbsession.commit()
+
+    # Both comments from the deleted version now hang off the surviving one,
+    # alongside the comment that was already there.
+    assert await _linked_comment_ids(dbsession, chain_with_comments.surviving_id) == [
+        9201,
+        9202,
+        9203,
+    ]
+    assert await _linked_comment_ids(dbsession, chain_with_comments.deleted_id) == []
+
+    # The comments themselves are untouched.
+    remaining = await dbsession.execute(
+        select(InternalComment.internal_comment_id).where(
+            InternalComment.internal_comment_id.in_([9201, 9202, 9203])
+        )
+    )
+    assert sorted(remaining.scalars().all()) == [9201, 9202, 9203]
+
+
+@pytest.mark.anyio
+async def test_delete_compliance_report_stamps_group_uuid_on_moved_comments(
+    compliance_report_repo, dbsession, chain_with_comments
+):
+    """The denormalised group uuid follows the comment to its new version."""
+    await compliance_report_repo.delete_compliance_report(
+        chain_with_comments.deleted_id
+    )
+    await dbsession.commit()
+
+    result = await dbsession.execute(
+        select(ComplianceReportInternalComment.compliance_report_group_uuid).where(
+            ComplianceReportInternalComment.internal_comment_id.in_([9202, 9203])
+        )
+    )
+    assert set(result.scalars().all()) == {chain_with_comments.group_uuid}
+
+
+@pytest.mark.anyio
+async def test_delete_compliance_report_keeps_one_link_per_comment(
+    compliance_report_repo, dbsession, chain_with_comments
+):
+    """A comment linked to both versions must not violate the composite primary
+    key when the deleted version's link is moved."""
+    dbsession.add(
+        ComplianceReportInternalComment(
+            compliance_report_id=chain_with_comments.surviving_id,
+            internal_comment_id=9202,
+        )
+    )
+    await dbsession.commit()
+
+    await compliance_report_repo.delete_compliance_report(
+        chain_with_comments.deleted_id
+    )
+    await dbsession.commit()
+
+    assert await _linked_comment_ids(dbsession, chain_with_comments.surviving_id) == [
+        9201,
+        9202,
+        9203,
+    ]
+
+
+@pytest.mark.anyio
+async def test_delete_compliance_report_drops_comments_when_no_version_survives(
+    compliance_report_repo, dbsession, chain_with_comments
+):
+    """With nothing left in the chain to hold them, the links go as before."""
+    await compliance_report_repo.delete_compliance_report(
+        chain_with_comments.surviving_id
+    )
+    await compliance_report_repo.delete_compliance_report(
+        chain_with_comments.deleted_id
+    )
+    await dbsession.commit()
+
+    result = await dbsession.execute(
+        select(ComplianceReportInternalComment.internal_comment_id).where(
+            ComplianceReportInternalComment.internal_comment_id.in_([9201, 9202, 9203])
+        )
+    )
+    assert result.scalars().all() == []
 
 
 @pytest.mark.anyio

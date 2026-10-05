@@ -1,8 +1,8 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
 import { ChargingSiteCard } from '../../components/ChargingSiteCard'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 
 // Complete react-router-dom mock
 vi.mock('react-router-dom', () => ({
@@ -88,30 +88,63 @@ describe('ChargingSiteCard', () => {
     vi.clearAllMocks()
   })
 
-  it('renders profile view by default', () => {
-    render(<ChargingSiteCard {...mockProps} />, { wrapper })
+  test('renders profile view by default', ({ render, theme, router }) => {
+    render(<ChargingSiteCard {...mockProps} />, [theme, router])
 
     expect(screen.getByText('Profile')).toBeInTheDocument()
     expect(screen.getByText('Map')).toBeInTheDocument()
     expect(screen.queryByText('Edit Form')).not.toBeInTheDocument()
   })
 
-  it('shows edit button for draft status', () => {
-    render(<ChargingSiteCard {...mockProps} />, { wrapper })
+  test('shows edit button for draft status', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ChargingSiteCard {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByText('common:editBtn')).toBeInTheDocument()
   })
 
-  it('does not show edit button for non-draft status', () => {
+  test('does not show edit button for non-draft status', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const propsWithSubmittedStatus = {
       ...mockProps,
       data: { ...mockData, status: { status: 'Submitted' } }
     }
-    render(<ChargingSiteCard {...propsWithSubmittedStatus} />, { wrapper })
+    render(<ChargingSiteCard {...propsWithSubmittedStatus} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.queryByText('common:editBtn')).not.toBeInTheDocument()
   })
 
-  it('switches to edit mode when edit button is clicked', () => {
-    render(<ChargingSiteCard {...mockProps} />, { wrapper })
+  test('switches to edit mode when edit button is clicked', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ChargingSiteCard {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const editButton = screen.getByText('common:editBtn')
     fireEvent.click(editButton)
@@ -121,16 +154,38 @@ describe('ChargingSiteCard', () => {
     expect(screen.queryByText('Map')).not.toBeInTheDocument()
   })
 
-  it('renders in add mode', () => {
+  test('renders in add mode', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const addModeProps = { ...mockProps, addMode: true }
-    render(<ChargingSiteCard {...addModeProps} />, { wrapper })
+    render(<ChargingSiteCard {...addModeProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('Edit Form')).toBeInTheDocument()
     expect(screen.queryByText('Profile')).not.toBeInTheDocument()
   })
 
-  it('renders history toggle and notifies on change', () => {
-    render(<ChargingSiteCard {...mockProps} />, { wrapper })
+  test('renders history toggle and notifies on change', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ChargingSiteCard {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const toggle = screen.getByRole('checkbox', {
       name: 'historyToggle'
@@ -140,7 +195,13 @@ describe('ChargingSiteCard', () => {
     expect(mockProps.onHistoryModeChange).toHaveBeenCalledWith(true)
   })
 
-  it('renders site history in read-only mode without edit button', () => {
+  test('renders site history in read-only mode without edit button', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const historyProps = {
       ...mockProps,
       historyMode: true,
@@ -153,15 +214,31 @@ describe('ChargingSiteCard', () => {
       }
     }
 
-    render(<ChargingSiteCard {...historyProps} />, { wrapper })
+    render(<ChargingSiteCard {...historyProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.queryByText('common:editBtn')).not.toBeInTheDocument()
     expect(screen.getByText('History Profile 3')).toBeInTheDocument()
     expect(screen.getByText('History Profile 2')).toBeInTheDocument()
   })
 
-  it('applies a max-height card layout with scrollable content', () => {
-    const { container } = render(<ChargingSiteCard {...mockProps} />, { wrapper })
+  test('applies a max-height card layout with scrollable content', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const { container } = render(<ChargingSiteCard {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const card = container.querySelector('[data-testid="widget-card"]')
     const sx = JSON.parse(card.getAttribute('data-sx'))

@@ -1,5 +1,6 @@
 import io
 from datetime import date, datetime, timezone
+from typing import Any, Sequence
 
 from fastapi import Depends
 from starlette.responses import StreamingResponse
@@ -44,6 +45,27 @@ FUEL_CODE_EXPORT_COLUMNS = [
 ]
 
 
+def _format_transport_modes(values: Sequence[Any] | None) -> str:
+    """
+    Render transport modes the way the fuel code grid does: ``Truck (125 km)``.
+
+    ``FuelCodeRepository.get_fuel_codes_paginated`` returns each mode as a
+    ``{"transport_mode", "distance"}`` dict when a distance is recorded and
+    falls back to the view's plain list of mode names otherwise.
+    """
+    labels = []
+    for item in values or []:
+        if isinstance(item, dict):
+            mode = item.get("transport_mode")
+            distance = item.get("distance")
+        else:
+            mode, distance = item, None
+        if not mode:
+            continue
+        labels.append(f"{mode} ({distance} km)" if distance is not None else str(mode))
+    return ", ".join(labels)
+
+
 class FuelCodeExporter:
     def __init__(self, repo: FuelCodeRepository = Depends(FuelCodeRepository)) -> None:
         self.repo = repo
@@ -73,7 +95,9 @@ class FuelCodeExporter:
         if exclude_archived:
             today = date.today()
             anchor = date(today.year, 3, 31)
-            compliance_period_start = anchor if today >= anchor else date(today.year - 1, 3, 31)
+            compliance_period_start = (
+                anchor if today >= anchor else date(today.year - 1, 3, 31)
+            )
 
         results = await self.repo.get_fuel_codes_paginated(
             pagination,
@@ -81,45 +105,42 @@ class FuelCodeExporter:
             compliance_period_start=compliance_period_start,
         )
 
-        # Prepare data for the spreadsheet
+        # Prepare data for the spreadsheet. The repo returns plain dicts (see
+        # FuelCodeRepository._with_transport_mode_distances), not ORM rows.
         data = []
         for fuel_code in results[0]:
             data.append(
                 [
-                    fuel_code.status,
-                    fuel_code.prefix,
-                    fuel_code.fuel_suffix,
-                    fuel_code.carbon_intensity,
-                    fuel_code.edrms,
-                    fuel_code.company,
-                    fuel_code.contact_name,
-                    fuel_code.contact_email,
-                    fuel_code.application_date,
-                    fuel_code.approval_date,
-                    fuel_code.effective_date,
-                    fuel_code.expiration_date,
-                    fuel_code.fuel_type,
-                    fuel_code.feedstock,
-                    fuel_code.feedstock_location,
-                    fuel_code.feedstock_misc,
-                    fuel_code.co_processed,
-                    fuel_code.fuel_production_facility_city,
-                    fuel_code.fuel_production_facility_province_state,
-                    fuel_code.fuel_production_facility_country,
-                    fuel_code.facility_nameplate_capacity,
-                    fuel_code.facility_nameplate_capacity_unit,
-                    (
-                        ", ".join(fuel_code.feedstock_fuel_transport_modes)
-                        if fuel_code.feedstock_fuel_transport_modes
-                        else ""
+                    fuel_code.get("status"),
+                    fuel_code.get("prefix"),
+                    fuel_code.get("fuel_suffix"),
+                    fuel_code.get("carbon_intensity"),
+                    fuel_code.get("edrms"),
+                    fuel_code.get("company"),
+                    fuel_code.get("contact_name"),
+                    fuel_code.get("contact_email"),
+                    fuel_code.get("application_date"),
+                    fuel_code.get("approval_date"),
+                    fuel_code.get("effective_date"),
+                    fuel_code.get("expiration_date"),
+                    fuel_code.get("fuel_type"),
+                    fuel_code.get("feedstock"),
+                    fuel_code.get("feedstock_location"),
+                    fuel_code.get("feedstock_misc"),
+                    fuel_code.get("co_processed"),
+                    fuel_code.get("fuel_production_facility_city"),
+                    fuel_code.get("fuel_production_facility_province_state"),
+                    fuel_code.get("fuel_production_facility_country"),
+                    fuel_code.get("facility_nameplate_capacity"),
+                    fuel_code.get("facility_nameplate_capacity_unit"),
+                    _format_transport_modes(
+                        fuel_code.get("feedstock_fuel_transport_modes")
                     ),
-                    (
-                        ", ".join(fuel_code.finished_fuel_transport_modes)
-                        if fuel_code.finished_fuel_transport_modes
-                        else ""
+                    _format_transport_modes(
+                        fuel_code.get("finished_fuel_transport_modes")
                     ),
-                    fuel_code.former_company,
-                    fuel_code.notes,
+                    fuel_code.get("former_company"),
+                    fuel_code.get("notes"),
                 ]
             )
 

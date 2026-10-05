@@ -183,10 +183,20 @@ async def update_comment(
         raise HTTPException(status_code=404, detail="Internal comment not found.")
 
     current_username = request.user.keycloak_username
-    # Administrators may edit any comment; everyone else only their own.
+    # Administrators may edit any comment; Company Overview is a shared
+    # organization statement editable by government analysts; everyone else
+    # only edits their own comments.
     user_role_names = request.user.role_names
     is_admin = RoleEnum.ADMINISTRATOR in user_role_names
-    if existing_comment.create_user != current_username and not is_admin:
+    is_shared_company_overview = (
+        RoleEnum.GOVERNMENT in user_role_names
+        and await service.repo.is_organization_comment(internal_comment_id)
+    )
+    if (
+        existing_comment.create_user != current_username
+        and not is_admin
+        and not is_shared_company_overview
+    ):
         raise HTTPException(
             status_code=403, detail="User is not the creator of the comment."
         )

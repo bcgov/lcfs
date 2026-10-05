@@ -19,6 +19,7 @@ from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.allocation_agreement.schema import AllocationAgreementSchema
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
 from sqlalchemy import and_, select, delete, func, text
 
@@ -120,32 +121,13 @@ class AllocationAgreementRepository:
         # We check the latest version rather than any version because
         # ETL-migrated TFRS supplemental chains can have DELETE followed
         # by UPDATE on the same group_uuid (not possible in modern LCFS).
-        latest_version_per_group = (
-            select(
-                AllocationAgreement.group_uuid,
-                func.max(AllocationAgreement.version).label("max_version"),
-            )
-            .where(
+        deleted_groups = VersioningQueryHelper.deleted_groups_subquery(
+            AllocationAgreement,
+            where_clauses=[
                 AllocationAgreement.compliance_report_id.in_(
                     compliance_reports_select
                 )
-            )
-            .group_by(AllocationAgreement.group_uuid)
-        ).subquery()
-
-        deleted_groups = (
-            select(AllocationAgreement.group_uuid)
-            .join(
-                latest_version_per_group,
-                and_(
-                    AllocationAgreement.group_uuid
-                    == latest_version_per_group.c.group_uuid,
-                    AllocationAgreement.version
-                    == latest_version_per_group.c.max_version,
-                ),
-            )
-            .where(AllocationAgreement.action_type == ActionTypeEnum.DELETE)
-            .distinct()
+            ],
         )
 
         # Build query conditions
@@ -168,16 +150,11 @@ class AllocationAgreementRepository:
             conditions.extend([~AllocationAgreement.group_uuid.in_(deleted_groups)])
 
         # Get the latest version of each record
-        valid_agreements_select = (
-            select(
-                AllocationAgreement.group_uuid,
-                func.max(AllocationAgreement.version).label("max_version"),
-            )
-            .where(*conditions)
-            .group_by(AllocationAgreement.group_uuid)
+        valid_agreements_subq = VersioningQueryHelper.latest_version_subquery(
+            AllocationAgreement,
+            version_label="max_version",
+            where_clauses=conditions,
         )
-
-        valid_agreements_subq = valid_agreements_select.subquery()
 
         # Get the actual records with their related data
         allocation_agreements_select = (

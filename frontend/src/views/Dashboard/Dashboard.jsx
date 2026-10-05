@@ -1,5 +1,6 @@
 import React from 'react'
-import { Grid, Box } from '@mui/material'
+import Grid from '@mui/material/Grid'
+import Box from '@mui/material/Box'
 import { Role } from '@/components/Role'
 import { roles, govRoles, nonGovRoles } from '@/constants/roles'
 import {
@@ -24,6 +25,8 @@ import {
 } from './components/cards'
 import OrganizationsSummaryCard from './components/cards/idir/OrganizationsSummaryCard'
 import { CIApplicationCard } from './components/cards/idir/CIApplicationCard'
+import { InitiativeAgreementsCard } from './components/cards/idir/InitiativeAgreementsCard'
+import OrgInitiativeAgreementsCard from './components/cards/bceid/OrgInitiativeAgreementsCard'
 import { ComplianceReportCard } from './components/cards/idir/ComplianceReportCard'
 
 export const Dashboard = () => {
@@ -48,7 +51,7 @@ export const Dashboard = () => {
             display="flex"
             flexDirection="column"
             gap={3}
-            sx={{ ml: { lg: 3 }, mt: 5 }}
+            sx={{ ml: { lg: 3 }, mt: { lg: 5 } }}
           >
             <Role roles={nonGovRoles}>
               <OrgBalanceCard />
@@ -84,6 +87,11 @@ export const Dashboard = () => {
               <Role roles={[roles.analyst]}>
                 <CIApplicationCard />
               </Role>
+              <Role
+                roles={[roles.ia_analyst, roles.ia_manager, roles.director]}
+              >
+                <InitiativeAgreementsCard />
+              </Role>
             </Role>
 
             <Role roles={[roles.transfers]}>
@@ -94,6 +102,9 @@ export const Dashboard = () => {
             </Role>
             <Role roles={[roles.ci_applicant]}>
               <OrgFuelCodeCard />
+            </Role>
+            <Role roles={[roles.ia_proponent]}>
+              <OrgInitiativeAgreementsCard />
             </Role>
             <Role roles={[roles.director]}>
               <DirectorReviewCard />

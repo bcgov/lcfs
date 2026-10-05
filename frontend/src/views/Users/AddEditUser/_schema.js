@@ -173,16 +173,48 @@ export const iaRoleOptions = (t) => [
   toOption(roles.ia_manager, t)
 ]
 
+// Org-controllable roles (#4565): assignable only when the organization has
+// them enabled. Manage Users and Signing Authority are always available.
+export const ORG_CONTROLLABLE_ROLES = [
+  roles.transfers,
+  roles.compliance_reporting,
+  roles.ci_applicant,
+  roles.ia_proponent
+]
+
+// Lowercase role values assignable given the org's available roles.
+// A null availableRoles (org not loaded) means "no filtering".
+export const allowedBceidRoleValues = (availableRoles) => {
+  if (availableRoles == null) {
+    return null
+  }
+  const allowed = [
+    roles.manage_users,
+    roles.signing_authority,
+    roles.read_only,
+    ...ORG_CONTROLLABLE_ROLES.filter((role) => availableRoles.includes(role))
+  ]
+  // IA Signer rides on IA Proponent availability
+  if (availableRoles.includes(roles.ia_proponent)) {
+    allowed.push(roles.ia_signer)
+  }
+  return allowed.map((role) => role.toLowerCase())
+}
+
 // IA Signer is excluded here — it is rendered separately, indented under IA Proponent
-export const bceidRoleOptions = (t) =>
-  [
+export const bceidRoleOptions = (t, availableRoles = null) => {
+  const allowed = allowedBceidRoleValues(availableRoles)
+  return [
     roles.manage_users,
     roles.transfers,
     roles.compliance_reporting,
     roles.signing_authority,
     roles.ci_applicant,
     roles.ia_proponent
-  ].map((role) => toOption(role, t))
+  ]
+    .filter((role) => allowed == null || allowed.includes(role.toLowerCase()))
+    .map((role) => toOption(role, t))
+}
 
 // Only shown when a government user edits a BCeID user
 export const iaSignerOption = (t) => toOption(roles.ia_signer, t)

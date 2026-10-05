@@ -1,14 +1,13 @@
 import colors from '@/themes/base/colors'
-import { Close, Warning } from '@mui/icons-material'
-import {
-  Box,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  IconButton
-} from '@mui/material'
+import Close from '@mui/icons-material/Close'
+import Warning from '@mui/icons-material/Warning'
+import Box from '@mui/material/Box'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
+import Divider from '@mui/material/Divider'
+import IconButton from '@mui/material/IconButton'
 import PropTypes from 'prop-types'
 import { useEffect, useState } from 'react'
 import BCButton from './BCButton'

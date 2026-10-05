@@ -1,5 +1,6 @@
 import React from 'react'
-import { Icon, Toolbar } from '@mui/material'
+import Icon from '@mui/material/Icon'
+import Toolbar from '@mui/material/Toolbar'
 import { bindTrigger } from 'material-ui-popup-state'
 import type { PopupState } from 'material-ui-popup-state/hooks'
 import BCBox from '@/components/BCBox'
@@ -60,6 +61,17 @@ const HeaderBar = ({
               </BCTypography>
             )}
           </BCTypography>
+          {data.headerUtilityPart && (
+            <BCBox
+              display={{ xs: 'none', xl: 'flex' }}
+              alignItems="center"
+              ml={3}
+              pl={2.5}
+              sx={{ borderLeft: '1px solid rgba(255, 255, 255, 0.35)' }}
+            >
+              {React.cloneElement(data.headerUtilityPart, { data })}
+            </BCBox>
+          )}
         </BCBox>
       </BCBox>
       <BCBox
@@ -80,9 +92,7 @@ const HeaderBar = ({
         sx={{ cursor: 'pointer' }}
         {...bindTrigger(popupState)}
       >
-        <Icon fontSize="inherit">
-          {popupState.isOpen ? 'close' : 'menu'}
-        </Icon>
+        <Icon fontSize="inherit">{popupState.isOpen ? 'close' : 'menu'}</Icon>
       </BCBox>
     </Toolbar>
   )

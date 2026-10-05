@@ -16,6 +16,7 @@ export const apiRoutes = {
   seededTestUsers: '/users/seeded-test-users',
   resolveOrgName: '/users/anonymizer/resolve-org-name',
   getUserActivities: '/users/:userID/activity',
+  getUserAssignedWork: '/users/:userID/assigned-work',
   getAllUserActivities: '/users/activities/all',
   trackUserLogin: '/users/logged-in',
   getUserLoginHistories: '/users/login-history',
@@ -69,6 +70,47 @@ export const apiRoutes = {
 
   // initiative-agreements
   initiativeAgreements: '/initiative-agreements/',
+  // Agreement-management endpoints (Initiative Agreements module);
+  // consumed by hooks/useInitiativeAgreements.ts
+  getInitiativeAgreementsList: '/initiative-agreements/list',
+  createAgreement: '/initiative-agreements/agreements',
+  getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
+  getInitiativeAgreement:
+    '/initiative-agreements/:initiativeAgreementId/profile',
+  getInitiativeAgreementAnalysts: '/initiative-agreements/analysts',
+  getDesignatedActionsList:
+    '/initiative-agreements/:initiativeAgreementId/designated-actions/list',
+  getAllDesignatedActionsList: '/initiative-agreements/designated-actions/list',
+  createDesignatedAction:
+    '/initiative-agreements/:initiativeAgreementId/designated-actions',
+  updateDesignatedAction:
+    '/initiative-agreements/designated-actions/:designatedActionId',
+  assignDesignatedActionAnalyst:
+    '/initiative-agreements/designated-actions/:designatedActionId/assign',
+  getDesignatedActionProfile:
+    '/initiative-agreements/designated-actions/:designatedActionId/profile',
+  evidenceRequirements:
+    '/initiative-agreements/designated-actions/:designatedActionId/evidence-requirements',
+  evidenceRequirement:
+    '/initiative-agreements/evidence-requirements/:evidenceRequirementId',
+  designatedActionWorkflow:
+    '/initiative-agreements/designated-actions/:designatedActionId/workflow',
+  designatedActionRecommendedCredits:
+    '/initiative-agreements/designated-actions/:designatedActionId/recommended-credits',
+  designatedActionMissingInformation:
+    '/initiative-agreements/designated-actions/:designatedActionId/missing-information',
+  designatedActionHistory:
+    '/initiative-agreements/designated-actions/:designatedActionId/history',
+  documentFolderTree: '/document-folders/:parentType/:parentID',
+  documentFolderUpdate: '/document-folders/:parentType/:parentID/:folderId',
+  documentFolderItems: '/document-folders/:parentType/:parentID/items',
+  documentFolderDeleted: '/document-folders/:parentType/:parentID/deleted',
+  documentFolderDeleteDocument:
+    '/document-folders/:parentType/:parentID/documents/:documentId',
+  documentFolderRestoreDocument:
+    '/document-folders/:parentType/:parentID/documents/:documentId/restore',
+  documentFolderRestoreFolder:
+    '/document-folders/:parentType/:parentID/:folderId/restore',
 
   // fuel-type
   getFuelTypeOthers: '/fuel-type/others/list',
@@ -89,6 +131,7 @@ export const apiRoutes = {
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',
+  ciApplicationFuelCodeFieldSearch: '/ci-applications/fuel-code-field-search?',
   ciApplicationLocationSearch: '/ci-applications/location-search?',
   getCIApplications: '/ci-applications/list',
   getCIApplication: '/ci-applications/:ciApplicationId',
@@ -131,6 +174,8 @@ export const apiRoutes = {
   getComplianceReportSummary: '/reports/:reportID/summary',
   getComplianceReportReviewSummary: '/reports/:reportID/review-summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
+  updateComplianceReportPenaltyStatus:
+    '/reports/:reportID/summary/penalty-status',
   exportComplianceReport: '/reports/:reportID/export',
   createSupplementalReport: '/reports/:reportID/supplemental',
   createAnalystAdjustment: '/reports/:reportID/adjustment',
@@ -259,6 +304,8 @@ export const apiRoutes = {
   fuelCodeCounts: '/dashboard/fuel-code-counts',
   orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
   ciApplicationCounts: '/dashboard/ci-application-counts',
+  initiativeAgreementCounts: '/dashboard/initiative-agreement-counts',
+  orgInitiativeAgreementCounts: '/dashboard/org-initiative-agreement-counts',
 
   // credit market
   creditMarketOverview: '/credit-market/overview',
@@ -274,6 +321,7 @@ export const apiRoutes = {
   getNotifications: '/notifications/list',
   getNotificationsCount: '/notifications/count',
   getNotificationSubscriptions: '/notifications/subscriptions',
+  getUserNotificationSubscriptions: '/notifications/subscriptions/user',
   saveNotificationSubscriptions: '/notifications/subscriptions/save',
 
   // government notifications

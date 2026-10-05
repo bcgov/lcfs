@@ -1,8 +1,17 @@
 import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, expect, vi } from 'vitest'
 import ChargingSitesMap from '../../components/ChargingSitesMap'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test as fixtureTest } from '@/tests/utils/fixtures'
+
+const test = (name, callback) =>
+  fixtureTest(name, ({ render, theme, router }) =>
+    callback({
+      render: (ui, providers = [], options = {}) =>
+        render(ui, [theme, router, ...providers], options),
+      theme,
+      router
+    })
+  )
 
 // Minimal mocks
 vi.mock('react-leaflet', () => ({
@@ -72,23 +81,21 @@ describe('ChargingSitesMap', () => {
     }
   ]
 
-  it('renders without crashing', () => {
+  test('renders without crashing', ({ render }) => {
     const { container } = render(
-      <ChargingSitesMap sites={mockSites} showLegend={false} />,
-      { wrapper }
+      <ChargingSitesMap sites={mockSites} showLegend={false} />
     )
     expect(container).toBeTruthy()
   })
 
-  it('renders empty for no sites', () => {
-    const { container } = render(<ChargingSitesMap sites={[]} />, { wrapper })
+  test('renders empty for no sites', ({ render }) => {
+    const { container } = render(<ChargingSitesMap sites={[]} />)
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders site name in DOM', () => {
+  test('renders site name in DOM', ({ render }) => {
     const { container } = render(
-      <ChargingSitesMap sites={mockSites} showLegend={false} />,
-      { wrapper }
+      <ChargingSitesMap sites={mockSites} showLegend={false} />
     )
     expect(container.innerHTML).toContain('Site 1')
   })

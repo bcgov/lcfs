@@ -1,4 +1,4 @@
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import * as echarts from 'echarts/core'
 import { useEffect, useRef } from 'react'
 
@@ -6,7 +6,9 @@ export const BCResponsiveEChart = ({
   option,
   height = 300,
   ariaLabel = undefined,
-  tabIndex = 0
+  ariaDescribedBy = undefined,
+  tabIndex = 0,
+  sx = undefined
 }) => {
   const chartRef = useRef(null)
   const chartInstance = useRef(null)
@@ -50,15 +52,19 @@ export const BCResponsiveEChart = ({
       ref={chartRef}
       role="img"
       aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
       tabIndex={tabIndex}
       sx={{
         width: '100%',
+        minWidth: 0,
+        maxWidth: '100%',
         height,
         '&:focus': {
           outline: '2px solid',
           outlineColor: 'primary.main',
           outlineOffset: '2px'
-        }
+        },
+        ...sx
       }}
     />
   )

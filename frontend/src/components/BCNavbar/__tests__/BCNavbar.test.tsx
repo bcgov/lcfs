@@ -1,18 +1,26 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useMediaQuery, useTheme } from '@mui/material'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import useTheme from '@mui/material/styles/useTheme'
 import BCNavbar from '../index'
 import theme from '@/themes'
 
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material')
+vi.mock('@mui/material/styles/useTheme', async (importOriginal) => {
+  const actual = await importOriginal()
   return {
     ...actual,
-    useTheme: vi.fn(),
-    useMediaQuery: vi.fn()
+    default: vi.fn()
+  }
+})
+
+vi.mock('@mui/material/useMediaQuery', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    default: vi.fn()
   }
 })
 
@@ -51,14 +59,11 @@ const TestWrapper = ({
 }
 
 const renderNavbar = (initialPath = '/') => {
-  return render(
-    <BCNavbar routes={sampleRoutes} />,
-    {
-      wrapper: ({ children }) => (
-        <TestWrapper initialEntries={[initialPath]}>{children}</TestWrapper>
-      )
-    }
-  )
+  return render(<BCNavbar routes={sampleRoutes} />, {
+    wrapper: ({ children }) => (
+      <TestWrapper initialEntries={[initialPath]}>{children}</TestWrapper>
+    )
+  })
 }
 
 describe('BCNavbar', () => {
@@ -175,10 +180,9 @@ describe('BCNavbar', () => {
     })
 
     it('renders without beta flag when disabled', () => {
-      render(
-        <BCNavbar beta={false} routes={sampleRoutes} />,
-        { wrapper: TestWrapper }
-      )
+      render(<BCNavbar beta={false} routes={sampleRoutes} />, {
+        wrapper: TestWrapper
+      })
 
       expect(screen.getByTestId('bc-navbar')).toBeInTheDocument()
     })
@@ -206,14 +210,24 @@ describe('BCNavbar', () => {
 
       expect(screen.getByTestId('menu-right')).toBeInTheDocument()
     })
+
+    it('renders a utility in the global header', () => {
+      render(
+        <BCNavbar
+          routes={sampleRoutes}
+          headerUtilityPart={<div data-test="header-utility">Search</div>}
+        />,
+        { wrapper: TestWrapper }
+      )
+
+      expect(screen.getByTestId('header-utility')).toBeInTheDocument()
+    })
   })
 
   describe('icons', () => {
     it('renders route with icon', () => {
       render(
-        <BCNavbar
-          routes={[{ icon: 'home', name: 'Home', route: '/' }]}
-        />,
+        <BCNavbar routes={[{ icon: 'home', name: 'Home', route: '/' }]} />,
         { wrapper: TestWrapper }
       )
 
@@ -221,12 +235,9 @@ describe('BCNavbar', () => {
     })
 
     it('renders route without icon', () => {
-      render(
-        <BCNavbar
-          routes={[{ name: 'No Icon', route: '/no-icon' }]}
-        />,
-        { wrapper: TestWrapper }
-      )
+      render(<BCNavbar routes={[{ name: 'No Icon', route: '/no-icon' }]} />, {
+        wrapper: TestWrapper
+      })
 
       expect(screen.getByText('No Icon')).toBeInTheDocument()
     })

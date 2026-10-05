@@ -1,5 +1,8 @@
 import React from 'react'
-import { Box, Grid, List, ListItemButton } from '@mui/material'
+import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import {
@@ -10,6 +13,7 @@ import {
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
 import { useDocuments, useDownloadDocument } from '@/hooks/useDocuments.js'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
   const { t } = useTranslation([
@@ -96,6 +100,14 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
                 >
                   {file.fileName}
                 </BCTypography>
+                <DocumentPreviewButton
+                  parentType={transactionType}
+                  parentID={
+                    transactionData.adminAdjustmentId ??
+                    transactionData.initiativeAgreementId
+                  }
+                  document={file}
+                />
               </ListItemButton>
             ))}
           </List>

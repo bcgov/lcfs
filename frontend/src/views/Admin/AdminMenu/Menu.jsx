@@ -2,7 +2,9 @@ import BCBox from '@/components/BCBox'
 import { ROUTES } from '@/routes/routes'
 import breakpoints from '@/themes/base/breakpoints'
 import { AdminTabPanel } from '@/views/Admin/AdminMenu/components/AdminTabPanel'
-import { AppBar, Tab, Tabs } from '@mui/material'
+import AppBar from '@mui/material/AppBar'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -108,7 +110,7 @@ export function AdminMenu() {
     const index = tabs.findIndex(
       (tab) =>
         location.pathname === tab.path ||
-        location.pathname === `${tab.path}/`
+        location.pathname.startsWith(`${tab.path}/`)
     )
     return index === -1 ? false : index
   }, [location.pathname, tabs])
@@ -152,6 +154,8 @@ export function AdminMenu() {
               key={tab.key}
               label={tab.label}
               wrapped={tab.wrapped}
+              aria-selected={index === tabIndex}
+              tabIndex={index === tabIndex ? 0 : -1}
               {...a11yProps(index)}
             />
           ))}

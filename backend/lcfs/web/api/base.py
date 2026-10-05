@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 from enum import Enum
 from typing_extensions import deprecated
-from sqlalchemy import and_, cast, Date, func, select, String
+from sqlalchemy import and_, asc, cast, Date, desc, func, select, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from fastapi import HTTPException, Query, Request, Response
@@ -9,6 +9,7 @@ from fastapi_cache import FastAPICache
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
+import math
 import structlog
 import re
 
@@ -71,11 +72,25 @@ class FilterModel(BaseSchema):
 
 
 class PaginationRequestSchema(BaseSchema):
+    # `size` of 0 is a deliberate "return everything" sentinel used by the
+    # export paths, so 0 stays valid - but a negative size is a negative
+    # LIMIT, which Postgres rejects.
     page: int = Field(default=1, alias="page")
-    size: int = Field(default=10, alias="size")
+    size: int = Field(default=10, alias="size", ge=0)
     sort_orders: List[SortOrder] = Field(default=[], alias="sortOrders")
     filters: List[FilterModel] = Field(default=[], alias="filters")
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+
+    @field_validator("page")
+    @classmethod
+    def clamp_page(cls, value: int) -> int:
+        """
+        `page` is 1-based; anything lower yields a negative OFFSET, which
+        Postgres rejects. Several repos already clamp this themselves, and the
+        frontend sends page=0 on at least one live path, so clamp rather than
+        reject - a 422 here would break existing callers.
+        """
+        return max(value, 1)
 
 
 class PaginationResponseSchema(BaseSchema):
@@ -84,6 +99,18 @@ class PaginationResponseSchema(BaseSchema):
     size: int
     total_pages: int
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+
+
+def calculate_total_pages(total: int, size: int) -> int:
+    """
+    Page count for a result set, safe for the size=0 "return everything"
+    sentinel - dividing by it raises ZeroDivisionError.
+    """
+    if not total:
+        return 0
+    if size <= 0:
+        return 1
+    return math.ceil(total / size)
 
 
 @deprecated("Use Pagination Request and Response schemas instead")
@@ -360,6 +387,142 @@ def camel_to_snake(name):
     """Convert a camel case string to snake case."""
     s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+
+class PaginatedQueryBuilder:
+    """
+    Shared filter -> sort -> paginate logic for repos, replacing the
+    per-repo loops over ``pagination.filters``/``pagination.sort_orders``.
+
+    Field lookups default to ``model``. For a rename, a different (e.g.
+    joined) model, or bespoke logic, pass:
+      - ``field_map``: incoming field name -> attribute name on ``model``.
+      - ``custom_filters``: field name -> ``callable(FilterModel)`` returning
+        a condition, or ``None`` to skip that filter.
+      - ``custom_sorts``: (mapped) field name -> a column, or
+        ``callable(SortOrder)`` returning a column or ``None`` to skip.
+      - ``default_filter``: ``callable(FilterModel)`` used instead of the
+        standard field-lookup/date-handling for any field with no
+        ``custom_filters`` entry - for repos where most fields need bespoke
+        handling rather than just a few.
+    """
+
+    def __init__(
+        self,
+        model: Any,
+        field_map: Optional[dict] = None,
+        custom_filters: Optional[dict] = None,
+        custom_sorts: Optional[dict] = None,
+        default_filter: Optional[Any] = None,
+    ):
+        self.model = model
+        self.field_map = field_map or {}
+        self.custom_filters = custom_filters or {}
+        self.custom_sorts = custom_sorts or {}
+        self.default_filter = default_filter
+
+    def _field(self, name: str):
+        return get_field_for_filter(self.model, self.field_map.get(name, name))
+
+    def _default_sort_field(self, name: str):
+        # Unlike filtering, an unknown sort field is silently skipped rather
+        # than raising - several repos rely on this to ignore stale/invalid
+        # sort params instead of 500ing.
+        return self._field(name) if hasattr(self.model, name) else None
+
+    def build_conditions(self, filters: List["FilterModel"]) -> list:
+        """Translate pagination filters into a list of SQLAlchemy conditions."""
+        conditions = []
+        for filter_model in filters:
+            mapped_field = self.field_map.get(filter_model.field, filter_model.field)
+            handler = self.custom_filters.get(
+                mapped_field, self.custom_filters.get(filter_model.field)
+            )
+            if handler is not None:
+                condition = handler(filter_model)
+                if condition is not None:
+                    conditions.append(condition)
+                continue
+
+            if self.default_filter is not None:
+                condition = self.default_filter(filter_model)
+                if condition is not None:
+                    conditions.append(condition)
+                continue
+
+            filter_value = filter_model.filter
+            if filter_model.filter_type == "date":
+                if filter_model.type == "inRange":
+                    if not filter_model.date_from and not filter_model.date_to:
+                        continue
+                    filter_value = [filter_model.date_from, filter_model.date_to]
+                else:
+                    if not filter_model.date_from:
+                        continue
+                    filter_value = filter_model.date_from
+
+            condition = apply_filter_conditions(
+                self._field(filter_model.field),
+                filter_value,
+                filter_model.type,
+                filter_model.filter_type,
+            )
+            if condition is not None:
+                conditions.append(condition)
+        return conditions
+
+    def apply_filters(self, query, filters: List["FilterModel"]):
+        """Apply pagination filters to *query*, returning the updated query."""
+        conditions = self.build_conditions(filters)
+        return query.where(and_(*conditions)) if conditions else query
+
+    def apply_sorting(
+        self,
+        query,
+        sort_orders: List["SortOrder"],
+        default_field: Optional[str] = None,
+        default_direction: str = "desc",
+        secondary_field: Optional[str] = None,
+        secondary_direction: str = "desc",
+    ):
+        """Apply sort orders, falling back to ``default_field`` when none are
+        given; ``secondary_field`` is always appended as a tiebreaker."""
+        if sort_orders:
+            for order in sort_orders:
+                sort_method = asc if order.direction == "asc" else desc
+                mapped_field = self.field_map.get(order.field, order.field)
+                override = self.custom_sorts.get(
+                    mapped_field, self.custom_sorts.get(order.field)
+                )
+                if callable(override):
+                    field = override(order)
+                elif override is not None:
+                    field = override
+                else:
+                    field = self._default_sort_field(mapped_field)
+                if field is None:
+                    continue
+                query = query.order_by(sort_method(field))
+        elif default_field:
+            sort_method = asc if default_direction == "asc" else desc
+            query = query.order_by(sort_method(self._field(default_field)))
+
+        if secondary_field:
+            sort_method = asc if secondary_direction == "asc" else desc
+            query = query.order_by(sort_method(self._field(secondary_field)))
+        return query
+
+    @staticmethod
+    def offset_limit(pagination: "PaginationRequestSchema") -> tuple[int, int]:
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
+        return offset, pagination.size
+
+    async def paginate(
+        self, db: AsyncSession, query, pagination: "PaginationRequestSchema"
+    ) -> tuple[list, int]:
+        """Apply offset/limit and execute via the single round-trip window count."""
+        offset, limit = self.offset_limit(pagination)
+        return await paginate_with_window_count(db, query, offset, limit)
 
 
 async def lcfs_cache_key_builder(

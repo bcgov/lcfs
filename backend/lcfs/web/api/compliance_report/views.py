@@ -14,11 +14,13 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportScheduleOverviewSchema,
     ComplianceReportStatusSchema,
     ComplianceReportSummarySchema,
+    ComplianceReportPenaltyStatusSchema,
     ComplianceReportYearNavigationSchema,
     ComplianceReportReviewSummarySchema,
     ChainedComplianceReportSchema,
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
+    ComplianceReportPenaltyStatusUpdateSchema,
     AssignAnalystSchema,
     AssignedAnalystSchema,
 )
@@ -169,6 +171,7 @@ async def get_compliance_report_year_navigation(
 @router.get(
     "/{report_id}/summary",
     response_model=ComplianceReportSummarySchema,
+    response_model_exclude_none=True,
     status_code=status.HTTP_200_OK,
 )
 @view_handler(
@@ -184,7 +187,9 @@ async def get_compliance_report_summary(
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
     await validate.validate_organization_access(report_id)
-    return await summary_service.calculate_compliance_report_summary(report_id)
+    return await summary_service.calculate_compliance_report_summary(
+        report_id, include_penalty_status=bool(request.user.is_government)
+    )
 
 
 @router.get(
@@ -218,6 +223,7 @@ async def get_compliance_report_review_summary(
 @router.put(
     "/{report_id}/summary",
     response_model=ComplianceReportSummarySchema,
+    response_model_exclude_none=True,
     status_code=status.HTTP_200_OK,
 )
 @view_handler(
@@ -254,7 +260,38 @@ async def update_compliance_report_summary(
         )
 
     return await summary_service.update_compliance_report_summary(
-        report_id, summary_data
+        report_id,
+        summary_data,
+        include_penalty_status=bool(request.user.is_government),
+    )
+
+
+@router.put(
+    "/{report_id}/summary/penalty-status",
+    response_model=ComplianceReportPenaltyStatusSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def update_compliance_report_penalty_status(
+    request: Request,
+    report_id: int,
+    status_data: ComplianceReportPenaltyStatusUpdateSchema,
+    summary_service: ComplianceReportSummaryService = Depends(),
+    validate: ComplianceReportValidation = Depends(),
+) -> ComplianceReportPenaltyStatusSchema:
+    """
+    Update IDIR-only invoice/payment status for non-compliance penalty rows.
+    """
+    await validate.validate_organization_access(report_id)
+    return await summary_service.update_penalty_status(
+        report_id, status_data, user=request.user
     )
 
 

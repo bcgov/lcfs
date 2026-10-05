@@ -32,6 +32,8 @@ export interface OrganizationCommentRecord {
   fullName: string | null
   createDate: string | null
   updateDate: string | null
+  updateUser: string | null
+  updateFullName: string | null
   canEdit: boolean
 }
 

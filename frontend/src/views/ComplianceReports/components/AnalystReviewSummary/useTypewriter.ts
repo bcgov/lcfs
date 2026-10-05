@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export const useTypewriter = (text: string, delay = 18) => {
+export const useTypewriter = (text: string, delay = 1) => {
   const [displayText, setDisplayText] = useState('')
 
   useEffect(() => {

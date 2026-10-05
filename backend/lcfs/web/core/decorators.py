@@ -46,8 +46,11 @@ def extract_context():
             "headers": dict(request.headers) if request else None,
         },
         "user": {
-            "id": user.user_profile_id if user else None,
-            "roles": user.role_names if user else [],
+            # Public endpoints run with Starlette's UnauthenticatedUser, which is
+            # truthy but carries none of our profile attributes. Never let the
+            # error logger raise here - it would mask the exception it is logging.
+            "id": getattr(user, "user_profile_id", None),
+            "roles": getattr(user, "role_names", []),
         },
         "session_state": repr(session) if session else "No session",
     }

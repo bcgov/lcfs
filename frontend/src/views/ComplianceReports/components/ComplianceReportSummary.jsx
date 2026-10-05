@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Stack,
-  FormControlLabel,
-  Checkbox,
-  Box
-} from '@mui/material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import Stack from '@mui/material/Stack'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
+import Box from '@mui/material/Box'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
 import SummaryTable from './SummaryTable'
@@ -19,6 +17,7 @@ import {
 } from './_schema'
 import {
   useGetComplianceReportSummary,
+  useUpdateComplianceReportPenaltyStatus,
   useUpdateComplianceReportSummary
 } from '@/hooks/useComplianceReports'
 import BCTypography from '@/components/BCTypography'
@@ -30,7 +29,7 @@ import { roles } from '@/constants/roles'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports.jsx'
 import { TogglePanel } from '@/components/TogglePanel.jsx'
-import { ExpandMore } from '@mui/icons-material'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import { SUMMARY } from '@/constants/common'
 
 /**
@@ -46,7 +45,8 @@ const shouldHideRenewableSummary = (renewableFuelTargetSummary) => {
 
   if (!line3 || !line9) return false
 
-  const isZeroOrNull = (value) => value === null || value === undefined || value === 0
+  const isZeroOrNull = (value) =>
+    value === null || value === undefined || value === 0
 
   const line3AllZero =
     isZeroOrNull(line3.gasoline) &&
@@ -103,10 +103,44 @@ const ComplianceReportSummary = ({
   const { data, isLoading, isError, error, isFetching } =
     useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
-    useUpdateComplianceReportSummary(data?.complianceReportId, {
+    useUpdateComplianceReportSummary(reportID, {
       onSuccess: (response) => {
         setSummaryData(response.data)
         setSavingCellKey(null)
+      },
+      onError: (error) => {
+        setSavingCellKey(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    })
+  const { mutate: updateComplianceReportPenaltyStatus } =
+    useUpdateComplianceReportPenaltyStatus(reportID, {
+      onSuccess: (response) => {
+        setSummaryData((currentSummary) => {
+          if (!currentSummary) return currentSummary
+
+          return {
+            ...currentSummary,
+            nonCompliancePenaltySummary:
+              currentSummary.nonCompliancePenaltySummary?.map((row) =>
+                Number(row.line) === Number(response.data?.line)
+                  ? {
+                      ...row,
+                      invoiceSent: response.data.invoiceSent,
+                      paymentReceived: response.data.paymentReceived
+                    }
+                  : row
+              )
+          }
+        })
+        setSavingCellKey(null)
+        alertRef.current?.triggerAlert({
+          message: 'Penalty status updated.',
+          severity: 'success'
+        })
       },
       onError: (error) => {
         setSavingCellKey(null)
@@ -170,10 +204,14 @@ const ComplianceReportSummary = ({
       const updatedData = {
         ...summaryData,
         nonCompliancePenaltySummary: data,
-        renewablePenaltyOverride: renewablePenaltyValue,
-        lowCarbonPenaltyOverride: lowCarbonPenaltyValue,
-        penaltyOverrideDate: new Date().toISOString(),
-        penaltyOverrideUser: currentUser?.userProfileId
+        ...(penaltyOverrideEnabled
+          ? {
+              renewablePenaltyOverride: renewablePenaltyValue,
+              lowCarbonPenaltyOverride: lowCarbonPenaltyValue,
+              penaltyOverrideDate: new Date().toISOString(),
+              penaltyOverrideUser: currentUser?.userProfileId
+            }
+          : {})
       }
 
       if (cellInfo) {
@@ -182,7 +220,46 @@ const ComplianceReportSummary = ({
       setSummaryData(updatedData)
       updateComplianceReportSummary(updatedData)
     },
-    [summaryData, updateComplianceReportSummary, currentUser]
+    [
+      summaryData,
+      updateComplianceReportSummary,
+      currentUser,
+      penaltyOverrideEnabled
+    ]
+  )
+
+  const handlePenaltyStatusCellEdit = useCallback(
+    (data, cellInfo = null) => {
+      const updatedData = {
+        ...summaryData,
+        nonCompliancePenaltySummary: data
+      }
+      const row = data[cellInfo?.rowIndex]
+
+      setSummaryData(updatedData)
+
+      if (!row?.line) return
+
+      if (cellInfo) {
+        setSavingCellKey(`penalty_${cellInfo.rowIndex}_${cellInfo.columnId}`)
+      }
+
+      alertRef.current?.triggerAlert({
+        message: 'Updating penalty status...',
+        severity: 'pending'
+      })
+
+      updateComplianceReportPenaltyStatus({
+        line: Number(row.line),
+        ...(cellInfo?.columnId === 'invoiceSent'
+          ? { invoiceSent: !!row.invoiceSent }
+          : {}),
+        ...(cellInfo?.columnId === 'paymentReceived'
+          ? { paymentReceived: !!row.paymentReceived }
+          : {})
+      })
+    },
+    [summaryData, updateComplianceReportPenaltyStatus]
   )
 
   // Computed data for non-compliance penalty summary based on override state
@@ -222,6 +299,19 @@ const ComplianceReportSummary = ({
       return row
     })
   }, [summaryData, penaltyOverrideEnabled])
+
+  const penaltyStatusEditableCells = useMemo(
+    () =>
+      (nonCompliancePenaltyDisplayData ?? []).reduce((indexes, row, index) => {
+        if (row?.line && Number(row.totalValue) > 0) indexes.push(index)
+        return indexes
+      }, []),
+    [nonCompliancePenaltyDisplayData]
+  )
+  const showPenaltyStatusColumns =
+    isGovernmentUser &&
+    currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT &&
+    penaltyStatusEditableCells.length > 0
 
   // When low carbon fuel is exempted, override line 22 to show line 17's value
   // (no credit change applied) instead of the stale calculated value
@@ -304,11 +394,7 @@ const ComplianceReportSummary = ({
                   summaryData?.renewableFuelTargetSummary
                 ) ? (
                   <Box sx={{ mb: 3 }}>
-                    <BCTypography
-                      variant="h6"
-                      color="primary"
-                      sx={{ mb: 1 }}
-                    >
+                    <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
                       {t('report:renewableFuelTargetSummary')}
                     </BCTypography>
                     <BCTypography
@@ -349,9 +435,7 @@ const ComplianceReportSummary = ({
                     lines6And8Locked={summaryData?.lines6And8Locked}
                     savingCellKey={savingCellKey}
                     tableType="renewable"
-                    exemptedLines={
-                      isRenewableFuelExempted ? [4, 11] : []
-                    }
+                    exemptedLines={isRenewableFuelExempted ? [4, 11] : []}
                   />
                 )}
                 <SummaryTable
@@ -361,19 +445,28 @@ const ComplianceReportSummary = ({
                   data={lowCarbonDisplayData}
                   width={'80.65%'}
                   compliancePeriodYear={compliancePeriodYear}
-                  exemptedLines={
-                    isLowCarbonFuelExempted ? [18, 20, 21] : []
-                  }
+                  exemptedLines={isLowCarbonFuelExempted ? [18, 20, 21] : []}
                 />
                 <SummaryTable
                   data-test="non-compliance-summary"
                   title={t('report:nonCompliancePenaltySummary')}
-                  columns={nonComplianceColumns(t, penaltyOverrideEnabled)}
+                  columns={nonComplianceColumns(
+                    t,
+                    penaltyOverrideEnabled,
+                    showPenaltyStatusColumns,
+                    showPenaltyStatusColumns,
+                    penaltyStatusEditableCells
+                  )}
                   data={nonCompliancePenaltyDisplayData}
                   width={'80.65%'}
                   onCellEditStopped={
-                    penaltyOverrideEnabled
+                    isGovernmentUser || penaltyOverrideEnabled
                       ? handlePenaltyOverrideCellEdit
+                      : undefined
+                  }
+                  onBooleanCellEditStopped={
+                    showPenaltyStatusColumns
+                      ? handlePenaltyStatusCellEdit
                       : undefined
                   }
                   savingCellKey={savingCellKey}

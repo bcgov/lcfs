@@ -15,6 +15,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, Session
 
+from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
+
 
 charging_site_document_association = Table(
     "charging_site_document_association",
@@ -204,11 +206,7 @@ def latest_charging_site_version_subquery():
     Helper subquery that returns the latest version number for each charging site group UUID.
     Used to ensure queries only work with the most recent version of a site record group.
     """
-    return (
-        select(
-            ChargingSite.group_uuid.label("group_uuid"),
-            func.max(ChargingSite.version).label("latest_version"),
-        )
-        .group_by(ChargingSite.group_uuid)
-        .subquery()
+    return VersioningQueryHelper.latest_version_subquery(
+        ChargingSite,
+        version_label="latest_version",
     )

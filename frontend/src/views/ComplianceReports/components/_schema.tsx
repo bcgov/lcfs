@@ -1,10 +1,8 @@
 // @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef } from 'ag-grid-community'
 import type { SummaryColumn } from '@/types/schema'
-import {
-  BCDateFloatingFilter,
-  BCSelectFloatingFilter
-} from '@/components/BCDataGrid/components'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { SUMMARY } from '@/constants/common'
 import {
   ReportsStatusRenderer,
@@ -16,7 +14,7 @@ import {
   useGetAvailableAnalysts
 } from '@/hooks/useComplianceReports'
 import { AssignedAnalystCell } from './AssignedAnalystCell'
-import { Tooltip } from '@mui/material'
+import Tooltip from '@mui/material/Tooltip'
 import WarningIcon from '@mui/icons-material/Warning'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -576,7 +574,10 @@ export const lowCarbonColumns = (
 
 export const nonComplianceColumns = (
   t: (key: string) => string,
-  editable: boolean = false
+  editable: boolean = false,
+  statusEditable: boolean = editable,
+  showStatusColumns: boolean = true,
+  statusEditableCells: number[] = [0, 1]
 ): SummaryColumn[] => [
   {
     id: 'description',
@@ -590,7 +591,33 @@ export const nonComplianceColumns = (
     width: '150px',
     editable: editable,
     editableCells: editable ? [0, 1] : []
-  }
+  },
+  ...(showStatusColumns
+    ? [
+        {
+          id: 'invoiceSent',
+          label: t('report:summaryLabels.invoiceSent', {
+            defaultValue: 'Invoice sent'
+          }),
+          align: 'center',
+          width: '160px',
+          type: 'booleanRadio',
+          editable: statusEditable,
+          editableCells: statusEditable ? statusEditableCells : []
+        },
+        {
+          id: 'paymentReceived',
+          label: t('report:summaryLabels.paymentReceived', {
+            defaultValue: 'Payment received'
+          }),
+          align: 'center',
+          width: '190px',
+          type: 'booleanRadio',
+          editable: statusEditable,
+          editableCells: statusEditable ? statusEditableCells : []
+        }
+      ]
+    : [])
 ]
 
 export const earlyIssuanceColumns = (

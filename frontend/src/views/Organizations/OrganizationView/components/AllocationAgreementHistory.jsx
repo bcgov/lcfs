@@ -1,26 +1,30 @@
 import React, { useMemo, useState } from 'react'
-import {
-  Card,
-  CardContent,
-  Chip,
-  FormControl,
-  Grid,
-  MenuItem,
-  Select,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow
-} from '@mui/material'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Chip from '@mui/material/Chip'
+import FormControl from '@mui/material/FormControl'
+import Grid from '@mui/material/Grid'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
+import Stack from '@mui/material/Stack'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
 import Tooltip from '@mui/material/Tooltip'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import ReactECharts from 'echarts-for-react'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import {
+  BC_CHART_AXIS_LABEL,
+  BC_CHART_CATEGORY_AXIS_LABEL,
+  BC_CHART_COLORS,
+  BC_CHART_GRID
+} from '@/components/charts/chartStyles'
 import Loading from '@/components/Loading'
 import { useOrganizationAllocationAgreementAnalytics } from '@/hooks/useOrganization'
 import { formatNumberWithCommas } from '@/utils/formatters'
@@ -86,29 +90,15 @@ const getChangeColor = (value) => {
 }
 
 const CHART_COLORS = {
-  blue: '#0072B2',
-  green: '#009E73',
-  orange: '#D55E00',
-  purple: '#CC79A7',
-  neutralText: '#405074'
+  blue: BC_CHART_COLORS.blue,
+  green: BC_CHART_COLORS.green,
+  orange: BC_CHART_COLORS.orange,
+  purple: BC_CHART_COLORS.purple,
+  neutralText: BC_CHART_COLORS.text
 }
-const CHART_GRID = {
-  left: 64,
-  right: 24,
-  top: 56,
-  bottom: 56,
-  containLabel: true
-}
-const CHART_AXIS_LABEL = {
-  color: '#5f6675',
-  hideOverlap: true
-}
-const CHART_CATEGORY_AXIS_LABEL = {
-  ...CHART_AXIS_LABEL,
-  show: true,
-  interval: 0,
-  margin: 10
-}
+const CHART_GRID = BC_CHART_GRID
+const CHART_AXIS_LABEL = BC_CHART_AXIS_LABEL
+const CHART_CATEGORY_AXIS_LABEL = BC_CHART_CATEGORY_AXIS_LABEL
 
 const MetricCard = ({ title, value, period, comparison, comparisonColor }) => (
   <Card

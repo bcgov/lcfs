@@ -1,5 +1,5 @@
 # Base stage for common setup
-FROM python:3.11-slim-bullseye as base
+FROM python:3.11-slim-bookworm as base
 
 RUN apt-get update && apt-get install -y \
   gcc \
@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
   libpangocairo-1.0-0 \
   libcairo2 \
   libgdk-pixbuf2.0-0 \
+  tzdata \
   && rm -rf /var/lib/apt/lists/*
 
 RUN pip install poetry==1.6.1
@@ -35,6 +36,9 @@ COPY . /app/
 
 # Make all startup scripts executable
 RUN chmod +x /app/wait-for-it.sh /app/lcfs/prestart.sh /app/lcfs/start.sh
+
+# Fail the build if the time zone data predates BC's permanent UTC-7 (IANA tzdb 2026b)
+RUN poetry run python -m lcfs.scripts.check_tzdata
 
 CMD /bin/bash /app/lcfs/start.sh
 

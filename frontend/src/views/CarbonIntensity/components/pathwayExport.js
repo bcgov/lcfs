@@ -1,10 +1,40 @@
 import * as XLSX from 'xlsx'
 
+const stringifyTransportModeValue = (value) => {
+  if (value === null || value === undefined) return ''
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => stringifyTransportModeValue(item))
+      .filter(Boolean)
+      .join(', ')
+  }
+
+  if (typeof value === 'object') {
+    const transportMode =
+      value.transportMode ?? value.transport_mode ?? value.mode ?? ''
+    const distance = value.distance
+
+    if (transportMode) {
+      return distance === null || distance === undefined || distance === ''
+        ? String(transportMode)
+        : `${transportMode} (${distance} km)`
+    }
+
+    return ''
+  }
+
+  return String(value)
+}
+
 const getExportCellValue = (row, colDef) => {
   if (typeof colDef.valueGetter === 'function') {
-    return colDef.valueGetter({ data: row, colDef }) ?? ''
+    return stringifyTransportModeValue(
+      colDef.valueGetter({ data: row, colDef }) ?? ''
+    )
   }
-  return row?.[colDef.field] ?? ''
+
+  return stringifyTransportModeValue(row?.[colDef.field] ?? '')
 }
 
 const MAX_COLUMN_WIDTH = 80
