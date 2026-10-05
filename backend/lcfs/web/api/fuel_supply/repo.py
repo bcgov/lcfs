@@ -1116,10 +1116,6 @@ class FuelSupplyRepository:
             yearly_fuel_type[year][fuel_type_name][
                 "total_compliance_units"
             ] += compliance_units
-            yearly_fuel_type[year][fuel_type_name]["fossil_derived"] = (
-                yearly_fuel_type[year][fuel_type_name].get("fossil_derived", False)
-                or bool(getattr(fs.fuel_type, "fossil_derived", False))
-            )
             if compliance_units > 0:
                 yearly_fuel_type[year][fuel_type_name][
                     "positive_compliance_units"
