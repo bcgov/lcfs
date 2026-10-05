@@ -142,7 +142,7 @@ async def test_export_transactions_formats_update_date_in_pacific_timezone(
                     organization_id=1,
                     compliance_units=20,
                     available_balance=45,
-                    update_date=datetime(2026, 7, 15, 6, 59),
+                    update_date=datetime(2026, 7, 15, 6, 59, tzinfo=timezone.utc),
                 ),
                 None,
             ),
@@ -153,7 +153,7 @@ async def test_export_transactions_formats_update_date_in_pacific_timezone(
                     organization_id=1,
                     compliance_units=30,
                     available_balance=75,
-                    update_date=datetime(2026, 9, 17, 11, 0),
+                    update_date=datetime(2026, 9, 17, 18, 0, tzinfo=timezone.utc),
                 ),
                 None,
             ),
@@ -172,7 +172,7 @@ async def test_export_transactions_formats_update_date_in_pacific_timezone(
         )
 
     dates = [row[4] for row in mock_add_sheet.call_args[1]["rows"]]
-    assert dates == [date(2026, 2, 10), date(2026, 7, 15), date(2026, 9, 17)]
+    assert dates == [date(2026, 2, 10), date(2026, 7, 14), date(2026, 9, 17)]
     assert all(not isinstance(d, datetime) for d in dates)
 
 

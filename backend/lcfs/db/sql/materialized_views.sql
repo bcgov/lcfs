@@ -77,8 +77,8 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ) AS recorded_date,
             NULL AS approved_date,
             t.transaction_effective_date::date AS transaction_effective_date,
-            t.update_date AT TIME ZONE 'America/Vancouver' AS update_date,
-            t.create_date AT TIME ZONE 'America/Vancouver' AS create_date
+            t.update_date AS update_date,
+            t.create_date AS create_date
         FROM transfer t
         JOIN organization org_from
             ON t.from_organization_id = org_from.organization_id
@@ -117,8 +117,8 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
                 LIMIT 1
             ) AS approved_date,
             ia.transaction_effective_date::date AS transaction_effective_date,
-            ia.update_date AT TIME ZONE 'America/Vancouver' AS update_date,
-            ia.create_date AT TIME ZONE 'America/Vancouver' AS create_date
+            ia.update_date AS update_date,
+            ia.create_date AS create_date
         FROM initiative_agreement ia
         JOIN organization org
             ON ia.to_organization_id = org.organization_id
@@ -153,8 +153,8 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
                 LIMIT 1
             ) AS approved_date,
             aa.transaction_effective_date::date AS transaction_effective_date,
-            aa.update_date AT TIME ZONE 'America/Vancouver' AS update_date,
-            aa.create_date AT TIME ZONE 'America/Vancouver' AS create_date
+            aa.update_date AS update_date,
+            aa.create_date AS create_date
         FROM admin_adjustment aa
         JOIN organization org
             ON aa.to_organization_id = org.organization_id
@@ -183,8 +183,8 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ag.recorded_date::date AS recorded_date,
             NULL AS approved_date,
             ag.transaction_effective_date::date AS transaction_effective_date,
-            ag.update_date AT TIME ZONE 'America/Vancouver' AS update_date,
-            ag.create_date AT TIME ZONE 'America/Vancouver' AS create_date
+            ag.update_date AS update_date,
+            ag.create_date AS create_date
         FROM aggregator_issuance ag
         JOIN organization org
             ON ag.to_organization_id = org.organization_id
@@ -212,8 +212,8 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             NULL AS recorded_date,
             NULL AS approved_date,
             NULL AS transaction_effective_date,
-            cr.update_date AT TIME ZONE 'America/Vancouver' AS update_date,
-            cr.create_date AT TIME ZONE 'America/Vancouver' AS create_date
+            cr.update_date AS update_date,
+            cr.create_date AS create_date
         FROM compliance_report cr
         JOIN organization org
             ON cr.organization_id = org.organization_id
@@ -254,8 +254,8 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
                 t.effective_date,
                 (t.create_date AT TIME ZONE 'America/Vancouver')::date
             ) AS transaction_effective_date,
-            COALESCE(t.update_date, t.create_date) AT TIME ZONE 'America/Vancouver' AS update_date,
-            t.create_date AT TIME ZONE 'America/Vancouver' AS create_date
+            COALESCE(t.update_date, t.create_date) AS update_date,
+            t.create_date AS create_date
         FROM "transaction" t
         JOIN organization org
             ON t.organization_id = org.organization_id
