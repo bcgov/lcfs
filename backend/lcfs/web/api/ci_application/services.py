@@ -840,6 +840,21 @@ def _initials(first: Optional[str], last: Optional[str]) -> Optional[str]:
     return f"{first_part[:1]}{last_part[:1]}".upper()
 
 
+def _user_display_name(user: UserProfile) -> str:
+    name_parts = [
+        part.strip()
+        for part in (
+            getattr(user, "first_name", None),
+            getattr(user, "last_name", None),
+        )
+        if isinstance(part, str) and part.strip()
+    ]
+    username = getattr(user, "keycloak_username", None)
+    return " ".join(name_parts) or (
+        username if isinstance(username, str) else "Unknown user"
+    )
+
+
 ASSIGNMENT_HISTORY_EVENTS = {
     "analyst_assigned",
     "analyst_reassigned",
@@ -1080,24 +1095,12 @@ class CIApplicationServices:
         user: UserProfile,
         changed_at: datetime,
     ) -> dict:
-        name_parts = [
-            part.strip()
-            for part in (
-                getattr(user, "first_name", None),
-                getattr(user, "last_name", None),
-            )
-            if isinstance(part, str) and part.strip()
-        ]
-        username = getattr(user, "keycloak_username", None)
-        changed_by = " ".join(name_parts) or (
-            username if isinstance(username, str) else "Unknown user"
-        )
         return {
             "event": _assignment_event_name(previous_analyst_id, new_analyst_id),
             "previous_analyst": _assignment_user_snapshot(previous_analyst),
             "new_analyst": _assignment_user_snapshot(new_analyst),
             "changed_at": changed_at.isoformat(),
-            "changed_by": changed_by,
+            "changed_by": _user_display_name(user),
         }
 
     async def _send_ci_notification(
@@ -2831,7 +2834,7 @@ class CIApplicationServices:
             history_snapshot = {
                 "event": "verification_returned_to_first_verification",
                 "changed_at": datetime.now(timezone.utc).isoformat(),
-                "changed_by": user.keycloak_username,
+                "changed_by": _user_display_name(user),
                 "return_reason": return_reason,
                 "return_to_first_verification": True,
             }

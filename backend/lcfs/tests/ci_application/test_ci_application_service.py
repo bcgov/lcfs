@@ -2489,6 +2489,8 @@ async def test_step5_decision_can_return_verification_2_to_verification_1(
     service, repo, notification_service, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
+    mock_user.first_name = "Morgan"
+    mock_user.last_name = "Verifier"
     ci = _ci_application(status=_status("Submitted", 2))
     ci.preliminary_risk_assessment = "High"
     ci.priority_score = 511
@@ -2536,6 +2538,7 @@ async def test_step5_decision_can_return_verification_2_to_verification_1(
         snapshot["return_reason"]
         == "Verification 2 finding changes modelling assumptions."
     )
+    assert snapshot["changed_by"] == "Morgan Verifier"
     assert snapshot["return_to_first_verification"] is True
     notification_service.send_notification.assert_awaited_once()
     request = notification_service.send_notification.await_args.args[0]
