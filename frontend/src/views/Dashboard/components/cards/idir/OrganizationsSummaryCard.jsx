@@ -1,12 +1,34 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import Box from '@mui/material/Box'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
+import Stack from '@mui/material/Stack'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import { useOrganizationNames } from '@/hooks/useOrganizations.js'
 import { numberFormatter } from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
+
+const styles = {
+  cardContent: {
+    '& .MuiCardContent-root': {
+      padding: '16px'
+    }
+  },
+  select: {
+    marginTop: 1,
+    mx: 2,
+    width: 'calc(100% - 32px)',
+    bgcolor: 'background.paper',
+    borderRadius: 1,
+    height: '36px',
+    '& .MuiSelect-select': {
+      height: '36px !important',
+      display: 'flex',
+      alignItems: 'center',
+      padding: '0 14px'
+    }
+  }
+}
 
 const OrganizationsSummaryCard = () => {
   const { data: organizations, isLoading } = useOrganizationNames()
@@ -71,64 +93,49 @@ const OrganizationsSummaryCard = () => {
     <BCWidgetCard
       component="div"
       title="Summary"
-      sx={{
-        '& .MuiCardContent-root': { padding: '16px' },
-        margin: '0 auto',
-        maxWidth: '300px',
-        boxShadow: 1
-      }}
+      sx={styles.cardContent}
       content={
-        <Box
-          p={2}
-          paddingTop={1}
-          paddingBottom={1}
-          display="flex"
-          flexDirection="column"
+        <Stack
           alignItems="center"
-          justifyContent="center"
           sx={{ width: '100%' }}
         >
           <BCTypography
-            style={{ fontSize: '16px', color: '#003366', marginBottom: '2px' }}
+            variant="body2"
+            sx={{ color: 'primary.main', mb: '2px' }}
           >
             {selectedOrganization.name}
           </BCTypography>
           <BCTypography
-            style={{ fontSize: '32px', color: '#547D59', marginBottom: '-2px' }}
+            variant="h3"
             component="span"
+            sx={{ color: 'success.main' }}
           >
             {numberFormatter(selectedOrganization.totalBalance)}
           </BCTypography>
           <BCTypography
-            style={{ fontSize: '18px', color: '#003366', marginBottom: '-4px' }}
+            variant="subtitle1"
             component="span"
+            sx={{ color: 'primary.main' }}
           >
             compliance units
           </BCTypography>
-          <Box display="flex" alignItems="center" mt={1}>
-            <BCTypography
-              style={{ fontSize: '22px', color: '#547D59' }}
-              component="span"
-            >
-              ({numberFormatter(selectedOrganization.reservedBalance)} in
-              reserve)
-            </BCTypography>
-          </Box>
           <BCTypography
-            style={{ fontSize: '14px', color: '#003366', marginTop: '6px' }}
+            variant="h5"
+            component="span"
+            fontWeight="regular"
+            sx={{ color: 'success.main', mt: 1 }}
+          >
+            ({numberFormatter(selectedOrganization.reservedBalance)} in reserve)
+          </BCTypography>
+          <BCTypography
+            variant="body3"
+            sx={{ color: 'primary.main', mt: 1 }}
           >
             Show balance for:
           </BCTypography>
           <Select
             defaultValue={t('txn:allOrganizations')}
-            fullWidth
-            sx={{
-              marginTop: 1,
-              padding: '8px',
-              width: 'calc(100% - 20px)',
-              bgcolor: 'background.paper',
-              borderRadius: 1
-            }}
+            sx={styles.select}
             variant="outlined"
             onChange={onSelectOrganization}
             inputProps={{ 'aria-label': 'Select an organization' }}
@@ -143,7 +150,7 @@ const OrganizationsSummaryCard = () => {
                 </MenuItem>
               ))}
           </Select>
-        </Box>
+        </Stack>
       }
     />
   )

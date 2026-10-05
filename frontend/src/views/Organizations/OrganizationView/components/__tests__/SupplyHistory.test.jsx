@@ -91,7 +91,9 @@ describe('SupplyHistory', () => {
     await user.click(fromSelect)
     await user.click(screen.getByRole('option', { name: '2023' }))
     await user.click(toSelect)
-    expect(screen.queryByRole('option', { name: '2023' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('option', { name: '2023' })
+    ).not.toBeInTheDocument()
     await user.click(screen.getByRole('option', { name: '2025' }))
 
     await waitFor(() => {
@@ -112,13 +114,42 @@ describe('SupplyHistory', () => {
     })
   })
 
+  it('shows the total renewable fuel (liquid) volume summary box', () => {
+    mockUseOrganizationFuelSupply.mockReturnValue({
+      ...queryData,
+      data: {
+        ...queryData.data,
+        analytics: {
+          ...queryData.data.analytics,
+          selectedYearSummary: {
+            reportingYear: '2025',
+            priorYear: '2024',
+            totalRenewableVolume: 1250000,
+            priorYearRenewableVolume: 1000000,
+            renewableVolumeChange: 250000,
+            renewableVolumePctChangeYoy: 25
+          }
+        }
+      }
+    })
+    renderComponent()
+
+    expect(
+      screen.getByText('Total renewable fuel (liquid) volume')
+    ).toBeInTheDocument()
+    expect(screen.getByText('1.25M L')).toBeInTheDocument()
+    expect(screen.getByText('+25.00% vs. previous year')).toBeInTheDocument()
+    expect(screen.getByText('Previous year: 2024 • 1M L')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Compliance units per unit of supply')
+    ).not.toBeInTheDocument()
+  })
+
   it('navigates to the selected organization supply history route', () => {
     renderComponent()
 
     fireEvent.click(screen.getByTestId('select-organization'))
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/organizations/3/supply-history'
-    )
+    expect(mockNavigate).toHaveBeenCalledWith('/organizations/3/supply-history')
   })
 })

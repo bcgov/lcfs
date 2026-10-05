@@ -50,7 +50,7 @@ This document provides essential security guidelines and best practices for deve
 *   **File Uploads**:
     *   Validate file types, sizes, and names.
     *   Scan uploaded files for malware (the `clamav` service is commented out in `docker-compose.yml` but indicates this consideration).
-    *   Store uploaded files in a secure location (e.g., MinIO) outside the webroot, with appropriate access controls.
+    *   Store uploaded files in a secure location (e.g., S3 object storage) outside the webroot, with appropriate access controls.
 *   **Regular Expression (ReDoS)**: Be cautious with complex regular expressions on user-supplied input, as they can be vulnerable to ReDoS attacks. Test regexes for catastrophic backtracking.
 
 ## 6. Dependency Management
