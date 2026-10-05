@@ -1,11 +1,11 @@
 // @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef } from 'ag-grid-community'
 import {
   numberFormatter,
   phoneNumberFormatter,
   timezoneFormatter
 } from '@/utils/formatters'
-import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/index'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { RoleRenderer } from '@/utils/grid/cellRenderers'
 
 // Column definitions for the credit trading market table

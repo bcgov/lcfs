@@ -1,5 +1,8 @@
 import React from 'react'
-import { Box, Grid, List, ListItemButton } from '@mui/material'
+import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import {

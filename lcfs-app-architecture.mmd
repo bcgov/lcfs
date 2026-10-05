@@ -1,0 +1,67 @@
+%%{init: {'theme': 'neutral'}}%%
+flowchart TB
+    Browser["User Browser"]
+
+    subgraph IDP["Identity Provider (external)"]
+        Keycloak["Keycloak<br/>OIDC / SSO"]
+    end
+
+    subgraph ExtGov["External BC Gov services"]
+        CHES["CHES<br/>Common Hosted Email Service<br/>(OAuth2 client-credentials, feature-flagged)"]
+        Geocoder["BC Address Geocoder<br/>REST API"]
+    end
+
+    subgraph BI["Reporting (external)"]
+        Metabase["Metabase<br/>BI dashboards"]
+    end
+
+    subgraph App["LCFS Application"]
+        FE["Frontend<br/>React 18 + Vite<br/>(Nginx in OpenShift)"]
+        BE["Backend API<br/>FastAPI (Python), N replicas"]
+        APS["In-process scheduler<br/>APScheduler (mostly idle/disabled jobs)"]
+        Redis[("Redis 8.x<br/>cache, rate limiting, geocoder cache, job status")]
+        S3[("MinIO / S3<br/>document storage")]
+        ClamAV["ClamAV<br/>virus scan (feature-flagged, off by default)"]
+        DB[("PostgreSQL 17<br/>Crunchy HA cluster<br/>incl. metabase.sql reporting views")]
+    end
+
+    subgraph CronJob["dynamic_scheduler.py (own OpenShift CronJob)"]
+        DynSched["reads scheduled_task table,<br/>runs task modules e.g. fuel_code_expiry"]
+    end
+
+    subgraph ETL["ETL Subsystem (separate compose stack)"]
+        NiFi["Apache NiFi 1.27"]
+        Registry["NiFi Registry"]
+        ZK["Zookeeper"]
+        TFRS[("TFRS PostgreSQL<br/>legacy source, read-only")]
+    end
+
+    subgraph DevTools["Local dev tooling (dev-only, not deployed)"]
+        MCP["MCP Server (Node/TS)<br/>stdio transport, container mgmt & test helpers"]
+    end
+
+    Browser -->|"HTTPS"| FE
+    Browser -.->|"OIDC login redirect"| Keycloak
+    FE -->|"REST/JSON over HTTPS, separate origin/Route"| BE
+    BE -.->|"token introspection"| Keycloak
+    BE --> Redis
+    BE --> S3
+    BE -->|"scan uploaded file"| ClamAV
+    ClamAV -.-> S3
+    BE --> DB
+    BE --- APS
+    BE -->|"send templated email"| CHES
+    BE -->|"forward/reverse geocode, cached"| Geocoder
+    BE -->|"fetch dashboard data, session/API-key auth"| Metabase
+    Metabase -->|"direct SQL read of reporting views"| DB
+    DynSched --> DB
+    DynSched -->|"send templated email"| CHES
+    NiFi -->|"JDBC read"| TFRS
+    NiFi -->|"JDBC write"| DB
+    NiFi <--> Registry
+    NiFi <--> ZK
+    MCP -.->|"docker/db/test control, dev only"| BE
+    MCP -.-> DB
+
+    classDef optional stroke-dasharray: 4 3
+    class ClamAV,MCP,APS optional

@@ -51,9 +51,12 @@ vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
   })
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  AccessibleHeader: () => <div data-test="accessible-header">Header</div>,
-  BCPagination: vi.fn().mockImplementation((props) => (
+vi.mock('@/components/BCDataGrid/components/Renderers/AccessibleHeader', () => ({
+    AccessibleHeader: () => <div data-test="accessible-header">Header</div>
+}))
+
+vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
+    BCPagination: vi.fn().mockImplementation((props) => (
     <div 
       data-test="bc-pagination"
       onClick={() => {

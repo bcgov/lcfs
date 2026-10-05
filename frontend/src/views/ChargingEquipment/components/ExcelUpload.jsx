@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Box, Alert } from '@mui/material'
+import Box from '@mui/material/Box'
+import Alert from '@mui/material/Alert'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faDownload, faUpload } from '@fortawesome/free-solid-svg-icons'
 import { useTranslation } from 'react-i18next'

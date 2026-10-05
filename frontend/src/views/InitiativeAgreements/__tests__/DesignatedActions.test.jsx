@@ -1,12 +1,12 @@
 import React from 'react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
 import {
   DesignatedActions,
   defaultActionsSortModel
 } from '../DesignatedActions'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -58,8 +58,11 @@ describe('DesignatedActions (module tab)', () => {
     })
   })
 
-  it('renders the tab bar, title and grid wired to the module-wide query', () => {
-    render(<DesignatedActions />, { wrapper })
+  test('renders the tab bar, title and grid wired to the module-wide query', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActions />, app)
 
     expect(screen.getByTestId('initiative-agreement-tabs')).toBeInTheDocument()
     expect(screen.getByTestId('designated-actions-title')).toHaveTextContent(
@@ -74,8 +77,8 @@ describe('DesignatedActions (module tab)', () => {
     )
   })
 
-  it('asks for newest activity first by default', () => {
-    render(<DesignatedActions />, { wrapper })
+  test('asks for newest activity first by default', ({ render, app }) => {
+    render(<DesignatedActions />, app)
 
     expect(defaultActionsSortModel).toEqual([
       { field: 'updateDate', direction: 'desc' }
@@ -85,8 +88,11 @@ describe('DesignatedActions (module tab)', () => {
     )
   })
 
-  it('links each row to the action under its own agreement', () => {
-    render(<DesignatedActions />, { wrapper })
+  test('links each row to the action under its own agreement', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActions />, app)
 
     const { defaultColDef } = mockBCGridViewer.mock.calls[0][0]
     expect(
@@ -100,21 +106,21 @@ describe('DesignatedActions (module tab)', () => {
     expect(defaultColDef.cellRendererParams.isAbsolute).toBe(true)
   })
 
-  it('surfaces a load failure in the alert box', () => {
+  test('surfaces a load failure in the alert box', ({ render, app }) => {
     mockUseAllDesignatedActions.mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: true,
       error: new Error('Boom')
     })
-    render(<DesignatedActions />, { wrapper })
+    render(<DesignatedActions />, app)
 
     expect(screen.getByTestId('alert-box')).toHaveTextContent('Boom')
   })
 
-  it('is not offered to a proponent', () => {
+  test('is not offered to a proponent', ({ render, app }) => {
     mockRoles = [roles.ia_proponent]
-    render(<DesignatedActions />, { wrapper })
+    render(<DesignatedActions />, app)
 
     expect(screen.queryByTestId('designated-actions-title')).toBeNull()
   })

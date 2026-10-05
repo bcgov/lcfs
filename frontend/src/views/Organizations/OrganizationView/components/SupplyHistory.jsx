@@ -1,17 +1,15 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react'
-import {
-  Grid,
-  FormControl,
-  Select,
-  MenuItem,
-  Card,
-  CardContent,
-  Stack,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
-} from '@mui/material'
-import { ExpandMore } from '@mui/icons-material'
+import Grid from '@mui/material/Grid'
+import FormControl from '@mui/material/FormControl'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Stack from '@mui/material/Stack'
+import Accordion from '@mui/material/Accordion'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import ReactECharts from 'echarts-for-react'
 
 import BCBox from '@/components/BCBox'
@@ -481,30 +479,28 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
         ]
       },
       {
-        key: 'cu-efficiency',
-        hasData: hasNumericValue(
-          selectedYearSummary.complianceUnitsPerUnitSupply
-        ),
-        title: t('org:supplyHistory.analytics.complianceUnitsPerUnitSupply'),
-        value: formatPlainNumber(
-          selectedYearSummary.complianceUnitsPerUnitSupply,
-          6
-        ),
+        key: 'renewable-volume',
+        hasData: hasNumericValue(selectedYearSummary.totalRenewableVolume),
+        title: t('org:supplyHistory.analytics.totalRenewableLiquidVolume'),
+        value: abbreviateNumber(selectedYearSummary.totalRenewableVolume, {
+          unitLabel: 'L'
+        }),
         period: year,
         comparisons: [
           {
-            label: `${formatPlainNumber(
-              selectedYearSummary.complianceUnitsPerUnitSupplyChange,
-              6
+            label: `${formatSignedPercent(
+              selectedYearSummary.renewableVolumePctChangeYoy
             )} ${t('org:supplyHistory.analytics.vsPreviousYear')}`,
             color: getComparisonColor(
-              selectedYearSummary.complianceUnitsPerUnitSupplyChange
+              selectedYearSummary.renewableVolumePctChangeYoy
             )
           },
           {
-            label: `${t('org:supplyHistory.analytics.previousYear')}: ${formatPlainNumber(
-              selectedYearSummary.priorYearComplianceUnitsPerUnitSupply,
-              6
+            label: `${t('org:supplyHistory.analytics.previousYear')}: ${
+              priorYear || t('org:supplyHistory.analytics.noData')
+            } • ${abbreviateNumber(
+              selectedYearSummary.priorYearRenewableVolume,
+              { unitLabel: 'L' }
             )}`,
             color: 'text'
           }

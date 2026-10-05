@@ -23,16 +23,25 @@ vi.mock('react-hook-form', () => ({
     })
 }))
 
-vi.mock('@mui/material', () => ({
-  Box: ({ children }) => <div data-test="box">{children}</div>,
-  FormControl: ({ children }) => <div data-test="form-control">{children}</div>,
-  FormControlLabel: ({ control: ctrl, label }) => (
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children }) => <div data-test="box">{children}</div>
+}))
+
+vi.mock('@mui/material/FormControl', () => ({
+    default: ({ children }) => <div data-test="form-control">{children}</div>
+}))
+
+vi.mock('@mui/material/FormControlLabel', () => ({
+    default: ({ control: ctrl, label }) => (
     <div data-test="form-control-label">
       {ctrl}
       {label}
     </div>
-  ),
-  Checkbox: ({ id, checked, disabled }) => (
+  )
+}))
+
+vi.mock('@mui/material/Checkbox', () => ({
+    default: ({ id, checked, disabled }) => (
     <input
       data-test="ia-signer-checkbox"
       id={id}
