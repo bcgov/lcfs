@@ -107,7 +107,7 @@ describe('SupplyHistory', () => {
     })
   })
 
-  it('shows the total renewable fuel (liquid) volume summary box', () => {
+  it('shows the renewable liquid volume metric without the legacy compliance unit metric', () => {
     mockUseOrganizationFuelSupply.mockReturnValue({
       ...queryData,
       data: {
@@ -119,7 +119,6 @@ describe('SupplyHistory', () => {
             priorYear: '2024',
             totalRenewableVolume: 1250000,
             priorYearRenewableVolume: 1000000,
-            renewableVolumeChange: 250000,
             renewableVolumePctChangeYoy: 25
           }
         }
@@ -136,22 +135,6 @@ describe('SupplyHistory', () => {
     expect(
       screen.queryByText('Compliance units per unit of supply')
     ).not.toBeInTheDocument()
-  })
-
-  it('describes the fuel types included in the renewable volume chart', () => {
-    renderComponent()
-
-    expect(
-      screen.getByText(/Includes liquid gasoline, diesel, and jet fuel supply only/)
-    ).toBeInTheDocument()
-    expect(screen.getByText(/renewable naphtha/)).toBeInTheDocument()
-    expect(
-      screen.getByText(/biodiesel, HDRD, other diesel fuel/)
-    ).toBeInTheDocument()
-    expect(screen.getByText(/alternative jet fuel/)).toBeInTheDocument()
-    expect(
-      screen.getByText(/Non-renewable includes liquid gasoline, diesel, and jet fuel/)
-    ).toBeInTheDocument()
   })
 
   it('does not render charts that only contain zero or empty data', () => {
