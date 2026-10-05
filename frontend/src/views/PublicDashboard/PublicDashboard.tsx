@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
-import { Box, Button } from '@mui/material'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined'
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined'
 import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined'
@@ -37,6 +38,8 @@ const LEGISLATION_URL =
   'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels'
 const REQUIREMENTS_URL =
   'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels/requirements'
+const TROUBLE_LOGGING_IN_URL =
+  'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels/reporting-system'
 
 const compactFmt = new Intl.NumberFormat('en-CA', {
   notation: 'compact',
@@ -72,6 +75,7 @@ export const PublicDashboard = () => {
   const navigate = useNavigate()
   const { data } = useCreditMarketPublicOverview('quarter')
   const { data: activeBg } = useActiveLoginBgImage()
+  const publicMarketDataEnabled = CONFIG.feature_flags.publicMarketData
 
   // After login the OIDC callback returns to the app root, which can briefly
   // bounce an authenticated user here (the public landing) before the session
@@ -400,7 +404,42 @@ export const PublicDashboard = () => {
               {t('publicDashboard.hero.subtitle')}
             </BCTypography>
 
-            <BCBox sx={{ mb: 4.5 }}>{renderLoginButtons()}</BCBox>
+            <BCBox
+              sx={{
+                mb: 4.5,
+                display: 'inline-flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 1.5
+              }}
+            >
+              {renderLoginButtons()}
+              <Box
+                component="a"
+                href={TROUBLE_LOGGING_IN_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-test="trouble-logging-in"
+                sx={{
+                  fontSize: 14,
+                  color: 'rgba(255,255,255,.78)',
+                  // Global `a:link, a:visited` strips underlines with !important.
+                  '&:link, &:visited, &:hover': {
+                    textDecoration: 'underline !important',
+                    textUnderlineOffset: '3px',
+                    textDecorationColor: 'rgba(255,255,255,.78)'
+                  },
+                  '&:hover': { color: '#fff', textDecorationColor: '#fff' },
+                  '&:focus-visible': {
+                    outline: `3px solid ${GOLD}`,
+                    outlineOffset: '3px',
+                    borderRadius: '3px'
+                  }
+                }}
+              >
+                {t('login.troubleMessage')}
+              </Box>
+            </BCBox>
 
             <BCBox
               sx={{
@@ -589,25 +628,27 @@ export const PublicDashboard = () => {
                   {t('publicDashboard.market.volumeSeries')}
                 </BCBox>
               </BCBox>
-              <Box
-                component={Link}
-                to={ROUTES.PUBLIC_MARKET_DATA}
-                data-test="explore-market-data"
-                sx={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: LINK,
-                  textDecoration: 'none',
-                  '&:hover': { color: NAVY },
-                  '&:focus-visible': {
-                    outline: `3px solid ${GOLD}`,
-                    outlineOffset: '3px',
-                    borderRadius: '3px'
-                  }
-                }}
-              >
-                {t('publicDashboard.market.explore')} →
-              </Box>
+              {publicMarketDataEnabled && (
+                <Box
+                  component={Link}
+                  to={ROUTES.PUBLIC_MARKET_DATA}
+                  data-test="explore-market-data"
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: LINK,
+                    textDecoration: 'none',
+                    '&:hover': { color: NAVY },
+                    '&:focus-visible': {
+                      outline: `3px solid ${GOLD}`,
+                      outlineOffset: '3px',
+                      borderRadius: '3px'
+                    }
+                  }}
+                >
+                  {t('publicDashboard.market.explore')} →
+                </Box>
+              )}
             </BCBox>
           </BCBox>
         </BCBox>

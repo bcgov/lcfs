@@ -2,7 +2,9 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import { Grid, List, ListItemButton } from '@mui/material'
+import Grid from '@mui/material/Grid'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
 import { LabelBox } from './LabelBox'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -13,6 +15,7 @@ import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
 } from '@/views/Transactions/constants.js'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 // Define common inline styles
 const inlineLabelStyle = { display: 'inline', marginRight: 6 }
@@ -120,6 +123,14 @@ export const TransactionView = ({ transaction }) => {
                         >
                           {file.fileName}
                         </BCTypography>
+                        <DocumentPreviewButton
+                          parentType={transactionType}
+                          parentID={
+                            transaction.adminAdjustmentId ??
+                            transaction.initiativeAgreementId
+                          }
+                          document={file}
+                        />
                       </ListItemButton>
                     ))}
                   </List>

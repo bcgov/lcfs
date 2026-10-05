@@ -1,4 +1,6 @@
-import { Box, List, ListItemButton } from '@mui/material'
+import Box from '@mui/material/Box'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/routes/routes'

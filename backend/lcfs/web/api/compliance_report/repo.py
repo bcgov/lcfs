@@ -7,8 +7,6 @@ from sqlalchemy import (
     func,
     select,
     and_,
-    asc,
-    desc,
     Integer,
     String,
     cast,
@@ -17,6 +15,7 @@ from sqlalchemy import (
     exists,
     text,
     bindparam,
+    update,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, contains_eager, joinedload, selectinload
@@ -54,6 +53,7 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.web.api.base import (
     PaginationRequestSchema,
+    PaginatedQueryBuilder,
     apply_filter_conditions,
     get_field_for_filter,
     paginate_with_window_count,
@@ -530,35 +530,27 @@ class ComplianceReportRepository:
         query = query.where(and_(*conditions))
 
         # Apply sorting from pagination
-        if len(pagination.sort_orders) < 1:
-            field = get_field_for_filter(ComplianceReportListView, "update_date")
-            query = query.order_by(desc(field))
-
-        for order in pagination.sort_orders:
-            sort_method = asc if order.direction == "asc" else desc
-            if order.field == "status":
-                order.field = get_field_for_filter(
+        sort_builder = PaginatedQueryBuilder(
+            ComplianceReportListView,
+            custom_sorts={
+                "status": get_field_for_filter(
                     ComplianceReportListView, "report_status"
-                )
-            elif order.field == "organization":
-                order.field = get_field_for_filter(
+                ),
+                "organization": get_field_for_filter(
                     ComplianceReportListView, "organization_name"
-                )
-            elif order.field == "type":
-                order.field = get_field_for_filter(
-                    ComplianceReportListView, "report_type"
-                )
-            elif order.field in ("assigned_analyst", "assignedAnalyst"):
-                first_name_field = get_field_for_filter(
+                ),
+                "type": get_field_for_filter(ComplianceReportListView, "report_type"),
+                "assigned_analyst": get_field_for_filter(
                     ComplianceReportListView, "assigned_analyst_first_name"
-                )
-                query = query.order_by(sort_method(first_name_field))
-                continue
-            else:
-                order.field = get_field_for_filter(
-                    ComplianceReportListView, order.field
-                )
-            query = query.order_by(sort_method(order.field))
+                ),
+                "assignedAnalyst": get_field_for_filter(
+                    ComplianceReportListView, "assigned_analyst_first_name"
+                ),
+            },
+        )
+        query = sort_builder.apply_sorting(
+            query, pagination.sort_orders, default_field="update_date"
+        )
 
         query_result, total_count = await paginate_with_window_count(
             self.db, query, offset, limit
@@ -696,155 +688,139 @@ class ComplianceReportRepository:
         return None
 
     def _apply_filters(self, pagination, conditions):
-        for filter in pagination.filters:
-            filter_value = filter.filter
+        builder = PaginatedQueryBuilder(
+            ComplianceReportListView,
+            custom_filters={
+                "assignedAnalyst": self._assigned_analyst_filter,
+                "assigned_analyst": self._assigned_analyst_filter,
+            },
+            default_filter=self._generic_report_filter,
+        )
+        conditions.extend(builder.build_conditions(pagination.filters))
 
-            if (
-                filter.filter_type == "set"
-                and (not filter_value or filter_value == [])
-                and filter.values
-            ):
-                filter_value = filter.values
+    def _assigned_analyst_filter(self, filter_model):
+        filter_value = filter_model.filter
+        logger.info(
+            f"Handling assignedAnalyst filter with value: '{filter_value}' (type: {type(filter_value)})"
+        )
+        if filter_value == "" or filter_value is None:
+            # Unassigned reports: analyst_id is null
+            analyst_id_field = get_field_for_filter(
+                ComplianceReportListView, "assigned_analyst_id"
+            )
             logger.info(
-                f"Processing filter: field={filter.field}, value={filter_value}"
+                "Added condition for unassigned analyst (assigned_analyst_id IS NULL)"
             )
+            return analyst_id_field.is_(None)
 
-            # check if the date string is selected for filter
-            if filter.filter is None:
-                if not filter.date_from and not filter.date_to:
-                    logger.info(
-                        "Skipping date filter because both 'date_from' and 'date_to' are empty"
-                    )
-                    continue
+        logger.info(f"Filtering by analyst initials: '{filter_value}'")
+        first_name_field = get_field_for_filter(
+            ComplianceReportListView, "assigned_analyst_first_name"
+        )
+        last_name_field = get_field_for_filter(
+            ComplianceReportListView, "assigned_analyst_last_name"
+        )
+        initials_field = func.concat(
+            func.substring(first_name_field, 1, 1),
+            func.substring(last_name_field, 1, 1),
+        )
+        if filter_model.type == "contains":
+            logger.info(
+                f"Added CONTAINS condition for analyst initials like '%{filter_value}%'"
+            )
+            return initials_field.ilike(f"%{filter_value}%")
+        logger.info(f"Added EQUALS condition for analyst initials = '{filter_value}'")
+        return initials_field == filter_value
 
-                filter_value = []
-                if filter.date_from:
-                    filter_value.append(
-                        datetime.strptime(
-                            filter.date_from, "%Y-%m-%d %H:%M:%S"
-                        ).strftime("%Y-%m-%d")
-                    )
-                if filter.date_to:
-                    filter_value.append(
-                        datetime.strptime(filter.date_to, "%Y-%m-%d %H:%M:%S").strftime(
-                            "%Y-%m-%d"
-                        )
-                    )
-            filter_option = filter.type
-            filter_type = filter.filter_type
-            if filter.field == "status":
-                field = cast(
-                    get_field_for_filter(ComplianceReportListView, "report_status"),
-                    String,
-                )
-                # Check if filter_value is a comma-separated string
-                if isinstance(filter_value, str) and "," in filter_value:
-                    filter_value = [
-                        val.strip() for val in filter_value.split(",") if val.strip()
-                    ]  # Convert to clean list
+    def _generic_report_filter(self, filter_model):
+        filter_value = filter_model.filter
 
-                if isinstance(filter_value, list):
+        if (
+            filter_model.filter_type == "set"
+            and (not filter_value or filter_value == [])
+            and filter_model.values
+        ):
+            filter_value = filter_model.values
+        logger.info(
+            f"Processing filter: field={filter_model.field}, value={filter_value}"
+        )
 
-                    def underscore_string(val):
-                        """
-                        If the item is an enum member, get its `.value`
-                        Then do .replace(" ", "_") so we get underscores
-                        """
-                        if isinstance(val, ComplianceReportStatusEnum):
-                            val = val.value  # convert enum to string
-                        return val.replace(" ", "_")
-
-                    filter_value = [underscore_string(val) for val in filter_value]
-                    filter_type = "set"
-                else:
-                    if isinstance(filter_value, ComplianceReportStatusEnum):
-                        filter_value = filter_value.value
-                    filter_value = filter_value.replace(" ", "_")
-
-            elif filter.field == "type":
-                field = get_field_for_filter(ComplianceReportListView, "report_type")
-            elif filter.field == "organization":
-                field = get_field_for_filter(
-                    ComplianceReportListView, "organization_name"
-                )
-            elif (
-                filter.field == "compliance_period"
-                or filter.field == "compliancePeriod"
-            ):
-                field = get_field_for_filter(
-                    ComplianceReportListView, "compliance_period"
-                )
-            elif filter.field == "updateDate" or filter.field == "update_date":
-                field = get_field_for_filter(ComplianceReportListView, "update_date")
-            elif (
-                filter.field == "assignedAnalyst" or filter.field == "assigned_analyst"
-            ):
+        # check if the date string is selected for filter
+        if filter_model.filter is None:
+            if not filter_model.date_from and not filter_model.date_to:
                 logger.info(
-                    f"Handling assignedAnalyst filter with value: '{filter_value}' (type: {type(filter_value)})"
+                    "Skipping date filter because both 'date_from' and 'date_to' are empty"
                 )
-                # Handle empty string for unassigned (null analyst fields)
-                if filter_value == "" or filter_value is None:
-                    # For unassigned reports, check if analyst_id is null/0 AND names are null/empty
-                    analyst_id_field = get_field_for_filter(
-                        ComplianceReportListView, "assigned_analyst_id"
-                    )
-                    first_name_field = get_field_for_filter(
-                        ComplianceReportListView, "assigned_analyst_first_name"
-                    )
-                    last_name_field = get_field_for_filter(
-                        ComplianceReportListView, "assigned_analyst_last_name"
-                    )
+                return None
 
-                    # Start with the simplest condition - just check if analyst_id is null
-                    unassigned_condition = analyst_id_field.is_(None)
-                    conditions.append(unassigned_condition)
-                    logger.info(
-                        "Added condition for unassigned analyst (assigned_analyst_id IS NULL)"
-                    )
-                    continue  # Skip the regular filter application
-                else:
-                    logger.info(f"Filtering by analyst initials: '{filter_value}'")
-                    # Filter by analyst initials - need to construct initials from first/last name
-                    first_name_field = get_field_for_filter(
-                        ComplianceReportListView, "assigned_analyst_first_name"
-                    )
-                    last_name_field = get_field_for_filter(
-                        ComplianceReportListView, "assigned_analyst_last_name"
-                    )
+            filter_value = []
+            if filter_model.date_from:
+                filter_value.append(
+                    datetime.strptime(
+                        filter_model.date_from, "%Y-%m-%d %H:%M:%S"
+                    ).strftime("%Y-%m-%d")
+                )
+            if filter_model.date_to:
+                filter_value.append(
+                    datetime.strptime(
+                        filter_model.date_to, "%Y-%m-%d %H:%M:%S"
+                    ).strftime("%Y-%m-%d")
+                )
 
-                    # Create initials field by concatenating first letter of first and last name
-                    initials_field = func.concat(
-                        func.substring(first_name_field, 1, 1),
-                        func.substring(last_name_field, 1, 1),
-                    )
+        filter_option = filter_model.type
+        filter_type = filter_model.filter_type
+        if filter_model.field == "status":
+            field = cast(
+                get_field_for_filter(ComplianceReportListView, "report_status"),
+                String,
+            )
+            # Check if filter_value is a comma-separated string
+            if isinstance(filter_value, str) and "," in filter_value:
+                filter_value = [
+                    val.strip() for val in filter_value.split(",") if val.strip()
+                ]  # Convert to clean list
 
-                    # Apply the filter condition directly
-                    if filter_option == "contains":
-                        conditions.append(initials_field.ilike(f"%{filter_value}%"))
-                        logger.info(
-                            f"Added CONTAINS condition for analyst initials like '%{filter_value}%'"
-                        )
-                    else:
-                        conditions.append(initials_field == filter_value)
-                        logger.info(
-                            f"Added EQUALS condition for analyst initials = '{filter_value}'"
-                        )
-                    continue  # Skip the regular filter application
+            if isinstance(filter_value, list):
+
+                def underscore_string(val):
+                    """
+                    If the item is an enum member, get its `.value`
+                    Then do .replace(" ", "_") so we get underscores
+                    """
+                    if isinstance(val, ComplianceReportStatusEnum):
+                        val = val.value  # convert enum to string
+                    return val.replace(" ", "_")
+
+                filter_value = [underscore_string(val) for val in filter_value]
+                filter_type = "set"
             else:
-                logger.info(
-                    f"Unknown filter field: {filter.field}, trying to get field from model"
-                )
-                try:
-                    field = get_field_for_filter(ComplianceReportListView, filter.field)
-                except Exception as e:
-                    logger.error(
-                        f"Failed to get field '{filter.field}' from ComplianceReportListView: {e}"
-                    )
-                    continue  # Skip this filter if field doesn't exist
+                if isinstance(filter_value, ComplianceReportStatusEnum):
+                    filter_value = filter_value.value
+                filter_value = filter_value.replace(" ", "_")
 
-            conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
+        elif filter_model.field == "type":
+            field = get_field_for_filter(ComplianceReportListView, "report_type")
+        elif filter_model.field == "organization":
+            field = get_field_for_filter(ComplianceReportListView, "organization_name")
+        elif filter_model.field in ("compliance_period", "compliancePeriod"):
+            field = get_field_for_filter(ComplianceReportListView, "compliance_period")
+        elif filter_model.field in ("updateDate", "update_date"):
+            field = get_field_for_filter(ComplianceReportListView, "update_date")
+        else:
+            logger.info(
+                f"Unknown filter field: {filter_model.field}, trying to get field from model"
             )
+            try:
+                field = get_field_for_filter(
+                    ComplianceReportListView, filter_model.field
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to get field '{filter_model.field}' from ComplianceReportListView: {e}"
+                )
+                return None  # Skip this filter if field doesn't exist
+
+        return apply_filter_conditions(field, filter_value, filter_option, filter_type)
 
     @repo_handler
     async def get_compliance_report_by_id(self, report_id: int) -> ComplianceReport:
@@ -1638,6 +1614,77 @@ class ComplianceReportRepository:
         )
         return result.scalars().first()
 
+    async def _reassign_internal_comments(self, compliance_report_id: int) -> None:
+        """
+        Move a report's internal comment links to the newest surviving version of
+        the same chain before the report itself is deleted (#5087).
+
+        Internal comments are the record of a report's review history, so they have
+        to outlive the version they happened to be written on: deleting an analyst
+        adjustment used to take the recommend and return comments with it. Comment
+        reads already span the whole chain (``get_related_compliance_report_ids``),
+        so re-pointing the association is enough for the comments to keep showing.
+
+        When no other version survives there is nothing left to hold the links, so
+        they are deleted as before.
+        """
+        group_uuid = await self.db.scalar(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
+        )
+
+        target_id = None
+        if group_uuid:
+            target_id = await self.db.scalar(
+                select(ComplianceReport.compliance_report_id)
+                .where(
+                    ComplianceReport.compliance_report_group_uuid == group_uuid,
+                    ComplianceReport.compliance_report_id != compliance_report_id,
+                )
+                .order_by(ComplianceReport.version.desc())
+                .limit(1)
+            )
+
+        if target_id is None:
+            await self.db.execute(
+                delete(ComplianceReportInternalComment).where(
+                    ComplianceReportInternalComment.compliance_report_id
+                    == compliance_report_id
+                )
+            )
+            return
+
+        # The composite primary key allows one row per (report, comment) pair, so
+        # drop any link the target already holds before re-pointing the rest.
+        already_linked = select(
+            ComplianceReportInternalComment.internal_comment_id
+        ).where(ComplianceReportInternalComment.compliance_report_id == target_id)
+        await self.db.execute(
+            delete(ComplianceReportInternalComment).where(
+                ComplianceReportInternalComment.compliance_report_id
+                == compliance_report_id,
+                ComplianceReportInternalComment.internal_comment_id.in_(already_linked),
+            )
+        )
+
+        result = await self.db.execute(
+            update(ComplianceReportInternalComment)
+            .where(
+                ComplianceReportInternalComment.compliance_report_id
+                == compliance_report_id
+            )
+            .values(
+                compliance_report_id=target_id,
+                compliance_report_group_uuid=group_uuid,
+            )
+        )
+        if result.rowcount:
+            logger.info(
+                f"Moved {result.rowcount} internal comment(s) from compliance report "
+                f"{compliance_report_id} to {target_id} before deletion"
+            )
+
     @repo_handler
     async def delete_compliance_report(self, compliance_report_id: int) -> bool:
         """
@@ -1646,7 +1693,8 @@ class ComplianceReportRepository:
         This performs a cascading delete of all related entities including:
         - ComplianceReportSummary
         - ComplianceReportHistory
-        - ComplianceReportInternalComment
+        - ComplianceReportInternalComment (moved to a surviving version when the
+          chain has one, rather than deleted - see _reassign_internal_comments)
         - NotionalTransfer
         - FuelSupply
         - FuelExport
@@ -1656,6 +1704,10 @@ class ComplianceReportRepository:
         - ComplianceReportOrganizationSnapshot
         - Document associations
         """
+        # Internal comments are preserved on a surviving version of the chain
+        # where possible, so this runs before (and instead of) deleting them.
+        await self._reassign_internal_comments(compliance_report_id)
+
         # Create a list of delete operations
         delete_operations = [
             # Child tables with no interdependencies
@@ -1679,12 +1731,6 @@ class ComplianceReportRepository:
             self.db.execute(
                 delete(ComplianceReportHistory).where(
                     ComplianceReportHistory.compliance_report_id == compliance_report_id
-                )
-            ),
-            self.db.execute(
-                delete(ComplianceReportInternalComment).where(
-                    ComplianceReportInternalComment.compliance_report_id
-                    == compliance_report_id
                 )
             ),
             self.db.execute(

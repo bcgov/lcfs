@@ -1,4 +1,6 @@
-import { Box, FormControlLabel, Checkbox } from '@mui/material'
+import Box from '@mui/material/Box'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
 import BCTypography from '@/components/BCTypography'
 import withRole from '@/utils/withRole'
 import { useFormContext } from 'react-hook-form'

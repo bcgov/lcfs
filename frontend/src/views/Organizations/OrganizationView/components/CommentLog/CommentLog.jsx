@@ -1,18 +1,16 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import {
-  Alert,
-  Box,
-  CircularProgress,
-  GlobalStyles,
-  Skeleton,
-  Stack
-} from '@mui/material'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import CircularProgress from '@mui/material/CircularProgress'
+import GlobalStyles from '@mui/material/GlobalStyles'
+import Skeleton from '@mui/material/Skeleton'
+import Stack from '@mui/material/Stack'
 
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
-import { BCPagination } from '@/components/BCDataGrid/components'
+import { BCPagination } from '@/components/BCDataGrid/components/StatusBar/BCPagination'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -112,11 +110,13 @@ export const CommentLog = ({ organizationId }) => {
             fontSize: '1rem',
             lineHeight: 1.5
           },
-          '.comment-content p': { margin: '0.25rem 0' },
+          '.comment-content p': { margin: '0.25rem 0', fontSize: '1rem' },
           '.comment-content ul, .comment-content ol': {
             paddingLeft: '1.5rem',
-            margin: '0.25rem 0'
+            margin: '0.25rem 0',
+            fontSize: '1rem'
           },
+          '.comment-content li': { fontSize: '1rem' },
           'mark.comment-search-highlight': {
             backgroundColor: '#ffec99',
             color: '#1a1a1a',

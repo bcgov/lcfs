@@ -28,6 +28,7 @@ from lcfs.web.api.user.schema import (
     UsersSchema,
     UserActivitySchema,
     UserActivitiesResponseSchema,
+    UserAssignedWorkSchema,
     ResolveOrgNameResponseSchema,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
@@ -613,6 +614,11 @@ class UserServices:
             return True
 
         return False
+
+    @service_handler
+    async def get_user_assigned_work(self, user_id: int) -> UserAssignedWorkSchema:
+        items = await self.repo.get_user_assigned_work(user_id)
+        return UserAssignedWorkSchema(**items)
 
     async def track_user_login(self, user: UserProfile):
         await self.repo.create_login_history(user)

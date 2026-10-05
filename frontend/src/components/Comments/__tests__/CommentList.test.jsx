@@ -1,6 +1,12 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { test } from '@/tests/utils/fixtures'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within
+} from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
 import { roles } from '@/constants/roles'
 import CommentList from '../CommentList'
 
@@ -10,10 +16,11 @@ const mockUserState = vi.hoisted(() => ({
 }))
 
 vi.mock('react-quill', () => {
-  const ReactQuill = ({ value, onChange }) => (
+  const ReactQuill = ({ value, onChange, placeholder }) => (
     <textarea
       aria-label="Comment editor"
       value={value}
+      placeholder={placeholder}
       onChange={(event) => onChange?.(event.target.value)}
     />
   )
@@ -34,11 +41,25 @@ vi.mock('react-i18next', () => ({
         'internalComment:edit': 'Edit',
         'internalComment:edited': 'Edited',
         'internalComment:internal': 'Internal',
+        'internalComment:internalOnly': 'Internal only',
+        'internalComment:commentVisibility': 'Comment visibility',
+        'internalComment:internalVisibilityMessage':
+          'Internal only - visible to government users only.',
+        'internalComment:publicVisibilityMessage':
+          'Public - visible to everyone, including external parties.',
+        'internalComment:internalCommentPlaceholder':
+          'Write an internal note (government users only)',
+        'internalComment:publicCommentPlaceholder':
+          'Write a public comment (visible to external parties)',
+        'internalComment:addInternalComment': 'Add internal comment',
+        'internalComment:addPublicComment': 'Add public comment',
         'internalComment:internalComments': 'Internal comments',
         'internalComment:public': 'Public',
         'internalComment:publicComments': 'Public comments',
         'internalComment:cancel': 'Cancel',
         'internalComment:editComment': 'Edit comment:',
+        'internalComment:newInternalComment': 'New internal comment',
+        'internalComment:newPublicComment': 'New public comment',
         'internalComment:postComment': 'Post comment',
         'internalComment:publicCommentConfirmText':
           'This comment will be visible outside the internal team.',
@@ -102,8 +123,11 @@ describe('CommentList comment filters', () => {
     mockUserState.username = 'idir-user'
   })
 
-  it('defaults to all comments for IDIR dual-mode users', () => {
-    render(<CommentList {...baseProps} />, { wrapper })
+  test('defaults to all comments for IDIR dual-mode users', ({
+    render,
+    theme
+  }) => {
+    render(<CommentList {...baseProps} />, [theme])
 
     expect(screen.getByRole('tab', { name: 'All comments' })).toHaveAttribute(
       'aria-selected',
@@ -113,8 +137,81 @@ describe('CommentList comment filters', () => {
     expect(screen.getByText('Public comment body')).toBeInTheDocument()
   })
 
-  it('filters between internal, public, and all comments without reloading', () => {
-    render(<CommentList {...baseProps} />, { wrapper })
+  test('identifies IDIR comment visibility with labelled lock and globe badges', ({
+    render,
+    theme
+  }) => {
+    const { container } = render(<CommentList {...baseProps} />, [theme])
+    const cards = container.querySelectorAll('[data-test="comment-card"]')
+
+    expect(cards[0]).toHaveAttribute('data-visibility', 'Internal')
+    expect(within(cards[0]).getByText('Internal')).toBeInTheDocument()
+    expect(
+      cards[0].querySelector('[data-testid="LockOutlinedIcon"]')
+    ).toBeInTheDocument()
+    expect(cards[1]).toHaveAttribute('data-visibility', 'Public')
+    expect(within(cards[1]).getByText('Public')).toBeInTheDocument()
+    expect(
+      cards[1].querySelector('[data-testid="LanguageIcon"]')
+    ).toBeInTheDocument()
+  })
+
+  test('updates the visibility message, placeholder, and submit action', ({
+    render,
+    theme
+  }) => {
+    const onVisibilityChange = vi.fn()
+    const { rerender } = render(
+      <CommentList
+        {...baseProps}
+        commentInput="Draft"
+        onVisibilityChange={onVisibilityChange}
+      />,
+      [theme]
+    )
+
+    expect(
+      screen.getByRole('button', { name: 'Internal only' })
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      screen.getByRole('button', { name: 'Add internal comment' })
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Public' }))
+    expect(onVisibilityChange).toHaveBeenCalledWith('Public')
+
+    rerender(
+      <CommentList
+        {...baseProps}
+        commentInput="Draft"
+        visibility="Public"
+        onVisibilityChange={onVisibilityChange}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Public' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    expect(
+      screen.getByText(
+        'Public - visible to everyone, including external parties.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Comment editor')).toHaveAttribute(
+      'placeholder',
+      'Write a public comment (visible to external parties)'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Add public comment' })
+    ).toBeInTheDocument()
+  })
+
+  test('filters between internal, public, and all comments without reloading', ({
+    render,
+    theme
+  }) => {
+    render(<CommentList {...baseProps} />, [theme])
 
     fireEvent.click(screen.getByRole('tab', { name: 'Internal comments' }))
     expect(screen.getByText('Internal comment body')).toBeInTheDocument()
@@ -129,7 +226,7 @@ describe('CommentList comment filters', () => {
     expect(screen.getByText('Public comment body')).toBeInTheDocument()
   })
 
-  it('changes sort order from the sort tabs', () => {
+  test('changes sort order from the sort tabs', ({ render, theme }) => {
     const onSortOrderChange = vi.fn()
 
     render(
@@ -138,7 +235,7 @@ describe('CommentList comment filters', () => {
         sortOrder="desc"
         onSortOrderChange={onSortOrderChange}
       />,
-      { wrapper }
+      [theme]
     )
 
     fireEvent.click(screen.getByRole('tab', { name: 'Sort oldest first' }))
@@ -146,7 +243,10 @@ describe('CommentList comment filters', () => {
     expect(onSortOrderChange).toHaveBeenCalledWith('asc')
   })
 
-  it('resets filter and sort order after adding a comment', async () => {
+  test('resets filter and sort order after adding a comment', async ({
+    render,
+    theme
+  }) => {
     const onAddComment = vi.fn().mockResolvedValue({})
     const onSortOrderChange = vi.fn()
 
@@ -158,7 +258,7 @@ describe('CommentList comment filters', () => {
         sortOrder="asc"
         onSortOrderChange={onSortOrderChange}
       />,
-      { wrapper }
+      [theme]
     )
 
     fireEvent.click(screen.getByRole('tab', { name: 'Internal comments' }))
@@ -166,7 +266,9 @@ describe('CommentList comment filters', () => {
       screen.getByRole('tab', { name: 'Internal comments' })
     ).toHaveAttribute('aria-selected', 'true')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add comment' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Add internal comment' })
+    )
 
     await waitFor(() => expect(onAddComment).toHaveBeenCalled())
     await waitFor(() =>
@@ -178,7 +280,10 @@ describe('CommentList comment filters', () => {
     expect(onSortOrderChange).toHaveBeenCalledWith('desc')
   })
 
-  it('confirms before posting a public comment', async () => {
+  test('confirms before posting a public comment', async ({
+    render,
+    theme
+  }) => {
     const onAddComment = vi.fn().mockResolvedValue({})
 
     render(
@@ -188,10 +293,19 @@ describe('CommentList comment filters', () => {
         commentInput="New public comment"
         visibility="Public"
       />,
-      { wrapper }
+      [theme]
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add comment' }))
+    expect(
+      screen.getByText(
+        'Public - visible to everyone, including external parties.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Comment editor')).toHaveAttribute(
+      'placeholder',
+      'Write a public comment (visible to external parties)'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Add public comment' }))
 
     expect(onAddComment).not.toHaveBeenCalled()
     expect(screen.getByText('Post public comment?')).toBeInTheDocument()
@@ -199,13 +313,16 @@ describe('CommentList comment filters', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onAddComment).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add comment' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add public comment' }))
     fireEvent.click(screen.getByRole('button', { name: 'Post comment' }))
 
     await waitFor(() => expect(onAddComment).toHaveBeenCalled())
   })
 
-  it('confirms before changing an internal comment to public', async () => {
+  test('confirms before changing an internal comment to public', async ({
+    render,
+    theme
+  }) => {
     const onEditComment = vi.fn()
 
     render(
@@ -223,11 +340,11 @@ describe('CommentList comment filters', () => {
           }
         ]}
       />,
-      { wrapper }
+      [theme]
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
-    fireEvent.click(screen.getAllByRole('radio', { name: 'Public' })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: 'Public' })[0])
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
 
     expect(onEditComment).not.toHaveBeenCalled()
@@ -238,13 +355,16 @@ describe('CommentList comment filters', () => {
     await waitFor(() => expect(onEditComment).toHaveBeenCalled())
   })
 
-  it('renders sort tabs but not filter tabs for BCeID dual-mode users', () => {
+  test('renders sort tabs but not filter tabs for BCeID dual-mode users', ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.ci_applicant]
     const onSortOrderChange = vi.fn()
 
     render(
       <CommentList {...baseProps} onSortOrderChange={onSortOrderChange} />,
-      { wrapper }
+      [theme]
     )
 
     expect(screen.queryByTestId('comment-filter-tabs')).not.toBeInTheDocument()
@@ -288,8 +408,11 @@ describe('CommentList attachments', () => {
     mockUserState.username = 'idir-user'
   })
 
-  it('renders attachment download links and downloads on click', () => {
-    render(<CommentList {...attachmentProps} />, { wrapper })
+  test('renders attachment download links and downloads on click', ({
+    render,
+    theme
+  }) => {
+    render(<CommentList {...attachmentProps} />, [theme])
 
     const link = screen.getByText('spec.pdf')
     expect(link).toBeInTheDocument()
@@ -303,23 +426,24 @@ describe('CommentList attachments', () => {
     )
   })
 
-  it('renders the attach file input on the add form', () => {
-    const { container } = render(<CommentList {...attachmentProps} />, {
-      wrapper
-    })
+  test('renders the attach file input on the add form', ({ render, theme }) => {
+    const { container } = render(<CommentList {...attachmentProps} />, [theme])
     expect(
       container.querySelector('[data-test="comment-attachment-input"]')
     ).toBeInTheDocument()
   })
 
-  it('stages a valid selected file via onAttachmentsChange', () => {
+  test('stages a valid selected file via onAttachmentsChange', ({
+    render,
+    theme
+  }) => {
     const onAttachmentsChange = vi.fn()
     const { container } = render(
       <CommentList
         {...attachmentProps}
         onAttachmentsChange={onAttachmentsChange}
       />,
-      { wrapper }
+      [theme]
     )
     const input = container.querySelector(
       '[data-test="comment-attachment-input"]'
@@ -329,10 +453,13 @@ describe('CommentList attachments', () => {
     expect(onAttachmentsChange).toHaveBeenCalledWith([file])
   })
 
-  it('does not render the attach input when attachments are disabled', () => {
+  test('does not render the attach input when attachments are disabled', ({
+    render,
+    theme
+  }) => {
     const { container } = render(
       <CommentList {...attachmentProps} enableAttachments={false} />,
-      { wrapper }
+      [theme]
     )
     expect(
       container.querySelector('[data-test="comment-attachment-input"]')
@@ -346,7 +473,10 @@ describe('CommentList admin edit mode', () => {
     mockUserState.username = 'idir-user'
   })
 
-  it('only shows the edit link for the original author when the user is not an admin', () => {
+  test('only shows the edit link for the original author when the user is not an admin', ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.government, roles.analyst]
     mockUserState.username = 'analyst-user'
 
@@ -372,14 +502,17 @@ describe('CommentList admin edit mode', () => {
       ]
     }
 
-    render(<CommentList {...props} />, { wrapper })
+    render(<CommentList {...props} />, [theme])
 
     const editLinks = screen.getAllByTestId('comment-edit-link')
     // Only the author's own comment should expose an edit affordance.
     expect(editLinks).toHaveLength(1)
   })
 
-  it('shows the edit link on every comment when the user has the Administrator role', () => {
+  test('shows the edit link on every comment when the user has the Administrator role', ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.government, roles.administrator]
     mockUserState.username = 'admin-user'
 
@@ -405,14 +538,17 @@ describe('CommentList admin edit mode', () => {
       ]
     }
 
-    render(<CommentList {...props} />, { wrapper })
+    render(<CommentList {...props} />, [theme])
 
     const editLinks = screen.getAllByTestId('comment-edit-link')
     // Admin can edit every comment regardless of author.
     expect(editLinks).toHaveLength(2)
   })
 
-  it("does not show the edit link on other users' comments when the user only has the System Admin role", () => {
+  test("does not show the edit link on other users' comments when the user only has the System Admin role", ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.system_admin]
     mockUserState.username = 'sysadmin'
 
@@ -438,12 +574,15 @@ describe('CommentList admin edit mode', () => {
       ]
     }
 
-    render(<CommentList {...props} />, { wrapper })
+    render(<CommentList {...props} />, [theme])
 
     expect(screen.queryAllByTestId('comment-edit-link')).toHaveLength(0)
   })
 
-  it("shows the editor name on the edited indicator when an admin edited another user's comment", () => {
+  test("shows the editor name on the edited indicator when an admin edited another user's comment", ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.government]
     mockUserState.username = 'reader'
 
@@ -464,13 +603,16 @@ describe('CommentList admin edit mode', () => {
       ]
     }
 
-    render(<CommentList {...props} />, { wrapper })
+    render(<CommentList {...props} />, [theme])
 
     const indicator = screen.getByTestId('comment-edited-indicator')
     expect(indicator.textContent).toContain('Edited by Admin User')
   })
 
-  it('shows the plain "Edited" indicator when the author edited their own comment', () => {
+  test('shows the plain "Edited" indicator when the author edited their own comment', ({
+    render,
+    theme
+  }) => {
     mockUserState.roles = [roles.government]
     mockUserState.username = 'reader'
 
@@ -491,7 +633,7 @@ describe('CommentList admin edit mode', () => {
       ]
     }
 
-    render(<CommentList {...props} />, { wrapper })
+    render(<CommentList {...props} />, [theme])
 
     const indicator = screen.getByTestId('comment-edited-indicator')
     expect(indicator.textContent).toBe('Edited')

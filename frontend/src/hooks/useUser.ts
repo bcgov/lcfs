@@ -35,6 +35,35 @@ export const useUserActivities = (userID: number | string | undefined | null, pa
   })
 }
 
+export const useUserAssignedWork = (
+  userId: number | null | undefined,
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['user-assigned-work-v2', userId],
+    queryFn: async () => {
+      const endpoint = apiRoutes.getUserAssignedWork.replace(':userID', String(userId))
+      return (await client.get(endpoint)).data as {
+        complianceReports: Array<{
+          complianceReportId: number
+          organization: string
+          period: string
+          status: string
+        }>
+        ciApplications: Array<{
+          ciApplicationId: number
+          organization: string
+          status: string
+        }>
+      }
+    },
+    enabled: !!userId,
+    staleTime: 0,
+    ...options
+  })
+}
+
 export const useUser = (id: number | string | undefined | null, options: QueryOptions<unknown>) => {
   const client = useApiService()
   return useQuery({

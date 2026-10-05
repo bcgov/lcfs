@@ -1,6 +1,6 @@
 import structlog
 from fastapi import Depends
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
@@ -41,8 +41,7 @@ class CreditMarketRepository:
         ]
         if cutoff_current_month:
             conditions.append(
-                Transfer.agreement_date
-                < func.date_trunc("month", func.current_date())
+                Transfer.agreement_date < func.date_trunc("month", func.current_date())
             )
         query = (
             select(
@@ -117,9 +116,7 @@ class CreditMarketRepository:
         adjustments). In the LCFS one credit corresponds to one tonne of CO2e
         reduced, so this is a proxy for the program's total emissions impact.
         """
-        query = select(
-            func.coalesce(func.sum(Transaction.compliance_units), 0)
-        ).where(
+        query = select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
             Transaction.transaction_action == TransactionActionEnum.Adjustment,
             Transaction.compliance_units > 0,
         )
@@ -147,41 +144,213 @@ class CreditMarketRepository:
     @repo_handler
     async def get_report_periods(self, interval: str):
         """
-        Per-period market aggregates (count, volume, weighted-average price,
-        transfer value) plus distinct-participant counts so the service can
-        suppress periods that are too small to publish safely.
+        Per-period market aggregates from the Metabase transfer base view,
+        including category breakdowns used by the public report tables.
         """
-        period = func.date_trunc(
-            interval, Transfer.transaction_effective_date
-        ).label("period")
-        query = (
-            select(
-                period,
-                func.count(Transfer.transfer_id).label("transfers"),
-                func.sum(Transfer.quantity).label("volume"),
-                func.sum(Transfer.price_per_unit * Transfer.quantity).label(
-                    "transfer_value"
-                ),
+        if interval in {"quarter", "year"}:
+            query = text(
+                """
+                SELECT
+                    date_trunc(:interval, calculated_effective_date)::timestamp AS period,
+                    coalesce(sum(quantity), 0) AS volume,
+                    count(*) AS transfers,
+                    min(price_per_unit) AS min_price,
+                    max(price_per_unit) AS max_price,
+                    (
+                        sum(quantity * price_per_unit)::double precision
+                        / nullif(sum(quantity)::double precision, 0.0)
+                    ) AS wavg,
+                    coalesce(sum(quantity * price_per_unit), 0) AS transfer_value,
+                    count(distinct from_organization) AS distinct_sellers,
+                    count(distinct to_organization) AS distinct_buyers
+                FROM vw_transfer_base
+                WHERE (transfer_category <> 'D' OR transfer_category IS NULL)
+                  AND calculated_effective_date < date_trunc('month', current_timestamp)
+                  AND price_per_unit IS NOT NULL
+                  AND price_per_unit > 0
+                  AND quantity IS NOT NULL
+                  AND quantity > 0
+                  AND calculated_effective_date IS NOT NULL
+                GROUP BY period
+                ORDER BY period
+                """
+            )
+            result = await self.db.execute(query, {"interval": interval})
+            return result.all()
+
+        query = text(
+            """
+            SELECT
+                date_trunc(:interval, calculated_effective_date)::timestamp AS period,
+                coalesce(sum(quantity), 0) AS volume,
+                count(*) AS transfers,
                 (
-                    func.sum(Transfer.price_per_unit * Transfer.quantity)
-                    / func.nullif(func.sum(Transfer.quantity), 0)
-                ).label("wavg"),
-                func.count(func.distinct(Transfer.from_organization_id)).label(
-                    "distinct_sellers"
-                ),
-                func.count(func.distinct(Transfer.to_organization_id)).label(
-                    "distinct_buyers"
-                ),
-            )
-            .join(
-                TransferStatus,
-                Transfer.current_status_id == TransferStatus.transfer_status_id,
-            )
-            .where(*self._recorded_transfer_filters())
-            .group_by(period)
-            .order_by(period)
+                    sum(quantity * price_per_unit)::double precision
+                    / nullif(sum(quantity)::double precision, 0.0)
+                ) AS wavg,
+                max(price_per_unit) AS max_price,
+                min(price_per_unit) AS min_price,
+                sum(CASE WHEN transfer_category = 'A' THEN 1 ELSE 0 END) AS category_a_transfers,
+                (
+                    sum(
+                        CASE
+                            WHEN transfer_category = 'A' THEN quantity * price_per_unit
+                            ELSE 0.0
+                        END
+                    )::double precision
+                    / nullif(
+                        sum(
+                            CASE
+                                WHEN transfer_category = 'A' THEN quantity
+                                ELSE 0.0
+                            END
+                        )::double precision,
+                        0.0
+                    )
+                ) AS category_a_average_price,
+                coalesce(
+                    sum(CASE WHEN transfer_category = 'A' THEN quantity ELSE 0 END),
+                    0
+                ) AS category_a_credit_volume,
+                sum(CASE WHEN transfer_category = 'B' THEN 1 ELSE 0 END) AS category_b_transfers,
+                (
+                    sum(
+                        CASE
+                            WHEN transfer_category = 'B' THEN quantity * price_per_unit
+                            ELSE 0.0
+                        END
+                    )::double precision
+                    / nullif(
+                        sum(
+                            CASE
+                                WHEN transfer_category = 'B' THEN quantity
+                                ELSE 0.0
+                            END
+                        )::double precision,
+                        0.0
+                    )
+                ) AS category_b_average_price,
+                coalesce(
+                    sum(CASE WHEN transfer_category = 'B' THEN quantity ELSE 0 END),
+                    0
+                ) AS category_b_credit_volume,
+                sum(CASE WHEN transfer_category = 'C' THEN 1 ELSE 0 END) AS category_c_transfers,
+                (
+                    sum(
+                        CASE
+                            WHEN transfer_category = 'C' THEN quantity * price_per_unit
+                            ELSE 0.0
+                        END
+                    )::double precision
+                    / nullif(
+                        sum(
+                            CASE
+                                WHEN transfer_category = 'C' THEN quantity
+                                ELSE 0.0
+                            END
+                        )::double precision,
+                        0.0
+                    )
+                ) AS category_c_average_price,
+                coalesce(
+                    sum(CASE WHEN transfer_category = 'C' THEN quantity ELSE 0 END),
+                    0
+                ) AS category_c_credit_volume,
+                sum(
+                    CASE
+                        WHEN transfer_category = 'A' AND is_a1_category IS TRUE THEN 1
+                        ELSE 0
+                    END
+                ) AS category_a1_transfers,
+                (
+                    sum(
+                        CASE
+                            WHEN transfer_category = 'A' AND is_a1_category IS TRUE
+                                THEN quantity * price_per_unit
+                            ELSE 0.0
+                        END
+                    )::double precision
+                    / nullif(
+                        sum(
+                            CASE
+                                WHEN transfer_category = 'A' AND is_a1_category IS TRUE
+                                    THEN quantity
+                                ELSE 0.0
+                            END
+                        )::double precision,
+                        0.0
+                    )
+                ) AS category_a1_average_price,
+                coalesce(
+                    sum(
+                        CASE
+                            WHEN transfer_category = 'A' AND is_a1_category IS TRUE THEN quantity
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS category_a1_credit_volume,
+                min(CASE WHEN is_a1_category IS TRUE THEN price_per_unit END) AS min_a1_price,
+                max(CASE WHEN is_a1_category IS TRUE THEN price_per_unit END) AS max_a1_price,
+                coalesce(sum(quantity * price_per_unit), 0) AS transfer_value,
+                count(distinct from_organization) AS distinct_sellers,
+                count(distinct to_organization) AS distinct_buyers
+            FROM vw_transfer_base
+            WHERE (transfer_category <> 'D' OR transfer_category IS NULL)
+              AND calculated_effective_date >= date_trunc(
+                    'month',
+                    (current_timestamp + interval '-200 month')
+                  )
+              AND calculated_effective_date < date_trunc('month', current_timestamp)
+              AND price_per_unit IS NOT NULL
+              AND price_per_unit > 0
+              AND quantity IS NOT NULL
+              AND quantity > 0
+              AND calculated_effective_date IS NOT NULL
+            GROUP BY period
+            ORDER BY period
+            """
         )
-        result = await self.db.execute(query)
+        result = await self.db.execute(query, {"interval": interval})
+        return result.all()
+
+    @repo_handler
+    async def get_report_a1_periods(self, interval: str = "month"):
+        """
+        Category A1 aggregates from the Metabase transfer base view.
+
+        ``vw_transfer_base`` centralizes the reporting definition of A1:
+        explicitly flagged transfers are A1, otherwise transfers with an
+        agreement date within 30 days of the calculated effective date are A1.
+        """
+        query = text(
+            """
+            SELECT
+                date_trunc(:interval, calculated_effective_date)::timestamp AS period,
+                count(*) AS transfers,
+                coalesce(sum(quantity), 0) AS volume,
+                coalesce(sum(price_per_unit * quantity::float), 0) AS transfer_value,
+                (
+                    sum(price_per_unit * quantity::float)
+                    / nullif(sum(quantity), 0)
+                ) AS wavg,
+                min(price_per_unit) AS min_price,
+                max(price_per_unit) AS max_price,
+                count(distinct from_organization) AS distinct_sellers,
+                count(distinct to_organization) AS distinct_buyers
+            FROM vw_transfer_base
+            WHERE is_a1_category IS TRUE
+              AND price_per_unit IS NOT NULL
+              AND price_per_unit > 0
+              AND quantity IS NOT NULL
+              AND quantity > 0
+              AND calculated_effective_date IS NOT NULL
+              AND calculated_effective_date < date_trunc('month', current_date)
+            GROUP BY period
+            ORDER BY period
+            """
+        )
+        result = await self.db.execute(query, {"interval": interval})
         return result.all()
 
     @repo_handler
@@ -198,6 +367,8 @@ class CreditMarketRepository:
                     func.sum(Transfer.price_per_unit * Transfer.quantity)
                     / func.nullif(func.sum(Transfer.quantity), 0)
                 ).label("wavg"),
+                func.min(Transfer.price_per_unit).label("min_price"),
+                func.max(Transfer.price_per_unit).label("max_price"),
             )
             .join(
                 TransferStatus,

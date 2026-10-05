@@ -21,6 +21,7 @@ export interface NavbarContextData {
   routes: NavbarRoute[]
   beta: boolean
   headerRightPart?: NavbarInjectedComponent
+  headerUtilityPart?: NavbarInjectedComponent
   menuRightPart?: NavbarInjectedComponent
 }
 
@@ -29,5 +30,6 @@ export interface BCNavbarProps {
   routes?: NavbarRoute[]
   beta?: boolean
   headerRightPart?: NavbarInjectedComponent
+  headerUtilityPart?: NavbarInjectedComponent
   menuRightPart?: NavbarInjectedComponent
 }

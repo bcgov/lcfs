@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState, useCallback, useEffect } from 'react'
-import { IconButton } from '@mui/material'
-import { Clear as ClearIcon } from '@mui/icons-material'
+import IconButton from '@mui/material/IconButton'
+import ClearIcon from '@mui/icons-material/Clear'
 
 const ITEM_HEIGHT = 48
 const ITEM_PADDING_TOP = 8

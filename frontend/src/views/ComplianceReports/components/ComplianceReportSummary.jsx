@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Stack,
-  FormControlLabel,
-  Checkbox,
-  Box
-} from '@mui/material'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import Stack from '@mui/material/Stack'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
+import Box from '@mui/material/Box'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
 import SummaryTable from './SummaryTable'
@@ -31,7 +29,7 @@ import { roles } from '@/constants/roles'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports.jsx'
 import { TogglePanel } from '@/components/TogglePanel.jsx'
-import { ExpandMore } from '@mui/icons-material'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import { SUMMARY } from '@/constants/common'
 
 /**
