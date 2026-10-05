@@ -1392,7 +1392,13 @@ describe('GovernmentDecisionStep', () => {
   })
 
   describe('return to first verification history', () => {
-    it('shows the return reason below workflow buttons while first verification is pending', () => {
+    test('shows the return reason below workflow buttons while first verification is pending', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.analyst }]
       render(
         <GovernmentDecisionStep
@@ -1410,7 +1416,7 @@ describe('GovernmentDecisionStep', () => {
           }}
           isGovernment={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(screen.getByTestId('ci-summary-return-history')).toBeVisible()
@@ -1431,7 +1437,13 @@ describe('GovernmentDecisionStep', () => {
       ).toBeTruthy()
     })
 
-    it('stops highlighting the return reason after first verification runs again', () => {
+    test('stops highlighting the return reason after first verification runs again', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = [{ name: roles.analyst }]
       render(
         <GovernmentDecisionStep
@@ -1449,7 +1461,7 @@ describe('GovernmentDecisionStep', () => {
           }}
           isGovernment={true}
         />,
-        { wrapper }
+        [query, theme, localization, router]
       )
 
       expect(screen.getByTestId('ci-summary-return-history-row')).toHaveAttribute(
