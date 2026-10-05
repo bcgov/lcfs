@@ -2768,3 +2768,205 @@ async def test_update_compliance_report_non_assessment_does_not_notify(
         mock_report, mock.ANY, skip_can_sign_check=True
     )
     compliance_report_update_service._perform_notification_call.assert_not_called()
+
+
+# --- Director assessing a reassessment straight from Analyst adjustment (#5075) ---
+
+
+def _grant_roles(*granted):
+    """user_has_roles stand-in: the user holds exactly `granted`."""
+    return lambda user, roles: all(role in granted for role in roles)
+
+
+def _reassessment_in_analyst_adjustment():
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = 501
+    report.compliance_report_group_uuid = "group-501"
+    report.organization_id = 77
+    report.version = 1
+    report.supplemental_initiator = SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    report.compliance_period = MagicMock(description="2024")
+    report.current_status = MagicMock(spec=ComplianceReportStatus)
+    report.current_status.status = ComplianceReportStatusEnum.Analyst_adjustment
+    report.summary = MagicMock(spec=ComplianceReportSummary)
+    report.summary.is_locked = False
+    report.summary.line_20_surplus_deficit_units = -300
+    report.transaction = None
+    report.transaction_id = None
+    report.is_non_assessment = False
+    report.is_renewable_fuel_exempted = False
+    report.is_low_carbon_fuel_exempted = False
+    return report
+
+
+def _wire_reassessment_workflow(
+    service, mock_repo, mock_summary_repo, mock_org_service, report
+):
+    def status_by_desc(desc):
+        status = MagicMock(spec=ComplianceReportStatus)
+        status.status = ComplianceReportStatusEnum(desc)
+        return status
+
+    def save_summary(calculated):
+        # The saved row carries whatever lock state the service set.
+        saved = MagicMock(spec=ComplianceReportSummary)
+        saved.is_locked = calculated.is_locked
+        saved.line_20_surplus_deficit_units = -300
+        # Credits held at the deadline cover the whole deficit.
+        saved.line_17_non_banked_units_used = 1000
+        return saved
+
+    mock_repo.get_compliance_report_by_id.return_value = report
+    mock_repo.get_compliance_report_status_by_desc.side_effect = status_by_desc
+    mock_repo.get_draft_report_by_group_uuid.return_value = None
+    mock_repo.lock_compliance_report_row.return_value = None
+    mock_repo.update_compliance_report.return_value = report
+    mock_summary_repo.get_summary_by_report_id.return_value = None
+    mock_summary_repo.save_compliance_report_summary.side_effect = save_summary
+
+    reserve = MagicMock()
+    reserve.transaction_action = TransactionActionEnum.Reserved
+    reserve.compliance_units = -300
+    mock_org_service.adjust_balance.return_value = reserve
+    mock_org_service.calculate_available_balance.return_value = 1000
+
+    service._perform_notification_call = AsyncMock()
+    return reserve
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "steps, history_entries",
+    [
+        (["Assessed"], 1),
+        (["Recommended by analyst", "Recommended by manager", "Assessed"], 3),
+    ],
+    ids=["director-direct-assess", "three-step-path"],
+)
+async def test_director_assess_from_analyst_adjustment_matches_three_step_path(
+    steps,
+    history_entries,
+    compliance_report_update_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_org_service,
+    mock_trxn_repo,
+    mock_user_has_roles,
+):
+    """A Director assessing a reassessment straight from Analyst adjustment
+    must reach the same end state as Recommend as Analyst, Recommend as
+    Manager and Assess: summary locked, FSE validated once, Line 20 reserved
+    once and finalized as an Adjustment. Only the history differs, because
+    the direct path writes a single Assessed entry."""
+    mock_user_has_roles.side_effect = _grant_roles(
+        RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR
+    )
+    report = _reassessment_in_analyst_adjustment()
+    reserve = _wire_reassessment_workflow(
+        compliance_report_update_service,
+        mock_repo,
+        mock_summary_repo,
+        mock_org_service,
+        report,
+    )
+
+    for status in steps:
+        await compliance_report_update_service.update_compliance_report(
+            report.compliance_report_id,
+            ComplianceReportUpdateSchema(status=status),
+            UserProfile(),
+        )
+
+    assert report.current_status.status == ComplianceReportStatusEnum.Assessed
+    assert report.summary.is_locked is True
+    compliance_report_update_service._charging_equipment_service.auto_validate_equipment_for_report.assert_awaited_once_with(
+        report.compliance_report_id, report.organization_id
+    )
+    mock_org_service.adjust_balance.assert_awaited_once_with(
+        transaction_action=TransactionActionEnum.Reserved,
+        compliance_units=-300,
+        organization_id=report.organization_id,
+    )
+    assert report.transaction is reserve
+    assert reserve.transaction_action == TransactionActionEnum.Adjustment
+    assert reserve.compliance_units == -300
+    assert mock_repo.add_compliance_report_history.call_count == history_entries
+    # #5014: only the reassessment's own reserve changes. No other
+    # transaction, such as the prior assessed report's, is released,
+    # reinstated or deleted.
+    mock_trxn_repo.release_transaction.assert_not_called()
+    mock_trxn_repo.reinstate_transaction.assert_not_called()
+    mock_trxn_repo.delete_transaction.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_direct_assess_from_analyst_adjustment_requires_director(
+    compliance_report_update_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_org_service,
+    mock_user_has_roles,
+):
+    """Only a Director may assess straight from Analyst adjustment. Anyone
+    else is refused before the summary is locked or credits are reserved."""
+    mock_user_has_roles.side_effect = _grant_roles(
+        RoleEnum.GOVERNMENT, RoleEnum.ANALYST
+    )
+    report = _reassessment_in_analyst_adjustment()
+    _wire_reassessment_workflow(
+        compliance_report_update_service,
+        mock_repo,
+        mock_summary_repo,
+        mock_org_service,
+        report,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await compliance_report_update_service.update_compliance_report(
+            report.compliance_report_id,
+            ComplianceReportUpdateSchema(status="Assessed"),
+            UserProfile(),
+        )
+
+    assert exc.value.status_code == 403
+    mock_summary_repo.save_compliance_report_summary.assert_not_awaited()
+    mock_org_service.adjust_balance.assert_not_awaited()
+    compliance_report_update_service._charging_equipment_service.auto_validate_equipment_for_report.assert_not_awaited()
+    mock_repo.add_compliance_report_history.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_director_exempts_from_analyst_adjustment_runs_analyst_step(
+    compliance_report_update_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_org_service,
+    mock_user_has_roles,
+):
+    """With exemption flags set, the Director's Assess becomes Exempted. The
+    skipped analyst step still runs first, as it does on the three-step
+    path, before the exemption is issued."""
+    mock_user_has_roles.side_effect = _grant_roles(
+        RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR
+    )
+    report = _reassessment_in_analyst_adjustment()
+    report.is_renewable_fuel_exempted = True
+    _wire_reassessment_workflow(
+        compliance_report_update_service,
+        mock_repo,
+        mock_summary_repo,
+        mock_org_service,
+        report,
+    )
+
+    await compliance_report_update_service.update_compliance_report(
+        report.compliance_report_id,
+        ComplianceReportUpdateSchema(status="Assessed"),
+        UserProfile(),
+    )
+
+    assert report.current_status.status == ComplianceReportStatusEnum.Exempted
+    assert report.summary.is_locked is True
+    compliance_report_update_service._charging_equipment_service.auto_validate_equipment_for_report.assert_awaited_once()
+    assert "exemption" in report.assessment_statement
+    mock_repo.add_compliance_report_history.assert_called_once()
