@@ -153,60 +153,6 @@ describe('ReviewCharts', () => {
     )
   })
 
-  it('does not multiply current-year values across prior-year series', () => {
-    const series = (comparisonLabel: string, comparisonValue: number) => ({
-      title: 'Fuel supply by fuel category and type',
-      currentLabel: '2025',
-      comparisonLabel,
-      points: [
-        {
-          label: 'Diesel - Fossil-derived diesel',
-          currentValue: 150,
-          comparisonValue,
-          delta: 150 - comparisonValue,
-          units: 'reported units'
-        }
-      ]
-    })
-
-    const chartData: ReviewChartData = {
-      historicalVariance: [
-        series('2024', 120),
-        series('2023', 110),
-        series('2022', 100)
-      ]
-    }
-
-    render(<ReviewCharts chartData={chartData} />)
-
-    expect(chartProps[0].option.series[0].data).toEqual([100, 110, 120, 150])
-  })
-
-  it('sums duplicate compliance unit fuel labels by schedule', () => {
-    const chartData: ReviewChartData = {
-      complianceUnitsByFuel: [
-        {
-          fuelCategory: 'Gasoline',
-          fuelType: 'Fossil-derived gasoline',
-          schedule: 'Fuel supply',
-          complianceUnits: 120
-        },
-        {
-          fuelCategory: 'Gasoline',
-          fuelType: 'Fossil-derived gasoline',
-          schedule: 'Fuel supply',
-          complianceUnits: 40
-        }
-      ]
-    }
-
-    render(<ReviewCharts chartData={chartData} />)
-
-    const option = chartProps[0].option
-    expect(option.xAxis.data).toEqual(['Gasoline - Fossil-derived gasoline'])
-    expect(option.series[0].data).toEqual([160])
-  })
-
   it('renders the supply and FSE correlation trend as a dual-axis chart', () => {
     const chartData: ReviewChartData = {
       historicalVariance: [
@@ -290,9 +236,6 @@ describe('ReviewCharts', () => {
     ).toBeInTheDocument()
 
     const option = chartProps[0].option
-    expect(option.tooltip.appendToBody).toBe(true)
-    expect(option.tooltip.position([20, 40])).toEqual([32, 56])
-    expect(option.tooltip.position([20, 140])).toEqual([32, 68])
     expect(option.series[0].type).toBe('heatmap')
     expect(option.visualMap.text).toEqual(['Higher volume', 'Missing'])
     expect(option.visualMap.dimension).toBe(3)

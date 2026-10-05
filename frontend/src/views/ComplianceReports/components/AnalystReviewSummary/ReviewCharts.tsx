@@ -293,17 +293,13 @@ const groupHistoricalSeries = (
     }
 
     series.points.forEach((point) => {
-      const label = point.label
-      group.labels.add(label)
-
-      const currentPeriod = group.periods.get(series.currentLabel)!
-      currentPeriod.set(label, point.currentValue)
-
-      const comparisonPeriod = group.periods.get(series.comparisonLabel)!
-      comparisonPeriod.set(
-        label,
-        (comparisonPeriod.get(label) || 0) + point.comparisonValue
-      )
+      group.labels.add(point.label)
+      group.periods
+        .get(series.currentLabel)!
+        .set(point.label, point.currentValue)
+      group.periods
+        .get(series.comparisonLabel)!
+        .set(point.label, point.comparisonValue)
     })
   })
 
@@ -557,12 +553,7 @@ const buildFuelPresenceHeatmapOptions = (group: HistoricalChartGroup) => {
 
   return getStandardChartOptions({
     tooltip: {
-      appendToBody: true,
-      confine: false,
-      position: (point: [number, number]) => {
-        const [x, y] = point
-        return [x + 12, y < 96 ? y + 16 : y - 72]
-      },
+      position: 'top',
       formatter: (params: any) => {
         const [xIndex, yIndex, quantity] = params.value || []
         const period = group.periodLabels[xIndex]

@@ -1484,8 +1484,12 @@ class ComplianceReportReviewService:
         current_totals: dict[str, dict[str, float]],
         prior_totals: dict[str, dict[str, float]],
     ) -> list[ComplianceReportReviewFindingSchema]:
-        current_other_uses = current_totals.get("other_uses", {})
-        prior_other_uses = prior_totals.get("other_uses", {})
+        current_other_uses = self._normalize_review_fuel_label_totals(
+            current_totals.get("other_uses", {})
+        )
+        prior_other_uses = self._normalize_review_fuel_label_totals(
+            prior_totals.get("other_uses", {})
+        )
         findings = []
 
         for fuel_label in sorted(set(current_other_uses) | set(prior_other_uses)):

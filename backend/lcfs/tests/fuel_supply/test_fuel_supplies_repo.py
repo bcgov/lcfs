@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.compliance import FuelSupply
-from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
+from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository, _fuel_type_filter
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema, ModeEnum
 from lcfs.web.api.fuel_supply.schema import (
     FuelSuppliesSchema,
@@ -39,6 +39,24 @@ def mock_db_session():
 @pytest.fixture
 def fuel_supply_repo(mock_db_session):
     return FuelSupplyRepository(db=mock_db_session)
+
+
+def test_fuel_type_filter_expands_legacy_and_current_equivalent_names():
+    petroleum_filter = str(
+        _fuel_type_filter("Petroleum-based diesel").compile(
+            compile_kwargs={"literal_binds": True}
+        )
+    )
+    fossil_filter = str(
+        _fuel_type_filter("fossil").compile(compile_kwargs={"literal_binds": True})
+    )
+
+    assert "Petroleum-based diesel" in petroleum_filter
+    assert "Fossil-derived diesel" in petroleum_filter
+    assert "Petroleum-based diesel" in fossil_filter
+    assert "Fossil-derived diesel" in fossil_filter
+    assert "Petroleum-based gasoline" in fossil_filter
+    assert "Fossil-derived gasoline" in fossil_filter
 
 
 @pytest.mark.anyio

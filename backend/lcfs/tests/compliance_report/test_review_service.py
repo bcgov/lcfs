@@ -507,6 +507,39 @@ def test_build_summary_includes_analyst_style_highlights():
     assert "Prior-year assessed comparison was available." in summary
 
 
+def test_other_uses_variance_matches_legacy_fuel_rows_for_rationale():
+    service = _service()
+
+    findings = service._other_uses_variance_findings(
+        {
+            "other_uses": [
+                SimpleNamespace(
+                    quantity_supplied=150,
+                    rationale="Used outside BC",
+                    fuel_category=SimpleNamespace(category="Diesel"),
+                    fuel_type=SimpleNamespace(fuel_type="Petroleum-based diesel"),
+                )
+            ]
+        },
+        {
+            "other_uses": {
+                "Diesel - Petroleum-based diesel": 150,
+            }
+        },
+        {
+            "other_uses": {
+                "Diesel - Petroleum-based diesel": 100,
+            }
+        },
+    )
+
+    assert len(findings) == 1
+    assert findings[0].title == (
+        "Other uses variance needs explanation for Diesel - Fossil-derived diesel"
+    )
+    assert "Supplier rationale is captured on 1 record(s)." in findings[0].detail
+
+
 def test_zero_value_narratives_confirm_consistent_absence():
     service = _service()
 

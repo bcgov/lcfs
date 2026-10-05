@@ -49,16 +49,18 @@ def _normalized_supply_history_fuel_type(fuel_type_name):
 
 
 def _fuel_type_filter(filter_value: str):
-    # Match the stored name or its current equivalent, so filtering on
-    # "Fossil-derived diesel" keeps the pre-2024 petroleum-based rows.
-    legacy_names = [
-        legacy
+    # Match either side of a legacy/current pair so filtering by either
+    # terminology keeps the continuous history across the 2024 transition.
+    filter_text = filter_value.lower()
+    equivalent_names = {
+        name
         for legacy, current in LCFS_Constants.LEGACY_FUEL_TYPE_EQUIVALENTS.items()
-        if filter_value.lower() in current.lower()
-    ]
+        if filter_text in legacy.lower() or filter_text in current.lower()
+        for name in (legacy, current)
+    }
     condition = FuelType.fuel_type.ilike(f"%{filter_value}%")
-    if legacy_names:
-        condition = or_(condition, FuelType.fuel_type.in_(legacy_names))
+    if equivalent_names:
+        condition = or_(condition, FuelType.fuel_type.in_(equivalent_names))
     return condition
 
 
