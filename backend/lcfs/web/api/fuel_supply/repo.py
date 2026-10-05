@@ -48,6 +48,13 @@ def _normalized_supply_history_fuel_type(fuel_type_name):
     )
 
 
+def _supply_history_fossil_derived(fuel_type):
+    fuel_type_name = getattr(fuel_type, "fuel_type", None)
+    return bool(getattr(fuel_type, "fossil_derived", False)) or (
+        fuel_type_name in LCFS_Constants.LEGACY_FUEL_TYPE_EQUIVALENTS
+    )
+
+
 def _fuel_type_filter(filter_value: str):
     # Match either side of a legacy/current pair so filtering by either
     # terminology keeps the continuous history across the 2024 transition.
@@ -1109,9 +1116,7 @@ class FuelSupplyRepository:
                     "total_compliance_units": 0,
                     "positive_compliance_units": False,
                     "renewable": bool(getattr(fs.fuel_type, "renewable", False)),
-                    "fossil_derived": bool(
-                        getattr(fs.fuel_type, "fossil_derived", False)
-                    ),
+                    "fossil_derived": _supply_history_fossil_derived(fs.fuel_type),
                 },
             )
             yearly_fuel_type[year][fuel_type_name]["total_volume"] += quantity

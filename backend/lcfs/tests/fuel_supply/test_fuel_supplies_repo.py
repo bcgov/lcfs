@@ -1104,3 +1104,8 @@ async def test_get_organization_fuel_supply_analytics_normalizes_petroleum_fuel_
         ("2024", "Fossil-derived diesel"),
         ("2024", "Fossil-derived gasoline"),
     }
+    assert all(
+        row["fossilDerived"] is True
+        for row in analytics["fuel_type_volume_trend"]
+        if row["fuelType"] in {"Fossil-derived diesel", "Fossil-derived gasoline"}
+    )
