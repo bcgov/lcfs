@@ -1,10 +1,10 @@
 import React from 'react'
-import { render, screen, cleanup } from '@testing-library/react'
+import { screen, cleanup } from '@testing-library/react'
 import TransferHistory from '../TransferHistory'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import { useTransfer } from '@/hooks/useTransfer'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import {
   TRANSFER_STATUSES,
   TRANSFER_RECOMMENDATION
@@ -54,33 +54,36 @@ describe('TransferHistory Component', () => {
   })
 
   describe('Early return conditions', () => {
-    it('returns null when transferData is null', () => {
+    test('returns null when transferData is null', ({ render, theme }) => {
       useTransfer.mockReturnValue({ data: null })
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
-      const { container } = render(<TransferHistory transferHistory={[]} />, {
-        wrapper
-      })
+      const { container } = render(<TransferHistory transferHistory={[]} />, [
+        theme
+      ])
       expect(container.firstChild).toBeNull()
     })
 
-    it('returns null when transferData is undefined', () => {
+    test('returns null when transferData is undefined', ({ render, theme }) => {
       useTransfer.mockReturnValue({ data: undefined })
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
-      const { container } = render(<TransferHistory transferHistory={[]} />, {
-        wrapper
-      })
+      const { container } = render(<TransferHistory transferHistory={[]} />, [
+        theme
+      ])
       expect(container.firstChild).toBeNull()
     })
 
-    it('returns null when useTransfer returns undefined', () => {
+    test('returns null when useTransfer returns undefined', ({
+      render,
+      theme
+    }) => {
       useTransfer.mockReturnValue({})
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
-      const { container } = render(<TransferHistory transferHistory={[]} />, {
-        wrapper
-      })
+      const { container } = render(<TransferHistory transferHistory={[]} />, [
+        theme
+      ])
       expect(container.firstChild).toBeNull()
     })
   })
@@ -97,7 +100,10 @@ describe('TransferHistory Component', () => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
     })
 
-    it('handles RECOMMENDED status with RECORD recommendation', () => {
+    test('handles RECOMMENDED status with RECORD recommendation', ({
+      render,
+      theme
+    }) => {
       const history = [
         {
           transferStatus: {
@@ -120,13 +126,16 @@ describe('TransferHistory Component', () => {
         }
       })
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
       expect(
         screen.getByText('Recommended recording transfer')
       ).toBeInTheDocument()
     })
 
-    it('handles RECOMMENDED status with REFUSE recommendation', () => {
+    test('handles RECOMMENDED status with REFUSE recommendation', ({
+      render,
+      theme
+    }) => {
       const history = [
         {
           transferStatus: {
@@ -149,13 +158,13 @@ describe('TransferHistory Component', () => {
         }
       })
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
       expect(
         screen.getByText('Recommended refusing transfer')
       ).toBeInTheDocument()
     })
 
-    it('handles non-RECOMMENDED status', () => {
+    test('handles non-RECOMMENDED status', ({ render, theme }) => {
       const history = [
         {
           transferStatus: {
@@ -171,11 +180,11 @@ describe('TransferHistory Component', () => {
         }
       ]
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
       expect(screen.getByText('Signed and submitted')).toBeInTheDocument()
     })
 
-    it('handles unknown status', () => {
+    test('handles unknown status', ({ render, theme }) => {
       const history = [
         {
           transferStatus: { transferStatusId: 1, status: 'UNKNOWN_STATUS' },
@@ -188,13 +197,13 @@ describe('TransferHistory Component', () => {
         }
       ]
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
       expect(screen.getByText('Status not found')).toBeInTheDocument()
     })
   })
 
   describe('Category calculation logic', () => {
-    it('uses transferCategory when provided', () => {
+    test('uses transferCategory when provided', ({ render, theme }) => {
       useTransfer.mockReturnValue({
         data: {
           currentStatus: { status: TRANSFER_STATUSES.SUBMITTED },
@@ -204,11 +213,14 @@ describe('TransferHistory Component', () => {
       })
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
-      render(<TransferHistory transferHistory={[]} />, { wrapper })
+      render(<TransferHistory transferHistory={[]} />, [theme])
       expect(screen.getByText(/Category B/)).toBeInTheDocument()
     })
 
-    it('displays A1 when the A1 category flag is set', () => {
+    test('displays A1 when the A1 category flag is set', ({
+      render,
+      theme
+    }) => {
       useTransfer.mockReturnValue({
         data: {
           currentStatus: { status: TRANSFER_STATUSES.RECORDED },
@@ -219,11 +231,14 @@ describe('TransferHistory Component', () => {
       })
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
-      render(<TransferHistory transferHistory={[]} />, { wrapper })
+      render(<TransferHistory transferHistory={[]} />, [theme])
       expect(screen.getByText(/Category A1/)).toBeInTheDocument()
     })
 
-    it('defaults to calculated category when transferCategory not provided', () => {
+    test('defaults to calculated category when transferCategory not provided', ({
+      render,
+      theme
+    }) => {
       useTransfer.mockReturnValue({
         data: {
           currentStatus: { status: TRANSFER_STATUSES.SUBMITTED },
@@ -232,7 +247,7 @@ describe('TransferHistory Component', () => {
       })
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
-      render(<TransferHistory transferHistory={[]} />, { wrapper })
+      render(<TransferHistory transferHistory={[]} />, [theme])
       expect(screen.getByText(/Category/)).toBeInTheDocument()
     })
   })
@@ -248,7 +263,7 @@ describe('TransferHistory Component', () => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
     })
 
-    it('filters out DRAFT records', () => {
+    test('filters out DRAFT records', ({ render, theme }) => {
       const history = [
         {
           transferStatus: {
@@ -276,13 +291,13 @@ describe('TransferHistory Component', () => {
         }
       ]
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
 
       expect(screen.queryByText('Draft User')).not.toBeInTheDocument()
       expect(screen.getByText('John Doe')).toBeInTheDocument()
     })
 
-    it('handles empty history after filtering', () => {
+    test('handles empty history after filtering', ({ render, theme }) => {
       const history = [
         {
           transferStatus: {
@@ -298,14 +313,14 @@ describe('TransferHistory Component', () => {
         }
       ]
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
 
       const listItems = screen.queryAllByRole('listitem')
       expect(listItems).toHaveLength(1) // Only agreement date item
     })
 
-    it('handles undefined transferHistory', () => {
-      render(<TransferHistory />, { wrapper })
+    test('handles undefined transferHistory', ({ render, theme }) => {
+      render(<TransferHistory />, [theme])
 
       const listItems = screen.queryAllByRole('listitem')
       expect(listItems).toHaveLength(1) // Only agreement date item
@@ -338,10 +353,13 @@ describe('TransferHistory Component', () => {
       useTransfer.mockReturnValue({ data: mockTransferData })
     })
 
-    it('shows director text for RECORDED status when user is not government', () => {
+    test('shows director text for RECORDED status when user is not government', ({
+      render,
+      theme
+    }) => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: false } })
 
-      render(<TransferHistory transferHistory={recordedHistory} />, { wrapper })
+      render(<TransferHistory transferHistory={recordedHistory} />, [theme])
 
       expect(screen.getByText('Director')).toBeInTheDocument()
       expect(
@@ -349,16 +367,22 @@ describe('TransferHistory Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('shows user details for RECORDED status when user is government', () => {
+    test('shows user details for RECORDED status when user is government', ({
+      render,
+      theme
+    }) => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
 
-      render(<TransferHistory transferHistory={recordedHistory} />, { wrapper })
+      render(<TransferHistory transferHistory={recordedHistory} />, [theme])
 
       expect(screen.getByText('System User')).toBeInTheDocument()
       expect(screen.getByText('Org A')).toBeInTheDocument()
     })
 
-    it('shows user details for non-RECORDED status regardless of user type', () => {
+    test('shows user details for non-RECORDED status regardless of user type', ({
+      render,
+      theme
+    }) => {
       const nonRecordedHistory = [
         {
           transferStatus: {
@@ -376,9 +400,7 @@ describe('TransferHistory Component', () => {
 
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: false } })
 
-      render(<TransferHistory transferHistory={nonRecordedHistory} />, {
-        wrapper
-      })
+      render(<TransferHistory transferHistory={nonRecordedHistory} />, [theme])
 
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.getByText('Org A')).toBeInTheDocument()
@@ -396,7 +418,10 @@ describe('TransferHistory Component', () => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
     })
 
-    it('displays agreement date for qualifying statuses', () => {
+    test('displays agreement date for qualifying statuses', ({
+      render,
+      theme
+    }) => {
       const qualifyingStatuses = [
         TRANSFER_STATUSES.SENT,
         TRANSFER_STATUSES.SUBMITTED,
@@ -409,7 +434,7 @@ describe('TransferHistory Component', () => {
           data: { ...mockTransferData, currentStatus: { status } }
         })
 
-        render(<TransferHistory transferHistory={[]} />, { wrapper })
+        render(<TransferHistory transferHistory={[]} />, [theme])
         expect(
           screen.getByText(/Date of written agreement/)
         ).toBeInTheDocument()
@@ -417,7 +442,10 @@ describe('TransferHistory Component', () => {
       })
     })
 
-    it('does not display agreement date for non-qualifying statuses', () => {
+    test('does not display agreement date for non-qualifying statuses', ({
+      render,
+      theme
+    }) => {
       useTransfer.mockReturnValue({
         data: {
           ...mockTransferData,
@@ -425,18 +453,21 @@ describe('TransferHistory Component', () => {
         }
       })
 
-      render(<TransferHistory transferHistory={[]} />, { wrapper })
+      render(<TransferHistory transferHistory={[]} />, [theme])
       expect(
         screen.queryByText(/Date of written agreement/)
       ).not.toBeInTheDocument()
     })
 
-    it('does not display agreement date when agreementDate is null', () => {
+    test('does not display agreement date when agreementDate is null', ({
+      render,
+      theme
+    }) => {
       useTransfer.mockReturnValue({
         data: { ...mockTransferData, agreementDate: null }
       })
 
-      render(<TransferHistory transferHistory={[]} />, { wrapper })
+      render(<TransferHistory transferHistory={[]} />, [theme])
       expect(
         screen.queryByText(/Date of written agreement/)
       ).not.toBeInTheDocument()
@@ -454,7 +485,10 @@ describe('TransferHistory Component', () => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
     })
 
-    it('renders history items with user profile names', () => {
+    test('renders history items with user profile names', ({
+      render,
+      theme
+    }) => {
       const history = [
         {
           transferStatus: {
@@ -470,13 +504,16 @@ describe('TransferHistory Component', () => {
         }
       ]
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
 
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.getByText('Org A')).toBeInTheDocument()
     })
 
-    it('renders history items with displayName when available', () => {
+    test('renders history items with displayName when available', ({
+      render,
+      theme
+    }) => {
       const history = [
         {
           transferStatus: {
@@ -493,13 +530,13 @@ describe('TransferHistory Component', () => {
         }
       ]
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
 
       expect(screen.getByText('Custom Display Name')).toBeInTheDocument()
       expect(screen.queryByText('John Doe')).not.toBeInTheDocument()
     })
 
-    it('handles missing organization gracefully', () => {
+    test('handles missing organization gracefully', ({ render, theme }) => {
       const history = [
         {
           transferStatus: {
@@ -511,13 +548,13 @@ describe('TransferHistory Component', () => {
         }
       ]
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
 
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.getByText('Government of BC')).toBeInTheDocument()
     })
 
-    it('formats dates correctly', () => {
+    test('formats dates correctly', ({ render, theme }) => {
       const history = [
         {
           transferStatus: {
@@ -533,7 +570,7 @@ describe('TransferHistory Component', () => {
         }
       ]
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
 
       expect(
         screen.getByText('Formatted: 2023-01-02T10:30:00Z')
@@ -552,19 +589,22 @@ describe('TransferHistory Component', () => {
       useCurrentUser.mockReturnValue({ data: { isGovernmentUser: true } })
     })
 
-    it('renders main container with data-test attribute', () => {
-      render(<TransferHistory transferHistory={[]} />, { wrapper })
+    test('renders main container with data-test attribute', ({
+      render,
+      theme
+    }) => {
+      render(<TransferHistory transferHistory={[]} />, [theme])
 
       expect(screen.getByTestId('transfer-history')).toBeInTheDocument()
     })
 
-    it('renders transaction history title', () => {
-      render(<TransferHistory transferHistory={[]} />, { wrapper })
+    test('renders transaction history title', ({ render, theme }) => {
+      render(<TransferHistory transferHistory={[]} />, [theme])
 
       expect(screen.getByText('Transaction history')).toBeInTheDocument()
     })
 
-    it('renders list structure', () => {
+    test('renders list structure', ({ render, theme }) => {
       const history = [
         {
           transferStatus: {
@@ -580,7 +620,7 @@ describe('TransferHistory Component', () => {
         }
       ]
 
-      render(<TransferHistory transferHistory={history} />, { wrapper })
+      render(<TransferHistory transferHistory={history} />, [theme])
 
       const list = screen.getByRole('list')
       expect(list).toBeInTheDocument()

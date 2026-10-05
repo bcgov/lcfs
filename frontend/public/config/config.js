@@ -25,6 +25,7 @@ export const config = {
     legacySupplementalLock: false,
     deterministicReportSummary: true,
     internalCommentSearch: true,
+    publicMarketData: false,
     creditMarketLoginPage: false
   }
 }

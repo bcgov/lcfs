@@ -13,6 +13,8 @@ export interface FeatureFlagsConfig {
   internalCommentSearch?: boolean
   deterministicReportSummary?: boolean
   creditMarketLoginPage?: boolean
+  publicMarketData?: boolean
+  initiativeAgreements?: boolean
 }
 
 export interface KeycloakConfig {
@@ -93,7 +95,9 @@ export const FEATURE_FLAGS = {
   CI_APPLICATIONS: 'ciApplications',
   INTERNAL_COMMENT_SEARCH: 'internalCommentSearch',
   DETERMINISTIC_REPORT_SUMMARY: 'deterministicReportSummary',
-  CREDIT_MARKET_LOGIN_PAGE: 'creditMarketLoginPage'
+  CREDIT_MARKET_LOGIN_PAGE: 'creditMarketLoginPage',
+  PUBLIC_MARKET_DATA: 'publicMarketData',
+  INITIATIVE_AGREEMENTS: 'initiativeAgreements'
 } as const
 
 export type FeatureFlagValue =
@@ -170,10 +174,17 @@ export const CONFIG: AppConfig = {
       !isProductionEnvironment,
     internalCommentSearch:
       window.lcfs_config.feature_flags.internalCommentSearch ?? false,
+    // The Initiative Agreements module is in active development — default ON
+    // for dev/test, OFF in prod until the tenant repo flag flips it on.
+    initiativeAgreements:
+      window.lcfs_config.feature_flags.initiativeAgreements ??
+      !isProductionEnvironment,
     deterministicReportSummary:
       window.lcfs_config.feature_flags.deterministicReportSummary ??
       !isProductionEnvironment,
     creditMarketLoginPage:
-      window.lcfs_config.feature_flags.creditMarketLoginPage ?? false
+      window.lcfs_config.feature_flags.creditMarketLoginPage ?? false,
+    publicMarketData:
+      window.lcfs_config.feature_flags.publicMarketData ?? false
   }
 }

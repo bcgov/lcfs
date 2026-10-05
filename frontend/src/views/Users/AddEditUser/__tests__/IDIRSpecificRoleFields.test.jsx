@@ -5,8 +5,8 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 // Local override for @/components/BCForm so that BCFormRadio propagates `disabled`
 // to its rendered inputs. This lets us assert the new behaviour where IA radio
 // inputs are NOT disabled simply because Director is selected.
-vi.mock('@/components/BCForm', () => ({
-  BCFormCheckbox: ({ name, options = [] }) =>
+vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
+    BCFormCheckbox: ({ name, options = [] }) =>
     React.createElement(
       'div',
       { 'data-test': `${name}-checkbox-group` },
@@ -18,8 +18,11 @@ vi.mock('@/components/BCForm', () => ({
           'data-testid': opt.dataTestId || `${name}${i + 1}`
         })
       )
-    ),
-  BCFormRadio: ({ name, options = [], disabled }) =>
+    )
+}))
+
+vi.mock('@/components/BCForm/BCFormRadio', () => ({
+    BCFormRadio: ({ name, options = [], disabled }) =>
     React.createElement(
       'div',
       { 'data-test': `${name}-radio-group` },
@@ -63,25 +66,43 @@ vi.mock('react-hook-form', () => ({
     })
 }))
 
-vi.mock('@mui/material', () => ({
-  Box: ({ children }) => <div data-test="box">{children}</div>,
-  Stack: ({ children }) => <div data-test="stack">{children}</div>,
-  Button: ({ children, onClick, disabled, ...props }) => (
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children }) => <div data-test="box">{children}</div>
+}))
+
+vi.mock('@mui/material/Stack', () => ({
+    default: ({ children }) => <div data-test="stack">{children}</div>
+}))
+
+vi.mock('@mui/material/Button', () => ({
+    default: ({ children, onClick, disabled, ...props }) => (
     <button onClick={onClick} disabled={disabled} {...props}>
       {children}
     </button>
-  ),
-  FormControl: ({ children }) => <div data-test="form-control">{children}</div>,
-  FormControlLabel: ({ control: ctrl, label, value }) => (
+  )
+}))
+
+vi.mock('@mui/material/FormControl', () => ({
+    default: ({ children }) => <div data-test="form-control">{children}</div>
+}))
+
+vi.mock('@mui/material/FormControlLabel', () => ({
+    default: ({ control: ctrl, label, value }) => (
     <div data-test="form-control-label" data-value={value}>
       {ctrl}
       {label}
     </div>
-  ),
-  Radio: ({ disabled }) => (
+  )
+}))
+
+vi.mock('@mui/material/Radio', () => ({
+    default: ({ disabled }) => (
     <input data-test="radio" type="radio" disabled={disabled} readOnly />
-  ),
-  RadioGroup: ({ children, value }) => (
+  )
+}))
+
+vi.mock('@mui/material/RadioGroup', () => ({
+    default: ({ children, value }) => (
     <div data-test="radio-group" data-value={value}>
       {children}
     </div>

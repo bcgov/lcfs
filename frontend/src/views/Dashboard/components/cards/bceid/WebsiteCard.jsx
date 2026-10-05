@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faShareFromSquare } from '@fortawesome/free-solid-svg-icons'

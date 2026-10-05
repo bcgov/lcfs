@@ -1,4 +1,5 @@
-import { AddCircleOutlineRounded, CheckBox } from '@mui/icons-material'
+import AddCircleOutlineRounded from '@mui/icons-material/AddCircleOutlineRounded'
+import CheckBox from '@mui/icons-material/CheckBox'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFilterCircleXmark } from '@fortawesome/free-solid-svg-icons'
 

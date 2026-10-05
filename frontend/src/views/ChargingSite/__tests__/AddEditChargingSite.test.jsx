@@ -1,8 +1,8 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { AddEditChargingSite } from '../AddEditChargingSite'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 import ROUTES from '@/routes/routes'
 
 const mockNavigate = vi.fn()
@@ -146,44 +146,99 @@ describe('AddEditChargingSite', () => {
     })
   })
 
-  it('renders add mode with correct title', () => {
-    render(<AddEditChargingSite {...mockProps} />, { wrapper })
+  test('renders add mode with correct title', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<AddEditChargingSite {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByText('chargingSite:addNewSite')).toBeInTheDocument()
     expect(
       screen.getByText('chargingSite:templateDescriptor')
     ).toBeInTheDocument()
   })
 
-  it('renders edit mode with site name as title', () => {
+  test('renders edit mode with site name as title', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const editProps = {
       ...mockProps,
       isEditMode: true,
       data: { siteName: 'Test Site' }
     }
-    render(<AddEditChargingSite {...editProps} />, { wrapper })
+    render(<AddEditChargingSite {...editProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByText('Test Site')).toBeInTheDocument()
     expect(
       screen.queryByText('chargingSite:templateDescriptor')
     ).not.toBeInTheDocument()
   })
 
-  it('renders grid editor', () => {
-    render(<AddEditChargingSite {...mockProps} />, { wrapper })
+  test('renders grid editor', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<AddEditChargingSite {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     // Use getByText instead of getByTestId to avoid the selector issue
     expect(screen.getByText('Add Row')).toBeInTheDocument()
     expect(screen.getByText('Save')).toBeInTheDocument()
   })
 
-  it('handles save button click', () => {
-    render(<AddEditChargingSite {...mockProps} />, { wrapper })
+  test('handles save button click', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<AddEditChargingSite {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     const saveButton = screen.getByText('Save')
     fireEvent.click(saveButton)
     expect(mockNavigate).toHaveBeenCalled()
   })
 
-  it('does not navigate away after deleting from add page', async () => {
+  test('does not navigate away after deleting from add page', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockHandleScheduleDelete.mockResolvedValue(true)
-    render(<AddEditChargingSite {...mockProps} />, { wrapper })
+    render(<AddEditChargingSite {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const deleteButton = screen.getByText('Delete')
     fireEvent.click(deleteButton)
@@ -192,7 +247,13 @@ describe('AddEditChargingSite', () => {
     expect(mockNavigate).not.toHaveBeenCalled()
   })
 
-  it('navigates to index after deleting an existing charging site', async () => {
+  test('navigates to index after deleting an existing charging site', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockHandleScheduleDelete.mockResolvedValue(true)
     render(
       <AddEditChargingSite
@@ -200,7 +261,7 @@ describe('AddEditChargingSite', () => {
         isEditMode={true}
         data={{ chargingSiteId: 123, siteName: 'To Delete' }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     const deleteButton = screen.getByText('Delete')
@@ -218,7 +279,13 @@ describe('AddEditChargingSite', () => {
     )
   })
 
-  it('sends a cleared allocating organization as explicit nulls', async () => {
+  test('sends a cleared allocating organization as explicit nulls', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     // The backend treats a missing key as "unchanged", so clearing the field
     // must reach it as null rather than being stripped with the other blanks.
     render(
@@ -227,7 +294,7 @@ describe('AddEditChargingSite', () => {
         isEditMode={true}
         data={{ chargingSiteId: 123, siteName: 'Site A' }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     fireEvent.click(screen.getByText('Clear Allocating Org'))

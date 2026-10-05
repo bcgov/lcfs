@@ -1,8 +1,15 @@
 import React from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, vi } from 'vitest'
+import { screen } from '@testing-library/react'
 import { FSEProcessing } from '../FSEProcessing'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
+
+let render
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [theme], options)
+    return fn()
+  })
 
 const mockNavigate = vi.fn()
 
@@ -110,7 +117,7 @@ describe('FSEProcessing', () => {
       hasAnyRole: vi.fn(() => false)
     })
 
-    render(<FSEProcessing />, { wrapper })
+    render(<FSEProcessing />)
 
     expect(
       screen.queryByRole('button', { name: 'Return selected to draft' })
@@ -122,7 +129,7 @@ describe('FSEProcessing', () => {
       hasAnyRole: vi.fn(() => true)
     })
 
-    render(<FSEProcessing />, { wrapper })
+    render(<FSEProcessing />)
 
     expect(
       screen.getByRole('button', { name: 'Return selected to draft' })
