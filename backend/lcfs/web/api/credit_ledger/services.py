@@ -114,14 +114,7 @@ _PACIFIC_TZ = ZoneInfo("America/Vancouver")
 
 
 def _to_pacific_date(value) -> Optional[date]:
-    """
-    Return the Vancouver calendar date for the full-ledger export.
-
-    openpyxl rejects tz-aware datetimes outright ("Excel does not support
-    datetimes with timezones"). The credit-ledger materialized views emit
-    Vancouver-local naive timestamps, so those must not be converted again.
-    Tz-aware datetimes from non-view callers are converted once.
-    """
+    """Return a plain Vancouver calendar date for the full-ledger export."""
     if value is None:
         return None
     if isinstance(value, datetime):

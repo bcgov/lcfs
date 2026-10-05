@@ -34,14 +34,15 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ts.status::text AS status,
             CASE
                 WHEN ts.status = 'Recorded' THEN
-                    EXTRACT(YEAR FROM (
-                        COALESCE(t.transaction_effective_date, (
-                            SELECT th.create_date
+                    EXTRACT(YEAR FROM COALESCE(
+                        t.transaction_effective_date::date,
+                        (
+                            SELECT (th.create_date AT TIME ZONE 'America/Vancouver')::date
                             FROM transfer_history th
                             WHERE th.transfer_id = t.transfer_id
                             AND th.transfer_status_id = 6  -- Recorded
                             LIMIT 1
-                        )) AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver'
+                        )
                     ))::text
                 ELSE 'N/A'
             END AS compliance_period,
@@ -68,16 +69,16 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ) AS government_comment,
             tc.category,
             (
-                SELECT (th.create_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date
+                SELECT (th.create_date AT TIME ZONE 'America/Vancouver')::date
                 FROM transfer_history th
                 WHERE th.transfer_id = t.transfer_id
                 AND th.transfer_status_id = 6  -- Recorded
                 LIMIT 1
             ) AS recorded_date,
             NULL AS approved_date,
-            (t.transaction_effective_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date AS transaction_effective_date,
-            t.update_date AS update_date,
-            t.create_date AS create_date
+            t.transaction_effective_date::date AS transaction_effective_date,
+            t.update_date AT TIME ZONE 'America/Vancouver' AS update_date,
+            t.create_date AT TIME ZONE 'America/Vancouver' AS create_date
         FROM transfer t
         JOIN organization org_from
             ON t.from_organization_id = org_from.organization_id
@@ -102,22 +103,22 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ia.compliance_units AS quantity,
             NULL AS price_per_unit,
             ias.status::text AS status,
-            EXTRACT(YEAR FROM (ia.transaction_effective_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver'))::text AS compliance_period,
+            EXTRACT(YEAR FROM ia.transaction_effective_date::date)::text AS compliance_period,
             null as from_org_comment,
             null as to_org_comment,
             ia.gov_comment AS government_comment,
             NULL AS category,
             NULL AS recorded_date,
             (
-                SELECT (iah.create_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date
+                SELECT (iah.create_date AT TIME ZONE 'America/Vancouver')::date
                 FROM initiative_agreement_history iah
                 WHERE iah.initiative_agreement_id = ia.initiative_agreement_id
                 AND iah.initiative_agreement_status_id = 3 -- Approved
                 LIMIT 1
             ) AS approved_date,
-            (ia.transaction_effective_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date AS transaction_effective_date,
-            ia.update_date AS update_date,
-            ia.create_date AS create_date
+            ia.transaction_effective_date::date AS transaction_effective_date,
+            ia.update_date AT TIME ZONE 'America/Vancouver' AS update_date,
+            ia.create_date AT TIME ZONE 'America/Vancouver' AS create_date
         FROM initiative_agreement ia
         JOIN organization org
             ON ia.to_organization_id = org.organization_id
@@ -138,22 +139,22 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             aa.compliance_units AS quantity,
             NULL AS price_per_unit,
             aas.status::text AS status,
-            EXTRACT(YEAR FROM (aa.transaction_effective_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver'))::text AS compliance_period,
+            EXTRACT(YEAR FROM aa.transaction_effective_date::date)::text AS compliance_period,
             null as from_org_comment,
             null as to_org_comment,
             aa.gov_comment AS government_comment,
             NULL AS category,
             NULL AS recorded_date,
             (
-                SELECT (aah.create_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date
+                SELECT (aah.create_date AT TIME ZONE 'America/Vancouver')::date
                 FROM admin_adjustment_history aah
                 WHERE aah.admin_adjustment_id = aa.admin_adjustment_id
                 AND aah.admin_adjustment_status_id = 3 -- Approved
                 LIMIT 1
             ) AS approved_date,
-            (aa.transaction_effective_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date AS transaction_effective_date,
-            aa.update_date AS update_date,
-            aa.create_date AS create_date
+            aa.transaction_effective_date::date AS transaction_effective_date,
+            aa.update_date AT TIME ZONE 'America/Vancouver' AS update_date,
+            aa.create_date AT TIME ZONE 'America/Vancouver' AS create_date
         FROM admin_adjustment aa
         JOIN organization org
             ON aa.to_organization_id = org.organization_id
@@ -174,16 +175,16 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ag.compliance_units AS quantity,
             NULL AS price_per_unit,
             'Recorded' AS status,
-            EXTRACT(YEAR FROM (ag.transaction_effective_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver'))::text AS compliance_period,
+            EXTRACT(YEAR FROM ag.transaction_effective_date::date)::text AS compliance_period,
             NULL AS from_org_comment,
             NULL AS to_org_comment,
             ag.gov_comment AS government_comment,
             NULL AS category,
-            (ag.recorded_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date AS recorded_date,
+            ag.recorded_date::date AS recorded_date,
             NULL AS approved_date,
-            (ag.transaction_effective_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date AS transaction_effective_date,
-            ag.update_date AS update_date,
-            ag.create_date AS create_date
+            ag.transaction_effective_date::date AS transaction_effective_date,
+            ag.update_date AT TIME ZONE 'America/Vancouver' AS update_date,
+            ag.create_date AT TIME ZONE 'America/Vancouver' AS create_date
         FROM aggregator_issuance ag
         JOIN organization org
             ON ag.to_organization_id = org.organization_id
@@ -211,8 +212,8 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             NULL AS recorded_date,
             NULL AS approved_date,
             NULL AS transaction_effective_date,
-            cr.update_date AS update_date,
-            cr.create_date AS create_date
+            cr.update_date AT TIME ZONE 'America/Vancouver' AS update_date,
+            cr.create_date AT TIME ZONE 'America/Vancouver' AS create_date
         FROM compliance_report cr
         JOIN organization org
             ON cr.organization_id = org.organization_id
@@ -239,16 +240,22 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             t.compliance_units AS quantity,
             NULL AS price_per_unit,
             CASE WHEN COALESCE(t.effective_status, TRUE) THEN 'Recorded' ELSE 'Inactive' END AS status,
-            EXTRACT(YEAR FROM (COALESCE(t.effective_date, t.create_date) AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver'))::text AS compliance_period,
+            EXTRACT(YEAR FROM COALESCE(
+                t.effective_date,
+                (t.create_date AT TIME ZONE 'America/Vancouver')::date
+            ))::text AS compliance_period,
             NULL AS from_org_comment,
             NULL AS to_org_comment,
             NULL AS government_comment,
             NULL AS category,
             NULL AS recorded_date,
             NULL AS approved_date,
-            (COALESCE(t.effective_date, t.create_date) AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date AS transaction_effective_date,
-            COALESCE(t.update_date, t.create_date) AS update_date,
-            t.create_date AS create_date
+            COALESCE(
+                t.effective_date,
+                (t.create_date AT TIME ZONE 'America/Vancouver')::date
+            ) AS transaction_effective_date,
+            COALESCE(t.update_date, t.create_date) AT TIME ZONE 'America/Vancouver' AS update_date,
+            t.create_date AT TIME ZONE 'America/Vancouver' AS create_date
         FROM "transaction" t
         JOIN organization org
             ON t.organization_id = org.organization_id

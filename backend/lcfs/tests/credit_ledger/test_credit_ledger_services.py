@@ -122,11 +122,6 @@ async def test_export_transactions_generates_stream(credit_ledger_service, mock_
 async def test_export_transactions_formats_update_date_in_pacific_timezone(
     credit_ledger_service, mock_repo
 ):
-    """
-    The legacy Credit Ledger UI displays updateDate in America/Vancouver. The
-    materialized view now emits Vancouver-local naive timestamps, while
-    tz-aware datetimes from other callers still need a single conversion.
-    """
     mock_repo.get_rows_paginated.return_value = (
         [
             (

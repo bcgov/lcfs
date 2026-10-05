@@ -402,6 +402,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # This migration fixes the active materialized-view contract. The prior
-    # definition double-converted timestamps and reintroduced ledger date drift.
     pass
