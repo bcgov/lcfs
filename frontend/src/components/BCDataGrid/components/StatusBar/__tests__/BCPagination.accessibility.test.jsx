@@ -18,22 +18,22 @@ describe('BCPagination accessibility', () => {
     const { rerender } = render(<BCPagination {...props} />)
 
     const status = screen.getByRole('status')
-    expect(status).toHaveTextContent('Showing 1 to 10 of 13 results.')
+    expect(status).toHaveTextContent('1 to 10 of 13')
     expect(status).toHaveAttribute('aria-live', 'polite')
     expect(status).toHaveAttribute('aria-atomic', 'true')
 
     rerender(<BCPagination {...props} page={2} />)
 
     expect(screen.getByRole('status')).toBe(status)
-    expect(status).toHaveTextContent('Showing 11 to 13 of 13 results.')
+    expect(status).toHaveTextContent('11 to 13 of 13')
 
     rerender(<BCPagination {...props} page={1} size={5} />)
-    expect(status).toHaveTextContent('Showing 1 to 5 of 13 results.')
+    expect(status).toHaveTextContent('1 to 5 of 13')
 
     rerender(<BCPagination {...props} total={1} />)
-    expect(status).toHaveTextContent('Showing 1 to 1 of 1 result.')
+    expect(status).toHaveTextContent('1 to 1 of 1')
 
     rerender(<BCPagination {...props} total={0} />)
-    expect(status).toHaveTextContent('Showing 0 to 0 of 0 results.')
+    expect(status).toHaveTextContent('0 to 0 of 0')
   })
 })

@@ -177,32 +177,32 @@ describe('BCPagination', () => {
   })
 
   describe('labelDisplayedRows Function', () => {
-    it('announces the displayed range as one complete status message', () => {
+    it('announces the displayed range without changing its wording', () => {
       renderWithTheme(<BCPagination {...defaultProps} />)
       
       const labelElement = screen.getByTestId('label-displayed-rows')
       expect(labelElement).toBeInTheDocument()
 
       const status = within(labelElement).getByRole('status')
-      expect(status).toHaveTextContent('Showing 1 to 10 of 100 results.')
+      expect(status).toHaveTextContent('1 to 10 of 100')
       expect(status).toHaveAttribute('aria-live', 'polite')
       expect(status).toHaveAttribute('aria-atomic', 'true')
-      expect(status.querySelectorAll('b')).toHaveLength(0)
+      expect(status.querySelectorAll('b')).toHaveLength(3)
     })
 
-    it('describes empty results clearly', () => {
+    it('preserves the existing wording for empty results', () => {
       renderWithTheme(<BCPagination {...defaultProps} total={0} />)
 
       expect(screen.getByRole('status')).toHaveTextContent(
-        'Showing 0 to 0 of 0 results.'
+        '0 to 0 of 0'
       )
     })
 
-    it('describes an unknown total without implying the count is zero', () => {
+    it('preserves the existing wording for unknown totals', () => {
       renderWithTheme(<BCPagination {...defaultProps} total={-1} />)
 
       expect(screen.getByRole('status')).toHaveTextContent(
-        'Showing 1 to 10 of more than 10 results.'
+        '1 to 10 of -1'
       )
     })
   })
