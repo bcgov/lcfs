@@ -22,7 +22,9 @@ updates:
           - "*"
 
   - package-ecosystem: "pip"
-    directory: "/backend"
+    directories:
+      - "/backend"
+      - "/etl/python_migration"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 0
