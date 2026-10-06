@@ -215,6 +215,26 @@ const getTopFuelTypesByVolume = (rows, limit = 8) =>
     .slice(0, limit)
     .map(([fuelType]) => fuelType)
 
+export const normalizeFuelTypeVolumeTrendRows = (rows = []) =>
+  Array.from(
+    rows
+      .reduce((acc, row) => {
+        const fuelType = row.fuelType
+        const key = `${row.reportingYear}|${fuelType}|${row.fuelCategory || ''}`
+        const existing = acc.get(key) || {
+          ...row,
+          fuelType,
+          totalVolume: 0,
+          fossilDerived: false
+        }
+        existing.totalVolume += row.totalVolume || 0
+        existing.fossilDerived = existing.fossilDerived || row.fossilDerived
+        acc.set(key, existing)
+        return acc
+      }, new Map())
+      .values()
+  )
+
 const SupplyMetricCard = ({ title, value, period, comparisons = [] }) => (
   <Card
     elevation={1}
@@ -600,7 +620,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   }, [analytics.complianceUnitCreditDebitTrend])
 
   const fuelTypeVolumeTrendData = useMemo(() => {
-    const rows = analytics.fuelTypeVolumeTrend || []
+    const rows = normalizeFuelTypeVolumeTrendRows(
+      analytics.fuelTypeVolumeTrend || []
+    )
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()
@@ -633,7 +655,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
 
   // YoY % change per fuel type/year, used to annotate the volume trend tooltip.
   const fuelTypeYoyChangeData = useMemo(() => {
-    const rows = analytics.fuelTypeVolumeTrend || []
+    const rows = normalizeFuelTypeVolumeTrendRows(
+      analytics.fuelTypeVolumeTrend || []
+    )
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()

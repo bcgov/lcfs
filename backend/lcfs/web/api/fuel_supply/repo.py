@@ -46,6 +46,39 @@ RENEWABLE_LIQUID_FUEL_CATEGORY_LABELS = {
 }
 
 
+def _normalized_supply_history_fuel_type(fuel_type_name):
+    """
+    Petroleum and fossil-derived labels represent the same historical supply
+    type across the 2023 terminology transition.
+    """
+    return LCFS_Constants.LEGACY_FUEL_TYPE_EQUIVALENTS.get(
+        fuel_type_name, fuel_type_name
+    )
+
+
+def _supply_history_fossil_derived(fuel_type):
+    fuel_type_name = getattr(fuel_type, "fuel_type", None)
+    return bool(getattr(fuel_type, "fossil_derived", False)) or (
+        fuel_type_name in LCFS_Constants.LEGACY_FUEL_TYPE_EQUIVALENTS
+    )
+
+
+def _fuel_type_filter(filter_value: str):
+    # Match either side of a legacy/current pair so filtering by either
+    # terminology keeps the continuous history across the 2024 transition.
+    filter_text = filter_value.lower()
+    equivalent_names = {
+        name
+        for legacy, current in LCFS_Constants.LEGACY_FUEL_TYPE_EQUIVALENTS.items()
+        if filter_text in legacy.lower() or filter_text in current.lower()
+        for name in (legacy, current)
+    }
+    condition = FuelType.fuel_type.ilike(f"%{filter_value}%")
+    if equivalent_names:
+        condition = or_(condition, FuelType.fuel_type.in_(equivalent_names))
+    return condition
+
+
 def _get_filter_values(filter_item):
     values = getattr(filter_item, "values", None)
     if values:
@@ -854,7 +887,14 @@ class FuelSupplyRepository:
                             CompliancePeriod.description.ilike(f"%{filter_value}%")
                         )
                 elif field == "fuel_type":
-                    query = query.where(FuelType.fuel_type.ilike(f"%{filter_value}%"))
+                    query = query.where(
+                        or_(
+                            *[
+                                _fuel_type_filter(value)
+                                for value in (filter_values or [filter_value])
+                            ]
+                        )
+                    )
                 elif field == "fuel_category":
                     # category is a Postgres enum; cast to text so ILIKE works
                     # (otherwise the pattern is cast to the enum type and fails).
@@ -959,7 +999,14 @@ class FuelSupplyRepository:
                 if field == "compliance_period":
                     selected_year_filter = set(filter_values)
                 elif field == "fuel_type":
-                    query = query.where(FuelType.fuel_type.ilike(f"%{filter_value}%"))
+                    query = query.where(
+                        or_(
+                            *[
+                                _fuel_type_filter(value)
+                                for value in (filter_values or [filter_value])
+                            ]
+                        )
+                    )
                 elif field == "fuel_category":
                     # category is a Postgres enum; cast to text so ILIKE works
                     # (otherwise the pattern is cast to the enum type and fails).
@@ -1046,14 +1093,18 @@ class FuelSupplyRepository:
                 total_volume += quantity
 
                 # Track unique fuel types
-                fuel_types_set.add(fs.fuel_type.fuel_type)
+                fuel_types_set.add(
+                    _normalized_supply_history_fuel_type(fs.fuel_type.fuel_type)
+                )
 
                 # Track submission dates
                 if fs.compliance_report.update_date:
                     submission_dates_set.add(fs.compliance_report.update_date)
 
                 # Aggregate by fuel type
-                fuel_type_name = fs.fuel_type.fuel_type
+                fuel_type_name = _normalized_supply_history_fuel_type(
+                    fs.fuel_type.fuel_type
+                )
                 total_by_fuel_type[fuel_type_name] = (
                     total_by_fuel_type.get(fuel_type_name, 0) + quantity
                 )
@@ -1119,7 +1170,8 @@ class FuelSupplyRepository:
                             category_label, set()
                         ).add(fuel_type_label)
 
-            fuel_type_name = fs.fuel_type.fuel_type
+            raw_fuel_type_name = fs.fuel_type.fuel_type
+            fuel_type_name = _normalized_supply_history_fuel_type(raw_fuel_type_name)
             yearly_fuel_type.setdefault(year, {})
             yearly_fuel_type[year].setdefault(
                 fuel_type_name,
@@ -1130,9 +1182,7 @@ class FuelSupplyRepository:
                     "total_compliance_units": 0,
                     "positive_compliance_units": False,
                     "renewable": bool(getattr(fs.fuel_type, "renewable", False)),
-                    "fossil_derived": bool(
-                        getattr(fs.fuel_type, "fossil_derived", False)
-                    ),
+                    "fossil_derived": _supply_history_fossil_derived(fs.fuel_type),
                 },
             )
             yearly_fuel_type[year][fuel_type_name]["total_volume"] += quantity
