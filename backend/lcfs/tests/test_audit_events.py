@@ -26,7 +26,9 @@ def transfer_repo(dbsession):
 
 
 @pytest.fixture
-def mock_user():
+async def mock_user():
+    # Async so the context variable is set in the anyio runner task the test
+    # runs in; anyio 4 does not see context changes made by sync fixtures.
     # Mock a user object with necessary attributes
     mock_user = Mock()
     mock_user.keycloak_username = "test_user"
