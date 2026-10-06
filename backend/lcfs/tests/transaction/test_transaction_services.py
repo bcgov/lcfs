@@ -1,4 +1,6 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
+import csv
+import io
 from math import ceil
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,6 +20,7 @@ def mock_repo():
     repo = MagicMock()
     repo.get_transactions_paginated = AsyncMock(return_value=([], 0))
     repo.get_transaction_statuses = AsyncMock(return_value=[])
+    repo.get_transfer_export_details = AsyncMock(return_value={})
     return repo
 
 
@@ -264,3 +267,160 @@ async def test_export_transactions_government_all_orgs(transactions_service):
 
     args, _ = transactions_service.repo.get_transactions_paginated.call_args
     assert args[4] is None
+
+
+# -- Agreement Date column and A1 category (#5030) -----------------------------
+
+
+def _view_row(**overrides):
+    """An mv_transaction_aggregate row as the export reads it."""
+    row = dict(
+        transaction_type="Transfer",
+        transaction_id=7,
+        compliance_period="2026",
+        from_organization="Org A",
+        to_organization="Org B",
+        quantity=100,
+        price_per_unit=250.0,
+        category="A",
+        status="Recorded",
+        transaction_effective_date=datetime(2026, 3, 20),
+        recorded_date=datetime(2026, 3, 20, 18, 0, 0),
+        approved_date=None,
+        from_org_comment=None,
+        to_org_comment=None,
+        government_comment=None,
+    )
+    row.update(overrides)
+    return MagicMock(**row)
+
+
+def _transfer_details(agreement_date=None, is_a1_category=False):
+    return MagicMock(agreement_date=agreement_date, is_a1_category=is_a1_category)
+
+
+async def _export_csv(transactions_service, rows, transfer_details):
+    repo = transactions_service.repo
+    repo.get_transactions_paginated.return_value = (rows, len(rows))
+    repo.get_transfer_export_details.return_value = transfer_details
+
+    response = await transactions_service.export_transactions(export_format="csv")
+    content = b""
+    async for chunk in response.body_iterator:
+        content += chunk
+    return csv.DictReader(io.StringIO(content.decode("utf-8")))
+
+
+@pytest.mark.anyio
+async def test_export_agreement_date_column_sits_with_the_dates(
+    transactions_service,
+):
+    reader = await _export_csv(transactions_service, [], {})
+
+    headers = reader.fieldnames
+    status_idx = headers.index("Status")
+    assert headers[status_idx : status_idx + 3] == [
+        "Status",
+        "Agreement Date",
+        "Effective Date",
+    ]
+
+
+@pytest.mark.anyio
+async def test_export_shows_a1_category_and_agreement_date(transactions_service):
+    reader = await _export_csv(
+        transactions_service,
+        [_view_row(transaction_id=7, category="A")],
+        {7: _transfer_details(datetime(2026, 3, 2), is_a1_category=True)},
+    )
+
+    (row,) = list(reader)
+    assert row["ID"] == "CT7"
+    assert row["Category"] == "A1"
+    assert row["Agreement Date"] == "2026-03-02"
+    assert row["Effective Date"] == "2026-03-20"
+
+
+@pytest.mark.anyio
+async def test_export_keeps_existing_categories(transactions_service):
+    reader = await _export_csv(
+        transactions_service,
+        [
+            _view_row(transaction_id=1, category="A"),
+            _view_row(transaction_id=2, category="B"),
+            _view_row(transaction_id=3, category="C"),
+            _view_row(transaction_id=4, category="D"),
+            _view_row(transaction_id=5, category=None, status="Submitted"),
+            # A flag left on a transfer moved out of Category A stays hidden
+            _view_row(transaction_id=6, category="B"),
+        ],
+        {
+            1: _transfer_details(datetime(2026, 1, 5)),
+            2: _transfer_details(datetime(2025, 8, 1)),
+            3: _transfer_details(datetime(2024, 11, 30)),
+            4: _transfer_details(datetime(2026, 2, 14)),
+            5: _transfer_details(datetime(2026, 3, 1)),
+            6: _transfer_details(datetime(2025, 9, 9), is_a1_category=True),
+        },
+    )
+
+    rows = {row["ID"]: row for row in reader}
+    assert [rows[f"CT{i}"]["Category"] for i in range(1, 7)] == [
+        "A",
+        "B",
+        "C",
+        "D",
+        "",
+        "B",
+    ]
+    assert rows["CT1"]["Agreement Date"] == "2026-01-05"
+    assert rows["CT5"]["Agreement Date"] == "2026-03-01"
+
+
+@pytest.mark.anyio
+async def test_export_agreement_date_blank_when_not_applicable(
+    transactions_service,
+):
+    reader = await _export_csv(
+        transactions_service,
+        [
+            # Legacy transfer recorded without an agreement date
+            _view_row(transaction_id=7, category="A"),
+            _view_row(transaction_id=8, category="A"),
+            # Same ID as transfer 8, but IDs are only unique per type
+            _view_row(
+                transaction_type="InitiativeAgreement",
+                transaction_id=8,
+                from_organization=None,
+                price_per_unit=None,
+                category=None,
+                status="Approved",
+            ),
+            _view_row(
+                transaction_type="AdminAdjustment",
+                transaction_id=9,
+                from_organization=None,
+                price_per_unit=None,
+                category=None,
+                status="Approved",
+            ),
+        ],
+        {
+            7: _transfer_details(agreement_date=None),
+            8: _transfer_details(datetime(2026, 3, 2), is_a1_category=True),
+        },
+    )
+
+    rows = {row["ID"]: row for row in reader}
+    assert rows["CT7"]["Agreement Date"] == ""
+    assert rows["CT7"]["Category"] == "A"
+    assert rows["CT8"]["Agreement Date"] == "2026-03-02"
+    assert rows["CT8"]["Category"] == "A1"
+    assert rows["IA8"]["Agreement Date"] == ""
+    assert rows["IA8"]["Category"] == ""
+    assert rows["AA9"]["Agreement Date"] == ""
+
+    # Only the transfer rows are looked up
+    transactions_service.repo.get_transfer_export_details.assert_awaited_once_with(
+        [7, 8]
+    )
