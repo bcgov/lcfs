@@ -75,7 +75,7 @@ const getDistance = (value: TransportModeValue) => {
 const normalizeValue = (
   value: TransportModeValue | TransportModeValue[] | undefined
 ): SelectedMode[] => {
-  if (!value && value !== 0) return []
+  if (value == null || value === '') return []
   const values = Array.isArray(value)
     ? value
     : typeof value === 'string'

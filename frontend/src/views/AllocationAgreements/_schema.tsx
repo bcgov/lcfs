@@ -1,5 +1,9 @@
-// @ts-nocheck
-import type { ColDef } from 'ag-grid-community'
+import type {
+  ColDef,
+  ICellEditorParams,
+  ICellRendererParams,
+  RowClassParams
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
@@ -11,7 +15,7 @@ import { apiRoutes } from '@/constants/routes'
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { formatNumberWithCommas } from '@/utils/formatters'
 import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
@@ -25,6 +29,10 @@ import {
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { isQuarterEditable } from '@/utils/grid/cellEditables'
 
+const valueFormatter = (params: {
+  value: string | number | null | undefined
+}) => String(formatNumberWithCommas(params))
+
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
 export const allocationAgreementColDefs = (
@@ -36,9 +44,9 @@ export const allocationAgreementColDefs = (
   compliancePeriod: string | number,
   isEarlyIssuance: boolean = false
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     validation,
-    actions((params) => {
+    actions((params: ICellRendererParams) => {
       return {
         enableDuplicate: false,
         enableDelete: !params.data.isNewSupplementalEntry,
@@ -46,7 +54,9 @@ export const allocationAgreementColDefs = (
         enableStatus:
           isSupplemental &&
           params.data.isNewSupplementalEntry &&
-          ACTION_STATUS_MAP[params.data.actionType]
+          ACTION_STATUS_MAP[
+            params.data.actionType as keyof typeof ACTION_STATUS_MAP
+          ]
       }
     }),
     {
@@ -93,7 +103,7 @@ export const allocationAgreementColDefs = (
       suppressKeyboardEvent,
       minWidth: 175,
       editable: true,
-      tooltipValueGetter: (p) =>
+      tooltipValueGetter: () =>
         'Select whether the fuel was purchased or sold under the allocation agreement'
     },
     {
@@ -104,14 +114,20 @@ export const allocationAgreementColDefs = (
       ),
       cellDataType: 'object',
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'trading-partner-name-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          queryKey,
+          client
+        }: {
+          queryKey: [string, string]
+          client: import('axios').AxiosInstance
+        }) => {
           let path = apiRoutes.organizationSearch
           path += 'org_name=' + queryKey[1]
           const response = await client.get(path)
           const filteredData = response.data.filter(
-            (org) => org.name !== orgName
+            (org: { name: string }) => org.name !== orgName
           )
           params.node.data.apiDataCache = filteredData
           return filteredData
@@ -120,7 +136,7 @@ export const allocationAgreementColDefs = (
         api: params.api,
         minWords: 1
       }),
-      cellRenderer: (params) =>
+      cellRenderer: (params: ICellRendererParams) =>
         params.value ||
         (!params.value && (
           <BCTypography variant="body4">Enter or search a name</BCTypography>
@@ -148,7 +164,7 @@ export const allocationAgreementColDefs = (
 
         return true
       },
-      tooltipValueGetter: (p) =>
+      tooltipValueGetter: () =>
         'Enter or select the legal name of the trading partner'
     },
     {
@@ -217,7 +233,7 @@ export const allocationAgreementColDefs = (
           params.data.fuelTypeId = fuelType?.fuelTypeId
           params.data.fuelTypeOther = undefined
           params.data.fuelCategory =
-            fuelType.fuelCategories?.[0]?.category ?? null
+            fuelType?.fuelCategories?.[0]?.category ?? null
           params.data.units = fuelType?.unit
           params.data.unrecognized = fuelType?.unrecognized
           params.data.provisionOfTheAct = null
@@ -225,7 +241,7 @@ export const allocationAgreementColDefs = (
         }
         return true
       },
-      tooltipValueGetter: (p) => 'Select the fuel type from the list'
+      tooltipValueGetter: () => 'Select the fuel type from the list'
     },
     {
       field: 'fuelTypeOther',
@@ -233,9 +249,13 @@ export const allocationAgreementColDefs = (
         'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
       ),
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'fuel-type-others',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          client
+        }: {
+          client: import('axios').AxiosInstance
+        }) => {
           const path = apiRoutes.getFuelTypeOthers
 
           const response = await client.get(path)
@@ -269,7 +289,7 @@ export const allocationAgreementColDefs = (
         'allocationAgreement:allocationAgreementColLabels.fuelCategory'
       ),
       cellEditor: AutocompleteCellEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         options:
           optionsData?.fuelTypes
             ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -300,9 +320,9 @@ export const allocationAgreementColDefs = (
       },
       valueGetter: (params) => params.data.fuelCategory,
       editable: (params) =>
-        optionsData?.fuelTypes?.find(
+        (optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
-        )?.fuelCategories.length > 1 && params.data.fuelType != null
+        )?.fuelCategories.length ?? 0) > 1 && params.data.fuelType != null
     },
     {
       field: 'provisionOfTheAct',
@@ -311,7 +331,7 @@ export const allocationAgreementColDefs = (
         'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
       ),
       cellEditor: AutocompleteCellEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         options: optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
           ?.provisions.map((item) => item.name)
@@ -342,7 +362,7 @@ export const allocationAgreementColDefs = (
         return true
       },
       editable: true,
-      tooltipValueGetter: (p) =>
+      tooltipValueGetter: () =>
         'Select the method for determining carbon intensity'
     },
     {
@@ -351,7 +371,7 @@ export const allocationAgreementColDefs = (
         'allocationAgreement:allocationAgreementColLabels.fuelCode'
       ),
       cellEditor: AutocompleteCellEditor,
-      cellEditorParams: (params) => {
+      cellEditorParams: (params: ICellEditorParams) => {
         const fuelTypes = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
         )
@@ -373,9 +393,9 @@ export const allocationAgreementColDefs = (
       minWidth: 175,
       editable: (params) =>
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
-        optionsData?.fuelTypes?.find(
+        (optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
-        )?.fuelCodes?.length > 0,
+        )?.fuelCodes?.length ?? 0) > 0,
       valueGetter: (params) => {
         const fuelTypeObj = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
@@ -430,7 +450,7 @@ export const allocationAgreementColDefs = (
         }
         return true
       },
-      tooltipValueGetter: (p) => 'Select the approved fuel code'
+      tooltipValueGetter: () => 'Select the approved fuel code'
     },
     {
       field: 'ciOfFuel',
@@ -451,7 +471,6 @@ export const allocationAgreementColDefs = (
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.quantity'
       ),
-      editor: NumberEditor,
       valueFormatter: (params) => valueFormatter({ value: params.value }),
       cellEditor: NumberEditor,
       cellEditorParams: {
@@ -478,7 +497,7 @@ export const allocationAgreementColDefs = (
 
   // Swap in Quarterly Columns if it's an early issuance report
   if (isEarlyIssuance) {
-    return baseColumns.flatMap((item) => {
+    return baseColumns.flatMap<ColDef>((item): ColDef[] => {
       if (item.field === 'quantity') {
         return [
           {
@@ -619,7 +638,7 @@ export const allocationAgreementColDefs = (
 export const allocationAgreementSummaryColDef = (
   isEarlyIssuance: boolean
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
@@ -710,7 +729,7 @@ export const allocationAgreementSummaryColDef = (
   ]
 
   if (isEarlyIssuance) {
-    return baseColumns.flatMap((item) => {
+    return baseColumns.flatMap<ColDef>((item): ColDef[] => {
       if (item.field === 'quantity') {
         return [
           {
@@ -786,7 +805,7 @@ export const changelogCommonColDefs = (
   highlight: boolean = true,
   isEarlyIssuance: boolean = false
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
@@ -794,7 +813,9 @@ export const changelogCommonColDefs = (
       field: 'allocationTransactionType.type',
       minWidth: 160,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'allocationTransactionType')
+        highlight
+          ? changelogCellStyle(params, 'allocationTransactionType')
+          : undefined
     },
     {
       headerName: i18n.t(
@@ -803,7 +824,7 @@ export const changelogCommonColDefs = (
       minWidth: 320,
       field: 'transactionPartner',
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'transactionPartner')
+        highlight ? changelogCellStyle(params, 'transactionPartner') : undefined
     },
     {
       headerName: i18n.t(
@@ -812,7 +833,7 @@ export const changelogCommonColDefs = (
       minWidth: 400,
       field: 'postalAddress',
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'postalAddress')
+        highlight ? changelogCellStyle(params, 'postalAddress') : undefined
     },
     {
       headerName: i18n.t(
@@ -821,7 +842,9 @@ export const changelogCommonColDefs = (
       minWidth: 200,
       field: 'transactionPartnerEmail',
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'transactionPartnerEmail')
+        highlight
+          ? changelogCellStyle(params, 'transactionPartnerEmail')
+          : undefined
     },
     {
       headerName: i18n.t(
@@ -830,7 +853,9 @@ export const changelogCommonColDefs = (
       minWidth: 150,
       field: 'transactionPartnerPhone',
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'transactionPartnerPhone')
+        highlight
+          ? changelogCellStyle(params, 'transactionPartnerPhone')
+          : undefined
     },
     {
       headerName: i18n.t(
@@ -838,7 +863,8 @@ export const changelogCommonColDefs = (
       ),
       minWidth: 200,
       field: 'fuelType.fuelType',
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'fuelType') : undefined
     },
     {
       headerName: i18n.t(
@@ -847,7 +873,7 @@ export const changelogCommonColDefs = (
       minWidth: 250,
       field: 'fuelTypeOther',
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'fuelTypeOther')
+        highlight ? changelogCellStyle(params, 'fuelTypeOther') : undefined
     },
     {
       headerName: i18n.t(
@@ -856,7 +882,7 @@ export const changelogCommonColDefs = (
       minWidth: 150,
       field: 'fuelCategory.category',
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'fuelCategory')
+        highlight ? changelogCellStyle(params, 'fuelCategory') : undefined
     },
     {
       headerName: i18n.t(
@@ -865,7 +891,7 @@ export const changelogCommonColDefs = (
       minWidth: 370,
       field: 'provisionOfTheAct.name',
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'provisionOfTheAct')
+        highlight ? changelogCellStyle(params, 'provisionOfTheAct') : undefined
     },
     {
       headerName: i18n.t(
@@ -873,7 +899,8 @@ export const changelogCommonColDefs = (
       ),
       minWidth: 175,
       field: 'fuelCode.fuelCode',
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'fuelCode') : undefined
     },
     {
       headerName: i18n.t(
@@ -881,7 +908,8 @@ export const changelogCommonColDefs = (
       ),
       minWidth: 90,
       field: 'ciOfFuel',
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'ciOfFuel') : undefined
     },
     {
       headerName: i18n.t(
@@ -889,7 +917,8 @@ export const changelogCommonColDefs = (
       ),
       minWidth: 185,
       field: 'quantity',
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'quantity') : undefined
     },
     {
       headerName: i18n.t(
@@ -897,11 +926,12 @@ export const changelogCommonColDefs = (
       ),
       minWidth: 200,
       field: 'units',
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'units') : undefined
     }
   ]
   if (isEarlyIssuance) {
-    return baseColumns.flatMap((item) => {
+    return baseColumns.flatMap<ColDef>((item): ColDef[] => {
       if (item.field === 'quantity') {
         return [
           {
@@ -912,7 +942,7 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q1Quantity')
+              highlight ? changelogCellStyle(params, 'q1Quantity') : undefined
           },
           {
             field: 'q2Quantity',
@@ -922,7 +952,7 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q2Quantity')
+              highlight ? changelogCellStyle(params, 'q2Quantity') : undefined
           },
           {
             field: 'q3Quantity',
@@ -932,7 +962,7 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q3Quantity')
+              highlight ? changelogCellStyle(params, 'q3Quantity') : undefined
           },
           {
             field: 'q4Quantity',
@@ -942,7 +972,7 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q4Quantity')
+              highlight ? changelogCellStyle(params, 'q4Quantity') : undefined
           },
           {
             field: 'totalQuantity',
@@ -952,7 +982,9 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'totalQuantity'),
+              highlight
+                ? changelogCellStyle(params, 'totalQuantity')
+                : undefined,
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -975,7 +1007,7 @@ export const changelogColDefs = (
   highlight: boolean = true,
   isEarlyIssuance: boolean = false
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     {
       field: 'groupUuid',
       hide: true,
@@ -1011,7 +1043,7 @@ export const changelogColDefs = (
     ...changelogCommonColDefs(highlight)
   ]
   if (isEarlyIssuance) {
-    return baseColumns.flatMap((item) => {
+    return baseColumns.flatMap<ColDef>((item): ColDef[] => {
       if (item.field === 'quantity') {
         return [
           {
@@ -1090,7 +1122,7 @@ export const changelogCommonGridOptions = {
 
 export const changelogGridOptions = {
   ...changelogCommonGridOptions,
-  getRowStyle: (params) => {
+  getRowStyle: (params: RowClassParams) => {
     if (params.data.actionType === 'DELETE') {
       return {
         backgroundColor: colors.alerts.error.background

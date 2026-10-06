@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type MouseEvent } from 'react'
 import FormControl from '@mui/material/FormControl'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
@@ -18,7 +17,7 @@ export interface BCDateFloatingFilterProps {
   label?: string
 }
 
-const parseDateOnly = (value) => {
+const parseDateOnly = (value: unknown): Date | null => {
   if (value instanceof Date) return value
   if (typeof value !== 'string') return null
 
@@ -41,11 +40,11 @@ export const BCDateFloatingFilter = ({
   initialFilterType = 'equals',
   label = 'Select date'
 }: BCDateFloatingFilterProps) => {
-  const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [open, setOpen] = useState(false)
 
   const handleChange = useCallback(
-    (newDate) => {
+    (newDate: Date | null) => {
       setSelectedDate(newDate)
 
       if (newDate && isValid(newDate)) {
@@ -66,7 +65,7 @@ export const BCDateFloatingFilter = ({
     [onModelChange, initialFilterType]
   )
 
-  const handleClear = (event) => {
+  const handleClear = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     setSelectedDate(null)
     onModelChange(undefined)
@@ -109,7 +108,6 @@ export const BCDateFloatingFilter = ({
       }}
     >
       <DatePicker
-        id="date-picker"
         aria-label="Date picker"
         aria-describedby="date-picker-description"
         sx={{
@@ -117,8 +115,8 @@ export const BCDateFloatingFilter = ({
           borderBottom: '4px solid #495057'
         }}
         value={selectedDate}
-        minDate={parseDateOnly(minDate)}
-        maxDate={parseDateOnly(maxDate)}
+        minDate={parseDateOnly(minDate) ?? undefined}
+        maxDate={parseDateOnly(maxDate) ?? undefined}
         onChange={handleChange}
         open={open}
         onOpen={handleOpen}
@@ -129,6 +127,7 @@ export const BCDateFloatingFilter = ({
         views={['year', 'month', 'day']}
         slotProps={{
           textField: {
+            id: 'date-picker',
             size: 'small',
             label,
             onKeyDown: (event) => event.stopPropagation(),

@@ -4,7 +4,6 @@ import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/Compl
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { fuelSupplySummaryColDef } from '@/views/FuelSupplies/_schema'
-import { defaultInitialPagination } from '@/constants/schedules'
 import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
 import { useFuelSupplyColumnStore } from '@/stores/useFuelSupplyColumnStore'
 import Grid2 from '@mui/material/Grid2'
@@ -12,6 +11,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import Loading from '@/components/Loading'
+import type { OptionsData } from '@/types/schema'
 
 interface FuelSupply {
   fuelSupplyId: number | string
@@ -43,8 +43,8 @@ interface PaginationSort {
 interface PaginationOptions {
   page: number
   size: number
-  filters?: PaginationFilter[]
-  sortOrders?: PaginationSort[]
+  filters: PaginationFilter[]
+  sortOrders: PaginationSort[]
 }
 
 export const FuelSupplySummary = ({
@@ -53,7 +53,12 @@ export const FuelSupplySummary = ({
   isEarlyIssuance
 }: FuelSupplySummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
-    defaultInitialPagination
+    {
+      page: 1,
+      size: 10,
+      filters: [],
+      sortOrders: []
+    }
   )
   const gridRef = useRef(null)
   const { t } = useTranslation(['common', 'fuelSupply'])
@@ -179,10 +184,10 @@ export const FuelSupplySummary = ({
   const columnDefs = useMemo(
     () =>
       fuelSupplySummaryColDef(
-        isEarlyIssuance,
+        isEarlyIssuance ?? false,
         showFuelTypeOther,
         parseInt(compliancePeriod ?? '0'),
-        optionsData
+        (optionsData as OptionsData | undefined) ?? { fuelTypes: [] }
       ),
     [isEarlyIssuance, showFuelTypeOther, compliancePeriod, optionsData]
   )

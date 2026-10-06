@@ -121,7 +121,7 @@ const extractFilterValues = (
     }
 
     if (startValue || endValue) {
-      return [startValue ?? endValue]
+      return [startValue ?? endValue ?? null]
     }
   }
 
@@ -129,7 +129,7 @@ const extractFilterValues = (
     if (filter.dateFrom && filter.dateTo) {
       return [`${filter.dateFrom} – ${filter.dateTo}`]
     }
-    return [filter.dateFrom ?? filter.dateTo]
+    return [filter.dateFrom ?? filter.dateTo ?? null]
   }
 
   if (filter.filter !== undefined && filter.filter !== null) {

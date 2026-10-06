@@ -1,8 +1,12 @@
-// @ts-nocheck
-import type { ColDef } from 'ag-grid-community'
+import type {
+  ColDef,
+  ICellEditorParams,
+  RowClassParams
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import type { AsyncSuggestionEditorProps } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
 import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
 import { NumberEditor } from '@/components/BCDataGrid/components/Editors/NumberEditor'
 import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
@@ -34,13 +38,39 @@ import {
   canEditCanadianProduced
 } from '@/utils/renewableClaimUtils'
 
+const numberCellFormatter = (params: {
+  value: string | number | null | undefined
+}) => String(formatNumberWithCommas(params))
+
+const isFuelSupplyQ1Editable = (
+  data: { isCanadaProduced?: boolean; [key: string]: unknown },
+  compliancePeriod: string | number,
+  optionsData: OptionsData
+) => {
+  const isCanadaProducedEditable = canEditCanadianProduced(
+    data,
+    compliancePeriod,
+    optionsData
+  )
+  return (
+    (isCanadaProducedEditable && !data.isCanadaProduced) ||
+    (canEditQ1Supplied(
+      data,
+      optionsData,
+      compliancePeriod,
+      PROVISION_APPROVED_FUEL_CODE
+    ) &&
+      !data.isCanadaProduced)
+  )
+}
+
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_APPROVED_FUEL_CODE_LEGACY =
   'Approved fuel code - Section 6 (5) (c)'
 export const PROVISION_GHGENIUS =
   'GHGenius modelled - Section 6 (5) (d) (ii) (A)'
 
-export const isFuelCodeProvision = (provision) =>
+export const isFuelCodeProvision = (provision: string | undefined) =>
   provision === PROVISION_APPROVED_FUEL_CODE ||
   provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
@@ -52,19 +82,28 @@ export const fuelSupplyColDefs = (
   isSupplemental: boolean,
   isEarlyIssuance: boolean = false
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     validation,
-    actions((params) => {
-      return {
-        enableDuplicate: false,
-        enableDelete: !params.data.isNewSupplementalEntry,
-        enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
-        enableStatus:
-          isSupplemental &&
-          params.data.isNewSupplementalEntry &&
-          ACTION_STATUS_MAP[params.data.actionType]
+    actions(
+      (params: {
+        data: {
+          isNewSupplementalEntry?: boolean
+          actionType?: keyof typeof ACTION_STATUS_MAP
+        }
+      }) => {
+        return {
+          enableDuplicate: false,
+          enableDelete: !params.data.isNewSupplementalEntry,
+          enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
+          enableStatus:
+            isSupplemental &&
+            params.data.isNewSupplementalEntry &&
+            params.data.actionType
+              ? ACTION_STATUS_MAP[params.data.actionType]
+              : false
+        }
       }
-    }),
+    ),
     {
       field: 'id',
       cellEditor: 'agTextCellEditor',
@@ -101,7 +140,7 @@ export const fuelSupplyColDefs = (
       field: 'complianceUnits',
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
       minWidth: 100,
-      valueFormatter: formatNumberWithCommas,
+      valueFormatter: numberCellFormatter,
       editable: false,
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
@@ -154,9 +193,11 @@ export const fuelSupplyColDefs = (
       field: 'fuelTypeOther',
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelTypeOther'),
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'fuel-type-others',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          client
+        }: Parameters<AsyncSuggestionEditorProps['queryFn']>[0]) => {
           const path = apiRoutes.getFuelTypeOthers
 
           const response = await client.get(path)
@@ -192,7 +233,7 @@ export const fuelSupplyColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
       cellEditor: AutocompleteCellEditor,
       cellRenderer: SelectRenderer,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         options: optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
           ?.fuelCategories.map((item) => item.fuelCategory)
@@ -227,16 +268,16 @@ export const fuelSupplyColDefs = (
       minWidth: 135,
       valueGetter: (params) => params.data.fuelCategory,
       editable: (params) =>
-        optionsData?.fuelTypes
+        (optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCategories.map((item) => item.fuelCategory).length > 1,
+          ?.fuelCategories.map((item) => item.fuelCategory).length ?? 0) > 1,
       tooltipValueGetter: () => 'Select the fuel category from the list'
     },
     {
       field: 'endUseType',
       headerComponent: RequiredHeader,
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         options: [
           ...new Set(
             optionsData?.fuelTypes
@@ -290,7 +331,7 @@ export const fuelSupplyColDefs = (
       valueGetter: (params) => {
         return params.data.provisionOfTheAct
       },
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         options: optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
           ?.provisions.map((item) => item.name)
@@ -382,7 +423,7 @@ export const fuelSupplyColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
       cellEditor: AutocompleteCellEditor,
       cellRenderer: SelectRenderer,
-      cellEditorParams: (params) => {
+      cellEditorParams: (params: ICellEditorParams) => {
         const fuelType = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
         )
@@ -408,7 +449,7 @@ export const fuelSupplyColDefs = (
         )
         return (
           isFuelCodeProvision(params.data.provisionOfTheAct) &&
-          fuelType?.fuelCodes?.length > 0
+          Boolean(fuelType?.fuelCodes?.length)
         )
       },
       valueGetter: (params) => {
@@ -421,11 +462,11 @@ export const fuelSupplyColDefs = (
         const fuelCodes =
           fuelType?.fuelCodes?.map((item) => item.fuelCode || item.fuel_code) ||
           []
+        const singleFuelCode = fuelType?.fuelCodes?.[0]
 
         if (isFuelCodeScenario && !params.data.fuelCode) {
           // If only one code is available, auto-populate
-          if (fuelCodes.length === 1) {
-            const singleFuelCode = fuelType.fuelCodes[0]
+          if (fuelCodes.length === 1 && singleFuelCode) {
             params.data.fuelCode =
               singleFuelCode.fuelCode || singleFuelCode.fuel_code
             params.data.fuelCodeId =
@@ -499,7 +540,7 @@ export const fuelSupplyColDefs = (
         freeSolo: false,
         openOnFocus: true
       },
-      hide: parseInt(compliancePeriod, 10) < NEW_REGULATION_YEAR,
+      hide: Number(compliancePeriod) < NEW_REGULATION_YEAR,
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       editable: (params) => {
@@ -551,7 +592,7 @@ export const fuelSupplyColDefs = (
       field: 'isQ1Supplied',
       headerComponent: RequiredHeader,
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
-      hide: parseInt(compliancePeriod, 10) !== NEW_REGULATION_YEAR,
+      hide: Number(compliancePeriod) !== NEW_REGULATION_YEAR,
       cellEditor: AutocompleteCellEditor,
       cellRenderer: SelectRenderer,
       cellEditorParams: {
@@ -563,30 +604,13 @@ export const fuelSupplyColDefs = (
       },
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-      editable: (params) => {
-        const isCanadaProducedEditable = canEditCanadianProduced(
-          params.data,
-          compliancePeriod,
-          optionsData
-        )
-        // For fuels using Default carbon intensity that are not produced in Canada, an active selection
-        // should be available to indicate with Yes/No whether the fuel was supplied in Q1.
-        return (
-          (isCanadaProducedEditable && !params.data.isCanadaProduced) ||
-          (canEditQ1Supplied(
-            params.data,
-            optionsData,
-            compliancePeriod,
-            PROVISION_APPROVED_FUEL_CODE
-          ) &&
-            !params.data.isCanadaProduced)
-        )
-      },
+      editable: (params) =>
+        isFuelSupplyQ1Editable(params.data, compliancePeriod, optionsData),
       minWidth: 160,
       valueGetter: (params) =>
         params.data.isQ1Supplied
           ? 'Yes'
-          : params.colDef?.editable(params)
+          : isFuelSupplyQ1Editable(params.data, compliancePeriod, optionsData)
             ? 'No'
             : '',
       valueSetter: (params) => {
@@ -601,7 +625,7 @@ export const fuelSupplyColDefs = (
       field: 'quantity',
       headerComponent: RequiredHeader,
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
-      valueFormatter: formatNumberWithCommas,
+      valueFormatter: numberCellFormatter,
       cellEditor: NumberEditor,
       cellEditorParams: {
         precision: 0,
@@ -616,7 +640,7 @@ export const fuelSupplyColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
       minWidth: 200,
       cellEditor: AutocompleteCellEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         options: ['L', 'kg', 'kWh', 'm³ (15°C and 1 atm)'],
         multiple: false,
         disableCloseOnSelect: false,
@@ -713,7 +737,7 @@ export const fuelSupplyColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
-      valueFormatter: formatNumberWithCommas,
+      valueFormatter: numberCellFormatter,
       minWidth: 100,
       editable: false
     }
@@ -721,14 +745,14 @@ export const fuelSupplyColDefs = (
 
   // Swap in Quarterly Columns if it's an early issuance report
   if (isEarlyIssuance) {
-    return baseColumns.flatMap((item) => {
+    return baseColumns.flatMap<ColDef>((item): ColDef[] => {
       if (item.field === 'quantity') {
         return [
           {
             field: 'q1Quantity',
             headerComponent: RequiredHeader,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -750,7 +774,7 @@ export const fuelSupplyColDefs = (
             field: 'q2Quantity',
             headerComponent: RequiredHeader,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -772,7 +796,7 @@ export const fuelSupplyColDefs = (
             field: 'q3Quantity',
             headerComponent: RequiredHeader,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -794,7 +818,7 @@ export const fuelSupplyColDefs = (
             field: 'q4Quantity',
             headerComponent: RequiredHeader,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -815,7 +839,7 @@ export const fuelSupplyColDefs = (
           {
             field: 'totalQuantity',
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
               StandardCellWarningAndErrors(
                 params,
@@ -850,12 +874,12 @@ export const fuelSupplySummaryColDef = (
   complianceYear: string | number,
   optionsData: OptionsData
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
       field: 'complianceUnits',
       minWidth: 180,
-      valueFormatter: formatNumberWithCommas
+      valueFormatter: numberCellFormatter
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
@@ -899,7 +923,7 @@ export const fuelSupplySummaryColDef = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
       field: 'isCanadaProduced',
       minWidth: 240,
-      hide: complianceYear < NEW_REGULATION_YEAR,
+      hide: Number(complianceYear) < NEW_REGULATION_YEAR,
       valueGetter: (params) => {
         // For fuel codes with known location, show the system-determined value
         const showCanadianProduced = canEditCanadianProduced(
@@ -951,7 +975,7 @@ export const fuelSupplySummaryColDef = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
       field: 'quantity',
       minWidth: 185,
-      valueFormatter: formatNumberWithCommas
+      valueFormatter: numberCellFormatter
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
@@ -1008,38 +1032,38 @@ export const fuelSupplySummaryColDef = (
   ]
 
   if (isEarlyIssuance) {
-    return baseColumns.flatMap((item) => {
+    return baseColumns.flatMap<ColDef>((item): ColDef[] => {
       if (item.field === 'quantity') {
         return [
           {
             field: 'q1Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: numberCellFormatter
           },
           {
             field: 'q2Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: numberCellFormatter
           },
           {
             field: 'q3Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: numberCellFormatter
           },
           {
             field: 'q4Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: numberCellFormatter
           },
           {
             field: 'totalQuantity',
             minWidth: 160,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -1074,34 +1098,35 @@ export const changelogCommonColDefs = (
   complianceYear: string | number,
   optionsData: OptionsData
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
       field: 'complianceUnits',
       minWidth: 180,
-      valueFormatter: formatNumberWithCommas,
+      valueFormatter: numberCellFormatter,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'complianceUnits')
+        highlight ? changelogCellStyle(params, 'complianceUnits') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
       field: 'fuelType.fuelType',
       minWidth: 200,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'fuelType') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
       field: 'fuelCategory.category',
       minWidth: 150,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'fuelCategory')
+        highlight ? changelogCellStyle(params, 'fuelCategory') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
       field: 'endUseType.type',
       minWidth: 200,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'endUseType')
+        highlight ? changelogCellStyle(params, 'endUseType') : undefined
     },
     {
       headerName: i18n.t(
@@ -1110,21 +1135,22 @@ export const changelogCommonColDefs = (
       field: 'provisionOfTheAct.name',
       minWidth: 370,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'provisionOfTheAct')
+        highlight ? changelogCellStyle(params, 'provisionOfTheAct') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
       field: 'fuelCode.fuelCode',
       minWidth: 175,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'fuelCode') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
       field: 'isCanadaProduced',
       minWidth: 240,
-      hide: complianceYear < NEW_REGULATION_YEAR,
+      hide: Number(complianceYear) < NEW_REGULATION_YEAR,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'isCanadaProduced'),
+        highlight ? changelogCellStyle(params, 'isCanadaProduced') : undefined,
       valueGetter: (params) => {
         // For fuel codes with known location, show the system-determined value
         const showCanadianProduced = canEditCanadianProduced(
@@ -1153,7 +1179,7 @@ export const changelogCommonColDefs = (
       minWidth: 170,
       hide: complianceYear !== NEW_REGULATION_YEAR,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'fuelCode'),
+        highlight ? changelogCellStyle(params, 'fuelCode') : undefined,
       valueGetter: (params) => {
         const showCanadianProduced = canEditCanadianProduced(
           params.data,
@@ -1179,98 +1205,107 @@ export const changelogCommonColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
       field: 'quantity',
       minWidth: 185,
-      valueFormatter: formatNumberWithCommas,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
+      valueFormatter: numberCellFormatter,
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'quantity') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
       field: 'units',
       minWidth: 200,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'units') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
       field: 'targetCi',
       minWidth: 135,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'targetCi')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'targetCi') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
       field: 'ciOfFuel',
       minWidth: 90,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'ciOfFuel') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
       field: 'uci',
       minWidth: 90,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'uci')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'uci') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
       field: 'energyDensity',
       minWidth: 160,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'energyDensity')
+        highlight ? changelogCellStyle(params, 'energyDensity') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
       field: 'eer',
       minWidth: 80,
       valueFormatter: (params) => formatNumberWithDecimals(params, 2),
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'eer')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'eer') : undefined
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
       field: 'energy',
       minWidth: 170,
       valueFormatter: (params) => formatNumberWithDecimals(params, 2),
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'energy')
+      cellStyle: (params) =>
+        highlight ? changelogCellStyle(params, 'energy') : undefined
     }
   ]
   if (isEarlyIssuance) {
-    return baseColumns.flatMap((item) => {
+    return baseColumns.flatMap<ColDef>((item): ColDef[] => {
       if (item.field === 'quantity') {
         return [
           {
             field: 'q1Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q1Quantity')
+              highlight ? changelogCellStyle(params, 'q1Quantity') : undefined
           },
           {
             field: 'q2Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q2Quantity')
+              highlight ? changelogCellStyle(params, 'q2Quantity') : undefined
           },
           {
             field: 'q3Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q3Quantity')
+              highlight ? changelogCellStyle(params, 'q3Quantity') : undefined
           },
           {
             field: 'q4Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q4Quantity')
+              highlight ? changelogCellStyle(params, 'q4Quantity') : undefined
           },
           {
             field: 'totalQuantity',
             minWidth: 160,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'totalQuantity'),
+              highlight
+                ? changelogCellStyle(params, 'totalQuantity')
+                : undefined,
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -1296,7 +1331,7 @@ export const changelogColDefs = (
   complianceYear: string | number,
   optionsData: OptionsData
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     {
       field: 'groupUuid',
       hide: true,
@@ -1337,38 +1372,38 @@ export const changelogColDefs = (
     )
   ]
   if (isEarlyIssuance) {
-    return baseColumns.flatMap((item) => {
+    return baseColumns.flatMap<ColDef>((item): ColDef[] => {
       if (item.field === 'quantity') {
         return [
           {
             field: 'q1Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: numberCellFormatter
           },
           {
             field: 'q2Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: numberCellFormatter
           },
           {
             field: 'q3Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: numberCellFormatter
           },
           {
             field: 'q4Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: numberCellFormatter
           },
           {
             field: 'totalQuantity',
             minWidth: 160,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -1406,7 +1441,7 @@ export const changelogCommonGridOptions = {
 
 export const changelogGridOptions = {
   ...changelogCommonGridOptions,
-  getRowStyle: (params) => {
+  getRowStyle: (params: RowClassParams) => {
     if (params.data.actionType === 'DELETE') {
       return {
         backgroundColor: colors.alerts.error.background

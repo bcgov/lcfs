@@ -1,5 +1,10 @@
-// @ts-nocheck
-import { useState, useCallback, useEffect } from 'react'
+import {
+  useState,
+  useCallback,
+  useEffect,
+  type ChangeEvent,
+  type MouseEvent
+} from 'react'
 import IconButton from '@mui/material/IconButton'
 import ClearIcon from '@mui/icons-material/Clear'
 
@@ -36,8 +41,12 @@ export const BCSelectFloatingFilter = ({
   multiple = false,
   initialSelectedValues = []
 }: BCSelectFloatingFilterProps) => {
-  const [selectedValues, setSelectedValues] = useState(multiple ? [] : '')
-  const [options, setOptions] = useState([])
+  const [selectedValues, setSelectedValues] = useState<string | string[]>(
+    multiple ? [] : ''
+  )
+  const [options, setOptions] = useState<
+    NonNullable<ReturnType<BCSelectFloatingFilterProps['optionsQuery']>['data']>
+  >([])
   const { data: optionsData, isLoading, isError, error } = optionsQuery(params)
 
   useEffect(() => {
@@ -69,7 +78,7 @@ export const BCSelectFloatingFilter = ({
     setSelectedValues(filterValues)
   }, [model])
 
-  const handleChange = (event) => {
+  const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const { options } = event.target
     const newValues = Array.from(options)
       .filter((option) => option.selected)
@@ -94,7 +103,7 @@ export const BCSelectFloatingFilter = ({
     }
   }
 
-  const handleClear = (event) => {
+  const handleClear = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     setSelectedValues([])
 

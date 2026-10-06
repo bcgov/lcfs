@@ -1,7 +1,9 @@
 import colors from '@/themes/base/colors'
 
+/** @returns {import('ag-grid-community').CellStyle | undefined} */
 export const changelogCellStyle = (params, key) => {
   if (params.data.actionType === 'UPDATE' && params.data.diff?.includes(key)) {
+    /** @type {import('ag-grid-community').CellStyle} */
     const style = { backgroundColor: colors.alerts.warning.background }
     if (params.data.updated) {
       style.textDecoration = 'line-through'

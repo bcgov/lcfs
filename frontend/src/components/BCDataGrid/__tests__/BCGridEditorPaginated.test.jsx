@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import React, { createRef } from 'react'
 import { BCGridEditorPaginated } from '../BCGridEditorPaginated'
@@ -97,6 +97,7 @@ vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
 }))
 
 // Simplified grid API mock
+let mockBCGridBaseProps
 const mockGridApi = {
   applyTransaction: vi.fn(() => ({ add: [{ rowIndex: 0 }] })),
   getAllDisplayedColumns: vi.fn(() => [
@@ -116,6 +117,7 @@ const mockGridApi = {
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
   BCGridBase: React.forwardRef((props, ref) => {
+    mockBCGridBaseProps = props
     React.useImperativeHandle(ref, () => ({ api: mockGridApi, columnApi: {} }))
 
     React.useEffect(() => {
@@ -328,6 +330,29 @@ describe('BCGridEditorPaginated - Simplified Coverage Test Suite', () => {
     )
 
     expect(screen.getByTestId('bc-grid-base')).toBeInTheDocument()
+  })
+
+  it('passes the original clicked cell event to the action callback', async () => {
+    const onAction = vi.fn()
+    const target = document.createElement('button')
+    target.dataset.action = 'delete'
+    const rowData = { id: 'row-1', name: 'Fuel' }
+    const cellEvent = {
+      column: { getColId: () => 'action' },
+      data: rowData,
+      node: { data: rowData },
+      event: { target },
+      api: mockGridApi
+    }
+
+    render(<BCGridEditorPaginated {...defaultProps} onAction={onAction} />)
+
+    await act(async () => {
+      await mockBCGridBaseProps.onCellClicked(cellEvent)
+    })
+
+    expect(onAction).toHaveBeenCalledOnce()
+    expect(onAction).toHaveBeenCalledWith('delete', cellEvent)
   })
 
   it('handles custom pagination page size selector', () => {

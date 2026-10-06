@@ -1,4 +1,3 @@
-// @ts-nocheck
 import DoneAll from '@mui/icons-material/DoneAll'
 import Warning from '@mui/icons-material/Warning'
 import Icon from '@mui/material/Icon'
@@ -21,7 +20,7 @@ export const ValidationRenderer2 = ({ data }: ValidationRenderer2Props) => {
           <Icon
             aria-label="shows sign for validation"
             data-testid="validation-sign"
-            size="medium"
+            fontSize="medium"
           >
             <Warning htmlColor="#fcba19" />
           </Icon>
@@ -33,7 +32,7 @@ export const ValidationRenderer2 = ({ data }: ValidationRenderer2Props) => {
           <Icon
             aria-label="shows sign for validation"
             data-testid="validation-sign"
-            size="medium"
+            fontSize="medium"
           >
             <Warning color="error" />
           </Icon>
@@ -45,7 +44,7 @@ export const ValidationRenderer2 = ({ data }: ValidationRenderer2Props) => {
           <Icon
             aria-label="shows sign for validation"
             data-testid="validation-sign"
-            size="medium"
+            fontSize="medium"
           >
             <DoneAll color="success" />
           </Icon>

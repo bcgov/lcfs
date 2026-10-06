@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import TextField from '@mui/material/TextField'
 import { styled } from '@mui/material/styles'
+import type { ChangeEvent } from 'react'
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiInputBase-input': {
@@ -29,10 +29,9 @@ export interface NumberEditorProps {
   column?: any
   min?: number
   max?: number
-  [key: string]: any
 }
 
-export const NumberEditor = forwardRef(
+export const NumberEditor = forwardRef<unknown, NumberEditorProps>(
   (
     {
       value,
@@ -41,15 +40,13 @@ export const NumberEditor = forwardRef(
       rowIndex,
       column,
       ...props
-    }: NumberEditorProps,
+    }: Omit<NumberEditorProps, 'ref'>,
     ref
   ) => {
-    const inputRef = useRef(null)
+    const inputRef = useRef<HTMLInputElement | null>(null)
 
     useEffect(() => {
-      if (inputRef) {
-        inputRef.current.focus()
-      }
+      inputRef.current?.focus()
     }, [])
 
     useImperativeHandle(ref, () => {
@@ -66,21 +63,23 @@ export const NumberEditor = forwardRef(
       }
     })
 
-    const formatNumber = (num) => {
-      if (isNaN(num) || num === undefined || num === null) return 0
+    const formatNumber = (num: string | number | undefined) => {
+      if (num === undefined || num === null || Number.isNaN(Number(num)))
+        return 0
       return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
     }
 
-    const onInputChange = (event) => {
+    const onInputChange = (event: ChangeEvent<HTMLInputElement>) => {
       const newValue = event.target.value.replace(/,/g, '')
       if (
         newValue === '' ||
-        (isFinite(newValue) && !isNaN(parseFloat(newValue)))
+        (Number.isFinite(Number(newValue)) &&
+          !Number.isNaN(parseFloat(newValue)))
       ) {
         let numValue = parseFloat(newValue)
-        if (numValue < props.min) numValue = props.min
-        if (numValue > props.max) numValue = props.max
-        onValueChange(parseInt(numValue) || 0)
+        if (props.min != null && numValue < props.min) numValue = props.min
+        if (props.max != null && numValue > props.max) numValue = props.max
+        onValueChange(Number.isNaN(numValue) ? 0 : Math.trunc(numValue))
       }
     }
 

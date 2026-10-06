@@ -1,7 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// @ts-nocheck
 import PropTypes from 'prop-types'
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type ChangeEvent, type MouseEvent } from 'react'
 import Pagination from '@mui/material/Pagination'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
@@ -11,14 +10,18 @@ import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined'
 import BCBox from '@/components/BCBox'
 import * as XLSX from 'xlsx'
 import { copyToClipboard } from '@/utils/clipboard'
+import type { BCGridRef } from '../../types'
 import type { TablePaginationActionsProps } from '@mui/material/TablePagination/TablePaginationActions'
+
+// MUI forwards this prop to its styled root, although PaginationProps omits it.
+const paginationRootProps: { component: 'div' } = { component: 'div' }
 
 export interface BCPaginationActionsProps extends TablePaginationActionsProps {
   enableResetButton?: boolean
   enableCopyButton?: boolean
   enableExportButton?: boolean
   exportName?: string
-  gridRef?: any
+  gridRef?: BCGridRef
   [key: string]: any
 }
 
@@ -47,36 +50,40 @@ export function BCPaginationActions({
       onlySelected: true,
       skipColumnHeaders: true
     })
-    const success = await copyToClipboard(selectedRows)
+    const success = await copyToClipboard(selectedRows ?? '')
     if (!success) {
       console.error('Failed to copy data to clipboard')
     }
   }, [gridRef])
 
   const handleDownloadData = useCallback(() => {
-    const rows = []
+    const rows: Record<string, unknown>[] = []
     gridRef?.current?.api?.forEachNodeAfterFilterAndSort((node) => {
-      rows.push(node.data)
+      if (node.data) rows.push(node.data)
     })
 
     // Get column definitions and create a mapping from field to headerName
-    const columnDefs = gridRef?.current?.api?.getColumnDefs()
-    const fieldToHeaderNameMap = columnDefs.reduce((map, colDef) => {
-      map[colDef.field] = colDef.headerName
+    const columnDefs = gridRef?.current?.api?.getColumnDefs() ?? []
+    const fieldToHeaderNameMap = columnDefs.reduce<
+      Record<string, string | undefined>
+    >((map, colDef) => {
+      if ('field' in colDef && colDef.field)
+        map[colDef.field] = colDef.headerName
       return map
     }, {})
 
     // Rename keys in rows using the fieldToHeaderNameMap and format dates
     const renamedRows = rows.map((row) => {
-      const renamedRow = {}
+      const renamedRow: Record<string, unknown> = {}
       for (const key in row) {
-        if (fieldToHeaderNameMap[key]) {
+        const headerName = fieldToHeaderNameMap[key]
+        if (headerName) {
           let value = row[key]
           // Check if the value is a date string in ISO format
           if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
             value = value.split('T')[0] // Extract the date part
           }
-          renamedRow[fieldToHeaderNameMap[key]] = value
+          renamedRow[headerName] = value
         }
       }
       return renamedRow
@@ -85,9 +92,9 @@ export function BCPaginationActions({
     const worksheet = XLSX.utils.json_to_sheet(renamedRows)
 
     // Adjust column widths
-    const colWidths = renamedRows.reduce((widths, row) => {
+    const colWidths = renamedRows.reduce<number[]>((widths, row) => {
       Object.keys(row).forEach((key, i) => {
-        const value = row[key] ? row[key].toString() : ''
+        const value = row[key] ? String(row[key]) : ''
         widths[i] = Math.max(widths[i] || 12, value.length)
       })
       return widths
@@ -100,7 +107,7 @@ export function BCPaginationActions({
 
     // Generate file name
     const formattedDate = new Date().toISOString().split('T')[0]
-    const fileName = `${exportName
+    const fileName = `${(exportName ?? 'export')
       .toLowerCase()
       .replace(/\s+/g, '_')}_${formattedDate}.xls`
 
@@ -108,21 +115,24 @@ export function BCPaginationActions({
     XLSX.writeFile(workbook, fileName, { bookType: 'xls', type: 'binary' })
   }, [gridRef, exportName])
 
-  const handlePageChange = useCallback((event, newPage) => {
-    if (currentPage === newPage) {
-      return
-    }
-    setCurrentPage(newPage)
-    gridRef?.current?.api?.showLoadingOverlay()
-    onPageChange(event, newPage - 1)
-  })
+  const handlePageChange = useCallback(
+    (event: ChangeEvent<unknown>, newPage: number) => {
+      if (currentPage === newPage) {
+        return
+      }
+      setCurrentPage(newPage)
+      gridRef?.current?.api?.showLoadingOverlay()
+      onPageChange(event as MouseEvent<HTMLButtonElement>, newPage - 1)
+    },
+    [currentPage, gridRef, onPageChange]
+  )
 
   return (
     <BCBox
       sx={{ flexShrink: 0, ml: 2.5, display: 'flex', alignItems: 'center' }}
     >
       <Pagination
-        component="div"
+        {...paginationRootProps}
         count={Math.ceil(count / rowsPerPage)}
         color="primary"
         page={page + 1}

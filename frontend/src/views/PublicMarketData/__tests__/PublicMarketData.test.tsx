@@ -5,8 +5,8 @@ import { test } from '@/tests/utils/fixtures'
 import { PublicMarketData } from '../PublicMarketData'
 
 vi.mock('echarts-for-react', () => ({ default: () => null }))
-vi.mock('html2canvas', () => ({ default: vi.fn() }), { virtual: true })
-vi.mock('jspdf', () => ({ default: vi.fn() }), { virtual: true })
+vi.mock('html2canvas', () => ({ default: vi.fn() }))
+vi.mock('jspdf', () => ({ default: vi.fn() }))
 vi.mock('xlsx', () => ({
   utils: {
     json_to_sheet: vi.fn(() => ({

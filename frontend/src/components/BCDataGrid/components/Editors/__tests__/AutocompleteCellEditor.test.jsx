@@ -4,6 +4,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createRef } from 'react'
+import Autocomplete from '@mui/material/Autocomplete'
 import { AutocompleteCellEditor } from '../AutocompleteCellEditor'
 
 // Mock MUI components
@@ -212,6 +213,13 @@ describe('AutocompleteCellEditor Component', () => {
       render(<AutocompleteCellEditor {...props} ref={mockRef} />)
 
       expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+
+    it('formats numeric option labels as strings', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      const autocompleteProps = vi.mocked(Autocomplete).mock.lastCall?.[0]
+      expect(autocompleteProps.getOptionLabel(42)).toBe('42')
     })
   })
 

@@ -1,5 +1,4 @@
-// @ts-nocheck
-import type { ColDef } from 'ag-grid-community'
+import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 import {
   numberFormatter,
   phoneNumberFormatter,
@@ -7,6 +6,14 @@ import {
 } from '@/utils/formatters'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { RoleRenderer } from '@/utils/grid/cellRenderers'
+
+interface CreditMarketGridRow {
+  creditsToSell?: number | string | null
+  isSeller?: boolean
+  isBuyer?: boolean
+  roleInMarket?: string
+  changes?: Array<{ field: string; oldValue?: unknown; newValue?: unknown }>
+}
 
 // Column definitions for the credit trading market table
 export const creditMarketColDefs = (
@@ -50,10 +57,10 @@ export const creditMarketColDefs = (
     sortable: true,
     filter: 'agSetColumnFilter',
     floatingFilter: true,
-    cellRenderer: (params) => {
+    cellRenderer: (params: ICellRendererParams<CreditMarketGridRow>) => {
       const roles = []
-      if (params.data.isSeller) roles.push('Seller')
-      if (params.data.isBuyer) roles.push('Buyer')
+      if (params.data?.isSeller) roles.push('Seller')
+      if (params.data?.isBuyer) roles.push('Buyer')
       return roles.length > 0 ? (
         <RoleRenderer value={roles} disableLink={true} />
       ) : (
@@ -175,9 +182,9 @@ export const creditMarketAuditLogColDefs = (
     wrapText: true,
     autoHeight: true,
     valueGetter: (params) =>
-      formatAuditChanges(params.data?.changes, t).join('; '),
-    cellRenderer: (params) => {
-      const lines = formatAuditChanges(params.data?.changes, t)
+      formatAuditChanges(params.data?.changes ?? [], t).join('; '),
+    cellRenderer: (params: ICellRendererParams<CreditMarketGridRow>) => {
+      const lines = formatAuditChanges(params.data?.changes ?? [], t)
       if (lines.length === 0) {
         return t('creditMarket:noChangeDetails', 'Not recorded')
       }
@@ -208,7 +215,7 @@ export const creditMarketAuditLogColDefs = (
     sortable: true,
     filter: false,
     floatingFilter: false,
-    cellRenderer: (params) => {
+    cellRenderer: (params: ICellRendererParams<CreditMarketGridRow>) => {
       const roles = String(params.value || '')
         .split(',')
         .map((role) => role.trim())

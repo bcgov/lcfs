@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ColDef } from 'ag-grid-community'
 import { TFunction } from 'i18next'
 import { Link } from 'react-router-dom'
@@ -6,6 +5,7 @@ import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters
 import { fuelCodeColDefs as idirFuelCodeColDefs } from '@/views/FuelCodes/_schema'
 import { ROUTES, buildPath } from '@/routes/routes'
 import BCBadge from '@/components/BCBadge'
+import type { BCBadgeColor } from '@/components/BCBadge/BCBadgeRoot'
 import BCBox from '@/components/BCBox'
 import { getAllFuelCodeStatuses } from '@/constants/statuses'
 
@@ -23,7 +23,7 @@ export const formatDate = (value: string | null | undefined): string => {
 }
 
 export const formatCarbonIntensity = (
-  value: number | null | undefined
+  value: number | string | null | undefined
 ): string => {
   if (value === null || value === undefined || value === '') return ''
   const num = Number(value)
@@ -126,7 +126,7 @@ const linkCellRenderer = (originalRenderer?: ColDef['cellRenderer']) => {
 const FuelCodeStatusBadge = (params: any) => {
   const statusArr = getAllFuelCodeStatuses()
   const statusIndex = statusArr.indexOf(params.data?.status)
-  const statusColors = ['info', 'info', 'success', 'error']
+  const statusColors: BCBadgeColor[] = ['info', 'info', 'success', 'error']
 
   return (
     <BCBox sx={{ width: '100%', height: '100%' }}>

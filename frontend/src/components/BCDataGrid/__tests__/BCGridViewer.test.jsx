@@ -3,6 +3,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { BCGridViewer } from '../BCGridViewer'
+import { createAgGridFilterPills } from '@/components/FilterToolbar/filterUtils'
 
 // Unmock the components we're testing (overrides global mocks)
 vi.unmock('@/components/BCDataGrid/BCGridViewer')
@@ -521,5 +522,39 @@ describe('BCGridViewer Component', () => {
         )
       }).not.toThrow()
     })
+  })
+})
+
+describe('Compound filter pill regressions', () => {
+  it('creates a removable pill for each side of a compound filter', () => {
+    const onRemove = vi.fn()
+    const pills = createAgGridFilterPills({
+      filters: [
+        {
+          field: 'fuelType',
+          operator: 'OR',
+          condition1: {
+            filterType: 'text',
+            type: 'contains',
+            filter: 'diesel'
+          },
+          condition2: {
+            filterType: 'text',
+            type: 'contains',
+            filter: 'renewable'
+          }
+        }
+      ],
+      columnLabelLookup: { fuelType: 'Fuel type' },
+      onRemove
+    })
+
+    expect(pills.map(({ label, value }) => [label, value])).toEqual([
+      ['Fuel type', 'diesel'],
+      ['Fuel type', 'renewable']
+    ])
+
+    pills[1].onRemove()
+    expect(onRemove).toHaveBeenCalledWith('fuelType', 'renewable')
   })
 })

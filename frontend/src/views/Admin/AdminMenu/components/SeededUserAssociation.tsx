@@ -34,6 +34,26 @@ interface SeededUserAssociationFormValues {
   saltPhrase: string
 }
 
+interface SeededUserOption {
+  userProfileId: number | string
+  keycloakUsername?: string
+  roles?: Array<{ name?: string | null }>
+  organization?: OrganizationOption | null
+  title?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  keycloakEmail?: string | null
+  email?: string | null
+  phone?: string | null
+  mobilePhone?: string | null
+  isActive?: boolean
+}
+
+interface OrganizationOption {
+  organizationId: number | string
+  name: string
+}
+
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
     padding: '7.5px 4px 7.5px 5px',
@@ -134,13 +154,15 @@ export const SeededUserAssociation = () => {
   const selectedRoles = useWatch({ control, name: 'selectedRoles' }) || []
 
   const {
-    data: seededUsers = [],
+    data: seededUsersData = [],
     isLoading: isUsersLoading,
     refetch: refetchSeededUsers
-  } = useSeededTestUsers(seedEnv)
+  } = useSeededTestUsers(seedEnv, {})
+  const seededUsers = seededUsersData as SeededUserOption[]
 
-  const { data: organizations = [], isLoading: isOrgsLoading } =
+  const { data: organizationsData = [], isLoading: isOrgsLoading } =
     useOrganizationNames(null, { orgFilter: 'all' })
+  const organizations = organizationsData as OrganizationOption[]
 
   const { mutate: updateUser, isPending } = useUpdateUser({
     onSuccess: () => {

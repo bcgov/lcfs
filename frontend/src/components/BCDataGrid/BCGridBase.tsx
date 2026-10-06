@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// @ts-nocheck
 import DataGridLoading from '@/components/DataGridLoading'
 import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
@@ -8,6 +7,15 @@ import {
   AllCommunityModule,
   ModuleRegistry,
   provideGlobalGridOptions
+} from 'ag-grid-community'
+import type {
+  CellClickedEvent,
+  CellKeyDownEvent,
+  DomLayoutType,
+  GridApi,
+  GridReadyEvent,
+  RowClickedEvent,
+  RowClassParams
 } from 'ag-grid-community'
 import {
   forwardRef,
@@ -19,7 +27,7 @@ import {
   useState
 } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import type { BCGridBaseProps } from './types'
+import type { BCGridBaseProps, BCGridRow } from './types'
 
 export type { BCGridBaseProps } from './types'
 
@@ -43,7 +51,13 @@ const defaultNoRowsOverlayTemplate = `
   </div>
 `
 
-export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
+// The ref exposes the mounted grid's enumerable instance fields and our helper.
+// Before the child grid attaches, those instance fields may be unavailable.
+export type BCGridBaseHandle = Partial<AgGridReact<BCGridRow>> & {
+  clearFilters?: () => void
+}
+
+export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
   (
     {
       autoSizeStrategy,
@@ -64,18 +78,18 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
   ) => {
     const [searchParams] = useSearchParams()
     const highlightedId = searchParams.get('hid')
-    const ref = useRef(null)
+    const ref = useRef<AgGridReact<BCGridRow> | null>(null)
 
     const loadingOverlayComponent = useMemo(() => DataGridLoading, [])
 
-    const getRowStyle = useCallback((params) => {
+    const getRowStyle = useCallback((params: RowClassParams<BCGridRow>) => {
       if (params.node.id === highlightedId) {
         return { backgroundColor: '#fade81' }
       }
     }, [])
 
-    const gridApiRef = useRef(null)
-    const [domLayout, setDomLayout] = useState('autoHeight')
+    const gridApiRef = useRef<GridApi<BCGridRow> | null>(null)
+    const [domLayout, setDomLayout] = useState<DomLayoutType>('autoHeight')
     const [height, setHeight] = useState('auto')
 
     const determineHeight = useCallback(() => {
@@ -96,7 +110,7 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
     }, [])
 
     const onGridReady = useCallback(
-      (params) => {
+      (params: GridReadyEvent<BCGridRow>) => {
         gridApiRef.current = params.api
         determineHeight()
         if (props.onGridReady && typeof props.onGridReady === 'function') {
@@ -124,25 +138,30 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
         api.setFilterModel(null)
 
         // Clear individual filters
-        const columns = api.getColumnDefs()
+        const columns = api.getColumnDefs() ?? []
         columns.forEach((column) => {
-          api.destroyFilter(column.field)
+          if ('field' in column && column.field) api.destroyFilter(column.field)
         })
       }
     }, [])
 
     // Handle keyboard events for row navigation
     const onCellKeyDown = useCallback(
-      (params) => {
-        const e = params.event
+      (params: CellKeyDownEvent<BCGridRow>) => {
+        const e = params.event as KeyboardEvent | null | undefined
+        if (!e) return
 
         if (e.code === 'Enter' && params.node) {
-          const cellEl = e.target.closest('.ag-cell')
+          const target = e.target
+          const cellEl =
+            target instanceof Element ? target.closest('.ag-cell') : null
           if (!cellEl) return
 
           // Look for links in the cell - check both direct children and nested elements
           // React Router's Link component renders as an <a> tag
-          const link = cellEl.querySelector('a[href], a[data-discover="true"]')
+          const link = cellEl.querySelector(
+            'a[href], a[data-discover="true"]'
+          ) as HTMLAnchorElement | null
           if (link) {
             e.preventDefault()
             e.stopPropagation()
@@ -151,7 +170,9 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
           }
 
           // Check for buttons that might be in the cell
-          const button = cellEl.querySelector('button:not([disabled])')
+          const button = cellEl.querySelector(
+            'button:not([disabled])'
+          ) as HTMLButtonElement | null
           if (button) {
             e.preventDefault()
             e.stopPropagation()
@@ -176,52 +197,62 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
     )
 
     // Helper to check if a column is a checkbox selection column
-    const isCheckboxColumn = useCallback((params) => {
-      const colId = params.column?.getColId?.()
-      const colDef = params.column?.getColDef?.()
+    const isCheckboxColumn = useCallback(
+      (params: CellClickedEvent<BCGridRow> | RowClickedEvent<BCGridRow>) => {
+        const column = 'column' in params ? params.column : undefined
+        const colId = column?.getColId?.()
+        const colDef = column?.getColDef?.()
 
-      // Check various possible selection column identifiers
-      if (
-        colId === '__select__' ||
-        colId === 'ag-Grid-SelectionColumn' ||
-        colId === 'ag-Grid-AutoColumn' ||
-        colDef?.checkboxSelection ||
-        colDef?.showDisabledCheckboxes !== undefined ||
-        // AG Grid's built-in selection column has no field and headerName
-        (colDef &&
-          !colDef.field &&
-          !colDef.headerName &&
-          colId?.startsWith?.('ag-Grid'))
-      ) {
-        return true
-      }
-
-      // Fallback: check if the clicked cell contains a checkbox (DOM-based check)
-      const target = params.event?.target
-      const cellElement = target?.closest?.('.ag-cell')
-      if (cellElement) {
-        // Check for checkbox input or AG Grid's selection wrapper
-        const hasCheckbox = cellElement.querySelector('input[type="checkbox"]')
-        const hasSelectionWrapper = cellElement.querySelector(
-          '.ag-selection-checkbox'
-        )
-        if (hasCheckbox || hasSelectionWrapper) {
+        // Check various possible selection column identifiers
+        if (
+          colId === '__select__' ||
+          colId === 'ag-Grid-SelectionColumn' ||
+          colId === 'ag-Grid-AutoColumn' ||
+          colDef?.checkboxSelection ||
+          colDef?.showDisabledCheckboxes !== undefined ||
+          // AG Grid's built-in selection column has no field and headerName
+          (colDef &&
+            !colDef.field &&
+            !colDef.headerName &&
+            colId?.startsWith?.('ag-Grid'))
+        ) {
           return true
         }
-      }
 
-      // Also check if we clicked directly on the selection checkbox wrapper
-      if (target?.closest?.('.ag-selection-checkbox')) {
-        return true
-      }
+        // Fallback: check if the clicked cell contains a checkbox (DOM-based check)
+        const target = params.event?.target
+        const cellElement =
+          target instanceof Element ? target.closest('.ag-cell') : null
+        if (cellElement) {
+          // Check for checkbox input or AG Grid's selection wrapper
+          const hasCheckbox = cellElement.querySelector(
+            'input[type="checkbox"]'
+          )
+          const hasSelectionWrapper = cellElement.querySelector(
+            '.ag-selection-checkbox'
+          )
+          if (hasCheckbox || hasSelectionWrapper) {
+            return true
+          }
+        }
 
-      return false
-    }, [])
+        // Also check if we clicked directly on the selection checkbox wrapper
+        if (
+          target instanceof Element &&
+          target.closest('.ag-selection-checkbox')
+        ) {
+          return true
+        }
+
+        return false
+      },
+      []
+    )
 
     // Handle cell clicks to expand checkbox click target area
     // Clicking anywhere in the checkbox cell will toggle the row selection
     const onCellClicked = useCallback(
-      (params) => {
+      (params: CellClickedEvent<BCGridRow>) => {
         if (isCheckboxColumn(params) && params.node) {
           // Check if the row is selectable
           const isRowSelectable = params.node.selectable !== false
@@ -229,7 +260,10 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
           if (isRowSelectable) {
             // Check if clicking directly on the checkbox input - if so, AG Grid handles it
             const target = params.event?.target
-            if (target?.tagName === 'INPUT' && target?.type === 'checkbox') {
+            if (
+              target instanceof HTMLInputElement &&
+              target.type === 'checkbox'
+            ) {
               return // Let AG Grid handle the direct checkbox click
             }
 
@@ -250,7 +284,7 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
 
     // Wrap onRowClicked to prevent navigation when clicking on checkbox cells
     const handleRowClicked = useCallback(
-      (params) => {
+      (params: RowClickedEvent<BCGridRow>) => {
         // Don't trigger row click handler for checkbox column clicks
         if (isCheckboxColumn(params)) {
           return
@@ -265,10 +299,13 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
     )
 
     // Expose clearFilters method through ref
-    useImperativeHandle(forwardedRef, () => ({
-      ...ref.current,
-      clearFilters
-    }))
+    useImperativeHandle(
+      forwardedRef,
+      (): BCGridBaseHandle => ({
+        ...ref.current,
+        clearFilters
+      })
+    )
 
     const resolvedAutoSizeStrategy = useMemo(() => {
       if (autoSizeStrategy === null) {

@@ -1,14 +1,20 @@
-// @ts-nocheck
-import type { ColDef } from 'ag-grid-community'
+import type {
+  ColDef,
+  ValueSetterParams,
+  ICellRendererParams
+} from 'ag-grid-community'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
-import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 import i18n from '@/i18n'
 import { currencyFormatter } from '@/utils/formatters'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
-const booleanValueFormatter = ({ value }) => {
+const booleanValueFormatter = ({
+  value
+}: {
+  value: boolean | null | undefined
+}) => {
   if (value === null || value === undefined) return ''
   return value ? 'Yes' : 'No'
 }
@@ -17,7 +23,7 @@ export const PENALTY_TYPES = [
   'Single contravention',
   'Continuous contravention'
 ]
-const booleanValueSetter = (field) => (params) => {
+const booleanValueSetter = (field: string) => (params: ValueSetterParams) => {
   const { newValue } = params
   if (newValue === undefined || newValue === null || newValue === '') {
     params.data[field] = false
@@ -32,7 +38,7 @@ const booleanValueSetter = (field) => (params) => {
   return true
 }
 
-export const penaltyLogColumnDefs = [
+export const penaltyLogColumnDefs: ColDef[] = [
   {
     headerName: i18n.t('org:penaltyLog.columns.complianceYear'),
     field: 'complianceYear',
@@ -49,7 +55,9 @@ export const penaltyLogColumnDefs = [
     headerName: i18n.t('org:penaltyLog.columns.penaltyAmount'),
     field: 'penaltyAmount',
     valueFormatter: ({ value }) =>
-      value === null || value === undefined ? '' : currencyFormatter(value),
+      value === null || value === undefined
+        ? ''
+        : String(currencyFormatter(value)),
     minWidth: 180
   },
   {
@@ -72,7 +80,7 @@ export const penaltyLogColumnDefs = [
   }
 ]
 
-export const discretionaryPenaltyLogColumnDefs = [
+export const discretionaryPenaltyLogColumnDefs: ColDef[] = [
   {
     headerName: i18n.t('org:penaltyLog.columns.compliancePeriod', {
       defaultValue: 'Compliance period'
@@ -95,7 +103,9 @@ export const discretionaryPenaltyLogColumnDefs = [
     }),
     field: 'penaltyAmount',
     valueFormatter: ({ value }) =>
-      value === null || value === undefined ? '' : currencyFormatter(value),
+      value === null || value === undefined
+        ? ''
+        : String(currencyFormatter(value)),
     minWidth: 250
   },
   {
@@ -153,7 +163,7 @@ export const penaltyLogEditorColDefs = (
   t: (key: string, options?: Record<string, unknown>) => string
 ): ColDef[] => [
   validation,
-  actions((params) => ({
+  actions((params: ICellRendererParams) => ({
     enableDuplicate: false,
     enableUndo: false,
     enableStatus: false,
@@ -222,7 +232,9 @@ export const penaltyLogEditorColDefs = (
     }),
     cellEditor: 'agNumberCellEditor',
     valueFormatter: ({ value }) =>
-      value === null || value === undefined ? '' : currencyFormatter(value),
+      value === null || value === undefined
+        ? ''
+        : String(currencyFormatter(value)),
     minWidth: 240
   },
   {

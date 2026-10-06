@@ -1,9 +1,8 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createRef } from 'react'
+import React, { createRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { BCGridBase } from '../BCGridBase'
-import { AgGridReact } from 'ag-grid-react'
 
 // Mock AgGridReact
 const mockGridApi = {
@@ -14,10 +13,17 @@ const mockGridApi = {
 }
 
 let shouldTriggerCallbacks = true
+let shouldAttachApiRef = true
+let capturedGridProps
 
 vi.mock('ag-grid-react', () => ({
-  AgGridReact: vi.fn((props) => {
+  AgGridReact: React.forwardRef((props, ref) => {
+    capturedGridProps = props
     const { onGridReady, onRowDataUpdated, getRowStyle } = props
+
+    React.useImperativeHandle(ref, () =>
+      shouldAttachApiRef ? { api: mockGridApi } : {}
+    )
 
     // Only trigger callbacks when enabled
     if (shouldTriggerCallbacks) {
@@ -84,6 +90,8 @@ describe('BCGridBase Component', () => {
     originalInnerHeight = window.innerHeight
     window.innerHeight = 800
     shouldTriggerCallbacks = true
+    shouldAttachApiRef = true
+    capturedGridProps = undefined
     mockGridApi.getDisplayedRowCount.mockReturnValue(10)
     mockGridApi.getColumnDefs.mockReturnValue([
       { field: 'test1' },
@@ -128,8 +136,7 @@ describe('BCGridBase Component', () => {
       )
 
       // Access the getRowStyle callback through AgGridReact mock
-      const getRowStyleCall =
-        vi.mocked(AgGridReact).mock.calls[0][0].getRowStyle
+      const getRowStyleCall = capturedGridProps.getRowStyle
       const result = getRowStyleCall({ node: { id: 'test123' } })
 
       expect(result).toEqual({ backgroundColor: '#fade81' })
@@ -144,8 +151,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      const getRowStyleCall =
-        vi.mocked(AgGridReact).mock.calls[0][0].getRowStyle
+      const getRowStyleCall = capturedGridProps.getRowStyle
       const result = getRowStyleCall({ node: { id: 'different123' } })
 
       expect(result).toEqual({})
@@ -160,8 +166,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      const getRowStyleCall =
-        vi.mocked(AgGridReact).mock.calls[0][0].getRowStyle
+      const getRowStyleCall = capturedGridProps.getRowStyle
       const result = getRowStyleCall({ node: { id: 'test123' } })
 
       expect(result).toEqual({})
@@ -179,8 +184,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      const getRowStyleCall =
-        vi.mocked(AgGridReact).mock.calls[0][0].getRowStyle
+      const getRowStyleCall = capturedGridProps.getRowStyle
       const result = getRowStyleCall({ node: { id: 'test123' } })
 
       expect(result).toEqual({
@@ -199,8 +203,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      const getRowStyleCall =
-        vi.mocked(AgGridReact).mock.calls[0][0].getRowStyle
+      const getRowStyleCall = capturedGridProps.getRowStyle
       const result = getRowStyleCall({ node: { id: 'test123' } })
 
       expect(result).toEqual({ backgroundColor: '#fade81' })
@@ -242,7 +245,7 @@ describe('BCGridBase Component', () => {
       })
 
       // Verify the AgGrid received domLayout: 'autoHeight' and height: 'auto'
-      const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
+      const agGridProps = capturedGridProps
       expect(agGridProps.domLayout).toBe('autoHeight')
       expect(agGridProps.containerStyle.height).toBe('auto')
     })
@@ -294,7 +297,7 @@ describe('BCGridBase Component', () => {
       })
 
       // Verify that the component handles row data updates
-      const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
+      const agGridProps = capturedGridProps
       expect(agGridProps.onRowDataUpdated).toBeDefined()
     })
   })
@@ -314,7 +317,7 @@ describe('BCGridBase Component', () => {
       })
 
       // onGridReady should have been called
-      const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
+      const agGridProps = capturedGridProps
       expect(agGridProps.onGridReady).toBeDefined()
     })
 
@@ -376,11 +379,7 @@ describe('BCGridBase Component', () => {
       const ref = createRef()
 
       // Mock ref.current to have no api
-      const MockAgGridWithoutApi = vi.fn(() => {
-        return <div data-testid="ag-grid-react">AgGrid</div>
-      })
-
-      vi.mocked(AgGridReact).mockImplementation(MockAgGridWithoutApi)
+      shouldAttachApiRef = false
 
       render(
         <TestWrapper>
@@ -400,6 +399,31 @@ describe('BCGridBase Component', () => {
       // No API calls should be made
       expect(mockGridApi.setFilterModel).not.toHaveBeenCalled()
       expect(mockGridApi.destroyFilter).not.toHaveBeenCalled()
+    })
+
+    it('clears filters after the nested grid ref becomes available', () => {
+      const ref = createRef()
+      shouldAttachApiRef = false
+      const { rerender } = render(
+        <TestWrapper>
+          <BCGridBase ref={ref} />
+        </TestWrapper>
+      )
+
+      expect(() => ref.current.clearFilters()).not.toThrow()
+      expect(mockGridApi.setFilterModel).not.toHaveBeenCalled()
+
+      shouldAttachApiRef = true
+      rerender(
+        <TestWrapper>
+          <BCGridBase ref={ref} />
+        </TestWrapper>
+      )
+
+      act(() => ref.current.clearFilters())
+      expect(mockGridApi.setFilterModel).toHaveBeenCalledWith(null)
+      expect(mockGridApi.destroyFilter).toHaveBeenCalledWith('test1')
+      expect(mockGridApi.destroyFilter).toHaveBeenCalledWith('test2')
     })
   })
 
@@ -492,7 +516,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
+      const agGridProps = capturedGridProps
       expect(agGridProps.autoSizeStrategy).toEqual({
         defaultMinWidth: 50,
         type: 'fitGridWidth',
@@ -513,7 +537,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
+      const agGridProps = capturedGridProps
       expect(agGridProps.columnDefs).toEqual([{ field: 'test' }])
       expect(agGridProps.rowData).toEqual([{ test: 'value' }])
       expect(agGridProps.customProp).toBe('custom')
@@ -526,7 +550,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
+      const agGridProps = capturedGridProps
 
       // Verify essential props
       expect(agGridProps.domLayout).toBe('autoHeight')
@@ -556,7 +580,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
+      const agGridProps = capturedGridProps
       expect(agGridProps.rowHeight).toBe(45) // ROW_HEIGHT constant
     })
   })

@@ -8,20 +8,21 @@ import { test } from '@/tests/utils/fixtures'
 vi.mock('@/hooks/useOrganization')
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => (key === 'balance' ? 'Balance' : key)
+    t: (key: string) => (key === 'balance' ? 'Balance' : key)
   })
 }))
 
 const mockedUseCurrentOrgBalance = useCurrentOrgBalance as unknown as Mock
+const getItemMock = vi.fn<Storage['getItem']>()
 
 describe('SupplierBalance', () => {
   // Mock sessionStorage
   const sessionStorageMock: Storage = {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
-    clear: vi.fn(),
-    removeItem: vi.fn(),
-    key: vi.fn(),
+    getItem: getItemMock,
+    setItem: vi.fn<Storage['setItem']>(),
+    clear: vi.fn<Storage['clear']>(),
+    removeItem: vi.fn<Storage['removeItem']>(),
+    key: vi.fn<Storage['key']>(),
     length: 0
   }
 
@@ -40,7 +41,7 @@ describe('SupplierBalance', () => {
     })
 
     // Default to showing balance
-    sessionStorageMock.getItem.mockReturnValue('1')
+    getItemMock.mockReturnValue('1')
   })
 
   test.afterEach(() => {
@@ -84,7 +85,7 @@ describe('SupplierBalance', () => {
     const balanceSpan =
       screen.getByText(/Balance:/).nextSibling ||
       screen.getByText(/Balance:/).parentElement
-    expect(balanceSpan.textContent).toContain('****')
+    expect(balanceSpan?.textContent).toContain('****')
 
     // Verify sessionStorage was updated
     expect(sessionStorageMock.setItem).toHaveBeenCalledWith('showBalance', '0')

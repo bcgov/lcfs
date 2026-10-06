@@ -1,5 +1,12 @@
-// @ts-nocheck
-import type { ColDef } from 'ag-grid-community'
+import type {
+  ColDef,
+  CellClassParams,
+  ICellRendererParams,
+  ICellEditorParams,
+  ValueSetterParams
+} from 'ag-grid-community'
+import type { ReactNode } from 'react'
+import type { AxiosInstance } from 'axios'
 import type { GridErrors, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
@@ -22,21 +29,24 @@ const getFieldOptions = (optionsData?: OptionsData) => ({
   feedstockMisc: optionsData?.fieldOptions?.feedstockMisc || []
 })
 
-const cellErrorStyle = (params) => {
+const cellErrorStyle = (params: CellClassParams) => {
   const validationFields =
     params.data.validationErrors ||
     (typeof params.data.validationMsg === 'object'
       ? params.data.validationMsg
       : null)
 
-  if (validationFields?.[params.colDef.field]) {
+  if (params.colDef.field && validationFields?.[params.colDef.field]) {
     return { borderColor: 'red' }
   }
   return { borderColor: 'unset' }
 }
 
-const createCellRenderer = (field, customRenderer = null) => {
-  const CellRenderer = (params) => {
+const createCellRenderer = (
+  field: string,
+  customRenderer: ((params: ICellRendererParams) => ReactNode) | null = null
+) => {
+  const CellRenderer = (params: ICellRendererParams) => {
     const hasError =
       params.data.id && params.context.errors[params.data.id]?.includes(field)
     const content = customRenderer
@@ -51,27 +61,29 @@ const createCellRenderer = (field, customRenderer = null) => {
   return CellRenderer
 }
 
-const getTransportModeName = (value) => {
+const getTransportModeName = (value: unknown): string => {
   if (!value) return ''
   if (typeof value === 'string' || typeof value === 'number') {
     return value.toString()
   }
+  if (typeof value !== 'object') return ''
+  const record = value as Record<string, unknown>
   return (
-    getTransportModeName(value.transportMode) ||
-    getTransportModeName(value.transport_mode) ||
-    getTransportModeName(value.mode) ||
-    getTransportModeName(value.name) ||
-    getTransportModeName(value.label) ||
-    getTransportModeName(value.value) ||
-    getTransportModeName(value.feedstockFuelTransportMode) ||
-    getTransportModeName(value.feedstock_fuel_transport_mode) ||
-    getTransportModeName(value.finishedFuelTransportMode) ||
-    getTransportModeName(value.finished_fuel_transport_mode)
+    getTransportModeName(record.transportMode) ||
+    getTransportModeName(record.transport_mode) ||
+    getTransportModeName(record.mode) ||
+    getTransportModeName(record.name) ||
+    getTransportModeName(record.label) ||
+    getTransportModeName(record.value) ||
+    getTransportModeName(record.feedstockFuelTransportMode) ||
+    getTransportModeName(record.feedstock_fuel_transport_mode) ||
+    getTransportModeName(record.finishedFuelTransportMode) ||
+    getTransportModeName(record.finished_fuel_transport_mode)
   )
 }
 
-export const normalizeTransportModeDistances = (value) => {
-  const values = Array.isArray(value)
+export const normalizeTransportModeDistances = (value: unknown) => {
+  const values: unknown[] = Array.isArray(value)
     ? value
     : typeof value === 'string' && value.trim()
       ? value.split(',').map((item) => item.trim())
@@ -83,21 +95,21 @@ export const normalizeTransportModeDistances = (value) => {
       if (typeof item === 'object') {
         return {
           transportMode: getTransportModeName(item),
-          distance: item.distance ?? ''
+          distance: ('distance' in item ? item.distance : undefined) ?? ''
         }
       }
       return { transportMode: getTransportModeName(item), distance: '' }
     })
-    .filter((item) => item?.transportMode)
+    .filter((item): item is NonNullable<typeof item> => !!item?.transportMode)
 }
 
-export const normalizeTransportModeDistancesForSave = (value) =>
+export const normalizeTransportModeDistancesForSave = (value: unknown) =>
   normalizeTransportModeDistances(value).map((item) => ({
     transport_mode: item.transportMode,
     distance: item.distance
   }))
 
-const renderTransportModeDistances = (params) => {
+const renderTransportModeDistances = (params: ICellRendererParams) => {
   const values = normalizeTransportModeDistances(params.value)
   if (!values.length) return <BCTypography variant="body4">Select</BCTypography>
   return (
@@ -112,7 +124,8 @@ const renderTransportModeDistances = (params) => {
   )
 }
 
-const transportModeValueSetter = (params) => {
+const transportModeValueSetter = (params: ValueSetterParams) => {
+  if (!params.colDef.field) return false
   params.data[params.colDef.field] = normalizeTransportModeDistances(
     params.newValue
   )
@@ -121,7 +134,7 @@ const transportModeValueSetter = (params) => {
 
 export const fuelCodeColDefs = (
   optionsData: OptionsData | undefined,
-  errors: GridErrors,
+  _errors: GridErrors,
   isCreate: boolean,
   canEdit: boolean,
   isNotesRequired: boolean = false,
@@ -154,7 +167,7 @@ export const fuelCodeColDefs = (
       headerComponent: canEdit ? RequiredHeader : undefined,
       headerName: i18n.t('fuelCode:fuelCodeColLabels.prefix'),
       cellEditor: AutocompleteCellEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         options:
           optionsData?.fuelCodePrefixes
             ?.filter((obj) => obj.prefix)
@@ -212,9 +225,15 @@ export const fuelCodeColDefs = (
       cellDataType: 'text',
       cellRenderer: createCellRenderer('fuelSuffix'),
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'fuel-code-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          queryKey,
+          client
+        }: {
+          queryKey: [string, string]
+          client: AxiosInstance
+        }) => {
           let path = apiRoutes.fuelCodeSearch
           path += `prefix=${encodeURIComponent(
             params.data.prefix || 'BCLCF'
@@ -236,7 +255,7 @@ export const fuelCodeColDefs = (
         return params.data.fuelSuffix
       },
       minWidth: 90,
-      tooltipValueGetter: (p) => 'select the next fuel code version'
+      tooltipValueGetter: () => 'select the next fuel code version'
     },
     {
       field: 'carbonIntensity',
@@ -267,9 +286,15 @@ export const fuelCodeColDefs = (
       headerName: i18n.t('fuelCode:fuelCodeColLabels.company'),
       cellDataType: 'text',
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'company-name-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          queryKey,
+          client
+        }: {
+          queryKey: [string, string]
+          client: AxiosInstance
+        }) => {
           let path = apiRoutes.fuelCodeSearch
           path += `company=${encodeURIComponent(queryKey[1])}`
           const response = await client.get(path)
@@ -296,9 +321,15 @@ export const fuelCodeColDefs = (
       headerName: i18n.t('fuelCode:fuelCodeColLabels.contactName'),
       cellEditor: AsyncSuggestionEditor,
       cellDataType: 'text',
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'contact-name-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          queryKey,
+          client
+        }: {
+          queryKey: [string, string]
+          client: AxiosInstance
+        }) => {
           let path = apiRoutes.fuelCodeSearch
           path += `company=${encodeURIComponent(
             params.data.company
@@ -319,9 +350,15 @@ export const fuelCodeColDefs = (
       headerName: i18n.t('fuelCode:fuelCodeColLabels.contactEmail'),
       cellEditor: AsyncSuggestionEditor,
       cellDataType: 'text',
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'contact-email-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          queryKey,
+          client
+        }: {
+          queryKey: [string, string]
+          client: AxiosInstance
+        }) => {
           let path = apiRoutes.fuelCodeSearch
           path += `company=${encodeURIComponent(
             params.data.company
@@ -529,9 +566,15 @@ export const fuelCodeColDefs = (
       suppressKeyboardEvent,
       cellDataType: 'text',
       cellRenderer: createCellRenderer('fuelProductionFacilityCity'),
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'fuel-production-city-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          queryKey,
+          client
+        }: {
+          queryKey: [string, string]
+          client: AxiosInstance
+        }) => {
           let path = apiRoutes.fuelCodeSearch
           path += `fpCity=${encodeURIComponent(queryKey[1])}`
           const response = await client.get(path)
@@ -552,7 +595,7 @@ export const fuelCodeColDefs = (
         // Split the newValue by comma and trim spaces
         const [city = '', province = '', country = ''] = params.newValue
           .split(',')
-          .map((val) => val.trim())
+          .map((val: string) => val.trim())
         params.data.fuelProductionFacilityCity = city
         params.data.fuelProductionFacilityProvinceState = province
         if (params.data.prefix !== 'C-BCLCF')
@@ -572,9 +615,15 @@ export const fuelCodeColDefs = (
       suppressKeyboardEvent,
       cellDataType: 'text',
       cellRenderer: createCellRenderer('fuelProductionFacilityProvinceState'),
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'fuel-production-province-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          queryKey,
+          client
+        }: {
+          queryKey: [string, string]
+          client: AxiosInstance
+        }) => {
           let path = apiRoutes.fuelCodeSearch
           path += `fpProvince=${encodeURIComponent(queryKey[1])}`
           const response = await client.get(path)
@@ -592,7 +641,7 @@ export const fuelCodeColDefs = (
         }
         const [province = '', country = ''] = params.newValue
           .split(',')
-          .map((val) => val.trim())
+          .map((val: string) => val.trim())
         params.data.fuelProductionFacilityProvinceState = province
         if (params.data.prefix !== 'C-BCLCF')
           params.data.fuelProductionFacilityCountry = country
@@ -615,9 +664,15 @@ export const fuelCodeColDefs = (
       suppressKeyboardEvent,
       cellDataType: 'text',
       cellRenderer: createCellRenderer('fuelProductionFacilityCountry'),
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'fuel-production-country-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          queryKey,
+          client
+        }: {
+          queryKey: [string, string]
+          client: AxiosInstance
+        }) => {
           let path = apiRoutes.fuelCodeSearch
           path += `fpCountry=${encodeURIComponent(queryKey[1])}`
           const response = await client.get(path)
@@ -756,9 +811,15 @@ export const fuelCodeColDefs = (
       editable: canEdit,
       headerName: i18n.t('fuelCode:fuelCodeColLabels.formerCompany'),
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'former-company-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          queryKey,
+          client
+        }: {
+          queryKey: [string, string]
+          client: AxiosInstance
+        }) => {
           let path = apiRoutes.fuelCodeSearch
           path += `formerCompany=${encodeURIComponent(queryKey[1])}`
           const response = await client.get(path)
@@ -766,7 +827,7 @@ export const fuelCodeColDefs = (
         },
         optionLabel: 'label',
         valueKey: 'value',
-        groupBy: (option) => {
+        groupBy: (option: string | { source?: string } | null | undefined) => {
           if (!option || typeof option === 'string') return ''
           return option.source === 'organization'
             ? 'Organizations'

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import BCBox from '@/components/BCBox'
 import { useApiService } from '@/services/useApiService'
 import Autocomplete from '@mui/material/Autocomplete'
@@ -8,9 +7,8 @@ import TextField from '@mui/material/TextField'
 import { useQuery } from '@tanstack/react-query'
 import match from 'autosuggest-highlight/match'
 import parse from 'autosuggest-highlight/parse'
-import { debounce } from 'lodash'
-import { useCallback, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react'
 
 export interface AsyncSuggestionEditorProps {
   value?: any
@@ -23,7 +21,7 @@ export interface AsyncSuggestionEditorProps {
     queryKey: readonly unknown[]
   }) => Promise<any[]>
   debounceValue?: number
-  onKeyDownCapture?: (event: KeyboardEvent) => void
+  onKeyDownCapture?: (event: ReactKeyboardEvent<HTMLDivElement>) => void
   api?: any
   optionLabel?: string
   valueKey?: string
@@ -59,7 +57,8 @@ export const AsyncSuggestionEditor = ({
   groupBy
 }: AsyncSuggestionEditorProps) => {
   const [inputValue, setInputValue] = useState('')
-  const [highlightedOption, setHighlightedOption] = useState(null)
+  const [highlightedOption, setHighlightedOption] = useState<any | null>(null)
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const apiService = useApiService()
 
   const { data: options = [], isLoading } = useQuery({
@@ -71,17 +70,30 @@ export const AsyncSuggestionEditor = ({
   })
 
   const debouncedSetInputValue = useCallback(
-    debounce((newInputValue) => setInputValue(newInputValue), debounceValue),
+    (newInputValue: string) => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current)
+      debounceTimer.current = setTimeout(
+        () => setInputValue(newInputValue),
+        debounceValue
+      )
+    },
     [debounceValue]
   )
 
-  const handleInputChange = (_, newInputValue) => {
+  useEffect(
+    () => () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    },
+    []
+  )
+
+  const handleInputChange = (_event: SyntheticEvent, newInputValue: string) => {
     debouncedSetInputValue(newInputValue)
     // Update the value based on the input
     onValueChange(newInputValue)
   }
 
-  const handleChange = (_, newValue) => {
+  const handleChange = (_event: SyntheticEvent, newValue: any) => {
     if (typeof newValue === 'string') {
       debouncedSetInputValue(newValue)
       onValueChange(newValue)
@@ -94,7 +106,7 @@ export const AsyncSuggestionEditor = ({
     }
   }
 
-  const handleKeyDown = (event) => {
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (onKeyDownCapture) {
       onKeyDownCapture(event)
     }

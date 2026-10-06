@@ -22,7 +22,7 @@ type RoleSwitcherMockProps = {
 const mockRefetch = vi.fn()
 const mockMarkAsRead = vi.fn()
 const mockNavigate = vi.fn()
-const mockRoleSwitcher = vi.fn<void, [RoleSwitcherMockProps]>()
+const mockRoleSwitcher = vi.fn<(props: RoleSwitcherMockProps) => void>()
 const originalRoleSwitcherFlag = CONFIG.feature_flags.roleSwitcher
 const initialHiddenDescriptor = Object.getOwnPropertyDescriptor(
   document,
@@ -30,7 +30,7 @@ const initialHiddenDescriptor = Object.getOwnPropertyDescriptor(
 )
 
 const getLastRoleSwitcherProps = () =>
-  mockRoleSwitcher.mock.calls.at(-1)?.[0] as RoleSwitcherMockProps | undefined
+  mockRoleSwitcher.mock.calls[mockRoleSwitcher.mock.calls.length - 1]?.[0]
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useNotifications')
@@ -58,7 +58,10 @@ vi.mock('react-router-dom', async () => {
 })
 
 vi.mock('../RoleSwitcher', async () => {
-  const { CONFIG: actualConfig } = await vi.importActual('@/constants/config')
+  const { CONFIG: actualConfig } =
+    await vi.importActual<typeof import('@/constants/config')>(
+      '@/constants/config'
+    )
   return {
     RoleSwitcher: (props: RoleSwitcherMockProps) => {
       mockRoleSwitcher(props)
@@ -88,7 +91,7 @@ vi.mock('@react-keycloak/web', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
@@ -175,7 +178,7 @@ describe('UserProfileActions', () => {
     if (initialHiddenDescriptor) {
       Object.defineProperty(document, 'hidden', initialHiddenDescriptor)
     } else {
-      delete document.hidden
+      Reflect.deleteProperty(document, 'hidden')
     }
   })
 

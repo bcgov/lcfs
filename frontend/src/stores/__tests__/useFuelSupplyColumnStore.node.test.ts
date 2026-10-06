@@ -1,4 +1,4 @@
-import type { ColumnState } from '@ag-grid-community/core'
+import type { ColumnState } from 'ag-grid-community'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useFuelSupplyColumnStore } from '../useFuelSupplyColumnStore'
 

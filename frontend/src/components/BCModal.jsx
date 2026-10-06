@@ -12,6 +12,21 @@ import PropTypes from 'prop-types'
 import { useEffect, useState } from 'react'
 import BCButton from './BCButton'
 
+/**
+ * @typedef {object} ModalData
+ * @property {import('react').ReactNode} [title]
+ * @property {import('react').ReactNode} [content]
+ * @property {import('react').ReactNode} [primaryButtonText]
+ * @property {() => unknown | Promise<unknown>} [primaryButtonAction]
+ * @property {string} [primaryButtonColor]
+ * @property {boolean} [primaryButtonDisabled]
+ * @property {import('react').ReactNode} [warningText]
+ * @property {import('react').ReactNode} [secondaryButtonText]
+ * @property {() => unknown} [secondaryButtonAction]
+ * @property {string} [secondaryButtonColor]
+ * @property {import('react').ReactNode} [customButtons]
+ */
+/** @param {{open: boolean, onClose: () => void, data?: ModalData | null}} props */
 const BCModal = ({ open, onClose, data = null }) => {
   const [isLoading, setIsLoading] = useState(false)
 

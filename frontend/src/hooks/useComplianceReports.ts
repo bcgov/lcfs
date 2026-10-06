@@ -6,6 +6,16 @@ import { useCurrentUser } from './useCurrentUser'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import type { QueryOptions, ExtMutationOptions } from './types'
 
+interface PenaltySummaryRow {
+  line?: number | string | null
+  invoiceSent?: boolean | null
+  paymentReceived?: boolean | null
+}
+
+interface CachedComplianceReportSummary {
+  nonCompliancePenaltySummary?: PenaltySummaryRow[]
+}
+
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
 const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
@@ -357,7 +367,7 @@ export const useUpdateComplianceReportPenaltyStatus = (
       return await client.put(path, data)
     },
     onSuccess: (data, variables, context) => {
-      queryClient.setQueryData(
+      queryClient.setQueryData<CachedComplianceReportSummary>(
         ['compliance-report-summary', reportID],
         (old) => {
           if (!old) return old
@@ -367,7 +377,7 @@ export const useUpdateComplianceReportPenaltyStatus = (
           return {
             ...old,
             nonCompliancePenaltySummary: old.nonCompliancePenaltySummary?.map(
-              (row: any) =>
+              (row) =>
                 Number(row.line) === Number(updatedStatus?.line)
                   ? {
                       ...row,

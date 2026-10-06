@@ -1,6 +1,10 @@
-// @ts-nocheck
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
 import PropTypes from 'prop-types'
+import type { SyntheticEvent } from 'react'
+
+interface FilterOption {
+  name: string
+}
 import Autocomplete from '@mui/material/Autocomplete'
 import TextField from '@mui/material/TextField'
 import Box from '@mui/material/Box'
@@ -26,26 +30,29 @@ export interface BCColumnSetFilterProps {
 export const BCColumnSetFilter = forwardRef(
   (props: BCColumnSetFilterProps, ref) => {
     const { apiQuery, params } = props
-    const [options, setOptions] = useState([])
-    const [currentValue, setCurrentValue] = useState(null)
+    const [options, setOptions] = useState<FilterOption[]>([])
+    const [currentValue, setCurrentValue] = useState<string | null>(null)
     // make api call to retrieve list
     const { data: optionsData, isLoading: optionsIsLoading } = apiQuery(params)
 
     // expose AG Grid Filter Lifecycle callbacks
     useImperativeHandle(ref, () => {
       return {
-        onParentModelChanged(parentModel) {
+        onParentModelChanged(parentModel: { filter?: unknown } | null) {
           // When the filter is empty we will receive a null value here
           if (!parentModel) {
             setCurrentValue(null)
           } else {
-            setCurrentValue(parentModel.filter + '')
+            setCurrentValue(String(parentModel.filter))
           }
         }
       }
     })
-    const onInputBoxChanged = (event, input) => {
-      if (event.target.value === '') {
+    const onInputBoxChanged = (
+      event: SyntheticEvent,
+      input: FilterOption | FilterOption[] | null
+    ) => {
+      if ('value' in event.target && event.target.value === '') {
         // Remove the filter
         props.parentFilterInstance((instance) => {
           instance.onFloatingFilterChanged(null, null)
@@ -55,11 +62,13 @@ export const BCColumnSetFilter = forwardRef(
 
       props.parentFilterInstance((instance) => {
         if (!props.multiple) {
-          const val = input ? input.name : ''
+          const val = input && !Array.isArray(input) ? input.name : ''
           setCurrentValue(val)
           instance.onFloatingFilterChanged('custom', val)
         } else {
-          const filterArr = input.map((item) => item.name).join(', ')
+          const filterArr = (Array.isArray(input) ? input : [])
+            .map((item) => item.name)
+            .join(', ')
           setCurrentValue(filterArr)
           instance.onFloatingFilterChanged('custom', filterArr)
         }

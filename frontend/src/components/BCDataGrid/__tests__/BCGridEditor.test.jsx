@@ -72,6 +72,7 @@ vi.mock('@/components/BCModal', () => ({
 }))
 
 // Simplified grid API mock
+let mockBCGridBaseProps
 const mockGridApi = {
   applyTransaction: vi.fn(() => ({ add: [{ rowIndex: 0 }] })),
   getAllDisplayedColumns: vi.fn(() => [
@@ -89,6 +90,7 @@ const mockGridApi = {
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
   BCGridBase: React.forwardRef((props, ref) => {
+    mockBCGridBaseProps = props
     React.useImperativeHandle(ref, () => ({ api: mockGridApi, columnApi: {} }))
 
     // Prevent setTimeout errors by calling onGridReady properly
@@ -227,6 +229,29 @@ describe('BCGridEditor - Simplified Coverage Test Suite', () => {
     )
 
     expect(screen.getByTestId('bc-grid-base')).toBeInTheDocument()
+  })
+
+  it('passes the original clicked cell event to the action callback', async () => {
+    const onAction = vi.fn()
+    const target = document.createElement('button')
+    target.dataset.action = 'duplicate'
+    const rowData = { id: 'row-1', name: 'Fuel' }
+    const cellEvent = {
+      column: { getColId: () => 'action' },
+      data: rowData,
+      node: { data: rowData },
+      event: { target },
+      api: mockGridApi
+    }
+
+    render(<BCGridEditor {...defaultProps} onAction={onAction} />)
+
+    await act(async () => {
+      await mockBCGridBaseProps.onCellClicked(cellEvent)
+    })
+
+    expect(onAction).toHaveBeenCalledOnce()
+    expect(onAction).toHaveBeenCalledWith('duplicate', cellEvent)
   })
 
   it('handles custom paste handler', () => {

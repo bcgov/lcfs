@@ -140,8 +140,12 @@ describe('ComplianceReportPageNav', () => {
           {
             isIntersecting: true,
             intersectionRatio: 0.5,
-            target: document.getElementById('report-section-summary')!
-          } as IntersectionObserverEntry
+            target: document.getElementById('report-section-summary')!,
+            boundingClientRect: new DOMRect(),
+            intersectionRect: new DOMRect(),
+            rootBounds: null,
+            time: 0
+          }
         ],
         intersectionObservers[0] as unknown as IntersectionObserver
       )
