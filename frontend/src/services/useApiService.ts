@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import axios, {
   AxiosInstance,
   AxiosRequestConfig,
@@ -58,37 +58,17 @@ export const useApiService = (
   const { setForbidden, addErrorRef, setErrorStatus, serverErrorBlockedRef } =
     useAuthorization()
   // Keep interceptor callbacks captured on the original Axios instance inputs.
-  const previousApiServiceInputsRef = useRef({
-    authenticated: keycloak.authenticated,
-    token: keycloak.token,
-    opts
-  })
-  const interceptorHandlersRef = useRef({
-    setForbidden,
-    addErrorRef,
-    setErrorStatus,
-    serverErrorBlockedRef,
-    enqueueSnackbar
-  })
-  if (
-    previousApiServiceInputsRef.current.authenticated !==
-      keycloak.authenticated ||
-    previousApiServiceInputsRef.current.token !== keycloak.token ||
-    previousApiServiceInputsRef.current.opts !== opts
-  ) {
-    previousApiServiceInputsRef.current = {
-      authenticated: keycloak.authenticated,
-      token: keycloak.token,
-      opts
-    }
-    interceptorHandlersRef.current = {
+  const interceptorHandlers = useMemo(
+    () => ({
       setForbidden,
       addErrorRef,
       setErrorStatus,
       serverErrorBlockedRef,
       enqueueSnackbar
-    }
-  }
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Handlers remain captured until auth/token/options recreate the instance.
+    [keycloak.authenticated, keycloak.token, opts]
+  )
 
   // useMemo to memoize the apiService instance
   const apiService = useMemo(() => {
@@ -98,7 +78,7 @@ export const useApiService = (
       setErrorStatus,
       serverErrorBlockedRef,
       enqueueSnackbar
-    } = interceptorHandlersRef.current
+    } = interceptorHandlers
     const instance = axios.create({
       baseURL: CONFIG.API_BASE,
       timeout: DEFAULT_TIMEOUT_MS,
@@ -166,7 +146,7 @@ export const useApiService = (
     }
 
     return instance
-  }, [keycloak.authenticated, keycloak.token, opts])
+  }, [keycloak.authenticated, keycloak.token, opts, interceptorHandlers])
 
   return apiService
 }
