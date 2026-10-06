@@ -666,13 +666,13 @@ class ComplianceReportUpdateService:
         available_balance = await self.org_service.calculate_available_balance(
             report.organization_id
         )
-        pre_deadline_balance = None
+        deadline_balance = None
         if credit_change < 0:
-            pre_deadline_balance = await self._calculate_pre_deadline_balance(report)
+            deadline_balance = await self._calculate_deadline_balance(report)
 
         effective_available_balance = available_balance
-        if pre_deadline_balance is not None:
-            effective_available_balance = min(available_balance, pre_deadline_balance)
+        if deadline_balance is not None:
+            effective_available_balance = min(available_balance, deadline_balance)
 
         units_to_reserve = credit_change
         if credit_change < 0:
@@ -721,23 +721,37 @@ class ComplianceReportUpdateService:
             report.transaction_id
         )
 
-    async def _calculate_pre_deadline_balance(self, report: ComplianceReport) -> int:
-        compliance_period = getattr(report, "compliance_period", None)
-        period_description = getattr(compliance_period, "description", None)
+    async def _calculate_deadline_balance(self, report: ComplianceReport) -> int:
+        """Credits the report summary counts as held at the March 31 deadline.
 
-        try:
-            compliance_year = int(period_description)
-        except (TypeError, ValueError):
-            return await self.org_service.calculate_available_balance(
-                report.organization_id
+        This is Line 17 plus issuance from earlier versions in the report
+        group that Line 17 leaves out, the same balance the summary uses to
+        split a Line 20 deficit between credits and the Line 21 penalty.
+        Reserving against it keeps In Reserve equal to the debit the summary
+        shows. Transaction.create_date can't stand in for it: Line 17 places
+        transfers, initiative agreements and admin adjustments by effective
+        date, so credits recorded after the deadline can still count.
+        """
+        line_17 = int(report.summary.line_17_non_banked_units_used or 0)
+
+        deferred_prior_issuance = 0
+        report_version = getattr(report, "version", None)
+        if (
+            isinstance(report_version, int)
+            and report_version > 0
+            and report.compliance_report_group_uuid
+        ):
+            deferred_prior_issuance = int(
+                await self.trx_service.repo.get_prior_group_adjustments_excluded_from_line_17(
+                    report.compliance_report_group_uuid,
+                    report.organization_id,
+                    report.compliance_report_id,
+                    int(report.compliance_period.description),
+                    report_version,
+                )
             )
 
-        pre_deadline_balance = (
-            await self.org_service.calculate_available_balance_for_period(
-                report.organization_id, compliance_year
-            )
-        )
-        return pre_deadline_balance
+        return line_17 + deferred_prior_issuance
 
     async def _calculate_and_lock_summary(
         self, report, user, skip_can_sign_check=False
