@@ -2,6 +2,8 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { ThemeProvider } from '@mui/material'
+import { I18nextProvider } from 'react-i18next'
+import i18n from '@/i18n'
 import theme from '@/themes'
 import { FuelCategoryBreakdown } from '../FuelCategoryBreakdown'
 
@@ -54,9 +56,11 @@ const rows = [
 
 const renderBreakdown = () =>
   render(
-    <ThemeProvider theme={theme}>
-      <FuelCategoryBreakdown rows={rows} />
-    </ThemeProvider>
+    <I18nextProvider i18n={i18n}>
+      <ThemeProvider theme={theme}>
+        <FuelCategoryBreakdown rows={rows} />
+      </ThemeProvider>
+    </I18nextProvider>
   )
 
 const lastOption = () => mockEChart.mock.calls.at(-1)[0].option
