@@ -2,7 +2,7 @@
   {
     "version": "1.3.9",
     "tag": "v1.3.9",
-    "date": "2026-09-25",
+    "date": "2026-10-06",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.9",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.7...v1.3.9",
     "summary": "This release includes 41 new features, 51 bug fixes, 14 dependency updates and 40 other changes. Highlights: Update analyst notifications for CI applications; CI application notifications IDIR director; Refine commenting feature - 4793, 4794, 4795; Add CI application location autocomplete.",
@@ -164,9 +164,7 @@
         "Centralize paginated query handling - 4085"
       ]
     },
-    "contributors": [
-      "@mr-moto"
-    ]
+    "contributors": []
   },
   {
     "version": "1.3.8",
