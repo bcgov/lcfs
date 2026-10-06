@@ -125,6 +125,7 @@ class ComplianceReportUpdateService:
 
         # Store original status
         current_status = report_data.status
+        previous_status = getattr(report.current_status, "status", None)
 
         # Handle status changes
         if report_data.status in [status.value for status in ReturnStatus]:
@@ -193,6 +194,10 @@ class ComplianceReportUpdateService:
 
         # Handle status change related actions
         if status_has_changed:
+            if self._is_direct_assessment_from_analyst_adjustment(
+                previous_status, new_status.status
+            ):
+                await self._recommend_before_direct_assessment(report, user)
             await self.handle_status_change(report, new_status.status, user)
             # Add history record
             await self.repo.add_compliance_report_history(report, user)
@@ -259,6 +264,40 @@ class ComplianceReportUpdateService:
             await handler(report, user)
         else:
             raise ServiceException(f"Unsupported status change to {new_status}")
+
+    @staticmethod
+    def _is_direct_assessment_from_analyst_adjustment(
+        previous_status: ComplianceReportStatusEnum,
+        new_status: ComplianceReportStatusEnum,
+    ) -> bool:
+        """True when a report goes from Analyst adjustment straight to
+        Assessed (or Exempted, which an assessment becomes when exemption
+        flags are set), skipping both Recommended steps."""
+        if previous_status != ComplianceReportStatusEnum.Analyst_adjustment:
+            return False
+        return new_status in (
+            ComplianceReportStatusEnum.Assessed,
+            ComplianceReportStatusEnum.Exempted,
+        )
+
+    async def _recommend_before_direct_assessment(
+        self, report: ComplianceReport, user: UserProfile
+    ):
+        """Do the Recommended by analyst work for a Director's direct assessment.
+
+        That step locks the summary, auto-validates FSE (2024+) and reserves
+        Line 20, all of which assessment depends on. Running it first gives
+        the same end state as Recommend as Analyst, Recommend as Manager and
+        Assess. Recommended by manager has no side effects to repeat. Only the
+        final status is written to the history.
+        """
+        has_director_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
+        )
+        if not has_director_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+
+        await self.handle_recommended_by_analyst_status(report, user)
 
     async def _check_report_exists(self, report_id: int) -> ComplianceReport:
         """Verify report exists and return it."""
