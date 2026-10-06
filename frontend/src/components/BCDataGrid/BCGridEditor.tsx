@@ -145,8 +145,7 @@ export const BCGridEditor = ({
       .map((col) => col.minWidth)
 
     // Use the minimum of all minWidths, or 100 as a fallback
-    const defaultMinWidth =
-      minWidths.length > 0 ? Math.min(...minWidths) : 100
+    const defaultMinWidth = minWidths.length > 0 ? Math.min(...minWidths) : 100
 
     return { type: 'fitGridWidth', defaultMinWidth }
   }, [columnDefs])
@@ -158,10 +157,10 @@ export const BCGridEditor = ({
         const foundRequired = actualCols.some(
           (colDef) => colDef.headerComponent === RequiredHeader
         )
-      if (foundRequired) {
-        setShowRequiredIndicator(true)
+        if (foundRequired) {
+          setShowRequiredIndicator(true)
+        }
       }
-    }
 
       requestAnimationFrame(() => {
         if (minWidthRelaxedRef.current) return
@@ -268,7 +267,9 @@ export const BCGridEditor = ({
       // Build a proper params-like object for each pasted row so downstream
       // handlers (which expect AG Grid CellEditingStopped params) don't crash.
       const firstEditableCol = findFirstEditableColumn()
-      const colDef = firstEditableCol?.colDef || { field: editableColumns[0]?.colDef?.field }
+      const colDef = firstEditableCol?.colDef || {
+        field: editableColumns[0]?.colDef?.field
+      }
       const column = firstEditableCol || editableColumns[0]
 
       // Save rows sequentially so each save completes before the next starts.

@@ -26,7 +26,7 @@ export const changelogRowStyle = (params, isSupplemental) => {
       backgroundColor: colors.alerts.success.background
     }
   }
-  
+
   // For UPDATE actions, only show yellow background if it's a new supplemental entry in supplemental mode
   if (
     params.data.actionType === 'UPDATE' &&
@@ -37,7 +37,7 @@ export const changelogRowStyle = (params, isSupplemental) => {
       backgroundColor: colors.alerts.warning.background
     }
   }
-  
+
   // For DELETE actions, only show red background if it's a new supplemental entry in supplemental mode
   if (
     params.data.actionType === 'DELETE' &&
@@ -48,8 +48,7 @@ export const changelogRowStyle = (params, isSupplemental) => {
       backgroundColor: colors.alerts.error.background
     }
   }
-  
+
   // No row-level styling for other cases (prevents highlighting all rows in edit mode)
   return {}
 }
-

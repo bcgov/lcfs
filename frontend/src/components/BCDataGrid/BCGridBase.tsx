@@ -188,7 +188,10 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
         colDef?.checkboxSelection ||
         colDef?.showDisabledCheckboxes !== undefined ||
         // AG Grid's built-in selection column has no field and headerName
-        (colDef && !colDef.field && !colDef.headerName && colId?.startsWith?.('ag-Grid'))
+        (colDef &&
+          !colDef.field &&
+          !colDef.headerName &&
+          colId?.startsWith?.('ag-Grid'))
       ) {
         return true
       }
@@ -199,7 +202,9 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
       if (cellElement) {
         // Check for checkbox input or AG Grid's selection wrapper
         const hasCheckbox = cellElement.querySelector('input[type="checkbox"]')
-        const hasSelectionWrapper = cellElement.querySelector('.ag-selection-checkbox')
+        const hasSelectionWrapper = cellElement.querySelector(
+          '.ag-selection-checkbox'
+        )
         if (hasCheckbox || hasSelectionWrapper) {
           return true
         }

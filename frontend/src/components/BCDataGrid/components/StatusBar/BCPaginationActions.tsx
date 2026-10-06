@@ -13,8 +13,7 @@ import * as XLSX from 'xlsx'
 import { copyToClipboard } from '@/utils/clipboard'
 import type { TablePaginationActionsProps } from '@mui/material/TablePagination/TablePaginationActions'
 
-export interface BCPaginationActionsProps
-  extends TablePaginationActionsProps {
+export interface BCPaginationActionsProps extends TablePaginationActionsProps {
   enableResetButton?: boolean
   enableCopyButton?: boolean
   enableExportButton?: boolean

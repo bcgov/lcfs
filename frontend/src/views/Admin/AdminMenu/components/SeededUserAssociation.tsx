@@ -496,20 +496,14 @@ export const SeededUserAssociation = () => {
                           }}
                           renderOption={(props, option, { selected }) => (
                             <li {...props} key={option.value}>
-                              <Checkbox
-                                checked={selected}
-                                sx={{ mr: 1 }}
-                              />
+                              <Checkbox checked={selected} sx={{ mr: 1 }} />
                               <BCTypography variant="body2">
                                 {option.label}
                               </BCTypography>
                             </li>
                           )}
                           renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              error={!!fieldState.error}
-                            />
+                            <TextField {...params} error={!!fieldState.error} />
                           )}
                         />
                         {renderError(fieldState.error?.message)}
@@ -622,12 +616,12 @@ export const SeededUserAssociation = () => {
 
                     <Box>
                       <BCButton
-                      color="primary"
-                      variant="outlined"
-                      disabled={isPending || isResolvingOrgName}
-                      onClick={handleResolveOrgName}
-                    >
-                      {t('admin:seededAssoc.resolveBtn')}
+                        color="primary"
+                        variant="outlined"
+                        disabled={isPending || isResolvingOrgName}
+                        onClick={handleResolveOrgName}
+                      >
+                        {t('admin:seededAssoc.resolveBtn')}
                       </BCButton>
                     </Box>
 

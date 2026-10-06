@@ -258,7 +258,9 @@ export const UserProfileActions = () => {
     setNotificationAnchorEl(event.currentTarget)
   }
 
-  const openNotificationMenuFromFocus = (event: ReactFocusEvent<HTMLElement>) => {
+  const openNotificationMenuFromFocus = (
+    event: ReactFocusEvent<HTMLElement>
+  ) => {
     cancelNotificationClose()
     setNotificationAnchorEl(event.currentTarget)
   }
@@ -476,7 +478,8 @@ export const UserProfileActions = () => {
                     disabled={notificationsCount === 0}
                   >
                     <BCTypography variant="body2" color="primary">
-                      {'✓ '}{t('notifications:markAllAsRead')}
+                      {'✓ '}
+                      {t('notifications:markAllAsRead')}
                     </BCTypography>
                   </Button>
                 </Stack>

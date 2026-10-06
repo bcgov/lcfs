@@ -8,7 +8,7 @@ import { AutocompleteCellEditor } from '../AutocompleteCellEditor'
 
 // Mock MUI components
 vi.mock('@mui/material/Autocomplete', () => ({
-    default: vi.fn(
+  default: vi.fn(
     ({
       children,
       onChange,
@@ -97,19 +97,19 @@ vi.mock('@mui/material/Autocomplete', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-    default: vi.fn(({ onBlur, inputRef, ...props }) => (
+  default: vi.fn(({ onBlur, inputRef, ...props }) => (
     <input data-test="textfield" ref={inputRef} onBlur={onBlur} {...props} />
   ))
 }))
 
 vi.mock('@mui/material/Checkbox', () => ({
-    default: vi.fn((props) => (
+  default: vi.fn((props) => (
     <input type="checkbox" data-test="checkbox" {...props} />
   ))
 }))
 
 vi.mock('@mui/material/Box', () => ({
-    default: vi.fn(({ children, ...props }) => (
+  default: vi.fn(({ children, ...props }) => (
     <div data-test="box" {...props}>
       {children}
     </div>
@@ -117,7 +117,7 @@ vi.mock('@mui/material/Box', () => ({
 }))
 
 vi.mock('@mui/material/Chip', () => ({
-    default: vi.fn(({ label, ...props }) => (
+  default: vi.fn(({ label, ...props }) => (
     <span data-test="chip" {...props}>
       {label}
     </span>
@@ -125,7 +125,7 @@ vi.mock('@mui/material/Chip', () => ({
 }))
 
 vi.mock('@mui/material/Stack', () => ({
-    default: vi.fn(({ children, ...props }) => (
+  default: vi.fn(({ children, ...props }) => (
     <div data-test="stack" {...props}>
       {children}
     </div>
@@ -133,15 +133,15 @@ vi.mock('@mui/material/Stack', () => ({
 }))
 
 vi.mock('@mui/material/Divider', () => ({
-    default: vi.fn((props) => <hr data-test="divider" {...props} />)
+  default: vi.fn((props) => <hr data-test="divider" {...props} />)
 }))
 
 vi.mock('@mui/icons-material/CheckBox', () => ({
-    default: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>)
+  default: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>)
 }))
 
 vi.mock('@mui/icons-material/CheckBoxOutlineBlank', () => ({
-    default: vi.fn(() => (
+  default: vi.fn(() => (
     <span data-test="checkbox-outline-icon">CheckBoxOutlineBlank</span>
   ))
 }))

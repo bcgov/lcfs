@@ -13,7 +13,10 @@ export interface LargeTextareaEditorProps {
 }
 
 export const LargeTextareaEditor = forwardRef(
-  ({ value, onValueChange, column, ...props }: LargeTextareaEditorProps, ref) => {
+  (
+    { value, onValueChange, column, ...props }: LargeTextareaEditorProps,
+    ref
+  ) => {
     const [valueState, setValueState] = useState(value)
     const [anchorEl, setAnchorEl] = useState()
     const [inputRef, setInputRef] = useState(null)

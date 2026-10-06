@@ -86,9 +86,8 @@ export interface BCGridEditorProps<TData extends BCGridRow = BCGridRow>
   [key: string]: any
 }
 
-export interface BCGridEditorPaginatedProps<
-  TData extends BCGridRow = BCGridRow
-> extends BCGridEditorProps<TData> {
+export interface BCGridEditorPaginatedProps<TData extends BCGridRow = BCGridRow>
+  extends BCGridEditorProps<TData> {
   dataKey?: string
   enableCopyButton?: boolean
   enableExportButton?: boolean

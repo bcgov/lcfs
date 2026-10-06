@@ -257,8 +257,7 @@ export const BCGridEditorPaginated = ({
       .map((col) => col.minWidth)
 
     // Use the minimum of all minWidths, or 100 as a fallback
-    const defaultMinWidth =
-      minWidths.length > 0 ? Math.min(...minWidths) : 100
+    const defaultMinWidth = minWidths.length > 0 ? Math.min(...minWidths) : 100
 
     return { type: 'fitGridWidth', defaultMinWidth }
   }, [columnDefs])
@@ -284,8 +283,7 @@ export const BCGridEditorPaginated = ({
   )
 
   const syncGridScrollPositions = useCallback(
-    (scrollLeft) =>
-      syncGridScrollPositionsUtil(gridContainerRef, scrollLeft),
+    (scrollLeft) => syncGridScrollPositionsUtil(gridContainerRef, scrollLeft),
     [gridContainerRef]
   )
 
@@ -340,10 +338,7 @@ export const BCGridEditorPaginated = ({
     window.addEventListener('resize', handleResize)
 
     let resizeObserver
-    if (
-      typeof ResizeObserver !== 'undefined' &&
-      gridContainerRef.current
-    ) {
+    if (typeof ResizeObserver !== 'undefined' && gridContainerRef.current) {
       const target =
         gridContainerRef.current.querySelector('.ag-body-horizontal-scroll') ||
         gridContainerRef.current.querySelector('.ag-center-cols-container')
@@ -378,14 +373,14 @@ export const BCGridEditorPaginated = ({
         return
       }
 
-        const { centerViewport, horizontalViewport, headerViewport } = info
+      const { centerViewport, horizontalViewport, headerViewport } = info
 
-        handleGridScroll = () => {
-          if (syncingFromCustomRef.current) return
+      handleGridScroll = () => {
+        if (syncingFromCustomRef.current) return
 
-          const latestInfo = getGridScrollInfo()
-          syncCustomScrollbarToGrid(latestInfo ?? info)
-        }
+        const latestInfo = getGridScrollInfo()
+        syncCustomScrollbarToGrid(latestInfo ?? info)
+      }
 
       listeners = [centerViewport, horizontalViewport, headerViewport]
         .filter(Boolean)
@@ -396,9 +391,9 @@ export const BCGridEditorPaginated = ({
           return element
         })
 
-        handleGridScroll()
-        updateScrollMetrics()
-      }
+      handleGridScroll()
+      updateScrollMetrics()
+    }
 
     tryAttach()
 
@@ -412,7 +407,12 @@ export const BCGridEditorPaginated = ({
         }
       })
     }
-  }, [showScrollbar, updateScrollMetrics, getGridScrollInfo, syncCustomScrollbarToGrid])
+  }, [
+    showScrollbar,
+    updateScrollMetrics,
+    getGridScrollInfo,
+    syncCustomScrollbarToGrid
+  ])
 
   useEffect(() => {
     if (!showScrollbar) return

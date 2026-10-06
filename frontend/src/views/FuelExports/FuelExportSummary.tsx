@@ -42,10 +42,7 @@ interface PaginationOptions {
   sortOrders?: PaginationSort[]
 }
 
-export const FuelExportSummary = ({
-  data,
-  status
-}: FuelExportSummaryProps) => {
+export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
     defaultInitialPagination
   )

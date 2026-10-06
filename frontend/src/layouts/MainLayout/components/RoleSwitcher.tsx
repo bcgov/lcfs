@@ -206,9 +206,7 @@ const RoleSwitcherComponent = ({
     setAreOptionsVisible((prev) => !prev)
   }
 
-  const handleTitleKeyDown = (
-    event: ReactKeyboardEvent<HTMLDivElement>
-  ) => {
+  const handleTitleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       toggleOptionsVisibility()

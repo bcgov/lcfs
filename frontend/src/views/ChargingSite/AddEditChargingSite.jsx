@@ -418,11 +418,7 @@ export const AddEditChargingSite = ({
     if (isEditMode) {
       setIsEditMode?.(false)
       const latestSiteId = rowData?.[0]?.chargingSiteId
-      if (
-        latestSiteId &&
-        siteId &&
-        String(latestSiteId) !== String(siteId)
-      ) {
+      if (latestSiteId && siteId && String(latestSiteId) !== String(siteId)) {
         navigate(
           ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', latestSiteId),
           { replace: true }

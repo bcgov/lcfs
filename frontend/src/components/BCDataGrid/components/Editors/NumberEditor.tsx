@@ -34,7 +34,14 @@ export interface NumberEditorProps {
 
 export const NumberEditor = forwardRef(
   (
-    { value, onValueChange, eventKey, rowIndex, column, ...props }: NumberEditorProps,
+    {
+      value,
+      onValueChange,
+      eventKey,
+      rowIndex,
+      column,
+      ...props
+    }: NumberEditorProps,
     ref
   ) => {
     const inputRef = useRef(null)

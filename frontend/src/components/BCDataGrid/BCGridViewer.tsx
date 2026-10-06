@@ -157,11 +157,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
           asArray = values
         } else if (typeof values === 'string' && values.includes(',')) {
           asArray = values.split(',')
-        } else if (
-          values !== undefined &&
-          values !== null &&
-          values !== ''
-        ) {
+        } else if (values !== undefined && values !== null && values !== '') {
           asArray = [values]
         } else {
           asArray = []
@@ -201,61 +197,63 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
         return dateOnly ? dateOnly[1] : value.trim()
       }
 
-      return Object.entries(filterModel).map(([field, filterConfig]) => {
-        const baseFilter = { field }
-        
-        if (filterConfig.filterType === 'set') {
-          // For set filters, use the 'filter' array or 'values' array
-          const values =
-            filterConfig.values !== undefined
-              ? filterConfig.values
-              : filterConfig.filter || []
-          const cleanValues = sanitizeArrayValues(values)
-          if (!cleanValues.length) {
-            return null
-          }
-          return {
-            ...baseFilter,
-            filterType: 'set',
-            values: cleanValues
-          }
-        } else if (filterConfig.filterType === 'text') {
-          // For text filters, skip if filter value is empty
-          if (
-            filterConfig.filter === undefined ||
-            filterConfig.filter === null ||
-            filterConfig.filter === ''
-          ) {
-            return null
-          }
-          const sanitizedFilter = sanitizeCsvString(filterConfig.filter)
-          if (!sanitizedFilter) {
-            return null
-          }
+      return Object.entries(filterModel)
+        .map(([field, filterConfig]) => {
+          const baseFilter = { field }
 
-          return {
-            ...baseFilter,
-            filterType: 'text',
-            type: filterConfig.type,
-            filter: sanitizedFilter
+          if (filterConfig.filterType === 'set') {
+            // For set filters, use the 'filter' array or 'values' array
+            const values =
+              filterConfig.values !== undefined
+                ? filterConfig.values
+                : filterConfig.filter || []
+            const cleanValues = sanitizeArrayValues(values)
+            if (!cleanValues.length) {
+              return null
+            }
+            return {
+              ...baseFilter,
+              filterType: 'set',
+              values: cleanValues
+            }
+          } else if (filterConfig.filterType === 'text') {
+            // For text filters, skip if filter value is empty
+            if (
+              filterConfig.filter === undefined ||
+              filterConfig.filter === null ||
+              filterConfig.filter === ''
+            ) {
+              return null
+            }
+            const sanitizedFilter = sanitizeCsvString(filterConfig.filter)
+            if (!sanitizedFilter) {
+              return null
+            }
+
+            return {
+              ...baseFilter,
+              filterType: 'text',
+              type: filterConfig.type,
+              filter: sanitizedFilter
+            }
+          } else {
+            // For other filter types, include all properties but clean empty values
+            const cleanConfig = { ...filterConfig }
+            if (cleanConfig.filter === '' || cleanConfig.filter === null) {
+              return null
+            }
+            if (cleanConfig.filterType === 'date') {
+              cleanConfig.type = cleanConfig.type || 'equals'
+              cleanConfig.dateFrom = sanitizeDateValue(cleanConfig.dateFrom)
+              cleanConfig.dateTo = sanitizeDateValue(cleanConfig.dateTo)
+            }
+            return {
+              ...baseFilter,
+              ...cleanConfig
+            }
           }
-        } else {
-          // For other filter types, include all properties but clean empty values
-          const cleanConfig = { ...filterConfig }
-          if (cleanConfig.filter === '' || cleanConfig.filter === null) {
-            return null
-          }
-          if (cleanConfig.filterType === 'date') {
-            cleanConfig.type = cleanConfig.type || 'equals'
-            cleanConfig.dateFrom = sanitizeDateValue(cleanConfig.dateFrom)
-            cleanConfig.dateTo = sanitizeDateValue(cleanConfig.dateTo)
-          }
-          return {
-            ...baseFilter,
-            ...cleanConfig
-          }
-        }
-      }).filter(Boolean) // Remove null entries
+        })
+        .filter(Boolean) // Remove null entries
     }, [])
 
     // Cache pagination options to sessionStorage

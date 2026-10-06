@@ -39,7 +39,9 @@ export const dateSortComparator = (a: string, b: string): number => {
   return left - right
 }
 
-const parseDateOnly = (value: string | Date | null | undefined): Date | null => {
+const parseDateOnly = (
+  value: string | Date | null | undefined
+): Date | null => {
   if (!value) return null
   if (value instanceof Date) return value
 

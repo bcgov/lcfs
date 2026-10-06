@@ -126,7 +126,9 @@ describe('PublicMarketData', () => {
     theme
   }) => {
     render(<PublicMarketData />, [theme])
-    expect(screen.getByTestId('monthly-average-price-chart')).toBeInTheDocument()
+    expect(
+      screen.getByTestId('monthly-average-price-chart')
+    ).toBeInTheDocument()
     expect(screen.getByTestId('transfer-price-trend-chart')).toBeInTheDocument()
     expect(screen.getByTestId('trade-volume-chart')).toBeInTheDocument()
     expect(screen.getByTestId('download-pdf')).toBeInTheDocument()

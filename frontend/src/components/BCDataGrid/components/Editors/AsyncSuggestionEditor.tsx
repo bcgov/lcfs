@@ -18,7 +18,10 @@ export interface AsyncSuggestionEditorProps {
   enabled?: boolean
   minWords?: number
   queryKey?: string
-  queryFn: (params: { client: any; queryKey: readonly unknown[] }) => Promise<any[]>
+  queryFn: (params: {
+    client: any
+    queryKey: readonly unknown[]
+  }) => Promise<any[]>
   debounceValue?: number
   onKeyDownCapture?: (event: KeyboardEvent) => void
   api?: any
