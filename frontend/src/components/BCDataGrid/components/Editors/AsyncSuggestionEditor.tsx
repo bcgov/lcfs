@@ -7,7 +7,8 @@ import TextField from '@mui/material/TextField'
 import { useQuery } from '@tanstack/react-query'
 import match from 'autosuggest-highlight/match'
 import parse from 'autosuggest-highlight/parse'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { debounce } from 'lodash'
+import { useCallback, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react'
 
 export interface AsyncSuggestionEditorProps {
@@ -58,7 +59,6 @@ export const AsyncSuggestionEditor = ({
 }: AsyncSuggestionEditorProps) => {
   const [inputValue, setInputValue] = useState('')
   const [highlightedOption, setHighlightedOption] = useState<any | null>(null)
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const apiService = useApiService()
 
   const { data: options = [], isLoading } = useQuery({
@@ -70,21 +70,11 @@ export const AsyncSuggestionEditor = ({
   })
 
   const debouncedSetInputValue = useCallback(
-    (newInputValue: string) => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current)
-      debounceTimer.current = setTimeout(
-        () => setInputValue(newInputValue),
-        debounceValue
-      )
-    },
+    debounce(
+      (newInputValue: string) => setInputValue(newInputValue),
+      debounceValue
+    ),
     [debounceValue]
-  )
-
-  useEffect(
-    () => () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current)
-    },
-    []
   )
 
   const handleInputChange = (_event: SyntheticEvent, newInputValue: string) => {

@@ -40,7 +40,7 @@ import {
 
 const numberCellFormatter = (params: {
   value: string | number | null | undefined
-}) => String(formatNumberWithCommas(params))
+}) => formatNumberWithCommas(params) as string
 
 const isFuelSupplyQ1Editable = (
   data: { isCanadaProduced?: boolean; [key: string]: unknown },

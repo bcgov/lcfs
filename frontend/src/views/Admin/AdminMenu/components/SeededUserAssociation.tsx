@@ -157,7 +157,10 @@ export const SeededUserAssociation = () => {
     data: seededUsersData = [],
     isLoading: isUsersLoading,
     refetch: refetchSeededUsers
-  } = useSeededTestUsers(seedEnv, {})
+  } = useSeededTestUsers(
+    seedEnv,
+    undefined as unknown as Parameters<typeof useSeededTestUsers>[1]
+  )
   const seededUsers = seededUsersData as SeededUserOption[]
 
   const { data: organizationsData = [], isLoading: isOrgsLoading } =

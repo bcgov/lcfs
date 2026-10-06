@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, type MouseEvent } from 'react'
+import type { ComponentProps } from 'react'
 import FormControl from '@mui/material/FormControl'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
@@ -6,6 +7,10 @@ import ClearIcon from '@mui/icons-material/Clear'
 import CalendarIcon from '@mui/icons-material/CalendarToday'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format, isValid } from 'date-fns'
+
+const legacyDatePickerProps = {
+  id: 'date-picker'
+} as unknown as ComponentProps<typeof DatePicker>
 
 export interface BCDateFloatingFilterProps {
   model?: any
@@ -110,13 +115,14 @@ export const BCDateFloatingFilter = ({
       <DatePicker
         aria-label="Date picker"
         aria-describedby="date-picker-description"
+        {...legacyDatePickerProps}
         sx={{
           border: 'none',
           borderBottom: '4px solid #495057'
         }}
         value={selectedDate}
-        minDate={parseDateOnly(minDate) ?? undefined}
-        maxDate={parseDateOnly(maxDate) ?? undefined}
+        minDate={parseDateOnly(minDate) as unknown as Date}
+        maxDate={parseDateOnly(maxDate) as unknown as Date}
         onChange={handleChange}
         open={open}
         onOpen={handleOpen}
@@ -127,7 +133,6 @@ export const BCDateFloatingFilter = ({
         views={['year', 'month', 'day']}
         slotProps={{
           textField: {
-            id: 'date-picker',
             size: 'small',
             label,
             onKeyDown: (event) => event.stopPropagation(),

@@ -9,6 +9,7 @@ import { useParams } from 'react-router-dom'
 import Loading from '@/components/Loading'
 import { useOtherUsesOptions } from '@/hooks/useOtherUses'
 import type { OptionsData } from '@/types/schema'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 interface OtherUse {
   otherUsesId: number | string
@@ -41,12 +42,7 @@ interface PaginationOptions {
 
 export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
-    {
-      page: 1,
-      size: 10,
-      filters: [],
-      sortOrders: []
-    }
+    defaultInitialPagination as unknown as PaginationOptions
   )
   const gridRef = useRef(null)
   const { compliancePeriod } = useParams<{ compliancePeriod: string }>()
@@ -159,7 +155,7 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
           getRowId={getRowId}
           columnDefs={otherUsesSummaryColDefs(
             parseInt(compliancePeriod ?? '0'),
-            (optionsData as OptionsData | undefined) ?? { fuelTypes: [] }
+            optionsData as OptionsData
           )}
           defaultColDef={defaultColDef}
           queryData={paginatedData}

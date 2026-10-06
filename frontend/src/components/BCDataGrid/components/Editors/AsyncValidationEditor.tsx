@@ -35,7 +35,7 @@ export const AsyncValidationEditor = forwardRef<
       isCancelAfterEnd: () => boolean
     }>
   ) => {
-    const [inputValue, setInputValue] = useState(value ?? '')
+    const [inputValue, setInputValue] = useState<string | undefined>(value)
     const [valid, setValid] = useState(true)
     const [validating, setValidating] = useState(false)
     const [touched, setTouched] = useState(false)
@@ -54,12 +54,12 @@ export const AsyncValidationEditor = forwardRef<
     useEffect(() => {
       const timeout = props.debounceLimit
 
-      new Promise<boolean>((resolve, reject) => {
+      new Promise<boolean>((resolve, _reject) => {
         if (inputValue === '') {
           resolve(false)
         } else {
           setTimeout(() => {
-            Promise.resolve(props.condition(inputValue)).then(resolve, reject)
+            resolve(props.condition(inputValue as string))
           }, timeout)
         }
       })
@@ -76,7 +76,7 @@ export const AsyncValidationEditor = forwardRef<
           return inputValue
         },
         afterGuiAttached: () => {
-          setInputValue(value ?? '')
+          setInputValue(value)
         },
         isCancelAfterEnd: () => {
           return !valid || validating
@@ -113,7 +113,7 @@ export const AsyncValidationEditor = forwardRef<
           style={{ color: txtColor }}
           onChange={inputHandler}
           value={inputValue}
-          placeholder={'Enter ' + (column?.colId ?? '')}
+          placeholder={'Enter ' + column!.colId}
         />
         {loadingElement}
       </div>

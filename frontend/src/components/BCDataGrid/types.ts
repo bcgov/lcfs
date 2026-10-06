@@ -91,7 +91,10 @@ export interface BCGridEditorProps<TData extends BCGridRow = BCGridRow>
   enablePaste?: boolean
   getRowId?: (params: GetRowIdParams<TData>) => string
   gridRef?: BCGridRef
-  handlePaste?: (event: ClipboardEvent, grid: { api?: GridApi<TData> }) => void
+  handlePaste?: (
+    event: ClipboardEvent,
+    grid: { api?: GridApi<TData>; columnApi?: unknown }
+  ) => void
   onAction?: (
     action: string,
     params?: CellClickedEvent<TData>

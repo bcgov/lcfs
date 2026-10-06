@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import Loading from '@/components/Loading'
 import type { OptionsData } from '@/types/schema'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 interface FuelSupply {
   fuelSupplyId: number | string
@@ -53,12 +54,7 @@ export const FuelSupplySummary = ({
   isEarlyIssuance
 }: FuelSupplySummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
-    {
-      page: 1,
-      size: 10,
-      filters: [],
-      sortOrders: []
-    }
+    defaultInitialPagination as unknown as PaginationOptions
   )
   const gridRef = useRef(null)
   const { t } = useTranslation(['common', 'fuelSupply'])
@@ -184,10 +180,10 @@ export const FuelSupplySummary = ({
   const columnDefs = useMemo(
     () =>
       fuelSupplySummaryColDef(
-        isEarlyIssuance ?? false,
+        isEarlyIssuance as boolean,
         showFuelTypeOther,
         parseInt(compliancePeriod ?? '0'),
-        (optionsData as OptionsData | undefined) ?? { fuelTypes: [] }
+        optionsData as OptionsData
       ),
     [isEarlyIssuance, showFuelTypeOther, compliancePeriod, optionsData]
   )

@@ -27,7 +27,7 @@ import { isNotionalTransferRenewableClaimEditable } from '@/utils/renewableClaim
 
 const numberCellFormatter = (params: {
   value: string | number | null | undefined
-}) => String(valueFormatter(params))
+}) => valueFormatter(params) as string
 
 export const notionalTransferColDefs = (
   optionsData: OptionsData,

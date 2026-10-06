@@ -35,7 +35,7 @@ import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 const valueFormatter = (params: {
   value: string | number | null | undefined
-}): string => String(formatNumberWithCommas(params))
+}): string => formatNumberWithCommas(params) as string
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_APPROVED_FUEL_CODE_LEGACY =

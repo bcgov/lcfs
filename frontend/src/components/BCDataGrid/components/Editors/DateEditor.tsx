@@ -2,6 +2,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format, isValid, parseISO } from 'date-fns'
 import { useEffect, useRef, useState } from 'react'
 import type {
+  ComponentProps,
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent,
   SyntheticEvent
@@ -77,6 +78,14 @@ const formatDateValue = (val?: Date | null) => {
   const normalizedDate = normalizeDate(val)
   return normalizedDate ? format(normalizedDate, 'yyyy-MM-dd') : null
 }
+
+const legacyDatePickerProps = {
+  fullWidth: true,
+  margin: 'normal',
+  id: 'date-picker-dialog',
+  variant: 'inline',
+  disableToolbar: true
+} as unknown as ComponentProps<typeof DatePicker>
 
 export const DateEditor = ({
   value,
@@ -225,6 +234,7 @@ export const DateEditor = ({
     >
       <DatePicker
         className="ag-grid-date-editor ag-input-field"
+        {...legacyDatePickerProps}
         format="yyyy-MM-dd"
         slotProps={{
           field: {
@@ -248,7 +258,6 @@ export const DateEditor = ({
             }
           },
           textField: {
-            id: 'date-picker-dialog',
             placeholder: 'yyyy-mm-dd',
             onKeyDown: handleKeyDown,
             onBlur: handleBlur,
@@ -286,8 +295,8 @@ export const DateEditor = ({
         onOpen={handleDatePickerOpen}
         onClose={handleDatePickerClose}
         views={['year', 'month', 'day']}
-        minDate={parseDateValue(minDate) ?? undefined}
-        maxDate={parseDateValue(maxDate) ?? undefined}
+        minDate={minDate as unknown as Date | undefined}
+        maxDate={maxDate as unknown as Date | undefined}
         sx={{
           width: '100%',
           height: '100%',

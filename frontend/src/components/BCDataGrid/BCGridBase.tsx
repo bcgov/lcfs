@@ -11,6 +11,7 @@ import {
 import type {
   CellClickedEvent,
   CellKeyDownEvent,
+  ColDef,
   DomLayoutType,
   GridApi,
   GridReadyEvent,
@@ -138,9 +139,9 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
         api.setFilterModel(null)
 
         // Clear individual filters
-        const columns = api.getColumnDefs() ?? []
+        const columns = api.getColumnDefs() as unknown as ColDef<BCGridRow>[]
         columns.forEach((column) => {
-          if ('field' in column && column.field) api.destroyFilter(column.field)
+          api.destroyFilter(column.field as string)
         })
       }
     }, [])

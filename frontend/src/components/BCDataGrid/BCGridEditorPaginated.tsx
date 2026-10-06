@@ -296,7 +296,15 @@ export const BCGridEditorPaginated = ({
       // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
       // Preserve current widths to avoid visual jumps.
       if (minWidthRelaxedRef.current) return
-      relaxColumnMinWidths(params.api, undefined, 50)
+      relaxColumnMinWidths(
+        params.api,
+        (
+          params as FirstDataRenderedEvent<BCGridRow> & {
+            columnApi?: unknown
+          }
+        ).columnApi,
+        50
+      )
       minWidthRelaxedRef.current = true
       setMinWidthRelaxed(true)
 
@@ -612,7 +620,15 @@ export const BCGridEditorPaginated = ({
 
       requestAnimationFrame(() => {
         if (minWidthRelaxedRef.current) return
-        relaxColumnMinWidths(params.api, undefined, 50)
+        relaxColumnMinWidths(
+          params.api,
+          (
+            params as GridReadyEvent<BCGridRow> & {
+              columnApi?: unknown
+            }
+          ).columnApi,
+          50
+        )
         minWidthRelaxedRef.current = true
         setMinWidthRelaxed(true)
       })
@@ -668,10 +684,11 @@ export const BCGridEditorPaginated = ({
 
   const handleExcelPaste = useCallback(
     (params: ClipboardEvent) => {
-      const gridApi = ref.current?.api
-      if (!gridApi || !params.clipboardData) return
+      const gridApi = ref.current!.api
       const newData: BCGridRow[] = []
-      const clipboardData = params.clipboardData
+      const clipboardData = (params.clipboardData ||
+        (window as Window & { clipboardData?: DataTransfer })
+          .clipboardData) as DataTransfer
       const pastedData = clipboardData.getData('text/plain')
       const headerRow = gridApi
         .getAllDisplayedColumns()
@@ -688,8 +705,8 @@ export const BCGridEditorPaginated = ({
         skipEmptyLines: true
       })
       if (
-        !parsedData.data.length ||
-        Object.keys(parsedData.data[0]).length < 2
+        parsedData.data.length < 0 ||
+        (parsedData.data as any[])[1].length < 2
       ) {
         return
       }
@@ -721,9 +738,16 @@ export const BCGridEditorPaginated = ({
   useEffect(() => {
     const pasteHandler = (event: ClipboardEvent) => {
       const gridApi = ref.current?.api
+      const columnApi = (
+        ref.current as
+          | (AgGridReact<BCGridRow> & {
+              columnApi?: unknown
+            })
+          | null
+      )?.columnApi
 
       if (handlePaste) {
-        handlePaste(event, { api: gridApi })
+        handlePaste(event, { api: gridApi, columnApi })
       } else {
         handleExcelPaste(event)
       }

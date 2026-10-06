@@ -11,6 +11,7 @@ import BCBox from '@/components/BCBox'
 import * as XLSX from 'xlsx'
 import { copyToClipboard } from '@/utils/clipboard'
 import type { BCGridRef } from '../../types'
+import type { ColDef } from 'ag-grid-community'
 import type { TablePaginationActionsProps } from '@mui/material/TablePagination/TablePaginationActions'
 
 // MUI forwards this prop to its styled root, although PaginationProps omits it.
@@ -50,7 +51,7 @@ export function BCPaginationActions({
       onlySelected: true,
       skipColumnHeaders: true
     })
-    const success = await copyToClipboard(selectedRows ?? '')
+    const success = await copyToClipboard(selectedRows as string)
     if (!success) {
       console.error('Failed to copy data to clipboard')
     }
@@ -59,16 +60,16 @@ export function BCPaginationActions({
   const handleDownloadData = useCallback(() => {
     const rows: Record<string, unknown>[] = []
     gridRef?.current?.api?.forEachNodeAfterFilterAndSort((node) => {
-      if (node.data) rows.push(node.data)
+      rows.push(node.data as Record<string, unknown>)
     })
 
     // Get column definitions and create a mapping from field to headerName
-    const columnDefs = gridRef?.current?.api?.getColumnDefs() ?? []
+    const columnDefs = gridRef?.current?.api?.getColumnDefs() as ColDef[]
     const fieldToHeaderNameMap = columnDefs.reduce<
       Record<string, string | undefined>
     >((map, colDef) => {
-      if ('field' in colDef && colDef.field)
-        map[colDef.field] = colDef.headerName
+      const field = colDef.field
+      if (field) map[field] = colDef.headerName
       return map
     }, {})
 
@@ -107,7 +108,7 @@ export function BCPaginationActions({
 
     // Generate file name
     const formattedDate = new Date().toISOString().split('T')[0]
-    const fileName = `${(exportName ?? 'export')
+    const fileName = `${(exportName as string)
       .toLowerCase()
       .replace(/\s+/g, '_')}_${formattedDate}.xls`
 

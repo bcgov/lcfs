@@ -7,15 +7,18 @@ import { useTranslation } from 'react-i18next'
 
 const SupplierBalance = () => {
   const { t } = useTranslation()
-  const [showBalance, setShowBalance] = useState<boolean>(true)
+  const [showBalance, setShowBalance] = useState<boolean>(
+    !!+(sessionStorage.getItem('showBalance') as unknown as number) || true
+  )
 
   // Update sessionStorage when showBalance changes
   useEffect(() => {
     sessionStorage.setItem('showBalance', showBalance ? '1' : '0')
   }, [showBalance])
 
-  const { data } = useCurrentOrgBalance()
-  const orgBalance = isOrganizationBalance(data) ? data : undefined
+  const { data: orgBalance } = useCurrentOrgBalance() as unknown as {
+    data?: { totalBalance?: number | null; reservedBalance?: number | null }
+  }
   const formattedTotalBalance =
     orgBalance?.totalBalance != null
       ? numberFormatter({ value: orgBalance.totalBalance })
@@ -55,10 +58,5 @@ const SupplierBalance = () => {
     </BCBox>
   )
 }
-
-const isOrganizationBalance = (
-  value: unknown
-): value is { totalBalance?: number | null; reservedBalance?: number | null } =>
-  typeof value === 'object' && value !== null
 
 export default SupplierBalance

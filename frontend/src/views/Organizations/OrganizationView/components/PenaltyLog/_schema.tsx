@@ -57,7 +57,7 @@ export const penaltyLogColumnDefs: ColDef[] = [
     valueFormatter: ({ value }) =>
       value === null || value === undefined
         ? ''
-        : String(currencyFormatter(value)),
+        : (currencyFormatter(value) as string),
     minWidth: 180
   },
   {
@@ -105,7 +105,7 @@ export const discretionaryPenaltyLogColumnDefs: ColDef[] = [
     valueFormatter: ({ value }) =>
       value === null || value === undefined
         ? ''
-        : String(currencyFormatter(value)),
+        : (currencyFormatter(value) as string),
     minWidth: 250
   },
   {
@@ -234,7 +234,7 @@ export const penaltyLogEditorColDefs = (
     valueFormatter: ({ value }) =>
       value === null || value === undefined
         ? ''
-        : String(currencyFormatter(value)),
+        : (currencyFormatter(value) as string),
     minWidth: 240
   },
   {

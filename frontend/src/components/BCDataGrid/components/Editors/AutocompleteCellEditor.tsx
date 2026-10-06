@@ -88,7 +88,7 @@ export const AutocompleteCellEditor = forwardRef<
     if (typeof option === 'string' || typeof option === 'number') {
       return option.toString()
     }
-    return option.label || option.name || String(option.value ?? '')
+    return (option.label || option.name || option.value || '') as string
   }
 
   // Helpers to map between raw values (ids/strings) and option objects

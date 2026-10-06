@@ -27,6 +27,13 @@ declare module 'lodash/startCase' {
   export default function startCase(value?: string): string
 }
 
+declare module 'lodash' {
+  export function debounce<TArgs extends unknown[], TResult>(
+    func: (...args: TArgs) => TResult,
+    wait?: number
+  ): (...args: TArgs) => void
+}
+
 declare module 'react-input-mask' {
   import type { ComponentType, InputHTMLAttributes, ReactNode } from 'react'
 

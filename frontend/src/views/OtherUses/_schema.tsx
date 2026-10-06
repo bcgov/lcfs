@@ -27,7 +27,7 @@ import {
 
 const valueFormatter = (params: {
   value: string | number | null | undefined
-}) => String(formatNumberWithCommas(params))
+}) => formatNumberWithCommas(params) as string
 
 type OtherUsesOptionsData = Omit<OptionsData, 'fuelTypes'> & {
   fuelTypes: Array<OptionsData['fuelTypes'][number] & { units?: string }>
@@ -380,7 +380,7 @@ export const otherUsesColDefs = (
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
-      const values = fuelType ? [fuelType.units ?? fuelType.unit] : []
+      const values = fuelType ? [fuelType.units] : []
       return {
         options: values,
         multiple: false,
@@ -573,7 +573,7 @@ export const otherUsesSummaryColDefs = (
     headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
     field: 'ciOfFuel',
     floatingFilter: false,
-    valueFormatter: (params) => String(decimalFormatter(params))
+    valueFormatter: decimalFormatter as ColDef['valueFormatter']
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),

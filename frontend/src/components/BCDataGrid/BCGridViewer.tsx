@@ -44,6 +44,7 @@ import {
   relaxColumnMinWidths
 } from '@/components/BCDataGrid/columnSizingUtils'
 import type {
+  BCGridRef,
   BCPaginationFilter,
   BCPaginationOptions,
   BCSortOrder,
@@ -52,77 +53,6 @@ import type {
 } from './types'
 
 export type { BCGridViewerProps } from './types'
-
-type AgGridFilterCondition = Omit<AgGridFilterModel, 'field'>
-
-const isFilterRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-const isFilterValue = (
-  value: unknown
-): value is string | number | boolean | null =>
-  value === null ||
-  typeof value === 'string' ||
-  typeof value === 'number' ||
-  typeof value === 'boolean'
-
-const normalizeFilterValues = (value: unknown) => {
-  const values = Array.isArray(value)
-    ? value
-    : isFilterValue(value)
-      ? [value]
-      : []
-  return values.filter(isFilterValue)
-}
-
-const normalizeFilterCondition = (
-  value: unknown
-): AgGridFilterCondition | undefined => {
-  if (!isFilterRecord(value)) return undefined
-
-  const condition: AgGridFilterCondition = {}
-  if (typeof value.filterType === 'string')
-    condition.filterType = value.filterType
-  if (typeof value.type === 'string') condition.type = value.type
-  if (isFilterValue(value.filter)) condition.filter = value.filter
-  if (isFilterValue(value.filterTo)) condition.filterTo = value.filterTo
-  if (Array.isArray(value.values)) {
-    condition.values = normalizeFilterValues(value.values)
-  } else if (Array.isArray(value.filter)) {
-    condition.values = normalizeFilterValues(value.filter)
-  }
-  if (typeof value.dateFrom === 'string' || value.dateFrom === null) {
-    condition.dateFrom = value.dateFrom
-  }
-  if (typeof value.dateTo === 'string' || value.dateTo === null) {
-    condition.dateTo = value.dateTo
-  }
-  if (value.operator === 'AND' || value.operator === 'OR') {
-    condition.operator = value.operator
-  }
-
-  const conditions = Array.isArray(value.conditions)
-    ? value.conditions
-        .map(normalizeFilterCondition)
-        .filter((entry): entry is AgGridFilterCondition => entry !== undefined)
-    : []
-  const condition1 = conditions[0] ?? normalizeFilterCondition(value.condition1)
-  const condition2 = conditions[1] ?? normalizeFilterCondition(value.condition2)
-  if (condition1) condition.condition1 = condition1
-  if (condition2) condition.condition2 = condition2
-
-  return condition
-}
-
-const normalizePaginationFilter = (
-  filter: BCPaginationFilter
-): AgGridFilterModel | undefined => {
-  if (typeof filter.field !== 'string') return undefined
-  const condition = normalizeFilterCondition(filter)
-  return condition
-    ? { field: filter.field, ...condition }
-    : { field: filter.field }
-}
 
 // Styles for floating pagination
 const floatingPaginationStyles = {
@@ -205,8 +135,7 @@ export const BCGridViewer = forwardRef<
     },
     _ref
   ) => {
-    const localGridRef = useRef<AgGridReact<BCGridRow> | null>(null)
-    const gridRef = providedGridRef ?? localGridRef
+    const gridRef = providedGridRef as BCGridRef
     const { data, error, isError, isLoading } = queryData || {}
     const hasInitializedFromCache = useRef(false)
     const previousGridKey = useRef(gridKey)
@@ -671,18 +600,34 @@ export const BCGridViewer = forwardRef<
           })
         } else {
           // Apply sort orders from current pagination options
-          const state: ColumnState[] = (
-            paginationOptions.sortOrders ?? []
-          ).flatMap((col: BCSortOrder) =>
-            col.field && (col.direction === 'asc' || col.direction === 'desc')
-              ? [{ colId: col.field, sort: col.direction as 'asc' | 'desc' }]
-              : []
-          )
-          params.api.applyColumnState({ state, defaultState: { sort: null } })
+          params.api.applyColumnState((() => {
+            let state: unknown[] = []
+            if (
+              paginationOptions.sortOrders &&
+              paginationOptions.sortOrders.length > 0
+            ) {
+              state = paginationOptions.sortOrders.map((col: BCSortOrder) => ({
+                colId: col.field,
+                sort: col.direction
+              }))
+              return {
+                state,
+                defaultState: { sort: null }
+              }
+            }
+          }) as unknown as Parameters<typeof params.api.applyColumnState>[0])
         }
         requestAnimationFrame(() => {
           if (minWidthRelaxedRef.current) return
-          relaxColumnMinWidths(params.api, undefined, 50)
+          relaxColumnMinWidths(
+            params.api,
+            (
+              params as GridReadyEvent<BCGridRow> & {
+                columnApi?: unknown
+              }
+            ).columnApi,
+            50
+          )
           minWidthRelaxedRef.current = true
           setMinWidthRelaxed(true)
         })
@@ -705,7 +650,15 @@ export const BCGridViewer = forwardRef<
         // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
         // Preserve current widths to avoid visual jumps.
         if (minWidthRelaxedRef.current) return
-        relaxColumnMinWidths(params.api, undefined, 50)
+        relaxColumnMinWidths(
+          params.api,
+          (
+            params as FirstDataRenderedEvent<BCGridRow> & {
+              columnApi?: unknown
+            }
+          ).columnApi,
+          50
+        )
         minWidthRelaxedRef.current = true
         setMinWidthRelaxed(true)
       },
@@ -1018,10 +971,7 @@ export const BCGridViewer = forwardRef<
     const gridFilterPills = useMemo(
       () =>
         createAgGridFilterPills({
-          filters: activeFilters.flatMap((filter) => {
-            const normalized = normalizePaginationFilter(filter)
-            return normalized ? [normalized] : []
-          }),
+          filters: activeFilters as unknown as AgGridFilterModel[],
           columnLabelLookup,
           columnPillRenderers: columnPillRendererLookup,
           onRemove: handleRemoveFilterPill
@@ -1048,7 +998,10 @@ export const BCGridViewer = forwardRef<
     const handleClearAllFilters = useCallback(() => {
       try {
         gridRef?.current?.api?.setFilterModel(null)
-        gridRef?.current?.api?.setSortModel([])
+        const api = gridRef?.current?.api as unknown as
+          | { setSortModel: (sortModel: unknown[]) => void }
+          | undefined
+        api?.setSortModel([])
         setActiveFilters([])
       } catch (error) {
         // no-op

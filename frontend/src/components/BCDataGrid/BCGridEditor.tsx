@@ -186,7 +186,12 @@ export const BCGridEditor = ({
 
       requestAnimationFrame(() => {
         if (minWidthRelaxedRef.current) return
-        relaxColumnMinWidths(params.api, undefined, 50)
+        relaxColumnMinWidths(
+          params.api,
+          (params as GridReadyEvent<BCGridRow> & { columnApi?: unknown })
+            .columnApi,
+          50
+        )
         minWidthRelaxedRef.current = true
         setMinWidthRelaxed(true)
       })
@@ -202,7 +207,15 @@ export const BCGridEditor = ({
       // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
       // Preserve current widths to avoid visual jumps.
       if (minWidthRelaxedRef.current) return
-      relaxColumnMinWidths(params.api, undefined, 50)
+      relaxColumnMinWidths(
+        params.api,
+        (
+          params as import('ag-grid-community').FirstDataRenderedEvent<BCGridRow> & {
+            columnApi?: unknown
+          }
+        ).columnApi,
+        50
+      )
       minWidthRelaxedRef.current = true
       setMinWidthRelaxed(true)
 
@@ -258,8 +271,9 @@ export const BCGridEditor = ({
       if (!gridApi) return
 
       const newData: BCGridRow[] = []
-      const clipboardData = params.clipboardData
-      if (!clipboardData) return
+      const clipboardData = (params.clipboardData ||
+        (window as Window & { clipboardData?: DataTransfer })
+          .clipboardData) as DataTransfer
       const pastedData = clipboardData.getData('text/plain')
       const displayedColumns = gridApi.getAllDisplayedColumns()
       const editableColumns = displayedColumns.filter(
@@ -327,9 +341,16 @@ export const BCGridEditor = ({
   useEffect(() => {
     const pasteHandler = (event: ClipboardEvent) => {
       const gridApi = ref.current?.api
+      const columnApi = (
+        ref.current as
+          | (AgGridReact<BCGridRow> & {
+              columnApi?: unknown
+            })
+          | null
+      )?.columnApi
 
       if (handlePaste) {
-        handlePaste(event, { api: gridApi })
+        handlePaste(event, { api: gridApi, columnApi })
       } else {
         handleExcelPaste(event) // Fallback to the default paste function
       }

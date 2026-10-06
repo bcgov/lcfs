@@ -31,7 +31,7 @@ import { isQuarterEditable } from '@/utils/grid/cellEditables'
 
 const valueFormatter = (params: {
   value: string | number | null | undefined
-}) => String(formatNumberWithCommas(params))
+}) => formatNumberWithCommas(params) as string
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 

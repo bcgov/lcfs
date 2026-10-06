@@ -688,15 +688,17 @@ const FuelCodeDetailBase = () => {
   const handleIterationPaginationChange = (
     newPaginationOptions: BCPaginationOptions
   ) => {
-    const nextPaginationOptions = {
-      ...newPaginationOptions,
-      page: newPaginationOptions.page ?? 1,
-      size: newPaginationOptions.size ?? 10
+    setPaginationOptions(newPaginationOptions)
+
+    if (newPaginationOptions.size !== paginationOptions.size) {
+      const api = gridRef.current?.api as unknown as
+        | { paginationSetPageSize?: (size?: number) => void }
+        | undefined
+      api?.paginationSetPageSize?.(newPaginationOptions.size)
     }
-    setPaginationOptions(nextPaginationOptions)
 
     gridRef.current?.api?.paginationGoToPage?.(
-      Math.max(nextPaginationOptions.page - 1, 0)
+      Math.max((newPaginationOptions.page || 1) - 1, 0)
     )
   }
 

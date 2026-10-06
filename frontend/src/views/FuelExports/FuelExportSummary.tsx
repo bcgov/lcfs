@@ -7,6 +7,7 @@ import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 interface FuelExport {
   fuelExportId: number | string
@@ -43,12 +44,7 @@ interface PaginationOptions {
 
 export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
-    {
-      page: 1,
-      size: 10,
-      filters: [],
-      sortOrders: []
-    }
+    defaultInitialPagination as unknown as PaginationOptions
   )
   const gridRef = useRef(null)
   const { t } = useTranslation(['common', 'fuelExport'])
