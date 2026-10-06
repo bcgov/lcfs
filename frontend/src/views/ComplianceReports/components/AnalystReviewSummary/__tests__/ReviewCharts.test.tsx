@@ -297,6 +297,14 @@ describe('ReviewCharts', () => {
 
     const option = chartProps[0].option
     expect(option.series[0].type).toBe('heatmap')
+    expect(option.tooltip).toEqual(
+      expect.objectContaining({
+        appendTo: 'body',
+        appendToBody: true,
+        confine: false,
+        extraCssText: expect.stringContaining('z-index')
+      })
+    )
     expect(option.visualMap.text).toEqual(['Higher volume', 'Missing'])
     expect(option.visualMap.dimension).toBe(3)
     expect(option.visualMap.max).toBeCloseTo(Math.log10(101))

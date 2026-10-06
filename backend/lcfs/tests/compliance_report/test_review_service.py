@@ -241,6 +241,62 @@ def test_renewable_liquid_fuel_volume_series_uses_liquid_target_fuels_only():
     assert points["Non-renewable"].comparison_value == 750
 
 
+def test_renewable_liquid_fuel_volume_series_uses_single_prior_baseline():
+    service = _service()
+
+    def fuel_supply(fuel_type, category, quantity, renewable):
+        return SimpleNamespace(
+            fuel_type=SimpleNamespace(fuel_type=fuel_type, renewable=renewable),
+            fuel_category=SimpleNamespace(category=category),
+            quantity=quantity,
+            q1_quantity=None,
+            q2_quantity=None,
+            q3_quantity=None,
+            q4_quantity=None,
+            units=QuantityUnitsEnum.Litres,
+        )
+
+    current = {
+        "fuel_supplies": [
+            fuel_supply("Ethanol", "Gasoline", 1000, True),
+            fuel_supply("Fossil-derived diesel", "Diesel", 2000, False),
+        ]
+    }
+    prior_2024 = {
+        "fuel_supplies": [
+            fuel_supply("Biodiesel", "Diesel", 300, True),
+            fuel_supply("Fossil-derived gasoline", "Gasoline", 700, False),
+        ]
+    }
+    prior_2023 = {
+        "fuel_supplies": [
+            fuel_supply("Biodiesel", "Diesel", 400, True),
+            fuel_supply("Fossil-derived gasoline", "Gasoline", 800, False),
+        ]
+    }
+
+    series = service._build_renewable_liquid_fuel_volume_series(
+        current,
+        [
+            (
+                SimpleNamespace(compliance_period=SimpleNamespace(description="2024")),
+                prior_2024,
+            ),
+            (
+                SimpleNamespace(compliance_period=SimpleNamespace(description="2023")),
+                prior_2023,
+            ),
+        ],
+        "2025",
+    )
+
+    assert len(series) == 1
+    assert series[0].comparison_label == "2024"
+    points = {point.label: point for point in series[0].points}
+    assert points["Renewable"].comparison_value == 300
+    assert points["Non-renewable"].comparison_value == 700
+
+
 def test_supplemental_line_20_finding_uses_magnitude_gap_delta():
     service = _service()
     current_summary = SimpleNamespace(

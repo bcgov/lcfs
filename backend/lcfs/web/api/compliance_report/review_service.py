@@ -1899,30 +1899,29 @@ class ComplianceReportReviewService:
         current_totals = self._sum_renewable_liquid_fuel_volume(
             current_records.get("fuel_supplies", [])
         )
-        series = []
+        if not prior_year_record_snapshots:
+            return []
 
-        for prior_report, prior_records in prior_year_record_snapshots:
-            prior_totals = self._sum_renewable_liquid_fuel_volume(
-                prior_records.get("fuel_supplies", [])
-            )
-            points = self._comparison_points(
-                current_totals,
-                prior_totals,
-                units="litres",
-            )
-            if points:
-                series.append(
-                    ComplianceReportReviewComparisonSeriesSchema(
-                        title="Renewable vs non-renewable liquid fuel supply",
-                        current_label=current_label,
-                        comparison_label=str(
-                            prior_report.compliance_period.description
-                        ),
-                        points=points,
-                    )
-                )
+        prior_report, prior_records = prior_year_record_snapshots[0]
+        prior_totals = self._sum_renewable_liquid_fuel_volume(
+            prior_records.get("fuel_supplies", [])
+        )
+        points = self._comparison_points(
+            current_totals,
+            prior_totals,
+            units="litres",
+        )
+        if not points:
+            return []
 
-        return series
+        return [
+            ComplianceReportReviewComparisonSeriesSchema(
+                title="Renewable vs non-renewable liquid fuel supply",
+                current_label=current_label,
+                comparison_label=str(prior_report.compliance_period.description),
+                points=points,
+            )
+        ]
 
     def _fse_chart_series(
         self,
