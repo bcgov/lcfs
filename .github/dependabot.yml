@@ -1,0 +1,33 @@
+# Dependabot security updates are enabled in the repository settings. This
+# file only changes how their pull requests are batched: every available
+# security fix for an ecosystem lands in one grouped PR instead of one PR per
+# package.
+#
+# open-pull-requests-limit: 0 keeps scheduled version updates turned off (the
+# behaviour before this file existed); it does not apply to security updates.
+# The schedule block is required by the config schema even so.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directories:
+      - "/frontend"
+      - "/mcp-server"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    groups:
+      pip-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
