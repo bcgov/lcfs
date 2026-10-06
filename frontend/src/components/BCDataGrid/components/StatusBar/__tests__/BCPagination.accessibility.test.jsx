@@ -7,6 +7,22 @@ vi.mock('../BCPaginationActions', () => ({
 }))
 
 describe('BCPagination accessibility', () => {
+  it('exposes pagination controls in a named navigation landmark', () => {
+    render(
+      <BCPagination
+        total={13}
+        page={1}
+        handleChangePage={vi.fn()}
+        size={10}
+        handleChangeRowsPerPage={vi.fn()}
+      />
+    )
+
+    expect(
+      screen.getByRole('navigation', { name: 'pagination for BC DataGrid' })
+    ).toBeInTheDocument()
+  })
+
   it('exposes the result range as one atomic, polite announcement and updates it', () => {
     const props = {
       total: 13,

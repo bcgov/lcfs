@@ -34,7 +34,6 @@ export const BCPagination = ({
   return (
     <TablePagination
       className="ag-grid-pagination"
-      aria-label="pagination for BC DataGrid"
       component="div"
       count={total}
       page={page - 1}
@@ -66,6 +65,9 @@ export const BCPagination = ({
         toolbar: 'nav'
       }}
       slotProps={{
+        toolbar: {
+          'aria-label': 'pagination for BC DataGrid'
+        },
         select: {
           IconComponent: (props) => (
             <ArrowDropDown
