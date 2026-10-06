@@ -29,6 +29,7 @@ function TabPanel({ children, value, index }) {
       hidden={value !== index}
       id={`organization-tabpanel-${index}`}
       aria-labelledby={`organization-tab-${index}`}
+      tabIndex={value === index ? 0 : -1}
     >
       {value === index && children}
     </BCBox>
@@ -196,12 +197,16 @@ export const OrganizationView = ({ addMode = false }) => {
             ))}
           </Tabs>
         </AppBar>
-        {organizationTitle && (
-          <BCTypography variant="h5" color="primary" mt={3}>
-            {organizationTitle}
-          </BCTypography>
-        )}
-        <BCBox sx={{ pt: 3 }}>{renderContent()}</BCBox>
+        {tabConfig.map((config, idx) => (
+          <TabPanel key={config.path} value={tabIndex} index={idx}>
+            {organizationTitle && (
+              <BCTypography variant="h5" color="primary" mt={3}>
+                {organizationTitle}
+              </BCTypography>
+            )}
+            <BCBox sx={{ pt: 3 }}>{idx === tabIndex && renderContent()}</BCBox>
+          </TabPanel>
+        ))}
       </BCBox>
     </BCBox>
   )

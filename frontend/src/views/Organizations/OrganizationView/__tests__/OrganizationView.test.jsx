@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, act } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OrganizationView } from '../OrganizationView'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -152,7 +152,7 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock BCAlert
 vi.mock('@/components/BCAlert', () => ({
-  default: ({ children, severity, sx }) => (
+  default: ({ children, severity }) => (
     <div data-test="alert-box" role="alert" data-severity={severity}>
       {children}
     </div>
@@ -383,6 +383,43 @@ describe('OrganizationView', () => {
       ;['Dashboard', 'Users', 'Credit ledger'].forEach((label) => {
         expect(screen.getByRole('tab', { name: label })).toBeInTheDocument()
       })
+    })
+
+    it('connects each named tab to a labelled tab panel', () => {
+      renderComponent()
+
+      const tabs = screen.getAllByRole('tab')
+      const panels = screen.getAllByRole('tabpanel', { hidden: true })
+      expect(panels).toHaveLength(tabs.length)
+
+      tabs.forEach((tab) => {
+        expect(tab).toHaveAccessibleName()
+        const panel = document.getElementById(tab.getAttribute('aria-controls'))
+        expect(panel).toHaveAttribute('role', 'tabpanel')
+        expect(panel).toHaveAttribute('aria-labelledby', tab.id)
+      })
+
+      const selectedTab = screen.getByRole('tab', { name: 'Dashboard' })
+      const selectedPanel = screen.getByRole('tabpanel')
+      expect(selectedTab).toHaveAttribute('aria-selected', 'true')
+      expect(selectedPanel).toHaveAccessibleName('Dashboard')
+      expect(selectedPanel).toHaveAttribute('tabindex', '0')
+      expect(selectedPanel).toContainElement(
+        screen.getByText('Organization Details')
+      )
+    })
+
+    it('moves keyboard focus to a tab whose name and selected state are exposed', () => {
+      renderComponent()
+
+      const dashboardTab = screen.getByRole('tab', { name: 'Dashboard' })
+      const usersTab = screen.getByRole('tab', { name: 'Users' })
+      dashboardTab.focus()
+      fireEvent.keyDown(dashboardTab, { key: 'ArrowRight' })
+
+      expect(usersTab).toHaveFocus()
+      expect(usersTab).toHaveAccessibleName('Users')
+      expect(usersTab).toHaveAttribute('aria-selected', 'false')
     })
 
     it('changes tab when handleChangeTab is called', () => {
