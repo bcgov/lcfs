@@ -139,7 +139,7 @@ export const useFuelCodeStatuses = (options: QueryOptions<unknown>) => {
 export const useFuelCodeBulletins = (
   bulletinType: any,
   paginationOptions: PaginationParams,
-  options: QueryOptions<unknown>
+  options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
   return useQuery({
@@ -164,7 +164,7 @@ export const useFuelCodeBulletins = (
 }
 
 export const useDownloadFuelCodeBulletins = (
-  options: ExtMutationOptions<unknown, any>
+  options: ExtMutationOptions<unknown, any> = {}
 ) => {
   const client = useApiService()
   return useMutation({

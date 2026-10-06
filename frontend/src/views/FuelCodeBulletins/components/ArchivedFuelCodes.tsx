@@ -37,12 +37,11 @@ export const ArchivedFuelCodes = () => {
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
-  const { mutateAsync: downloadBulletins } = useDownloadFuelCodeBulletins({})
+  const { mutateAsync: downloadBulletins } = useDownloadFuelCodeBulletins()
 
   const { data, isLoading, isError, error } = useFuelCodeBulletins(
     'archived',
-    paginationOptions as PaginationParams,
-    {}
+    paginationOptions as PaginationParams
   )
 
   const bulletinData = data as
