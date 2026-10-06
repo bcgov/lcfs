@@ -31,7 +31,7 @@ export const publicPageRoutes: AppRouteObject[] = [
     path: ROUTES.PUBLIC_DASHBOARD,
     element: <PublicDashboardRoute />,
     handle: {
-      title: 'LCFS At a Glance',
+      title: 'LCFS Program Information',
       hideBreadcrumb: creditMarketPageEnabled
     }
   },

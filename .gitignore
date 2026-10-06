@@ -1,158 +1,152 @@
-# Generated geocoding output files
-org_snapshot_coordinates.sql
+# Operating system
+.DS_Store
 
-# Issue #4492 proprietary data (source workbook, mapping, manual backfill SQL) — keep out of the public repo
-4492.xlsx
-4492_correction_mapping.csv
-4492_aggregator_issuance_backfill.sql
-
-### Python template
-
+# Editors and IDEs
 .idea/
 .vscode/*
 !.vscode/extensions.json
-# Byte-compiled / optimized / DLL files
+.ropeproject
+.spyderproject
+.spyproject
+
+# Environment and local configuration
+.env
+.venv
+ENV/
+env/
+env.bak/
+venv/
+venv.bak/
+.git/
+local_settings.py
+
+# Python bytecode and compiled extensions
 __pycache__/
 *.py[cod]
 *$py.class
-docs/
-.DS_Store
-
-# C extensions
 *.so
+*.sage.py
+cython_debug/
 
-# Distribution / packaging
+# Python packaging and build output
 .Python
+.eggs/
+.installed.cfg
+__pypackages__/
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
-.eggs/
 lib/
 lib64/
 parts/
 sdist/
+share/python-wheels/
 var/
 wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
 *.egg
+*.egg-info/
 MANIFEST
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+# PyInstaller and PyBuilder
 *.manifest
 *.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-*.sqlite3
-*.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
 .pybuilder/
 target/
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Logs and installer output
+*.log
+pip-delete-this-directory.txt
+pip-log.txt
 
-# IPython
-profile_default/
-ipython_config.py
+# Documentation and translations
+docs/
+docs/_build/
+/site
+*.mo
+*.pot
 
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
-
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
-
-# Celery stuff
+# Python framework runtime files
+.scrapy
+.webassets-cache
+instance/
 celerybeat-schedule
 celerybeat.pid
 
-# SageMath parsed files
-*.sage.py
+# Notebooks and IPython
+.ipynb_checkpoints
+ipython_config.py
+profile_default/
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-.git/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
+# Python type checker caches
 .dmypy.json
+.mypy_cache/
+.pyre/
+.pytype/
 dmypy.json
 
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# local database file
+# Local databases
+*.sqlite3
+*.sqlite3-journal
 LCFS Local DB.session.sql
+
+# Generated project output
+org_snapshot_coordinates.sql
 frontend/cucumber-report.html
 
-# AI Assistant Files
-CLAUDE.md
+# Issue #4492 proprietary data — keep out of the public repo
+4492.xlsx
+4492_correction_mapping.csv
+4492_aggregator_issuance_backfill.sql
+
+# AI assistant configuration and files
+.agents/
+.mcp.json
 AGENTS.md
+AGENTS.override.md
+.claude
+CLAUDE.md
+CLAUDE.local.md
+.codex/
+.cursor/
 .cursorrules
 cursor.md
+.github/agents/
+.github/chatmodes/
+.github/copilot/
 .github/copilot-instructions.md
-.aider*
-.windsurf
-windsurf.md
-.continue/
+.github/instructions/
+.github/prompts/
+.github/skills/
+.gemini/
+.qwen/
+GEMINI.md
+QWEN.md
 .codeium/
-.tabnine/
+.windsurf
+.windsurfrules
+windsurf.md
+.cline/
+.clineignore
+.clinerules
+.roo/
+.rooignore
+.roomodes
+.roorules
+.roorules-*
+.kilocode/
+.kilocoderules
+.kilocoderules-*
+.opencode/
+opencode.json
+opencode.jsonc
+.paseo/
+paseo.json
+.aider*
+.continue/
+.factory/
+.goosehints
+.kiro/
 .kite/
-.claude
+.tabnine/
