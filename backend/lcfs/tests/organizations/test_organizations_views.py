@@ -1,5 +1,5 @@
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from fastapi import status, FastAPI
 from unittest.mock import AsyncMock, patch, MagicMock
 from lcfs.web.api.organizations.services import (
@@ -91,7 +91,7 @@ class TestOrganizationLinkKeyViews:
                 lambda: mock_service_instance
             )
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get("/api/organizations/1/forms")
 
             assert response.status_code == status.HTTP_200_OK
@@ -130,7 +130,7 @@ class TestOrganizationLinkKeyViews:
                 lambda: mock_service_instance
             )
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get("/api/organizations/1/link-keys")
 
             assert response.status_code == status.HTTP_200_OK
@@ -168,7 +168,7 @@ class TestOrganizationLinkKeyViews:
             )
 
             payload = {"form_id": 1}
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.post(
                     "/api/organizations/1/link-keys", json=payload
                 )
@@ -207,7 +207,7 @@ class TestOrganizationLinkKeyViews:
                 lambda: mock_service_instance
             )
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.put("/api/organizations/1/link-keys/1")
 
             assert response.status_code == status.HTTP_200_OK
@@ -245,7 +245,7 @@ class TestOrganizationLinkKeyViews:
                 lambda: mock_service_instance
             )
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get(
                     "/api/organizations/validate-link-key/valid-key-123"
                 )
@@ -282,7 +282,7 @@ class TestOrganizationLinkKeyViews:
                 lambda: mock_service_instance
             )
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get(
                     "/api/organizations/validate-link-key/invalid-key-123"
                 )
@@ -325,7 +325,7 @@ class TestOrganizationLinkKeyViews:
                 lambda: mock_service_instance
             )
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get("/api/organizations/1/forms")
 
             assert response.status_code == status.HTTP_200_OK
@@ -398,7 +398,7 @@ class TestOrganizationLinkKeyViews:
                 lambda: mock_service_instance
             )
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get("/api/organizations/1/link-keys")
 
             assert response.status_code == status.HTTP_200_OK
@@ -442,7 +442,7 @@ class TestOrganizationLinkKeyViews:
             )
 
             payload = {"form_id": 1}
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.post(
                     "/api/organizations/999/link-keys", json=payload
                 )
@@ -474,7 +474,7 @@ class TestOrganizationLinkKeyViews:
             )
 
             payload = {"form_id": 1}
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.post(
                     "/api/organizations/1/link-keys", json=payload
                 )
@@ -576,7 +576,7 @@ class TestOrganizationLinkKeyViews:
             )
 
             payload = {"form_id": 1}
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.post(
                     "/api/organizations/1/link-keys", json=payload
                 )
@@ -617,7 +617,7 @@ class TestOrganizationLinkKeyViews:
                 lambda: mock_service_instance
             )
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.put("/api/organizations/1/link-keys/1")
 
             assert response.status_code == status.HTTP_200_OK
@@ -677,7 +677,7 @@ class TestGetOrganizationBalanceStripping:
             mock_svc.get_organization.return_value = _mock_org_schema(org_id=1)
             fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get("/api/organizations/1")
 
         assert response.status_code == status.HTTP_200_OK
@@ -700,7 +700,7 @@ class TestGetOrganizationBalanceStripping:
             mock_svc.get_organization.return_value = _mock_org_schema(org_id=1)
             fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get("/api/organizations/1")
 
         assert response.status_code == status.HTTP_200_OK
@@ -725,7 +725,7 @@ class TestGetOrganizationBalanceStripping:
             )
             fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get("/api/organizations/1")
 
         assert response.status_code == status.HTTP_200_OK
@@ -754,7 +754,7 @@ class TestPenaltyEndpointsOrgCheck:
             )
             fastapi_app.dependency_overrides[OrganizationPenaltyService] = lambda: mock_svc
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get("/api/organizations/1/penalties/analytics")
 
         assert response.status_code == status.HTTP_200_OK
@@ -767,7 +767,7 @@ class TestPenaltyEndpointsOrgCheck:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER], {"organization_id": 99})
 
         with patch("lcfs.web.api.organizations.views.OrganizationPenaltyService"):
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get("/api/organizations/1/penalties/analytics")
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -789,7 +789,7 @@ class TestPenaltyEndpointsOrgCheck:
             )
             fastapi_app.dependency_overrides[OrganizationPenaltyService] = lambda: mock_svc
 
-            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+            async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 response = await client.get("/api/organizations/5/penalties/analytics")
 
         assert response.status_code == status.HTTP_200_OK
