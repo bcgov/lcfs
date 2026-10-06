@@ -195,6 +195,26 @@ class TransactionRepository:
         return transactions, total_count
 
     @repo_handler
+    async def get_transfer_export_details(self, transfer_ids: List[int]) -> dict:
+        """
+        Agreement date and A1 flag for the given transfers, keyed by transfer_id.
+
+        mv_transaction_aggregate carries neither, so the transactions export
+        reads them from the transfer table for the transfers it includes.
+        """
+        if not transfer_ids:
+            return {}
+
+        result = await self.db.execute(
+            select(
+                Transfer.transfer_id,
+                Transfer.agreement_date,
+                Transfer.is_a1_category,
+            ).where(Transfer.transfer_id.in_(transfer_ids))
+        )
+        return {row.transfer_id: row for row in result.all()}
+
+    @repo_handler
     async def get_transaction_by_id(self, transaction_id: int) -> Transaction:
         """
         Retrieves a transaction by its ID.

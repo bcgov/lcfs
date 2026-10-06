@@ -1667,3 +1667,44 @@ async def test_calculate_line_17_counts_transfer_recorded_after_deadline(
 
     assert await line_17(from_org_id, 2024) == 40
     assert await line_17(to_org_id, 2024) == 60
+
+
+@pytest.mark.anyio
+async def test_get_transfer_export_details(
+    dbsession, transaction_repo, mock_transactions
+):
+    a1_transfer = Transfer(
+        from_organization_id=test_org_id,
+        to_organization_id=test_org_2_id,
+        agreement_date=datetime(2026, 3, 2),
+        price_per_unit=2.0,
+        quantity=20,
+        transfer_category_id=1,
+        is_a1_category=True,
+        current_status_id=6,
+    )
+    undated_transfer = Transfer(
+        from_organization_id=test_org_id,
+        to_organization_id=test_org_2_id,
+        price_per_unit=2.0,
+        quantity=20,
+        current_status_id=6,
+    )
+    dbsession.add_all([a1_transfer, undated_transfer])
+    await dbsession.flush()
+
+    details = await transaction_repo.get_transfer_export_details(
+        [a1_transfer.transfer_id, undated_transfer.transfer_id]
+    )
+
+    # Only the requested transfers, not the others in mock_transactions
+    assert set(details) == {a1_transfer.transfer_id, undated_transfer.transfer_id}
+    assert details[a1_transfer.transfer_id].agreement_date == datetime(2026, 3, 2)
+    assert details[a1_transfer.transfer_id].is_a1_category is True
+    assert details[undated_transfer.transfer_id].agreement_date is None
+    assert details[undated_transfer.transfer_id].is_a1_category is False
+
+
+@pytest.mark.anyio
+async def test_get_transfer_export_details_without_transfers(transaction_repo):
+    assert await transaction_repo.get_transfer_export_details([]) == {}
