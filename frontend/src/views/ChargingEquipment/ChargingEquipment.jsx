@@ -274,7 +274,7 @@ export const ChargingEquipment = () => {
 
   const columnDefs = useMemo(
     () =>
-      chargingEquipmentColDefs(t, {
+      chargingEquipmentColDefs(t, isIDIR, {
         enableSelection: !isIDIR,
         showDateColumns: true,
         showIntendedUsers: true,

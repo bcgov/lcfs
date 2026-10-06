@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import IconButton from '@mui/material/IconButton'
 import ClearIcon from '@mui/icons-material/Clear'
+import type { ChangeEvent, MouseEvent } from 'react'
 
 const ITEM_HEIGHT = 48
 const ITEM_PADDING_TOP = 8
@@ -23,8 +24,7 @@ export interface BCSelectFloatingFilterProps {
   initialSelectedValues?: string[]
 }
 
-const EMPTY_OPTIONS: Record<string, unknown>[] = []
-const EMPTY_SELECTION: string[] = []
+type FilterOption = Record<string, unknown>
 
 export const BCSelectFloatingFilter = ({
   model,
@@ -36,31 +36,70 @@ export const BCSelectFloatingFilter = ({
   params,
   initialFilterType = 'equals',
   multiple = false,
-  initialSelectedValues = EMPTY_SELECTION
+  initialSelectedValues = []
 }: BCSelectFloatingFilterProps) => {
-  const [selectedValues, setSelectedValues] = useState<string[]>([])
+  const [selectedValues, setSelectedValues] = useState<string[] | string>(
+    multiple ? [] : ''
+  )
+  const [options, setOptions] = useState<FilterOption[]>([])
   const { data: optionsData, isLoading, isError, error } = optionsQuery(params)
-  const filter = model?.filter
-  const hasSelection = selectedValues.length > 0
-  const options = useMemo(() => {
-    const baseOptions = optionsData || EMPTY_OPTIONS
-    if (hasSelection && filter?.split(',').length > 1 &&
-        !baseOptions.some((option) => option[valueKey]?.toString() === filter)) {
-      return [...baseOptions, { [valueKey]: filter, [labelKey]: filter }]
-    }
-    return baseOptions
-  }, [optionsData, filter, hasSelection, valueKey, labelKey])
+  const optionsDataRef = useRef(optionsData)
+  const optionsRef = useRef(options)
+  const initialSelectedValuesRef = useRef(initialSelectedValues)
+  const optionKeysRef = useRef({ valueKey, labelKey })
 
   useEffect(() => {
-    const nextValues = model ? model.filter?.split(',') || [] : initialSelectedValues
-    setSelectedValues((previous) =>
-      previous.length === nextValues.length && previous.every((value, index) => value === nextValues[index])
-        ? previous
-        : nextValues
-    )
-  }, [model, initialSelectedValues])
+    optionsDataRef.current = optionsData
+  }, [optionsData])
 
-  const handleChange = (event) => {
+  useEffect(() => {
+    optionsRef.current = options
+  }, [options])
+
+  useEffect(() => {
+    initialSelectedValuesRef.current = initialSelectedValues
+  }, [initialSelectedValues])
+
+  useEffect(() => {
+    optionKeysRef.current = { valueKey, labelKey }
+  }, [valueKey, labelKey])
+
+  useEffect(() => {
+    if (optionsDataRef.current) {
+      setOptions(optionsDataRef.current)
+    }
+  }, [isLoading])
+
+  useEffect(() => {
+    if (!model) {
+      setSelectedValues(initialSelectedValuesRef.current)
+      return
+    }
+
+    const filterValues = model.filter?.split(',') || []
+    const { valueKey: currentValueKey, labelKey: currentLabelKey } =
+      optionKeysRef.current
+
+    if (filterValues.length > 1) {
+      const optionExists = optionsRef.current.some(
+        (option) =>
+          option[currentValueKey]?.toString() === model.filter?.toString()
+      )
+
+      if (!optionExists) {
+        const newOptions: FilterOption[] = [
+          {
+            [currentValueKey]: model.filter,
+            [currentLabelKey]: model.filter
+          }
+        ]
+        setOptions((previous) => [...previous, ...newOptions])
+      }
+    }
+    setSelectedValues(filterValues)
+  }, [model])
+
+  const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const { options } = event.target
     const newValues = Array.from(options)
       .filter((option) => option.selected)
@@ -85,10 +124,12 @@ export const BCSelectFloatingFilter = ({
     }
   }
 
-  const handleClear = (event) => {
+  const handleClear = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     setSelectedValues([])
 
+    const currentOptions = optionsDataRef.current
+    setOptions(currentOptions || [])
     onModelChange(null)
   }
 

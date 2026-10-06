@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef, useRef, useCallback } from 'react'
+import { useState, useEffect, forwardRef, useRef } from 'react'
 import TextField from '@mui/material/TextField'
 import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
@@ -79,54 +79,73 @@ export const AddressAutocomplete = forwardRef<
     const { autocompleteAddress, validateAddress } = useGeocoder()
     const { mutateAsync: fetchAutocomplete } = autocompleteAddress
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
-
-    const fetchAddresses = useCallback(async (searchValue: string) => {
-      if (!searchValue || searchValue.length < 3) {
-        setOptions([])
-        return
-      }
-
-      // Don't fetch if user is just adding postal code to selected address
-      if (
-        isAddressSelected &&
-        searchValue.includes(',') &&
-        (searchValue.endsWith(' ') ||
-          /[A-Za-z][0-9][A-Za-z]/.test(searchValue.slice(-3)))
-      ) {
-        return
-      }
-
-      try {
-        // Use the new autocomplete endpoint
-        const result = (await fetchAutocomplete({
-          partialAddress: searchValue,
-          maxResults
-        })) as GeocoderAutocompleteResponse
-
-        if (result.suggestions) {
-          // Suggestions now come as complete AddressSchema objects
-          const addresses = result.suggestions.map((addr) => ({
-            fullAddress: addr.full_address,
-            streetAddress: addr.street_address || '',
-            city: addr.city || '',
-            localityName: addr.city || '',
-            province: addr.province || '',
-            postalCode: addr.postal_code || '',
-            postal_code: addr.postal_code || '',
-            latitude: addr.latitude,
-            longitude: addr.longitude,
-            score: addr.score
-          }))
-          
-          setOptions(addresses)
-        }
-      } catch (error) {
-        console.error('Error fetching addresses:', error)
-        setOptions([])
-      }
-    }, [fetchAutocomplete, isAddressSelected, maxResults])
+    const fetchContextRef = useRef({
+      isAddressSelected,
+      maxResults,
+      fetchAutocomplete
+    })
 
     useEffect(() => {
+      fetchContextRef.current = {
+        isAddressSelected,
+        maxResults,
+        fetchAutocomplete
+      }
+    }, [isAddressSelected, maxResults, fetchAutocomplete])
+
+    useEffect(() => {
+      const {
+        isAddressSelected: addressWasSelected,
+        maxResults: requestMaxResults,
+        fetchAutocomplete: requestAutocomplete
+      } = fetchContextRef.current
+
+      const fetchAddresses = async (searchValue: string) => {
+        if (!searchValue || searchValue.length < 3) {
+          setOptions([])
+          return
+        }
+
+        // Don't fetch if user is just adding postal code to selected address
+        if (
+          addressWasSelected &&
+          searchValue.includes(',') &&
+          (searchValue.endsWith(' ') ||
+            /[A-Za-z][0-9][A-Za-z]/.test(searchValue.slice(-3)))
+        ) {
+          return
+        }
+
+        try {
+          // Use the new autocomplete endpoint
+          const result = (await requestAutocomplete({
+            partialAddress: searchValue,
+            maxResults: requestMaxResults
+          })) as GeocoderAutocompleteResponse
+
+          if (result.suggestions) {
+            // Suggestions now come as complete AddressSchema objects
+            const addresses = result.suggestions.map((addr) => ({
+              fullAddress: addr.full_address,
+              streetAddress: addr.street_address || '',
+              city: addr.city || '',
+              localityName: addr.city || '',
+              province: addr.province || '',
+              postalCode: addr.postal_code || '',
+              postal_code: addr.postal_code || '',
+              latitude: addr.latitude,
+              longitude: addr.longitude,
+              score: addr.score
+            }))
+
+            setOptions(addresses)
+          }
+        } catch (error) {
+          console.error('Error fetching addresses:', error)
+          setOptions([])
+        }
+      }
+
       // Clear previous timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -149,7 +168,7 @@ export const AddressAutocomplete = forwardRef<
           clearTimeout(timeoutRef.current)
         }
       }
-    }, [fetchAddresses, inputValue])
+    }, [inputValue])
 
     const isLoading = autocompleteAddress.isPending || validateAddress.isPending
 

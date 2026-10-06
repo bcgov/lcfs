@@ -279,14 +279,17 @@ type ChargingEquipmentColumnOptions = {
   showDateColumns?: boolean
   showIntendedUsers?: boolean
   showLocationFields?: boolean
+  showPorts?: boolean
+  showFuelMeasurement?: boolean
   showNotes?: boolean
   showOrganizationColumn?: boolean
 }
 
 export const chargingEquipmentColDefs = (
   t: (key: string) => string,
-  options: ChargingEquipmentColumnOptions = {}
+  ...args: [isIDIR?: boolean, options?: ChargingEquipmentColumnOptions]
 ): ColDef[] => {
+  const options = args[1] || {}
   const {
   enableSelection = false,
   historyMode = false,

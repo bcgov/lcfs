@@ -441,7 +441,7 @@ export const ChargingSiteFSEGrid = ({
       canReturnToDraft,
       canSubmit,
       canSetToDecommission,
-      chargingSiteStatus: equipmentData?.status?.status || 'Draft',
+      chargingSiteStatus: equipmentData?.chargingSiteStatus || 'Draft',
       organizationId: equipmentData?.organizationId || null,
       currentUser,
       hasAnyRole,
@@ -461,7 +461,7 @@ export const ChargingSiteFSEGrid = ({
     canReturnToDraft,
     canSubmit,
     canSetToDecommission,
-    equipmentData?.status?.status,
+    equipmentData?.chargingSiteStatus,
     equipmentData?.organizationId,
     currentUser,
     hasAnyRole,
@@ -538,7 +538,7 @@ export const ChargingSiteFSEGrid = ({
           <BCGridViewer
             gridRef={gridRef}
             alertRef={alertRef}
-            columnDefs={chargingEquipmentColDefs(t, {
+            columnDefs={chargingEquipmentColDefs(t, isIDIR, {
               enableSelection: false,
               historyMode,
               onToggleHistory: handleToggleHistory,

@@ -1,4 +1,11 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import {
+  useState,
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+  type ChangeEvent
+} from 'react'
 import { useDebounce } from '@/utils/debounce'
 
 export interface AsyncValidationEditorProps {
@@ -29,10 +36,15 @@ export const AsyncValidationEditor = forwardRef(
     const [touched, setTouched] = useState(false)
 
     const debouncedInputVal = useDebounce(inputValue, debounceLimit)
+    const validationInputsRef = useRef({ inputValue, debounceLimit, condition })
+
+    useEffect(() => {
+      validationInputsRef.current = { inputValue, debounceLimit, condition }
+    }, [inputValue, debounceLimit, condition])
     // TODO: ability to show tool tip
     // TODO: ability to show error message
     // TODO: ability to perform both synchronous and asynhronous validations.
-    function inputHandler(e) {
+    function inputHandler(e: ChangeEvent<HTMLInputElement>) {
       setTouched(true)
       setInputValue(e.target.value)
       onValueChange(e.target.value)
@@ -40,14 +52,18 @@ export const AsyncValidationEditor = forwardRef(
     }
 
     useEffect(() => {
-      const timeout = debounceLimit
+      const {
+        inputValue: currentInputValue,
+        debounceLimit: timeout,
+        condition: currentCondition
+      } = validationInputsRef.current
 
-      new Promise((resolve) => {
-        if (debouncedInputVal === '') {
+      new Promise<boolean>((resolve) => {
+        if (currentInputValue === '') {
           resolve(false)
         } else {
           setTimeout(() => {
-            resolve(condition(debouncedInputVal))
+            resolve(currentCondition(currentInputValue))
           }, timeout)
         }
       })
@@ -56,7 +72,7 @@ export const AsyncValidationEditor = forwardRef(
           setValidating(false)
         })
         .catch((err) => console.log(err))
-    }, [condition, debounceLimit, debouncedInputVal])
+    }, [debouncedInputVal])
 
     useImperativeHandle(ref, () => {
       return {
