@@ -17,6 +17,18 @@ import CommentForm from '@/components/Comments/CommentForm'
 import { sanitizeAndHighlightCommentHtml } from '@/utils/sanitizeCommentHtml'
 import { formatCommentDateTime, isCommentEdited } from './dateUtils'
 
+const metadataChipSx = {
+  height: 22,
+  bgcolor: 'primary.main',
+  color: '#fff',
+  borderColor: 'primary.main',
+  width: 'fit-content',
+  '& .MuiChip-label': {
+    px: 2,
+    fontSize: '0.86rem'
+  }
+}
+
 const ENTITY_TYPE_CONFIG = {
   Transfer: {
     label: 'Transfer',
@@ -199,19 +211,25 @@ export const CommentRow = forwardRef(function CommentRow(
                 variant="outlined"
                 label={comment.category}
                 data-test="comment-category-chip"
-                sx={{
-                  height: 22,
-                  bgcolor: 'primary.main',
-                  color: '#fff',
-                  borderColor: 'primary.main',
-                  width: 'fit-content',
-                  '& .MuiChip-label': {
-                    px: 2,
-                    fontSize: '0.86rem'
-                  }
-                }}
+                sx={metadataChipSx}
               />
             )}
+            <Chip
+              size="small"
+              color="primary"
+              variant="outlined"
+              label={
+                comment.complianceYear ??
+                t('internalComment:log.noCompliancePeriod')
+              }
+              aria-label={t('internalComment:log.compliancePeriod', {
+                year:
+                  comment.complianceYear ??
+                  t('internalComment:log.noCompliancePeriod')
+              })}
+              data-test="comment-compliance-period-chip"
+              sx={metadataChipSx}
+            />
             <BCTypography variant="body2" color="text" component="span">
               <strong>{displayName || displayUser || '—'}</strong>
               {displayDate && (
