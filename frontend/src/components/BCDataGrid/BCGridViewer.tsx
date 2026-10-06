@@ -110,6 +110,26 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
   ) => {
     const { data, error, isError, isLoading } = queryData || {}
     const hasInitializedFromCache = useRef(false)
+    // Keep cache restoration tied to its original enable/grid-key triggers.
+    const paginationRestoreInputsRef = useRef({
+      paginationOptions,
+      onPaginationChange
+    })
+    const previousPaginationRestoreDepsRef = useRef({
+      enablePageCaching,
+      gridKey
+    })
+    if (
+      previousPaginationRestoreDepsRef.current.enablePageCaching !==
+        enablePageCaching ||
+      previousPaginationRestoreDepsRef.current.gridKey !== gridKey
+    ) {
+      previousPaginationRestoreDepsRef.current = { enablePageCaching, gridKey }
+      paginationRestoreInputsRef.current = {
+        paginationOptions,
+        onPaginationChange
+      }
+    }
     const previousGridKey = useRef(gridKey)
     const isRestoringFromCache = useRef(false)
 
@@ -348,6 +368,8 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
 
     // Initialize with cached pagination options if available
     useEffect(() => {
+      const { paginationOptions, onPaginationChange } =
+        paginationRestoreInputsRef.current
       if (enablePageCaching && gridKey && !hasInitializedFromCache.current) {
         const cachedPagination = sessionStorage.getItem(`${gridKey}-pagination`)
         if (cachedPagination) {
@@ -364,7 +386,7 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
           }
         }
       }
-    }, [enablePageCaching, gridKey, onPaginationChange, paginationOptions])
+    }, [enablePageCaching, gridKey])
 
     // Reset initialization flag when gridKey changes
     useEffect(() => {

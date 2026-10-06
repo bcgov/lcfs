@@ -64,10 +64,7 @@ type NotificationUser = {
 }
 
 const parseNotificationPayload = (message: string): NotificationPayload => {
-  const payload: unknown = JSON.parse(message)
-  return typeof payload === 'object' && payload !== null
-    ? (payload as NotificationPayload)
-    : {}
+  return JSON.parse(message) as NotificationPayload
 }
 
 const latestNotificationOptions = {

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import axios, {
   AxiosInstance,
   AxiosRequestConfig,
@@ -57,9 +57,48 @@ export const useApiService = (
   const { enqueueSnackbar } = useSnackbar()
   const { setForbidden, addErrorRef, setErrorStatus, serverErrorBlockedRef } =
     useAuthorization()
+  // Keep interceptor callbacks captured on the original Axios instance inputs.
+  const previousApiServiceInputsRef = useRef({
+    authenticated: keycloak.authenticated,
+    token: keycloak.token,
+    opts
+  })
+  const interceptorHandlersRef = useRef({
+    setForbidden,
+    addErrorRef,
+    setErrorStatus,
+    serverErrorBlockedRef,
+    enqueueSnackbar
+  })
+  if (
+    previousApiServiceInputsRef.current.authenticated !==
+      keycloak.authenticated ||
+    previousApiServiceInputsRef.current.token !== keycloak.token ||
+    previousApiServiceInputsRef.current.opts !== opts
+  ) {
+    previousApiServiceInputsRef.current = {
+      authenticated: keycloak.authenticated,
+      token: keycloak.token,
+      opts
+    }
+    interceptorHandlersRef.current = {
+      setForbidden,
+      addErrorRef,
+      setErrorStatus,
+      serverErrorBlockedRef,
+      enqueueSnackbar
+    }
+  }
 
   // useMemo to memoize the apiService instance
   const apiService = useMemo(() => {
+    const {
+      setForbidden,
+      addErrorRef,
+      setErrorStatus,
+      serverErrorBlockedRef,
+      enqueueSnackbar
+    } = interceptorHandlersRef.current
     const instance = axios.create({
       baseURL: CONFIG.API_BASE,
       timeout: DEFAULT_TIMEOUT_MS,
@@ -127,16 +166,7 @@ export const useApiService = (
     }
 
     return instance
-  }, [
-    keycloak.authenticated,
-    keycloak.token,
-    opts,
-    addErrorRef,
-    enqueueSnackbar,
-    serverErrorBlockedRef,
-    setErrorStatus,
-    setForbidden
-  ])
+  }, [keycloak.authenticated, keycloak.token, opts])
 
   return apiService
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
+import { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react'
 import PropTypes from 'prop-types'
 import Autocomplete from '@mui/material/Autocomplete'
 import TextField from '@mui/material/TextField'
@@ -37,6 +37,13 @@ export const BCColumnSetFilter = forwardRef((props: BCColumnSetFilterProps, ref)
   const [currentValue, setCurrentValue] = useState(null)
   // make api call to retrieve list
   const { data: optionsData, isLoading: optionsIsLoading } = apiQuery(params)
+  // Preserve the original optionsData-only effect trigger.
+  const apiOptionFieldOnDataChangeRef = useRef(apiOptionField)
+  const previousOptionsDataRef = useRef(optionsData)
+  if (previousOptionsDataRef.current !== optionsData) {
+    previousOptionsDataRef.current = optionsData
+    apiOptionFieldOnDataChangeRef.current = apiOptionField
+  }
 
   // expose AG Grid Filter Lifecycle callbacks
   useImperativeHandle(ref, () => {
@@ -77,11 +84,11 @@ export const BCColumnSetFilter = forwardRef((props: BCColumnSetFilterProps, ref)
     // if no data then wait for re-load
     if (!optionsData) return
     const optionsDataCopy = optionsData.map((option) => ({
-      name: option[apiOptionField]
+      name: option[apiOptionFieldOnDataChangeRef.current]
     }))
 
     setOptions(optionsDataCopy)
-  }, [apiOptionField, optionsData])
+  }, [optionsData])
 
   return (
     <Autocomplete

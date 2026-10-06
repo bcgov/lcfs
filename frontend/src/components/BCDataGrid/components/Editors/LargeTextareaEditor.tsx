@@ -24,7 +24,7 @@ export const LargeTextareaEditor = forwardRef(
     const [inputRef, setInputRef] = useState(null)
 
     useLayoutEffect(() => {
-      api?.getFocusedCell()
+      api!.getFocusedCell()
       if (inputRef) {
         inputRef.focus()
       }
@@ -47,7 +47,7 @@ export const LargeTextareaEditor = forwardRef(
       if (event.key === 'Tab') {
         // setAnchorEl(null)
         // Move to the next cell
-        api?.tabToNextCell()
+        api!.tabToNextCell()
       }
     }
 

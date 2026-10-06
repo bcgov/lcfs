@@ -128,8 +128,7 @@ export const BCSelectFloatingFilter = ({
     event.stopPropagation()
     setSelectedValues([])
 
-    const currentOptions = optionsDataRef.current
-    setOptions(currentOptions || [])
+    setOptions(optionsData || [])
     onModelChange(null)
   }
 

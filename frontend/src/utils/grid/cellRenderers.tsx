@@ -711,6 +711,14 @@ const GenericChipRenderer = ({
     return []
   }, [value])
 
+  // Keep chip config captured with the original options-driven callback.
+  const chipConfigSnapshotRef = useRef(chipConfig)
+  const previousOptionsRef = useRef(options)
+  if (previousOptionsRef.current !== options) {
+    previousOptionsRef.current = options
+    chipConfigSnapshotRef.current = chipConfig
+  }
+
   const calculateChipWidths = useCallback((): {
     visibleChips: ChipDescriptor[]
     hiddenChipsCount: number
@@ -730,7 +738,7 @@ const GenericChipRenderer = ({
         chipWidths.push({
           text: chipText,
           width: chipTextWidth + 32,
-          ...chipConfig
+          ...chipConfigSnapshotRef.current
         })
         totalWidth = newTotalWidth
       } else {
@@ -745,11 +753,11 @@ const GenericChipRenderer = ({
       visibleChips: options.map((text) => ({
         text,
         width: text.length * 6 + 32,
-        ...chipConfig
+        ...chipConfigSnapshotRef.current
       })),
       hiddenChipsCount: 0
     }
-  }, [options, chipConfig])
+  }, [options])
 
   useEffect(() => {
     const { visibleChips, hiddenChipsCount } = calculateChipWidths()

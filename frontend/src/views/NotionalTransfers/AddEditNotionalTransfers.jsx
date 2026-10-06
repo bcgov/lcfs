@@ -326,6 +326,20 @@ export const AddEditNotionalTransfers = () => {
     }
   }, [compliancePeriod])
 
+  // Preserve the original row-data/options-only effect trigger.
+  const previousGridColumnsEffectInputsRef = useRef({ rowData, optionsData })
+  const updateGridColumnsVisibilityForEffectRef = useRef(
+    updateGridColumnsVisibility
+  )
+  if (
+    previousGridColumnsEffectInputsRef.current.rowData !== rowData ||
+    previousGridColumnsEffectInputsRef.current.optionsData !== optionsData
+  ) {
+    previousGridColumnsEffectInputsRef.current = { rowData, optionsData }
+    updateGridColumnsVisibilityForEffectRef.current =
+      updateGridColumnsVisibility
+  }
+
   const onFirstDataRendered = useCallback((params) => {
     params.api?.autoSizeAllColumns?.()
   }, [])
@@ -335,8 +349,8 @@ export const AddEditNotionalTransfers = () => {
     }, 0)
   }, [updateGridColumnsVisibility])
   useEffect(() => {
-    updateGridColumnsVisibility()
-  }, [rowData, optionsData, updateGridColumnsVisibility])
+    updateGridColumnsVisibilityForEffectRef.current()
+  }, [rowData, optionsData])
 
   const handleNavigateBack = useCallback(() => {
     navigate(

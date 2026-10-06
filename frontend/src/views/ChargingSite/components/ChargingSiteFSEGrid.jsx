@@ -328,6 +328,32 @@ export const ChargingSiteFSEGrid = ({
     })
   }, [navigate, location.pathname, siteId])
 
+  // Preserve the callback's original refresh triggers while satisfying deps.
+  const bulkUpdateOriginalDependencies = [
+    historyMode,
+    selectedRows,
+    siteId,
+    bulkUpdateStatus,
+    handleClearFilters,
+    equipmentList,
+    navigate
+  ]
+  const previousBulkUpdateDependenciesRef = useRef(
+    bulkUpdateOriginalDependencies
+  )
+  const bulkUpdateClosureInputsRef = useRef({ refetch, t })
+  if (
+    bulkUpdateOriginalDependencies.some(
+      (dependency, index) =>
+        !Object.is(dependency, previousBulkUpdateDependenciesRef.current[index])
+    )
+  ) {
+    previousBulkUpdateDependenciesRef.current = bulkUpdateOriginalDependencies
+    bulkUpdateClosureInputsRef.current = { refetch, t }
+  }
+  const { refetch: refetchOnBulkUpdate, t: translateOnBulkUpdate } =
+    bulkUpdateClosureInputsRef.current
+
   // Bulk status update handlers
   const handleBulkStatusUpdate = useCallback(
     async (newStatus) => {
@@ -354,10 +380,10 @@ export const ChargingSiteFSEGrid = ({
           }
         }
 
-        refetch()
+        refetchOnBulkUpdate()
         handleClearFilters()
         alertRef.current?.triggerAlert({
-          message: t('equipmentBulkUpdateSuccess'),
+          message: translateOnBulkUpdate('equipmentBulkUpdateSuccess'),
           severity: 'success'
         })
       } catch (error) {
@@ -377,9 +403,9 @@ export const ChargingSiteFSEGrid = ({
       bulkUpdateStatus,
       handleClearFilters,
       equipmentList,
-      refetch,
-      t,
-      navigate
+      navigate,
+      refetchOnBulkUpdate,
+      translateOnBulkUpdate
     ]
   )
 
@@ -430,29 +456,8 @@ export const ChargingSiteFSEGrid = ({
   )
 
   // Build context for button configuration
-  const buttonContext = useMemo(() => {
-    return buildButtonContext({
-      t,
-      setModalData,
-      equipmentList,
-      selectedRows,
-      isUpdating,
-      canValidate,
-      canReturnToDraft,
-      canSubmit,
-      canSetToDecommission,
-      chargingSiteStatus: equipmentData?.chargingSiteStatus || 'Draft',
-      organizationId: equipmentData?.organizationId || null,
-      currentUser,
-      hasAnyRole,
-      hasRoles,
-      handleToggleSelectByStatus,
-      handleBulkStatusUpdate,
-      handleClearFilters,
-      handleCreateFSE
-    })
-  }, [
-    t,
+  // Preserve the original memo refresh triggers for omitted context values.
+  const buttonContextOriginalDependencies = [
     setModalData,
     equipmentList,
     selectedRows,
@@ -463,9 +468,74 @@ export const ChargingSiteFSEGrid = ({
     canSetToDecommission,
     equipmentData?.chargingSiteStatus,
     equipmentData?.organizationId,
+    currentUser?.userId,
+    handleToggleSelectByStatus,
+    handleBulkStatusUpdate,
+    handleClearFilters,
+    handleCreateFSE
+  ]
+  const previousButtonContextDependenciesRef = useRef(
+    buttonContextOriginalDependencies
+  )
+  const buttonContextInputsRef = useRef({
+    t,
     currentUser,
     hasAnyRole,
     hasRoles,
+    chargingSiteStatus: equipmentData?.status?.status || 'Draft'
+  })
+  if (
+    buttonContextOriginalDependencies.some(
+      (dependency, index) =>
+        !Object.is(
+          dependency,
+          previousButtonContextDependenciesRef.current[index]
+        )
+    )
+  ) {
+    previousButtonContextDependenciesRef.current =
+      buttonContextOriginalDependencies
+    buttonContextInputsRef.current = {
+      t,
+      currentUser,
+      hasAnyRole,
+      hasRoles,
+      chargingSiteStatus: equipmentData?.status?.status || 'Draft'
+    }
+  }
+  const buttonContextInputs = buttonContextInputsRef.current
+  const buttonContext = useMemo(() => {
+    return buildButtonContext({
+      t: buttonContextInputs.t,
+      setModalData,
+      equipmentList,
+      selectedRows,
+      isUpdating,
+      canValidate,
+      canReturnToDraft,
+      canSubmit,
+      canSetToDecommission,
+      chargingSiteStatus: buttonContextInputs.chargingSiteStatus,
+      organizationId: equipmentData?.organizationId || null,
+      currentUser: buttonContextInputs.currentUser,
+      hasAnyRole: buttonContextInputs.hasAnyRole,
+      hasRoles: buttonContextInputs.hasRoles,
+      handleToggleSelectByStatus,
+      handleBulkStatusUpdate,
+      handleClearFilters,
+      handleCreateFSE
+    })
+  }, [
+    buttonContextInputs,
+    setModalData,
+    equipmentList,
+    selectedRows,
+    isUpdating,
+    canValidate,
+    canReturnToDraft,
+    canSubmit,
+    canSetToDecommission,
+    equipmentData?.organizationId,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
     handleClearFilters,

@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import match from 'autosuggest-highlight/match'
 import parse from 'autosuggest-highlight/parse'
 import { debounce } from 'lodash'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { GridApi } from 'ag-grid-community'
 import type { ApiServiceInstance } from '@/services/useApiService'
@@ -80,8 +80,6 @@ export const AsyncSuggestionEditor = ({
     [debounceValue]
   )
 
-  useEffect(() => () => debouncedSetInputValue.cancel(), [debouncedSetInputValue])
-
   const handleInputChange = (_, newInputValue) => {
     debouncedSetInputValue(newInputValue)
     // Update the value based on the input
@@ -150,7 +148,7 @@ export const AsyncSuggestionEditor = ({
         getOptionLabel={(option) =>
           typeof option === 'string'
             ? option
-            : String(option[optionLabel] ?? '')
+            : (option as AsyncSuggestionOption)[optionLabel] as string
         }
         options={options || []}
         groupBy={groupBy}
@@ -169,7 +167,7 @@ export const AsyncSuggestionEditor = ({
           const label =
             typeof option === 'string'
               ? option
-              : String(option[optionLabel] ?? '')
+              : (option as AsyncSuggestionOption)[optionLabel] as string
           const matches = match(label, inputValue, { insideWords: true })
           const parts = parse(label, matches)
 

@@ -79,7 +79,7 @@ export const KeycloakProvider = ({ children }) => {
 
     return () => {
       events.forEach((event) =>
-        window.removeEventListener(event, refreshOnActivity)
+        window.removeEventListener(event, () => refreshToken())
       )
     }
   }, [refreshToken])

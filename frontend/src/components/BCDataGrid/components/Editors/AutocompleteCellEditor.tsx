@@ -76,12 +76,12 @@ export const AutocompleteCellEditor = forwardRef(
       if (typeof option === 'string' || typeof option === 'number') {
         return option.toString()
       }
-      if (typeof option !== 'object') return ''
-      const values = option as Record<string, unknown>
-      const label = values.label ?? values.name ?? values.value
-      return typeof label === 'string' || typeof label === 'number'
-        ? String(label)
-        : ''
+      const values = option as {
+        label?: unknown
+        name?: unknown
+        value?: unknown
+      }
+      return (values.label || values.name || values.value || '') as string
     }
 
     // Helpers to map between raw values (ids/strings) and option objects
