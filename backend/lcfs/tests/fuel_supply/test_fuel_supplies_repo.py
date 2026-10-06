@@ -1038,13 +1038,15 @@ def test_renewable_liquid_fuel_grouping_rules():
 
     def fuel_supply(fuel_type, category, renewable=True, unit_name="Litres"):
         unit_value = "L" if unit_name == "Litres" else "kWh"
+        units = SimpleNamespace(name=unit_name, value=unit_value)
         return SimpleNamespace(
             fuel_type=SimpleNamespace(
                 fuel_type=fuel_type,
                 renewable=renewable,
-                units=SimpleNamespace(name=unit_name, value=unit_value),
+                units=units,
             ),
             fuel_category=SimpleNamespace(category=category),
+            units=units,
         )
 
     renewable_gasoline_fuels = [
@@ -1082,6 +1084,13 @@ def test_renewable_liquid_fuel_grouping_rules():
     electricity = fuel_supply("Electricity", "Diesel", unit_name="Kilowatt_hour")
     assert _get_renewable_liquid_fuel_group(electricity) is None
     assert _get_renewable_liquid_fuel_category_label(electricity) is None
+
+    mismatched_supply_units = fuel_supply("Renewable gasoline", "Gasoline")
+    mismatched_supply_units.units = SimpleNamespace(
+        name="Kilowatt_hour", value="kWh"
+    )
+    assert _get_renewable_liquid_fuel_group(mismatched_supply_units) is None
+    assert _get_renewable_liquid_fuel_category_label(mismatched_supply_units) is None
 
     propane = fuel_supply("Propane", "Other", renewable=False)
     assert _get_renewable_liquid_fuel_group(propane) is None
