@@ -695,13 +695,6 @@ const FuelCodeDetailBase = () => {
     }
     setPaginationOptions(nextPaginationOptions)
 
-    if (nextPaginationOptions.size !== paginationOptions.size) {
-      gridRef.current?.api?.setGridOption(
-        'paginationPageSize',
-        nextPaginationOptions.size
-      )
-    }
-
     gridRef.current?.api?.paginationGoToPage?.(
       Math.max(nextPaginationOptions.page - 1, 0)
     )

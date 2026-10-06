@@ -146,8 +146,8 @@ export const PublicDashboard = () => {
       latestVwap: last?.vwap ?? null,
       latestPeriod: last?.period ?? '',
       deltaPct:
-        last?.vwap != null && prev?.vwap != null && prev.vwap !== 0
-          ? ((last.vwap - prev.vwap) / prev.vwap) * 100
+        last && prev && prev.vwap
+          ? ((Number(last.vwap) - Number(prev.vwap)) / Number(prev.vwap)) * 100
           : null
     }
   }, [priceIndex])

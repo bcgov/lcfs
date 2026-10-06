@@ -79,7 +79,7 @@ export const NumberEditor = forwardRef<unknown, NumberEditorProps>(
         let numValue = parseFloat(newValue)
         if (props.min != null && numValue < props.min) numValue = props.min
         if (props.max != null && numValue > props.max) numValue = props.max
-        onValueChange(Number.isNaN(numValue) ? 0 : Math.trunc(numValue))
+        onValueChange(parseInt(String(numValue), 10) || 0)
       }
     }
 
