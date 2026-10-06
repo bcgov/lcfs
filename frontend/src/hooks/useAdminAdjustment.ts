@@ -2,9 +2,12 @@ import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { QueryOptions , ExtMutationOptions} from './types'
+import type { QueryOptions, ExtMutationOptions } from './types'
 
-export const useAdminAdjustment = (adminAdjustmentID: number | string | undefined | null, options: QueryOptions<unknown>) => {
+export const useAdminAdjustment = (
+  adminAdjustmentID: number | string | undefined | null,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
 
   return useQuery({
@@ -16,12 +19,15 @@ export const useAdminAdjustment = (adminAdjustmentID: number | string | undefine
   })
 }
 
-export const useCreateUpdateAdminAdjustment = (adminAdjustmentId: number | string | undefined | null, options: ExtMutationOptions<unknown, any>) => {
+export const useCreateUpdateAdminAdjustment = (
+  adminAdjustmentId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, unknown>
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
     ...options,
-    mutationFn: async ({ data }: any) => {
+    mutationFn: async ({ data }: { data: Record<string, unknown> }) => {
       if (adminAdjustmentId) {
         data.adminAdjustmentId = adminAdjustmentId
         return await client.put(apiRoutes.adminAdjustments, data)
@@ -30,7 +36,9 @@ export const useCreateUpdateAdminAdjustment = (adminAdjustmentId: number | strin
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [ADMIN_ADJUSTMENT, adminAdjustmentId] })
+      queryClient.invalidateQueries({
+        queryKey: [ADMIN_ADJUSTMENT, adminAdjustmentId]
+      })
     }
   })
 }

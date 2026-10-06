@@ -43,7 +43,7 @@ const EVENT_LABELS = {
 
 // In display order. An event no group claims lands in "other" so nothing
 // the trail recorded is ever silently dropped from the page.
-export const HISTORY_GROUPS = [
+const HISTORY_GROUPS = [
   {
     key: 'evidenceReview',
     events: ['EVIDENCE_REVIEWED', 'INFORMATION_REQUESTED']
@@ -59,7 +59,7 @@ export const HISTORY_GROUPS = [
   { key: 'recordChanges', events: ['DETAILS_EDITED', 'CHANGE_ORDER'] }
 ]
 
-export const groupHistory = (entries) => {
+const groupHistory = (entries) => {
   const claimed = new Set(HISTORY_GROUPS.flatMap((group) => group.events))
   const groups = HISTORY_GROUPS.map((group) => ({
     key: group.key,

@@ -1,15 +1,10 @@
-import BCAlert from '@/components/BCAlert'
+import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import { DownloadButton } from '@/components/DownloadButton'
 import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/routes/routes'
-import {
-  faCirclePlus,
-  faCheck,
-  faBan,
-  faSquareCheck
-} from '@fortawesome/free-solid-svg-icons'
+import { faCheck, faBan, faSquareCheck } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
@@ -23,28 +18,20 @@ import {
 } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { chargingEquipmentColDefs } from '@/views/ChargingSite/components/_schema'
-
-const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
-
-const defaultColDef = {
-  editable: false,
-  resizable: true,
-  filter: 'agTextColumnFilter',
-  floatingFilter: false,
-  sortable: true,
-  minWidth: 100
-}
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
-import Loading from '@/components/Loading'
+import '@/components/Loading'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { BCAlert2 } from '@/components/BCAlert'
 import { BulkActionModals } from './components/BulkActionModals'
 import {
   useChargingEquipment,
   useDownloadChargingEquipment
 } from '@/hooks/useChargingEquipment'
+
+const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
+
+
 
 const initialPaginationOptions = {
   page: 1,
@@ -66,10 +53,12 @@ export const ChargingEquipment = () => {
   const gridRef = useRef()
   const alertRef = useRef(null)
   const isProgrammaticSelection = useRef(false)
-  const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
+  const {
+  hasAnyRole
+} = useCurrentUser()
   const isIDIR = hasAnyRole(...govRoles)
 
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const highlightedId = searchParams.get('hid')
 
   // Alerts now use BCAlert2 via alertRef
@@ -135,23 +124,10 @@ export const ChargingEquipment = () => {
   }, [filteredOrgNames, selectedOrg.id])
 
   const renderOrganizationOption = useCallback((props, option) => {
-    const orgTypeLabel = option?.orgType || option?.org_type
-    const formattedOrgType = orgTypeLabel
-      ? orgTypeLabel
-          .split('_')
-          .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-          .join(' ')
-      : null
-
     return (
       <li {...props}>
         <Box display="flex" flexDirection="column">
           <BCTypography variant="body2">{option?.name || ''}</BCTypography>
-          {/* {formattedOrgType && (
-            <BCTypography variant="caption" color="text.secondary">
-              {formattedOrgType}
-            </BCTypography>
-          )} */}
         </Box>
       </li>
     )
@@ -253,12 +229,9 @@ export const ChargingEquipment = () => {
 
   const equipmentQuery = useChargingEquipment(enhancedPaginationOptions)
   const {
-    data: equipmentData,
-    isLoading,
-    isError,
-    error,
-    refetch
-  } = equipmentQuery
+  isError,
+  refetch
+} = equipmentQuery
   const { mutateAsync: downloadChargingEquipment } = useDownloadChargingEquipment()
 
   const {
@@ -301,7 +274,7 @@ export const ChargingEquipment = () => {
 
   const columnDefs = useMemo(
     () =>
-      chargingEquipmentColDefs(t, isIDIR, {
+      chargingEquipmentColDefs(t, {
         enableSelection: !isIDIR,
         showDateColumns: true,
         showIntendedUsers: true,

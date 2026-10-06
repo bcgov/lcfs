@@ -3,6 +3,19 @@ import { describe, expect, vi, beforeEach } from 'vitest'
 import { FinalSupplyEquipmentReporting } from '../FinalSupplyEquipmentReporting'
 import { test } from '@/tests/utils/fixtures'
 
+import { useSiteNames } from '@/hooks/useChargingSite'
+import {
+  useGetFSEReportingList,
+  useSaveFSEReporting,
+  useDeleteFSEReportingBatch,
+  useSetFSEReportingDefaultDates,
+  useUpdateFSEReportingActiveStatus,
+  useImportFSEReportingUpdate,
+  useGetFSEReportingUpdateJobStatus
+} from '@/hooks/useFinalSupplyEquipment'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
+import { handleScheduleSave } from '@/utils/schedules'
+
 let render
 const fixtureOptions = undefined
 const it = (name, fn) =>
@@ -75,19 +88,6 @@ vi.mock('@/components/BCDataGrid/BCGridEditorPaginated', () => ({
 vi.mock('@/utils/schedules', () => ({
   handleScheduleSave: vi.fn()
 }))
-
-import { useSiteNames } from '@/hooks/useChargingSite'
-import {
-  useGetFSEReportingList,
-  useSaveFSEReporting,
-  useDeleteFSEReportingBatch,
-  useSetFSEReportingDefaultDates,
-  useUpdateFSEReportingActiveStatus,
-  useImportFSEReportingUpdate,
-  useGetFSEReportingUpdateJobStatus
-} from '@/hooks/useFinalSupplyEquipment'
-import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
-import { handleScheduleSave } from '@/utils/schedules'
 
 describe('FinalSupplyEquipmentReporting', () => {
   const mockSiteNames = [
@@ -346,9 +346,9 @@ describe('FinalSupplyEquipmentReporting', () => {
 
   describe('Site Filter Functionality', () => {
     it('updates filter when site is selected', async () => {
-      const { container } = render(<FinalSupplyEquipmentReporting />, {
+      render(<FinalSupplyEquipmentReporting />, {
         fixtureOptions
-      })
+      });
 
       const autocomplete = screen.getByRole('combobox')
       fireEvent.mouseDown(autocomplete)
@@ -360,9 +360,9 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('clears filter when site selection is cleared', async () => {
-      const { container } = render(<FinalSupplyEquipmentReporting />, {
+      render(<FinalSupplyEquipmentReporting />, {
         fixtureOptions
-      })
+      });
 
       const autocomplete = screen.getByRole('combobox')
       expect(autocomplete).toBeInTheDocument()
@@ -521,9 +521,9 @@ describe('FinalSupplyEquipmentReporting', () => {
     })
 
     it('updates pagination when filter changes', async () => {
-      const { container } = render(<FinalSupplyEquipmentReporting />, {
+      render(<FinalSupplyEquipmentReporting />, {
         fixtureOptions
-      })
+      });
 
       const autocomplete = screen.getByRole('combobox')
       fireEvent.mouseDown(autocomplete)
@@ -579,8 +579,8 @@ describe('FinalSupplyEquipmentReporting', () => {
       // Mock the download to never resolve so we can observe the loading state
       let resolveDownload
       mockApiDownload.mockReturnValue(
-        new Promise((res) => {
-          resolveDownload = res
+        new Promise((resolve) => {
+          resolveDownload = resolve
         })
       )
 

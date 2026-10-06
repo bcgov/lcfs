@@ -53,14 +53,14 @@ const mockHasAnyRole = vi.fn()
 
 vi.mock('@/hooks/useReleaseNotes', () => ({
   useReleaseNotes: () => mockUseReleaseNotes(),
-  useUpdateReleaseNote: (options: any) => ({
+  useUpdateReleaseNote: (options: { onSuccess?: (data: unknown, variables: unknown, context: undefined) => void }) => ({
     mutate: (variables: unknown) => {
       mockUpdateMutate(variables)
       options?.onSuccess?.({}, variables, undefined)
     },
     isPending: false
   }),
-  useResetReleaseNote: (options: any) => ({
+  useResetReleaseNote: (options: { onSuccess?: (data: unknown, variables: unknown, context: undefined) => void }) => ({
     mutate: (variables: unknown) => {
       mockResetMutate(variables)
       options?.onSuccess?.({}, variables, undefined)

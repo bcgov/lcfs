@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
 import PropTypes from 'prop-types'
 import Autocomplete from '@mui/material/Autocomplete'
@@ -7,6 +6,11 @@ import Box from '@mui/material/Box'
 import Checkbox from '@mui/material/Checkbox'
 import CheckBox from '@mui/icons-material/CheckBox'
 import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank'
+import type { Column } from 'ag-grid-community'
+
+interface ColumnFilterInstance {
+  onFloatingFilterChanged: (filterType: string | null, value: unknown) => void
+}
 
 const icon = <CheckBoxOutlineBlank fontSize="small" />
 const checkedIcon = <CheckBox fontSize="small" />
@@ -14,17 +18,21 @@ const checkedIcon = <CheckBox fontSize="small" />
  * @deprecated
  */
 export interface BCColumnSetFilterProps {
-  apiQuery: (params?: any) => { data?: any[]; isLoading?: boolean }
+  apiQuery: (params?: Record<string, unknown>) => {
+    data?: Array<Record<string, unknown>>
+    isLoading?: boolean
+  }
   apiOptionField?: string
-  column?: any
-  parentFilterInstance: (callback: (instance: any) => void) => void
+  column?: Column
+  parentFilterInstance: (callback: (instance: ColumnFilterInstance) => void) => void
   multiple?: boolean
-  params?: any
+  params?: Record<string, unknown>
   disableCloseOnSelect?: boolean
 }
 
 export const BCColumnSetFilter = forwardRef((props: BCColumnSetFilterProps, ref) => {
   const { apiQuery, params } = props
+  const apiOptionField = props.apiOptionField || 'name'
   const [options, setOptions] = useState([])
   const [currentValue, setCurrentValue] = useState(null)
   // make api call to retrieve list
@@ -68,14 +76,12 @@ export const BCColumnSetFilter = forwardRef((props: BCColumnSetFilterProps, ref)
   useEffect(() => {
     // if no data then wait for re-load
     if (!optionsData) return
-    // if already loaded then disable re-load
-    if (options === optionsData) return
     const optionsDataCopy = optionsData.map((option) => ({
-      name: option[props.apiOptionField ? props.apiOptionField : 'name']
+      name: option[apiOptionField]
     }))
 
     setOptions(optionsDataCopy)
-  }, [optionsData])
+  }, [apiOptionField, optionsData])
 
   return (
     <Autocomplete

@@ -49,8 +49,8 @@ export const useCurrentUser = () => {
    *   }
    */
   const hasRoles = (...roleNames: string[]) => {
-    return roleNames.every((roleName: any) =>
-      query.data?.roles?.some((role: any) => role.name === roleName)
+    return roleNames.every((roleName: string) =>
+      query.data?.roles?.some((role: { name: string }) => role.name === roleName)
     )
   }
 
@@ -69,8 +69,8 @@ export const useCurrentUser = () => {
    *   }
    */
   const hasAnyRole = (...roleNames: string[]) => {
-    return roleNames.some((roleName: any) =>
-      query.data?.roles?.some((role: any) => role.name === roleName)
+    return roleNames.some((roleName: string) =>
+      query.data?.roles?.some((role: { name: string }) => role.name === roleName)
     )
   }
 
@@ -78,7 +78,7 @@ export const useCurrentUser = () => {
     return query.data ? `${query.data.firstName} ${query.data.lastName}` : ''
   }
 
-  const sameOrganization = (orgId: any) => {
+  const sameOrganization = (orgId: unknown) => {
     return query.data?.organization?.organizationId === orgId
   }
 

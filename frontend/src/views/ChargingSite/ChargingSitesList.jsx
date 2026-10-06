@@ -2,9 +2,8 @@ import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import { ROUTES } from '@/routes/routes'
-import { useNavigate, useLocation, useOutletContext } from 'react-router-dom'
+import { useNavigate, useLocation, useOutletContext , Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Outlet } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
@@ -60,7 +59,7 @@ export const ChargingSitesList = () => {
     if (cached) {
       try {
         return JSON.parse(cached)
-      } catch (e) {
+      } catch {
         return { id: null, label: null }
       }
     }
@@ -133,23 +132,10 @@ export const ChargingSitesList = () => {
   }, [filteredOrgNames, selectedOrg.id])
 
   const renderOrganizationOption = useCallback((props, option) => {
-    const orgTypeLabel = option?.orgType || option?.org_type
-    const formattedOrgType = orgTypeLabel
-      ? orgTypeLabel
-          .split('_')
-          .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-          .join(' ')
-      : null
-
     return (
       <li {...props}>
         <Box display="flex" flexDirection="column">
           <BCTypography variant="body2">{option?.name || ''}</BCTypography>
-          {/* {formattedOrgType && (
-            <BCTypography variant="caption" color="text.secondary">
-              {formattedOrgType}
-            </BCTypography>
-          )} */}
         </Box>
       </li>
     )
@@ -169,14 +155,14 @@ export const ChargingSitesList = () => {
       return Object.fromEntries(
         (filteredOrgNames || []).map((o) => [o.organizationId, o.name])
       )
-    } catch (e) {
+    } catch {
       return {}
     }
   }, [filteredOrgNames])
 
   const idirColumnDefs = useMemo(
     () => indexChargingSitesColDefs(isIDIR, orgIdToName),
-    [orgIdToName]
+    [isIDIR, orgIdToName]
   )
 
   const apiPaginationOptions = useMemo(() => {
@@ -246,7 +232,7 @@ export const ChargingSitesList = () => {
 
     try {
       gridRef.current?.clearFilters?.()
-    } catch (e) {
+    } catch {
       // no-op
     }
   }, [])

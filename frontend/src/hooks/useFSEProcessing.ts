@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useApiService } from '@/services/useApiService'
 
-export const useFSEProcessing = (siteId: number | string | undefined | null) => {
+export const useFSEProcessing = (
+  siteId: number | string | undefined | null
+) => {
   const queryClient = useQueryClient()
   const apiService = useApiService()
 
@@ -23,7 +25,7 @@ export const useFSEProcessing = (siteId: number | string | undefined | null) => 
 
   // Mutation for bulk validating equipment
   const validateMutation = useMutation({
-    mutationFn: async (equipmentIds: any) => {
+    mutationFn: async (equipmentIds: unknown) => {
       const response = await apiService.post(
         '/charging-equipment/bulk/validate',
         { charging_equipment_ids: equipmentIds }
@@ -38,7 +40,7 @@ export const useFSEProcessing = (siteId: number | string | undefined | null) => 
 
   // Mutation for bulk returning to draft
   const returnToDraftMutation = useMutation({
-    mutationFn: async (equipmentIds: any) => {
+    mutationFn: async (equipmentIds: unknown) => {
       const response = await apiService.post(
         '/charging-equipment/bulk/return-to-draft',
         { charging_equipment_ids: equipmentIds }

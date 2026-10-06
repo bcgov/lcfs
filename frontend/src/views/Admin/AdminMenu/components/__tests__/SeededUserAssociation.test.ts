@@ -5,7 +5,7 @@ import {
   sanitizeOrgRoles,
   isSeededUserSelectable,
   isValidOrgRolePayload
-} from '../SeededUserAssociation'
+} from '../seededUserHelpers'
 
 describe('SeededUserAssociation role boundaries', () => {
   it('keeps government and org role sets disjoint', () => {
@@ -35,9 +35,9 @@ describe('SeededUserAssociation role boundaries', () => {
   })
 
   it('isValidOrgRolePayload rejects mixed gov role payload', () => {
-    expect(
-      isValidOrgRolePayload(['supplier', 'manage users', 'analyst'])
-    ).toBe(false)
+    expect(isValidOrgRolePayload(['supplier', 'manage users', 'analyst'])).toBe(
+      false
+    )
   })
 
   it('isSeededUserSelectable only allows lcfs/tfs users 1 through 10', () => {

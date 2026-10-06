@@ -49,7 +49,7 @@ const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   }
 }))
 
-const FileTable = styled(Box)(({ theme }) => ({
+const FileTable = styled(Box)(() => ({
   width: '100%',
   maxWidth: '100%',
   display: 'grid',
@@ -295,6 +295,7 @@ function DocumentTable({ parentType, parentID }) {
         onDragLeave={handleDragOut}
         onDragOver={handleDrag}
         onDrop={handleDrop}
+        isDragActive={isDragActive}
       >
         <CardContent>
           <IconButton aria-label="upload" size="medium">
@@ -326,7 +327,7 @@ function DocumentTable({ parentType, parentID }) {
         </TableCell>
         <TableCell></TableCell>
 
-        {files.map((file, i) => {
+        {files.map((file) => {
           const displayName = getDocumentDisplayName(file)
           const canRename =
             renameEnabled &&

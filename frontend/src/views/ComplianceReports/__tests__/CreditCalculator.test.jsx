@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import {
@@ -74,7 +74,11 @@ vi.mock('@/hooks/useCalculator', () => ({
 
 vi.mock('@/components/BCForm/BCFormRadio', async () => {
   const actual = await vi.importActual('@/components/BCForm/BCFormRadio')
-  const MockRadio = ({ name, label, options = [], disabled }) => {
+  const MockRadio = ({
+  name,
+  label,
+  options = []
+}) => {
     const { control, getValues } = useFormContext()
 
     const getTestId = (option, index) => {

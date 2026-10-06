@@ -202,7 +202,7 @@ const CommentForm = ({
       }
     }
     // handleAttachClick only reads a stable ref, so depend on the toggle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [attachmentsEnabled])
 
   const isCommentEmpty = !commentText || commentText.trim() === ''

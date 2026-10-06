@@ -1,6 +1,5 @@
 import {
   forwardRef,
-  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -55,8 +54,8 @@ const FacilityLocationAutocomplete = ({
   const [debouncedSearch, setDebouncedSearch] = useState(value || '')
   const autofillToken = `lcfs-no-autofill-${id}`
 
-  const debouncedSetSearch = useCallback(
-    debounce((v) => setDebouncedSearch(v), 500),
+  const debouncedSetSearch = useMemo(
+    () => debounce((v) => setDebouncedSearch(v), 500),
     []
   )
 

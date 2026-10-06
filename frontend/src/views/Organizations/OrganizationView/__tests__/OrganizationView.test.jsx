@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, act } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OrganizationView } from '../OrganizationView'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -152,7 +152,10 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock BCAlert
 vi.mock('@/components/BCAlert', () => ({
-  default: ({ children, severity, sx }) => (
+  default: ({
+  children,
+  severity
+}) => (
     <div data-test="alert-box" role="alert" data-severity={severity}>
       {children}
     </div>

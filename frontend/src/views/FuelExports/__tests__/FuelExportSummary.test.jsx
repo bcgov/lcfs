@@ -1,6 +1,6 @@
-import React from 'react'
+import 'react';
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FuelExportSummary } from '../FuelExportSummary'
 
 // Mock react-i18next
@@ -10,25 +10,20 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Mock BCGridViewer with enhanced mock to capture function calls
-let mockOnPaginationChange = vi.fn()
+// Mock BCGridViewer with enhanced pagination controls
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-    gridKey,
-    columnDefs,
-    queryData,
-    dataKey,
-    gridOptions,
-    defaultColDef,
-    suppressPagination,
-    paginationOptions,
-    getRowId,
-    enableCopyButton,
-    onPaginationChange
-  }) => {
-    // Store the pagination callback for testing
-    mockOnPaginationChange = onPaginationChange
-    
+  gridKey,
+  queryData,
+  dataKey,
+  gridOptions,
+  defaultColDef,
+  suppressPagination,
+  paginationOptions,
+  getRowId,
+  enableCopyButton,
+  onPaginationChange
+}) => {
     return (
       <div data-test="bc-grid-viewer">
         <div data-test="grid-key">{gridKey}</div>

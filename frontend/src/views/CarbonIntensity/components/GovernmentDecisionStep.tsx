@@ -29,8 +29,28 @@ import {
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
 
+interface DecisionApplication extends Record<string, unknown> {
+  ciApplicationId?: number
+  returnHistory?: {changedAt: string}[]
+  verification1Date?: string
+  verification2Date?: string
+  recommendationDate?: string
+  status?: {status?: string}
+  preliminaryRiskAssessment?: string
+  verification2RiskAssessment?: string
+  verification2PriorityScore?: number | string
+  priorityScore?: number | string
+  pathways?: unknown[]
+  generatedFuelCodes?: (Record<string, unknown> & {isValid?: boolean})[]
+  documentUploadEnabled?: boolean
+  pathwaySupplementalEditEnabled?: boolean
+}
+interface RequestError {
+  message?: string
+  response?: {data?: {detail?: string}}
+}
 type GovernmentDecisionStepProps = {
-  ciApplication: any
+  ciApplication: DecisionApplication
   isGovernment?: boolean
   readOnly?: boolean
   onSupplierRequest?:
@@ -45,7 +65,7 @@ type GovernmentDecisionStepProps = {
 const normalizeRisk = (risk?: string | null) =>
   risk === 'Moderate' ? 'Medium' : risk
 
-const isReturnToFirstVerificationPending = (ciApplication: any = {}) => {
+const isReturnToFirstVerificationPending = (ciApplication: DecisionApplication = {}) => {
   const returnHistory = ciApplication.returnHistory
   if (!Array.isArray(returnHistory) || returnHistory.length === 0) return false
   if (!ciApplication.verification1Date) return true
@@ -184,7 +204,7 @@ export const GovernmentDecisionStep = ({
     'feedstockLocation'
   ]
 
-  const isGeneratedFuelCodeReady = (row: any) =>
+  const isGeneratedFuelCodeReady = (row: Record<string, unknown> & {isValid?: boolean}) =>
     row?.isValid === true ||
     generatedFuelCodeRequiredFields.every((field) => {
       const value = row?.[field]
@@ -193,14 +213,15 @@ export const GovernmentDecisionStep = ({
 
   const recordDecisionFor = async (
     nextStatus: string,
-    additionalData: Record<string, any> = {}
+    additionalData: Record<string, unknown> = {}
   ) => {
     setError(null)
     setSuccess(null)
     try {
       await recordDecision({ status: nextStatus, ...additionalData })
       setSuccess(t('carbonIntensity:step5.decisionSuccess'))
-    } catch (err: any) {
+    } catch (caughtError) {
+      const err = caughtError as RequestError
       setError(
         err?.response?.data?.detail ||
           err?.message ||
@@ -210,7 +231,7 @@ export const GovernmentDecisionStep = ({
   }
 
   const recordWorkflowAction = async (
-    action: () => Promise<any>,
+    action: () => Promise<unknown>,
     successMessage: string
   ) => {
     setError(null)
@@ -218,7 +239,8 @@ export const GovernmentDecisionStep = ({
     try {
       await action()
       setSuccess(successMessage)
-    } catch (err: any) {
+    } catch (caughtError) {
+      const err = caughtError as RequestError
       setError(
         err?.response?.data?.detail ||
           err?.message ||
@@ -328,7 +350,8 @@ export const GovernmentDecisionStep = ({
     state.pending = request
     try {
       await request
-    } catch (err: any) {
+    } catch (caughtError) {
+      const err = caughtError as RequestError
       if (state.pending === request) state.dirty = true
       const message =
         err?.response?.data?.detail ||
@@ -343,7 +366,7 @@ export const GovernmentDecisionStep = ({
     if (!canEditRiskAssessment || !riskAssessmentAutosaveRef.current.dirty)
       return
     const timeout = setTimeout(() => {
-      void persistRiskAssessmentDraft().catch(() => undefined)
+      persistRiskAssessmentDraft().catch(() => undefined)
     }, 600)
     return () => clearTimeout(timeout)
   }, [
@@ -357,7 +380,7 @@ export const GovernmentDecisionStep = ({
     () => () => {
       const state = riskAssessmentAutosaveRef.current
       if (state.enabled && state.dirty) {
-        void state.save(state.draft).catch(() => undefined)
+        state.save(state.draft).catch(() => undefined)
       }
     },
     []
@@ -451,7 +474,7 @@ export const GovernmentDecisionStep = ({
       return completeVerification1({
         preliminaryRiskAssessment: riskAssessment,
         priorityScore: validPriorityScore
-      } as any)
+      })
     }, t('carbonIntensity:step5.workflowSuccess'))
   }
 
@@ -464,7 +487,7 @@ export const GovernmentDecisionStep = ({
       return completeVerification2({
         preliminaryRiskAssessment: riskAssessment,
         priorityScore: validPriorityScore
-      } as any)
+      })
     }, t('carbonIntensity:step5.workflowSuccess'))
   }
 
@@ -575,7 +598,7 @@ export const GovernmentDecisionStep = ({
                         error={!!priorityScoreError}
                         onBlur={() => {
                           setPriorityScoreTouched(true)
-                          void persistRiskAssessmentDraft().catch(
+                          persistRiskAssessmentDraft().catch(
                             () => undefined
                           )
                         }}

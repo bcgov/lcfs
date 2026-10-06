@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
 import { ChargingSiteProfile } from '../../components/ChargingSiteProfile'
@@ -10,7 +10,7 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-vi.mock('@/utils/grid/cellRenderers', () => ({
+vi.mock('@/utils/grid/createStatusRenderer', () => ({
   createStatusRenderer:
     () =>
     ({ data }) => <span>{data?.status?.status}</span>

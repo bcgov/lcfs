@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react';
 import { screen } from '@testing-library/react'
 import { OrganizationBadge } from '../OrganizationBadge'
 import { beforeEach, describe, expect, vi } from 'vitest'

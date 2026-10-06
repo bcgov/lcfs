@@ -4,9 +4,13 @@ import { screen, fireEvent } from '@testing-library/react'
 import { ChargingSiteFSEGrid } from '../../components/ChargingSiteFSEGrid'
 import { test } from '@/tests/utils/fixtures'
 
+import {
+  useChargingSiteEquipmentPaginated,
+  useBulkUpdateEquipmentStatus
+} from '@/hooks/useChargingSite'
+
 const mockNavigate = vi.fn()
 const mockPathname = '/compliance-reporting/charging-sites/123'
-let lastGridProps
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
@@ -38,33 +42,25 @@ vi.mock('@/components/BCButton', () => ({
 vi.mock('@/hooks/useChargingSite')
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: React.forwardRef(
-    (props, ref) => (
-      (lastGridProps = props),
-      (
-        <div data-testid="bc-grid-viewer">
-          <button
-            onClick={() =>
-              props.onCellClicked?.({ data: { chargingEquipmentId: 456 } })
-            }
-          >
+    function BCGridViewerMock(props) {
+  return <div data-testid="bc-grid-viewer">
+          <button onClick={() => props.onCellClicked?.({
+      data: {
+        chargingEquipmentId: 456
+      }
+    })}>
             Row Click
           </button>
-        </div>
-      )
-    )
+        </div>;
+}
   )
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  BCAlert2: React.forwardRef((props, ref) => (
-    <div data-testid="bc-alert">Alert</div>
-  ))
+  BCAlert2: React.forwardRef(function BCAlert2Mock() {
+  return <div data-testid="bc-alert">Alert</div>;
+})
 }))
-
-import {
-  useChargingSiteEquipmentPaginated,
-  useBulkUpdateEquipmentStatus
-} from '@/hooks/useChargingSite'
 
 describe('ChargingSiteFSEGrid', () => {
   const mockEquipmentData = {
@@ -88,7 +84,6 @@ describe('ChargingSiteFSEGrid', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    lastGridProps = null
     useChargingSiteEquipmentPaginated.mockReturnValue({
       data: mockEquipmentData,
       isLoading: false,

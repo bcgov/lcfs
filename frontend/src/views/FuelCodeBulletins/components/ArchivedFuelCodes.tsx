@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { govRoles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { buildColumnDefs, normalizeRows } from '../_schema'
+import { buildColumnDefs, normalizeRows, type FuelCodeRow } from '../_schema'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import {
   useDownloadFuelCodeBulletins,
@@ -28,7 +28,7 @@ export const ArchivedFuelCodes = () => {
   const { hasAnyRole } = useCurrentUser()
   const isIdirView = hasAnyRole(...govRoles)
   const navigate = useNavigate()
-  const gridRef = useRef<any>(null)
+  const gridRef = useRef(null)
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState('')
   const [paginationOptions, setPaginationOptions] = useState(
@@ -147,11 +147,11 @@ export const ArchivedFuelCodes = () => {
             resizable: true,
             sortable: true
           }}
-          getRowId={(params: any) => params.data.id}
+          getRowId={(params: { data: FuelCodeRow }) => params.data.id}
           rowStyle={isIdirView ? { cursor: 'pointer' } : undefined}
           onRowClicked={
             isIdirView
-              ? (params: any) => {
+              ? (params: { data?: FuelCodeRow }) => {
                   navigateToFuelCodeDetail(params.data?.fuelCodeId)
                 }
               : undefined

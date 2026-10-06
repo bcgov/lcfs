@@ -14,15 +14,12 @@ import { ROUTES } from '@/routes/routes'
 import { useAllDesignatedActions } from '@/hooks/useInitiativeAgreements'
 import { allDesignatedActionColDefs } from './_schema'
 import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
+import { defaultActionsSortModel } from './designatedActionsConfig'
 
 // Every designated action across every agreement, newest activity first
 // (#5078). The agreement grid answers "what agreements exist"; this one
 // answers "what needs attention", so it is a work queue: sorted by last
 // updated unless the analyst sorts otherwise.
-export const defaultActionsSortModel = [
-  { field: 'updateDate', direction: 'desc' }
-]
-
 const initialPaginationOptions = {
   page: 1,
   size: 10,

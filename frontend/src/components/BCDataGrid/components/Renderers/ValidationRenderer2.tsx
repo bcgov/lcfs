@@ -1,4 +1,3 @@
-// @ts-nocheck
 import DoneAll from '@mui/icons-material/DoneAll'
 import Warning from '@mui/icons-material/Warning'
 import Icon from '@mui/material/Icon'
@@ -9,7 +8,7 @@ export interface ValidationRenderer2Props {
   data: {
     validationStatus?: 'warning' | 'error' | 'success' | 'pending' | string
     validationMsg?: string
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 

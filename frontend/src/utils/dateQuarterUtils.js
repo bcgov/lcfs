@@ -4,10 +4,10 @@
 
 /**
  * Determines the current quarter based on today's date for early issuance reports.
- * 
+ *
  * Quarter schedule follows early issuance activation dates:
  * - Q1: Mar-Jun (active from Apr 1)
- * - Q2: Jul-Sep (active from Jul 1) 
+ * - Q2: Jul-Sep (active from Jul 1)
  * - Q3: Oct-Dec (active from Oct 1)
  * - Q4: Jan-Feb (active from Jan 1 of following year)
  *
@@ -19,23 +19,27 @@ export function getCurrentQuarter(compliancePeriod) {
   const currentMonth = now.getMonth() // 0-11
   const currentYear = now.getFullYear()
   const year = Number.parseInt(compliancePeriod, 10)
-  
+
   // For the compliance period year
   if (currentYear === year) {
-    if (currentMonth >= 2 && currentMonth <= 5) { // Mar-Jun
+    if (currentMonth >= 2 && currentMonth <= 5) {
+      // Mar-Jun
       return 'Q1'
-    } else if (currentMonth >= 6 && currentMonth <= 8) { // Jul-Sep
+    } else if (currentMonth >= 6 && currentMonth <= 8) {
+      // Jul-Sep
       return 'Q2'
-    } else if (currentMonth >= 9 && currentMonth <= 11) { // Oct-Dec
+    } else if (currentMonth >= 9 && currentMonth <= 11) {
+      // Oct-Dec
       return 'Q3'
     }
   }
-  
+
   // For the year after compliance period (Q4 is in Jan-Feb of following year)
-  if (currentYear === year + 1 && currentMonth >= 0 && currentMonth <= 1) { // Jan-Feb
+  if (currentYear === year + 1 && currentMonth >= 0 && currentMonth <= 1) {
+    // Jan-Feb
     return 'Q4'
   }
-  
+
   // Default to Q4 if we can't determine
   return 'Q4'
 }
@@ -49,10 +53,10 @@ export function getCurrentQuarter(compliancePeriod) {
  */
 export function getQuarterDateRange(quarter, year) {
   const ranges = {
-    'Q1': { from: `${year}-01-01`, to: `${year}-03-31` },
-    'Q2': { from: `${year}-01-01`, to: `${year}-06-30` },
-    'Q3': { from: `${year}-01-01`, to: `${year}-09-30` },
-    'Q4': { from: `${year}-01-01`, to: `${year}-12-31` }
-  };
-  return ranges[quarter] || ranges['Q4'];
+    Q1: { from: `${year}-01-01`, to: `${year}-03-31` },
+    Q2: { from: `${year}-01-01`, to: `${year}-06-30` },
+    Q3: { from: `${year}-01-01`, to: `${year}-09-30` },
+    Q4: { from: `${year}-01-01`, to: `${year}-12-31` }
+  }
+  return ranges[quarter] || ranges.Q4
 }

@@ -2,7 +2,7 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { createStatusRenderer } from '@/utils/grid/cellRenderers'
+import { createStatusRenderer } from '@/utils/grid/createStatusRenderer'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
@@ -10,14 +10,15 @@ import BCButton from '@/components/BCButton'
 import { useUpdateChargingSiteStatus } from '@/hooks/useChargingSite'
 
 export const ChargingSiteProfile = ({
-  alertRef = useRef(null),
+  alertRef: alertRefProp,
   data,
   hasAnyRole,
-  hasRoles,
   historyMode = false,
   isIDIR,
   refetch
 }) => {
+  const localAlertRef = useRef(null)
+  const alertRef = alertRefProp ?? localAlertRef
   const { t } = useTranslation('chargingSite')
   const { siteId } = useParams()
   const [isSubmitting, setIsSubmitting] = useState(false)

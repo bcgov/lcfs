@@ -1,9 +1,6 @@
+import { createStatusRenderer } from './createStatusRenderer'
 import BCBadge from '@/components/BCBadge'
-import type {
-  BCBadgeColor,
-  BCBadgeSize,
-  BCBadgeVariant
-} from '@/components/BCBadge/BCBadgeRoot'
+import type { BCBadgeColor } from '@/components/BCBadge/BCBadgeRoot'
 import BCBox from '@/components/BCBox'
 import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import { roles } from '@/constants/roles'
@@ -31,18 +28,18 @@ import { getCode } from 'country-list'
 
 // Loose typing because these renderers are consumed by AG Grid and many
 // consumers across the codebase pass through additional ad-hoc props.
-type RendererProps = {
-  value?: any
-  valueFormatted?: any
-  data?: any
-  node?: any
-  colDef?: any
-  api?: any
-  url?: (params: { data: any }) => string
+export type RendererProps = {
+  value?: unknown
+  valueFormatted?: unknown
+  data?: unknown
+  node?: unknown
+  colDef?: unknown
+  api?: unknown
+  url?: (params: { data: unknown }) => string
   isAbsolute?: boolean
   isView?: boolean
-  state?: (data: any) => any
-  [key: string]: any
+  state?: (data: unknown) => unknown
+  [key: string]: unknown
 }
 
 interface ChipConfig {
@@ -240,7 +237,7 @@ interface FilterPillProps {
 
 type FilterPillRenderer = (props: FilterPillProps) => ReactNode
 
-interface RendererWithFilterPill {
+export interface RendererWithFilterPill {
   (props: RendererProps): ReactElement
   filterPillRenderer?: FilterPillRenderer
 }
@@ -368,7 +365,7 @@ export const OrgTypeRenderer: RendererWithFilterPill = (
   // Multi-type organizations (#4565): one chip per type with overflow, the
   // same treatment RoleRenderer gives the Users table. Falls back to the
   // legacy single type when the list is absent.
-  const orgTypes: any[] = props.data?.orgTypes?.length
+  const orgTypes: unknown[] = props.data?.orgTypes?.length
     ? props.data.orgTypes
     : props.data?.orgType
       ? [props.data.orgType]
@@ -677,12 +674,14 @@ interface GenericChipRendererProps extends RendererProps {
   chipConfig?: ChipConfig
 }
 
+const DEFAULT_CHIP_CONFIG: ChipConfig = {}
+
 const GenericChipRenderer = ({
   value,
   disableLink = false,
   renderChip = defaultRenderChip,
   renderOverflowChip = defaultRenderOverflowChip,
-  chipConfig = {},
+  chipConfig = DEFAULT_CHIP_CONFIG,
   ...props
 }: GenericChipRendererProps): ReactElement => {
   const location = useLocation()
@@ -694,8 +693,8 @@ const GenericChipRenderer = ({
   const options = useMemo<string[]>(() => {
     if (Array.isArray(value)) {
       return value
-        .map((item: any) => item?.label || item)
-        .filter((item: any) => item && item !== '')
+        .map((item: unknown) => item?.label || item)
+        .filter((item: unknown) => item && item !== '')
     }
 
     if (value?.label) {
@@ -750,7 +749,7 @@ const GenericChipRenderer = ({
       })),
       hiddenChipsCount: 0
     }
-  }, [options])
+  }, [options, chipConfig])
 
   useEffect(() => {
     const { visibleChips, hiddenChipsCount } = calculateChipWidths()
@@ -787,7 +786,7 @@ const GenericChipRenderer = ({
     return () => {
       resizeObserver.disconnect()
     }
-  }, [value, api, colDef])
+  }, [value, api, colDef, calculateChipWidths])
 
   const chipContent = (
     <div
@@ -1026,133 +1025,6 @@ export const LastCommentRenderer = (props: RendererProps): ReactElement => {
       </BCBox>
     </Link>
   )
-}
-
-interface CreateStatusRendererOptions {
-  statusField?: string
-  defaultColor?: BCBadgeColor
-  variant?: BCBadgeVariant
-  size?: BCBadgeSize
-  minWidth?: string
-  fontSize?: string
-  padding?: string
-  fontWeight?: string
-  textTransform?: string | null
-  replaceUnderscores?: boolean
-  margin?: number
-  enableLink?: boolean
-  urlGenerator?: ((args: { data: any; node: any }) => string) | null
-}
-
-export const createStatusRenderer = (
-  colorMap: Record<string, BCBadgeColor>,
-  options: CreateStatusRendererOptions = {},
-  value: string | undefined = undefined
-): RendererWithFilterPill => {
-  const {
-    statusField = 'status',
-    defaultColor = 'info',
-    variant = 'contained',
-    size = 'lg',
-    minWidth = '120px',
-    fontSize = '0.875rem',
-    padding = '0.4em 0.6em',
-    fontWeight = 'regular',
-    textTransform = null,
-    replaceUnderscores = false,
-    margin = 1,
-    enableLink = false,
-    urlGenerator = null
-  } = options
-
-  const buildBadge = (statusValue: string): ReactNode => {
-    if (!statusValue) return null
-    let displayText: string = statusValue
-    if (replaceUnderscores && typeof displayText === 'string') {
-      displayText = displayText.replace(/_/g, ' ')
-    }
-    const badgeColor = colorMap[statusValue] || defaultColor
-
-    return (
-      <BCBadge
-        badgeContent={displayText}
-        color={badgeColor}
-        variant={variant}
-        size={size}
-        sx={{
-          '& .MuiBadge-badge': {
-            minWidth,
-            fontWeight,
-            fontSize,
-            padding,
-            ...(textTransform && { textTransform })
-          }
-        }}
-      />
-    )
-  }
-
-  const StatusRendererComponent: RendererWithFilterPill = (
-    props: RendererProps
-  ): ReactElement => {
-    const { data, node } = props
-    const location = useLocation()
-
-    let statusValue: any = statusField.includes('.')
-      ? statusField.split('.').reduce<any>((obj, key) => obj?.[key], data)
-      : data[statusField]
-    if (
-      statusValue &&
-      typeof statusValue === 'object' &&
-      statusValue !== null &&
-      !Array.isArray(statusValue)
-    ) {
-      statusValue = statusValue.status || statusValue
-    }
-    if (value !== undefined) {
-      statusValue = value
-    }
-    const badgeNode = buildBadge(statusValue)
-    const component = (
-      <BCBox
-        m={margin}
-        sx={{
-          display: 'flex',
-          justifyContent: 'center'
-        }}
-        component="span"
-      >
-        {badgeNode}
-      </BCBox>
-    )
-
-    if (enableLink) {
-      const targetUrl = urlGenerator
-        ? urlGenerator({ data, node })
-        : `${location.pathname}/${node?.id}`
-
-      return (
-        <Link to={targetUrl} style={{ color: '#000' }}>
-          {component}
-        </Link>
-      )
-    }
-
-    return component
-  }
-
-  StatusRendererComponent.filterPillRenderer = ({
-    rawValue,
-    value: pillValue
-  }) => {
-    const pillStatusValue = (rawValue || pillValue) as string
-    if (!pillStatusValue) {
-      return null
-    }
-    return buildBadge(pillStatusValue)
-  }
-
-  return StatusRendererComponent
 }
 
 export const ChargingSiteStatusRenderer = createStatusRenderer(

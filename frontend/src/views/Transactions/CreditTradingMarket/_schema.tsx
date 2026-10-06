@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
 import {
   numberFormatter,

@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
@@ -7,7 +7,7 @@ import { test } from '@/tests/utils/fixtures'
 
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { roles } from '@/constants/roles'
+import '@/constants/roles'
 
 // Mock useCurrentUser
 vi.mock('@/hooks/useCurrentUser', () => ({

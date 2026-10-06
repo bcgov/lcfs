@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { useDebounce } from '@/utils/debounce'
 
@@ -10,7 +9,7 @@ export interface AsyncValidationEditorProps {
   column?: { colId?: string }
   debounceLimit?: number
   condition: (value: string) => boolean | Promise<boolean>
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export const AsyncValidationEditor = forwardRef(
@@ -18,10 +17,9 @@ export const AsyncValidationEditor = forwardRef(
     {
       value,
       onValueChange,
-      eventKey,
-      rowIndex,
       column,
-      ...props
+      debounceLimit,
+      condition
     }: AsyncValidationEditorProps,
     ref
   ) => {
@@ -30,7 +28,7 @@ export const AsyncValidationEditor = forwardRef(
     const [validating, setValidating] = useState(false)
     const [touched, setTouched] = useState(false)
 
-    const debouncedInputVal = useDebounce(inputValue, props.debounceLimit)
+    const debouncedInputVal = useDebounce(inputValue, debounceLimit)
     // TODO: ability to show tool tip
     // TODO: ability to show error message
     // TODO: ability to perform both synchronous and asynhronous validations.
@@ -42,14 +40,14 @@ export const AsyncValidationEditor = forwardRef(
     }
 
     useEffect(() => {
-      const timeout = props.debounceLimit
+      const timeout = debounceLimit
 
-      new Promise((resolve, reject) => {
-        if (inputValue === '') {
+      new Promise((resolve) => {
+        if (debouncedInputVal === '') {
           resolve(false)
         } else {
           setTimeout(() => {
-            resolve(props.condition(inputValue))
+            resolve(condition(debouncedInputVal))
           }, timeout)
         }
       })
@@ -58,7 +56,7 @@ export const AsyncValidationEditor = forwardRef(
           setValidating(false)
         })
         .catch((err) => console.log(err))
-    }, [debouncedInputVal])
+    }, [condition, debounceLimit, debouncedInputVal])
 
     useImperativeHandle(ref, () => {
       return {

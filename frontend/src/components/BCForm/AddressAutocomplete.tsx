@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef, useRef } from 'react'
+import { useState, useEffect, forwardRef, useRef, useCallback } from 'react'
 import TextField from '@mui/material/TextField'
 import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
@@ -21,6 +21,21 @@ export interface AddressOption {
   latitude?: number
   longitude?: number
   score?: number
+}
+
+interface GeocoderSuggestion {
+  full_address?: string
+  street_address?: string
+  city?: string
+  province?: string
+  postal_code?: string
+  latitude?: number
+  longitude?: number
+  score?: number
+}
+
+interface GeocoderAutocompleteResponse {
+  suggestions?: GeocoderSuggestion[]
 }
 
 export interface AddressAutocompleteProps {
@@ -62,9 +77,10 @@ export const AddressAutocomplete = forwardRef<
     const [isAddressSelected, setIsAddressSelected] = useState(false)
     
     const { autocompleteAddress, validateAddress } = useGeocoder()
+    const { mutateAsync: fetchAutocomplete } = autocompleteAddress
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
-    const fetchAddresses = async (searchValue: string) => {
+    const fetchAddresses = useCallback(async (searchValue: string) => {
       if (!searchValue || searchValue.length < 3) {
         setOptions([])
         return
@@ -82,14 +98,14 @@ export const AddressAutocomplete = forwardRef<
 
       try {
         // Use the new autocomplete endpoint
-        const result = await autocompleteAddress.mutateAsync({
+        const result = (await fetchAutocomplete({
           partialAddress: searchValue,
           maxResults
-        })
+        })) as GeocoderAutocompleteResponse
 
         if (result.suggestions) {
           // Suggestions now come as complete AddressSchema objects
-          const addresses = result.suggestions.map((addr: any) => ({
+          const addresses = result.suggestions.map((addr) => ({
             fullAddress: addr.full_address,
             streetAddress: addr.street_address || '',
             city: addr.city || '',
@@ -108,7 +124,7 @@ export const AddressAutocomplete = forwardRef<
         console.error('Error fetching addresses:', error)
         setOptions([])
       }
-    }
+    }, [fetchAutocomplete, isAddressSelected, maxResults])
 
     useEffect(() => {
       // Clear previous timeout
@@ -133,7 +149,7 @@ export const AddressAutocomplete = forwardRef<
           clearTimeout(timeoutRef.current)
         }
       }
-    }, [inputValue]) // Only depend on inputValue
+    }, [fetchAddresses, inputValue])
 
     const isLoading = autocompleteAddress.isPending || validateAddress.isPending
 

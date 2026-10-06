@@ -65,46 +65,34 @@ export const BulkActionModals = ({
         open={showSubmitModal}
         onClose={onSubmitCancel}
         title={submitModalData.title}
-        children={
-          <>
-            {submitModalData.content}
-            <Box p={3} display="flex" gap={2}>
-              <button disabled={isSubmitting} onClick={onSubmitCancel}>
-                {t('common:cancel')}
-              </button>
-              <button disabled={isSubmitting} onClick={onSubmitConfirm}>
-                {t('chargingEquipment:submitSelected')}
-              </button>
-            </Box>
-          </>
-        }
         data={submitModalData}
-      />
+      >
+        {submitModalData.content}
+        <Box p={3} display="flex" gap={2}>
+          <button disabled={isSubmitting} onClick={onSubmitCancel}>
+            {t('common:cancel')}
+          </button>
+          <button disabled={isSubmitting} onClick={onSubmitConfirm}>
+            {t('chargingEquipment:submitSelected')}
+          </button>
+        </Box>
+      </BCModal>
       <BCModal
         open={showDecommissionModal}
         onClose={onDecommissionCancel}
         title={decommissionModalData.title}
-        children={
-          <>
-            {decommissionModalData.content}
-            <Box p={3} display="flex" gap={2}>
-              <button
-                disabled={isDecommissioning}
-                onClick={onDecommissionCancel}
-              >
-                {t('common:cancel')}
-              </button>
-              <button
-                disabled={isDecommissioning}
-                onClick={onDecommissionConfirm}
-              >
-                {t('chargingEquipment:setToDecommissioned')}
-              </button>
-            </Box>
-          </>
-        }
         data={decommissionModalData}
-      />
+      >
+        {decommissionModalData.content}
+        <Box p={3} display="flex" gap={2}>
+          <button disabled={isDecommissioning} onClick={onDecommissionCancel}>
+            {t('common:cancel')}
+          </button>
+          <button disabled={isDecommissioning} onClick={onDecommissionConfirm}>
+            {t('chargingEquipment:setToDecommissioned')}
+          </button>
+        </Box>
+      </BCModal>
     </>
   )
 }

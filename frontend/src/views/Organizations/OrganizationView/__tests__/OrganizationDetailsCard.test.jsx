@@ -92,8 +92,8 @@ const Wrapper = ({ children }) => (
   </QueryClientProvider>
 )
 
-const mockGovUser = { hasRoles: () => true }
-const mockNonGovUser = { hasRoles: () => false }
+
+
 
 describe('OrganizationDetailsCard', () => {
   afterEach(() => {

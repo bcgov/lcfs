@@ -1,17 +1,15 @@
 import React from 'react'
-import { screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import {
-  AddEditAllocationAgreements,
-  flattenNestedFields
-} from '../AddEditAllocationAgreements'
+import { AddEditAllocationAgreements } from '../AddEditAllocationAgreements'
+import { flattenNestedFields } from '../allocationAgreementUtils'
 import * as useAllocationAgreementHook from '@/hooks/useAllocationAgreement'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
 import * as configModule from '@/constants/config'
 import * as schedulesUtils from '@/utils/schedules'
-import { useApiService } from '@/services/useApiService'
+import '@/services/useApiService'
 
 // Mock react-router-dom hooks
 const mockUseLocation = vi.fn()
@@ -147,8 +145,6 @@ const mockGridApi = {
 
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
-    gridRef,
-    alertRef,
     onGridReady,
     rowData,
     onCellValueChanged,
@@ -445,16 +441,8 @@ describe('flattenNestedFields', () => {
 })
 
 describe('AddEditAllocationAgreements', () => {
-  let mockAlertRef
-
   beforeEach(() => {
     vi.resetAllMocks()
-
-    mockAlertRef = {
-      current: {
-        triggerAlert: vi.fn()
-      }
-    }
 
     // Mock react-router-dom hooks with complete location object
     mockUseLocation.mockReturnValue({
@@ -732,13 +720,7 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   // TODO: Re-enable when import/export feature is re-enabled in the component
-  describe.skip('Import/Export Functionality', ({
-    render,
-    query,
-    theme,
-    localization,
-    router
-  }) => {
+  describe.skip('Import/Export Functionality', () => {
     beforeEach(() => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
     })
@@ -1180,14 +1162,6 @@ describe('AddEditAllocationAgreements', () => {
       localization,
       router
     }) => {
-      const mockParams = {
-        node: { data: { quantity: 100 } },
-        colDef: { field: 'quantity' }
-      }
-      const validationFn = (value) =>
-        value !== null && !isNaN(value) && value > 0
-      const mockAlertRef = { current: { triggerAlert: vi.fn() } }
-
       // We can't test the validate function directly since it's internal,
       // but we can test the validation through the onCellEditingStopped event
       render(<AddEditAllocationAgreements />, [
@@ -1422,13 +1396,7 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   // TODO: Re-enable when import/export feature is re-enabled in the component
-  describe.skip('Menu State Management Coverage', ({
-    render,
-    query,
-    theme,
-    localization,
-    router
-  }) => {
+  describe.skip('Menu State Management Coverage', () => {
     beforeEach(() => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
     })
@@ -1604,19 +1572,6 @@ describe('AddEditAllocationAgreements', () => {
         router
       ])
 
-      // Create a more realistic BCGridEditor mock for this test
-      const mockParams = {
-        colDef: { field: 'transactionPartner' },
-        oldValue: '',
-        newValue: { name: 'Test Org' },
-        node: {
-          setDataValue: vi.fn(),
-          updateData: vi.fn(),
-          data: { transactionPartner: { name: 'Test Org' }, id: 'test-id' }
-        }
-      }
-
-      // This tests the typeof params.newValue === 'object' branch
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
   })

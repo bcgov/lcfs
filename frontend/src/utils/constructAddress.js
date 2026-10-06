@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 export const constructAddress = (address) => {
   const {
     streetAddress = '',

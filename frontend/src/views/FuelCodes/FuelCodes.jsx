@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { fuelCodeColDefs, defaultSortModel } from './_schema'
-import { defaultInitialPagination } from '@/constants/schedules'
+import '@/constants/schedules'
 import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'
 import { ArchivedFuelCodes } from '@/views/FuelCodeBulletins/components/ArchivedFuelCodes'
 import { CurrentFuelCodes } from '@/views/FuelCodeBulletins/components/CurrentFuelCodes'
@@ -124,13 +124,6 @@ const FuelCodesBase = () => {
       setAlertSeverity('error')
     } finally {
       setIsDownloading(false)
-    }
-  }
-
-  const handleClearFilters = () => {
-    setPaginationOptions(initialPaginationOptions)
-    if (gridRef && gridRef.current) {
-      gridRef.current.clearFilters()
     }
   }
 

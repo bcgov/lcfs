@@ -23,6 +23,7 @@ const initialPaginationOptions = {
   sortOrders: [],
   filters: []
 }
+const EMPTY_EQUIPMENT_LIST = []
 
 const arrayOfStrings = (values = [], selector) =>
   [...values]
@@ -151,12 +152,18 @@ export const ChargingSiteFSEGrid = ({
     paginationOptions,
     { historyMode }
   )
-  const { data: equipmentData, isLoading, refetch } = equipmentQuery
+  const {
+  data: equipmentData,
+  refetch
+} = equipmentQuery
 
   const { mutateAsync: bulkUpdateStatus, isPending: isUpdating } =
     useBulkUpdateEquipmentStatus()
 
-  const equipmentList = equipmentData?.equipments || []
+  const equipmentList = useMemo(
+    () => equipmentData?.equipments || EMPTY_EQUIPMENT_LIST,
+    [equipmentData?.equipments]
+  )
   const visibleEquipmentRows = useMemo(() => {
     if (!historyMode) return equipmentList
     return buildHistoryRows(equipmentList, expandedHistoryRows)
@@ -370,6 +377,8 @@ export const ChargingSiteFSEGrid = ({
       bulkUpdateStatus,
       handleClearFilters,
       equipmentList,
+      refetch,
+      t,
       navigate
     ]
   )
@@ -443,6 +452,7 @@ export const ChargingSiteFSEGrid = ({
       handleCreateFSE
     })
   }, [
+    t,
     setModalData,
     equipmentList,
     selectedRows,
@@ -451,9 +461,11 @@ export const ChargingSiteFSEGrid = ({
     canReturnToDraft,
     canSubmit,
     canSetToDecommission,
-    equipmentData?.chargingSiteStatus,
+    equipmentData?.status?.status,
     equipmentData?.organizationId,
-    currentUser?.userId,
+    currentUser,
+    hasAnyRole,
+    hasRoles,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
     handleClearFilters,
@@ -526,7 +538,7 @@ export const ChargingSiteFSEGrid = ({
           <BCGridViewer
             gridRef={gridRef}
             alertRef={alertRef}
-            columnDefs={chargingEquipmentColDefs(t, isIDIR, {
+            columnDefs={chargingEquipmentColDefs(t, {
               enableSelection: false,
               historyMode,
               onToggleHistory: handleToggleHistory,

@@ -45,6 +45,15 @@ interface FuelCodeSunburstFilters {
   fuelType: string
 }
 
+type HeatmapTooltipParams = {
+  value?: [number, number, number, number]
+}
+
+type SunburstTooltipParams = {
+  treePathInfo?: Array<{ name: string }>
+  value?: number
+}
+
 type HistoricalChartMode = 'trend' | 'horizontal-bars' | 'grouped-bars'
 
 const ALL_FILTER_VALUE = 'all'
@@ -554,8 +563,8 @@ const buildFuelPresenceHeatmapOptions = (group: HistoricalChartGroup) => {
   return getStandardChartOptions({
     tooltip: {
       position: 'top',
-      formatter: (params: any) => {
-        const [xIndex, yIndex, quantity] = params.value || []
+      formatter: (params: HeatmapTooltipParams) => {
+        const [xIndex, yIndex, quantity] = params.value ?? [0, 0, 0, 0]
         const period = group.periodLabels[xIndex]
         const fuel = group.labels[yIndex]
         return `${fuel}<br/>${period}<br/>${
@@ -706,7 +715,7 @@ const buildFuelCodeSunburstOptions = (
   return getStandardChartOptions({
     tooltip: {
       trigger: 'item',
-      formatter: (params: any) => {
+      formatter: (params: SunburstTooltipParams) => {
         const treePath = params.treePathInfo
           ?.slice(1)
           .map((item: { name: string }) => item.name)

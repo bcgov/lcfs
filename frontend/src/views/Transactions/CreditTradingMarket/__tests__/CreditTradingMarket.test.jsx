@@ -9,7 +9,7 @@ vi.mock('@/hooks/useCurrentUser')
 
 // Mock child components
 vi.mock('../CreditMarketTable', () => ({
-  CreditMarketTable: React.forwardRef((props, ref) => {
+  CreditMarketTable: React.forwardRef(function CreditMarketTableMock(props, ref) {
     React.useImperativeHandle(ref, () => ({
       refreshListings: vi.fn()
     }))
@@ -134,9 +134,9 @@ describe('CreditTradingMarket', () => {
 
     // Check that heading has correct styling properties
     const headings = screen.getAllByTestId('bc-typography')
-    const mainHeading = headings.find(
+    headings.find(
       (el) => el.getAttribute('data-variant') === 'h4'
-    )
+    );
     const disclaimer = headings.find(
       (el) => el.getAttribute('data-variant') === 'body2'
     )

@@ -91,7 +91,7 @@ export const PublicDashboard = () => {
     navigate(ROUTES.DASHBOARD, { replace: true })
   }, [initialized, keycloak.authenticated, navigate])
 
-  const priceIndex = data?.priceIndex ?? []
+  const priceIndex = useMemo(() => data?.priceIndex ?? [], [data?.priceIndex])
   const periods = priceIndex.map((p) => p.period)
 
   const bgUrl = activeBg?.loginBgImageId

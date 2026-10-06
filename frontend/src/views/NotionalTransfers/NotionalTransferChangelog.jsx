@@ -126,7 +126,7 @@ export const NotionalTransferChangelog = () => {
         pagination: {
           page: paginationOptions.page,
           size: paginationOptions.size,
-          total: total
+          total
         }
       },
       error: null,

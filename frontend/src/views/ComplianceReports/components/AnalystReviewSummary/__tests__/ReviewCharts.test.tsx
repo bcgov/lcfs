@@ -3,10 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ReviewCharts } from '../ReviewCharts'
 import type { ReviewChartData } from '../types'
 
-const chartProps: any[] = []
+type MockChartProps = {
+  ariaLabel?: string
+  option: {
+    yAxis?: Array<{ name?: string }>
+    series?: unknown[]
+    [key: string]: unknown
+  }
+}
+
+const chartProps: MockChartProps[] = []
 
 vi.mock('@/components/charts/BCResponsiveEchart', () => ({
-  BCResponsiveEChart: (props: any) => {
+  BCResponsiveEChart: (props: MockChartProps) => {
     chartProps.push(props)
     return <div data-test="echarts" role="img" aria-label={props.ariaLabel} />
   }

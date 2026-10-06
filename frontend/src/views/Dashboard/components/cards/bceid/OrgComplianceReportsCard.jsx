@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import Stack from '@mui/material/Stack'
@@ -31,7 +31,9 @@ const CountDisplay = ({ count }) => (
 const OrgComplianceReportsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
-  const { data: orgData, isLoading: orgLoading } = useOrganization()
+  const {
+  data: orgData
+} = useOrganization()
   const { data: counts, isLoading } = useOrgComplianceReportCounts()
 
   const handleNavigation = (route, status) => {

@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
-import { OrganizationDetailsCard } from './OrganizationDetailsCard'
-import { OrganizationUsers } from './OrganizationUsers'
-import { CreditLedger } from './CreditLedger'
-import { PenaltyLog } from './components/PenaltyLog/PenaltyLog'
-import PenaltyLogManage from './components/PenaltyLog/PenaltyLogManage'
-import SupplyHistory from './components/SupplyHistory'
-import ComplianceTracking from './components/ComplianceTracking'
+import './OrganizationDetailsCard';
+import './OrganizationUsers';
+import './CreditLedger';
+import './components/PenaltyLog/PenaltyLog';
+import './components/PenaltyLog/PenaltyLogManage';
+import './components/SupplyHistory';
+import './components/ComplianceTracking';
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import {
@@ -21,19 +21,6 @@ import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 import AppBar from '@mui/material/AppBar'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
-
-function TabPanel({ children, value, index }) {
-  return (
-    <BCBox
-      role="tabpanel"
-      hidden={value !== index}
-      id={`organization-tabpanel-${index}`}
-      aria-labelledby={`organization-tab-${index}`}
-    >
-      {value === index && children}
-    </BCBox>
-  )
-}
 
 function a11yProps(index) {
   return {

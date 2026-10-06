@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
 import { ChargingSiteCard } from '../../components/ChargingSiteCard'

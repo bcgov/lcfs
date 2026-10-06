@@ -11,23 +11,25 @@ const SELECTORS = {
 }
 
 // Get the current compliance year for testing
-const currentComplianceYear = new Date().getFullYear() - 1
 
 Given('the user is on the login page', () => {
   cy.visit('/', { timeout: 60000 })
 })
 
-Given('the analyst logs in with valid credentials for compliance reports', () => {
-  cy.loginWith(
-    'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
-  )
-  cy.wait(5000)
-  cy.setIDIRRoles('analyst')
-  cy.visit('/', { timeout: 60000 })
-  cy.get(SELECTORS.dashboard).should('exist')
-})
+Given(
+  'the analyst logs in with valid credentials for compliance reports',
+  () => {
+    cy.loginWith(
+      'idir',
+      Cypress.env('ADMIN_IDIR_USERNAME'),
+      Cypress.env('ADMIN_IDIR_PASSWORD')
+    )
+    cy.wait(5000)
+    cy.setIDIRRoles('analyst')
+    cy.visit('/', { timeout: 60000 })
+    cy.get(SELECTORS.dashboard).should('exist')
+  }
+)
 
 Given('they navigate to the compliance reports page', () => {
   cy.visit('/compliance-reporting')

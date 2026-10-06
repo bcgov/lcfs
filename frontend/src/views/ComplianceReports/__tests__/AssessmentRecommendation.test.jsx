@@ -1,5 +1,5 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import 'react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { AssessmentRecommendation } from '../components/AssessmentRecommendation'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
@@ -11,7 +11,7 @@ const mockNavigate = vi.fn()
 const mockCreateAnalystAdjustment = vi.fn()
 const mockUpdateComplianceReport = vi.fn()
 const mockHasRoles = vi.fn(() => false)
-const mockIsFeatureEnabled = vi.fn(() => false)
+vi.fn(() => false);
 const mockCurrentUserData = { isGovernmentUser: true }
 
 // Mock hooks

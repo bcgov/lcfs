@@ -1,6 +1,6 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import Loading from '@/components/Loading'
+import '@/components/Loading';
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { formatOrgAvailableRoles } from '@/constants/organizationRoles'

@@ -1,4 +1,4 @@
-import { createElement } from 'react'
+import 'react';
 import { screen } from '@testing-library/react'
 import { LabelBox } from '../LabelBox'
 import { test } from '@/tests/utils/fixtures'

@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import IconButton from '@mui/material/IconButton'
 import ClearIcon from '@mui/icons-material/Clear'
 
@@ -7,10 +6,10 @@ const ITEM_HEIGHT = 48
 const ITEM_PADDING_TOP = 8
 
 export interface BCSelectFloatingFilterProps {
-  model?: any
-  onModelChange: (model: any) => void
-  optionsQuery: (params?: any) => {
-    data?: Array<Record<string, any>>
+  model?: { type?: string; filter?: string } | null
+  onModelChange: (model: { type: string; filter: string } | null) => void
+  optionsQuery: (params?: Record<string, unknown>) => {
+    data?: Array<Record<string, unknown>>
     isLoading?: boolean
     isError?: boolean
     error?: Error
@@ -18,11 +17,14 @@ export interface BCSelectFloatingFilterProps {
   valueKey?: string
   labelKey?: string
   disabled?: boolean
-  params?: any
+  params?: Record<string, unknown>
   initialFilterType?: string
   multiple?: boolean
   initialSelectedValues?: string[]
 }
+
+const EMPTY_OPTIONS: Record<string, unknown>[] = []
+const EMPTY_SELECTION: string[] = []
 
 export const BCSelectFloatingFilter = ({
   model,
@@ -34,40 +36,29 @@ export const BCSelectFloatingFilter = ({
   params,
   initialFilterType = 'equals',
   multiple = false,
-  initialSelectedValues = []
+  initialSelectedValues = EMPTY_SELECTION
 }: BCSelectFloatingFilterProps) => {
-  const [selectedValues, setSelectedValues] = useState(multiple ? [] : '')
-  const [options, setOptions] = useState([])
+  const [selectedValues, setSelectedValues] = useState<string[]>([])
   const { data: optionsData, isLoading, isError, error } = optionsQuery(params)
+  const filter = model?.filter
+  const hasSelection = selectedValues.length > 0
+  const options = useMemo(() => {
+    const baseOptions = optionsData || EMPTY_OPTIONS
+    if (hasSelection && filter?.split(',').length > 1 &&
+        !baseOptions.some((option) => option[valueKey]?.toString() === filter)) {
+      return [...baseOptions, { [valueKey]: filter, [labelKey]: filter }]
+    }
+    return baseOptions
+  }, [optionsData, filter, hasSelection, valueKey, labelKey])
 
   useEffect(() => {
-    if (optionsData) {
-      setOptions(optionsData)
-    }
-  }, [isLoading])
-
-  useEffect(() => {
-    if (!model) {
-      setSelectedValues(initialSelectedValues)
-      return
-    }
-
-    const filterValues = model.filter?.split(',') || []
-
-    if (filterValues.length > 1) {
-      const optionExists = options.some(
-        (opt) => opt[valueKey]?.toString() === model?.filter?.toString()
-      )
-
-      if (!optionExists) {
-        const newOptions = [
-          { [valueKey]: model?.filter, [labelKey]: model?.filter }
-        ]
-        setOptions((prev) => [...prev, ...newOptions])
-      }
-    }
-    setSelectedValues(filterValues)
-  }, [model])
+    const nextValues = model ? model.filter?.split(',') || [] : initialSelectedValues
+    setSelectedValues((previous) =>
+      previous.length === nextValues.length && previous.every((value, index) => value === nextValues[index])
+        ? previous
+        : nextValues
+    )
+  }, [model, initialSelectedValues])
 
   const handleChange = (event) => {
     const { options } = event.target
@@ -97,9 +88,6 @@ export const BCSelectFloatingFilter = ({
   const handleClear = (event) => {
     event.stopPropagation()
     setSelectedValues([])
-
-    // Remove any dynamically added options
-    setOptions(optionsData || [])
 
     onModelChange(null)
   }

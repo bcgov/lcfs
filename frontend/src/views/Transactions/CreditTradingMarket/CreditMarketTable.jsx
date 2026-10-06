@@ -1,14 +1,6 @@
-import React, {
-  useState,
-  useRef,
-  useCallback,
-  useEffect,
-  useMemo,
-  forwardRef,
-  useImperativeHandle
-} from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import Box from '@mui/material/Box'
-import BCTypography from '@/components/BCTypography'
+import '@/components/BCTypography';
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -135,7 +127,7 @@ export const CreditMarketTable = forwardRef(
     if (!selectedOrgId && gridRef.current?.api?.deselectAll) {
       gridRef.current.api.deselectAll()
     }
-  }, [selectedOrgId])
+  }, [gridRef, selectedOrgId])
 
   // Build query data structure for BCGridViewer
     const queryData = {

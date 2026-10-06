@@ -111,7 +111,7 @@ export const AddEditNotionalTransfers = () => {
               complianceReportId
             }
           ])
-        } catch (error) {
+        } catch {
           alertRef.triggerAlert({
             message: t('notionalTransfer:LoadFailMsg'),
             severity: 'error'
@@ -215,7 +215,7 @@ export const AddEditNotionalTransfers = () => {
         params.api?.autoSizeAllColumns?.()
       }, 0)
     },
-    [saveRow, t, complianceReportId]
+    [saveRow, t, complianceReportId, orgName]
   )
 
   const onAction = async (action, params) => {
@@ -255,35 +255,39 @@ export const AddEditNotionalTransfers = () => {
     optionsData,
     warnings,
     orgName,
-    compliancePeriod
+    compliancePeriod,
+    optionsLoading
   ])
 
   useEffect(() => {
     if (!transfersLoading && !isArrayEmpty(notionalTransfers)) {
-      const updatedRowData =
-        notionalTransfers?.map((item) => {
-          let matchingRow = rowData.find(
-            (row) => row.notionalTransferId === item.notionalTransferId
-          )
-          if (!matchingRow) {
-            matchingRow = rowData.find(
-              (row) =>
-                row.notionalTransferId === undefined ||
-                row.notionalTransferId === null
+      setRowData((currentRowData) => {
+        const updatedRowData =
+          notionalTransfers?.map((item) => {
+            let matchingRow = currentRowData.find(
+              (row) => row.notionalTransferId === item.notionalTransferId
             )
-          }
-          return {
-            ...item,
-            complianceReportId,
-            isNewSupplementalEntry:
-              isSupplemental && item.complianceReportId === +complianceReportId,
-            id: matchingRow ? matchingRow.id : uuid()
-          }
-        }) ?? []
-      setRowData([
-        ...updatedRowData,
-        { id: uuid(), complianceReportId, compliancePeriod }
-      ])
+            if (!matchingRow) {
+              matchingRow = currentRowData.find(
+                (row) =>
+                  row.notionalTransferId === undefined ||
+                  row.notionalTransferId === null
+              )
+            }
+            return {
+              ...item,
+              complianceReportId,
+              isNewSupplementalEntry:
+                isSupplemental &&
+                item.complianceReportId === +complianceReportId,
+              id: matchingRow ? matchingRow.id : uuid()
+            }
+          }) ?? []
+        return [
+          ...updatedRowData,
+          { id: uuid(), complianceReportId, compliancePeriod }
+        ]
+      })
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
@@ -320,7 +324,7 @@ export const AddEditNotionalTransfers = () => {
     if (showColumns) {
       api?.autoSizeAllColumns?.()
     }
-  })
+  }, [compliancePeriod])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api?.autoSizeAllColumns?.()
@@ -329,10 +333,10 @@ export const AddEditNotionalTransfers = () => {
     setTimeout(() => {
       updateGridColumnsVisibility()
     }, 0)
-  })
+  }, [updateGridColumnsVisibility])
   useEffect(() => {
     updateGridColumnsVisibility()
-  }, [rowData, optionsData])
+  }, [rowData, optionsData, updateGridColumnsVisibility])
 
   const handleNavigateBack = useCallback(() => {
     navigate(

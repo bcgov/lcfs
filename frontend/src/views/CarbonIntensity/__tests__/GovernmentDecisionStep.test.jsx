@@ -1,17 +1,11 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
+import 'react'
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within
-} from '@testing-library/react'
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 
 import { roles } from '@/constants/roles'
+
+import { GovernmentDecisionStep } from '@/views/CarbonIntensity/components/GovernmentDecisionStep'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
@@ -85,8 +79,6 @@ vi.mock('@/hooks/useCurrentUser', () => ({
       names.some((name) => mockUserRoles.some((r) => r.name === name))
   })
 }))
-
-import { GovernmentDecisionStep } from '@/views/CarbonIntensity/components/GovernmentDecisionStep'
 
 const baseCi = { ciApplicationId: 10, status: { status: 'Submitted' } }
 const renderAnalystDecision = (render, providers, ciApplication = baseCi) => {

@@ -1,29 +1,34 @@
-// @ts-nocheck
 import { forwardRef, useState, useCallback, useLayoutEffect } from 'react'
 import InputBase from '@mui/material/InputBase'
 import Popper from '@mui/material/Popper'
 import Paper from '@mui/material/Paper'
+import type { GridApi } from 'ag-grid-community'
 
 export interface LargeTextareaEditorProps {
   value?: string
   onValueChange: (value: string) => void
   column: { actualWidth: number }
-  api?: any
-  [key: string]: any
+  api?: Pick<GridApi, 'getFocusedCell' | 'tabToNextCell'>
+  [key: string]: unknown
 }
 
 export const LargeTextareaEditor = forwardRef(
-  ({ value, onValueChange, column, ...props }: LargeTextareaEditorProps, ref) => {
+  ({
+  value,
+  onValueChange,
+  column,
+  api
+}) => {
     const [valueState, setValueState] = useState(value)
     const [anchorEl, setAnchorEl] = useState()
     const [inputRef, setInputRef] = useState(null)
 
     useLayoutEffect(() => {
-      const focusedCell = props.api.getFocusedCell()
+      api?.getFocusedCell()
       if (inputRef) {
         inputRef.focus()
       }
-    }, [inputRef, props.api])
+    }, [inputRef, api])
 
     const handleRef = useCallback((el) => {
       setAnchorEl(el)
@@ -42,7 +47,7 @@ export const LargeTextareaEditor = forwardRef(
       if (event.key === 'Tab') {
         // setAnchorEl(null)
         // Move to the next cell
-        props.api.tabToNextCell()
+        api?.tabToNextCell()
       }
     }
 

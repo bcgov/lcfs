@@ -70,7 +70,8 @@ const lookupTableFixture = {
       fuelType: 'Biodiesel',
       fuelCategory: 'Diesel',
       endUse: 'Any',
-      determiningCarbonIntensity: 'Default carbon intensity - section 19 (b) (ii)',
+      determiningCarbonIntensity:
+        'Default carbon intensity - section 19 (b) (ii)',
       targetCi: 79.28,
       ciOfFuel: 20.5,
       uci: 0,
@@ -82,7 +83,8 @@ const lookupTableFixture = {
       fuelType: 'Ethanol',
       fuelCategory: 'Gasoline',
       endUse: 'Any',
-      determiningCarbonIntensity: 'Default carbon intensity - section 19 (b) (ii)',
+      determiningCarbonIntensity:
+        'Default carbon intensity - section 19 (b) (ii)',
       targetCi: 88.83,
       ciOfFuel: 40.2,
       uci: 0,
@@ -110,15 +112,15 @@ const assertDescription = (paragraphs, nextContentSelector) => {
       cy.get('p').should('have.length', 2)
       paragraphs.forEach((paragraph) => cy.contains('p', paragraph))
     })
-    .then(($description) => {
-      const nextContent = $description[0].ownerDocument.querySelector(
-        nextContentSelector
-      )
-      expect(
-        $description[0].compareDocumentPosition(nextContent) &
-          Node.DOCUMENT_POSITION_FOLLOWING
-      ).to.equal(Node.DOCUMENT_POSITION_FOLLOWING)
-    })
+
+  cy.getByDataTest('public-calculator-description').then(($description) => {
+    const nextContent =
+      $description[0].ownerDocument.querySelector(nextContentSelector)
+    expect(
+      $description[0].compareDocumentPosition(nextContent) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).to.equal(Node.DOCUMENT_POSITION_FOLLOWING)
+  })
 }
 
 const checkDescriptionAccessibility = () => {
@@ -260,9 +262,8 @@ describe('Public Credit Calculator and Calculation Data (#4089)', () => {
       cy.wait('@calculate')
 
       // Typing into compliance units switches to reverse mode.
-      cy.getByDataTest('complianceUnits')
-        .clear({ force: true })
-        .type('500', { force: true })
+      cy.getByDataTest('complianceUnits').clear({ force: true })
+      cy.getByDataTest('complianceUnits').type('500', { force: true })
       cy.wait('@calculateQuantity')
       cy.getByDataTest('quantity', { timeout: 15000 }).should(
         'have.value',
@@ -292,9 +293,11 @@ describe('Public Credit Calculator and Calculation Data (#4089)', () => {
         .should('exist')
         .should('not.be.disabled')
         .clear({ force: true })
-        .type('85.50', { force: true })
+      cy.get('#carbon-intensity-input').type('85.50', { force: true })
 
-      cy.wait('@customCalculate').its('request.query.useCustomCi').should('eq', 'true')
+      cy.wait('@customCalculate')
+        .its('request.query.useCustomCi')
+        .should('eq', 'true')
       cy.getByDataTest('complianceUnits', { timeout: 15000 }).should(
         'have.value',
         '999'
@@ -346,9 +349,9 @@ describe('Public Credit Calculator and Calculation Data (#4089)', () => {
         ensureScrollable: false
       })
 
-      cy.contains('.ag-header-cell-text', 'Target CI', { timeout: 10000 }).should(
-        'be.visible'
-      ) // TCI
+      cy.contains('.ag-header-cell-text', 'Target CI', {
+        timeout: 10000
+      }).should('be.visible') // TCI
       cy.contains('.ag-header-cell-text', 'CI of fuel').should('be.visible') // CI
       cy.contains('.ag-header-cell-text', 'EER').should('be.visible')
       cy.contains('.ag-header-cell-text', 'Energy density').should('be.visible')

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import 'react'
 import { useTranslation } from 'react-i18next'
 import Checkbox from '@mui/material/Checkbox'
 import FormControlLabel from '@mui/material/FormControlLabel'

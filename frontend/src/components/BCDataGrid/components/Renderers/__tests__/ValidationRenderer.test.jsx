@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { ThemeProvider } from '@mui/material/styles'
-import { createTheme } from '@mui/material/styles'
+import { ThemeProvider , createTheme } from '@mui/material/styles'
 import { ValidationRenderer } from '../ValidationRenderer'
 
 const theme = createTheme()

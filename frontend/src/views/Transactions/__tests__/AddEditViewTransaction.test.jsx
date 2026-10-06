@@ -190,39 +190,20 @@ vi.mock('react-hook-form', () => ({
     register: vi.fn(),
     control: {}
   })),
-  Controller: ({ render, name }) => render({
+  Controller: ({
+  render
+}) => render({
     field: { value: '', onChange: vi.fn() },
     fieldState: { error: null }
   })
 }))
 
-const renderComponent = (
-  handleMode = 'edit',
-  txnType = INITIATIVE_AGREEMENT
-) => {
+const renderComponent = () => {
   const queryClient = new QueryClient()
   queryClient.getQueryState = vi.fn().mockReturnValue({
     status: 'success'
   })
 
-  let path = ''
-  switch (handleMode) {
-    case 'view':
-      path =
-        txnType === ADMIN_ADJUSTMENT
-          ? '/admin-adjustment/1'
-          : '/initiative-agreement/1'
-      break
-    case 'edit':
-      path =
-        txnType === ADMIN_ADJUSTMENT
-          ? '/admin-adjustment/edit/1'
-          : '/initiative-agreement/edit/1'
-      break
-    case 'add':
-      path = '/transactions/add'
-      break
-  }
   useTranslation.mockReturnValue({ t: vi.fn((key) => key) })
 
   useTransactionMutation.mockReturnValue({

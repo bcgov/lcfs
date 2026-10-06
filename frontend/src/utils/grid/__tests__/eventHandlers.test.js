@@ -15,12 +15,8 @@ describe('suppressKeyboardEvent', () => {
     // JSDOM does not implement closest on elements not in DOM by default for some old versions
     if (!Element.prototype.closest) {
       Element.prototype.closest = function (selector) {
-        let el = this
-        while (el) {
-          if (el.matches(selector)) return el
-          el = el.parentElement
-        }
-        return null
+        if (this.matches(selector)) return this
+        return this.parentElement?.closest(selector) ?? null
       }
     }
   })
@@ -41,7 +37,7 @@ describe('suppressKeyboardEvent', () => {
   it('handles Tab navigation within cell correctly', () => {
     const input1 = document.createElement('input')
     const input2 = document.createElement('input')
-    const cell = createCell({ children: [input1, input2] })
+    createCell({ children: [input1, input2] })
 
     // Case: Tab pressed on last element -> should return false (allow move to next cell)
     let event = { code: 'Tab', srcElement: input2, shiftKey: false, key: 'Tab' }

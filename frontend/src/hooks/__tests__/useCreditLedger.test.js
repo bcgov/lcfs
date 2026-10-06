@@ -424,7 +424,7 @@ describe('useDownloadCreditLedger', () => {
 
   test('should pass through API options', () => {
     const apiOptions = { timeout: 30000 }
-    const downloadFn = useDownloadCreditLedger(apiOptions)
+    useDownloadCreditLedger(apiOptions)
 
     expect(vi.mocked(useApiService)).toHaveBeenCalledWith(apiOptions)
   })

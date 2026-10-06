@@ -88,9 +88,9 @@ export const CommentLog = ({ organizationId }) => {
     refetch
   } = useOrganizationComments(effectiveOrgId)
 
-  const comments = data?.comments ?? []
+  const comments = data?.comments
   const threadGroups = useMemo(
-    () => groupConsecutiveByEntity(comments),
+    () => groupConsecutiveByEntity(comments ?? []),
     [comments]
   )
   const pagination = data?.pagination
@@ -166,13 +166,13 @@ export const CommentLog = ({ organizationId }) => {
           </Alert>
         )}
 
-        {!isLoading && !isError && comments.length === 0 && (
+        {!isLoading && !isError && (comments?.length ?? 0) === 0 && (
           <Alert severity="info" icon={false} data-test="comment-log-empty">
             {t('internalComment:log.empty')}
           </Alert>
         )}
 
-        {comments.length > 0 && (
+        {(comments?.length ?? 0) > 0 && (
           <BCBox
             variant="bordered"
             borderRadius="sm"

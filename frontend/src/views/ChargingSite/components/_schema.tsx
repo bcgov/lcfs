@@ -1,25 +1,20 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
-import type { GridErrors, GridWarnings } from '@/types/schema'
+import type {} from '@/types/schema';
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
-import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 import { TextCellEditor } from '@/components/BCDataGrid/components/Editors/TextCellEditor'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import {
-  ChargingSiteStatusRenderer,
-  CommonArrayRenderer,
-  createStatusRenderer,
-  MultiSelectRenderer
-} from '@/utils/grid/cellRenderers'
+import { ChargingSiteStatusRenderer, CommonArrayRenderer } from '@/utils/grid/cellRenderers'
+import { createStatusRenderer } from '@/utils/grid/createStatusRenderer'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
-import { dateFormatter, numberFormatter } from '@/utils/formatters'
+import { dateFormatter } from '@/utils/formatters'
 import {
   useChargingEquipmentStatuses,
   useChargingSiteStatuses
@@ -67,9 +62,7 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
 }
 
 export const chargingSiteColDefs = (
-  errors: GridErrors,
-  warnings: GridWarnings,
-  gridReady: boolean
+  errors, warnings
 ): ColDef[] => {
   return [
     validation,
@@ -103,14 +96,14 @@ export const chargingSiteColDefs = (
       valueGetter: (params) => {
         return params.data?.siteName || ''
       },
-      tooltipValueGetter: (p) => 'Enter a unique site identifier name'
+      tooltipValueGetter: () => 'Enter a unique site identifier name'
     },
     {
       field: 'streetAddress',
       headerComponent: RequiredHeader,
       headerName: i18n.t('chargingSite:columnLabels.streetAddress'),
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'address-autocomplete',
         queryFn: addressAutocompleteQuery,
         optionLabel: 'label'
@@ -265,7 +258,7 @@ export const chargingSiteColDefs = (
 
         return true
       },
-      tooltipValueGetter: (p) =>
+      tooltipValueGetter: () =>
         'Enter or select the allocating organization name. Suggestions include organizations from your allocation agreements and previously entered values.'
     },
     {
@@ -278,24 +271,33 @@ export const chargingSiteColDefs = (
   ]
 }
 
+type ChargingEquipmentColumnOptions = {
+  enableSelection?: boolean
+  historyMode?: boolean
+  onToggleHistory?: ((registrationNumber: string | number) => void) | null
+  expandedRows?: Set<string | number>
+  showDateColumns?: boolean
+  showIntendedUsers?: boolean
+  showLocationFields?: boolean
+  showNotes?: boolean
+  showOrganizationColumn?: boolean
+}
+
 export const chargingEquipmentColDefs = (
   t: (key: string) => string,
-  isIDIR: boolean = false,
-  options: Record<string, any> = {}
+  options: ChargingEquipmentColumnOptions = {}
 ): ColDef[] => {
   const {
-    enableSelection = false,
-    historyMode = false,
-    onToggleHistory = null,
-    expandedRows = new Set(),
-    showDateColumns = false,
-    showIntendedUsers = false,
-    showLocationFields = true,
-    showPorts = false,
-    showFuelMeasurement = false,
-    showNotes = false,
-    showOrganizationColumn = false
-  } = options
+  enableSelection = false,
+  historyMode = false,
+  onToggleHistory = null,
+  expandedRows = new Set(),
+  showDateColumns = false,
+  showIntendedUsers = false,
+  showLocationFields = true,
+  showNotes = false,
+  showOrganizationColumn = false
+} = options
 
   const cols = []
 

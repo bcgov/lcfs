@@ -8,6 +8,12 @@ import type {
   ExtMutationOptions
 } from './types'
 
+interface EquipmentPayload extends Record<string, unknown> {
+  id?: number | string
+  levelOfEquipment?: { name: string }
+  chargingEquipmentComplianceId?: number | string
+}
+
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
 const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
@@ -79,7 +85,7 @@ export const useGetFinalSupplyEquipments = (
 
 export const useSaveFinalSupplyEquipment = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -93,7 +99,7 @@ export const useSaveFinalSupplyEquipment = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: EquipmentPayload) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -154,7 +160,7 @@ export const useSaveFinalSupplyEquipment = (
 
 export const useUpdateFinalSupplyEquipment = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -168,7 +174,7 @@ export const useUpdateFinalSupplyEquipment = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: EquipmentPayload) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -230,7 +236,7 @@ export const useUpdateFinalSupplyEquipment = (
 
 export const useDeleteFinalSupplyEquipment = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -243,7 +249,7 @@ export const useDeleteFinalSupplyEquipment = (
   } = options
 
   return useMutation({
-    mutationFn: async (equipmentId: any) => {
+    mutationFn: async (equipmentId: unknown) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -293,7 +299,7 @@ export const useDeleteFinalSupplyEquipment = (
 
 export const useImportFinalSupplyEquipment = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -306,7 +312,13 @@ export const useImportFinalSupplyEquipment = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: any) => {
+    mutationFn: async ({
+      file,
+      isOverwrite
+    }: {
+      file: File
+      isOverwrite?: string
+    }) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -322,7 +334,7 @@ export const useImportFinalSupplyEquipment = (
       const formData = new FormData()
       formData.append('file', file)
       formData.append('filename', file.name)
-      formData.append('overwrite', isOverwrite)
+      formData.append('overwrite', String(isOverwrite))
 
       return await client.post(path, formData, {
         headers: {
@@ -393,8 +405,10 @@ export const useGetFinalSupplyEquipmentImportJobStatus = (
     refetchInterval: (data) => {
       // Stop polling when job is complete or failed
       if (
-        (data?.state?.data as any)?.status === 'completed' ||
-        (data?.state?.data as any)?.status === 'failed'
+        (data?.state?.data as { status?: string } | undefined)?.status ===
+          'completed' ||
+        (data?.state?.data as { status?: string } | undefined)?.status ===
+          'failed'
       ) {
         return false
       }
@@ -475,7 +489,7 @@ export const useGetFSEReportingList = (
 export const useSaveFSEReporting = (
   organizationId: number | string | undefined | null,
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -489,7 +503,7 @@ export const useSaveFSEReporting = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: EquipmentPayload | EquipmentPayload[]) => {
       if (!organizationId) {
         throw new Error('Organization ID is required')
       }
@@ -576,7 +590,7 @@ export const useSaveFSEReporting = (
 export const useDeleteFSEReportingBatch = (
   complianceReportId: number | string | undefined | null,
   organizationId: number | string | undefined | null = null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -589,7 +603,7 @@ export const useDeleteFSEReportingBatch = (
   } = options
 
   return useMutation({
-    mutationFn: async (reportingIds: any) => {
+    mutationFn: async (reportingIds: unknown) => {
       if (!Array.isArray(reportingIds) || reportingIds.length === 0) {
         throw new Error('Reporting IDs array is required')
       }
@@ -642,7 +656,7 @@ export const useDeleteFSEReportingBatch = (
 export const useUpdateFSEReportingActiveStatus = (
   complianceReportId: number | string | undefined | null,
   organizationId: number | string | undefined | null = null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -655,7 +669,7 @@ export const useUpdateFSEReportingActiveStatus = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ reportingIds, isActive }: any) => {
+    mutationFn: async ({ reportingIds, isActive }: Record<string, unknown>) => {
       if (!Array.isArray(reportingIds) || reportingIds.length === 0) {
         throw new Error('Reporting IDs array is required')
       }
@@ -706,7 +720,7 @@ export const useUpdateFSEReportingActiveStatus = (
 
 export const useSetFSEReportingDefaultDates = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -719,7 +733,7 @@ export const useSetFSEReportingDefaultDates = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: EquipmentPayload) => {
       return await client.post(
         '/final-supply-equipments/reporting/set-default',
         data
@@ -771,7 +785,9 @@ export const useGetAllChargingSitesForMap = (
   return useQuery({
     queryKey: ['charging-sites-map-data', organizationId],
     queryFn: async () => {
-      const requestBody = {
+      const requestBody: PaginationParams & {
+        organization_id?: number | string
+      } = {
         page: 1,
         size: 10000,
         filters: [],
@@ -841,7 +857,7 @@ export const useGetAllFSEForMap = (
         // Transform FSE reporting data to consistent camelCase format
         const items = response.data?.finalSupplyEquipments || []
         return {
-          finalSupplyEquipments: items.map((eq: any) => ({
+          finalSupplyEquipments: items.map((eq: Record<string, unknown>) => ({
             chargingEquipmentId:
               eq.charging_equipment_id || eq.chargingEquipmentId,
             chargingSiteId: eq.charging_site_id || eq.chargingSiteId,
@@ -871,7 +887,9 @@ export const useGetAllFSEForMap = (
       }
 
       // Fetch all charging equipment (optionally filtered by organization)
-      const requestBody = {
+      const requestBody: PaginationParams & {
+        organization_id?: number | string
+      } = {
         page: 1,
         size: 10000,
         filters: [],
@@ -879,7 +897,7 @@ export const useGetAllFSEForMap = (
       }
 
       if (organizationId) {
-        ;(requestBody as any).organization_id = organizationId
+        requestBody.organization_id = organizationId
       }
 
       const response = await client.post(
@@ -891,7 +909,7 @@ export const useGetAllFSEForMap = (
       const items = response.data?.items || []
 
       return {
-        finalSupplyEquipments: items.map((eq: any) => ({
+        finalSupplyEquipments: items.map((eq: Record<string, unknown>) => ({
           chargingEquipmentId:
             eq.chargingEquipmentId || eq.charging_equipment_id,
           chargingSiteId: eq.chargingSiteId || eq.charging_site_id,
@@ -943,13 +961,13 @@ export const useGetAllFSEForMap = (
  */
 export const useImportFSEReportingUpdate = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async ({ file }: any) => {
+    mutationFn: async ({ file }: { file: File; isOverwrite?: string }) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -995,7 +1013,12 @@ export const useGetFSEReportingUpdateJobStatus = (
     },
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
-      if (!data || (data?.state?.data as any)?.progress >= 100) return false
+      if (
+        !data ||
+        ((data?.state?.data as { progress?: number } | undefined)?.progress ??
+          0) >= 100
+      )
+        return false
       return 300
     },
     staleTime: 0,

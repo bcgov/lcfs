@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { screen, fireEvent } from '@testing-library/react'
 import { vi, describe, expect, beforeEach } from 'vitest'
 import UserSettingsCard from '../UserSettingsCard'
@@ -30,7 +30,9 @@ vi.mock('@/utils/withRole', () => ({
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: ({ icon, style }) => (
+  FontAwesomeIcon: ({
+  style
+}) => (
     <span data-test="font-awesome-icon" style={style}>
       mock-icon
     </span>

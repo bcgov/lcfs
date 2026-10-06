@@ -74,7 +74,7 @@ describe('FinalSupplyEquipments utils.js', () => {
       const L = (await import('leaflet')).default
       const color = 'red'
 
-      const icon = createMarkerIcon(color)
+      createMarkerIcon(color);
 
       expect(L.Icon).toHaveBeenCalledWith({
         iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,

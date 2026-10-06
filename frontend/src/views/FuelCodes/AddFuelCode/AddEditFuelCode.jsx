@@ -586,7 +586,7 @@ const AddEditFuelCodeBase = () => {
     [handleDeleteFuelCode, t, updateState]
   )
 
-  const openApprovalModal = useCallback(
+  useCallback(
     (fuelCodeId) => {
       updateState({
         modalData: {
@@ -608,7 +608,7 @@ const AddEditFuelCodeBase = () => {
       })
     },
     [handleApproveCode, t, updateState]
-  )
+  );
 
   const parsePastedData = useCallback((pastedData, headerRow) => {
     return Papa.parse(headerRow + '\n' + pastedData, {
@@ -966,7 +966,8 @@ const AddEditFuelCodeBase = () => {
     updateState,
     state.isButtonOperationInProgress,
     state.currentButtonOperation,
-    setButtonOperationState
+    setButtonOperationState,
+    navigate
   ])
 
   const buttonConfig = useMemo(() => {

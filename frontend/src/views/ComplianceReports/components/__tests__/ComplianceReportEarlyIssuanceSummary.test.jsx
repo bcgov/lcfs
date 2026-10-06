@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import ComplianceReportEarlyIssuanceSummary from '../ComplianceReportEarlyIssuanceSummary'
@@ -14,7 +14,7 @@ vi.mock('../SummaryTable', () => ({
   )
 }))
 vi.mock('../_schema', () => ({
-  earlyIssuanceColumns: vi.fn((t) => ['column1', 'column2'])
+  earlyIssuanceColumns: vi.fn(() => ['column1', 'column2'])
 }))
 
 // Mock components
@@ -46,7 +46,7 @@ vi.mock('@mui/material/AccordionDetails', () => ({
 }))
 
 vi.mock('@mui/icons-material/ExpandMore', () => ({
-    default: (props) => <div data-test="expand-more-icon">ExpandMore</div>
+    default: () => <div data-test="expand-more-icon">ExpandMore</div>
 }))
 
 describe('ComplianceReportEarlyIssuanceSummary', () => {

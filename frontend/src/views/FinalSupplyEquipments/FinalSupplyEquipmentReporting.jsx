@@ -31,7 +31,7 @@ import {
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { handleScheduleSave } from '@/utils/schedules'
 import { defaultInitialPagination } from '@/constants/schedules'
-import ROUTES from '@/routes/routes'
+import '@/routes/routes'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes'
 import ImportDialog from '@/components/ImportDialog'
@@ -105,7 +105,10 @@ export const FinalSupplyEquipmentReporting = () => {
     organizationId,
     'all' // 'all' to fetch all equipments data.
   )
-  const { data, isLoading, isError, refetch } = queryData
+  const {
+  data,
+  refetch
+} = queryData
 
   // Mutation hook for saving changes
   const { mutateAsync: saveRow } = useSaveFSEReporting(
@@ -452,7 +455,7 @@ export const FinalSupplyEquipmentReporting = () => {
         checkboxes: true,
         mode: 'multiRow',
         headerCheckbox: true,
-        isRowSelectable: (params) => true,
+        isRowSelectable: () => true,
         enableClickSelection: false
       },
       selectionColumnDef: {
@@ -483,7 +486,14 @@ export const FinalSupplyEquipmentReporting = () => {
         parseInt(complianceReportId),
         reportData?.report?.complianceReportGroupUuid
       ),
-    [minDate, maxDate, errors, warnings, handleSelectionChanged]
+    [
+      minDate,
+      maxDate,
+      errors,
+      warnings,
+      complianceReportId,
+      reportData?.report?.complianceReportGroupUuid
+    ]
   )
 
   const handleGridReady = useCallback(() => {
@@ -544,7 +554,15 @@ export const FinalSupplyEquipmentReporting = () => {
       }
       params.api?.autoSizeAllColumns?.()
     },
-    [saveRow, t, complianceReportId, reportData, defaultFromDate, defaultToDate]
+    [
+      saveRow,
+      t,
+      complianceReportId,
+      reportData,
+      defaultFromDate,
+      defaultToDate,
+      organizationId
+    ]
   )
 
   const handleDownloadTemplate = useCallback(async () => {
@@ -662,6 +680,7 @@ export const FinalSupplyEquipmentReporting = () => {
     setDefaults,
     complianceReportId,
     reportData,
+    organizationId,
     t
   ])
 
@@ -936,7 +955,7 @@ export const FinalSupplyEquipmentReporting = () => {
           text: t('finalSupplyEquipment:saveChanges'),
           confirmText: t('finalSupplyEquipment:saveConfirmation'),
           confirmLabel: t('finalSupplyEquipment:saveAnyway'),
-          onSave: (e) => {
+          onSave: () => {
             navigate(
               `/compliance-reporting/${compliancePeriod}/${complianceReportId}`
             )

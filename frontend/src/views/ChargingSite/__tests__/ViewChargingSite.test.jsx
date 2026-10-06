@@ -4,6 +4,9 @@ import { screen } from '@testing-library/react'
 import { ViewChargingSite } from '../ViewChargingSite'
 import { test } from '@/tests/utils/fixtures'
 
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useGetChargingSiteById } from '@/hooks/useChargingSite'
+
 const mockNavigate = vi.fn()
 
 vi.mock('react-router-dom', async (orig) => {
@@ -22,11 +25,13 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  BCAlert2: React.forwardRef(({ severity, message }, ref) => (
-    <div data-testid="bc-alert" ref={ref}>
+  BCAlert2: React.forwardRef(function BCAlert2Mock({
+  message
+}, ref) {
+  return <div data-testid="bc-alert" ref={ref}>
       {message}
-    </div>
-  ))
+    </div>;
+})
 }))
 
 vi.mock('@/hooks/useCurrentUser')
@@ -48,9 +53,6 @@ vi.mock('../components/ChargingSiteFSEGrid', () => ({
 vi.mock('@/components/Loading', () => ({
   default: () => <div data-testid="loading">Loading...</div>
 }))
-
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useGetChargingSiteById } from '@/hooks/useChargingSite'
 
 describe('ViewChargingSite', () => {
   const mockChargingSiteData = {

@@ -52,9 +52,9 @@ describe('ExcelStyledTable', () => {
       ])
     }
 
-    const { container } = render(
+    render(
       <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />
-    )
+    );
 
     expect(screen.getByText('✓ No overlap')).toBeInTheDocument()
     
@@ -73,9 +73,9 @@ describe('ExcelStyledTable', () => {
       r1: [{ supplyFromDate: '2023-02-01', supplyToDate: '2023-02-15' }]
     }
 
-    const { container } = render(
+    render(
       <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={overlapMap} />
-    )
+    );
 
     expect(screen.getByText('⚠️ Period overlap')).toBeInTheDocument()
     

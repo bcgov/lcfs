@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, {
   forwardRef,
   useState,
@@ -17,6 +16,7 @@ import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
 import CheckBox from '@mui/icons-material/CheckBox'
 import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank'
+import type { GridApi } from 'ag-grid-community'
 
 const icon = <CheckBoxOutlineBlank fontSize="medium" />
 const checkedIcon = <CheckBox fontSize="medium" />
@@ -24,21 +24,24 @@ const checkedIcon = <CheckBox fontSize="medium" />
 export interface AutocompleteCellEditorOption {
   label?: string
   name?: string
-  value?: any
-  [key: string]: any
+  value?: unknown
+  [key: string]: unknown
 }
 
 export interface AutocompleteCellEditorProps {
-  value?: any
+  value?: unknown
   options?: AutocompleteCellEditorOption[]
   limitTags?: number
   multiple?: boolean
   disableCloseOnSelect?: boolean
   openOnFocus?: boolean
   freeSolo?: boolean
-  colDef?: any
-  api?: any
-  onValueChange?: (value: any) => void
+  colDef?: { cellEditorParams?: { returnObject?: boolean } }
+  api?: Pick<
+    GridApi,
+    'tabToPreviousCell' | 'tabToNextCell' | 'getFocusedCell' | 'startEditingCell' | 'stopEditing'
+  >
+  onValueChange?: (value: unknown) => void
   onKeyDownCapture?: (event: KeyboardEvent) => void
   onBlur?: (event: FocusEvent) => void
   onPaste?: (event: ClipboardEvent) => void
@@ -68,27 +71,32 @@ export const AutocompleteCellEditor = forwardRef(
       returnObjectProp ?? colDef?.cellEditorParams?.returnObject ?? false
     const shouldUseInputState = freeSolo && !multiple
 
-    const getLabel = (option) => {
+    const getLabel = (option: unknown): string => {
       if (option == null) return ''
       if (typeof option === 'string' || typeof option === 'number') {
         return option.toString()
       }
-      return option.label || option.name || option.value || ''
+      if (typeof option !== 'object') return ''
+      const values = option as Record<string, unknown>
+      const label = values.label ?? values.name ?? values.value
+      return typeof label === 'string' || typeof label === 'number'
+        ? String(label)
+        : ''
     }
 
     // Helpers to map between raw values (ids/strings) and option objects
-    const getRawValue = (optionOrValue) => {
+    const getRawValue = (optionOrValue: unknown): unknown => {
       if (optionOrValue == null) return null
       if (typeof optionOrValue === 'object') {
         // Expect shape { value, label }
         return Object.prototype.hasOwnProperty.call(optionOrValue, 'value')
-          ? optionOrValue.value
+          ? (optionOrValue as Record<string, unknown>).value
           : optionOrValue
       }
       return optionOrValue
     }
 
-    const findOptionByRaw = (raw) => {
+    const findOptionByRaw = (raw: unknown) => {
       if (raw == null) return null
       return options.find((opt) =>
         typeof opt === 'object' ? opt?.value === raw : opt === raw

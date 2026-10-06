@@ -1,8 +1,8 @@
-import React from 'react'
+import 'react'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
-import { use } from 'chai'
+import 'chai'
 
 // Create mock functions at the top level
 const mockNavigate = vi.fn()
@@ -112,7 +112,11 @@ vi.mock('@/constants/roles', () => ({
 
 // Mock other components to prevent rendering issues
 vi.mock('@/components/TogglePanel.jsx', () => ({
-  TogglePanel: ({ label, onComponent, offComponent, disabled }) => (
+  TogglePanel: ({
+  label,
+  offComponent,
+  disabled
+}) => (
     <div data-testid="toggle-panel">
       <div>{label}</div>
       <div>{disabled ? 'disabled' : 'enabled'}</div>
@@ -122,7 +126,9 @@ vi.mock('@/components/TogglePanel.jsx', () => ({
 }))
 
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
-  default: ({ open, close }) =>
+  default: ({
+  open
+}) =>
     open ? <div data-testid="document-upload-dialog">Upload Dialog</div> : null
 }))
 
@@ -179,14 +185,7 @@ vi.mock('@/views/FuelExports/FuelExportSummary', () => ({
 vi.mock('@/views/FuelExports/FuelExportChangelog.jsx', () => ({
   FuelExportChangelog: () => <div>Fuel Export Changelog</div>
 }))
-const createRoleMock = (userRoles = []) => ({
-  Role: ({ children, roles }) => {
-    const isAuthorized =
-      roles?.length > 0 ? roles.some((role) => userRoles.includes(role)) : true
 
-    return isAuthorized ? children : null
-  }
-})
 // Import the component after all mocks are set up
 const ReportDetails = await import('../ReportDetails').then((m) => m.default)
 

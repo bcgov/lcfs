@@ -76,7 +76,12 @@ vi.mock('@/hooks/useUser')
 vi.mock('@/views/Users/AddEditUser/_schema')
 
 const mutateMock = vi.fn()
-let hookOptions: any
+let hookOptions: {
+  onSuccess?: (
+    data: unknown,
+    variables: { meta: { admin: boolean; role: string } }
+  ) => void
+} | null
 const originalRoleSwitcherFlag = CONFIG.feature_flags.roleSwitcher
 
 const defaultUser = {

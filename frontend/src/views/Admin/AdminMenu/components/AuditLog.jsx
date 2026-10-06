@@ -4,7 +4,7 @@ import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { auditLogColDefs, defaultAuditLogSortModel } from './_schema'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
-import { defaultInitialPagination } from '@/constants/schedules'
+import '@/constants/schedules'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useAuditLogs } from '@/hooks/useAuditLog.js'
 
@@ -47,13 +47,6 @@ export const AuditLog = () => {
     }),
     []
   )
-
-  const handleClearFilters = () => {
-    setPaginationOptions(initialPaginationOptions)
-    if (gridRef && gridRef.current) {
-      gridRef.current.clearFilters()
-    }
-  }
 
   return (
     <BCBox>

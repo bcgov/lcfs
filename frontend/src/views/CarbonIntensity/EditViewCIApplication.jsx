@@ -1,3 +1,4 @@
+import { CI_APPLICATION_STEPS } from './components/ciWorkflowHelpers'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -30,7 +31,6 @@ import {
 } from '@/hooks/useCIApplication'
 
 import {
-  CI_APPLICATION_STEPS,
   CIApplicationProgress
 } from './components/CIApplicationProgress'
 import { getCIResumeStep } from './ciResumeStep'
@@ -43,7 +43,7 @@ import { GovernmentDecisionStep } from './components/GovernmentDecisionStep'
 import { GeneratedFuelCodesSection } from './components/GeneratedFuelCodesSection'
 import { StepStub } from './components/StepStub'
 import { FuelCodesTabs } from './components/FuelCodesTabs'
-import colors from '@/themes/base/colors'
+import '@/themes/base/colors'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 
 const getApiError = (err, fallback) => {

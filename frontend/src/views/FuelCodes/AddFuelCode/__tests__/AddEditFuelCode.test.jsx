@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -183,20 +183,12 @@ vi.mock('@/components/Loading', () => ({
 
 vi.mock('@/components/BCButton', () => ({
   default: ({
-    children,
-    onClick,
-    startIcon,
-    loading,
-    variant,
-    color,
-    size,
-    sx,
-    ...domProps
-  }) => (
-    <button onClick={onClick} {...domProps}>
+  children,
+  onClick,
+  ...domProps
+}) => { delete domProps.startIcon; delete domProps.loading; delete domProps.variant; delete domProps.color; delete domProps.size; delete domProps.sx; return <button onClick={onClick} {...domProps}>
       {children}
-    </button>
-  )
+    </button>; }
 }))
 
 vi.mock('@/components/BCModal', () => ({

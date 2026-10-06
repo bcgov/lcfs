@@ -6,8 +6,8 @@ import { AnalystReviewSummary } from '..'
 const mockUseGetComplianceReportReviewSummary = vi.fn()
 
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useGetComplianceReportReviewSummary: (...args: any[]) =>
-    mockUseGetComplianceReportReviewSummary(...args)
+  useGetComplianceReportReviewSummary: () =>
+    mockUseGetComplianceReportReviewSummary()
 }))
 
 vi.mock('echarts-for-react', () => ({

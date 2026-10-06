@@ -1,9 +1,9 @@
-import React from 'react'
+import 'react'
 import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, beforeEach, vi } from 'vitest'
 import { ComplianceReportViewSelector } from '../ComplianceReportViewSelector.jsx'
-import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
-import * as useCurrentUserHook from '@/hooks/useCurrentUser'
+import '@/hooks/useComplianceReports'
+import '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
 
 // Create mock functions at the top level

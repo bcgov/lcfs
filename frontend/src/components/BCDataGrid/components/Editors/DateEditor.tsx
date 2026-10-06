@@ -1,7 +1,15 @@
-// @ts-nocheck
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format, isValid, parseISO } from 'date-fns'
 import { useEffect, useRef, useState } from 'react'
+import type { Column, GridApi } from 'ag-grid-community'
+
+interface DateEditorApi extends Pick<GridApi, 'stopEditing' | 'setFocusedCell'> {
+  getLastDisplayedRowIndex: () => number
+}
+
+interface DateEditorColumn extends Pick<Column, 'getColId' | 'getColDef'> {
+  colId?: string
+}
 
 export interface DateEditorProps {
   value?: string | null
@@ -9,15 +17,15 @@ export interface DateEditorProps {
   minDate?: Date | string
   maxDate?: Date | string
   rowIndex?: number
-  api?: any
-  column?: any
+  api?: DateEditorApi
+  column?: DateEditorColumn
   autoOpenLastRow?: boolean
 }
 
 const stopEditingAfterValueChange = (
-  api?: any,
+  api?: DateEditorApi,
   rowIndex?: number,
-  column?: any
+  column?: DateEditorColumn
 ) => {
   const scrollX = window.scrollX
   const scrollY = window.scrollY
@@ -33,7 +41,11 @@ const stopEditingAfterValueChange = (
   }, 0)
 }
 
-const restoreWindowScroll = (scrollX: number, scrollY: number, callback?) => {
+const restoreWindowScroll = (
+  scrollX: number,
+  scrollY: number,
+  callback?: () => void
+) => {
   let hasRunCallback = false
   const restore = () => {
     if (!hasRunCallback) {

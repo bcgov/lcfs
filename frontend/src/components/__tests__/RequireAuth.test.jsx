@@ -69,7 +69,7 @@ describe('RequireAuth', () => {
       router,
       server
     }) => {
-      void server
+      if (!server) throw new Error('MSW server fixture failed to initialize')
       keycloak.useKeycloak.mockReturnValue({
         keycloak: { authenticated: true },
         initialized: true

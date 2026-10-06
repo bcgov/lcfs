@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   getCountryPrefix,
-  formatFuelCodeWithCountryPrefix,
-  extractOriginalFuelCode,
-  formatFuelCodeOptions
+  extractOriginalFuelCode
 } from '@/utils/fuelCodeCountryPrefix'
 
 describe('getCountryPrefix', () => {
@@ -35,8 +33,6 @@ describe('getCountryPrefix', () => {
     expect(getCountryPrefix('   ')).toBe('')
   })
 })
-
-
 
 describe('extractOriginalFuelCode', () => {
   it('should extract original fuel code from C- prefixed codes', () => {
@@ -70,5 +66,3 @@ describe('extractOriginalFuelCode', () => {
     expect(extractOriginalFuelCode('C-C-TEST')).toBe('C-TEST')
   })
 })
-
-

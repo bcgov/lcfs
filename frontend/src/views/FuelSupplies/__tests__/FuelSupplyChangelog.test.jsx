@@ -2,9 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { FuelSupplyChangelog } from '../FuelSupplyChangelog'
 
+// Import the mocked modules for configuration
+import { useComplianceReportWithCache, useGetChangeLog } from '@/hooks/useComplianceReports'
+import { useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { changelogColDefs, changelogCommonColDefs } from '../_schema'
+
 // Mock all external dependencies
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: vi.fn(({ gridKey, onPaginationChange, paginationOptions, columnDefs, queryData, getRowId, suppressPagination, gridOptions, defaultColDef, enablePageCaching, ...props }) => {
+  BCGridViewer: vi.fn(({ gridKey, onPaginationChange }) => {
     const handlePaginationTest = () => {
       if (onPaginationChange && typeof onPaginationChange === 'function') {
         onPaginationChange({ page: 2, size: 10 })
@@ -81,13 +88,6 @@ vi.mock('../_schema', () => ({
   changelogColDefs: vi.fn(() => [{ field: 'actionType' }]),
   changelogCommonColDefs: vi.fn((showActions) => [{ field: 'common', showActions }])
 }))
-
-// Import the mocked modules for configuration
-import { useComplianceReportWithCache, useGetChangeLog } from '@/hooks/useComplianceReports'
-import { useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { changelogColDefs, changelogCommonColDefs } from '../_schema'
 
 describe('FuelSupplyChangelog', () => {
   const mockComplianceReportId = 'test-report-id'

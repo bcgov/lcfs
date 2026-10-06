@@ -30,7 +30,11 @@ export interface ApiServiceInstance extends AxiosInstance {
 const DEFAULT_TIMEOUT_MS = 90_000
 
 type ErrorResponse = {
-  response?: { status: number; data?: unknown; headers?: Record<string, string> }
+  response?: {
+    status: number
+    data?: unknown
+    headers?: Record<string, string>
+  }
   message?: string
 }
 
@@ -46,10 +50,13 @@ function extractErrorRef(error: ErrorResponse): string | null {
   return typeof header === 'string' ? header : null
 }
 
-export const useApiService = (opts: AxiosRequestConfig = {}): ApiServiceInstance => {
+export const useApiService = (
+  opts: AxiosRequestConfig = {}
+): ApiServiceInstance => {
   const { keycloak } = useKeycloak()
   const { enqueueSnackbar } = useSnackbar()
-  const { setForbidden, addErrorRef, setErrorStatus, serverErrorBlockedRef } = useAuthorization()
+  const { setForbidden, addErrorRef, setErrorStatus, serverErrorBlockedRef } =
+    useAuthorization()
 
   // useMemo to memoize the apiService instance
   const apiService = useMemo(() => {
@@ -89,7 +96,10 @@ export const useApiService = (opts: AxiosRequestConfig = {}): ApiServiceInstance
             const detail =
               (error.response?.data as { detail?: string })?.detail ||
               `${status} error`
-            enqueueSnackbar(detail, { autoHideDuration: 5000, variant: 'error' })
+            enqueueSnackbar(detail, {
+              autoHideDuration: 5000,
+              variant: 'error'
+            })
           }
         }
 
@@ -117,7 +127,16 @@ export const useApiService = (opts: AxiosRequestConfig = {}): ApiServiceInstance
     }
 
     return instance
-  }, [keycloak.authenticated, keycloak.token, opts])
+  }, [
+    keycloak.authenticated,
+    keycloak.token,
+    opts,
+    addErrorRef,
+    enqueueSnackbar,
+    serverErrorBlockedRef,
+    setErrorStatus,
+    setForbidden
+  ])
 
   return apiService
 }

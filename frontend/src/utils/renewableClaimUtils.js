@@ -60,7 +60,10 @@ export const isFuelCodeCanadian = (
   if (!fuelTypeOption) {
     return false
   }
-  const fuelCodeDetails = findFuelCodeDetails(fuelTypeOption, (fuelCodeValue?.fuelCode || fuelCodeValue))
+  const fuelCodeDetails = findFuelCodeDetails(
+    fuelTypeOption,
+    fuelCodeValue?.fuelCode || fuelCodeValue
+  )
   if (!fuelCodeDetails?.fuelProductionFacilityCountry) {
     return false
   }
@@ -72,13 +75,15 @@ export const getFuelCodeDetails = (
   optionsData
 ) => {
   const fuelTypeOption = findFuelTypeOption(optionsData, fuelTypeName)
-  return findFuelCodeDetails(fuelTypeOption, (fuelCodeValue?.fuelCode || fuelCodeValue))
+  return findFuelCodeDetails(
+    fuelTypeOption,
+    fuelCodeValue?.fuelCode || fuelCodeValue
+  )
 }
 export const calculateRenewableClaimColumnVisibility = (
   rowData,
   optionsData,
-  compliancePeriod,
-  approvedFuelCodeValue = 'Fuel code - section 19 (b) (i)'
+  compliancePeriod
 ) => {
   const complianceYear = parseInt(compliancePeriod, 10)
   if (Number.isNaN(complianceYear) || complianceYear < NEW_REGULATION_YEAR) {
@@ -113,11 +118,13 @@ export const canEditQ1Supplied = (
     return false
   }
   // if provision is required, check that first
-  const hasProvision = typeof (row.provisionOfTheAct?.name || row.provisionOfTheAct) === 'string'
+  const hasProvision =
+    typeof (row.provisionOfTheAct?.name || row.provisionOfTheAct) === 'string'
   if (
     requireApprovedProvision &&
     hasProvision &&
-    (row.provisionOfTheAct?.name || row.provisionOfTheAct) !== approvedFuelCodeValue
+    (row.provisionOfTheAct?.name || row.provisionOfTheAct) !==
+      approvedFuelCodeValue
   ) {
     return false
   }
@@ -137,7 +144,11 @@ export const canEditQ1Supplied = (
   if (typeof isCanadianOverride === 'function') {
     isCanadian = isCanadianOverride(row, optionsData)
   } else if (row.fuelType || row.fuelCode) {
-    isCanadian = isFuelCodeCanadian(row.fuelType?.fuelType || row.fuelType, row.fuelCode, optionsData)
+    isCanadian = isFuelCodeCanadian(
+      row.fuelType?.fuelType || row.fuelType,
+      row.fuelCode,
+      optionsData
+    )
   }
   if (typeof isCanadian === 'boolean') {
     return !isCanadian
@@ -175,7 +186,9 @@ export const canEditCanadianProduced = (row, compliancePeriod, optionsData) => {
     optionsData,
     complianceYear
   )
-  const isDefaultCI = (row.provisionOfTheAct?.name || row.provisionOfTheAct) === DEFAULT_CI_FUEL_CODE
+  const isDefaultCI =
+    (row.provisionOfTheAct?.name || row.provisionOfTheAct) ===
+    DEFAULT_CI_FUEL_CODE
   return complianceYear >= NEW_REGULATION_YEAR && isEligible && isDefaultCI
 }
 

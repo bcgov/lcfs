@@ -1,7 +1,7 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { QueryOptions , ExtMutationOptions} from './types'
+import type { QueryOptions, ExtMutationOptions } from './types'
 
 export const useNotificationsCount = (options: QueryOptions<unknown>) => {
   const client = useApiService()
@@ -20,7 +20,15 @@ export const useNotificationsCount = (options: QueryOptions<unknown>) => {
   })
 }
 
-export const useGetNotificationMessages = ({ page = 1, size = 10, sortOrders = [], filters = [] }: any = {}, options: QueryOptions<unknown>) => {
+export const useGetNotificationMessages = (
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = []
+  }: Record<string, unknown> = {},
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['notification-messages', page, size, sortOrders, filters],
@@ -37,12 +45,13 @@ export const useGetNotificationMessages = ({ page = 1, size = 10, sortOrders = [
   })
 }
 
-export const useMarkNotificationAsRead = (options: ExtMutationOptions<unknown, any>) => {
+export const useMarkNotificationAsRead = (
+  options: ExtMutationOptions<unknown, unknown>
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (_ids) =>
-      client.put(apiRoutes.notifications, _ids),
+    mutationFn: (_ids) => client.put(apiRoutes.notifications, _ids),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications-count'] })
       queryClient.invalidateQueries({ queryKey: ['notification-messages'] })
@@ -52,7 +61,9 @@ export const useMarkNotificationAsRead = (options: ExtMutationOptions<unknown, a
   })
 }
 
-export const useDeleteNotificationMessages = (options: ExtMutationOptions<unknown, any>) => {
+export const useDeleteNotificationMessages = (
+  options: ExtMutationOptions<unknown, unknown>
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
@@ -82,7 +93,7 @@ export const useTargetUserNotificationSubscriptions = (
         )
         return response.data
       } catch (error) {
-        if ((error as any).response?.status === 404) return []
+        if ((error as unknown).response?.status === 404) return []
         throw error
       }
     },
@@ -92,7 +103,9 @@ export const useTargetUserNotificationSubscriptions = (
   })
 }
 
-export const useNotificationSubscriptions = (options: QueryOptions<unknown>) => {
+export const useNotificationSubscriptions = (
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['notification-subscriptions'],
@@ -103,7 +116,10 @@ export const useNotificationSubscriptions = (options: QueryOptions<unknown>) => 
         )
         return response.data
       } catch (error) {
-        if ((error as any).response && (error as any).response.status === 404) {
+        if (
+          (error as unknown).response &&
+          (error as unknown).response.status === 404
+        ) {
           // Return an empty array if 404 is returned
           return []
         }
@@ -114,20 +130,26 @@ export const useNotificationSubscriptions = (options: QueryOptions<unknown>) => 
   })
 }
 
-export const useCreateSubscription = (options: ExtMutationOptions<unknown, any>) => {
+export const useCreateSubscription = (
+  options: ExtMutationOptions<unknown, unknown>
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data) =>
       client.post(apiRoutes.saveNotificationSubscriptions, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notification-subscriptions'] })
+      queryClient.invalidateQueries({
+        queryKey: ['notification-subscriptions']
+      })
     },
     ...options
   })
 }
 
-export const useDeleteSubscription = (options: ExtMutationOptions<unknown, any>) => {
+export const useDeleteSubscription = (
+  options: ExtMutationOptions<unknown, unknown>
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
@@ -137,13 +159,17 @@ export const useDeleteSubscription = (options: ExtMutationOptions<unknown, any>)
         deleted: true
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notification-subscriptions'] })
+      queryClient.invalidateQueries({
+        queryKey: ['notification-subscriptions']
+      })
     },
     ...options
   })
 }
 
-export const useUpdateNotificationsEmail = (options: ExtMutationOptions<unknown, any>) => {
+export const useUpdateNotificationsEmail = (
+  options: ExtMutationOptions<unknown, unknown>
+) => {
   const client = useApiService()
   return useMutation({
     mutationFn: (data) => client.post(apiRoutes.updateNotificationsEmail, data),

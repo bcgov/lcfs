@@ -1,12 +1,22 @@
 import { test } from '@/tests/utils/fixtures'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi, describe, expect, beforeEach } from 'vitest';
 import DocumentTable from '../DocumentTable'
 import { validateFile } from '@/utils/fileValidation'
 import {
   COMPLIANCE_REPORT_FILE_TYPES,
   MAX_FILE_SIZE_BYTES
 } from '@/constants/common'
+
+// Import mocked hooks for use in tests
+import {
+  useDocuments,
+  useUploadDocument,
+  useDeleteDocument,
+  useUpdateDocument,
+  useDownloadDocument
+} from '@/hooks/useDocuments'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 // Mock external dependencies
 vi.mock('@/hooks/useDocuments', () => ({
@@ -19,7 +29,7 @@ vi.mock('@/hooks/useDocuments', () => ({
 
 vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
   __esModule: true,
-  default: ({ document }) => (
+  default: () => (
     <button type="button" data-test="document-preview-button">
       Preview document
     </button>
@@ -56,16 +66,6 @@ vi.mock('react-i18next', () => ({
     }
   })
 }))
-
-// Import mocked hooks for use in tests
-import {
-  useDocuments,
-  useUploadDocument,
-  useDeleteDocument,
-  useUpdateDocument,
-  useDownloadDocument
-} from '@/hooks/useDocuments'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 describe('DocumentTable', () => {
   let mockUploadMutate, mockDeleteMutate, mockUpdateMutate, mockDownloadDocument

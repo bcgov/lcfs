@@ -20,7 +20,7 @@ export const useOrganizationListStatuses = (options: QueryOptions<unknown>) => {
     ORGANIZATION_STATUSES.UNREGISTERED
   ]
 
-  const filteredData = (data as any)?.filter((status: any) =>
+  const filteredData = (data as unknown)?.filter((status: string) =>
     validStatuses.includes(status.status)
   )
 
@@ -55,7 +55,11 @@ export const useOrganizationListStatuses = (options: QueryOptions<unknown>) => {
  *   { staleTime: 5 * 60 * 1000 }
  * )
  */
-export const useOrganizationNames = (statuses: any = null, queryParamsOrOptions: any = {}, options: QueryOptions<unknown> = {}) => {
+export const useOrganizationNames = (
+  statuses: unknown = null,
+  queryParamsOrOptions: unknown = {},
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const hasQueryParams =
@@ -89,7 +93,7 @@ export const useOrganizationNames = (statuses: any = null, queryParamsOrOptions:
           .filter(
             (status) => typeof status === 'string' && status.trim().length > 0
           )
-          .map((status: any) => `statuses=${encodeURIComponent(status)}`)
+          .map((status: string) => `statuses=${encodeURIComponent(status)}`)
       : []
 
   const filterEntries: string[] = []
@@ -100,12 +104,12 @@ export const useOrganizationNames = (statuses: any = null, queryParamsOrOptions:
       const values = Array.isArray(rawValue) ? rawValue : [rawValue]
       values
         .filter(
-          (value: any) =>
+          (value: unknown) =>
             value !== null &&
             value !== undefined &&
             String(value).trim().length > 0
         )
-        .forEach((value: any) => {
+        .forEach((value: unknown) => {
           filterEntries.push(
             `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
           )
@@ -145,7 +149,10 @@ export const useRegExtOrgs = (options: QueryOptions<unknown>) => {
   })
 }
 
-export const useOrganizationsList = (paginationOptions: PaginationParams, options: QueryOptions<unknown>) => {
+export const useOrganizationsList = (
+  paginationOptions: PaginationParams,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
 
   return useQuery({
@@ -158,7 +165,11 @@ export const useOrganizationsList = (paginationOptions: PaginationParams, option
   })
 }
 
-export const useOrganizationUsers = (orgID: number | string | undefined | null, paginationOptions: PaginationParams, options: QueryOptions<unknown>) => {
+export const useOrganizationUsers = (
+  orgID: number | string | undefined | null,
+  paginationOptions: PaginationParams,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
 
   return useQuery({

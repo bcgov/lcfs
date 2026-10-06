@@ -7,7 +7,9 @@ import type { QueryOptions } from './types'
  * Hook to fetch the current government notification
  * Available to all authenticated users (BCeID and IDIR)
  */
-export const useCurrentGovernmentNotification = (options: QueryOptions<unknown> = {}) => {
+export const useCurrentGovernmentNotification = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const path = apiRoutes.currentGovernmentNotification
 
@@ -26,12 +28,20 @@ export const useCurrentGovernmentNotification = (options: QueryOptions<unknown> 
  * Hook to update the government notification
  * Only available to Compliance Manager IDIR users
  */
-export const useUpdateGovernmentNotification = ({ onSuccess, onError }: any = {}) => {
+type NotificationCallbacks = {
+  onSuccess?: (data: unknown) => void
+  onError?: (error: Error) => void
+}
+
+export const useUpdateGovernmentNotification = ({
+  onSuccess,
+  onError
+}: NotificationCallbacks = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (notificationData: any) => {
+    mutationFn: async (notificationData: unknown) => {
       const response = await apiService.put(
         apiRoutes.updateGovernmentNotification,
         notificationData
@@ -40,10 +50,14 @@ export const useUpdateGovernmentNotification = ({ onSuccess, onError }: any = {}
     },
     onMutate: async (notificationData) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['current-government-notification'] })
+      await queryClient.cancelQueries({
+        queryKey: ['current-government-notification']
+      })
 
       // Snapshot the previous value
-      const previousNotification = queryClient.getQueryData(['current-government-notification'])
+      const previousNotification = queryClient.getQueryData([
+        'current-government-notification'
+      ])
 
       // Optimistically update to the new value
       // If there's no previous notification, create a temporary one with the form data
@@ -69,7 +83,7 @@ export const useUpdateGovernmentNotification = ({ onSuccess, onError }: any = {}
       // Return context with the snapshotted value
       return { previousNotification }
     },
-    onSuccess: (data, _variables, _context) => {
+    onSuccess: (data) => {
       // Update with the actual server response
       queryClient.setQueryData(['current-government-notification'], data)
       if (onSuccess) {
@@ -79,7 +93,10 @@ export const useUpdateGovernmentNotification = ({ onSuccess, onError }: any = {}
     onError: (error, _variables, context) => {
       // Rollback to the previous value on error
       if (context?.previousNotification) {
-        queryClient.setQueryData(['current-government-notification'], context.previousNotification)
+        queryClient.setQueryData(
+          ['current-government-notification'],
+          context.previousNotification
+        )
       }
       if (onError) {
         onError(error)
@@ -89,7 +106,9 @@ export const useUpdateGovernmentNotification = ({ onSuccess, onError }: any = {}
       // Only invalidate on error to trigger a refetch
       // On success, we already have the correct data from onSuccess
       if (error) {
-        queryClient.invalidateQueries({ queryKey: ['current-government-notification'] })
+        queryClient.invalidateQueries({
+          queryKey: ['current-government-notification']
+        })
       }
     }
   })
@@ -99,7 +118,10 @@ export const useUpdateGovernmentNotification = ({ onSuccess, onError }: any = {}
  * Hook to delete the government notification
  * Only available to Compliance Manager and Director IDIR users
  */
-export const useDeleteGovernmentNotification = ({ onSuccess, onError }: any = {}) => {
+export const useDeleteGovernmentNotification = ({
+  onSuccess,
+  onError
+}: NotificationCallbacks = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
 
@@ -112,7 +134,9 @@ export const useDeleteGovernmentNotification = ({ onSuccess, onError }: any = {}
     },
     onMutate: async () => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['current-government-notification'] })
+      await queryClient.cancelQueries({
+        queryKey: ['current-government-notification']
+      })
 
       // Snapshot the previous value
       const previousNotification = queryClient.getQueryData([
@@ -125,7 +149,7 @@ export const useDeleteGovernmentNotification = ({ onSuccess, onError }: any = {}
       // Return context with the snapshotted value
       return { previousNotification }
     },
-    onSuccess: (_data, _variables, _context) => {
+    onSuccess: () => {
       // Ensure the cache is set to null
       queryClient.setQueryData(['current-government-notification'], null)
       if (onSuccess) {
@@ -147,7 +171,9 @@ export const useDeleteGovernmentNotification = ({ onSuccess, onError }: any = {}
     onSettled: (_data, error) => {
       // Only invalidate on error to trigger a refetch
       if (error) {
-        queryClient.invalidateQueries({ queryKey: ['current-government-notification'] })
+        queryClient.invalidateQueries({
+          queryKey: ['current-government-notification']
+        })
       }
     }
   })

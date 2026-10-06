@@ -1,10 +1,16 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import 'react';
+import '@testing-library/react';
 import { vi } from 'vitest'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import ThemeProvider from '@mui/material/styles/ThemeProvider'
-import theme from '@/themes'
-import { Notifications } from '../Notifications'
+import '@tanstack/react-query';
+import '@mui/material/styles/ThemeProvider';
+import '@/themes';
+import '../Notifications';
+
+// Import actual routes mapping
+import { routesMapping } from '../_schema'
+import { ROUTES } from '@/routes/routes'
+
+// Mock dependencies
 
 // Mock dependencies
 const navigateMock = vi.fn()
@@ -52,37 +58,18 @@ vi.mock('@/components/ClearFiltersButton', () => ({
   )
 }))
 
-// Import actual routes mapping
-import { routesMapping } from '../_schema'
-import { ROUTES } from '@/routes/routes'
-
 vi.mock('../_schema', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    columnDefs: (t, currentUser) => [],
+    columnDefs: () => [],
     // Use the actual routesMapping function
     routesMapping: actual.routesMapping
   }
 })
 
 // Helper to create wrapper with QueryClient and Theme
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false }
-    }
-  })
-  const { MemoryRouter } = require('react-router-dom')
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <MemoryRouter>{children}</MemoryRouter>
-      </ThemeProvider>
-    </QueryClientProvider>
-  )
-}
+
 
 describe('Fuel Code Notifications', () => {
   beforeEach(() => {

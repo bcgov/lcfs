@@ -22,7 +22,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, component, gutterBottom, sx, ...domProps }) => <div data-test="bc-typography" {...domProps}>{children}</div>
+  default: ({
+  children,
+  ...domProps
+}) => { delete domProps.variant; delete domProps.component; delete domProps.gutterBottom; delete domProps.sx; return <div data-test="bc-typography" {...domProps}>{children}</div>; }
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -30,7 +33,10 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@mui/material/Box', () => ({
-    default: ({ children, paddingTop, paddingBottom, flexDirection, alignItems, justifyContent, ...domProps }) => <div data-test="box" {...domProps}>{children}</div>
+    default: ({
+  children,
+  ...domProps
+}) => { delete domProps.paddingTop; delete domProps.paddingBottom; delete domProps.flexDirection; delete domProps.alignItems; delete domProps.justifyContent; return <div data-test="box" {...domProps}>{children}</div>; }
 }))
 
 vi.mock('@mui/material/Tooltip', () => ({

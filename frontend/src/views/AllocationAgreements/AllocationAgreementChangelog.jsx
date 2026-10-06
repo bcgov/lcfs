@@ -18,7 +18,7 @@ export const AllocationAgreementChangelog = ({ isEarlyIssuance = false }) => {
   // State for pagination - one per changelog item
   const [paginationStates, setPaginationStates] = useState({})
 
-  const { complianceReportId, compliancePeriod } = useParams()
+  const { complianceReportId } = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
 

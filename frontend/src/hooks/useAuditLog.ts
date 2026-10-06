@@ -3,7 +3,15 @@ import { useApiService } from '@/services/useApiService'
 import { useQuery } from '@tanstack/react-query'
 import type { QueryOptions } from './types'
 
-export const useAuditLogs = ({ page = 1, size = 10, sortOrders = [], filters = [] }: any = {}, options: QueryOptions<unknown>) => {
+export const useAuditLogs = (
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = []
+  }: Record<string, unknown> = {},
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['audit-logs', page, size, sortOrders, filters],
@@ -20,9 +28,15 @@ export const useAuditLogs = ({ page = 1, size = 10, sortOrders = [], filters = [
   })
 }
 
-export const useAuditLog = (auditLogId: number | string | undefined | null, options: QueryOptions<unknown>) => {
+export const useAuditLog = (
+  auditLogId: number | string | undefined | null,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
-  const path = apiRoutes.getAuditLog.replace(':auditLogId', String(auditLogId ?? ''))
+  const path = apiRoutes.getAuditLog.replace(
+    ':auditLogId',
+    String(auditLogId ?? '')
+  )
   return useQuery({
     queryKey: ['audit-log', auditLogId],
     queryFn: () => client.get(path).then((res) => res.data),

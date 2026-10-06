@@ -225,7 +225,7 @@ describe('SelectRenderer & MultiSelectRenderer', () => {
 
 /* -------------------------------------------------------------------------
  * Additional component tests (merged from cellRenderers.extra.test.jsx)
- * -----------------------------------------------------------------------*/
+ * ----------------------------------------------------------------------- */
 
 describe('Additional cellRenderers components', () => {
   // For overflow-chip tests we need a narrow container width

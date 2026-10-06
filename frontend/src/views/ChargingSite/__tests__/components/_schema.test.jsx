@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
@@ -229,30 +229,30 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('showOrganizationColumn option', () => {
     it('excludes organizationName when false (BCeID)', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: false }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showOrganizationColumn: false }))
       expect(f).not.toContain('organizationName')
     })
 
     it('includes organizationName when true (IDIR)', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: true }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showOrganizationColumn: true }))
       expect(f).toContain('organizationName')
     })
   })
 
   describe('allocatingOrganizationName column positioning', () => {
     it('immediately follows organizationName for IDIR users', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: true }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showOrganizationColumn: true }))
       expect(f.indexOf('allocatingOrganizationName')).toBe(f.indexOf('organizationName') + 1)
     })
 
     it('immediately follows siteName for BCeID users', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: false }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showOrganizationColumn: false }))
       expect(f.indexOf('allocatingOrganizationName')).toBe(f.indexOf('siteName') + 1)
     })
 
     it('appears before registrationNumber in both user modes', () => {
       for (const showOrg of [true, false]) {
-        const f = fields(chargingEquipmentColDefs(mockT, false, { showOrganizationColumn: showOrg }))
+        const f = fields(chargingEquipmentColDefs(mockT, { showOrganizationColumn: showOrg }))
         expect(f.indexOf('allocatingOrganizationName')).toBeLessThan(f.indexOf('registrationNumber'))
       }
     })
@@ -286,26 +286,26 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('enableSelection option', () => {
     it('adds a leading __select__ checkbox column', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { enableSelection: true }))
+      const f = fields(chargingEquipmentColDefs(mockT, { enableSelection: true }))
       expect(f[0]).toBe('__select__')
     })
 
     it('does not add checkbox column when false', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { enableSelection: false }))
+      const f = fields(chargingEquipmentColDefs(mockT, { enableSelection: false }))
       expect(f).not.toContain('__select__')
     })
   })
 
   describe('historyMode option', () => {
     it('adds a leading history toggle column and compliance years column', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { historyMode: true }))
+      const f = fields(chargingEquipmentColDefs(mockT, { historyMode: true }))
       expect(f[0]).toBe('__historyToggle__')
       expect(f).toContain('complianceYears')
     })
 
     it('renders expand action for collapsed current rows', () => {
       const onToggleHistory = vi.fn()
-      const col = chargingEquipmentColDefs(mockT, false, {
+      const col = chargingEquipmentColDefs(mockT, {
         historyMode: true,
         onToggleHistory,
         expandedRows: new Set()
@@ -329,7 +329,7 @@ describe('chargingEquipmentColDefs', () => {
     })
 
     it('renders collapse action for expanded current rows', () => {
-      const col = chargingEquipmentColDefs(mockT, false, {
+      const col = chargingEquipmentColDefs(mockT, {
         historyMode: true,
         onToggleHistory: vi.fn(),
         expandedRows: new Set(['REG-1'])
@@ -353,7 +353,7 @@ describe('chargingEquipmentColDefs', () => {
     })
 
     it('prefixes registration number for history rows', () => {
-      const col = chargingEquipmentColDefs(mockT, false, {
+      const col = chargingEquipmentColDefs(mockT, {
         historyMode: true
       }).find((c) => c.field === 'registrationNumber')
 
@@ -368,13 +368,13 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('showDateColumns option', () => {
     it('adds createdDate and updatedDate when true', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showDateColumns: true }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showDateColumns: true }))
       expect(f).toContain('createdDate')
       expect(f).toContain('updatedDate')
     })
 
     it('omits date columns when false', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showDateColumns: false }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showDateColumns: false }))
       expect(f).not.toContain('createdDate')
       expect(f).not.toContain('updatedDate')
     })
@@ -382,25 +382,25 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('showIntendedUsers option', () => {
     it('includes intendedUsers column when true', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showIntendedUsers: true }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showIntendedUsers: true }))
       expect(f).toContain('intendedUsers')
     })
 
     it('excludes intendedUsers column when false', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showIntendedUsers: false }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showIntendedUsers: false }))
       expect(f).not.toContain('intendedUsers')
     })
   })
 
   describe('showLocationFields option', () => {
     it('includes latitude and longitude when true (default)', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showLocationFields: true }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showLocationFields: true }))
       expect(f).toContain('latitude')
       expect(f).toContain('longitude')
     })
 
     it('excludes latitude and longitude when false', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showLocationFields: false }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showLocationFields: false }))
       expect(f).not.toContain('latitude')
       expect(f).not.toContain('longitude')
     })
@@ -408,12 +408,12 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('showNotes option', () => {
     it('includes notes column when true', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showNotes: true }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showNotes: true }))
       expect(f).toContain('notes')
     })
 
     it('excludes notes column when false (default)', () => {
-      const f = fields(chargingEquipmentColDefs(mockT, false, { showNotes: false }))
+      const f = fields(chargingEquipmentColDefs(mockT, { showNotes: false }))
       expect(f).not.toContain('notes')
     })
   })
@@ -470,7 +470,7 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('intendedUse column valueGetter and valueFormatter', () => {
     const intendedCol = () =>
-      chargingEquipmentColDefs(mockT, false, { showIntendedUsers: true }).find(
+      chargingEquipmentColDefs(mockT, { showIntendedUsers: true }).find(
         (c) => c.field === 'intendedUse'
       )
 
@@ -508,7 +508,7 @@ describe('chargingEquipmentColDefs', () => {
 
   describe('intendedUsers column valueGetter', () => {
     const intendedUsersCol = () =>
-      chargingEquipmentColDefs(mockT, false, { showIntendedUsers: true }).find(
+      chargingEquipmentColDefs(mockT, { showIntendedUsers: true }).find(
         (c) => c.field === 'intendedUsers'
       )
 

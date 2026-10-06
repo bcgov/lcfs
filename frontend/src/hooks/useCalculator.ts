@@ -16,7 +16,7 @@ export const useGetCompliancePeriodList = (options: QueryOptions<unknown>) => {
   })
 }
 
-export const useGetFuelTypeList = (params: Record<string, any>) => {
+export const useGetFuelTypeList = (params: Record<string, unknown>) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['calculator-fuel-types', params],
@@ -38,7 +38,7 @@ export const useGetFuelTypeList = (params: Record<string, any>) => {
   })
 }
 
-export const useGetFuelTypeOptions = (params: Record<string, any>) => {
+export const useGetFuelTypeOptions = (params: Record<string, unknown>) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['calculator-fuel-type-options', params],
@@ -71,7 +71,7 @@ export const useCalculateComplianceUnits = ({
   useCustomCi = false,
   customCiValue,
   enabled = true
-}: any) => {
+}: Record<string, unknown>) => {
   const client = useApiService()
   return useQuery({
     queryKey: [
@@ -126,7 +126,7 @@ export const useCalculateQuantityFromComplianceUnits = ({
   useCustomCi = false,
   customCiValue,
   enabled = true
-}: any) => {
+}: Record<string, unknown>) => {
   const client = useApiService()
   return useQuery({
     queryKey: [
@@ -171,13 +171,19 @@ export const useCalculateQuantityFromComplianceUnits = ({
   })
 }
 
-export const useGetLookupTableData = (complianceYear: string | number | undefined, options: QueryOptions<unknown>) => {
+export const useGetLookupTableData = (
+  complianceYear: string | number | undefined,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['lookup-table-data', complianceYear],
     queryFn: () =>
       client.get(
-        apiRoutes.getLookupTableData.replace(':complianceYear', String(complianceYear ?? ''))
+        apiRoutes.getLookupTableData.replace(
+          ':complianceYear',
+          String(complianceYear ?? '')
+        )
       ),
     staleTime: 60 * 60 * 1000, // 1 hour
     gcTime: 60 * 60 * 1000,

@@ -144,7 +144,7 @@ export const CoordinatesDisplay = ({ lat, lng, googleMapsUrl }) => {
       )
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
+    } catch {
       console.error('Copy failed')
     }
   }

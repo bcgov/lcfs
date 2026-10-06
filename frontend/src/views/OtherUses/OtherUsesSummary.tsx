@@ -13,7 +13,7 @@ import { useOtherUsesOptions } from '@/hooks/useOtherUses'
 interface OtherUse {
   otherUsesId: number | string
   actionType?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 interface OtherUsesSummaryProps {

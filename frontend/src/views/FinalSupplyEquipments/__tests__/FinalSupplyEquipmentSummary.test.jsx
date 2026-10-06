@@ -1,5 +1,5 @@
 import { screen, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import '@testing-library/user-event'
 import { beforeEach, describe, expect, vi } from 'vitest'
 import { FinalSupplyEquipmentSummary } from '../FinalSupplyEquipmentSummary'
 import { test } from '@/tests/utils/fixtures'

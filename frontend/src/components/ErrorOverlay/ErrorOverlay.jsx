@@ -17,7 +17,7 @@ export const ErrorOverlay = () => {
   const { errorStatus, errorRefs, setErrorStatus, clearErrorRefs, resetServerError } =
     useAuthorization()
 
-  useEffect(() => router.subscribe(resetServerError), [])
+  useEffect(() => router.subscribe(resetServerError), [resetServerError])
 
   const handleClose = () => {
     setErrorStatus(null)

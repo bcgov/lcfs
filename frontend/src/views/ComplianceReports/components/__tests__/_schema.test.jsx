@@ -265,7 +265,7 @@ describe('ComplianceReports Schema', () => {
 
       return render(
         <BrowserRouter>
-          <TypeRenderer data={data} />
+          <TypeRenderer data={data} isSupplier={isSupplier} />
         </BrowserRouter>
       )
     }

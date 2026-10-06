@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
 import type { SummaryColumn } from '@/types/schema'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
@@ -14,83 +13,7 @@ import {
   useGetAvailableAnalysts
 } from '@/hooks/useComplianceReports'
 import { AssignedAnalystCell } from './AssignedAnalystCell'
-import Tooltip from '@mui/material/Tooltip'
-import WarningIcon from '@mui/icons-material/Warning'
-import { Link, useLocation } from 'react-router-dom'
-
-// Cell renderer for Type column with 30-day supplemental flag
-const TypeCellRenderer = (isSupplier) => (props) => {
-  const location = useLocation()
-  const { data } = props
-  const reportType = data.reportType || ''
-
-  // Show a flag on existing rows (Original Report, Supplemental, Early Issuance, etc.)
-  // to alert IDIR that the organization has a draft supplemental sitting > 30 days.
-  const hasDraftSupplementalOverThirtyDays = () => {
-    // Only show flag for IDIR users (government users)
-    if (isSupplier) {
-      return false
-    }
-
-    // Need the draft's create date to calculate age
-    if (!data.latestSupplementalCreateDate) {
-      return false
-    }
-
-    if (data.isLatest !== false || data.latestStatus !== 'Draft') {
-      return false
-    }
-
-    // The flag only nudges toward the *initial* submission of a supplemental.
-    // Once it has been submitted for the first time the flag is permanently
-    // retired, even after the report is returned to Draft for analyst-requested
-    // revisions (#4630 — matches the report-page 30-day banner suppression).
-    if (data.latestSupplementalHasBeenSubmitted) {
-      return false
-    }
-
-    // Calculate how long the draft supplemental has been sitting
-    const createDate = new Date(data.latestSupplementalCreateDate)
-    const now = new Date()
-    const daysDiff = Math.floor((now - createDate) / (1000 * 60 * 60 * 24))
-
-    return daysDiff > 30
-  }
-
-  const showFlag = hasDraftSupplementalOverThirtyDays()
-
-  const targetUrl = `${location.pathname}/${data.compliancePeriod}/${data.complianceReportId}`
-
-  return (
-    <Link to={targetUrl} style={{ color: '#000', textDecoration: 'none' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          width: '100%',
-          height: '100%'
-        }}
-      >
-        {showFlag && (
-          <Tooltip
-            title="Supplemental draft over 30 days old"
-            arrow
-            placement="top"
-          >
-            <WarningIcon
-              fontSize="medium"
-              sx={{
-                color: '#ff0000'
-              }}
-            />
-          </Tooltip>
-        )}
-        <span>{reportType}</span>
-      </div>
-    </Link>
-  )
-}
+import { ComplianceReportTypeCell } from './ComplianceReportTypeCell'
 
 export const reportsColDefs = (
   t: (key: string) => string,
@@ -194,7 +117,8 @@ export const reportsColDefs = (
     headerName: t('report:reportColLabels.type'),
     minWidth: 300,
     valueGetter: ({ data }) => data.reportType,
-    cellRenderer: TypeCellRenderer(isSupplier),
+    cellRenderer: ComplianceReportTypeCell,
+    cellRendererParams: { isSupplier },
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       optionsQuery: () => ({
@@ -237,9 +161,20 @@ export const reportsColDefs = (
   }
 ]
 
+type RenewableFuelLine = {
+  gasoline: number
+  diesel: number
+  jetFuel: number
+  maxGasoline?: number
+  maxDiesel?: number
+  maxJetFuel?: number
+}
+
+type RenewableFuelData = Record<string, RenewableFuelLine>
+
 export const renewableFuelColumns = (
   t: (key: string) => string,
-  data: Record<string, any>,
+  data: RenewableFuelData,
   editable: boolean,
   compliancePeriodYear: string | number,
   lines7And9Locked: boolean = false,
@@ -267,9 +202,9 @@ export const renewableFuelColumns = (
   let dieselEditableCells = []
   let jetFuelEditableCells = []
 
-  const safeRound = (value = 0) => Math.round(value || 0)
+  const safeRound = (value: number = 0) => Math.round(value || 0)
 
-  const toRoundedOrUndefined = (value) => {
+  const toRoundedOrUndefined = (value: unknown) => {
     const numericValue = Number(value)
     if (!Number.isFinite(numericValue)) {
       return undefined
@@ -277,8 +212,11 @@ export const renewableFuelColumns = (
     return Math.round(numericValue)
   }
 
-  const buildLineSevenConstraint = (maxValue, currentValue) => {
-    const constraint = { min: 0 }
+  const buildLineSevenConstraint = (
+    maxValue: unknown,
+    currentValue: unknown
+  ) => {
+    const constraint: { min: number; max?: number } = { min: 0 }
     const roundedMax = toRoundedOrUndefined(maxValue)
     const roundedCurrent = toRoundedOrUndefined(currentValue) ?? 0
 
@@ -589,7 +527,7 @@ export const nonComplianceColumns = (
     label: t('report:summaryLabels.totalValue'),
     align: 'center',
     width: '150px',
-    editable: editable,
+    editable,
     editableCells: editable ? [0, 1] : []
   },
   ...(showStatusColumns

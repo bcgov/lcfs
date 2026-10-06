@@ -1,5 +1,4 @@
 import breakpoints from '../base/breakpoints'
-import { pxToRem } from '../utils'
 
 const {
   values: { sm, md, lg, xl, xxl }
