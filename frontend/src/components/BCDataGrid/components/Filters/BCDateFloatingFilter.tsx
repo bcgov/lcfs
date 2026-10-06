@@ -133,30 +133,28 @@ export const BCDateFloatingFilter = ({
             label,
             onKeyDown: (event) => event.stopPropagation(),
             InputProps: {
-              startAdornment: (
-                <InputAdornment position="start">
+              endAdornment: (
+                <InputAdornment position="end">
+                  {selectedDate && (
+                    <IconButton
+                      sx={{ marginRight: 0, paddingRight: '6px' }}
+                      size="small"
+                      onClick={handleClear}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      edge="end"
+                      aria-label="Clear date"
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  )}
                   <IconButton
-                    sx={{ marginLeft: 0, paddingLeft: '6px' }}
+                    sx={{ marginRight: 0, paddingRight: '6px' }}
                     size="small"
-                    edge="start"
+                    edge="end"
                     onClick={() => setOpen(true)}
                     aria-label="Open calendar"
                   >
                     <CalendarIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ),
-              endAdornment: selectedDate && (
-                <InputAdornment position="end">
-                  <IconButton
-                    sx={{ marginRight: 0, paddingRight: '6px' }}
-                    size="small"
-                    onClick={handleClear}
-                    onMouseDown={(event) => event.stopPropagation()}
-                    edge="end"
-                    aria-label="Clear date"
-                  >
-                    <ClearIcon fontSize="small" />
                   </IconButton>
                 </InputAdornment>
               )

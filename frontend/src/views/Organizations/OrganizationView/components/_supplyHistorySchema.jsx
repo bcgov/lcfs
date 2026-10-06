@@ -1,5 +1,42 @@
 import i18n from '@/i18n'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { formatNumberWithCommas } from '@/utils/formatters'
+
+const parseDateOnly = (value) => {
+  if (!value) return null
+  if (value instanceof Date) return value
+
+  const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly
+    return new Date(Number(year), Number(month) - 1, Number(day))
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const formatDateOnly = (value) => {
+  if (!value) return ''
+  const dateOnly = String(value).match(/^(\d{4}-\d{2}-\d{2})/)
+  if (dateOnly) return dateOnly[1]
+
+  const date = parseDateOnly(value)
+  return date ? date.toLocaleDateString('en-CA') : String(value)
+}
+
+const dateFilterComparator = (filterLocalDateAtMidnight, cellValue) => {
+  const cellDate = parseDateOnly(cellValue)
+  if (!cellDate) return -1
+  const normalizedCellDate = new Date(
+    cellDate.getFullYear(),
+    cellDate.getMonth(),
+    cellDate.getDate()
+  )
+  if (normalizedCellDate < filterLocalDateAtMidnight) return -1
+  if (normalizedCellDate > filterLocalDateAtMidnight) return 1
+  return 0
+}
 
 export const supplyHistoryColDefs = () => [
   {
@@ -16,11 +53,19 @@ export const supplyHistoryColDefs = () => [
     minWidth: 180,
     flex: 0.8,
     sortable: true,
-    valueFormatter: (params) => {
-      if (!params.value) return ''
-      const date = new Date(params.value)
-      return date.toLocaleDateString('en-CA') // YYYY-MM-DD format
-    }
+    filter: 'agDateColumnFilter',
+    filterParams: {
+      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+      defaultOption: 'equals',
+      suppressAndOrCondition: true,
+      comparator: dateFilterComparator
+    },
+    floatingFilterComponent: BCDateFloatingFilter,
+    floatingFilterComponentParams: {
+      initialFilterType: 'equals',
+      label: 'YYYY-MM-DD'
+    },
+    valueFormatter: (params) => formatDateOnly(params.value)
   },
   {
     field: 'fuelType',
@@ -58,7 +103,7 @@ export const supplyHistoryColDefs = () => [
     flex: 0.9,
     sortable: true,
     filter: 'agNumberColumnFilter',
-    valueFormatter: formatNumberWithCommas,
+    valueFormatter: formatNumberWithCommas
   },
   {
     field: 'units',

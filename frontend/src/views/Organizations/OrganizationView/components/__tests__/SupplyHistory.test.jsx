@@ -7,6 +7,7 @@ import {
   SupplyHistory,
   normalizeFuelTypeVolumeTrendRows
 } from '../SupplyHistory'
+import { supplyHistoryColDefs } from '../_supplyHistorySchema'
 import theme from '@/themes'
 
 const mockUseOrganizationFuelSupply = vi.fn()
@@ -108,6 +109,26 @@ describe('SupplyHistory', () => {
         { enabled: true }
       )
     })
+  })
+
+  it('uses a date-only filter for the submission date column', () => {
+    const submissionDateCol = supplyHistoryColDefs().find(
+      (col) => col.field === 'reportSubmissionDate'
+    )
+
+    expect(submissionDateCol.filter).toBe('agDateColumnFilter')
+    expect(submissionDateCol.floatingFilterComponent).toBeDefined()
+    expect(
+      submissionDateCol.valueFormatter({
+        value: '2025-03-31T23:59:59+00:00'
+      })
+    ).toBe('2025-03-31')
+    expect(
+      submissionDateCol.filterParams.comparator(
+        new Date(2025, 2, 31),
+        '2025-03-31T23:59:59+00:00'
+      )
+    ).toBe(0)
   })
 
   it('shows the renewable liquid volume metric without the legacy compliance unit metric', () => {

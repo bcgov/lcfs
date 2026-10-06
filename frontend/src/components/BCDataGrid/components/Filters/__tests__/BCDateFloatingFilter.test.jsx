@@ -353,8 +353,10 @@ describe('BCDateFloatingFilter', () => {
     it('opens date picker when calendar icon is clicked', async () => {
       render(<BCDateFloatingFilter {...defaultProps} />)
       
-      const startAdornment = screen.getByTestId('start-adornment')
-      const calendarButton = startAdornment.querySelector('[data-test="icon-button"]')
+      const endAdornment = screen.getByTestId('end-adornment')
+      const calendarButton = endAdornment.querySelector(
+        '[aria-label="Open calendar"]'
+      )
       
       await act(async () => {
         fireEvent.click(calendarButton)

@@ -735,6 +735,14 @@ class ComplianceReportRepository:
     def _generic_report_filter(self, filter_model):
         filter_value = filter_model.filter
 
+        def _date_filter_value(value):
+            text_value = str(value).strip()
+            if len(text_value) >= 10 and text_value[4] == "-" and text_value[7] == "-":
+                return text_value[:10]
+            return datetime.strptime(text_value, "%Y-%m-%d %H:%M:%S").strftime(
+                "%Y-%m-%d"
+            )
+
         if (
             filter_model.filter_type == "set"
             and (not filter_value or filter_value == [])
@@ -755,17 +763,9 @@ class ComplianceReportRepository:
 
             filter_value = []
             if filter_model.date_from:
-                filter_value.append(
-                    datetime.strptime(
-                        filter_model.date_from, "%Y-%m-%d %H:%M:%S"
-                    ).strftime("%Y-%m-%d")
-                )
+                filter_value.append(_date_filter_value(filter_model.date_from))
             if filter_model.date_to:
-                filter_value.append(
-                    datetime.strptime(
-                        filter_model.date_to, "%Y-%m-%d %H:%M:%S"
-                    ).strftime("%Y-%m-%d")
-                )
+                filter_value.append(_date_filter_value(filter_model.date_to))
 
         filter_option = filter_model.type
         filter_type = filter_model.filter_type
