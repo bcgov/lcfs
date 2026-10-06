@@ -44,8 +44,7 @@ export const BCPagination = ({
       labelRowsPerPage={'Page Size:'}
       labelDisplayedRows={({ from, to, count }) => (
         <span role="status" aria-live="polite" aria-atomic="true">
-          <b>{from}</b>&nbsp;to&nbsp;<b>{to}</b>&nbsp;of&nbsp;
-          <b>{count}</b>
+          {`${from} to ${to} of ${count}`}
         </span>
       )}
       showFirstButton

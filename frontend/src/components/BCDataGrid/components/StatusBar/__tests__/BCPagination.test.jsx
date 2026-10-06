@@ -187,7 +187,7 @@ describe('BCPagination', () => {
       expect(status).toHaveTextContent('1 to 10 of 100')
       expect(status).toHaveAttribute('aria-live', 'polite')
       expect(status).toHaveAttribute('aria-atomic', 'true')
-      expect(status.querySelectorAll('b')).toHaveLength(3)
+      expect(status.children).toHaveLength(0)
     })
 
     it('preserves the existing wording for empty results', () => {
