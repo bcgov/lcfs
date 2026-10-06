@@ -35,7 +35,6 @@ export const BCPagination = ({
   return (
     <TablePagination
       className="ag-grid-pagination"
-      aria-label="pagination for BC DataGrid"
       component="div"
       count={total}
       page={page - 1}
@@ -45,10 +44,9 @@ export const BCPagination = ({
       onRowsPerPageChange={handleChangeRowsPerPage}
       labelRowsPerPage={'Page Size:'}
       labelDisplayedRows={({ from, to, count }) => (
-        <>
-          <b>{from}</b>&nbsp;to&nbsp;<b>{to}</b>&nbsp;of&nbsp;
-          <b>{count}</b>
-        </>
+        <span role="status" aria-live="polite" aria-atomic="true" tabIndex={0}>
+          {`${from} to ${to} of ${count}`}
+        </span>
       )}
       showFirstButton
       showLastButton
@@ -67,6 +65,9 @@ export const BCPagination = ({
         toolbar: 'nav'
       }}
       slotProps={{
+        toolbar: {
+          'aria-label': 'pagination for BC DataGrid'
+        },
         select: {
           IconComponent: (props) => (
             <ArrowDropDown

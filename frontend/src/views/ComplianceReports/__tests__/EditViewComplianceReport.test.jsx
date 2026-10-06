@@ -3,7 +3,6 @@ import { render, screen, act, waitFor } from '@testing-library/react'
 import { forwardRef } from 'react'
 import userEvent from '@testing-library/user-event'
 import { EditViewComplianceReport } from '../EditViewComplianceReport'
-
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
@@ -20,6 +19,8 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { CONFIG } from '@/constants/config'
 import { buttonClusterConfigFn } from '../buttonConfigs'
+
+const { mockTriggerAlert } = vi.hoisted(() => ({ mockTriggerAlert: vi.fn() }))
 
 // Mock all external dependencies
 vi.mock('react-router-dom', () => ({
@@ -70,23 +71,20 @@ vi.mock('@/components/BCAlert', () => ({
   __esModule: true,
   default: ({ children }) => <div data-test="bc-alert">{children}</div>,
   FloatingAlert: forwardRef(function FloatingAlertMock(props, ref) {
-  // Create a mock triggerAlert function
-  const triggerAlert = vi.fn();
+    // Shared so tests can assert on the alerts the page raises
+    const triggerAlert = mockTriggerAlert
 
-  // Assign triggerAlert to ref if provided
-  if (ref) {
-    if (typeof ref === 'function') {
-      ref({
-        triggerAlert
-      });
-    } else if (ref.current !== undefined) {
-      ref.current = {
-        triggerAlert
-      };
+    // Assign triggerAlert to ref if provided
+    if (ref) {
+      if (typeof ref === 'function') {
+        ref({ triggerAlert })
+      } else {
+        ref.current = { triggerAlert }
+      }
     }
-  }
-  return <div data-test="floating-alert" />;
-})
+
+    return <div data-test={props['data-test'] || 'floating-alert'} />
+  })
 }))
 
 vi.mock('@/components/BCBox', () => ({
@@ -937,6 +935,48 @@ describe('EditViewComplianceReport', () => {
       expect(useCreateSupplementalReport).toHaveBeenCalled()
       expect(useCreateAnalystAdjustment).toHaveBeenCalled()
       expect(useCreateIdirSupplementalReport).toHaveBeenCalled()
+    })
+
+    it('shows the backend reason when a status update is refused', () => {
+      render(<EditViewComplianceReport />)
+      const { onError } = useUpdateComplianceReport.mock.calls.at(-1)[1]
+
+      act(() =>
+        onError({
+          message: 'Request failed with status code 400',
+          response: {
+            status: 400,
+            data: { detail: 'Report summary must be locked before assessment.' }
+          }
+        })
+      )
+
+      expect(mockTriggerAlert).toHaveBeenCalledWith({
+        message: 'Report summary must be locked before assessment.',
+        severity: 'error'
+      })
+    })
+
+    it('falls back to the request error when the backend reason is not text', () => {
+      render(<EditViewComplianceReport />)
+      const { onError } = useUpdateComplianceReport.mock.calls.at(-1)[1]
+
+      act(() =>
+        onError({
+          message: 'Request failed with status code 422',
+          response: {
+            status: 422,
+            data: {
+              detail: [{ loc: ['body', 'status'], msg: 'Field required' }]
+            }
+          }
+        })
+      )
+
+      expect(mockTriggerAlert).toHaveBeenCalledWith({
+        message: 'Request failed with status code 422',
+        severity: 'error'
+      })
     })
   })
 
@@ -2204,10 +2244,7 @@ describe('EditViewComplianceReport', () => {
           })
         })
 
-        render(<EditViewComplianceReport />);
-
-        // Trigger deletion
-        screen.queryByText('Delete');
+        render(<EditViewComplianceReport />)
         // Since deletion state is internal, just verify the component can handle it
         expect(
           screen.getByTestId('compliance-report-header')

@@ -1,15 +1,15 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
-import './OrganizationDetailsCard';
-import './OrganizationUsers';
-import './CreditLedger';
-import './components/PenaltyLog/PenaltyLog';
-import './components/PenaltyLog/PenaltyLogManage';
-import './components/SupplyHistory';
-import './components/ComplianceTracking';
+import './OrganizationDetailsCard'
+import './OrganizationUsers'
+import './CreditLedger'
+import './components/PenaltyLog/PenaltyLog'
+import './components/PenaltyLog/PenaltyLogManage'
+import './components/SupplyHistory'
+import './components/ComplianceTracking'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import {
@@ -21,6 +21,20 @@ import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 import AppBar from '@mui/material/AppBar'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
+
+function TabPanel({ children, value, index }) {
+  return (
+    <BCBox
+      role="tabpanel"
+      hidden={value !== index}
+      id={`organization-tabpanel-${index}`}
+      aria-labelledby={`organization-tab-${index}`}
+      tabIndex={value === index ? 0 : -1}
+    >
+      {value === index && children}
+    </BCBox>
+  )
+}
 
 function a11yProps(index) {
   return {
@@ -183,12 +197,16 @@ export const OrganizationView = ({ addMode = false }) => {
             ))}
           </Tabs>
         </AppBar>
-        {organizationTitle && (
-          <BCTypography variant="h5" color="primary" mt={3}>
-            {organizationTitle}
-          </BCTypography>
-        )}
-        <BCBox sx={{ pt: 3 }}>{renderContent()}</BCBox>
+        {tabConfig.map((config, idx) => (
+          <TabPanel key={config.path} value={tabIndex} index={idx}>
+            {organizationTitle && (
+              <BCTypography variant="h5" color="primary" mt={3}>
+                {organizationTitle}
+              </BCTypography>
+            )}
+            <BCBox sx={{ pt: 3 }}>{idx === tabIndex && renderContent()}</BCBox>
+          </TabPanel>
+        ))}
       </BCBox>
     </BCBox>
   )
