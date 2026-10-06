@@ -170,8 +170,9 @@ async def test_export_recorded_date_utc_midnight(transactions_service):
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("export_format", ["xls", "xlsx"])
 async def test_export_transactions_writes_transaction_mv_dates_as_excel_dates(
-    transactions_service,
+    transactions_service, export_format
 ):
     mock_transactions = [
         MagicMock(
@@ -196,6 +197,12 @@ async def test_export_transactions_writes_transaction_mv_dates_as_excel_dates(
         mock_transactions,
         1,
     )
+    transactions_service.repo.get_transfer_export_details.return_value = {
+        99: MagicMock(
+            agreement_date=datetime(2026, 2, 9),
+            is_a1_category=False,
+        )
+    }
 
     with patch(
         "lcfs.web.api.transaction.services.SpreadsheetBuilder.build_spreadsheet",
@@ -203,15 +210,16 @@ async def test_export_transactions_writes_transaction_mv_dates_as_excel_dates(
     ), patch(
         "lcfs.web.api.transaction.services.SpreadsheetBuilder.add_sheet"
     ) as mock_add_sheet:
-        await transactions_service.export_transactions(export_format="xlsx")
+        await transactions_service.export_transactions(export_format=export_format)
 
     row = mock_add_sheet.call_args.kwargs["rows"][0]
-    assert row[9:12] == [
+    assert row[9:13] == [
+        date(2026, 2, 9),
         date(2026, 2, 11),
         date(2026, 2, 11),
         date(2026, 7, 15),
     ]
-    assert all(not isinstance(value, datetime) for value in row[9:12])
+    assert all(not isinstance(value, datetime) for value in row[9:13])
 
 
 # A government export scoped to an organisation must not go through the

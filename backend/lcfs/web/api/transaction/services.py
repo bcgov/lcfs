@@ -288,26 +288,10 @@ class TransactionsService:
                     category,
                     masked_status,
                     # A calendar date, so no Pacific conversion
-                    (
-                        transfer.agreement_date.strftime("%Y-%m-%d")
-                        if transfer and transfer.agreement_date
-                        else None
-                    ),
-                    (
-                        result.transaction_effective_date.strftime("%Y-%m-%d")
-                        if result.transaction_effective_date
-                        else None
-                    ),
-                    (
-                        self._to_pacific(result.recorded_date).strftime("%Y-%m-%d")
-                        if result.recorded_date
-                        else None
-                    ),
-                    (
-                        self._to_pacific(result.approved_date).strftime("%Y-%m-%d")
-                        if result.approved_date
-                        else None
-                    ),
+                    self._export_date(transfer.agreement_date if transfer else None),
+                    self._export_date(result.transaction_effective_date),
+                    self._export_date(result.recorded_date),
+                    self._export_date(result.approved_date),
                     result.from_org_comment,
                     result.to_org_comment,
                     result.government_comment,
