@@ -10,10 +10,10 @@ import Accordion from '@mui/material/Accordion'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import ExpandMore from '@mui/icons-material/ExpandMore'
-import ReactECharts from 'echarts-for-react'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import { BCResponsiveEChart } from '@/components/charts/BCResponsiveEchart'
 import {
   BC_CHART_AXIS_LABEL,
   BC_CHART_CATEGORY_AXIS_LABEL,
@@ -50,6 +50,21 @@ const CHART_PALETTE = BC_CHART_PALETTE
 const CHART_GRID = BC_CHART_GRID
 const CHART_AXIS_LABEL = BC_CHART_AXIS_LABEL
 const CHART_CATEGORY_AXIS_LABEL = BC_CHART_CATEGORY_AXIS_LABEL
+const srOnlySx = {
+  border: 0,
+  clip: 'rect(0 0 0 0)',
+  clipPath: 'inset(50%)',
+  height: 1,
+  left: 0,
+  m: -1,
+  maxHeight: 1,
+  maxWidth: 1,
+  overflow: 'hidden',
+  p: 0,
+  position: 'absolute',
+  top: 0,
+  width: 1
+}
 
 const getStoredYearRange = () => {
   if (typeof window === 'undefined') {
@@ -162,7 +177,8 @@ const formatDisplayDate = (value) => {
   return new Intl.DateTimeFormat('en-CA', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
+    timeZone: 'America/Vancouver'
   }).format(date)
 }
 
@@ -172,6 +188,72 @@ const formatCompactAxisNumber = (value) => {
   }
   return abbreviateNumber(value)
 }
+
+const formatAccessibleChartValue = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return 'No value'
+  }
+  return formatPlainNumber(value, 2)
+}
+
+const getSeriesChartSummaryRows = (chartData) =>
+  chartData.labels.map((label, index) => ({
+    label,
+    values: chartData.series.map((series) => ({
+      key: series.name,
+      value: formatAccessibleChartValue(series.data[index])
+    }))
+  }))
+
+const getSingleSeriesChartSummaryRows = (labels, values, valueLabel) =>
+  labels.map((label, index) => ({
+    label,
+    values: [
+      {
+        key: valueLabel,
+        value: formatAccessibleChartValue(values[index])
+      }
+    ]
+  }))
+
+const getChartAriaLabel = (title, rows) => {
+  const sampleRows = rows.slice(0, 4).map((row) => {
+    const values = row.values
+      .map((item) => `${item.key}: ${item.value}`)
+      .join(', ')
+    return `${row.label}. ${values}.`
+  })
+  return `${title}. ${sampleRows.join(' ')}`
+}
+
+const AccessibleChartSummary = ({ title, ariaLabel, rows, id }) => (
+  <BCBox id={id} sx={srOnlySx}>
+    <BCTypography component="p">{ariaLabel}</BCTypography>
+    <table>
+      <caption>{title}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Label</th>
+          {rows[0]?.values.map((item) => (
+            <th key={item.key} scope="col">
+              {item.key}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.label}>
+            <th scope="row">{row.label}</th>
+            {row.values.map((item) => (
+              <td key={`${row.label}-${item.key}`}>{item.value}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </BCBox>
+)
 
 const getComparisonColor = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
@@ -279,40 +361,58 @@ const SupplyMetricCard = ({ title, value, period, comparisons = [] }) => (
   </Card>
 )
 
-const ChartPanel = ({ title, subtitle, description, option, height = 340 }) => (
-  <Card
-    elevation={2}
-    sx={{
-      height: '100%',
-      overflow: 'hidden',
-      minWidth: 0
-    }}
-  >
-    <CardContent sx={{ minWidth: 0, overflow: 'hidden' }}>
-      <BCTypography variant="subtitle1" sx={{ mb: subtitle ? 0.5 : 2 }}>
-        {title}
-      </BCTypography>
-      {subtitle && (
-        <BCTypography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {subtitle}
+const ChartPanel = ({
+  title,
+  subtitle,
+  description,
+  option,
+  height = 340,
+  summaryRows = []
+}) => {
+  const summaryId = React.useId()
+  const ariaLabel = getChartAriaLabel(title, summaryRows)
+
+  return (
+    <Card
+      elevation={2}
+      sx={{
+        height: '100%',
+        overflow: 'hidden',
+        minWidth: 0
+      }}
+    >
+      <CardContent sx={{ minWidth: 0, overflow: 'hidden' }}>
+        <BCTypography variant="subtitle1" sx={{ mb: subtitle ? 0.5 : 2 }}>
+          {title}
         </BCTypography>
-      )}
-      {description && (
-        <BCTypography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {description}
-        </BCTypography>
-      )}
-      <BCBox sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
-        <ReactECharts
-          option={option}
-          notMerge
-          lazyUpdate
-          style={{ height, width: '100%', minWidth: 0 }}
-        />
-      </BCBox>
-    </CardContent>
-  </Card>
-)
+        {subtitle && (
+          <BCTypography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {subtitle}
+          </BCTypography>
+        )}
+        {description && (
+          <BCTypography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {description}
+          </BCTypography>
+        )}
+        <BCBox sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
+          <AccessibleChartSummary
+            id={summaryId}
+            title={title}
+            ariaLabel={ariaLabel}
+            rows={summaryRows}
+          />
+          <BCResponsiveEChart
+            option={option}
+            height={height}
+            ariaLabel={ariaLabel}
+            ariaDescribedBy={summaryId}
+          />
+        </BCBox>
+      </CardContent>
+    </Card>
+  )
+}
 
 export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   const { t } = useTranslation(['org'])
@@ -749,6 +849,28 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     }
   }, [analytics.topFuelCodes])
 
+  const complianceUnitCreditDebitSummaryRows = useMemo(
+    () => getSeriesChartSummaryRows(complianceUnitCreditDebitTrendData),
+    [complianceUnitCreditDebitTrendData]
+  )
+  const fuelTypeVolumeTrendSummaryRows = useMemo(
+    () => getSeriesChartSummaryRows(fuelTypeVolumeTrendData),
+    [fuelTypeVolumeTrendData]
+  )
+  const renewableSupplyVolumeChangeSummaryRows = useMemo(
+    () => getSeriesChartSummaryRows(renewableSupplyVolumeChangeData),
+    [renewableSupplyVolumeChangeData]
+  )
+  const topFuelCodesSummaryRows = useMemo(
+    () =>
+      getSingleSeriesChartSummaryRows(
+        topFuelCodesChartData.labels,
+        topFuelCodesChartData.values,
+        t('org:supplyHistory.analytics.quantity')
+      ),
+    [topFuelCodesChartData, t]
+  )
+
   const showComplianceUnitCreditDebitChart =
     complianceUnitCreditDebitTrendData.labels.length > 1 &&
     chartSeriesHasData(complianceUnitCreditDebitTrendData.series)
@@ -1116,6 +1238,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                     title={t('org:supplyHistory.analytics.netCreditsDebitsYoy')}
                     option={complianceUnitCreditDebitTrendOption}
                     height={320}
+                    summaryRows={complianceUnitCreditDebitSummaryRows}
                   />
                 </Grid>
               )}
@@ -1126,6 +1249,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                     title={t('org:supplyHistory.analytics.topFuelCodes')}
                     option={topFuelCodesChartOption}
                     height={360}
+                    summaryRows={topFuelCodesSummaryRows}
                   />
                 </Grid>
               )}
@@ -1139,6 +1263,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                     )}
                     option={fuelTypeVolumeTrendOption}
                     height={380}
+                    summaryRows={fuelTypeVolumeTrendSummaryRows}
                   />
                 </Grid>
               )}
@@ -1154,6 +1279,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                     )}
                     option={renewableSupplyVolumeChangeOption}
                     height={360}
+                    summaryRows={renewableSupplyVolumeChangeSummaryRows}
                   />
                 </Grid>
               )}

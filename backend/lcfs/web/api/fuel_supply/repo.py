@@ -1,7 +1,7 @@
 import structlog
 from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, delete, func, cast, String
+from sqlalchemy import and_, or_, select, delete, func, cast, String, Date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, contains_eager, joinedload
 from typing import List, Optional, Sequence, Any
@@ -108,7 +108,7 @@ def _get_renewable_liquid_fuel_group(fuel_supply):
         return None
 
     fuel_type = getattr(fuel_supply, "fuel_type", None)
-    if not _is_litres_unit(getattr(fuel_type, "units", None)):
+    if not _is_litres_unit(getattr(fuel_supply, "units", None)):
         return None
 
     if bool(getattr(fuel_type, "renewable", False)):
@@ -124,12 +124,27 @@ def _get_renewable_liquid_fuel_category_label(fuel_supply):
         return None
 
     fuel_type = getattr(fuel_supply, "fuel_type", None)
-    if not _is_litres_unit(getattr(fuel_type, "units", None)):
+    if not _is_litres_unit(getattr(fuel_supply, "units", None)):
         return None
 
     if bool(getattr(fuel_type, "renewable", False)):
         return RENEWABLE_LIQUID_FUEL_CATEGORY_LABELS[fuel_category]
     return f"Non-renewable {fuel_category.lower()}"
+
+
+def _vancouver_date_field(field):
+    return cast(func.timezone("America/Vancouver", field), Date)
+
+
+def _date_filter_values(filter_item):
+    values = []
+    date_from = getattr(filter_item, "date_from", None)
+    date_to = getattr(filter_item, "date_to", None)
+    if date_from:
+        values.append(str(date_from)[:10])
+    if date_to:
+        values.append(str(date_to)[:10])
+    return values
 
 
 def _scalar_reference_options(fuel_category_loader, fuel_type_loader):
@@ -873,8 +888,9 @@ class FuelSupplyRepository:
                 field = camel_to_snake(getattr(filter_item, "field", "") or "")
                 filter_value = getattr(filter_item, "filter", None)
                 filter_values = _get_filter_values(filter_item)
+                date_values = _date_filter_values(filter_item)
 
-                if not filter_value and not filter_values:
+                if not filter_value and not filter_values and not date_values:
                     continue
 
                 if field == "compliance_period":
@@ -905,6 +921,24 @@ class FuelSupplyRepository:
                     query = query.where(
                         ProvisionOfTheAct.name.ilike(f"%{filter_value}%")
                     )
+                elif field == "report_submission_date":
+                    submission_date = _vancouver_date_field(ComplianceReport.update_date)
+                    filter_type = getattr(filter_item, "type", None)
+                    if filter_type == "inRange" and len(date_values) == 2:
+                        query = query.where(
+                            and_(
+                                submission_date >= func.date(date_values[0]),
+                                submission_date <= func.date(date_values[1]),
+                            )
+                        )
+                    elif date_values:
+                        date_value = func.date(date_values[0])
+                        if filter_type == "lessThan":
+                            query = query.where(submission_date < date_value)
+                        elif filter_type == "greaterThan":
+                            query = query.where(submission_date > date_value)
+                        else:
+                            query = query.where(submission_date == date_value)
                 elif field == "fuel_code":
                     # FuelCode.fuel_code is a Python property (prefix + suffix),
                     # not a column, so it can't be used in SQL. Join the prefix

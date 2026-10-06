@@ -18,12 +18,14 @@ import Tooltip from '@mui/material/Tooltip'
 import WarningIcon from '@mui/icons-material/Warning'
 import { Link, useLocation } from 'react-router-dom'
 
+const VANCOUVER_TIME_ZONE = 'America/Vancouver'
+
 const parseDateOnly = (value: string | Date | null | undefined): Date | null => {
   if (!value) return null
   if (value instanceof Date) return value
 
   const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (dateOnly) {
+  if (dateOnly && !/[T ]\d{2}:\d{2}/.test(String(value))) {
     const [, year, month, day] = dateOnly
     return new Date(Number(year), Number(month) - 1, Number(day))
   }
@@ -35,17 +37,19 @@ const parseDateOnly = (value: string | Date | null | undefined): Date | null => 
 const formatDateOnly = (value: string | Date | null | undefined): string => {
   if (!value) return ''
   const dateOnly = String(value).match(/^(\d{4}-\d{2}-\d{2})/)
-  if (dateOnly) return dateOnly[1]
+  if (dateOnly && !/[T ]\d{2}:\d{2}/.test(String(value))) return dateOnly[1]
 
   const date = parseDateOnly(value)
-  return date ? date.toLocaleDateString('en-CA') : String(value)
+  return date
+    ? date.toLocaleDateString('en-CA', { timeZone: VANCOUVER_TIME_ZONE })
+    : String(value)
 }
 
 const dateFilterComparator = (
   filterLocalDateAtMidnight: Date,
   cellValue: string | Date | null | undefined
 ): number => {
-  const cellDate = parseDateOnly(cellValue)
+  const cellDate = parseDateOnly(formatDateOnly(cellValue))
   if (!cellDate) return -1
   const normalizedCellDate = new Date(
     cellDate.getFullYear(),

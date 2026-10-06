@@ -2,12 +2,14 @@ import i18n from '@/i18n'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { formatNumberWithCommas } from '@/utils/formatters'
 
+const VANCOUVER_TIME_ZONE = 'America/Vancouver'
+
 const parseDateOnly = (value) => {
   if (!value) return null
   if (value instanceof Date) return value
 
   const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (dateOnly) {
+  if (dateOnly && !/[T ]\d{2}:\d{2}/.test(String(value))) {
     const [, year, month, day] = dateOnly
     return new Date(Number(year), Number(month) - 1, Number(day))
   }
@@ -19,14 +21,16 @@ const parseDateOnly = (value) => {
 const formatDateOnly = (value) => {
   if (!value) return ''
   const dateOnly = String(value).match(/^(\d{4}-\d{2}-\d{2})/)
-  if (dateOnly) return dateOnly[1]
+  if (dateOnly && !/[T ]\d{2}:\d{2}/.test(String(value))) return dateOnly[1]
 
   const date = parseDateOnly(value)
-  return date ? date.toLocaleDateString('en-CA') : String(value)
+  return date
+    ? date.toLocaleDateString('en-CA', { timeZone: VANCOUVER_TIME_ZONE })
+    : String(value)
 }
 
 const dateFilterComparator = (filterLocalDateAtMidnight, cellValue) => {
-  const cellDate = parseDateOnly(cellValue)
+  const cellDate = parseDateOnly(formatDateOnly(cellValue))
   if (!cellDate) return -1
   const normalizedCellDate = new Date(
     cellDate.getFullYear(),

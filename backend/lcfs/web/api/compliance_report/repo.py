@@ -10,6 +10,7 @@ from sqlalchemy import (
     Integer,
     String,
     cast,
+    Date,
     or_,
     delete,
     exists,
@@ -805,7 +806,13 @@ class ComplianceReportRepository:
         elif filter_model.field in ("compliance_period", "compliancePeriod"):
             field = get_field_for_filter(ComplianceReportListView, "compliance_period")
         elif filter_model.field in ("updateDate", "update_date"):
-            field = get_field_for_filter(ComplianceReportListView, "update_date")
+            field = cast(
+                func.timezone(
+                    "America/Vancouver",
+                    get_field_for_filter(ComplianceReportListView, "update_date"),
+                ),
+                Date,
+            )
         else:
             logger.info(
                 f"Unknown filter field: {filter_model.field}, trying to get field from model"

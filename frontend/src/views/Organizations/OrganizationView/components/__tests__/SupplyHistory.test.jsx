@@ -16,6 +16,17 @@ vi.mock('echarts-for-react', () => ({
   default: () => <div data-test="echarts" />
 }))
 
+vi.mock('@/components/charts/BCResponsiveEchart', () => ({
+  BCResponsiveEChart: ({ ariaLabel, ariaDescribedBy }) => (
+    <div
+      role="img"
+      aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
+      data-test="responsive-echarts"
+    />
+  )
+}))
+
 vi.mock('@/hooks/useFuelSupply', () => ({
   useOrganizationFuelSupply: (...args) => mockUseOrganizationFuelSupply(...args)
 }))
@@ -120,13 +131,13 @@ describe('SupplyHistory', () => {
     expect(submissionDateCol.floatingFilterComponent).toBeDefined()
     expect(
       submissionDateCol.valueFormatter({
-        value: '2025-03-31T23:59:59+00:00'
+        value: '2025-04-01T03:00:00+00:00'
       })
     ).toBe('2025-03-31')
     expect(
       submissionDateCol.filterParams.comparator(
         new Date(2025, 2, 31),
-        '2025-03-31T23:59:59+00:00'
+        '2025-04-01T03:00:00+00:00'
       )
     ).toBe(0)
   })
