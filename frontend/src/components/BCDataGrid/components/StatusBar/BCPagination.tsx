@@ -43,7 +43,7 @@ export const BCPagination = ({
       onRowsPerPageChange={handleChangeRowsPerPage}
       labelRowsPerPage={'Page Size:'}
       labelDisplayedRows={({ from, to, count }) => (
-        <span role="status" aria-live="polite" aria-atomic="true">
+        <span role="status" aria-live="polite" aria-atomic="true" tabIndex={0}>
           {`${from} to ${to} of ${count}`}
         </span>
       )}

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { BCPagination } from '../BCPagination'
 
 vi.mock('../BCPaginationActions', () => ({
@@ -21,6 +22,26 @@ describe('BCPagination accessibility', () => {
     expect(
       screen.getByRole('navigation', { name: 'pagination for BC DataGrid' })
     ).toBeInTheDocument()
+  })
+
+  it('includes the range summary in keyboard focus order', async () => {
+    const user = userEvent.setup()
+    render(
+      <BCPagination
+        total={13}
+        page={1}
+        handleChangePage={vi.fn()}
+        size={10}
+        handleChangeRowsPerPage={vi.fn()}
+      />
+    )
+
+    await user.tab()
+    expect(screen.getByRole('combobox', { name: 'Page Size:' })).toHaveFocus()
+
+    await user.tab()
+    expect(screen.getByRole('status')).toHaveFocus()
+    expect(screen.getByRole('status')).toHaveTextContent('1 to 10 of 13')
   })
 
   it('exposes the result range as one atomic, polite announcement and updates it', () => {
