@@ -503,6 +503,42 @@ describe('CreditCalculator', () => {
         ).toBeInTheDocument()
       })
     })
+
+    it('displays Hydrogen energy density per kilogram', async () => {
+      vi.mocked(useGetFuelTypeOptions).mockReturnValue({
+        data: {
+          ...mockFuelOptions,
+          data: {
+            ...mockFuelOptions.data,
+            unit: 'kg',
+            energyDensity: { unit: { name: 'MJ/kg' } }
+          }
+        }
+      })
+      vi.mocked(useCalculateComplianceUnits).mockReturnValue({
+        data: {
+          data: {
+            complianceUnits: 1500,
+            tci: 85,
+            eer: 1.2,
+            rci: 75,
+            uci: 10,
+            energyContent: 14176000,
+            energyDensity: 141.76
+          }
+        }
+      })
+
+      render(
+        <TestWrapper>
+          <CreditCalculator />
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('141.76 MJ/kg')).toBeInTheDocument()
+      })
+    })
   })
 
   describe('Conditional Rendering', () => {

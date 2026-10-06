@@ -82,6 +82,18 @@ describe('LookupTable schema', () => {
     )
   })
 
+  it('formats Hydrogen energy density in kilograms', () => {
+    const unitsColumn = lookupTableColumnDefs.find(
+      (col) => col.field === 'units'
+    )
+
+    expect(
+      unitsColumn.valueGetter({
+        data: { energyDensityUnit: 'MJ/kg' }
+      })
+    ).toBe('kg')
+  })
+
   it('returns N/A for missing energy density', () => {
     const energyContentColumn = lookupTableColumnDefs.find(
       (col) => col.field === 'energy_content'
