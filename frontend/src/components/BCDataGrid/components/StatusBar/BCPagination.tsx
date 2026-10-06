@@ -43,12 +43,16 @@ export const BCPagination = ({
       rowsPerPage={size}
       onRowsPerPageChange={handleChangeRowsPerPage}
       labelRowsPerPage={'Page Size:'}
-      labelDisplayedRows={({ from, to, count }) => (
-        <>
-          <b>{from}</b>&nbsp;to&nbsp;<b>{to}</b>&nbsp;of&nbsp;
-          <b>{count}</b>
-        </>
-      )}
+      labelDisplayedRows={({ from, to, count }) => {
+        const totalLabel = count === -1 ? `more than ${to}` : count
+        const resultLabel = totalLabel === 1 ? 'result' : 'results'
+
+        return (
+          <span role="status" aria-live="polite" aria-atomic="true">
+            {`Showing ${from} to ${to} of ${totalLabel} ${resultLabel}.`}
+          </span>
+        )
+      }}
       showFirstButton
       showLastButton
       ActionsComponent={(subProps) => (

@@ -39,7 +39,7 @@ const Harness = ({ onApply }) => {
       filters={filters}
       setFilter={setFilter}
       clearFilters={clearFilters}
-      categories={['Compliance notes']}
+      categories={['Compliance notes', 'Organization changes']}
       years={[2025, 2024]}
     />
   )
@@ -79,5 +79,84 @@ describe('CommentLogFilters — Clear all filters', () => {
     // Input is empty and the search was NOT re-applied to the stale "test".
     expect(input.value).toBe('')
     expect(onApply).not.toHaveBeenLastCalledWith('search', 'test')
+  })
+
+  test('labels the category combobox and exposes keyboard selection state', ({
+    render,
+    theme
+  }) => {
+    const onApply = vi.fn()
+    render(<Harness onApply={onApply} />, [theme])
+
+    const category = screen.getByRole('combobox', {
+      name: /internalComment:log\.filters\.categoryLabel/
+    })
+    expect(category).toHaveAttribute('aria-expanded', 'false')
+    act(() => category.focus())
+    expect(category).toHaveFocus()
+
+    // MUI keeps DOM focus on the combobox and moves its active descendant
+    // through the listbox as the user presses the arrow keys.
+    fireEvent.keyDown(category, { key: 'ArrowDown' })
+    expect(category).toHaveAttribute('aria-expanded', 'true')
+    const listbox = screen.getByRole('listbox', {
+      name: /internalComment:log\.filters\.categoryLabel/
+    })
+    expect(category).toHaveAttribute('aria-controls', listbox.id)
+    const options = screen.getAllByRole('option')
+    expect(options.map((option) => option.textContent)).toEqual([
+      'Compliance notes',
+      'Organization changes'
+    ])
+
+    fireEvent.keyDown(category, { key: 'ArrowDown' })
+    const activeOptionId = category.getAttribute('aria-activedescendant')
+    expect(options[0]).toHaveAttribute('id', activeOptionId)
+
+    fireEvent.keyDown(category, { key: 'ArrowDown' })
+    const secondActiveOptionId = category.getAttribute('aria-activedescendant')
+    expect(options[1]).toHaveAttribute('id', secondActiveOptionId)
+    expect(options[1]).toHaveAttribute('aria-selected', 'false')
+    expect(category).toHaveFocus()
+
+    fireEvent.keyDown(category, { key: 'Enter' })
+    expect(onApply).toHaveBeenLastCalledWith('category', 'Organization changes')
+    expect(category).toHaveValue('Organization changes')
+    expect(category).toHaveAttribute('aria-expanded', 'false')
+    expect(category).toHaveFocus()
+
+    fireEvent.keyDown(category, { key: 'ArrowDown' })
+    expect(
+      screen.getByRole('option', { name: 'Organization changes' })
+    ).toHaveAttribute('aria-selected', 'true')
+
+    fireEvent.keyDown(category, { key: 'Escape' })
+    expect(category).toHaveAttribute('aria-expanded', 'false')
+    expect(category).toHaveValue('Organization changes')
+    expect(category).toHaveFocus()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  test('gives each visible filter label to its control', ({
+    render,
+    theme
+  }) => {
+    render(<Harness onApply={vi.fn()} />, [theme])
+
+    expect(
+      screen.getByRole('textbox', {
+        name: /internalComment:log\.filters\.searchLabel/
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('combobox', {
+        name: /internalComment:log\.filters\.categoryLabel/
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('combobox', {
+        name: /internalComment:log\.filters\.yearLabel/
+      })
+    ).toBeInTheDocument()
   })
 })
