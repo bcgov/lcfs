@@ -8,9 +8,7 @@ Before you begin, ensure you have the following installed on your system:
 
 *   **Git**: For cloning the repository and version control.
 *   **Docker and Docker Compose**: For running the application services in containers. ([Install Docker](https://docs.docker.com/get-docker/), Docker Compose is typically included).
-*   **Node.js and npm**: For frontend development.
-    *   It's recommended to use a Node version manager like `nvm` to easily switch Node versions.
-    *   Check `frontend/.nvmrc` (if it exists) or `frontend/package.json` (`engines` field) for the specific Node.js version recommended for the project. If not specified, a recent LTS version is generally a good choice.
+*   **Node.js 24.21.0 and npm**: Required for frontend development. Use `frontend/.nvmrc` with a Node version manager such as `nvm`; `frontend/package.json` enforces Node.js 24 or newer.
     *   npm (Node Package Manager) is included with Node.js.
 *   **Python and Poetry**: For backend development.
     *   Python version is specified in `backend/.python-version` (e.g., 3.9+).
@@ -28,17 +26,57 @@ cd lcfs
 
 ## 3. Running the Full Application (Docker Compose)
 
-The simplest way to get all core services (frontend, backend, database, Redis, RabbitMQ, MinIO) running together is using the main Docker Compose file at the project root.
+The main Docker Compose file starts the frontend, backend, PostgreSQL, Redis, and MinIO services. Its default host ports are:
+
+| Service | Published port | Override variable |
+| --- | ---: | --- |
+| PostgreSQL | 5432 | `LCFS_DB_PUBLISHED_PORT` |
+| Redis | 6379 | `LCFS_REDIS_PUBLISHED_PORT` |
+| MinIO API | 9000 | `LCFS_MINIO_PUBLISHED_PORT` |
+| MinIO console | 9001 | `LCFS_MINIO_CONSOLE_PUBLISHED_PORT` |
+| Backend API | 8000 | `LCFS_BACKEND_PUBLISHED_PORT` |
+| Backend debugger | 5678 | `LCFS_BACKEND_DEBUG_PUBLISHED_PORT` |
+| Frontend | 3000 | `LCFS_FRONTEND_PUBLISHED_PORT` |
+
+Start the default stack and check the API and frontend:
 
 ```bash
-docker-compose up --build
+docker compose up --build -d
+curl http://localhost:8000/api/health
+open http://localhost:3000
 ```
 
-*   The `--build` flag ensures that Docker images are rebuilt if there are changes to Dockerfiles or related build contexts.
-*   Once started:
-    *   Frontend will be accessible at: `http://localhost:3000`
-    *   Backend API documentation (Swagger UI) will be accessible at: `http://localhost:8000/docs` (Note: original wiki said `/3000/docs`, but FastAPI typically serves on its own port).
-    *   Backend API documentation (ReDoc) will also be available at: `http://localhost:8000/redoc`.
+Follow backend logs from a separate terminal with `docker compose logs -f backend`.
+
+Stop the default stack with:
+
+```bash
+docker compose down
+```
+
+To run an isolated stack, set alternate published ports in a dedicated terminal. Compose scopes its containers, volumes, and network to the supplied project name:
+
+```bash
+export LCFS_DB_PUBLISHED_PORT=15432
+export LCFS_REDIS_PUBLISHED_PORT=16379
+export LCFS_MINIO_PUBLISHED_PORT=19000
+export LCFS_MINIO_CONSOLE_PUBLISHED_PORT=19001
+export LCFS_BACKEND_PUBLISHED_PORT=18000
+export LCFS_BACKEND_DEBUG_PUBLISHED_PORT=15678
+export LCFS_FRONTEND_PUBLISHED_PORT=13000
+
+docker compose -p lcfs-benchmark-1 up --build -d
+curl http://localhost:18000/api/health
+open http://localhost:13000
+```
+
+Follow isolated backend logs with `docker compose -p lcfs-benchmark-1 logs -f backend`.
+
+Stop only that isolated stack with:
+
+```bash
+docker compose -p lcfs-benchmark-1 down
+```
 
 ## 4. Setting Up and Running Frontend Separately
 
@@ -114,4 +152,4 @@ The ETL subsystem (Apache NiFi and related services) has its own Docker Compose 
 *   **Cypress**: E2E tests require `frontend/cypress.env.json` for test user credentials and other parameters. Create this by copying `frontend/cypress.env.example.json` and filling in the necessary values. **Do not commit `cypress.env.json`.**
 
 ---
-*This setup guide should provide a solid foundation for local development. Refer to specific README files in subdirectories (`backend/README.md`, `frontend/README.md`, `etl/readme.md`) for more detailed information on each component.* 
+*This setup guide should provide a solid foundation for local development. Refer to specific README files in subdirectories (`backend/README.md`, `frontend/README.md`, `etl/readme.md`) for more detailed information on each component.*

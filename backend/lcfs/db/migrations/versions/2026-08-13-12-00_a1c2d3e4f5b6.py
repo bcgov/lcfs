@@ -1,7 +1,7 @@
 """Add display_name to document for editable file display names.
 
 Revision ID: a1c2d3e4f5b6
-Revises: f9a0b1c2d3e5
+Revises: b6c7d8e9f0a1
 Create Date: 2026-08-13 12:00:00.000000
 """
 

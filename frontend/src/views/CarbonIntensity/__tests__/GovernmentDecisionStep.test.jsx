@@ -1,6 +1,7 @@
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -23,6 +24,7 @@ const mockRecommendToDirector = vi.fn().mockResolvedValue(null)
 const mockRequestPathwayChanges = vi.fn().mockResolvedValue(null)
 const mockRequestDocumentation = vi.fn().mockResolvedValue(null)
 const mockGenerateFuelCodes = vi.fn().mockResolvedValue(null)
+const mockSaveRiskAssessmentDraft = vi.fn().mockResolvedValue(null)
 
 vi.mock('@/hooks/useCIApplication', () => ({
   useCompleteCIApplicationVerification1: vi.fn(() => ({
@@ -54,7 +56,7 @@ vi.mock('@/hooks/useCIApplication', () => ({
     isPending: false
   })),
   useUpdateCIApplicationRiskAssessment: vi.fn(() => ({
-    mutate: vi.fn(),
+    mutateAsync: mockSaveRiskAssessmentDraft,
     isPending: false
   }))
 }))
@@ -88,13 +90,23 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 import { GovernmentDecisionStep } from '@/views/CarbonIntensity/components/GovernmentDecisionStep'
 
 const baseCi = { ciApplicationId: 10, status: { status: 'Submitted' } }
+const renderAnalystDecision = (ciApplication = baseCi) => {
+  mockUserRoles = [{ name: roles.analyst }]
+  return render(
+    <GovernmentDecisionStep ciApplication={ciApplication} isGovernment />,
+    { wrapper }
+  )
+}
 
 describe('GovernmentDecisionStep', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUserRoles = [{ name: roles.ci_applicant }]
   })
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    vi.useRealTimers()
+  })
 
   it('renders the shared Comments widget targeting this CI application', () => {
     render(<GovernmentDecisionStep ciApplication={baseCi} />, { wrapper })
@@ -185,6 +197,49 @@ describe('GovernmentDecisionStep', () => {
 
     fireEvent.change(input, { target: { value: '12.5' } })
     expect(input).toHaveValue('999')
+  })
+
+  it('rehydrates the editable Verification 2 values after refresh', () => {
+    renderAnalystDecision({
+      ...baseCi,
+      preliminaryRiskAssessment: 'Medium',
+      priorityScore: 100,
+      verification1Date: '2026-05-19T12:00:00Z',
+      verification2RiskAssessment: 'High',
+      verification2PriorityScore: 200
+    })
+
+    expect(screen.getByTestId('ci-priority-score-input')).toHaveValue('200')
+    expect(screen.getByRole('radio', { name: 'High' })).toBeChecked()
+  })
+
+  it('auto-saves a changed assessment after the debounce', async () => {
+    vi.useFakeTimers()
+    renderAnalystDecision()
+
+    fireEvent.change(screen.getByTestId('ci-priority-score-input'), {
+      target: { value: '200' }
+    })
+    await act(async () => vi.advanceTimersByTimeAsync(600))
+
+    expect(mockSaveRiskAssessmentDraft).toHaveBeenCalledWith({
+      preliminaryRiskAssessment: 'Low',
+      priorityScore: 200
+    })
+  })
+
+  it('flushes a changed assessment when navigating away before the debounce', () => {
+    const { unmount } = renderAnalystDecision()
+
+    fireEvent.change(screen.getByTestId('ci-priority-score-input'), {
+      target: { value: '200' }
+    })
+    unmount()
+
+    expect(mockSaveRiskAssessmentDraft).toHaveBeenCalledWith({
+      preliminaryRiskAssessment: 'Low',
+      priorityScore: 200
+    })
   })
 
   it.each([
@@ -613,14 +668,14 @@ describe('GovernmentDecisionStep', () => {
       within(modal).getByText('carbonIntensity:step5.requestPathwayChanges')
     )
 
+    await waitFor(() =>
+      expect(mockRequestPathwayChanges).toHaveBeenCalledTimes(1)
+    )
     expect(screen.getByTestId('ci-request-pathway-changes-btn')).toBeDisabled()
     expect(
       screen.getByTestId('ci-request-documentation-btn')
     ).not.toBeDisabled()
     expect(onSupplierRequest).toHaveBeenCalledWith('pathwayChanges')
-    await waitFor(() =>
-      expect(mockRequestPathwayChanges).toHaveBeenCalledTimes(1)
-    )
     expect(mockRecordDecision).not.toHaveBeenCalled()
   })
 
@@ -747,6 +802,41 @@ describe('GovernmentDecisionStep', () => {
     )
     expect(onSupplierRequest).toHaveBeenCalledWith('documentation')
     expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
+  })
+
+  it('persists the latest assessment before requesting documentation', async () => {
+    let resolveSave
+    mockSaveRiskAssessmentDraft.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve
+        })
+    )
+    renderAnalystDecision()
+
+    fireEvent.change(screen.getByTestId('ci-priority-score-input'), {
+      target: { value: '200' }
+    })
+    fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
+    fireEvent.click(
+      within(screen.getByTestId('modal')).getByText(
+        'carbonIntensity:step5.requestDocumentation'
+      )
+    )
+
+    await waitFor(() =>
+      expect(mockSaveRiskAssessmentDraft).toHaveBeenCalledWith({
+        preliminaryRiskAssessment: 'Low',
+        priorityScore: 200
+      })
+    )
+    expect(mockRequestDocumentation).not.toHaveBeenCalled()
+
+    await act(async () => resolveSave(null))
+
+    await waitFor(() =>
+      expect(mockRequestDocumentation).toHaveBeenCalledTimes(1)
+    )
   })
 
   it('can render only the decision panel for the submitted application page layout', () => {

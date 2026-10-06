@@ -518,8 +518,38 @@ async def test_get_table_options_returns_lookup_data(service, repo, fuel_repo):
     ]
     assert set(result.units_of_measure) == {u.value for u in QuantityUnitsEnum}
     assert [ft.fuel_type for ft in result.fuel_types] == ["Biodiesel", "Electricity"]
+    assert result.field_options == {}
     fuel_repo.get_fuel_types.assert_awaited_once()
+    fuel_repo.get_fuel_code_field_options.assert_not_called()
     repo.get_fuel_types.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_search_fuel_code_field_options_uses_fuel_code_feedstock_columns(
+    service, fuel_repo
+):
+    fuel_repo.get_distinct_feedstocks.return_value = ["Canola", "Corn"]
+    fuel_repo.get_distinct_feedstock_locations.return_value = [
+        "Ontario",
+        "Saskatchewan",
+    ]
+
+    assert await service.search_fuel_code_field_options("feedstock", "Ca") == [
+        "Canola",
+        "Corn",
+    ]
+    assert await service.search_fuel_code_field_options(
+        "feedstockLocation", "Sa"
+    ) == ["Ontario", "Saskatchewan"]
+
+    fuel_repo.get_distinct_feedstocks.assert_awaited_once_with("Ca")
+    fuel_repo.get_distinct_feedstock_locations.assert_awaited_once_with("Sa")
+
+
+@pytest.mark.anyio
+async def test_search_fuel_code_field_options_rejects_unknown_field(service):
+    with pytest.raises(ValueError):
+        await service.search_fuel_code_field_options("pathwayFeedstockRegion", "Sa")
 
 
 @pytest.mark.anyio
@@ -2263,7 +2293,7 @@ async def test_request_documentation_enables_upload_for_workflow_roles(
 
 
 @pytest.mark.anyio
-async def test_request_documentation_clears_previous_government_review(
+async def test_request_documentation_resets_review_and_preserves_latest_assessment(
     service, repo, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
@@ -2284,8 +2314,8 @@ async def test_request_documentation_clears_previous_government_review(
 
     result = await service.request_documentation(ci, mock_user)
 
-    assert ci.preliminary_risk_assessment is None
-    assert ci.priority_score is None
+    assert ci.preliminary_risk_assessment == "Medium"
+    assert ci.priority_score == 426
     assert ci.verification_1_user_id is None
     assert ci.verification_1_date is None
     assert ci.verification_2_user_id is None
@@ -2430,7 +2460,7 @@ async def test_step5_decision_can_return_recommended_to_submitted(
 
 
 @pytest.mark.anyio
-async def test_request_pathway_changes_clears_previous_government_review(
+async def test_request_pathway_changes_resets_review_and_preserves_assessment(
     service, repo, notification_service, mock_user
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
@@ -2440,10 +2470,6 @@ async def test_request_pathway_changes_clears_previous_government_review(
     ci.priority_score = 511
     ci.verification_1_user_id = 22
     ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
-    ci.verification_2_user_id = 33
-    ci.verification_2_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
-    ci.verification_2_risk_assessment = "Medium"
-    ci.verification_2_priority_score = 426
     ci.recommendation_user_id = 44
     ci.recommendation_date = datetime(2026, 5, 21, tzinfo=timezone.utc)
     repo.update.side_effect = lambda obj: obj
@@ -2455,8 +2481,8 @@ async def test_request_pathway_changes_clears_previous_government_review(
     assert ci.status_id == 2
     assert ci.ci_application_status.status == "Submitted"
     assert ci.assigned_analyst_id == 12
-    assert ci.preliminary_risk_assessment is None
-    assert ci.priority_score is None
+    assert ci.preliminary_risk_assessment == "High"
+    assert ci.priority_score == 511
     assert ci.verification_1_user_id is None
     assert ci.verification_1_date is None
     assert ci.verification_2_user_id is None

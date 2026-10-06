@@ -45,6 +45,12 @@ export const CompanyOverviewComments = ({
   const editMutation = useEditOrganizationComment(organizationId)
 
   const comments = data?.comments ?? []
+  const overviewComment = comments.reduce((latest, comment) => {
+    if (!latest) return comment
+    const latestDate = latest.updateDate ?? latest.createDate ?? ''
+    const commentDate = comment.updateDate ?? comment.createDate ?? ''
+    return commentDate > latestDate ? comment : latest
+  }, null)
 
   const handleCreate = async (text) => {
     const body = (text ?? '').trim()
@@ -79,7 +85,7 @@ export const CompanyOverviewComments = ({
 
             {isLoading ? (
               <Loading />
-            ) : comments.length === 0 ? (
+            ) : !overviewComment ? (
               <Alert
                 severity="info"
                 icon={false}
@@ -88,9 +94,6 @@ export const CompanyOverviewComments = ({
                 {t('org:sections.companyOverview.empty')}
               </Alert>
             ) : (
-              // Same container structure as the org Comment Log so the shared
-              // CommentRow renders identically in both places (bordered white
-              // panel + semantic list).
               <BCBox
                 variant="bordered"
                 borderRadius="sm"
@@ -98,38 +101,39 @@ export const CompanyOverviewComments = ({
                 sx={{ p: 2, backgroundColor: '#ffffff' }}
               >
                 <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
-                  {comments.map((comment, index) => (
-                    <Box
-                      key={comment.internalCommentId}
-                      component="li"
-                      sx={{ listStyle: 'none' }}
-                    >
-                      <CommentRow
-                        comment={comment}
-                        index={index}
-                        showInternalBadge={isGovernmentUser}
-                        isGovernmentUser={isGovernmentUser}
-                        allowPublicVisibility={false}
-                        onEdit={handleEdit}
-                        isEditPending={editMutation.isPending}
-                      />
-                    </Box>
-                  ))}
+                  <Box
+                    key={overviewComment.internalCommentId}
+                    component="li"
+                    sx={{ listStyle: 'none' }}
+                  >
+                    <CommentRow
+                      comment={overviewComment}
+                      index={0}
+                      showInternalBadge={isGovernmentUser}
+                      isGovernmentUser={isGovernmentUser}
+                      allowPublicVisibility={false}
+                      useLatestAttribution
+                      onEdit={handleEdit}
+                      isEditPending={editMutation.isPending}
+                    />
+                  </Box>
                 </Box>
               </BCBox>
             )}
 
-            <BCBox sx={{ mt: 2 }} data-test="company-overview-add">
-              <CommentForm
-                title={t('org:sections.companyOverview.addTitle')}
-                commentText={commentText}
-                onCommentChange={setCommentText}
-                onSubmit={handleCreate}
-                isSubmitting={createMutation.isPending}
-                showVisibilityToggle={false}
-                visibility={VISIBILITY}
-              />
-            </BCBox>
+            {!overviewComment && (
+              <BCBox sx={{ mt: 2 }} data-test="company-overview-add">
+                <CommentForm
+                  title={t('org:sections.companyOverview.addTitle')}
+                  commentText={commentText}
+                  onCommentChange={setCommentText}
+                  onSubmit={handleCreate}
+                  isSubmitting={createMutation.isPending}
+                  showVisibilityToggle={false}
+                  visibility={VISIBILITY}
+                />
+              </BCBox>
+            )}
           </BCBox>
         }
       />

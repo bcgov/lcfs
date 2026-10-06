@@ -12,6 +12,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { useReportOpenings } from '@/hooks/useReportOpenings'
 import { useApiService } from '@/services/useApiService.js'
+import { buildPath, ROUTES } from '@/routes/routes.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
 import { OrganizationAddress } from '@/views/ComplianceReports/components/OrganizationAddress.jsx'
 import { Assignment, FileDownload } from '@mui/icons-material'
@@ -19,7 +20,7 @@ import { Stack } from '@mui/material'
 import Box from '@mui/material/Box'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 export const AssessmentCard = ({
   reportData,
@@ -197,7 +198,21 @@ export const AssessmentCard = ({
         <>
           <Stack direction="column" spacing={0.5}>
             <BCTypography variant="h6" color="primary">
-              {orgData?.name}{' '}
+              {isGovernmentUser && orgData?.organizationId ? (
+                <BCTypography
+                  component={Link}
+                  variant="h6"
+                  color="primary"
+                  to={buildPath(ROUTES.ORGANIZATIONS.VIEW, {
+                    orgID: orgData.organizationId
+                  })}
+                  sx={{ textDecoration: 'underline' }}
+                >
+                  {orgData?.name}
+                </BCTypography>
+              ) : (
+                orgData?.name
+              )}{' '}
               {snapshotData?.isEdited && t('report:addressEdited')}
             </BCTypography>
             {snapshotLoading && <Loading />}

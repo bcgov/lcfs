@@ -1,17 +1,20 @@
 import * as Yup from 'yup'
 
-// Dynamic schema function based on organization type
+// Dynamic schema function based on the selected organization types
 export const createValidationSchema = (
   orgTypes = [],
-  selectedOrgTypeId = null
+  selectedOrgTypeIds = []
 ) => {
-  // Find the selected organization type
-  const selectedOrgType = orgTypes.find(
-    (type) => type.organizationTypeId === parseInt(selectedOrgTypeId)
+  // Find the selected organization types
+  const selectedIds = (selectedOrgTypeIds || []).map((id) => parseInt(id))
+  const selectedOrgTypes = orgTypes.filter((type) =>
+    selectedIds.includes(type.organizationTypeId)
   )
 
-  // Check if the selected org type requires BCeID
-  const requiresBCeID = selectedOrgType?.isBceidUser ?? true // Default to true for safety
+  // BCeID rules apply when any selected org type is a BCeID type
+  const requiresBCeID =
+    selectedOrgTypes.length === 0 ||
+    selectedOrgTypes.some((type) => type.isBceidUser) // Default to true for safety
 
   return Yup.object({
     orgLegalName: Yup.string().required(
@@ -40,7 +43,10 @@ export const createValidationSchema = (
           )
           .max(30, 'Phone number is too long.')
           .nullable(),
-    orgType: Yup.string().required('Organization type is required.'),
+    orgTypeIds: Yup.array()
+      .of(Yup.string())
+      .min(1, 'At least one organization type is required.'),
+    availableRoles: Yup.array().of(Yup.string()),
     orgRegForTransfers: Yup.string().required(
       'Registered for transfers is required.'
     ),
@@ -80,4 +86,4 @@ export const createValidationSchema = (
   })
 }
 
-export const schemaValidation = createValidationSchema([], null)
+export const schemaValidation = createValidationSchema([], [])

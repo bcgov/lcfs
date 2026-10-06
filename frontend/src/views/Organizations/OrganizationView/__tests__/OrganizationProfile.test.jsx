@@ -154,7 +154,11 @@ vi.mock('@/constants/roles', () => ({
   roles: {
     government: 'government',
     supplier: 'supplier',
-    analyst: 'analyst'
+    analyst: 'analyst',
+    compliance_reporting: 'Compliance Reporting',
+    transfers: 'Transfer',
+    ci_applicant: 'CI Applicant',
+    ia_proponent: 'IA Proponent'
   }
 }))
 
@@ -785,7 +789,7 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Organization Type Rendering', () => {
-    it('shows organization type with BCeID suffix when applicable', () => {
+    it('shows the legacy single organization type without a BCeID suffix', () => {
       const orgDataWithType = {
         ...mockOrgData,
         orgType: { description: 'Fuel Supplier', isBceidUser: true }
@@ -802,13 +806,19 @@ describe('OrganizationProfile Component', () => {
         { wrapper }
       )
 
-      expect(screen.getByText('Fuel Supplier (BCeID user)')).toBeInTheDocument()
+      expect(screen.getByText('Fuel Supplier')).toBeInTheDocument()
+      expect(
+        screen.queryByText(/\(BCeID user\)/, { exact: false })
+      ).not.toBeInTheDocument()
     })
 
-    it('shows organization type with non-BCeID suffix when applicable', () => {
-      const orgDataWithType = {
+    it('lists all organization types for multi-type orgs (#4565)', () => {
+      const orgDataWithTypes = {
         ...mockOrgData,
-        orgType: { description: 'Government', isBceidUser: false }
+        orgTypes: [
+          { description: 'Fuel supplier', orgType: 'fuel_supplier' },
+          { description: 'Credit transfer', orgType: 'credit_trader' }
+        ]
       }
 
       render(
@@ -816,14 +826,38 @@ describe('OrganizationProfile Component', () => {
           hasRoles={mockHasRoles}
           isCurrentUserLoading={false}
           orgID={mockOrgID}
-          orgData={orgDataWithType}
+          orgData={orgDataWithTypes}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
         { wrapper }
       )
 
       expect(
-        screen.getByText('Government (non-BCeID user)')
+        screen.getByText('Fuel supplier, Credit transfer')
+      ).toBeInTheDocument()
+    })
+
+    it('shows the roles available to the organization (#4565)', () => {
+      const orgDataWithRoles = {
+        ...mockOrgData,
+        availableRoles: ['Transfer', 'Compliance Reporting']
+      }
+
+      render(
+        <OrganizationProfile
+          hasRoles={mockHasRoles}
+          isCurrentUserLoading={false}
+          orgID={mockOrgID}
+          orgData={orgDataWithRoles}
+          orgBalanceInfo={mockOrgBalanceInfo}
+        />,
+        { wrapper }
+      )
+
+      // Backend role names are rendered with the form's wording, in the
+      // form's order, rather than the raw enum values.
+      expect(
+        screen.getByText('Compliance reporting, Credit transfer')
       ).toBeInTheDocument()
     })
   })

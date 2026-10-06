@@ -12,6 +12,15 @@ vi.mock('@/hooks/useDocuments.js', () => ({
   useDownloadDocument: vi.fn()
 }))
 
+vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
+  __esModule: true,
+  default: ({ document }) => (
+    <button type="button" data-test="document-preview-button">
+      Preview document
+    </button>
+  )
+}))
+
 const mockUseDocuments = vi.mocked(useDocuments)
 const mockUseDownloadDocument = vi.mocked(useDownloadDocument)
 
@@ -26,7 +35,8 @@ vi.mock('react-i18next', () => ({
         'txn:effectiveDateLabel': 'Effective date',
         'txn:commentsTextLabel': 'Comments',
         'txn:approvedLabel': 'Approved',
-        'txn:approvedByDirector': 'by the director under the Low Carbon Fuels Act',
+        'txn:approvedByDirector':
+          'by the director under the Low Carbon Fuels Act',
         'txn:for': 'for',
         'txn:adminAdjustmentId': 'Administrative adjustment — ID:',
         'txn:initiativeAgreementId': 'Initiative agreement — ID:',
@@ -39,9 +49,9 @@ vi.mock('react-i18next', () => ({
 
 // Mock formatters
 vi.mock('@/utils/formatters', () => ({
-  dateFormatter: ({ value }) => value ? '2024-01-01' : '',
-  formatDateWithTimezoneAbbr: (value) => value ? 'January 1, 2024' : '',
-  numberFormatter: ({ value }) => value ? value.toLocaleString() : '0'
+  dateFormatter: ({ value }) => (value ? '2024-01-01' : ''),
+  formatDateWithTimezoneAbbr: (value) => (value ? 'January 1, 2024' : ''),
+  numberFormatter: ({ value }) => (value ? value.toLocaleString() : '0')
 }))
 
 // Test data fixtures
@@ -102,9 +112,13 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
-      expect(screen.getByText('Administrative adjustment for Test Organization')).toBeInTheDocument()
-      expect(screen.getByText(/Administrative adjustment — ID: AA123/)).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Administrative adjustment for Test Organization')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Administrative adjustment — ID: AA123/)
+      ).toBeInTheDocument()
     })
 
     it('renders initiative agreement type correctly', () => {
@@ -115,9 +129,13 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
-      expect(screen.getByText('Initiative agreement for Test Organization')).toBeInTheDocument()
-      expect(screen.getByText(/Initiative agreement — ID: IA456/)).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Initiative agreement for Test Organization')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Initiative agreement — ID: IA456/)
+      ).toBeInTheDocument()
     })
   })
 
@@ -127,7 +145,7 @@ describe('OrgTransactionDetails Component', () => {
         ...adminAdjustmentData,
         history: historyWithApproved
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -135,19 +153,23 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
-      expect(screen.getByText('Administrative adjustment for Test Organization')).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Administrative adjustment for Test Organization')
+      ).toBeInTheDocument()
     })
 
     it('uses initiativeAgreementStatus for initiative agreement type', () => {
       const dataWithHistory = {
         ...initiativeAgreementData,
-        history: [{
-          createDate: '2024-01-03T10:00:00Z',
-          initiativeAgreementStatus: { status: 'Approved' }
-        }]
+        history: [
+          {
+            createDate: '2024-01-03T10:00:00Z',
+            initiativeAgreementStatus: { status: 'Approved' }
+          }
+        ]
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType="INITIATIVE_AGREEMENT"
@@ -155,8 +177,10 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
-      expect(screen.getByText('Initiative agreement for Test Organization')).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Initiative agreement for Test Organization')
+      ).toBeInTheDocument()
     })
   })
 
@@ -166,7 +190,7 @@ describe('OrgTransactionDetails Component', () => {
         ...adminAdjustmentData,
         history: historyWithApproved
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -174,7 +198,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(screen.getByText(/January 1, 2024/)).toBeInTheDocument()
     })
 
@@ -183,7 +207,7 @@ describe('OrgTransactionDetails Component', () => {
         ...adminAdjustmentData,
         history: historyWithoutApproved
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -191,7 +215,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(screen.getByText(/January 1, 2024/)).toBeInTheDocument()
     })
 
@@ -200,7 +224,7 @@ describe('OrgTransactionDetails Component', () => {
         ...adminAdjustmentData,
         history: null
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -208,7 +232,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(screen.getByText(/January 1, 2024/)).toBeInTheDocument()
     })
 
@@ -220,7 +244,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(screen.getByText('2024-01-01')).toBeInTheDocument()
     })
 
@@ -229,7 +253,7 @@ describe('OrgTransactionDetails Component', () => {
         ...adminAdjustmentData,
         transactionEffectiveDate: null
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -237,7 +261,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(screen.getByText('2024-01-01')).toBeInTheDocument()
     })
   })
@@ -245,7 +269,7 @@ describe('OrgTransactionDetails Component', () => {
   describe('File Attachment Rendering', () => {
     it('renders file attachments when files exist', () => {
       mockUseDocuments.mockReturnValue({ data: mockFiles })
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -253,7 +277,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(screen.getByText('Attachments')).toBeInTheDocument()
       expect(screen.getByText('file1.pdf')).toBeInTheDocument()
       expect(screen.getByText('file2.doc')).toBeInTheDocument()
@@ -261,7 +285,7 @@ describe('OrgTransactionDetails Component', () => {
 
     it('does not render attachments when no files', () => {
       mockUseDocuments.mockReturnValue({ data: [] })
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -269,13 +293,13 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(screen.queryByText('Attachments')).not.toBeInTheDocument()
     })
 
     it('does not render attachments when data is null', () => {
       mockUseDocuments.mockReturnValue({ data: null })
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -283,7 +307,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(screen.queryByText('Attachments')).not.toBeInTheDocument()
     })
 
@@ -291,7 +315,7 @@ describe('OrgTransactionDetails Component', () => {
       const mockViewDocument = vi.fn()
       mockUseDownloadDocument.mockReturnValue(mockViewDocument)
       mockUseDocuments.mockReturnValue({ data: mockFiles })
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -299,7 +323,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       fireEvent.click(screen.getByText('file1.pdf'))
       expect(mockViewDocument).toHaveBeenCalledWith(1)
     })
@@ -311,7 +335,7 @@ describe('OrgTransactionDetails Component', () => {
         ...adminAdjustmentData,
         govComment: 'Test government comment'
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -319,7 +343,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(screen.getByText('Comments')).toBeInTheDocument()
       expect(screen.getByText('Test government comment')).toBeInTheDocument()
     })
@@ -332,7 +356,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(screen.queryByText('Comments')).not.toBeInTheDocument()
     })
   })
@@ -346,7 +370,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(mockUseDocuments).toHaveBeenCalledWith(ADMIN_ADJUSTMENT, 123)
     })
 
@@ -358,7 +382,7 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
+
       expect(mockUseDocuments).toHaveBeenCalledWith('INITIATIVE_AGREEMENT', 456)
     })
 
@@ -370,8 +394,11 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
-      expect(mockUseDownloadDocument).toHaveBeenCalledWith(ADMIN_ADJUSTMENT, 123)
+
+      expect(mockUseDownloadDocument).toHaveBeenCalledWith(
+        ADMIN_ADJUSTMENT,
+        123
+      )
     })
   })
 
@@ -384,13 +411,17 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
-      expect(screen.getByText('Administrative adjustment for Test Organization')).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Administrative adjustment for Test Organization')
+      ).toBeInTheDocument()
       expect(screen.getByText('Compliance units')).toBeInTheDocument()
       expect(screen.getByText('1,000')).toBeInTheDocument()
       expect(screen.getByText('Effective date')).toBeInTheDocument()
       expect(screen.getByText('Approved')).toBeInTheDocument()
-      expect(screen.getByText(/by the director under the Low Carbon Fuels Act/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/by the director under the Low Carbon Fuels Act/)
+      ).toBeInTheDocument()
     })
 
     it('renders with empty history array', () => {
@@ -398,7 +429,7 @@ describe('OrgTransactionDetails Component', () => {
         ...adminAdjustmentData,
         history: []
       }
-      
+
       render(
         <OrgTransactionDetails
           transactionType={ADMIN_ADJUSTMENT}
@@ -406,8 +437,10 @@ describe('OrgTransactionDetails Component', () => {
         />,
         { wrapper }
       )
-      
-      expect(screen.getByText('Administrative adjustment for Test Organization')).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Administrative adjustment for Test Organization')
+      ).toBeInTheDocument()
     })
   })
 })

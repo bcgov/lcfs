@@ -16,7 +16,8 @@ import {
   idirTextFields,
   bceidTextFields,
   defaultValues,
-  statusOptions
+  statusOptions,
+  allowedBceidRoleValues
 } from './_schema'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { BCFormRadio, BCFormText } from '@/components/BCForm'
@@ -43,8 +44,9 @@ import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
 import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
 import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
+import { UserImpactSummaryModal } from './components/UserImpactSummaryModal'
 import { roles } from '@/constants/roles'
-import { useOrganizationUser } from '@/hooks/useOrganization'
+import { useOrganization, useOrganizationUser } from '@/hooks/useOrganization'
 
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({
@@ -63,6 +65,9 @@ export const AddEditUser = ({
   const [orgName, setOrgName] = useState('')
   const [openConfirm, setOpenConfirm] = useState(false)
 
+  const [showImpactModal, setShowImpactModal] = useState(false)
+  const [pendingSave, setPendingSave] = useState(null)
+
   const {
     data,
     isLoading: isUserLoading,
@@ -79,12 +84,16 @@ export const AddEditUser = ({
     : // eslint-disable-next-line react-hooks/rules-of-hooks
       useUser(userID, { enabled: !!userID, retry: false })
 
-  // Determine if user is safe to remove
   const safeToDelete = data?.isSafeToRemove
   const isEditingGovernmentUser = data?.isGovernmentUser || false
   const isCurrentUserGovernment = currentUser?.isGovernmentUser || false
 
-  // User form hook and form validation
+  const roleOrgId = orgID || currentUser?.organization?.organizationId
+  const { data: orgData } = useOrganization(roleOrgId, {
+    enabled: !!roleOrgId && (!!orgID || hasRoles(roles.supplier))
+  })
+  const availableRoles = orgData?.availableRoles ?? null
+
   const form = useForm({
     resolver: yupResolver(userInfoSchema(userType)),
     mode: 'onChange',
@@ -103,7 +112,6 @@ export const AddEditUser = ({
   const readOnly = watch('readOnly')
   const bceidRoles = watch('bceidRoles')
 
-  // Success callback for user operations
   const onUserOperationSuccess = () => {
     if (hasRoles(roles.supplier)) {
       navigate(ROUTES.ORGANIZATION.ORG)
@@ -124,12 +132,10 @@ export const AddEditUser = ({
     }
   }
 
-  // Error callback for user operations
   const onUserOperationError = (error) => {
     console.error('Error saving user:', error)
   }
 
-  // Update user hook
   const {
     mutate: updateUser,
     isPending: isUpdating,
@@ -141,7 +147,6 @@ export const AddEditUser = ({
     organizationId: orgID || currentUser?.organization?.organizationId
   })
 
-  // Create user hook
   const {
     mutate: createUser,
     isPending: isCreating,
@@ -264,14 +269,18 @@ export const AddEditUser = ({
     }
   }, [isUserFetched, data, reset])
 
-  // Prepare payload and call mutate function
-  const onSubmit = (data) => {
-    // For IDIR users, use keycloakEmail for both email fields
-    // For BCeID users, use altEmail if provided
+  const allowedBceidRoles = useMemo(
+    () => allowedBceidRoleValues(availableRoles),
+    [availableRoles]
+  )
+
+  const buildPayload = (data) => {
     const isIDIRUser = !orgID && !hasRoles(roles.supplier)
-    const emailValue = isIDIRUser 
-      ? data.keycloakEmail 
-      : (data.altEmail === '' ? null : data.altEmail)
+    const emailValue = isIDIRUser
+      ? data.keycloakEmail
+      : data.altEmail === ''
+        ? null
+        : data.altEmail
 
     const payload = {
       userProfileId: userID,
@@ -289,11 +298,17 @@ export const AddEditUser = ({
         data.status === 'Active'
           ? [
               ...data.adminRole,
-              ...(data.readOnly === '' ? data.bceidRoles : []),
+              ...(data.readOnly === ''
+                ? (data.bceidRoles || []).filter(
+                    (role) =>
+                      allowedBceidRoles == null ||
+                      allowedBceidRoles.includes(role)
+                  )
+                : []),
               data.idirRole,
               data.iaRole,
               data.readOnly
-            ]
+            ].filter(Boolean)
           : []
     }
 
@@ -303,12 +318,29 @@ export const AddEditUser = ({
       payload.roles = [...payload.roles, roles.government.toLocaleLowerCase()]
     }
 
-    // Call appropriate mutation based on whether we're creating or updating
-    if (userID) {
-      updateUser({ userID, payload })
+    return payload
+  }
+
+  const onSubmit = (data) => {
+    const payload = buildPayload(data)
+    setPendingSave({ userID, payload })
+    setShowImpactModal(true)
+  }
+
+  const handleConfirmSave = () => {
+    setShowImpactModal(false)
+    if (!pendingSave) return
+    if (pendingSave.userID) {
+      updateUser({ userID: pendingSave.userID, payload: pendingSave.payload })
     } else {
-      createUser(payload)
+      createUser(pendingSave.payload)
     }
+    setPendingSave(null)
+  }
+
+  const handleImpactModalClose = () => {
+    setShowImpactModal(false)
+    setPendingSave(null)
   }
 
   const onErrors = (error) => {
@@ -413,6 +445,7 @@ export const AddEditUser = ({
                     disabled={disabled}
                     status={status}
                     isGovernmentUser={isCurrentUserGovernment}
+                    availableRoles={availableRoles}
                     t={t}
                   />
                 ) : (
@@ -539,6 +572,18 @@ export const AddEditUser = ({
           </Grid2>
         </FormProvider>
       </form>
+
+      <UserImpactSummaryModal
+        open={showImpactModal}
+        onClose={handleImpactModalClose}
+        onConfirm={handleConfirmSave}
+        currentUserData={userID ? data : null}
+        proposedRoles={pendingSave?.payload?.roles ?? []}
+        proposedIsActive={pendingSave?.payload?.isActive ?? true}
+        isNewUser={!userID}
+        userId={userID ? Number(userID) : undefined}
+        isCurrentUserGovernment={isCurrentUserGovernment}
+      />
 
       {/* Confirmation Dialog for deletion */}
       <Dialog open={openConfirm} onClose={handleCancelDelete}>

@@ -88,11 +88,18 @@ jobs:
               backend_release_tags+=("$tag")
             fi
           done
+          backend_pr_tags=()
+          for tag in $backend_all_tags; do
+            if [[ $tag =~ ^[A-Za-z0-9._-]+-[0-9]+$ ]] && [[ ! $tag =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
+              backend_pr_tags+=("$tag")
+            fi
+          done
           if [ ${#backend_release_tags[@]} -gt 0 ]; then
             backend_top3=$(printf '%s\n' "${backend_release_tags[@]}" | sort -V | tail -3 | tr '\n' ',')
           else
             backend_top3=""
           fi
+          backend_pr_tags_csv=$(printf '%s\n' "${backend_pr_tags[@]}" | tr '\n' ',')
 
           # ── lcfs-frontend: filter release tags (x.y.z-timestamp) and keep top 3 ─
           frontend_all_tags=$(oc get is lcfs-frontend -n "$namespace" \
@@ -103,16 +110,23 @@ jobs:
               frontend_release_tags+=("$tag")
             fi
           done
+          frontend_pr_tags=()
+          for tag in $frontend_all_tags; do
+            if [[ $tag =~ ^[A-Za-z0-9._-]+-[0-9]+$ ]] && [[ ! $tag =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
+              frontend_pr_tags+=("$tag")
+            fi
+          done
           if [ ${#frontend_release_tags[@]} -gt 0 ]; then
             frontend_top3=$(printf '%s\n' "${frontend_release_tags[@]}" | sort -V | tail -3 | tr '\n' ',')
           else
             frontend_top3=""
           fi
+          frontend_pr_tags_csv=$(printf '%s\n' "${frontend_pr_tags[@]}" | tr '\n' ',')
 
           # ── Merge current deployment tag + top 3, deduplicate ─────────────────
-          backend_keep=$(printf '%s\n' "$backend_current_tag" "$backend_top3" \
+          backend_keep=$(printf '%s\n' "$backend_current_tag" "$backend_top3" "$backend_pr_tags_csv" \
             | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
-          frontend_keep=$(printf '%s\n' "$frontend_current_tag" "$frontend_top3" \
+          frontend_keep=$(printf '%s\n' "$frontend_current_tag" "$frontend_top3" "$frontend_pr_tags_csv" \
             | tr ',' '\n' | grep -v '^$' | sort -u | tr '\n' ',' | sed 's/,$//')
 
           echo "lcfs-backend tags to keep:  $backend_keep"

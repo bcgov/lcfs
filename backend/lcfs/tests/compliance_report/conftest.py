@@ -125,6 +125,7 @@ def mock_repo():
     repo = AsyncMock(spec=ComplianceReportRepository)
     # Add default mock for get_assessed_compliance_report_by_period
     repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
+    repo.get_prior_assessed_compliance_report_in_group = AsyncMock(return_value=None)
     return repo
 
 
@@ -174,6 +175,7 @@ def mock_trxn_repo():
     repo.calculate_available_balance_for_period = AsyncMock(return_value=2000)
     repo.delete_transaction = AsyncMock()
     repo.get_group_adjustments_excluded_from_line_17 = AsyncMock(return_value=0)
+    repo.get_prior_group_adjustments_excluded_from_line_17 = AsyncMock(return_value=0)
     repo.get_reserved_transaction_by_id = AsyncMock(return_value=None)
     return repo
 
@@ -214,6 +216,9 @@ def mock_summary_repo():
     repo = AsyncMock(spec=ComplianceReportSummaryRepository)
     # Add default mock for get_assessed_compliance_report_by_period
     repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
+    repo.db = MagicMock()
+    repo.db.add = MagicMock()
+    repo.db.flush = AsyncMock()
     return repo
 
 

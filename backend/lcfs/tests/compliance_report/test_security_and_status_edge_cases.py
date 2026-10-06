@@ -578,7 +578,6 @@ class TestReportLifecycleAndTransactions:
         mock_trxn_repo.reinstate_transaction.assert_not_called()
         assert v0_transaction.transaction_action == TransactionActionEnum.Reserved
 
-
     async def test_deleting_recommended_then_returned_adjustment_removes_its_own_reserve(
         self,
         compliance_report_service,

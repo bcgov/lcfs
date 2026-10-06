@@ -2,9 +2,12 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, AsyncMock
 
+from sqlalchemy import select
+
 from lcfs.db.models.compliance import (
     CompliancePeriod,
     ComplianceReport,
+    ComplianceReportPenaltyStatusHistory,
     ComplianceReportStatus,
     ComplianceReportSummary,
     FuelSupply,
@@ -719,6 +722,33 @@ async def test_penalty_override_field_defaults(summary_repo, compliance_reports)
     assert result.low_carbon_penalty_override is None
     assert result.penalty_override_date is None
     assert result.penalty_override_user is None
+
+
+@pytest.mark.anyio
+async def test_update_penalty_status_history_uses_report_group_and_version(
+    summary_repo, dbsession, compliance_reports, compliance_report_summaries, users
+):
+    report = compliance_reports[0]
+    summary = compliance_report_summaries[0]
+    user = users[0]
+
+    await summary_repo.update_penalty_status(
+        report.compliance_report_id,
+        line=11,
+        invoice_sent=True,
+        user=user,
+    )
+
+    history = await dbsession.scalar(select(ComplianceReportPenaltyStatusHistory))
+
+    assert history.summary_id == summary.summary_id
+    assert history.compliance_report_group_uuid == report.compliance_report_group_uuid
+    assert history.version == report.version
+    assert history.line == 11
+    assert history.field_name == "invoice_sent"
+    assert history.previous_value is False
+    assert history.new_value is True
+    assert history.user_profile_id == user.user_profile_id
 
 
 @pytest.mark.anyio

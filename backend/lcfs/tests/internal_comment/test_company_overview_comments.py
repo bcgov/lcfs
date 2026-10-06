@@ -13,6 +13,10 @@ from fastapi import FastAPI, status
 from httpx import AsyncClient
 
 from lcfs.db.models import UserProfile
+from lcfs.db.models.comment.InternalComment import InternalComment
+from lcfs.db.models.comment.OrganizationInternalComment import (
+    OrganizationInternalComment,
+)
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum, AudienceScopeEnum
 
@@ -106,9 +110,7 @@ async def test_company_overview_comment_appears_in_org_comment_log(
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    match = [
-        c for c in data["comments"] if c["comment"] == "<p>Overview alpha</p>"
-    ]
+    match = [c for c in data["comments"] if c["comment"] == "<p>Overview alpha</p>"]
     assert len(match) == 1
     record = match[0]
     assert record["entityType"] == EntityTypeEnum.ORGANIZATION.value
@@ -120,9 +122,7 @@ async def test_company_overview_comment_appears_in_org_comment_log(
     filtered = await client.get(url, params={"category": "Company Overview"})
     assert filtered.status_code == status.HTTP_200_OK
     assert filtered.json()["pagination"]["total"] >= 1
-    assert all(
-        c["category"] == "Company Overview" for c in filtered.json()["comments"]
-    )
+    assert all(c["category"] == "Company Overview" for c in filtered.json()["comments"])
 
     # Excluded when filtering by an unrelated category.
     other = await client.get(url, params={"category": "Transfer notes"})
@@ -160,6 +160,53 @@ async def test_company_overview_comment_searchable_in_org_comment_log(
     url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
     hit = await client.get(url, params={"search": "aggregator"})
     assert hit.status_code == status.HTTP_200_OK
-    assert any(
-        "aggregator" in (c["comment"] or "") for c in hit.json()["comments"]
+    assert any("aggregator" in (c["comment"] or "") for c in hit.json()["comments"])
+
+
+@pytest.mark.anyio
+async def test_gov_analyst_can_edit_company_overview_created_by_another_analyst(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+):
+    """Company Overview is a shared org statement, not author-locked."""
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.GOVERNMENT, RoleEnum.ANALYST],
+        user_details={"keycloak_username": "SECOND_ANALYST"},
     )
+    await add_models(
+        [
+            UserProfile(
+                keycloak_username="FIRST_ANALYST",
+                first_name="First",
+                last_name="Analyst",
+            ),
+            UserProfile(
+                keycloak_username="SECOND_ANALYST",
+                first_name="Second",
+                last_name="Analyst",
+            ),
+            InternalComment(
+                internal_comment_id=4608,
+                comment="<p>Original shared overview</p>",
+                audience_scope=AudienceScopeEnum.ANALYST.value,
+                create_user="FIRST_ANALYST",
+            ),
+            OrganizationInternalComment(
+                organization_id=1,
+                internal_comment_id=4608,
+            ),
+        ]
+    )
+
+    url = fastapi_app.url_path_for("update_comment", internal_comment_id=4608)
+    response = await client.put(url, json={"comment": "<p>Updated shared overview</p>"})
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["comment"] == "<p>Updated shared overview</p>"
+    assert data["createUser"] == "FIRST_ANALYST"
+    assert data["updateUser"] == "SECOND_ANALYST"
+    assert data["updateFullName"] == "Second Analyst"

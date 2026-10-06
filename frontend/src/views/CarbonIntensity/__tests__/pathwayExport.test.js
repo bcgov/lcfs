@@ -65,6 +65,39 @@ describe('pathwayExport', () => {
     )
   })
 
+  it('formats transport mode objects into readable labels instead of [object Object]', () => {
+    exportRowsToXlsx({
+      rows: [
+        {
+          feedstockTransportMode: [
+            { transportMode: 'Truck', distance: 125 },
+            { transportMode: 'Rail' }
+          ],
+          finishedFuelTransportMode: [{ transportMode: 'Ship', distance: 300 }],
+          feedstock: 'Canola'
+        }
+      ],
+      columnDefs: [
+        {
+          field: 'feedstockTransportMode',
+          headerName: 'Feedstock transport mode'
+        },
+        {
+          field: 'finishedFuelTransportMode',
+          headerName: 'Finished fuel transport mode'
+        },
+        { field: 'feedstock', headerName: 'Feedstock' }
+      ],
+      fileName: 'pathways.xlsx',
+      sheetName: 'Pathways'
+    })
+
+    expect(XLSX.utils.aoa_to_sheet).toHaveBeenCalledWith([
+      ['Feedstock transport mode', 'Finished fuel transport mode', 'Feedstock'],
+      ['Truck (125 km), Rail', 'Ship (300 km)', 'Canola']
+    ])
+  })
+
   it('uses the grid minimum width when it is wider than the content', () => {
     exportRowsToXlsx({
       rows: [{ feedstock: 'Soy' }],

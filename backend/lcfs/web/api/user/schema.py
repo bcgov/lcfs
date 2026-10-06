@@ -91,6 +91,22 @@ class UserLoginHistorySchema(BaseSchema):
     create_date: datetime
 
 
+class AssignedComplianceReportSchema(BaseSchema):
+    compliance_report_id: int
+    organization: str
+    period: str
+    status: str
+
+class AssignedCIApplicationSchema(BaseSchema):
+    ci_application_id: int
+    organization: str
+    status: str
+
+class UserAssignedWorkSchema(BaseSchema):
+    compliance_reports: List[AssignedComplianceReportSchema] = []
+    ci_applications: List[AssignedCIApplicationSchema] = []
+
+
 class UserLoginHistoryResponseSchema(BaseSchema):
     histories: List[UserLoginHistorySchema]
     pagination: PaginationResponseSchema

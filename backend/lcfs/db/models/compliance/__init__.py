@@ -8,6 +8,7 @@ from .ComplianceReportCountView import ComplianceReportCountView
 from .ComplianceReportHistory import ComplianceReportHistory
 from .ComplianceReportListView import ComplianceReportListView
 from .ComplianceReportOrganizationSnapshot import ComplianceReportOrganizationSnapshot
+from .ComplianceReportPenaltyStatusHistory import ComplianceReportPenaltyStatusHistory
 from .ComplianceReportStatus import ComplianceReportStatus
 from .ComplianceReportSummary import ComplianceReportSummary
 from .EndUserType import EndUserType
@@ -39,6 +40,7 @@ __all__ = [
     "ComplianceReportStatus",
     "ComplianceReportSummary",
     "ComplianceReportOrganizationSnapshot",
+    "ComplianceReportPenaltyStatusHistory",
     "FinalSupplyEquipment",
     "FuelSupply",
     "FuelExport",

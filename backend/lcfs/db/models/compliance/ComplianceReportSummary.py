@@ -109,6 +109,10 @@ class ComplianceReportSummary(BaseModel, Auditable):
     line_11_fossil_derived_base_fuel_total = Column(Float, nullable=False, default=0)
     line_21_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
     total_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
+    line_11_invoice_sent = Column(Boolean, nullable=False, default=False)
+    line_11_payment_received = Column(Boolean, nullable=False, default=False)
+    line_21_invoice_sent = Column(Boolean, nullable=False, default=False)
+    line_21_payment_received = Column(Boolean, nullable=False, default=False)
 
     historical_snapshot = Column(
         JSONB,
