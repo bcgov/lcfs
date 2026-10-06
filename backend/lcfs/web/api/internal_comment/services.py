@@ -1,5 +1,6 @@
 import json
 import re
+from html import escape
 import structlog
 from math import ceil
 from typing import List, Optional
@@ -21,6 +22,7 @@ from .schema import (
     InternalCommentUpdateSchema,
     InternalCommentResponseSchema,
     EntityTypeEnum,
+    MentionableUserSchema,
     OrganizationCommentRecordSchema,
     OrganizationCommentsFilterSchema,
     OrganizationCommentsPaginationSchema,
@@ -49,6 +51,129 @@ DEFAULT_CATEGORY_BY_ENTITY: dict[EntityTypeEnum, str] = {
 
 _HTML_TAG_RE = re.compile(r"<[^>]*>")
 _WHITESPACE_RE = re.compile(r"\s+")
+_MENTION_ID_RE = re.compile(r'data-mention-id="(\d+)"')
+
+_ENTITY_LABEL_BY_TYPE: dict[EntityTypeEnum, str] = {
+    EntityTypeEnum.COMPLIANCE_REPORT: "a compliance report",
+    EntityTypeEnum.TRANSFER: "a transfer",
+    EntityTypeEnum.INITIATIVE_AGREEMENT: "an initiative agreement",
+    EntityTypeEnum.DESIGNATED_ACTION: "an initiative agreement",
+    EntityTypeEnum.ADMIN_ADJUSTMENT: "an administrative adjustment",
+    EntityTypeEnum.CI_APPLICATION: "a CI application",
+    EntityTypeEnum.ORGANIZATION: "an organization's Company Overview",
+}
+
+
+def _extract_mentioned_user_ids(html: Optional[str]) -> List[int]:
+    """Mentioned user ids from the raw comment HTML, de-duplicated, in order."""
+    if not html:
+        return []
+    seen: dict[int, None] = {}
+    for match in _MENTION_ID_RE.finditer(html):
+        seen.setdefault(int(match.group(1)), None)
+    return list(seen.keys())
+
+
+# A mention span as Quill serializes it: an inner span plus zero-width guard
+# characters around the visible "@Name".
+_MENTION_SPAN_RE = re.compile(
+    r'(<span class="mention" data-mention-id="(\d+)"[^>]*>)'
+    r"[\ufeff\u200b]*(?:<span[^>]*>.*?</span>|[^<]*)[\ufeff\u200b]*"
+    r"(</span>)",
+    re.DOTALL,
+)
+
+
+def _mention_display_name(user) -> str:
+    name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+    return name or user.keycloak_username
+
+
+def _rewrite_mention_names(
+    html: Optional[str], name_by_id: dict[int, str]
+) -> Optional[str]:
+    """
+    Set each mention's visible text to the user's current name. Mentions of
+    users not in `name_by_id` are left as-is.
+    """
+    if not html or not name_by_id:
+        return html
+
+    def _replace(match: re.Match) -> str:
+        open_tag, id_str, close_tag = match.groups()
+        current_name = name_by_id.get(int(id_str))
+        if not current_name:
+            return match.group(0)
+        current_name = escape(current_name)
+        if 'data-mention-name="' in open_tag:
+            new_open_tag = re.sub(
+                r'data-mention-name="[^"]*"',
+                f'data-mention-name="{current_name}"',
+                open_tag,
+            )
+        else:
+            new_open_tag = open_tag.replace(
+                ">", f' data-mention-name="{current_name}">', 1
+            )
+        return f"{new_open_tag}@{current_name}{close_tag}"
+
+    return _MENTION_SPAN_RE.sub(_replace, html)
+
+
+_MENTION_NAME_ATTR_RE = re.compile(r'\s*data-mention-name="[^"]*"')
+
+
+def _strip_mention_names_for_storage(html: Optional[str]) -> Optional[str]:
+    """
+    Store mentions by user id only. The name is looked up again on read
+    (`_refresh_mention_names`), so it never goes stale.
+    """
+    if not html or "data-mention-id" not in html:
+        return html
+
+    def _replace(match: re.Match) -> str:
+        open_tag, _id_str, close_tag = match.groups()
+        new_open_tag = _MENTION_NAME_ATTR_RE.sub("", open_tag)
+        return f"{new_open_tag}@{close_tag}"
+
+    return _MENTION_SPAN_RE.sub(_replace, html)
+
+
+def _remove_mention_markup(
+    html: Optional[str], name_by_id: dict[int, str]
+) -> Optional[str]:
+    """Replace mention spans with plain "@Name" text (used for Public comments)."""
+    if not html or "data-mention-id" not in html:
+        return html
+
+    def _replace(match: re.Match) -> str:
+        _open_tag, id_str, _close_tag = match.groups()
+        name = name_by_id.get(int(id_str), "user")
+        return f"@{escape(name)}"
+
+    return _MENTION_SPAN_RE.sub(_replace, html)
+
+
+def _build_entity_link_path(
+    entity_type: EntityTypeEnum, entity_id: int, compliance_year: Optional[int]
+) -> str:
+    """IDIR-facing front-end route for the entity a comment thread hangs off."""
+    if entity_type == EntityTypeEnum.COMPLIANCE_REPORT and compliance_year:
+        return f"/compliance-reporting/{compliance_year}/{entity_id}"
+    if entity_type == EntityTypeEnum.TRANSFER:
+        return f"/transfers/{entity_id}"
+    if entity_type in (
+        EntityTypeEnum.INITIATIVE_AGREEMENT,
+        EntityTypeEnum.DESIGNATED_ACTION,
+    ):
+        return f"/initiative-agreement/{entity_id}"
+    if entity_type == EntityTypeEnum.ADMIN_ADJUSTMENT:
+        return f"/admin-adjustment/{entity_id}"
+    if entity_type == EntityTypeEnum.CI_APPLICATION:
+        return f"/ci-applications/{entity_id}"
+    if entity_type == EntityTypeEnum.ORGANIZATION:
+        return f"/organizations/{entity_id}/comment-log"
+    return "/notifications"
 
 
 def sanitize_comment_text(html: Optional[str]) -> str:
@@ -149,6 +274,132 @@ class InternalCommentService:
                 ci_application_id=ci_application_id,
             )
 
+    async def _refresh_mention_names(
+        self, htmls: List[Optional[str]]
+    ) -> List[Optional[str]]:
+        """Show every mention in `htmls` with the user's current name."""
+        ids: set[int] = set()
+        for html in htmls:
+            ids.update(_extract_mentioned_user_ids(html))
+        if not ids:
+            return htmls
+
+        try:
+            users = await self.repo.get_users_by_ids(list(ids))
+            name_by_id = {u.user_profile_id: _mention_display_name(u) for u in users}
+        except Exception:
+            logger.exception("Failed to refresh @mention display names")
+            return htmls
+
+        return [_rewrite_mention_names(html, name_by_id) for html in htmls]
+
+    async def _sanitize_comment_for_visibility(
+        self, html: Optional[str], visibility: CommentVisibilityEnum
+    ) -> Optional[str]:
+        """
+        Public comments can't hold mentions of internal staff, so they become
+        plain "@Name" text. Internal comments keep id-only mentions.
+        """
+        if visibility != CommentVisibilityEnum.PUBLIC:
+            return _strip_mention_names_for_storage(html)
+
+        ids = _extract_mentioned_user_ids(html)
+        if not ids:
+            return html
+
+        try:
+            users = await self.repo.get_users_by_ids(ids)
+            name_by_id = {u.user_profile_id: _mention_display_name(u) for u in users}
+        except Exception:
+            logger.exception("Failed to resolve @mention names for a public comment")
+            name_by_id = {}
+
+        return _remove_mention_markup(html, name_by_id)
+
+    async def _notify_mentioned_users(
+        self,
+        comment: InternalComment,
+        entity_type: EntityTypeEnum,
+        entity_id: int,
+        mentioned_user_ids: List[int],
+    ) -> None:
+        """
+        Send an in-app and email notification to each mentioned active IDIR
+        user except the author. Failures are logged, never raised, so a
+        notification problem can't fail the comment save.
+        """
+        requester = self.request.user
+        requester_id = getattr(requester, "user_profile_id", None)
+        candidate_ids = [uid for uid in mentioned_user_ids if uid != requester_id]
+        if not candidate_ids:
+            return
+
+        try:
+            recipients = await self.repo.get_active_idir_users_by_ids(candidate_ids)
+            if not recipients:
+                return
+
+            commenter_name = (
+                f"{getattr(requester, 'first_name', '') or ''} "
+                f"{getattr(requester, 'last_name', '') or ''}"
+            ).strip() or getattr(requester, "keycloak_username", "A colleague")
+
+            comment_html = (await self._refresh_mention_names([comment.comment]))[0]
+            comment_text = sanitize_comment_text(comment_html)
+            if len(comment_text) > 500:
+                comment_text = comment_text[:500].rstrip() + "…"
+
+            entity_label = _ENTITY_LABEL_BY_TYPE.get(entity_type, "a record")
+            link_path = _build_entity_link_path(
+                entity_type, entity_id, comment.compliance_year
+            )
+            message_payload = json.dumps(
+                {
+                    "id": entity_id,
+                    "service": entity_type.value,
+                    "compliancePeriod": comment.compliance_year,
+                    "type": "Mention",
+                }
+            )
+
+            for recipient in recipients:
+                notification_data = NotificationMessageSchema(
+                    type="Mention",
+                    message=message_payload,
+                    related_organization_id=comment.organization_id,
+                    origin_user_profile_id=requester_id,
+                    related_transaction_id=str(entity_id),
+                )
+                email_context = {
+                    "subject": f"You were mentioned in a comment on {entity_label}",
+                    "commenter_name": commenter_name,
+                    "comment_text": comment_text,
+                    "entity_label": entity_label,
+                    "link_path": link_path,
+                }
+                await self.notification_service.send_mention_notification(
+                    recipient_user_profile_id=recipient.user_profile_id,
+                    recipient_email=recipient.keycloak_email or recipient.email,
+                    notification_data=notification_data,
+                    email_context=email_context,
+                )
+        except Exception:
+            logger.exception(
+                "Failed to send @mention notifications",
+                entity_type=entity_type,
+                entity_id=entity_id,
+            )
+
+    @service_handler
+    async def get_mentionable_users(
+        self, query: Optional[str]
+    ) -> List[MentionableUserSchema]:
+        """Active IDIR users matching *query*, for the @mention lookup."""
+        if not self._is_government_user():
+            raise HTTPException(status_code=403, detail="Forbidden resource")
+        users = await self.repo.search_mentionable_users(query)
+        return [MentionableUserSchema.model_validate(user) for user in users]
+
     async def _populate_comment_metadata(
         self,
         comment: InternalComment,
@@ -245,6 +496,11 @@ class InternalCommentService:
                     detail="audience_scope is required for internal comments.",
                 )
 
+        # Enforced here as well as in the editor.
+        data.comment = await self._sanitize_comment_for_visibility(
+            data.comment, data.visibility
+        )
+
         username = self.request.user.keycloak_username
 
         if data.entity_type == EntityTypeEnum.ORGANIZATION:
@@ -277,7 +533,11 @@ class InternalCommentService:
                     comment_search_vector=transient.comment_search_vector,
                     update_user=username,
                 )
-                return InternalCommentResponseSchema.model_validate(updated_comment)
+                schema = InternalCommentResponseSchema.model_validate(updated_comment)
+                schema.comment = (await self._refresh_mention_names([schema.comment]))[
+                    0
+                ]
+                return schema
 
         comment = InternalComment(
             comment=data.comment,
@@ -294,6 +554,16 @@ class InternalCommentService:
         created_comment = await self.repo.create_internal_comment(
             comment, data.entity_type, data.entity_id
         )
+
+        if is_government_user and data.visibility == CommentVisibilityEnum.INTERNAL:
+            mentioned_user_ids = _extract_mentioned_user_ids(data.comment)
+            if mentioned_user_ids:
+                await self._notify_mentioned_users(
+                    created_comment,
+                    data.entity_type,
+                    data.entity_id,
+                    mentioned_user_ids,
+                )
 
         if not is_government_user and data.entity_type == EntityTypeEnum.CI_APPLICATION:
             await self._send_ci_comment_notification(
@@ -323,7 +593,9 @@ class InternalCommentService:
                 related_organization_id=created_comment.organization_id,
             )
 
-        return InternalCommentResponseSchema.from_orm(created_comment)
+        schema = InternalCommentResponseSchema.from_orm(created_comment)
+        schema.comment = (await self._refresh_mention_names([schema.comment]))[0]
+        return schema
 
     @service_handler
     async def get_internal_comments(
@@ -354,10 +626,14 @@ class InternalCommentService:
         comments = await self.repo.get_internal_comments(
             entity_type, entity_id, visibility_filter
         )
-        return [
+        schemas = [
             InternalCommentResponseSchema.model_validate(comment)
             for comment in comments
         ]
+        refreshed = await self._refresh_mention_names([s.comment for s in schemas])
+        for schema, comment_html in zip(schemas, refreshed):
+            schema.comment = comment_html
+        return schemas
 
     @service_handler
     async def get_internal_comment_by_id(
@@ -373,7 +649,9 @@ class InternalCommentService:
             InternalCommentResponseSchema: The internal comment as a data transfer object.
         """
         comment = await self.repo.get_internal_comment_by_id(internal_comment_id)
-        return InternalCommentResponseSchema.from_orm(comment)
+        schema = InternalCommentResponseSchema.from_orm(comment)
+        schema.comment = (await self._refresh_mention_names([schema.comment]))[0]
+        return schema
 
     @service_handler
     async def update_internal_comment(
@@ -441,7 +719,14 @@ class InternalCommentService:
         refresh_text = (
             data.comment if data.comment is not None else existing_comment.comment
         )
-        transient = InternalComment(comment=refresh_text)
+        # Also runs when only the visibility changed (Internal -> Public).
+        sanitized_text = await self._sanitize_comment_for_visibility(
+            refresh_text, next_visibility
+        )
+        previously_mentioned = set(
+            _extract_mentioned_user_ids(existing_comment.comment)
+        )
+        transient = InternalComment(comment=sanitized_text)
         await self._populate_comment_metadata(
             transient,
             entity_type=None,
@@ -451,7 +736,7 @@ class InternalCommentService:
 
         updated_comment = await self.repo.update_internal_comment(
             internal_comment_id=internal_comment_id,
-            new_comment_text=data.comment,
+            new_comment_text=sanitized_text,
             visibility=next_visibility.value,
             audience_scope=(
                 next_audience_scope.value if next_audience_scope is not None else None
@@ -461,7 +746,25 @@ class InternalCommentService:
             comment_search_vector=transient.comment_search_vector,
             update_user=self.request.user.keycloak_username,
         )
-        return InternalCommentResponseSchema.model_validate(updated_comment)
+
+        # Only people mentioned for the first time by this edit are notified.
+        if is_government_user and next_visibility == CommentVisibilityEnum.INTERNAL:
+            new_mentions = [
+                user_id
+                for user_id in _extract_mentioned_user_ids(sanitized_text)
+                if user_id not in previously_mentioned
+            ]
+            if new_mentions:
+                entity = await self.repo.get_comment_entity(internal_comment_id)
+                if entity:
+                    entity_type, entity_id = entity
+                    await self._notify_mentioned_users(
+                        updated_comment, entity_type, entity_id, new_mentions
+                    )
+
+        schema = InternalCommentResponseSchema.model_validate(updated_comment)
+        schema.comment = (await self._refresh_mention_names([schema.comment]))[0]
+        return schema
 
     @service_handler
     async def copy_internal_comments(
@@ -586,6 +889,10 @@ class InternalCommentService:
             )
             for row in rows
         ]
+
+        refreshed = await self._refresh_mention_names([r.comment for r in records])
+        for record, comment_html in zip(records, refreshed):
+            record.comment = comment_html
 
         total_pages = ceil(total / size) if total and size else 0
         return OrganizationCommentsResponseSchema(

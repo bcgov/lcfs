@@ -194,3 +194,73 @@ def test_build_email_payload_includes_attachments(
 
     assert payload["attachments"] == [attachment]
     assert payload["bcc"] == ["user@example.com"]
+
+
+MENTION_CONTEXT = {
+    "subject": "You were mentioned in a comment on a transfer",
+    "commenter_name": "Gov User",
+    "comment_text": "Heads up @Jane Doe",
+    "entity_label": "a transfer",
+    "link_path": "/transfers/123",
+}
+
+
+@pytest.mark.anyio
+async def test_send_mention_notification_email_sends_to_recipient(
+    mock_email_repo, mock_environment_vars
+):
+    service = CHESEmailService(repo=mock_email_repo)
+    service.send_email = AsyncMock(return_value=True)
+
+    result = await service.send_mention_notification_email(
+        "jane.doe@gov.bc.ca", dict(MENTION_CONTEXT)
+    )
+
+    assert result is True
+    payload = service.send_email.await_args.args[0]
+    assert payload["bcc"] == ["jane.doe@gov.bc.ca"]
+    assert "/transfers/123" in payload["body"]
+    # Sent directly: no subscription lookup.
+    mock_email_repo.get_subscribed_user_emails.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_send_mention_notification_email_requires_recipient_email(
+    mock_email_repo, mock_environment_vars
+):
+    service = CHESEmailService(repo=mock_email_repo)
+    service.send_email = AsyncMock(return_value=True)
+
+    assert await service.send_mention_notification_email("", MENTION_CONTEXT) is False
+    service.send_email.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_send_mention_notification_email_skipped_when_ches_disabled(
+    mock_email_repo, mock_environment_vars
+):
+    mock_environment_vars.ches_enabled = False
+    service = CHESEmailService(repo=mock_email_repo)
+    service.send_email = AsyncMock(return_value=True)
+
+    result = await service.send_mention_notification_email(
+        "jane.doe@gov.bc.ca", MENTION_CONTEXT
+    )
+
+    assert result is False
+    service.send_email.assert_not_awaited()
+
+
+def test_mention_email_template_escapes_comment_text():
+    service = CHESEmailService()
+    body = service._render_email_template(
+        NotificationTypeEnum.IDIR_ANY__INTERNAL_COMMENT__MENTION.value,
+        {
+            **MENTION_CONTEXT,
+            "comment_text": "<script>alert(1)</script>",
+            "environment": "dev",
+        },
+    )
+
+    assert "<script>" not in body
+    assert "Gov User mentioned you in a comment on" in body

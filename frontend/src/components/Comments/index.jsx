@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useComments } from '@/hooks/useComments'
+import { useMentionableUsers } from '@/hooks/useMentionableUsers'
 import CommentList from './CommentList'
 import Loading from '@/components/Loading'
 
@@ -30,6 +32,14 @@ const Comments = ({
     sortOrder,
     handleSortOrderChange
   } = useComments(entityType, entityId, { commentMode })
+
+  // One lookup is shared by the add form and any comment being edited.
+  // `null` means no lookup is in progress.
+  const [mentionQuery, setMentionQuery] = useState(null)
+  const mentionResults = useMentionableUsers(
+    mentionQuery ?? '',
+    mentionQuery !== null
+  )
 
   const showAddCommentBtn = entityId !== null
 
@@ -77,6 +87,8 @@ const Comments = ({
       onDownloadAttachment={downloadCommentAttachment}
       sortOrder={sortOrder}
       onSortOrderChange={handleSortOrderChange}
+      mentionResults={mentionResults}
+      onMentionQueryChange={setMentionQuery}
     />
   )
 }

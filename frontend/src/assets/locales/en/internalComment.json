@@ -55,5 +55,21 @@
   "attachments": "Attachments",
   "removeAttachment": "Remove attachment",
   "downloadAttachment": "Download attachment",
-  "attachmentUploadError": "Some attachments could not be uploaded."
+  "attachmentUploadError": "Some attachments could not be uploaded.",
+  "mentionButtonLabel": "Mention a user",
+  "mentionListLabel": "Matching users",
+  "mentionSearching": "Searching for users\u2026",
+  "mentionNoResults": "No matching users found",
+  "mentionNavigateHint": "Navigate",
+  "mentionSelectHint": "Select",
+  "toolbarBold": "Bold",
+  "toolbarItalic": "Italic",
+  "toolbarBulletList": "Bulleted list",
+  "toolbarNumberedList": "Numbered list",
+  "mentionButtonDisabledPublic": "Mentions are only available in internal comments",
+  "mentionsBlocked": "Public comments can't include mentions. Remove them, or keep this comment internal.",
+  "removeMentions": "Remove mentions",
+  "keepInternal": "Keep internal",
+  "mentionsConverted": "Mentions removed from this comment.",
+  "undo": "Undo"
 }

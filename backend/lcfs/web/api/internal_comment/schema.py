@@ -3,6 +3,7 @@ from enum import Enum
 from datetime import date, datetime
 from lcfs.web.api.base import BaseSchema
 from lcfs.services.s3.schema import FileResponseSchema
+from pydantic import computed_field
 
 
 # --------------------------------------
@@ -121,3 +122,19 @@ class OrganizationCommentsFilterSchema(BaseSchema):
     search: Optional[str] = None
     sort_by: CommentSortFieldEnum = CommentSortFieldEnum.CREATE_DATE
     sort_order: CommentSortOrderEnum = CommentSortOrderEnum.DESC
+
+
+class MentionableUserSchema(BaseSchema):
+    """An IDIR user eligible to be @mentioned in an internal comment."""
+
+    user_profile_id: int
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+
+    @computed_field
+    @property
+    def display_name(self) -> str:
+        name = f"{self.first_name or ''} {self.last_name or ''}".strip()
+        return name or self.email or str(self.user_profile_id)
+

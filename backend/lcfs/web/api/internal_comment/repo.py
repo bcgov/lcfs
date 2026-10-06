@@ -80,6 +80,118 @@ class InternalCommentRepository:
         self.report_repo = report_repo
 
     @repo_handler
+    async def search_mentionable_users(
+        self, query: Optional[str], limit: int = 8
+    ) -> List[UserProfile]:
+        """
+        Active IDIR (government) users matching *query* by name or email, for
+        the @mention lookup. IDIR users have no organization_id.
+        """
+        stmt = select(UserProfile).where(
+            UserProfile.organization_id.is_(None),
+            UserProfile.is_active.is_(True),
+        )
+        normalized = (query or "").strip()
+        if normalized:
+            pattern = f"%{normalized}%"
+            full_name = UserProfile.first_name + " " + UserProfile.last_name
+            stmt = stmt.where(
+                or_(
+                    full_name.ilike(pattern),
+                    UserProfile.first_name.ilike(pattern),
+                    UserProfile.last_name.ilike(pattern),
+                    UserProfile.email.ilike(pattern),
+                    UserProfile.keycloak_username.ilike(pattern),
+                )
+            )
+        stmt = stmt.order_by(UserProfile.first_name, UserProfile.last_name).limit(limit)
+        return (await self.db.execute(stmt)).scalars().all()
+
+    @repo_handler
+    async def get_active_idir_users_by_ids(
+        self, user_profile_ids: List[int]
+    ) -> List[UserProfile]:
+        """Active IDIR users among *user_profile_ids* (dedupes/validates @mention targets)."""
+        if not user_profile_ids:
+            return []
+        stmt = select(UserProfile).where(
+            UserProfile.user_profile_id.in_(set(user_profile_ids)),
+            UserProfile.organization_id.is_(None),
+            UserProfile.is_active.is_(True),
+        )
+        return (await self.db.execute(stmt)).scalars().all()
+
+    @repo_handler
+    async def get_users_by_ids(self, user_profile_ids: List[int]) -> List[UserProfile]:
+        """
+        Users (any status/organization) matching *user_profile_ids*, for
+        re-resolving a comment's @mentions to each user's *current* display
+        name at read time — a mentioned user may have since changed their
+        name, gone inactive, or left IDIR, but the mention should still
+        reflect who they are now rather than a name frozen at posting time.
+        """
+        if not user_profile_ids:
+            return []
+        stmt = select(UserProfile).where(
+            UserProfile.user_profile_id.in_(set(user_profile_ids))
+        )
+        return (await self.db.execute(stmt)).scalars().all()
+
+    @repo_handler
+    async def get_comment_entity(
+        self, internal_comment_id: int
+    ) -> Optional[Tuple[EntityTypeEnum, int]]:
+        """The (entity type, entity id) a comment is attached to, if any."""
+        links = (
+            (
+                EntityTypeEnum.TRANSFER,
+                TransferInternalComment.transfer_id,
+                TransferInternalComment,
+            ),
+            (
+                EntityTypeEnum.INITIATIVE_AGREEMENT,
+                InitiativeAgreementInternalComment.initiative_agreement_id,
+                InitiativeAgreementInternalComment,
+            ),
+            (
+                EntityTypeEnum.DESIGNATED_ACTION,
+                DesignatedActionInternalComment.designated_action_id,
+                DesignatedActionInternalComment,
+            ),
+            (
+                EntityTypeEnum.ADMIN_ADJUSTMENT,
+                AdminAdjustmentInternalComment.admin_adjustment_id,
+                AdminAdjustmentInternalComment,
+            ),
+            (
+                EntityTypeEnum.COMPLIANCE_REPORT,
+                ComplianceReportInternalComment.compliance_report_id,
+                ComplianceReportInternalComment,
+            ),
+            (
+                EntityTypeEnum.CI_APPLICATION,
+                CIApplicationInternalComment.ci_application_id,
+                CIApplicationInternalComment,
+            ),
+            (
+                EntityTypeEnum.ORGANIZATION,
+                OrganizationInternalComment.organization_id,
+                OrganizationInternalComment,
+            ),
+        )
+        for entity_type, entity_column, link in links:
+            entity_id = (
+                await self.db.execute(
+                    select(entity_column).where(
+                        link.internal_comment_id == internal_comment_id
+                    )
+                )
+            ).scalar_one_or_none()
+            if entity_id is not None:
+                return entity_type, entity_id
+        return None
+
+    @repo_handler
     async def create_internal_comment(
         self,
         internal_comment: InternalComment,
