@@ -72,4 +72,3 @@ export const CIApplicationListStatusRenderer = (props: {data?: {pathwaySupplemen
 
 CIApplicationListStatusRenderer.filterPillRenderer =
   CIApplicationStatusRenderer.filterPillRenderer
-

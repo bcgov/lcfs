@@ -185,4 +185,3 @@ export const getCIWorkflowConnectorStyle = (currentStep, nextStep) =>
   currentStep?.state === 'completed' && nextStep?.state === 'completed'
     ? 'solid'
     : 'dotted'
-
