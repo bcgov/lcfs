@@ -260,9 +260,6 @@ async def test_create_or_update_reserve_uses_persisted_transaction(
     org_service = compliance_report_update_service.org_service
     org_service.calculate_available_balance = AsyncMock(return_value=1_000_000)
     org_service.adjust_balance = AsyncMock()
-    compliance_report_update_service._calculate_pre_deadline_balance = AsyncMock(
-        return_value=1_000_000
-    )
 
     persisted = MagicMock()
     persisted.transaction_id = 100
@@ -965,28 +962,35 @@ async def test_handle_submitted_no_sign(
     mock_summary_service.calculate_compliance_report_summary.assert_called()
 
 
+def _deficit_report(report_id, organization_id, line_20, line_17):
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = report_id
+    report.organization_id = organization_id
+    report.compliance_period = MagicMock(description="2024")
+    report.summary = MagicMock(spec=ComplianceReportSummary)
+    report.summary.line_20_surplus_deficit_units = line_20
+    report.summary.line_17_non_banked_units_used = line_17
+    report.transaction = None
+    return report
+
+
 @pytest.mark.anyio
-async def test_handle_submitted_status_skips_reserve_without_pre_deadline_balance(
+async def test_handle_submitted_status_skips_reserve_without_line_17_credits(
     compliance_report_update_service,
     mock_user_has_roles,
     mock_org_service,
     mock_summary_service,
 ):
-    """Scenario: No eligible credits exist before the deadline, so no reserve is created."""
+    """Scenario: The summary holds no credits at the deadline (Line 17 is 0),
+    so the whole deficit is the Line 21 penalty and nothing is reserved,
+    even though the live balance is high."""
     mock_user_has_roles.return_value = True
-    report = MagicMock(spec=ComplianceReport)
-    report.compliance_report_id = 1
-    report.organization_id = 123
-    report.compliance_period = MagicMock(description="2024")
-    report.summary = MagicMock(spec=ComplianceReportSummary)
-    report.summary.line_20_surplus_deficit_units = -150
-    report.transaction = None
+    report = _deficit_report(1, 123, line_20=-150, line_17=0)
 
     mock_summary_service.calculate_compliance_report_summary.return_value = (
         report.summary
     )
     mock_org_service.calculate_available_balance.return_value = 100000
-    mock_org_service.calculate_available_balance_for_period.return_value = 0
 
     await compliance_report_update_service.handle_submitted_status(
         report, UserProfile()
@@ -994,36 +998,24 @@ async def test_handle_submitted_status_skips_reserve_without_pre_deadline_balanc
 
     mock_org_service.adjust_balance.assert_not_awaited()
     assert report.transaction is None
-    mock_org_service.calculate_available_balance.assert_awaited_once_with(
-        report.organization_id
-    )
-    mock_org_service.calculate_available_balance_for_period.assert_awaited_once_with(
-        report.organization_id, 2024
-    )
 
 
 @pytest.mark.anyio
-async def test_handle_submitted_status_caps_to_pre_deadline_balance(
+async def test_handle_submitted_status_caps_reserve_to_line_17(
     compliance_report_update_service,
     mock_user_has_roles,
     mock_org_service,
     mock_summary_service,
 ):
-    """Scenario: Eligible credits before the deadline cap the reserve even though the live balance is higher."""
+    """Scenario: Line 17 covers only part of the deficit, so the reserve is
+    capped at Line 17 even though the live balance is higher (#3262)."""
     mock_user_has_roles.return_value = True
-    report = MagicMock(spec=ComplianceReport)
-    report.compliance_report_id = 2
-    report.organization_id = 321
-    report.compliance_period = MagicMock(description="2024")
-    report.summary = MagicMock(spec=ComplianceReportSummary)
-    report.summary.line_20_surplus_deficit_units = -120000
-    report.transaction = None
+    report = _deficit_report(2, 321, line_20=-120000, line_17=80000)
 
     mock_summary_service.calculate_compliance_report_summary.return_value = (
         report.summary
     )
     mock_org_service.calculate_available_balance.return_value = 120000
-    mock_org_service.calculate_available_balance_for_period.return_value = 80000
     mock_transaction = MagicMock()
     mock_org_service.adjust_balance.return_value = mock_transaction
 
@@ -1037,12 +1029,6 @@ async def test_handle_submitted_status_caps_to_pre_deadline_balance(
         organization_id=321,
     )
     assert report.transaction is mock_transaction
-    mock_org_service.calculate_available_balance.assert_awaited_once_with(
-        report.organization_id
-    )
-    mock_org_service.calculate_available_balance_for_period.assert_awaited_once_with(
-        report.organization_id, 2024
-    )
 
 
 @pytest.mark.anyio
@@ -1052,21 +1038,14 @@ async def test_handle_submitted_status_caps_to_live_balance_when_smaller(
     mock_org_service,
     mock_summary_service,
 ):
-    """Scenario: Live balance is lower than pre-deadline total, so reserve is limited by current availability."""
+    """Scenario: Live balance is lower than Line 17, so the reserve is limited by current availability."""
     mock_user_has_roles.return_value = True
-    report = MagicMock(spec=ComplianceReport)
-    report.compliance_report_id = 3
-    report.organization_id = 555
-    report.compliance_period = MagicMock(description="2024")
-    report.summary = MagicMock(spec=ComplianceReportSummary)
-    report.summary.line_20_surplus_deficit_units = -120000
-    report.transaction = None
+    report = _deficit_report(3, 555, line_20=-120000, line_17=100000)
 
     mock_summary_service.calculate_compliance_report_summary.return_value = (
         report.summary
     )
     mock_org_service.calculate_available_balance.return_value = 40000
-    mock_org_service.calculate_available_balance_for_period.return_value = 100000
     mock_transaction = MagicMock()
     mock_org_service.adjust_balance.return_value = mock_transaction
 
@@ -1080,11 +1059,66 @@ async def test_handle_submitted_status_caps_to_live_balance_when_smaller(
         organization_id=555,
     )
     assert report.transaction is mock_transaction
-    mock_org_service.calculate_available_balance.assert_awaited_once_with(
-        report.organization_id
+
+
+@pytest.mark.anyio
+async def test_create_or_update_reserve_reserves_each_deficit_line_17_covers(
+    compliance_report_update_service, mock_org_service
+):
+    """Regression for #5031: two submitted reports with deficits of 242 and
+    74, both covered by Line 17, must reserve 316 in total. The old cap
+    counted credits by Transaction.create_date, so credits recorded after
+    the deadline but effective before it reserved nothing."""
+    first = _deficit_report(10, 9, line_20=-242, line_17=500)
+    second = _deficit_report(11, 9, line_20=-74, line_17=500)
+    # The first reserve comes out of the live balance before the second runs.
+    mock_org_service.calculate_available_balance.side_effect = [500, 258]
+
+    await compliance_report_update_service._create_or_update_reserve_transaction(
+        -242, first
     )
-    mock_org_service.calculate_available_balance_for_period.assert_awaited_once_with(
-        report.organization_id, 2024
+    await compliance_report_update_service._create_or_update_reserve_transaction(
+        -74, second
+    )
+
+    reserved = [
+        call.kwargs["compliance_units"]
+        for call in mock_org_service.adjust_balance.await_args_list
+    ]
+    assert reserved == [-242, -74]
+    assert all(
+        call.kwargs["transaction_action"] == TransactionActionEnum.Reserved
+        for call in mock_org_service.adjust_balance.await_args_list
+    )
+
+
+@pytest.mark.anyio
+async def test_create_or_update_reserve_counts_prior_issuance_excluded_from_line_17(
+    compliance_report_update_service, mock_org_service, mock_trxn_repo
+):
+    """Scenario: A supplemental's summary covers the deficit with Line 17
+    plus credits issued to an earlier version after the deadline, which
+    Line 17 leaves out. The reserve counts the same credits."""
+    report = _deficit_report(20, 77, line_20=-250, line_17=100)
+    report.version = 1
+    report.compliance_report_group_uuid = "group-20"
+    mock_trxn_repo.get_prior_group_adjustments_excluded_from_line_17.return_value = 200
+    mock_org_service.calculate_available_balance.return_value = 1000
+
+    units = (
+        await compliance_report_update_service._create_or_update_reserve_transaction(
+            -250, report
+        )
+    )
+
+    assert units == -250
+    mock_trxn_repo.get_prior_group_adjustments_excluded_from_line_17.assert_awaited_once_with(
+        "group-20", 77, 20, 2024, 1
+    )
+    mock_org_service.adjust_balance.assert_awaited_once_with(
+        transaction_action=TransactionActionEnum.Reserved,
+        compliance_units=-250,
+        organization_id=77,
     )
 
 

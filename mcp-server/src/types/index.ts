@@ -1,4 +1,3 @@
-import { CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
 export interface ContainerInfo {
@@ -105,4 +104,4 @@ export const dataTransferSchema = z.object({
   dryRun: z.boolean().optional(),
 });
 
-export type CallToolRequest = z.infer<typeof CallToolRequestSchema>;
+export type { CallToolRequest } from '@modelcontextprotocol/sdk/types.js';

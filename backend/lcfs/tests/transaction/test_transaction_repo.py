@@ -63,27 +63,6 @@ async def test_calculate_available_balance(
 
 
 @pytest.mark.anyio
-async def test_edge_case_transaction_in_proper_period(
-    dbsession, transaction_repo, mock_transactions
-):
-    """Transaction is right on the edge of the compliance period (March 31st), check it shows up in 2022 and after"""
-    available_balance = await transaction_repo.calculate_available_balance_for_period(
-        test_org_id, 2021
-    )
-    assert available_balance == 0
-
-    available_balance = await transaction_repo.calculate_available_balance_for_period(
-        test_org_id, 2022
-    )
-    assert available_balance == 33
-
-    available_balance = await transaction_repo.calculate_available_balance_for_period(
-        test_org_id, 2023
-    )
-    assert available_balance == 33
-
-
-@pytest.mark.anyio
 async def test_calculate_line_17_available_balance_for_period(
     dbsession, transaction_repo
 ):
@@ -1593,6 +1572,101 @@ async def test_calculate_line_17_excludes_transfer_without_any_date(
     assert await line_17(from_org_id, 2025) == 100
     assert await line_17(to_org_id, 2024) == 0
     assert await line_17(to_org_id, 2025) == 0
+
+
+@pytest.mark.anyio
+async def test_calculate_line_17_counts_transfer_recorded_after_deadline(
+    dbsession, transaction_repo
+):
+    """
+    A transfer effective before the March 31 deadline but recorded after it
+    belongs to the earlier period: Line 17 places it by effective date, not
+    by when its transactions were created. The compliance report reserve is
+    capped at Line 17, so these credits can cover a deficit.
+
+    Scenario: 100 units on hand from a historical assessment; a 60-unit
+    transfer effective March 20, 2025 and recorded April 15, 2025.
+    - 2024 (period ends Mar 31, 2025): the transfer counts -> 40 / 60
+    """
+    from datetime import datetime
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+    from lcfs.db.models.transfer import Transfer
+    from lcfs.db.models import Organization, OrganizationAddress
+
+    from_org_id, to_org_id = 6021, 6022
+    for org_id in (from_org_id, to_org_id):
+        dbsession.add(
+            Organization(
+                organization_id=org_id,
+                name=f"Test Company {org_id}",
+                operating_name=f"Test Co. {org_id}",
+                org_address=OrganizationAddress(
+                    street_address="123 Backdated St",
+                    city="Test City",
+                    province_state="Test Province",
+                    country="Test Country",
+                    postalCode_zipCode="T3ST 6Z3",
+                ),
+            )
+        )
+
+    # Historical credits, no parent entity
+    dbsession.add(
+        Transaction(
+            transaction_id=6021,
+            organization_id=from_org_id,
+            compliance_units=100,
+            transaction_action=TransactionActionEnum.Adjustment,
+            create_date=datetime(2023, 6, 1),
+            update_date=datetime(2023, 6, 1),
+        )
+    )
+    # Both sides of the transfer, created when it was recorded on April 15, 2025
+    dbsession.add(
+        Transaction(
+            transaction_id=6022,
+            organization_id=from_org_id,
+            compliance_units=-60,
+            transaction_action=TransactionActionEnum.Adjustment,
+            create_date=datetime(2025, 4, 15),
+            update_date=datetime(2025, 4, 15),
+        )
+    )
+    dbsession.add(
+        Transaction(
+            transaction_id=6023,
+            organization_id=to_org_id,
+            compliance_units=60,
+            transaction_action=TransactionActionEnum.Adjustment,
+            create_date=datetime(2025, 4, 15),
+            update_date=datetime(2025, 4, 15),
+        )
+    )
+    await dbsession.flush()
+
+    dbsession.add(
+        Transfer(
+            transfer_id=96021,
+            from_organization_id=from_org_id,
+            to_organization_id=to_org_id,
+            from_transaction_id=6022,
+            to_transaction_id=6023,
+            agreement_date=datetime(2025, 3, 20),
+            transaction_effective_date=datetime(2025, 3, 20),
+            current_status_id=6,  # Recorded
+            quantity=60,
+            price_per_unit=10,
+        )
+    )
+    await dbsession.commit()
+
+    line_17 = transaction_repo.calculate_line_17_available_balance_for_period
+
+    assert await line_17(from_org_id, 2024) == 40
+    assert await line_17(to_org_id, 2024) == 60
 
 
 @pytest.mark.anyio
