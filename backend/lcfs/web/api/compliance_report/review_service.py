@@ -36,12 +36,38 @@ from lcfs.web.api.compliance_report.summary_service import (
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.utils.constants import LCFS_Constants
 
 
 MATERIAL_PERCENT_THRESHOLD = 25
 MATERIAL_VOLUME_THRESHOLD = 100_000
 
 logger = structlog.get_logger(__name__)
+
+
+def _normalized_review_fuel_type(fuel_type_name):
+    return LCFS_Constants.LEGACY_FUEL_TYPE_EQUIVALENTS.get(
+        fuel_type_name, fuel_type_name
+    )
+
+
+def _normalized_review_fuel_label(label):
+    if not label:
+        return label
+
+    text = str(label)
+    if " (" in text and text.endswith(")"):
+        prefix, _, rest = text.partition(" (")
+        inner = rest[:-1]
+        normalized_inner = _normalized_review_fuel_label(inner)
+        return f"{prefix} ({normalized_inner})"
+
+    parts = text.split(" - ")
+    if len(parts) < 2:
+        return _normalized_review_fuel_type(text)
+
+    fuel_type = parts.pop()
+    return " - ".join([*parts, str(_normalized_review_fuel_type(fuel_type))])
 
 
 class ComplianceReportReviewService:
@@ -1209,8 +1235,10 @@ class ComplianceReportReviewService:
     ) -> list[ComplianceReportReviewFindingSchema]:
         findings = []
         for key in self._schedule_keys():
-            current = current_totals.get(key, {})
-            prior = prior_totals.get(key, {})
+            current = self._normalize_review_fuel_label_totals(
+                current_totals.get(key, {})
+            )
+            prior = self._normalize_review_fuel_label_totals(prior_totals.get(key, {}))
 
             for fuel_type in sorted(set(current) | set(prior)):
                 current_value = current.get(fuel_type, 0)
@@ -1456,8 +1484,12 @@ class ComplianceReportReviewService:
         current_totals: dict[str, dict[str, float]],
         prior_totals: dict[str, dict[str, float]],
     ) -> list[ComplianceReportReviewFindingSchema]:
-        current_other_uses = current_totals.get("other_uses", {})
-        prior_other_uses = prior_totals.get("other_uses", {})
+        current_other_uses = self._normalize_review_fuel_label_totals(
+            current_totals.get("other_uses", {})
+        )
+        prior_other_uses = self._normalize_review_fuel_label_totals(
+            prior_totals.get("other_uses", {})
+        )
         findings = []
 
         for fuel_label in sorted(set(current_other_uses) | set(prior_other_uses)):
@@ -1839,7 +1871,14 @@ class ComplianceReportReviewService:
             historical_variance=historical,
             supplemental_impact=supplemental,
             compliance_units_by_fuel=[
-                ComplianceReportReviewComplianceUnitPointSchema(**point)
+                ComplianceReportReviewComplianceUnitPointSchema(
+                    **{
+                        **point,
+                        "fuel_type": _normalized_review_fuel_type(
+                            point.get("fuel_type")
+                        ),
+                    }
+                )
                 for point in compliance_units_by_fuel
             ],
         )
@@ -2026,6 +2065,8 @@ class ComplianceReportReviewService:
         self, current: dict[str, float], comparison: dict[str, float], units: str
     ) -> list[ComplianceReportReviewComparisonPointSchema]:
         points = []
+        current = self._normalize_review_fuel_label_totals(current)
+        comparison = self._normalize_review_fuel_label_totals(comparison)
         for label in sorted(set(current) | set(comparison)):
             current_value = current.get(label, 0)
             comparison_value = comparison.get(label, 0)
@@ -2040,6 +2081,14 @@ class ComplianceReportReviewService:
                 )
             )
         return points
+
+    def _normalize_review_fuel_label_totals(
+        self, totals: dict[str, float]
+    ) -> dict[str, float]:
+        normalized = defaultdict(float)
+        for label, value in (totals or {}).items():
+            normalized[_normalized_review_fuel_label(label)] += self._number(value)
+        return dict(normalized)
 
     def _comparison_point(
         self,
@@ -2258,7 +2307,7 @@ class ComplianceReportReviewService:
         fuel_type = getattr(getattr(row, "fuel_type", None), "fuel_type", None)
         key = str(fuel_category or "Unknown fuel category")
         if fuel_type:
-            key = f"{key} - {fuel_type}"
+            key = f"{key} - {_normalized_review_fuel_type(fuel_type)}"
         return key
 
     def _summary_row_value(self, rows, line_number: int) -> float | None:
