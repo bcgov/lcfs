@@ -29,6 +29,10 @@ const valueFormatter = (params: {
   value: string | number | null | undefined
 }) => String(formatNumberWithCommas(params))
 
+type OtherUsesOptionsData = Omit<OptionsData, 'fuelTypes'> & {
+  fuelTypes: Array<OptionsData['fuelTypes'][number] & { units?: string }>
+}
+
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_APPROVED_FUEL_CODE_LEGACY =
   'Approved fuel code - Section 6 (5) (c)'
@@ -38,7 +42,7 @@ export const isFuelCodeProvision = (provision: string | null | undefined) =>
   provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
 export const otherUsesColDefs = (
-  optionsData: OptionsData,
+  optionsData: OtherUsesOptionsData,
   errors: GridErrors,
   warnings: GridWarnings,
   isSupplemental: boolean,
@@ -376,7 +380,7 @@ export const otherUsesColDefs = (
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
-      const values = fuelType ? [fuelType.unit] : []
+      const values = fuelType ? [fuelType.units ?? fuelType.unit] : []
       return {
         options: values,
         multiple: false,
