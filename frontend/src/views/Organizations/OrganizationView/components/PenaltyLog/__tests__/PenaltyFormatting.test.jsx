@@ -16,7 +16,14 @@ vi.mock('@/components/charts/BCMetricCard', () => ({
 }))
 
 vi.mock('@/components/charts/BCResponsiveEchart', () => ({
-  BCResponsiveEChart: () => <div data-testid="penalty-chart" />
+  BCResponsiveEChart: ({ ariaLabel, ariaDescription, ariaDescribedBy }) => (
+    <div
+      data-testid="penalty-chart"
+      role="img"
+      aria-label={ariaDescription || ariaLabel}
+      aria-describedby={ariaDescribedBy}
+    />
+  )
 }))
 
 vi.mock('@/components/BCDataGrid/columns', () => ({
@@ -24,16 +31,22 @@ vi.mock('@/components/BCDataGrid/columns', () => ({
   validation: {}
 }))
 
-vi.mock('@/components/BCDataGrid/components/Editors/AutocompleteCellEditor', () => ({
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor',
+  () => ({
     AutocompleteCellEditor: () => null
-}))
+  })
+)
 
-vi.mock('@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter', () => ({
+vi.mock(
+  '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter',
+  () => ({
     BCSelectFloatingFilter: () => null
-}))
+  })
+)
 
 vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
-    RequiredHeader: () => null
+  RequiredHeader: () => null
 }))
 
 vi.mock('@/utils/grid/eventHandlers', () => ({
@@ -117,6 +130,84 @@ describe('organization dashboard penalty formatting', () => {
     expect(screen.getAllByText('$200.00')).toHaveLength(2)
     expect(screen.getAllByText('$323.45')).toHaveLength(2)
     expect(screen.getByText('$50.10')).toBeInTheDocument()
+  })
+
+  it('provides accessible exact amounts and shares for penalty mix chart data', () => {
+    const { container } = render(
+      <PenaltySummaryTable
+        yearlyPenalties={[]}
+        penaltyTotals={{
+          autoRenewable: 1000,
+          autoLowCarbon: 2000,
+          discretionary: 3000,
+          totalAutomatic: 3000
+        }}
+        penaltyMixOption={{
+          series: [
+            {
+              type: 'line',
+              data: [{ name: 'Ignored series category', value: 10000 }]
+            },
+            {
+              type: 'pie',
+              data: [
+                { name: 'Renewable fuel target penalty', value: 125.5 },
+                { name: 'Low carbon fuel target penalty', value: 250 },
+                { name: 'Discretionary penalty', value: 124.5 }
+              ]
+            }
+          ]
+        }}
+      />
+    )
+
+    const chart = screen.getByRole('img', {
+      name: /Penalty mix donut chart by penalty type/
+    })
+    const describedByIds = chart.getAttribute('aria-describedby').split(' ')
+    const describedElements = describedByIds.map((id) =>
+      document.getElementById(id)
+    )
+    const tableCaptionId = screen.getByText('Penalty mix data').id
+    const table = screen.getByRole('table', { name: 'Penalty mix data' })
+    const scrollRegion = screen.getByRole('region', {
+      name: 'Penalty mix data'
+    })
+    const ids = [...container.querySelectorAll('[id]')].map(({ id }) => id)
+
+    expect(describedElements).toHaveLength(2)
+    expect(new Set(describedByIds).size).toBe(describedByIds.length)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(describedElements.every(Boolean)).toBe(true)
+    expect(describedByIds).toContain(tableCaptionId)
+    expect(chart).toHaveAccessibleName(
+      'Penalty mix donut chart by penalty type. Total penalties: $500.00. Renewable fuel target penalty: $125.50, 25.1% of total. Low carbon fuel target penalty: $250.00, 50.0% of total. Discretionary penalty: $124.50, 24.9% of total. Open the data table for all values.'
+    )
+    expect(describedElements[0]).toHaveTextContent(
+      'Exact penalty amounts and shares of the total are available in the data table.'
+    )
+    expect(table).toHaveAttribute('aria-labelledby', tableCaptionId)
+    expect(table).toHaveAttribute('aria-describedby', describedByIds[0])
+    expect(scrollRegion).toHaveAttribute('aria-labelledby', tableCaptionId)
+    expect(scrollRegion).toHaveAttribute('tabindex', '0')
+    expect(
+      screen.getByRole('rowheader', { name: 'Renewable fuel target penalty' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('rowheader', { name: 'Low carbon fuel target penalty' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('rowheader', { name: 'Discretionary penalty' })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: '$125.50' })).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: '$250.00' })).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: '$124.50' })).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: '25.1%' })).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: '50.0%' })).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: '24.9%' })).toBeInTheDocument()
+    expect(
+      screen.queryByText('Ignored series category')
+    ).not.toBeInTheDocument()
   })
 
   it('formats history and editor penalty amounts with two decimal places', () => {
@@ -244,7 +335,8 @@ describe('organization dashboard penalty formatting', () => {
       },
       {
         id: 'automatic-low-carbon-1',
-        description: 'Low carbon fuel target non-compliance penalty total (Line 21)',
+        description:
+          'Low carbon fuel target non-compliance penalty total (Line 21)',
         penaltyAmount: 250,
         dueDate: '2026-04-15',
         invoiceSent: false,
