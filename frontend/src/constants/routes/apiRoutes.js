@@ -16,6 +16,7 @@ export const apiRoutes = {
   seededTestUsers: '/users/seeded-test-users',
   resolveOrgName: '/users/anonymizer/resolve-org-name',
   getUserActivities: '/users/:userID/activity',
+  getUserAssignedWork: '/users/:userID/assigned-work',
   getAllUserActivities: '/users/activities/all',
   trackUserLogin: '/users/logged-in',
   getUserLoginHistories: '/users/login-history',
@@ -79,6 +80,7 @@ export const apiRoutes = {
   getInitiativeAgreementAnalysts: '/initiative-agreements/analysts',
   getDesignatedActionsList:
     '/initiative-agreements/:initiativeAgreementId/designated-actions/list',
+  getAllDesignatedActionsList: '/initiative-agreements/designated-actions/list',
   createDesignatedAction:
     '/initiative-agreements/:initiativeAgreementId/designated-actions',
   updateDesignatedAction:
@@ -95,6 +97,8 @@ export const apiRoutes = {
     '/initiative-agreements/designated-actions/:designatedActionId/workflow',
   designatedActionRecommendedCredits:
     '/initiative-agreements/designated-actions/:designatedActionId/recommended-credits',
+  designatedActionMissingInformation:
+    '/initiative-agreements/designated-actions/:designatedActionId/missing-information',
   designatedActionHistory:
     '/initiative-agreements/designated-actions/:designatedActionId/history',
   documentFolderTree: '/document-folders/:parentType/:parentID',
@@ -127,6 +131,7 @@ export const apiRoutes = {
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',
+  ciApplicationFuelCodeFieldSearch: '/ci-applications/fuel-code-field-search?',
   ciApplicationLocationSearch: '/ci-applications/location-search?',
   getCIApplications: '/ci-applications/list',
   getCIApplication: '/ci-applications/:ciApplicationId',
@@ -169,6 +174,8 @@ export const apiRoutes = {
   getComplianceReportSummary: '/reports/:reportID/summary',
   getComplianceReportReviewSummary: '/reports/:reportID/review-summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
+  updateComplianceReportPenaltyStatus:
+    '/reports/:reportID/summary/penalty-status',
   exportComplianceReport: '/reports/:reportID/export',
   createSupplementalReport: '/reports/:reportID/supplemental',
   createAnalystAdjustment: '/reports/:reportID/adjustment',
@@ -298,6 +305,7 @@ export const apiRoutes = {
   orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
   ciApplicationCounts: '/dashboard/ci-application-counts',
   initiativeAgreementCounts: '/dashboard/initiative-agreement-counts',
+  orgInitiativeAgreementCounts: '/dashboard/org-initiative-agreement-counts',
 
   // credit market
   creditMarketOverview: '/credit-market/overview',
@@ -313,6 +321,7 @@ export const apiRoutes = {
   getNotifications: '/notifications/list',
   getNotificationsCount: '/notifications/count',
   getNotificationSubscriptions: '/notifications/subscriptions',
+  getUserNotificationSubscriptions: '/notifications/subscriptions/user',
   saveNotificationSubscriptions: '/notifications/subscriptions/save',
 
   // government notifications

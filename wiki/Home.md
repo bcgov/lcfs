@@ -21,7 +21,7 @@ The LCFS system is a modern web application composed of several key services and
 *   **ETL (Extract, Transform, Load)**: Employs **Apache NiFi** for data migration and synchronization, particularly for integrating data from the TFRS (Transportation Fuel Reporting System) database.
 *   **Caching**: **Redis** is used as a caching layer to improve performance.
 *   **Message Queuing**: **RabbitMQ** is used for asynchronous task processing.
-*   **Object Storage**: **MinIO** (S3-compatible) is used for file storage.
+*   **Object Storage**: S3-compatible object storage is used for file storage (**RustFS** in local development, provisioned S3 buckets in deployed environments).
 *   **ORM (Object Relational Mapper)**: Employs **SQLAlchemy** for database entity mapping in the backend.
 *   **Database Migrations**: Manages database schema changes over time with **Alembic**.
 *   **Data Validation**: Utilizes **Pydantic** for data validation within FastAPI.

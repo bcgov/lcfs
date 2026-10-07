@@ -1,3 +1,4 @@
+import { test } from '@/tests/utils/fixtures'
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -10,8 +11,6 @@ import {
 import userEvent from '@testing-library/user-event'
 
 import { ApplicationInformationStep } from '@/views/CarbonIntensity/components/ApplicationInformationStep'
-import { wrapper } from '@/tests/utils/wrapper'
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
@@ -66,8 +65,19 @@ describe('ApplicationInformationStep', () => {
   })
   afterEach(cleanup)
 
-  it('renders the organization summary block when provided', () => {
-    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+  test('renders the organization summary block when provided', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByText('Fuel Producer Ltd.')).toBeInTheDocument()
     expect(
       screen.getByText('697 Sarmiento, San Martin, Santa Fe, Argentina')
@@ -75,12 +85,25 @@ describe('ApplicationInformationStep', () => {
     expect(screen.getByText('Zimmerman@fuelproducerltd.ar')).toBeInTheDocument()
   })
 
-  it('renders all Step 1 form fields', () => {
-    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+  test('renders all Step 1 form fields', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(document.getElementById('facilityCity')).toBeInTheDocument()
     expect(document.getElementById('facilityProvinceState')).toBeInTheDocument()
     expect(document.getElementById('facilityCountry')).toBeInTheDocument()
-    expect(document.getElementById('facilityNameplateCapacity')).toBeInTheDocument()
+    expect(
+      document.getElementById('facilityNameplateCapacity')
+    ).toBeInTheDocument()
     expect(
       document.getElementById('facilityNameplateCapacityUnit')
     ).toBeInTheDocument()
@@ -92,29 +115,55 @@ describe('ApplicationInformationStep', () => {
     expect(document.getElementById('facilityCountry')).toBeRequired()
   })
 
-  it('renders the Save & proceed button and no Delete button on add', () => {
-    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+  test('renders the Save & proceed button and no Delete button on add', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByTestId('ci-step1-save-btn')).toBeInTheDocument()
     expect(screen.queryByTestId('ci-step1-delete-btn')).not.toBeInTheDocument()
   })
 
-  it('renders the Delete button when editing an existing application AND onDelete is wired', () => {
+  test('renders the Delete button when editing an existing application AND onDelete is wired', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     render(
       <ApplicationInformationStep
         {...baseProps}
         ciApplication={{ ciApplicationId: 5, facilityCountry: 'Argentina' }}
         onDelete={vi.fn()}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
     expect(screen.getByTestId('ci-step1-delete-btn')).toBeInTheDocument()
   })
 
-  it('blocks submission when required fields are missing', async () => {
+  test('blocks submission when required fields are missing', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn()
-    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, {
-      wrapper
-    })
+    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
 
@@ -126,16 +175,28 @@ describe('ApplicationInformationStep', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('blocks submission when city or province/state are missing', async () => {
+  test('blocks submission when city or province/state are missing', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn()
     const user = userEvent.setup()
-    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, {
-      wrapper
-    })
+    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     await user.click(document.getElementById('facilityCountry'))
     await user.type(document.getElementById('facilityCountry'), 'Canada')
-    await user.type(document.getElementById('facilityNameplateCapacity'), '2500')
+    await user.type(
+      document.getElementById('facilityNameplateCapacity'),
+      '2500'
+    )
     await selectUnit(user)
 
     fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
@@ -153,12 +214,21 @@ describe('ApplicationInformationStep', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('rejects non-positive capacity values', async () => {
+  test('rejects non-positive capacity values', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn()
     const user = userEvent.setup()
-    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, {
-      wrapper
-    })
+    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     await user.click(document.getElementById('facilityCountry'))
     await user.type(document.getElementById('facilityCountry'), 'Argentina')
@@ -176,12 +246,21 @@ describe('ApplicationInformationStep', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('calls onSave with normalized payload when the form is valid', async () => {
+  test('calls onSave with normalized payload when the form is valid', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const onSave = vi.fn()
     const user = userEvent.setup()
-    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, {
-      wrapper
-    })
+    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     await user.click(document.getElementById('facilityCity'))
     await user.type(document.getElementById('facilityCity'), 'Vancouver')
@@ -213,9 +292,20 @@ describe('ApplicationInformationStep', () => {
     })
   })
 
-  it('shows API suggestions and auto-populates on select', async () => {
+  test('shows API suggestions and auto-populates on select', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const user = userEvent.setup()
-    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     await user.click(document.getElementById('facilityCity'))
     await user.type(document.getElementById('facilityCity'), 'coquit')
@@ -234,9 +324,20 @@ describe('ApplicationInformationStep', () => {
     })
   })
 
-  it('province autocomplete works without entering city first', async () => {
+  test('province autocomplete works without entering city first', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const user = userEvent.setup()
-    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     await user.click(document.getElementById('facilityProvinceState'))
     await user.type(document.getElementById('facilityProvinceState'), 'alb')
@@ -255,9 +356,20 @@ describe('ApplicationInformationStep', () => {
     })
   })
 
-  it('country autocomplete works without entering city first', async () => {
+  test('country autocomplete works without entering city first', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const user = userEvent.setup()
-    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     await user.click(document.getElementById('facilityCountry'))
     await user.type(document.getElementById('facilityCountry'), 'can')
@@ -272,8 +384,19 @@ describe('ApplicationInformationStep', () => {
     })
   })
 
-  it('disables browser autofill attributes on location fields', () => {
-    render(<ApplicationInformationStep {...baseProps} />, { wrapper })
+  test('disables browser autofill attributes on location fields', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(document.getElementById('facilityCity')).toHaveAttribute(
       'autocomplete',
       'lcfs-no-autofill-facilityCity'
@@ -288,7 +411,13 @@ describe('ApplicationInformationStep', () => {
     )
   })
 
-  it('pre-populates fields from an existing application', () => {
+  test('pre-populates fields from an existing application', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const existing = {
       ciApplicationId: 8,
       facilityCity: 'San Martin',
@@ -304,25 +433,51 @@ describe('ApplicationInformationStep', () => {
         ciApplication={existing}
         onDelete={vi.fn()}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(document.getElementById('facilityCity').value).toBe('San Martin')
-    expect(document.getElementById('facilityProvinceState').value).toBe('Santa Fe')
+    expect(document.getElementById('facilityProvinceState').value).toBe(
+      'Santa Fe'
+    )
     expect(document.getElementById('facilityCountry').value).toBe('Argentina')
-    expect(document.getElementById('facilityNameplateCapacity').value).toBe('1,500')
+    expect(document.getElementById('facilityNameplateCapacity').value).toBe(
+      '1,500'
+    )
     expect(document.getElementById('proposedFuelCodeEffectiveDate').value).toBe(
       '2026-06-01'
     )
   })
 
-  it('disables the save button when readOnly is true', () => {
-    render(<ApplicationInformationStep {...baseProps} readOnly />, { wrapper })
+  test('disables the save button when readOnly is true', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ApplicationInformationStep {...baseProps} readOnly />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByTestId('ci-step1-save-btn')).toBeDisabled()
   })
 
-  it('disables the save button while isSaving is true', () => {
-    render(<ApplicationInformationStep {...baseProps} isSaving />, { wrapper })
+  test('disables the save button while isSaving is true', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ApplicationInformationStep {...baseProps} isSaving />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByTestId('ci-step1-save-btn')).toBeDisabled()
   })
 })

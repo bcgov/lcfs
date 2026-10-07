@@ -1,22 +1,33 @@
 import { forwardRef, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import {
-  Avatar,
-  Chip,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  Tooltip
-} from '@mui/material'
+import Avatar from '@mui/material/Avatar'
+import Chip from '@mui/material/Chip'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import Tooltip from '@mui/material/Tooltip'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 
 import BCBox from '@/components/BCBox'
+import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import CommentForm from '@/components/Comments/CommentForm'
 
 import { sanitizeAndHighlightCommentHtml } from '@/utils/sanitizeCommentHtml'
 import { formatCommentDateTime, isCommentEdited } from './dateUtils'
+
+const metadataChipSx = {
+  height: 22,
+  bgcolor: 'primary.main',
+  color: '#fff',
+  borderColor: 'primary.main',
+  width: 'fit-content',
+  '& .MuiChip-label': {
+    px: 2,
+    fontSize: '0.86rem'
+  }
+}
 
 const ENTITY_TYPE_CONFIG = {
   Transfer: {
@@ -74,6 +85,7 @@ export const CommentRow = forwardRef(function CommentRow(
     showInternalBadge,
     isGovernmentUser,
     allowPublicVisibility = true,
+    useLatestAttribution = false,
     searchQuery = '',
     onEdit,
     isEditPending
@@ -108,6 +120,14 @@ export const CommentRow = forwardRef(function CommentRow(
   )
 
   const edited = isCommentEdited(comment.createDate, comment.updateDate)
+  const displayName =
+    useLatestAttribution && edited
+      ? comment.updateFullName || comment.updateUser || comment.fullName
+      : comment.fullName
+  const displayUser =
+    useLatestAttribution && edited ? comment.updateUser : comment.createUser
+  const displayDate =
+    useLatestAttribution && edited ? comment.updateDate : comment.createDate
   const isInternal = comment.visibility === 'Internal'
   const renderVisibilityChip =
     !!comment.visibility && (showInternalBadge || !isInternal)
@@ -140,7 +160,7 @@ export const CommentRow = forwardRef(function CommentRow(
         }
       }}
     >
-      <Tooltip title={comment.fullName || ''} arrow>
+      <Tooltip title={displayName || ''} arrow>
         <Avatar
           sx={{
             width: 32,
@@ -151,10 +171,10 @@ export const CommentRow = forwardRef(function CommentRow(
             mt: 2.5,
             mr: 2
           }}
-          aria-label={`Comment by ${comment.fullName || comment.createUser || ''}`}
+          aria-label={`Comment by ${displayName || displayUser || ''}`}
           role="img"
         >
-          {getInitials(comment.fullName) || '?'}
+          {getInitials(displayName) || '?'}
         </Avatar>
       </Tooltip>
       <BCBox
@@ -191,26 +211,32 @@ export const CommentRow = forwardRef(function CommentRow(
                 variant="outlined"
                 label={comment.category}
                 data-test="comment-category-chip"
-                sx={{
-                  height: 22,
-                  bgcolor: 'primary.main',
-                  color: '#fff',
-                  borderColor: 'primary.main',
-                  width: 'fit-content',
-                  '& .MuiChip-label': {
-                    px: 2,
-                    fontSize: '0.86rem'
-                  }
-                }}
+                sx={metadataChipSx}
               />
             )}
+            <Chip
+              size="small"
+              color="primary"
+              variant="outlined"
+              label={
+                comment.complianceYear ??
+                t('internalComment:log.noCompliancePeriod')
+              }
+              aria-label={t('internalComment:log.compliancePeriod', {
+                year:
+                  comment.complianceYear ??
+                  t('internalComment:log.noCompliancePeriod')
+              })}
+              data-test="comment-compliance-period-chip"
+              sx={metadataChipSx}
+            />
             <BCTypography variant="body2" color="text" component="span">
-              <strong>{comment.fullName || comment.createUser || '—'}</strong>
-              {comment.createDate && (
+              <strong>{displayName || displayUser || '—'}</strong>
+              {displayDate && (
                 <>
                   {', '}
-                  <time dateTime={comment.createDate}>
-                    {formatCommentDateTime(comment.createDate)}
+                  <time dateTime={displayDate}>
+                    {formatCommentDateTime(displayDate)}
                   </time>
                 </>
               )}
@@ -247,32 +273,6 @@ export const CommentRow = forwardRef(function CommentRow(
                   </>
                 ) : null
               })()}
-              {comment.canEdit && !editing && (
-                <>
-                  {' '}
-                  <BCTypography
-                    variant="body2"
-                    component="a"
-                    role="button"
-                    tabIndex={0}
-                    onClick={startEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        startEdit()
-                      }
-                    }}
-                    sx={{
-                      color: 'link.main',
-                      cursor: 'pointer',
-                      textDecoration: 'none',
-                      '&:hover': { textDecoration: 'underline' }
-                    }}
-                  >
-                    [Edit]
-                  </BCTypography>
-                </>
-              )}
               {edited && (
                 <>
                   {' - '}
@@ -299,6 +299,33 @@ export const CommentRow = forwardRef(function CommentRow(
                 </>
               )}
             </BCTypography>
+            {comment.canEdit && !editing && (
+              <BCButton
+                variant="outlined"
+                size="small"
+                onClick={startEdit}
+                data-test="edit-comment-btn"
+                aria-label={t('internalComment:edit')}
+                sx={{
+                  height: 'auto',
+                  py: 0.25,
+                  px: 1.5,
+                  minWidth: 'auto',
+                  fontSize: '0.8125rem',
+                  lineHeight: 1.4,
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  backgroundColor: '#fff',
+                  '&:hover': {
+                    backgroundColor: 'primary.light',
+                    borderColor: 'primary.main',
+                    color: '#fff'
+                  }
+                }}
+              >
+                {t('internalComment:edit')}
+              </BCButton>
+            )}
           </BCBox>
           <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {renderVisibilityChip && (
@@ -326,9 +353,24 @@ export const CommentRow = forwardRef(function CommentRow(
             )}
           </BCBox>
         </BCBox>
-        <div
+        <BCBox
           className="comment-content"
           data-test="comment-body"
+          sx={{
+            wordBreak: 'break-word',
+            fontSize: '1rem',
+            lineHeight: 1.5,
+            '& p': { margin: '0.25rem 0', fontSize: '1rem' },
+            '& ul, & ol': {
+              paddingLeft: '1.5rem',
+              margin: '0.25rem 0',
+              fontSize: '1rem'
+            },
+            '& li': {
+              lineHeight: 1.6,
+              fontSize: '1rem'
+            }
+          }}
           dangerouslySetInnerHTML={{ __html: renderedHtml }}
         />
         {editing && (

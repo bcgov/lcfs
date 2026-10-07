@@ -1,4 +1,7 @@
-import { Card, CardContent, Grid, Stack } from '@mui/material'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Grid from '@mui/material/Grid'
+import Stack from '@mui/material/Stack'
 import { BCResponsiveEChart } from './BCResponsiveEchart'
 import BCTypography from '../BCTypography'
 import { useTheme } from '@mui/material/styles'

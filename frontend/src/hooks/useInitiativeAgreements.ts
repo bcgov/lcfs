@@ -79,6 +79,31 @@ export const useInitiativeAgreementStatuses = (
 }
 
 /** Paginated designated actions for one agreement's grid (#4896). */
+/** Every agreement's designated actions, for the module's tab (#5078). */
+export const useAllDesignatedActions = (
+  { page = 1, size = 10, sortOrders = [], filters = [] }: PaginationParams = {},
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: [
+      'designated-actions',
+      'all',
+      { page, size, sortOrders, filters }
+    ],
+    queryFn: async () =>
+      (
+        await client.post(apiRoutes.getAllDesignatedActionsList, {
+          page,
+          size,
+          sortOrders,
+          filters
+        })
+      ).data,
+    ...options
+  })
+}
+
 export const useDesignatedActions = (
   initiativeAgreementId: number | string,
   { page = 1, size = 10, sortOrders = [], filters = [] }: PaginationParams = {},
@@ -213,7 +238,7 @@ export const useCreateEvidenceRequirement = (
 ) =>
   useEvidenceMutation(
     designatedActionId,
-    (client) => async (payload: { description: string }) =>
+    (client) => async (payload: { title: string; description: string }) =>
       (
         await client.post(
           apiRoutes.evidenceRequirements.replace(
@@ -314,6 +339,29 @@ export const useSetRecommendedCredits = (
   })
 }
 
+// The Missing information box's working text (#5118). Requesting
+// additional information sends it; saving it records nothing.
+export const useSetMissingInformation = (
+  designatedActionId: number | string
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (missingInformation: string | null) =>
+      (
+        await client.put(
+          actionPath(
+            apiRoutes.designatedActionMissingInformation,
+            designatedActionId
+          ),
+          { missingInformation }
+        )
+      ).data,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
+  })
+}
+
 export const useDesignatedActionHistory = (
   designatedActionId: number | string,
   options: QueryOptions<unknown> = {}
@@ -402,6 +450,7 @@ export const useCreateAgreement = () => {
       agreementType?: string
       title?: string | null
       projectDescription?: string | null
+      projectLocation?: string | null
       contactName?: string | null
       contactEmail?: string | null
       contactPhone?: string | null

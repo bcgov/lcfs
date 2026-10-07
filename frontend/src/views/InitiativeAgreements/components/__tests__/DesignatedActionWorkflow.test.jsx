@@ -1,8 +1,14 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { DesignatedActionWorkflow } from '../DesignatedActionWorkflow'
-import { wrapper } from '@/tests/utils/wrapper'
+import { cleanup, fireEvent, screen } from '@testing-library/react'
+
+import { describe, expect, vi, beforeEach } from 'vitest'
+
+import {
+  DesignatedActionWorkflow,
+  PLACEMENT_DECISION,
+  PLACEMENT_EVIDENCE
+} from '../DesignatedActionWorkflow'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -21,20 +27,85 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
 const analystActions = [
   'accept_evidence',
   'request_information',
-  'recommend_to_manager'
+  'recommend_to_manager',
+  'not_recommend'
 ]
 
 describe('DesignatedActionWorkflow', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('shows only the actions the API says are available', () => {
+  test('splits the actions by placement: evidence decisions and closing decisions', ({
+    render,
+    app
+  }) => {
+    // The API offers everything an analyst may do; each placement shows
+    // only its share (#5080), and together they show all of it.
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory
+        placement={PLACEMENT_EVIDENCE}
+      />,
+      app
+    )
+    expect(screen.getByTestId('workflow-accept_evidence')).toBeInTheDocument()
+    expect(
+      screen.getByTestId('workflow-request_information')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('workflow-recommend_to_manager')
+    ).not.toBeInTheDocument()
+    cleanup()
+
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory
+        placement={PLACEMENT_DECISION}
+      />,
+      app
+    )
+    expect(
+      screen.getByTestId('workflow-recommend_to_manager')
+    ).toBeInTheDocument()
+    // The wireframe's negative recommendation sits beside it (#5118).
+    expect(screen.getByTestId('workflow-not_recommend')).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('workflow-accept_evidence')
+    ).not.toBeInTheDocument()
+  })
+
+  test('renders nothing for a placement with no actions to offer', ({
+    render,
+    app
+  }) => {
+    // A director has no evidence decisions; the evidence slot stays
+    // empty rather than showing an empty block.
+    const { container } = render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={['approve', 'reject', 'return']}
+        allEvidenceSatisfactory
+        placement={PLACEMENT_EVIDENCE}
+      />,
+      app
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  test('shows only the actions the API says are available', ({
+    render,
+    app
+  }) => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
         availableActions={['approve', 'reject', 'return']}
         allEvidenceSatisfactory
       />,
-      { wrapper }
+      app
     )
 
     expect(screen.getByTestId('workflow-approve')).toBeInTheDocument()
@@ -45,32 +116,41 @@ describe('DesignatedActionWorkflow', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('disables accept and recommend until every requirement is satisfactory', () => {
+  test('disables accept and recommend until every requirement is satisfactory', ({
+    render,
+    app
+  }) => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
         availableActions={analystActions}
         allEvidenceSatisfactory={false}
+        missingInformation="The signed permit."
       />,
-      { wrapper }
+      app
     )
 
     expect(screen.getByTestId('workflow-accept_evidence')).toBeDisabled()
     expect(screen.getByTestId('workflow-recommend_to_manager')).toBeDisabled()
-    // Requesting information is exactly what you do when it is not.
+    // Requesting information, or not recommending, is exactly what you do
+    // when it is not.
     expect(
       screen.getByTestId('workflow-request_information')
     ).not.toBeDisabled()
+    expect(screen.getByTestId('workflow-not_recommend')).not.toBeDisabled()
   })
 
-  it('accepts the evidence without asking for anything else', () => {
+  test('accepts the evidence without asking for anything else', ({
+    render,
+    app
+  }) => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
         availableActions={analystActions}
         allEvidenceSatisfactory
       />,
-      { wrapper }
+      app
     )
 
     fireEvent.click(screen.getByTestId('workflow-accept_evidence'))
@@ -81,45 +161,97 @@ describe('DesignatedActionWorkflow', () => {
     )
   })
 
-  it('asks what is needed before requesting information', () => {
+  test('sends the Missing information box when requesting information', ({
+    render,
+    app
+  }) => {
+    // The reason is on the page (#5118); there is nothing more to ask.
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
         availableActions={analystActions}
         allEvidenceSatisfactory
+        missingInformation="  Send the signed permit.  "
       />,
-      { wrapper }
+      app
     )
 
     fireEvent.click(screen.getByTestId('workflow-request_information'))
-    expect(mockPerform).not.toHaveBeenCalled()
 
-    const box = screen.getByTestId('workflow-comment')
-    fireEvent.change(box, { target: { value: 'Send the signed permit.' } })
-    fireEvent.click(screen.getByText('initiativeAgreement:workflow.submit'))
-
+    expect(screen.queryByTestId('workflow-comment')).not.toBeInTheDocument()
     expect(mockPerform).toHaveBeenCalledWith(
       { action: 'request_information', comment: 'Send the signed permit.' },
       expect.anything()
     )
   })
 
-  it('sends the recommended amount when recommending', () => {
+  test('cannot request information until the box says what is missing', ({
+    render,
+    app
+  }) => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
         availableActions={analystActions}
         allEvidenceSatisfactory
-        canEditCredits
-        recommendedCredits={null}
-        creditAllocation={1850}
+        missingInformation="   "
       />,
-      { wrapper }
+      app
     )
 
-    fireEvent.change(screen.getByTestId('recommended-credits-input'), {
-      target: { value: '1200' }
+    expect(screen.getByTestId('workflow-request_information')).toBeDisabled()
+    expect(
+      screen.getByTestId('workflow-tip-request_information')
+    ).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('blockedNoMissingInformation')
+    )
+  })
+
+  test('asks why before not recommending', ({ render, app }) => {
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory={false}
+        placement={PLACEMENT_DECISION}
+      />,
+      app
+    )
+
+    fireEvent.click(screen.getByTestId('workflow-not_recommend'))
+    expect(mockPerform).not.toHaveBeenCalled()
+    expect(
+      screen.getByText('initiativeAgreement:workflow.prompt.not_recommend')
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByTestId('workflow-comment'), {
+      target: { value: 'The permit was never issued.' }
     })
+    fireEvent.click(screen.getByText('initiativeAgreement:workflow.submit'))
+
+    expect(mockPerform).toHaveBeenCalledWith(
+      { action: 'not_recommend', comment: 'The permit was never issued.' },
+      expect.anything()
+    )
+  })
+
+  test('sends the saved recommended amount when recommending', ({
+    render,
+    app
+  }) => {
+    // The amount is edited in the page header (#5079); the action carries
+    // whatever was saved there.
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory
+        recommendedCredits={1200}
+      />,
+      app
+    )
+
     fireEvent.click(screen.getByTestId('workflow-recommend_to_manager'))
 
     expect(mockPerform).toHaveBeenCalledWith(
@@ -128,36 +260,15 @@ describe('DesignatedActionWorkflow', () => {
     )
   })
 
-  it('saves an edited amount when the field loses focus', () => {
+  test('no longer hosts the credits field', ({ render, app }) => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
         availableActions={analystActions}
         allEvidenceSatisfactory
-        canEditCredits
         recommendedCredits={null}
-        creditAllocation={1850}
       />,
-      { wrapper }
-    )
-
-    const input = screen.getByTestId('recommended-credits-input')
-    fireEvent.change(input, { target: { value: '900' } })
-    fireEvent.blur(input)
-
-    expect(mockSaveCredits).toHaveBeenCalledWith(900)
-  })
-
-  it('does not offer the credits field to a director', () => {
-    render(
-      <DesignatedActionWorkflow
-        designatedActionId="9"
-        availableActions={['approve', 'reject', 'return']}
-        allEvidenceSatisfactory
-        canEditCredits={false}
-        recommendedCredits={1200}
-      />,
-      { wrapper }
+      app
     )
 
     expect(
@@ -165,7 +276,7 @@ describe('DesignatedActionWorkflow', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('a disabled button says what would enable it', () => {
+  test('a disabled button says what would enable it', ({ render, app }) => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
@@ -173,7 +284,7 @@ describe('DesignatedActionWorkflow', () => {
         allEvidenceSatisfactory={false}
         hasRequirements
       />,
-      { wrapper }
+      app
     )
 
     expect(screen.getByTestId('workflow-tip-accept_evidence')).toHaveAttribute(
@@ -182,7 +293,10 @@ describe('DesignatedActionWorkflow', () => {
     )
   })
 
-  it('tells you to add a requirement when there are none', () => {
+  test('tells you to add a requirement when there are none', ({
+    render,
+    app
+  }) => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
@@ -190,7 +304,7 @@ describe('DesignatedActionWorkflow', () => {
         allEvidenceSatisfactory={false}
         hasRequirements={false}
       />,
-      { wrapper }
+      app
     )
 
     expect(screen.getByTestId('workflow-tip-accept_evidence')).toHaveAttribute(
@@ -199,7 +313,7 @@ describe('DesignatedActionWorkflow', () => {
     )
   })
 
-  it('surfaces the reason the API refused an action', () => {
+  test('surfaces the reason the API refused an action', ({ render, app }) => {
     mockPerform.mockImplementation((_payload, handlers) =>
       handlers.onError({
         response: {
@@ -213,7 +327,7 @@ describe('DesignatedActionWorkflow', () => {
         availableActions={analystActions}
         allEvidenceSatisfactory
       />,
-      { wrapper }
+      app
     )
 
     fireEvent.click(screen.getByTestId('workflow-accept_evidence'))
@@ -223,7 +337,7 @@ describe('DesignatedActionWorkflow', () => {
     )
   })
 
-  it('tells the caller when something changed', () => {
+  test('tells the caller when something changed', ({ render, app }) => {
     const onChanged = vi.fn()
     mockPerform.mockImplementation((_payload, handlers) => handlers.onSuccess())
     render(
@@ -233,7 +347,7 @@ describe('DesignatedActionWorkflow', () => {
         allEvidenceSatisfactory
         onChanged={onChanged}
       />,
-      { wrapper }
+      app
     )
 
     fireEvent.click(screen.getByTestId('workflow-accept_evidence'))

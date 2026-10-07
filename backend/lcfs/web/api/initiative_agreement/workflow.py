@@ -30,6 +30,7 @@ STATUS_SUBMISSION_RECEIVED = "Submission received"
 STATUS_UNDERWAY = "Underway"
 STATUS_INFORMATION_REQUESTED = "Information requested"
 STATUS_RECOMMENDED_TO_MANAGER = "Recommended to manager"
+STATUS_NOT_RECOMMENDED = "Not recommended"
 STATUS_RECOMMENDED_TO_DIRECTOR = "Recommended to director"
 STATUS_APPROVED = "Approved"
 STATUS_RETURNED = "Returned"
@@ -48,6 +49,7 @@ IN_REVIEW_STATUSES = (
 ACTION_ACCEPT_EVIDENCE = "accept_evidence"
 ACTION_REQUEST_INFORMATION = "request_information"
 ACTION_RECOMMEND_TO_MANAGER = "recommend_to_manager"
+ACTION_NOT_RECOMMEND = "not_recommend"
 ACTION_RETURN = "return"
 ACTION_RECOMMEND_TO_DIRECTOR = "recommend_to_director"
 ACTION_APPROVE = "approve"
@@ -73,6 +75,7 @@ class Transition:
         requires_credits=False,
         requires_all_evidence_satisfactory=False,
         captures_evidence=False,
+        uses_missing_information=False,
     ):
         self.roles = roles
         self.from_statuses = from_statuses
@@ -82,6 +85,7 @@ class Transition:
         self.requires_credits = requires_credits
         self.requires_all_evidence_satisfactory = requires_all_evidence_satisfactory
         self.captures_evidence = captures_evidence
+        self.uses_missing_information = uses_missing_information
 
 
 TRANSITIONS = {
@@ -99,6 +103,8 @@ TRANSITIONS = {
     # Sends the action back to the proponent for more evidence. The
     # snapshot carries the full review, so this round's findings survive
     # the next one.
+    # The reason is the page's Missing information box (#5118): sent as the
+    # comment, or read from the saved box when the request carries none.
     ACTION_REQUEST_INFORMATION: Transition(
         roles=(RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER),
         from_statuses=IN_REVIEW_STATUSES,
@@ -106,6 +112,7 @@ TRANSITIONS = {
         event=EVENT_INFORMATION_REQUESTED,
         requires_comment=True,
         captures_evidence=True,
+        uses_missing_information=True,
     ),
     ACTION_RECOMMEND_TO_MANAGER: Transition(
         roles=(RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER),
@@ -115,10 +122,23 @@ TRANSITIONS = {
         requires_credits=True,
         requires_all_evidence_satisfactory=True,
     ),
+    # The analyst's negative recommendation (#5118). It goes to the
+    # manager like a positive one, but carries no amount and does not
+    # need the evidence to be satisfactory: evidence falling short is the
+    # usual reason for it. The reason is required, and the review is kept.
+    ACTION_NOT_RECOMMEND: Transition(
+        roles=(RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER),
+        from_statuses=IN_REVIEW_STATUSES,
+        to_status=STATUS_NOT_RECOMMENDED,
+        event=EVENT_STATUS_CHANGE,
+        requires_comment=True,
+        captures_evidence=True,
+    ),
     ACTION_RETURN: Transition(
         roles=(RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR),
         from_statuses=(
             STATUS_RECOMMENDED_TO_MANAGER,
+            STATUS_NOT_RECOMMENDED,
             STATUS_RECOMMENDED_TO_DIRECTOR,
         ),
         to_status=STATUS_RETURNED,

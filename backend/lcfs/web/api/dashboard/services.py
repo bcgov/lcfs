@@ -3,6 +3,7 @@ from fastapi import Depends
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.dashboard.repo import DashboardRepository
 from lcfs.web.api.dashboard.schema import (
+    OrgInitiativeAgreementCountsSchema,
     DirectorReviewCountsSchema,
     TransactionCountsSchema,
     OrganizarionTransactionCountsSchema,
@@ -94,6 +95,18 @@ class DashboardServices:
         return InitiativeAgreementCountsSchema(
             draft=counts.get("Draft", 0),
             underway=counts.get("Underway", 0),
+        )
+
+    @service_handler
+    async def get_org_initiative_agreement_counts(
+        self, organization_id: int
+    ) -> OrgInitiativeAgreementCountsSchema:
+        """The caller's organization's agreements, for the BCeID card."""
+        counts = await self.repo.get_initiative_agreement_counts(organization_id)
+
+        return OrgInitiativeAgreementCountsSchema(
+            underway=counts.get("Underway", 0),
+            completed=counts.get("Completed", 0),
         )
 
     @service_handler

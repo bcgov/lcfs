@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   apiToRow,
@@ -195,6 +195,48 @@ describe('buildPathwayColDefs — design data column', () => {
     })
     const fuelCodeTypeIndex = cols.findIndex((c) => c.field === 'fuelCodeTypeId')
     expect(cols[fuelCodeTypeIndex + 1].field).toBe('designData')
+  })
+})
+
+describe('buildPathwayColDefs — predictive text options', () => {
+  it('uses FuelCode-backed async suggestions for feedstock', async () => {
+    const cols = buildPathwayColDefs({
+      optionsData: {},
+      canEdit: true
+    })
+
+    const params = cols
+      .find((c) => c.field === 'feedstock')
+      .cellEditorParams({ api: {} })
+    const client = { get: vi.fn().mockResolvedValue({ data: ['Canola'] }) }
+
+    expect(params.queryKey).toBe('ci-feedstock-search')
+    await expect(
+      params.queryFn({ client, queryKey: [params.queryKey, 'Can'] })
+    ).resolves.toEqual(['Canola'])
+    expect(client.get).toHaveBeenCalledWith(
+      '/ci-applications/fuel-code-field-search?field=feedstock&query=Can'
+    )
+  })
+
+  it('uses FuelCode feedstock location async suggestions for feedstock region', async () => {
+    const cols = buildPathwayColDefs({
+      optionsData: {},
+      canEdit: true
+    })
+
+    const params = cols
+      .find((c) => c.field === 'feedstockRegion')
+      .cellEditorParams({ api: {} })
+    const client = { get: vi.fn().mockResolvedValue({ data: ['Saskatchewan'] }) }
+
+    expect(params.queryKey).toBe('ci-feedstock-location-search')
+    await expect(
+      params.queryFn({ client, queryKey: [params.queryKey, 'Sas'] })
+    ).resolves.toEqual(['Saskatchewan'])
+    expect(client.get).toHaveBeenCalledWith(
+      '/ci-applications/fuel-code-field-search?field=feedstockLocation&query=Sas'
+    )
   })
 })
 

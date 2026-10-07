@@ -32,10 +32,13 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
+    SortOrder,
     validate_pagination,
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.schema import (
+    AllDesignatedActionsListSchema,
+    DesignatedActionListItemSchema,
     AgreementCreateSchema,
     AnalystAssignmentSchema,
     CreateInitiativeAgreementHistorySchema,
@@ -223,6 +226,7 @@ class InitiativeAgreementServices:
         return InitiativeAgreementProfileSchema(
             **self._list_item_kwargs(agreement),
             project_description=agreement.project_description,
+            project_location=agreement.project_location,
             contact_email=agreement.contact_email,
             contact_phone=agreement.contact_phone,
             create_date=agreement.create_date,
@@ -292,6 +296,7 @@ class InitiativeAgreementServices:
                 agreement_type=data.agreement_type,
                 title=(data.title or None),
                 project_description=(data.project_description or None),
+                project_location=(data.project_location or None),
                 contact_name=(data.contact_name or None),
                 contact_email=(data.contact_email or None),
                 contact_phone=(data.contact_phone or None),
@@ -492,13 +497,62 @@ class InitiativeAgreementServices:
         actions, total_count = await self.repo.get_designated_actions_paginated(
             initiative_agreement_id, pagination
         )
-        # The grid endpoint is IDIR-only, so internal comments are visible.
+        rows = await self._designated_action_rows(actions, DesignatedActionSchema)
+        return DesignatedActionsListSchema(
+            pagination=self._pagination_response(pagination, total_count),
+            designated_actions=rows,
+        )
+
+    @service_handler
+    async def get_all_designated_actions_paginated(
+        self, pagination: PaginationRequestSchema
+    ) -> AllDesignatedActionsListSchema:
+        """Every agreement's designated actions, for the module's
+        Designated actions tab (#5078). Newest activity first unless the
+        caller sorts otherwise: the tab is a work queue."""
+        pagination = validate_pagination(pagination)
+        pagination.size = min(pagination.size, MAX_PAGE_SIZE)
+        if not pagination.sort_orders:
+            pagination.sort_orders = [SortOrder(field="update_date", direction="desc")]
+        actions, total_count = await self.repo.get_designated_actions_paginated(
+            None, pagination
+        )
+        rows = await self._designated_action_rows(
+            actions, DesignatedActionListItemSchema
+        )
+        for row, action in zip(rows, actions):
+            row.ia_code = (
+                action.initiative_agreement.ia_code
+                if action.initiative_agreement
+                else None
+            )
+        return AllDesignatedActionsListSchema(
+            pagination=self._pagination_response(pagination, total_count),
+            designated_actions=rows,
+        )
+
+    @staticmethod
+    def _pagination_response(pagination, total_count) -> PaginationResponseSchema:
+        return PaginationResponseSchema(
+            total=total_count,
+            page=pagination.page,
+            size=pagination.size,
+            total_pages=(
+                math.ceil(total_count / pagination.size) if pagination.size else 0
+            ),
+        )
+
+    async def _designated_action_rows(self, actions, schema):
+        """Grid rows with each action's newest comment attached.
+
+        Both grids are IDIR-only, so internal comments are visible.
+        """
         latest_comments = await self.repo.get_latest_comments_by_designated_action_ids(
             actions, include_internal=True
         )
         rows = []
         for action in actions:
-            row = DesignatedActionSchema.model_validate(action)
+            row = schema.model_validate(action)
             entry = latest_comments.get(action.designated_action_id)
             if entry:
                 comment, full_name = entry
@@ -516,17 +570,7 @@ class InitiativeAgreementServices:
                         }
                     )
             rows.append(row)
-        return DesignatedActionsListSchema(
-            pagination=PaginationResponseSchema(
-                total=total_count,
-                page=pagination.page,
-                size=pagination.size,
-                total_pages=(
-                    math.ceil(total_count / pagination.size) if pagination.size else 0
-                ),
-            ),
-            designated_actions=rows,
-        )
+        return rows
 
     @service_handler
     async def get_designated_action_profile(
@@ -587,6 +631,7 @@ class InitiativeAgreementServices:
                 {
                     "evidence_requirement_id": r.evidence_requirement_id,
                     "requirement_number": r.requirement_number,
+                    "title": r.title,
                     "description": r.description,
                     "analyst_review": r.analyst_review,
                     "review_outcome": r.review_outcome,
@@ -641,6 +686,23 @@ class InitiativeAgreementServices:
         return DesignatedActionSchema.model_validate(refreshed)
 
     @service_handler
+    async def set_missing_information(
+        self, designated_action_id: int, text: Optional[str], user
+    ) -> DesignatedActionSchema:
+        """Persist the Missing information box between review rounds (#5118).
+
+        No history event, for the same reason as the recommended amount:
+        this is working text. Requesting additional information records
+        what was actually sent.
+        """
+        action = await self._get_action_or_404(designated_action_id)
+        action.missing_information = (text or "").strip() or None
+        action.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+        refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
+        return DesignatedActionSchema.model_validate(refreshed)
+
+    @service_handler
     async def perform_workflow_action(
         self, designated_action_id: int, data: DesignatedActionWorkflowSchema, user
     ) -> DesignatedActionSchema:
@@ -670,6 +732,12 @@ class InitiativeAgreementServices:
             )
 
         comment = (data.comment or "").strip()
+        if transition.uses_missing_information:
+            if comment:
+                # The box and what was sent must agree afterwards.
+                action.missing_information = comment
+            else:
+                comment = (action.missing_information or "").strip()
         if transition.requires_comment and not comment:
             raise HTTPException(
                 status_code=400,
@@ -792,6 +860,11 @@ class InitiativeAgreementServices:
     ) -> EvidenceRequirementSchema:
         """Add an evidence requirement to an action (the wireframe's Add EOC)."""
         await self._get_action_or_404(designated_action_id)
+        title = (data.title or "").strip()
+        if not title:
+            raise HTTPException(
+                status_code=400, detail="A requirement title is required."
+            )
         description = (data.description or "").strip()
         if not description:
             raise HTTPException(
@@ -805,6 +878,7 @@ class InitiativeAgreementServices:
             EvidenceRequirement(
                 designated_action_id=designated_action_id,
                 requirement_number=number,
+                title=title,
                 description=description,
                 evidence_type=data.evidence_type,
                 create_user=username,
@@ -832,13 +906,32 @@ class InitiativeAgreementServices:
                 f"Evidence requirement with id {evidence_requirement_id} not found"
             )
 
+        # The text an analyst saves deliberately — title, description and
+        # evaluation — is recorded with its before and after, the way a
+        # correction to the action's own details is. Outcome and notes are
+        # not: they are captured whole in the workflow snapshots.
+        changes = {}
+        if data.title is not None:
+            title = data.title.strip()
+            if not title:
+                raise HTTPException(
+                    status_code=400, detail="A requirement title is required."
+                )
+            if title != requirement.title:
+                changes["title"] = {"from": requirement.title, "to": title}
+                requirement.title = title
         if data.description is not None:
             description = data.description.strip()
             if not description:
                 raise HTTPException(
                     status_code=400, detail="A requirement description is required."
                 )
-            requirement.description = description
+            if description != requirement.description:
+                changes["description"] = {
+                    "from": requirement.description,
+                    "to": description,
+                }
+                requirement.description = description
         if data.evidence_type is not None:
             requirement.evidence_type = data.evidence_type
         if data.requirement_number is not None:
@@ -846,6 +939,11 @@ class InitiativeAgreementServices:
 
         review_touched = False
         if data.analyst_review is not None:
+            if data.analyst_review != (requirement.analyst_review or ""):
+                changes["evaluation"] = {
+                    "from": requirement.analyst_review,
+                    "to": data.analyst_review,
+                }
             requirement.analyst_review = data.analyst_review
             review_touched = True
         if data.review_notes is not None:
@@ -869,6 +967,36 @@ class InitiativeAgreementServices:
             requirement.reviewed_by_user_id = getattr(user, "user_profile_id", None)
             requirement.reviewed_date = datetime.now(timezone.utc)
         requirement.update_user = getattr(user, "keycloak_username", None)
+
+        if changes:
+            action = await self.repo.get_designated_action_by_id(
+                requirement.designated_action_id
+            )
+            display_name = " ".join(
+                p
+                for p in (
+                    getattr(user, "first_name", ""),
+                    getattr(user, "last_name", ""),
+                )
+                if p
+            ).strip()
+            await self.repo.add_designated_action_history(
+                DesignatedActionHistory(
+                    designated_action_id=action.designated_action_id,
+                    designated_action_group_uuid=action.group_uuid,
+                    event=EVENT_DETAILS_EDITED,
+                    status_id=action.current_status_id,
+                    user_profile_id=getattr(user, "user_profile_id", None),
+                    display_name=display_name or None,
+                    snapshot={
+                        "changed": changes,
+                        "evidence_requirement_id": requirement.evidence_requirement_id,
+                        "requirement_number": requirement.requirement_number,
+                        "requirement_title": requirement.title
+                        or requirement.description,
+                    },
+                )
+            )
         await self.repo.db.flush()
 
         refreshed = await self.repo.get_evidence_requirement(evidence_requirement_id)

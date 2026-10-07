@@ -17,6 +17,7 @@ import PublicLayout from '@/layouts/PublicLayout'
 import { fuelCodeRoutes } from './routeConfig/fuelCodeRoutes'
 import { ciApplicationRoutes } from './routeConfig/ciApplicationRoutes'
 import { publicPageRoutes } from './routeConfig/publicPageRoutes'
+import { marketDataRoutes } from './routeConfig/marketDataRoutes'
 import { PublicPageLayout } from '@/layouts/PublicPageLayout'
 import { initiativeAgreementRoutes } from './routeConfig/initiativeAgreementRoutes'
 import { ReleaseNotes } from '@/views/ReleaseNotes'
@@ -33,6 +34,7 @@ const allRoutes = [
   ...transferRoutes,
   ...reportRoutes,
   ...notificationRoutes,
+  ...marketDataRoutes,
   ...publicPageRoutes,
   ...initiativeAgreementRoutes
 ]

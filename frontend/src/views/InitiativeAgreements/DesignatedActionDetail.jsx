@@ -2,20 +2,19 @@ import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import {
-  Divider,
-  IconButton,
-  Paper,
-  Stack,
-  Step,
-  StepLabel,
-  Stepper
-} from '@mui/material'
+import Divider from '@mui/material/Divider'
+import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
+import Stepper from '@mui/material/Stepper'
+import TextField from '@mui/material/TextField'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
+import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Comments from '@/components/Comments'
@@ -29,13 +28,19 @@ import withRole from '@/utils/withRole'
 
 import {
   useDesignatedActionProfile,
-  useEvidenceRequirements
+  useEvidenceRequirements,
+  useSetMissingInformation,
+  useSetRecommendedCredits
 } from '@/hooks/useInitiativeAgreements'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { DocumentTree } from './components/DocumentTree'
 import { EvidenceOfCompletion } from './components/EvidenceOfCompletion'
-import { DesignatedActionWorkflow } from './components/DesignatedActionWorkflow'
+import {
+  DesignatedActionWorkflow,
+  PLACEMENT_DECISION,
+  PLACEMENT_EVIDENCE
+} from './components/DesignatedActionWorkflow'
 import { EditDesignatedAction } from './components/EditDesignatedAction'
 import { DesignatedActionHistoryPanel } from './components/DesignatedActionHistoryPanel'
 
@@ -81,6 +86,50 @@ const DesignatedActionDetailBase = () => {
 
   const { data: requirements = [] } =
     useEvidenceRequirements(designatedActionId)
+
+  // The recommended amount is edited here, beside the allocation it is
+  // measured against, rather than at the foot of the page (#5079).
+  const { mutate: saveCredits } = useSetRecommendedCredits(designatedActionId)
+  const [credits, setCredits] = useState('')
+  useEffect(() => {
+    setCredits(
+      action?.recommendedCredits === null ||
+        action?.recommendedCredits === undefined
+        ? ''
+        : String(action.recommendedCredits)
+    )
+  }, [action?.recommendedCredits])
+  const commitCredits = () => {
+    const next = credits === '' ? null : Number(credits)
+    // A number input sanitises garbage to '', but if a non-number ever
+    // arrives it must not be saved as null and read as "cleared".
+    if (next !== null && !Number.isInteger(next)) {
+      setCredits(
+        action?.recommendedCredits == null
+          ? ''
+          : String(action.recommendedCredits)
+      )
+      return
+    }
+    if (next !== (action?.recommendedCredits ?? null)) {
+      saveCredits(next)
+    }
+  }
+  // The Missing information box (#5118): edited here because the request
+  // button beside the summary sends it, saved on leaving the field like
+  // the recommended amount.
+  const { mutate: saveMissingInformation } =
+    useSetMissingInformation(designatedActionId)
+  const [missingInformation, setMissingInformation] = useState('')
+  useEffect(() => {
+    setMissingInformation(action?.missingInformation ?? '')
+  }, [action?.missingInformation])
+  const commitMissingInformation = () => {
+    if (missingInformation.trim() !== (action?.missingInformation ?? '')) {
+      saveMissingInformation(missingInformation)
+    }
+  }
+
   const allEvidenceSatisfactory =
     requirements.length > 0 &&
     requirements.every((r) => r.reviewOutcome === 'Satisfactory')
@@ -95,9 +144,13 @@ const DesignatedActionDetailBase = () => {
       queryKey: ['document-tree', PARENT_TYPE, String(designatedActionId)]
     })
 
-  // Surface the wireframe's action identifier in the breadcrumb.
+  // The breadcrumb reads the hierarchy the URL encodes — the agreement,
+  // then the action — so it needs a label for each numeric segment.
   const setAgreementCrumb = useInitiativeAgreementPageStore(
     (state) => state.setAgreementCrumb
+  )
+  const setParentCrumb = useInitiativeAgreementPageStore(
+    (state) => state.setParentCrumb
   )
   useEffect(() => {
     setAgreementCrumb(
@@ -105,8 +158,12 @@ const DesignatedActionDetailBase = () => {
         ? `DA${action.actionNumber}-IA${action.initiativeAgreementId}`
         : null
     )
-    return () => setAgreementCrumb(null)
-  }, [action, setAgreementCrumb])
+    setParentCrumb(action?.iaCode ?? null)
+    return () => {
+      setAgreementCrumb(null)
+      setParentCrumb(null)
+    }
+  }, [action, setAgreementCrumb, setParentCrumb])
 
   if (isLoading) {
     return <Loading message={t('initiativeAgreement:loadingText')} />
@@ -142,6 +199,7 @@ const DesignatedActionDetailBase = () => {
 
   return (
     <BCBox>
+      <InitiativeAgreementTabs />
       <BCTypography
         variant="h5"
         color="primary"
@@ -152,9 +210,10 @@ const DesignatedActionDetailBase = () => {
       </BCTypography>
       <Divider sx={{ mt: 2, mb: 3 }} />
 
+      {/* Centred on the page, per the design review (#5118). */}
       <Stepper
         alternativeLabel
-        sx={{ mb: 3, maxWidth: 640 }}
+        sx={{ mb: 3, maxWidth: 640, mx: 'auto' }}
         data-test="designated-action-stepper"
       >
         {WORKFLOW_STEPS.map((step) => (
@@ -239,14 +298,50 @@ const DesignatedActionDetailBase = () => {
                   count: (action.creditAllocation ?? 0).toLocaleString()
                 })}
               />
-              <LabelValue
-                label={t('initiativeAgreement:actionDetail.recommendedCredits')}
-                value={
-                  action.recommendedCredits != null
-                    ? action.recommendedCredits.toLocaleString()
-                    : null
-                }
-              />
+              {canRecommend ? (
+                <BCBox
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <BCTypography
+                    variant="body4"
+                    component="label"
+                    htmlFor="recommended-credits-input"
+                    sx={{ fontWeight: 700 }}
+                  >
+                    {t('initiativeAgreement:actionDetail.recommendedCredits')}
+                  </BCTypography>
+                  <TextField
+                    id="recommended-credits-input"
+                    size="small"
+                    type="number"
+                    value={credits}
+                    inputProps={{
+                      min: 0,
+                      max: action.creditAllocation ?? undefined,
+                      'data-test': 'recommended-credits-input'
+                    }}
+                    sx={{ width: 160 }}
+                    onChange={(event) => setCredits(event.target.value)}
+                    onBlur={commitCredits}
+                  />
+                </BCBox>
+              ) : (
+                <LabelValue
+                  label={t(
+                    'initiativeAgreement:actionDetail.recommendedCredits'
+                  )}
+                  value={
+                    action.recommendedCredits != null
+                      ? action.recommendedCredits.toLocaleString()
+                      : null
+                  }
+                />
+              )}
               <LabelValue
                 label={t('initiativeAgreement:actionDetail.completionDate')}
                 value={
@@ -307,30 +402,49 @@ const DesignatedActionDetailBase = () => {
                 }
               />
             </BCBox>
+
+            {/* Evidence of completion review (#4899) in its own box inside
+                the card, with the evidence decisions beneath its summary
+                (#5080) and the recommendation beneath the box (#5118).
+                Which buttons appear comes from the API, so the page cannot
+                offer a transition the server refuses. */}
+            <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
+              <EvidenceOfCompletion
+                designatedActionId={designatedActionId}
+                // The API takes evidence edits from analysts and managers
+                // only; directors see the review without controls that
+                // would be refused.
+                canEdit={canRecommend}
+                missingInformation={missingInformation}
+                onMissingInformationChange={setMissingInformation}
+                onMissingInformationBlur={commitMissingInformation}
+                missingInformationReadOnly={!canRecommend}
+                actions={
+                  <DesignatedActionWorkflow
+                    designatedActionId={designatedActionId}
+                    availableActions={action.availableActions}
+                    recommendedCredits={action.recommendedCredits}
+                    allEvidenceSatisfactory={allEvidenceSatisfactory}
+                    hasRequirements={requirements.length > 0}
+                    missingInformation={missingInformation}
+                    placement={PLACEMENT_EVIDENCE}
+                    onChanged={refreshAction}
+                  />
+                }
+              />
+              <DesignatedActionWorkflow
+                designatedActionId={designatedActionId}
+                availableActions={action.availableActions}
+                recommendedCredits={action.recommendedCredits}
+                allEvidenceSatisfactory={allEvidenceSatisfactory}
+                hasRequirements={requirements.length > 0}
+                placement={PLACEMENT_DECISION}
+                onChanged={refreshAction}
+              />
+            </Role>
           </BCBox>
         }
       />
-
-      {/* Evidence of completion review (#4899). The Accept and Request
-          additional information buttons belong to the workflow story. */}
-      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
-        <EvidenceOfCompletion designatedActionId={designatedActionId} />
-      </Role>
-
-      {/* Workflow actions (#4898). Which buttons appear comes from the
-          API, so the page cannot offer a transition the server refuses. */}
-      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
-        <DesignatedActionWorkflow
-          designatedActionId={designatedActionId}
-          availableActions={action.availableActions}
-          recommendedCredits={action.recommendedCredits}
-          creditAllocation={action.creditAllocation}
-          allEvidenceSatisfactory={allEvidenceSatisfactory}
-          hasRequirements={requirements.length > 0}
-          canEditCredits={canRecommend}
-          onChanged={refreshAction}
-        />
-      </Role>
 
       <DocumentUploadDialog
         open={uploadOpen}

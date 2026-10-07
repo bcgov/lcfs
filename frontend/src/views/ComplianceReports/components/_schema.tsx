@@ -1,10 +1,8 @@
 // @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef } from 'ag-grid-community'
 import type { SummaryColumn } from '@/types/schema'
-import {
-  BCDateFloatingFilter,
-  BCSelectFloatingFilter
-} from '@/components/BCDataGrid/components'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { SUMMARY } from '@/constants/common'
 import {
   ReportsStatusRenderer,
@@ -16,9 +14,52 @@ import {
   useGetAvailableAnalysts
 } from '@/hooks/useComplianceReports'
 import { AssignedAnalystCell } from './AssignedAnalystCell'
-import { Tooltip } from '@mui/material'
+import Tooltip from '@mui/material/Tooltip'
 import WarningIcon from '@mui/icons-material/Warning'
 import { Link, useLocation } from 'react-router-dom'
+
+const VANCOUVER_TIME_ZONE = 'America/Vancouver'
+
+const parseDateOnly = (value: string | Date | null | undefined): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+
+  const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (dateOnly && !/[T ]\d{2}:\d{2}/.test(String(value))) {
+    const [, year, month, day] = dateOnly
+    return new Date(Number(year), Number(month) - 1, Number(day))
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const formatDateOnly = (value: string | Date | null | undefined): string => {
+  if (!value) return ''
+  const dateOnly = String(value).match(/^(\d{4}-\d{2}-\d{2})/)
+  if (dateOnly && !/[T ]\d{2}:\d{2}/.test(String(value))) return dateOnly[1]
+
+  const date = parseDateOnly(value)
+  return date
+    ? date.toLocaleDateString('en-CA', { timeZone: VANCOUVER_TIME_ZONE })
+    : String(value)
+}
+
+const dateFilterComparator = (
+  filterLocalDateAtMidnight: Date,
+  cellValue: string | Date | null | undefined
+): number => {
+  const cellDate = parseDateOnly(formatDateOnly(cellValue))
+  if (!cellDate) return -1
+  const normalizedCellDate = new Date(
+    cellDate.getFullYear(),
+    cellDate.getMonth(),
+    cellDate.getDate()
+  )
+  if (normalizedCellDate < filterLocalDateAtMidnight) return -1
+  if (normalizedCellDate > filterLocalDateAtMidnight) return 1
+  return 0
+}
 
 // Cell renderer for Type column with 30-day supplemental flag
 const TypeCellRenderer = (isSupplier) => (props) => {
@@ -226,13 +267,15 @@ export const reportsColDefs = (
     headerName: t('report:reportColLabels.lastUpdated'),
     minWidth: 225,
     valueGetter: ({ data }) => data.updateDate || '',
+    filterValueGetter: ({ data }) => formatDateOnly(data.updateDate),
     valueFormatter: timezoneFormatter,
     filter: 'agDateColumnFilter',
     filterParams: {
       filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
       suppressAndOrCondition: true,
       buttons: ['clear'],
-      maxValidYear: 2400
+      maxValidYear: 2400,
+      comparator: dateFilterComparator
     },
     floatingFilterComponent: BCDateFloatingFilter,
     suppressFloatingFilterButton: true
@@ -576,7 +619,10 @@ export const lowCarbonColumns = (
 
 export const nonComplianceColumns = (
   t: (key: string) => string,
-  editable: boolean = false
+  editable: boolean = false,
+  statusEditable: boolean = editable,
+  showStatusColumns: boolean = true,
+  statusEditableCells: number[] = [0, 1]
 ): SummaryColumn[] => [
   {
     id: 'description',
@@ -590,7 +636,33 @@ export const nonComplianceColumns = (
     width: '150px',
     editable: editable,
     editableCells: editable ? [0, 1] : []
-  }
+  },
+  ...(showStatusColumns
+    ? [
+        {
+          id: 'invoiceSent',
+          label: t('report:summaryLabels.invoiceSent', {
+            defaultValue: 'Invoice sent'
+          }),
+          align: 'center',
+          width: '160px',
+          type: 'booleanRadio',
+          editable: statusEditable,
+          editableCells: statusEditable ? statusEditableCells : []
+        },
+        {
+          id: 'paymentReceived',
+          label: t('report:summaryLabels.paymentReceived', {
+            defaultValue: 'Payment received'
+          }),
+          align: 'center',
+          width: '190px',
+          type: 'booleanRadio',
+          editable: statusEditable,
+          editableCells: statusEditable ? statusEditableCells : []
+        }
+      ]
+    : [])
 ]
 
 export const earlyIssuanceColumns = (

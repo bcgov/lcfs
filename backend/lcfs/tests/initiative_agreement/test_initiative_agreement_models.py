@@ -173,6 +173,7 @@ async def test_designated_action_statuses_seeded(dbsession):
         "Underway",
         "Information requested",
         "Recommended to manager",
+        "Not recommended",
         "Recommended to director",
         "Approved",
         "Issued (legacy)",

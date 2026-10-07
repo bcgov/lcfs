@@ -1,8 +1,8 @@
 import React from 'react'
-import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { screen } from '@testing-library/react'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import { FuelCodeDetail } from '../FuelCodeDetail'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 const mockGridViewer = vi.fn(() => <div data-test="iterations-grid">Grid</div>)
 
@@ -67,12 +67,19 @@ vi.mock('react-i18next', () => ({
 }))
 
 const mockUseGetFuelCodeGroup = vi.fn()
+const mockUseGetFuelCode = vi.fn()
+const mockUseCurrentUser = vi.fn()
 
 vi.mock('@/hooks/useFuelCode', () => ({
   useGetFuelCodeGroup: (...args) => mockUseGetFuelCodeGroup(...args),
+  useGetFuelCode: (...args) => mockUseGetFuelCode(...args),
   useFuelCodeStatuses: vi.fn(() => ({
     data: [{ status: 'Approved' }, { status: 'Draft' }]
   }))
+}))
+
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => mockUseCurrentUser()
 }))
 
 vi.mock('@/stores/useFuelCodePageStore', () => ({
@@ -147,21 +154,28 @@ const groupData = {
 describe('FuelCodeDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseCurrentUser.mockReturnValue({
+      data: { isGovernmentUser: true }
+    })
     mockUseGetFuelCodeGroup.mockReturnValue({
       data: groupData,
       isLoading: false,
       isError: false,
       error: null
     })
+    mockUseGetFuelCode.mockReturnValue({
+      data: latestIteration,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
   })
 
-  afterEach(() => {
-    cleanup()
-  })
-
-  it('renders the detail title, iterations grid, and chart', () => {
-    render(<FuelCodeDetail />, { wrapper })
-
+  test('renders the detail title, iterations grid, and chart', ({
+    render,
+    router
+  }) => {
+    render(<FuelCodeDetail />, [router])
     expect(screen.getByTestId('fuel-code-tabs')).toBeInTheDocument()
     expect(screen.getByTestId('iterations-grid')).toBeInTheDocument()
     expect(screen.getByText('C-BCLCF-100')).toBeInTheDocument()
@@ -172,9 +186,11 @@ describe('FuelCodeDetail', () => {
     )
   })
 
-  it('passes pagination and stable filter props to the iterations grid', () => {
-    render(<FuelCodeDetail />, { wrapper })
-
+  test('passes pagination and stable filter props to the iterations grid', ({
+    render,
+    router
+  }) => {
+    render(<FuelCodeDetail />, [router])
     const gridProps = mockGridViewer.mock.calls[0][0]
 
     expect(gridProps.enablePageCaching).toBe(false)
@@ -195,7 +211,10 @@ describe('FuelCodeDetail', () => {
     })
   })
 
-  it('shows skeleton loading state instead of rendering the grid while loading', () => {
+  test('shows skeleton loading state instead of rendering the grid while loading', ({
+    render,
+    router
+  }) => {
     mockUseGetFuelCodeGroup.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -203,13 +222,15 @@ describe('FuelCodeDetail', () => {
       error: null
     })
 
-    render(<FuelCodeDetail />, { wrapper })
-
+    render(<FuelCodeDetail />, [router])
     expect(screen.queryByTestId('iterations-grid')).not.toBeInTheDocument()
     expect(screen.getByText('All iterations')).toBeInTheDocument()
   })
 
-  it('does not render placeholder company contact details when data is missing', () => {
+  test('does not render placeholder company contact details when data is missing', ({
+    render,
+    router
+  }) => {
     mockUseGetFuelCodeGroup.mockReturnValue({
       data: {
         ...groupData,
@@ -225,12 +246,43 @@ describe('FuelCodeDetail', () => {
       error: null
     })
 
-    render(<FuelCodeDetail />, { wrapper })
-
+    render(<FuelCodeDetail />, [router])
     expect(screen.queryByText('697 Sarmiento')).not.toBeInTheDocument()
     expect(screen.queryByText('+54 9 11 1234-5678')).not.toBeInTheDocument()
     expect(
       screen.queryByText('Zimmerman@fuelproducerltd.ar')
     ).not.toBeInTheDocument()
+  })
+
+  test('uses the single-record endpoint and renders a read-only view for BCeID', ({
+    render,
+    router
+  }) => {
+    mockUseCurrentUser.mockReturnValue({
+      data: { isGovernmentUser: false }
+    })
+
+    render(<FuelCodeDetail />, [router])
+
+    expect(mockUseGetFuelCode).toHaveBeenCalledWith('100', { enabled: true })
+    expect(mockUseGetFuelCodeGroup).toHaveBeenCalledWith('100', {
+      enabled: false
+    })
+    expect(screen.getByText('C-BCLCF-100')).toBeInTheDocument()
+    expect(screen.getByText('Fuel Producer Ltd.')).toBeInTheDocument()
+    expect(screen.queryByTestId('iterations-grid')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('volume-chart')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('compliance-units-chart')
+    ).not.toBeInTheDocument()
+  })
+
+  test('uses the group endpoint for IDIR users', ({ render, router }) => {
+    render(<FuelCodeDetail />, [router])
+
+    expect(mockUseGetFuelCodeGroup).toHaveBeenCalledWith('100', {
+      enabled: true
+    })
+    expect(mockUseGetFuelCode).toHaveBeenCalledWith('100', { enabled: false })
   })
 })

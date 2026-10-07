@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
-import { Divider, Stack } from '@mui/material'
+import Divider from '@mui/material/Divider'
+import Stack from '@mui/material/Stack'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
@@ -13,8 +14,14 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { ROUTES } from '@/routes/routes'
 
 import { useGetInitiativeAgreements } from '@/hooks/useInitiativeAgreements'
-import { defaultSortModel, initiativeAgreementColDefs } from './_schema'
+import {
+  defaultSortModel,
+  initiativeAgreementColDefs,
+  proponentInitiativeAgreementColDefs
+} from './_schema'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import CreateAgreement from './components/CreateAgreement'
+import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
 
 const initialPaginationOptions = {
   page: 1,
@@ -36,7 +43,17 @@ const InitiativeAgreementsBase = () => {
 
   const queryData = useGetInitiativeAgreements(paginationOptions)
 
-  const columnDefs = useMemo(() => initiativeAgreementColDefs(t), [t])
+  const { hasAnyRole } = useCurrentUser()
+  const isProponent =
+    hasAnyRole?.(roles.ia_proponent) &&
+    !hasAnyRole?.(roles.ia_analyst, roles.ia_manager, roles.director)
+  const columnDefs = useMemo(
+    () =>
+      isProponent
+        ? proponentInitiativeAgreementColDefs(t)
+        : initiativeAgreementColDefs(t),
+    [t, isProponent]
+  )
 
   useEffect(() => {
     if (location.state?.message) {
@@ -79,6 +96,7 @@ const InitiativeAgreementsBase = () => {
 
   return (
     <BCBox>
+      <InitiativeAgreementTabs />
       {alertMessage && (
         <BCAlert data-test="alert-box" severity={alertSeverity}>
           {alertMessage}

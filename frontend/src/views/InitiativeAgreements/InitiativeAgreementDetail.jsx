@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import { Divider, Paper, Stack } from '@mui/material'
+import Divider from '@mui/material/Divider'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
 import Grid2 from '@mui/material/Grid2'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
+import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
@@ -87,6 +90,7 @@ const InitiativeAgreementDetailBase = () => {
 
   return (
     <BCBox>
+      <InitiativeAgreementTabs />
       <BCTypography
         variant="h5"
         color="primary"
@@ -169,6 +173,10 @@ const InitiativeAgreementDetailBase = () => {
                   <LabelValue
                     label={t('initiativeAgreement:detail.endDate')}
                     value={dateFormatter({ value: agreement.agreementEndDate })}
+                  />
+                  <LabelValue
+                    label={t('initiativeAgreement:detail.projectLocation')}
+                    value={agreement.projectLocation}
                   />
                 </Stack>
               </Grid2>

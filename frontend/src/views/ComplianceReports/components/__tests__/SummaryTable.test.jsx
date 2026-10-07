@@ -20,43 +20,64 @@ vi.mock('@/utils/formatters', () => ({
 }))
 
 // Mock Material-UI components for simplified testing
-vi.mock('@mui/material', () => ({
-  Paper: ({ children, ...props }) => (
+vi.mock('@mui/material/Paper', () => ({
+    default: ({ children, ...props }) => (
     <div data-test="paper" {...props}>
       {children}
     </div>
-  ),
-  Table: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Table', () => ({
+    default: ({ children, ...props }) => (
     <table data-test="table" {...props}>
       {children}
     </table>
-  ),
-  TableBody: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/TableBody', () => ({
+    default: ({ children, ...props }) => (
     <tbody data-test="table-body" {...props}>
       {children}
     </tbody>
-  ),
-  TableCell: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/TableCell', () => ({
+    default: ({ children, ...props }) => (
     <td data-test="table-cell" {...props}>
       {children}
     </td>
-  ),
-  TableContainer: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/TableContainer', () => ({
+    default: ({ children, ...props }) => (
     <div data-test="table-container" {...props}>
       {children}
     </div>
-  ),
-  TableHead: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/TableHead', () => ({
+    default: ({ children, ...props }) => (
     <thead data-test="table-head" {...props}>
       {children}
     </thead>
-  ),
-  TableRow: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/TableRow', () => ({
+    default: ({ children, ...props }) => (
     <tr data-test="table-row" {...props}>
       {children}
     </tr>
-  ),
-  Input: ({ value, onChange, onBlur, onFocus, onKeyDown, inputProps, startAdornment, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/Input', () => ({
+    default: ({ value, onChange, onBlur, onFocus, onKeyDown, inputProps, startAdornment, ...props }) => (
     <div data-test="input-wrapper">
       {startAdornment}
       <input
@@ -70,8 +91,11 @@ vi.mock('@mui/material', () => ({
         {...props}
       />
     </div>
-  ),
-  TextField: ({ value, onChange, onBlur, slotProps, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+    default: ({ value, onChange, onBlur, slotProps, ...props }) => (
     <div data-test="input-wrapper">
       {slotProps?.input?.startAdornment}
       <input
@@ -83,14 +107,51 @@ vi.mock('@mui/material', () => ({
         {...props}
       />
     </div>
-  ),
-  InputAdornment: ({ children, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/InputAdornment', () => ({
+  default: ({ children, ...props }) => (
     <span data-test="input-adornment" {...props}>
       {children}
     </span>
-  ),
-  CircularProgress: () => <div data-test="circular-progress" />,
-  Tooltip: ({ children }) => children
+  )
+}))
+
+vi.mock('@mui/material/Radio', () => ({
+  default: ({ disabled, ...props }) => (
+    <input data-test="radio" type="radio" disabled={disabled} {...props} />
+  )
+}))
+
+vi.mock('@mui/material/RadioGroup', () => ({
+  default: ({ children, value, onChange, row, ...props }) => (
+    <div
+      data-test="radio-group"
+      data-value={value}
+      onChange={onChange}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}))
+
+vi.mock('@mui/material/FormControlLabel', () => ({
+  default: ({ control, label, value }) => (
+    <label>
+      {React.cloneElement(control, { value })}
+      {label}
+    </label>
+  )
+}))
+
+vi.mock('@mui/material/CircularProgress', () => ({
+  default: () => <div data-test="circular-progress" />
+}))
+
+vi.mock('@mui/material/Tooltip', () => ({
+  default: ({ children }) => children
 }))
 
 // Mock react-number-format
@@ -279,6 +340,37 @@ describe('SummaryTable', () => {
 
       const inputs = screen.getAllByTestId('input')
       expect(inputs).toHaveLength(1) // Only one editable cell
+    })
+
+    it('disables boolean radio cells when the row is locked', () => {
+      const booleanColumns = [
+        { id: 'line', label: 'Line' },
+        {
+          id: 'invoiceSent',
+          label: 'Invoice sent',
+          type: 'booleanRadio',
+          editable: true,
+          editableCells: [0]
+        }
+      ]
+      const onBooleanCellEditStopped = vi.fn()
+
+      customRender(
+        <SummaryTable
+          columns={booleanColumns}
+          data={[{ line: 7, invoiceSent: false }]}
+          lines7And9Locked
+          onBooleanCellEditStopped={onBooleanCellEditStopped}
+        />
+      )
+
+      const radios = screen.getAllByTestId('radio')
+
+      expect(radios).toHaveLength(2)
+      radios.forEach((radio) => expect(radio).toBeDisabled())
+
+      fireEvent.click(radios[0])
+      expect(onBooleanCellEditStopped).not.toHaveBeenCalled()
     })
   })
 

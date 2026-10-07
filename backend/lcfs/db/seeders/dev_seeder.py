@@ -5,6 +5,7 @@ from sqlalchemy import text
 
 from lcfs.db.seeders.dev.user_profile_seeder import seed_user_profiles
 from lcfs.db.seeders.dev.user_role_seeder import seed_user_roles
+from lcfs.db.seeders.dev.comment_seeder import seed_comments
 from lcfs.db.seeders.dev.organization_address_seeder import seed_organization_addresses
 from lcfs.db.seeders.dev.organization_attorney_address_seeder import (
     seed_organization_attorney_addresses,
@@ -28,6 +29,9 @@ from lcfs.db.seeders.dev.feedstock_fuel_transfer_mode_seeder import (
 )
 from lcfs.db.seeders.dev.notification_channel_subscription_seeder import (
     seed_notification_channel_subscriptions,
+)
+from lcfs.db.seeders.org_association_seeder import (
+    seed_org_type_and_available_role_associations,
 )
 from lcfs.db.seeders.seed_charging_power_output import seed_charging_power_output
 from lcfs.db.seeders.staging.test_allocation_agreement_seeder import (
@@ -123,6 +127,7 @@ async def seed_dev(session: AsyncSession):
     # Seed user-related entities
     await seed_user_profiles(session)
     await seed_user_roles(session)
+    await seed_org_type_and_available_role_associations(session)
     # seed transactions and adjustments
     await seed_test_transactions(session)
     await seed_admin_adjustments(session)
@@ -148,6 +153,7 @@ async def seed_dev(session: AsyncSession):
     # Seed transfers and transactions
     await seed_test_transfers(session)
     await seed_test_transfer_history(session)
+    await seed_comments(session)
 
     # Seed remaining
     await seed_finished_fuel_transfer_modes(session)

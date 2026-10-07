@@ -510,3 +510,178 @@ async def test_an_unassignment_names_only_who_was_removed(
     unassignment = response.json()[0]
     assert unassignment["snapshot"]["from_analyst"] == "Kiran Patel"
     assert unassignment["snapshot"]["to_analyst"] is None
+
+
+def _missing_information_url(fastapi_app, action):
+    return fastapi_app.url_path_for(
+        "set_designated_action_missing_information",
+        designated_action_id=action.designated_action_id,
+    )
+
+
+@pytest.mark.anyio
+async def test_the_analyst_does_not_recommend_with_a_reason(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Not recommended goes to the manager without an amount, and without
+    the evidence being satisfactory — evidence falling short is the usual
+    reason for it (#5118)."""
+    action = await _seed_da(dbsession, "IA-26NR1")
+    await _seed_requirement(dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    no_reason = await client.put(
+        _workflow_url(fastapi_app, action), json={"action": "not_recommend"}
+    )
+    assert no_reason.status_code == status.HTTP_400_BAD_REQUEST
+    assert not await _history(dbsession, action)
+
+    response = await client.put(
+        _workflow_url(fastapi_app, action),
+        json={"action": "not_recommend", "comment": "The permit was never issued."},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert await _status_of(dbsession, action) == "Not recommended"
+    assert response.json()["recommendedCredits"] is None
+
+    entries = await _history(dbsession, action)
+    assert [e.event for e in entries] == [EVENT_STATUS_CHANGE]
+    snapshot = entries[0].snapshot
+    assert snapshot["comment"] == "The permit was never issued."
+    # The review that led to it is kept, as for a request for information.
+    assert snapshot["evidence_requirements"][0]["review_outcome"] == (
+        REVIEW_OUTCOME_INFORMATION_REQUESTED
+    )
+
+
+@pytest.mark.anyio
+async def test_the_manager_can_return_a_not_recommended_action(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26NR2", status_name="Not recommended")
+    set_mock_user(fastapi_app, IDIR_IA_MANAGER)
+
+    profile = await client.get(
+        fastapi_app.url_path_for(
+            "get_designated_action_profile",
+            designated_action_id=action.designated_action_id,
+        )
+    )
+    # Only a positive recommendation can go on to the director.
+    assert profile.json()["availableActions"] == ["return"]
+
+    returned = await client.put(
+        _workflow_url(fastapi_app, action),
+        json={"action": "return", "comment": "Look at the second permit again."},
+    )
+    assert returned.status_code == status.HTTP_200_OK
+    assert await _status_of(dbsession, action) == "Returned"
+
+
+@pytest.mark.anyio
+async def test_not_recommending_is_refused_outside_the_review(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(
+        dbsession, "IA-26NR3", status_name="Recommended to director"
+    )
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    wrong_status = await client.put(
+        _workflow_url(fastapi_app, action),
+        json={"action": "not_recommend", "comment": "Too late for this."},
+    )
+    assert wrong_status.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.anyio
+async def test_a_director_cannot_not_recommend(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    underway = await _seed_da(dbsession, "IA-26NR4")
+    set_mock_user(fastapi_app, IDIR_DIRECTOR)
+    wrong_role = await client.put(
+        _workflow_url(fastapi_app, underway),
+        json={"action": "not_recommend", "comment": "Not the director's call."},
+    )
+    assert wrong_role.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_the_missing_information_box_is_kept_between_rounds(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26MI1")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    saved = await client.put(
+        _missing_information_url(fastapi_app, action),
+        json={"missingInformation": "  The signed stage two permit.  "},
+    )
+    assert saved.status_code == status.HTTP_200_OK
+    assert saved.json()["missingInformation"] == "The signed stage two permit."
+    # Working text: nothing is recorded until the request is sent.
+    assert not await _history(dbsession, action)
+
+    cleared = await client.put(
+        _missing_information_url(fastapi_app, action),
+        json={"missingInformation": "   "},
+    )
+    assert cleared.json()["missingInformation"] is None
+
+
+@pytest.mark.anyio
+async def test_directors_cannot_write_the_missing_information(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26MI2")
+    set_mock_user(fastapi_app, IDIR_DIRECTOR)
+
+    response = await client.put(
+        _missing_information_url(fastapi_app, action),
+        json={"missingInformation": "Not the director's text."},
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_requesting_information_sends_the_saved_box(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26MI3")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    await client.put(
+        _missing_information_url(fastapi_app, action),
+        json={"missingInformation": "The signed stage two permit."},
+    )
+
+    response = await client.put(
+        _workflow_url(fastapi_app, action), json={"action": "request_information"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    entries = await _history(dbsession, action)
+    assert entries[-1].snapshot["comment"] == "The signed stage two permit."
+    # The box stays on the page after the request goes out.
+    assert response.json()["missingInformation"] == "The signed stage two permit."
+
+
+@pytest.mark.anyio
+async def test_a_request_with_its_own_text_updates_the_box(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26MI4")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    await client.put(
+        _missing_information_url(fastapi_app, action),
+        json={"missingInformation": "An older draft."},
+    )
+
+    response = await client.put(
+        _workflow_url(fastapi_app, action),
+        json={"action": "request_information", "comment": "What was really sent."},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["missingInformation"] == "What was really sent."

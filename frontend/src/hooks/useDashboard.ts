@@ -107,6 +107,23 @@ export const useInitiativeAgreementCounts = (
   })
 }
 
+/** BCeID card: the caller's organization's agreements by status (#4893). */
+export const useOrgInitiativeAgreementCounts = (
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  const path = apiRoutes.orgInitiativeAgreementCounts
+
+  return useQuery({
+    queryKey: ['org-initiative-agreement-counts'],
+    queryFn: async () => {
+      const response = await client.get(path)
+      return response.data
+    },
+    ...options
+  })
+}
+
 export const useCIApplicationCounts = (options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
   const path = apiRoutes.ciApplicationCounts

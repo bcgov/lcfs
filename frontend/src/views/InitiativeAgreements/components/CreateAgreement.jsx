@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import {
-  Autocomplete,
-  Box,
-  InputLabel,
-  MenuItem,
-  TextField
-} from '@mui/material'
+import Autocomplete from '@mui/material/Autocomplete'
+import Box from '@mui/material/Box'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import TextField from '@mui/material/TextField'
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
@@ -35,6 +33,7 @@ export const CreateAgreement = () => {
   const [iaCode, setIaCode] = useState('')
   const [agreementType, setAgreementType] = useState(AGREEMENT_TYPES[0])
   const [title, setTitle] = useState('')
+  const [projectLocation, setProjectLocation] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [error, setError] = useState('')
@@ -64,6 +63,7 @@ export const CreateAgreement = () => {
     setIaCode('')
     setAgreementType(AGREEMENT_TYPES[0])
     setTitle('')
+    setProjectLocation('')
     setStartDate('')
     setEndDate('')
     setError('')
@@ -82,6 +82,7 @@ export const CreateAgreement = () => {
         iaCode: iaCode.trim(),
         agreementType,
         title: title.trim() || null,
+        projectLocation: projectLocation.trim() || null,
         agreementStartDate: startDate || null,
         agreementEndDate: endDate || null
       },
@@ -228,6 +229,15 @@ export const CreateAgreement = () => {
                 value={title}
                 inputProps={{ 'data-test': 'create-agreement-title' }}
                 onChange={(event) => setTitle(event.target.value)}
+              />
+
+              <ModalField
+                id="create-agreement-location"
+                label={t('initiativeAgreement:create.locationLabel')}
+                optional
+                value={projectLocation}
+                inputProps={{ 'data-test': 'create-agreement-location' }}
+                onChange={(event) => setProjectLocation(event.target.value)}
               />
 
               <ModalField

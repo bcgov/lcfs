@@ -145,5 +145,14 @@
       "message": "Are you sure you want to delete this government notification? This action cannot be undone.",
       "confirm": "Delete"
     }
+  },
+  "orgInitiativeAgreements": {
+    "title": "Initiative agreements",
+    "thereAre": "There are:",
+    "underway": "Initiative agreement(s) underway",
+    "completed": "Completed initiative agreement(s)",
+    "viewAll": "View all initiative agreement(s)",
+    "noAgreements": "Your organization has no initiative agreements yet.",
+    "loadingMessage": "Loading initiative agreements card..."
   }
 }

@@ -20,6 +20,7 @@ from sqlalchemy import (
     extract,
     delete,
     join,
+    Date,
 )
 from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -194,6 +195,26 @@ class TransactionRepository:
         return transactions, total_count
 
     @repo_handler
+    async def get_transfer_export_details(self, transfer_ids: List[int]) -> dict:
+        """
+        Agreement date and A1 flag for the given transfers, keyed by transfer_id.
+
+        mv_transaction_aggregate carries neither, so the transactions export
+        reads them from the transfer table for the transfers it includes.
+        """
+        if not transfer_ids:
+            return {}
+
+        result = await self.db.execute(
+            select(
+                Transfer.transfer_id,
+                Transfer.agreement_date,
+                Transfer.is_a1_category,
+            ).where(Transfer.transfer_id.in_(transfer_ids))
+        )
+        return {row.transfer_id: row for row in result.all()}
+
+    @repo_handler
     async def get_transaction_by_id(self, transaction_id: int) -> Transaction:
         """
         Retrieves a transaction by its ID.
@@ -327,56 +348,34 @@ class TransactionRepository:
         )
         return available_balance or 0
 
-    @repo_handler
-    async def calculate_available_balance_for_period(
-        self, organization_id: int, compliance_period: int
-    ):
+    @staticmethod
+    def _transfer_effective_date(transfer):
         """
-        Calculate the available balance for a specific organization available to a specific compliance period.
+        Effective date of a transfer for period-cutoff comparisons.
 
-        Args:
-            organization_id (int): The ID of the organization for which to calculate the available balance.
-            compliance_period (int): The compliance period year in integer
+        Some recorded transfers (zero-dollar Category D, whose category is
+        assigned before the director records them) never had
+        transaction_effective_date stamped. Without a date the transfer is
+        indistinguishable from an undated historical transaction and gets
+        counted in every period's Line 17, even periods that ended before it
+        was recorded. Fall back to the Pacific date the transfer was recorded,
+        mirroring ComplianceReportSummaryRepository (Lines 12/13).
 
-        Returns:
-            int: The available balance of compliance units for the specified organization and period. Returns 0 if no balance is calculated.
+        `transfer` may be the Transfer model or an alias of it.
         """
-        vancouver_timezone = zoneinfo.ZoneInfo("America/Vancouver")
-        compliance_period_end = datetime.strptime(
-            f"{str(compliance_period + 1)}-03-31", "%Y-%m-%d"
-        )
-        compliance_period_end_local = compliance_period_end.replace(
-            hour=23, minute=59, second=59, microsecond=999999, tzinfo=vancouver_timezone
-        )
-        # Calculate the sum of all transactions up to the specified date
-        balance_to_date = await self.db.scalar(
-            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
-                and_(
-                    Transaction.organization_id == organization_id,
-                    Transaction.create_date <= compliance_period_end_local,
-                    Transaction.transaction_action != TransactionActionEnum.Released,
-                )
+        recorded_date = (
+            select(func.min(TransferHistory.create_date))
+            .where(
+                TransferHistory.transfer_id == transfer.transfer_id,
+                TransferHistory.transfer_status_id == 6,  # Recorded
             )
+            .correlate(transfer)
+            .scalar_subquery()
         )
-
-        # Calculate the sum of future negative transactions
-        future_negative_transactions = await self.db.scalar(
-            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
-                and_(
-                    Transaction.organization_id == organization_id,
-                    Transaction.create_date > compliance_period_end_local,
-                    Transaction.compliance_units < 0,
-                    Transaction.transaction_action != TransactionActionEnum.Released,
-                )
-            )
+        return func.coalesce(
+            transfer.transaction_effective_date,
+            func.cast(func.timezone("America/Vancouver", recorded_date), Date),
         )
-
-        # Calculate the available balance, round to the nearest whole number, and if negative, set to zero
-        available_balance = max(
-            round(balance_to_date - abs(future_negative_transactions)), 0
-        )
-
-        return available_balance
 
     @repo_handler
     async def calculate_line_17_available_balance_for_period(
@@ -432,7 +431,7 @@ class TransactionRepository:
                 case(
                     (
                         Transfer.from_transaction_id.isnot(None),
-                        Transfer.transaction_effective_date,
+                        self._transfer_effective_date(Transfer),
                     ),
                     else_=None,
                 ).label("transfer_from_effective_date"),
@@ -440,7 +439,7 @@ class TransactionRepository:
                 case(
                     (
                         TransferTo.to_transaction_id.isnot(None),
-                        TransferTo.transaction_effective_date,
+                        self._transfer_effective_date(TransferTo),
                     ),
                     else_=None,
                 ).label("transfer_to_effective_date"),
@@ -460,6 +459,10 @@ class TransactionRepository:
                     ),
                     else_=None,
                 ).label("admin_effective_date"),
+                # Linked transfer ids, so a transfer with no usable date can
+                # be told apart from a transaction with no parent at all
+                Transfer.transfer_id.label("transfer_from_id"),
+                TransferTo.transfer_id.label("transfer_to_id"),
                 # Include status checks
                 Transfer.current_status_id.label("transfer_from_status"),
                 TransferTo.current_status_id.label("transfer_to_status"),
@@ -533,13 +536,25 @@ class TransactionRepository:
         for row in result:
             transaction_id = row.transaction_id
             compliance_units = row.compliance_units
-            create_date = row.create_date
             # update_date reflects when the transaction was last modified.
             # For compliance report transactions, this is when the transaction
             # action was changed to Adjustment (i.e., the assessment time),
             # which may differ from create_date if the transaction was initially
             # created as Reserved during an earlier pipeline step.
             update_date = row.update_date
+
+            # A transfer with neither an effective date nor a Recorded history
+            # row can't be placed in any period. Leave it out entirely, as
+            # Lines 12/13 do, instead of letting it fall through to the
+            # undated historical branch below and count in every period.
+            if (
+                row.transfer_from_id is not None
+                and row.transfer_from_effective_date is None
+            ) or (
+                row.transfer_to_id is not None
+                and row.transfer_to_effective_date is None
+            ):
+                continue
 
             # Determine if this transaction should be counted as past or future
             count_as_past = False
@@ -628,9 +643,15 @@ class TransactionRepository:
             # Apply the transaction to the appropriate balance
             if count_as_past:
                 past_balance += compliance_units
-            elif create_date > compliance_period_end_local and compliance_units < 0:
-                # This is a future negative transaction - but only count it if it's not
-                # associated with any parent entity that has a future effective date
+            elif compliance_units < 0:
+                # Any finalized debit that did not land in the past balance is a
+                # future debit and still reduces the available balance (FIFO).
+                # Do not gate this on create_date: a compliance report reduction
+                # is created as Reserved at submission and only flips to
+                # Adjustment at assessment, so a supplemental submitted before
+                # the deadline but assessed after it would otherwise be dropped
+                # from both branches. Only skip it when its parent entity has a
+                # future effective date.
                 is_future_debit = True
 
                 # Check if this transaction belongs to a transfer with future effective date
@@ -682,10 +703,12 @@ class TransactionRepository:
         compliance_period: int,
     ) -> int:
         """
-        Sum Adjustment transactions that are linked to other compliance reports
-        in the same report group but are excluded from the Line 17 available
-        balance because their transaction was finalized (Reserved -> Adjustment)
-        after the compliance period end date (March 31, year + 1).
+        Sum positive Adjustment transactions that are linked to other compliance
+        reports in the same report group but are excluded from the Line 17
+        available balance because their transaction was finalized
+        (Reserved -> Adjustment) after the compliance period end date
+        (March 31, year + 1). Negative adjustments are not included: Line 17
+        already subtracts every finalized debit regardless of timing.
 
         These represent compliance units the organization actually holds from
         prior assessments that Line 17 does not capture because of the period-
@@ -719,6 +742,11 @@ class TransactionRepository:
                     Transaction.transaction_action
                     == TransactionActionEnum.Adjustment,
                     Transaction.update_date > compliance_period_end_local,
+                    # Only credits are ever excluded from Line 17 by the
+                    # cutoff; post-deadline debits are already subtracted
+                    # there as future debits, so adding them back here would
+                    # double-count the reduction.
+                    Transaction.compliance_units > 0,
                 )
             )
             .group_by(Transaction.transaction_id, Transaction.compliance_units)
@@ -740,8 +768,8 @@ class TransactionRepository:
         before_version: int,
     ) -> int:
         """
-        Sum post-deadline Adjustment transactions in the same report group from
-        versions before the current report.
+        Sum post-deadline positive Adjustment transactions in the same report
+        group from versions before the current report.
 
         This is the locked-summary counterpart to
         get_group_adjustments_excluded_from_line_17, with an explicit version
@@ -776,6 +804,11 @@ class TransactionRepository:
                     Transaction.transaction_action
                     == TransactionActionEnum.Adjustment,
                     Transaction.update_date > compliance_period_end_local,
+                    # Only credits are ever excluded from Line 17 by the
+                    # cutoff; post-deadline debits are already subtracted
+                    # there as future debits, so adding them back here would
+                    # double-count the reduction.
+                    Transaction.compliance_units > 0,
                 )
             )
             .group_by(Transaction.transaction_id, Transaction.compliance_units)
@@ -917,11 +950,20 @@ class TransactionRepository:
     @repo_handler
     async def reinstate_transaction(self, transaction_id: int) -> bool:
         """
-        Sets a transaction's action back to 'Reserved'. This is used when a
-        superseding report is deleted, putting the previous report back in play.
+        Sets a Released transaction's action back to 'Reserved'. This is used
+        when a superseding report is deleted, putting the previous report back
+        in play.
+
+        Only a Released transaction is reinstated. An Adjustment is a finalized
+        assessment result and must never be demoted to Reserved: positive
+        Reserved units are invisible to every balance calculation, so the
+        organization would silently lose the issued units.
         """
         transaction = await self.get_transaction_by_id(transaction_id)
-        if not transaction:
+        if (
+            not transaction
+            or transaction.transaction_action != TransactionActionEnum.Released
+        ):
             return False
         transaction.transaction_action = TransactionActionEnum.Reserved
         self.db.add(transaction)

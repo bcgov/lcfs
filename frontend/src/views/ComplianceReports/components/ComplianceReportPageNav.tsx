@@ -1,19 +1,17 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import { Box } from '@mui/material'
-import {
-  AutoAwesome,
-  Description,
-  ElectricBolt,
-  FactCheck,
-  Gavel,
-  Handshake,
-  LocalGasStation,
-  Recycling,
-  Summarize,
-  SwapHoriz,
-  UploadFile
-} from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import AutoAwesome from '@mui/icons-material/AutoAwesome'
+import Description from '@mui/icons-material/Description'
+import ElectricBolt from '@mui/icons-material/ElectricBolt'
+import FactCheck from '@mui/icons-material/FactCheck'
+import Gavel from '@mui/icons-material/Gavel'
+import Handshake from '@mui/icons-material/Handshake'
+import LocalGasStation from '@mui/icons-material/LocalGasStation'
+import Recycling from '@mui/icons-material/Recycling'
+import Summarize from '@mui/icons-material/Summarize'
+import SwapHoriz from '@mui/icons-material/SwapHoriz'
+import UploadFile from '@mui/icons-material/UploadFile'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { useEffect, useMemo, useRef, useState } from 'react'
 

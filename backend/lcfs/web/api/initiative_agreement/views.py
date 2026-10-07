@@ -5,6 +5,7 @@ from fastapi import APIRouter, Body, Depends, Request, status
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.schema import (
+    AllDesignatedActionsListSchema,
     AgreementCreateSchema,
     AnalystAssignmentSchema,
     DesignatedActionCreateSchema,
@@ -24,6 +25,7 @@ from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementSchema,
     InitiativeAgreementsListSchema,
     InitiativeAgreementUpdateSchema,
+    MissingInformationSchema,
     RecommendedCreditsSchema,
 )
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
@@ -131,6 +133,23 @@ async def get_designated_actions(
     )
 
 
+@router.post(
+    "/designated-actions/list",
+    response_model=AllDesignatedActionsListSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def get_all_designated_actions(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Every agreement's designated actions, for the module's Designated
+    actions tab (#5078). IDIR only; proponents arrive with the BCeID
+    stories."""
+    return await service.get_all_designated_actions_paginated(pagination)
+
+
 @router.put(
     "/designated-actions/{designated_action_id}/workflow",
     response_model=DesignatedActionSchema,
@@ -168,6 +187,24 @@ async def set_designated_action_recommended_credits(
     """Save the recommended amount before recommending."""
     return await service.set_recommended_credits(
         designated_action_id, data.recommended_credits, request.user
+    )
+
+
+@router.put(
+    "/designated-actions/{designated_action_id}/missing-information",
+    response_model=DesignatedActionSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def set_designated_action_missing_information(
+    request: Request,
+    designated_action_id: int,
+    data: MissingInformationSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Save the working text of the Missing information box (#5118)."""
+    return await service.set_missing_information(
+        designated_action_id, data.missing_information, request.user
     )
 
 

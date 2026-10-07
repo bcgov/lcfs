@@ -13,6 +13,7 @@ from lcfs.web.api.dashboard.schema import (
     OrgFuelCodeCountsSchema,
     CIApplicationCountsSchema,
     InitiativeAgreementCountsSchema,
+    OrgInitiativeAgreementCountsSchema,
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -108,6 +109,21 @@ async def get_initiative_agreement_counts(
     service: DashboardServices = Depends(),
 ):
     return await service.get_initiative_agreement_counts()
+
+
+@router.get(
+    "/org-initiative-agreement-counts",
+    response_model=OrgInitiativeAgreementCountsSchema,
+)
+@view_handler([RoleEnum.IA_PROPONENT])
+async def get_org_initiative_agreement_counts(
+    request: Request,
+    service: DashboardServices = Depends(),
+):
+    """BCeID dashboard card: the caller's organization's agreements by
+    lifecycle status (#4893)."""
+    organization_id = request.user.organization.organization_id
+    return await service.get_org_initiative_agreement_counts(organization_id)
 
 
 @router.get("/ci-application-counts", response_model=CIApplicationCountsSchema)

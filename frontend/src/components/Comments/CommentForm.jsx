@@ -1,11 +1,12 @@
 import PropTypes from 'prop-types'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactQuill from 'react-quill'
 import { GlobalStyles } from '@mui/system'
 import Chip from '@mui/material/Chip'
-import Radio from '@mui/material/Radio'
-import RadioGroup from '@mui/material/RadioGroup'
-import FormControlLabel from '@mui/material/FormControlLabel'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
+import LanguageIcon from '@mui/icons-material/Language'
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import 'react-quill/dist/quill.snow.css'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
@@ -31,80 +32,77 @@ const VisibilityToggle = ({
   visibility,
   onVisibilityChange,
   align = 'right',
-  marginTop = 0.5,
-  radioMarginRight = -1.1
+  marginTop = 0.5
 }) => {
   const { t } = useTranslation(['internalComment'])
   const isLeft = align === 'left'
-
-  const radioLabelSx = {
-    m: 0,
-    display: 'inline-flex',
-    alignItems: 'center',
-    flexDirection: 'row',
-    '& .MuiFormControlLabel-label': {
-      fontSize: '0.88rem',
-      fontWeight: 500,
-      lineHeight: 1.15
-    },
-    '& .MuiRadio-root': {
-      mr: radioMarginRight
-    }
-  }
 
   return (
     <BCBox
       sx={{
         display: 'flex',
-        flexDirection: 'column',
         alignItems: isLeft ? 'flex-start' : 'flex-end',
-        minWidth: 220,
         mt: marginTop
       }}
     >
-      <Chip
-        label={
-          visibility === 'Public'
-            ? t('internalComment:public')
-            : t('internalComment:internal')
-        }
+      <ToggleButtonGroup
+        exclusive
         size="small"
+        value={visibility}
+        onChange={(_, value) => value && onVisibilityChange?.(value)}
+        aria-label={t('internalComment:commentVisibility')}
         sx={{
-          mb: 0.75,
-          color: '#fff',
-          bgcolor: visibility === 'Public' ? '#187a11' : '#063267',
-          minWidth: 92,
-          '& .MuiChip-label': {
-            fontSize: '0.88rem',
-            fontWeight: 600
+          '& .MuiToggleButton-root': {
+            minWidth: 150,
+            gap: 0.75,
+            py: 1,
+            px: 2,
+            color: '#003366',
+            borderColor: '#b8c5d1',
+            fontSize: '1rem',
+            fontWeight: 500,
+            textTransform: 'none',
+            '& .MuiSvgIcon-root': { fontSize: '1.35rem !important' }
+          },
+          '& .MuiToggleButtonGroup-firstButton': {
+            borderTopLeftRadius: '10px !important',
+            borderBottomLeftRadius: '10px !important'
+          },
+          '& .MuiToggleButtonGroup-lastButton': {
+            borderTopRightRadius: '10px !important',
+            borderBottomRightRadius: '10px !important'
           }
         }}
-      />
-      <RadioGroup
-        row
-        value={visibility}
-        onChange={(event) => onVisibilityChange?.(event.target.value)}
-        sx={{
-          columnGap: 1.1,
-          alignItems: 'center',
-          justifyContent: isLeft ? 'flex-start' : 'flex-end'
-        }}
       >
-        <FormControlLabel
+        <ToggleButton
           value="Internal"
-          labelPlacement="end"
-          control={<Radio size="small" sx={{ p: 0.25 }} />}
-          label={t('internalComment:internal')}
-          sx={radioLabelSx}
-        />
-        <FormControlLabel
+          aria-label={t('internalComment:internalOnly')}
+          sx={{
+            '&.Mui-selected, &.Mui-selected:hover': {
+              color: '#fff !important',
+              bgcolor: '#003366',
+              '& .MuiSvgIcon-root': { color: '#fff !important' }
+            }
+          }}
+        >
+          <LockOutlinedIcon fontSize="small" aria-hidden="true" />
+          {t('internalComment:internalOnly')}
+        </ToggleButton>
+        <ToggleButton
           value="Public"
-          labelPlacement="end"
-          control={<Radio size="small" sx={{ p: 0.25 }} />}
-          label={t('internalComment:public')}
-          sx={radioLabelSx}
-        />
-      </RadioGroup>
+          aria-label={t('internalComment:public')}
+          sx={{
+            '&.Mui-selected, &.Mui-selected:hover': {
+              color: '#fff !important',
+              bgcolor: '#2e7d32',
+              '& .MuiSvgIcon-root': { color: '#fff !important' }
+            }
+          }}
+        >
+          <LanguageIcon fontSize="small" aria-hidden="true" />
+          {t('internalComment:public')}
+        </ToggleButton>
+      </ToggleButtonGroup>
     </BCBox>
   )
 }
@@ -113,8 +111,7 @@ VisibilityToggle.propTypes = {
   visibility: PropTypes.oneOf(['Internal', 'Public']).isRequired,
   onVisibilityChange: PropTypes.func,
   align: PropTypes.oneOf(['left', 'right']),
-  marginTop: PropTypes.number,
-  radioMarginRight: PropTypes.number
+  marginTop: PropTypes.number
 }
 
 const CommentForm = ({
@@ -140,17 +137,21 @@ const CommentForm = ({
 }) => {
   const { t } = useTranslation(['internalComment'])
   const fileInputRef = useRef(null)
+  const quillRef = useRef(null)
   const [attachmentError, setAttachmentError] = useState(null)
 
   const attachmentsEnabled = enableAttachments && !!onAttachmentsChange
+  const attachmentsEnabledRef = useRef(attachmentsEnabled)
+  attachmentsEnabledRef.current = attachmentsEnabled
 
   const handleSubmit = () => {
     onSubmit(commentText, visibility)
   }
 
-  const handleAttachClick = () => {
+  const handleAttachClick = useCallback(() => {
+    if (!attachmentsEnabledRef.current) return
     fileInputRef.current?.click()
-  }
+  }, [])
 
   const handleFilesSelected = (event) => {
     const selected = Array.from(event.target.files || [])
@@ -185,28 +186,111 @@ const CommentForm = ({
     onAttachmentsChange(attachments.filter((_, i) => i !== index))
   }
 
-  // Toolbar config is memoized so Quill doesn't reinitialize each render. The
-  // custom "attach" button triggers the hidden file input via its handler.
+  // ReactQuill treats a modules change as an editor regeneration. Keep this
+  // configuration stable and toggle the attachment control in place instead.
   const quillModules = useMemo(() => {
-    const container = [['bold', 'italic'], [{ list: 'bullet' }, { list: 'ordered' }]]
-    if (attachmentsEnabled) {
-      container.push(['attach'])
-    }
     return {
       toolbar: {
-        container,
+        container: [
+          ['bold', 'italic'],
+          [{ list: 'bullet' }, { list: 'ordered' }],
+          ['attach']
+        ],
         handlers: { attach: handleAttachClick }
       },
       keyboard: {
         bindings: { tab: false }
       }
     }
-    // handleAttachClick only reads a stable ref, so depend on the toggle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attachmentsEnabled])
+  }, [handleAttachClick])
+
+  const quillInstanceKey = showVisibilityToggle ? visibility : 'static'
+
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor?.()
+    const toolbar = quill?.getModule?.('toolbar')?.container
+    if (!toolbar) return
+
+    toolbar.setAttribute('role', 'toolbar')
+    toolbar.setAttribute(
+      'aria-label',
+      t('internalComment:commentFormattingToolbar', {
+        defaultValue: 'Comment formatting'
+      })
+    )
+
+    const controls = [
+      ['.ql-bold', t('internalComment:formatBold', { defaultValue: 'Bold' })],
+      [
+        '.ql-italic',
+        t('internalComment:formatItalic', { defaultValue: 'Italic' })
+      ],
+      [
+        '.ql-list[value="bullet"]',
+        t('internalComment:formatBulletedList', {
+          defaultValue: 'Bulleted list'
+        })
+      ],
+      [
+        '.ql-list[value="ordered"]',
+        t('internalComment:formatNumberedList', {
+          defaultValue: 'Numbered list'
+        })
+      ]
+    ]
+    controls.forEach(([selector, label]) => {
+      toolbar.querySelectorAll(selector).forEach((button) => {
+        button.setAttribute('aria-label', label)
+      })
+    })
+    toolbar.querySelectorAll('.ql-attach').forEach((button) => {
+      button.setAttribute(
+        'aria-label',
+        t('internalComment:attachFile', { defaultValue: 'Attach file' })
+      )
+      button.removeAttribute('aria-pressed')
+      button.disabled = !attachmentsEnabled
+      button.hidden = !attachmentsEnabled
+      // Quill's author stylesheet can override the browser's default [hidden]
+      // styling, so set inline display as well to keep it out of view and the
+      // accessibility tree while attachments are unavailable.
+      button.style.display = attachmentsEnabled ? '' : 'none'
+      const group = button.closest('.ql-formats')
+      if (group) {
+        group.hidden = !attachmentsEnabled
+        group.style.display = attachmentsEnabled ? '' : 'none'
+      }
+    })
+
+    const updatePressedStates = () => {
+      toolbar
+        .querySelectorAll(
+          '.ql-bold, .ql-italic, .ql-list[value="bullet"], .ql-list[value="ordered"]'
+        )
+        .forEach((button) => {
+          button.setAttribute(
+            'aria-pressed',
+            String(button.classList.contains('ql-active'))
+          )
+        })
+    }
+
+    updatePressedStates()
+    // Quill changes ql-active after its editor-change callback has run. Watch
+    // the generated controls so aria-pressed always matches the actual state.
+    const observer = new MutationObserver(updatePressedStates)
+    observer.observe(toolbar, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    return () => observer.disconnect()
+  }, [t, quillInstanceKey, attachmentsEnabled])
 
   const isCommentEmpty = !commentText || commentText.trim() === ''
-  const showVisibilityUnderTitle = showVisibilityToggle && visibilityAlign === 'left'
+  const showVisibilityUnderTitle =
+    showVisibilityToggle && visibilityAlign === 'left'
 
   return (
     <>
@@ -214,7 +298,9 @@ const CommentForm = ({
         styles={{
           '.ql-editor': {
             minHeight: '75px',
-            backgroundColor: '#fff'
+            backgroundColor: '#fff',
+            fontSize: '1rem',
+            lineHeight: 1.5
           },
           '.ql-toolbar.ql-snow': {
             border: 'none !important',
@@ -234,7 +320,6 @@ const CommentForm = ({
             onVisibilityChange={onVisibilityChange}
             align="left"
             marginTop={0.25}
-            radioMarginRight={-0.15}
           />
         )}
       </BCBox>
@@ -262,9 +347,48 @@ const CommentForm = ({
           )}
         </BCBox>
       )}
+      {showVisibilityToggle && (
+        <BCBox
+          role="status"
+          data-test="comment-visibility-message"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.75,
+            mb: 1,
+            px: 1,
+            py: 0.5,
+            color: visibility === 'Public' ? '#256428' : '#003366',
+            border: '1px solid',
+            borderColor: visibility === 'Public' ? '#2e7d32' : '#1769aa',
+            bgcolor: visibility === 'Public' ? '#f4fbf4' : '#f4f8fc',
+            fontSize: '0.875rem'
+          }}
+        >
+          {visibility === 'Public' ? (
+            <LanguageIcon fontSize="small" aria-hidden="true" />
+          ) : (
+            <LockOutlinedIcon fontSize="small" aria-hidden="true" />
+          )}
+          <span>
+            {visibility === 'Public'
+              ? t('internalComment:publicVisibilityMessage')
+              : t('internalComment:internalVisibilityMessage')}
+          </span>
+        </BCBox>
+      )}
       <ReactQuill
+        key={quillInstanceKey}
+        ref={quillRef}
         value={commentText}
         onChange={onCommentChange}
+        placeholder={
+          showVisibilityToggle
+            ? visibility === 'Public'
+              ? t('internalComment:publicCommentPlaceholder')
+              : t('internalComment:internalCommentPlaceholder')
+            : undefined
+        }
         theme="snow"
         modules={quillModules}
         formats={['bold', 'italic', 'list', 'bullet']}
@@ -336,11 +460,38 @@ const CommentForm = ({
             color="primary"
             onClick={handleSubmit}
             disabled={isCommentEmpty || isSubmitting}
-            sx={{ marginRight: 1 }}
+            startIcon={
+              !isEditing && showVisibilityToggle ? (
+                visibility === 'Public' ? (
+                  <LanguageIcon />
+                ) : (
+                  <LockOutlinedIcon />
+                )
+              ) : undefined
+            }
+            sx={{
+              marginRight: 1,
+              // theme's `.MuiButton-containedSizeSmall svg { fontSize: ... !important }`
+              // otherwise beats the icon's own size, hence the extra specificity here
+              '&.MuiButton-containedSizeSmall .MuiButton-startIcon svg': {
+                fontSize: '1.15rem !important'
+              },
+              ...(!isEditing &&
+                showVisibilityToggle && {
+                  bgcolor: visibility === 'Public' ? '#2e7d32' : '#003366',
+                  '&:hover': {
+                    bgcolor: visibility === 'Public' ? '#256428' : '#00264d'
+                  }
+                })
+            }}
           >
             {isEditing
               ? t('internalComment:saveChanges')
-              : t('internalComment:addComment')}
+              : showVisibilityToggle
+                ? visibility === 'Public'
+                  ? t('internalComment:addPublicComment')
+                  : t('internalComment:addInternalComment')
+                : t('internalComment:addComment')}
           </BCButton>
         )}
         {isEditing && (

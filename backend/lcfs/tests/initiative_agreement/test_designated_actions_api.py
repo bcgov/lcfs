@@ -3,7 +3,7 @@
 import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 
@@ -856,3 +856,101 @@ async def test_grid_carries_and_sorts_the_current_status(
         "Not started",
         "Approved",
     ]
+
+
+# ---------------------------------------------------------------------------
+# The module-wide Designated actions tab (#5078).
+# ---------------------------------------------------------------------------
+
+
+def _all_url(fastapi_app):
+    return fastapi_app.url_path_for("get_all_designated_actions")
+
+
+@pytest.mark.anyio
+async def test_the_tab_lists_actions_across_every_agreement_newest_first(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Every agreement's current actions in one list, and — with no sort
+    asked for — the most recently touched first, because the tab is a
+    work queue rather than a register."""
+    org_id, other_org = await _two_org_ids(dbsession)
+    first = await _seed_agreement(dbsession, org_id, "IA-26ALL1")
+    second = await _seed_agreement(dbsession, other_org, "IA-26ALL2")
+    older = await _seed_action(dbsession, first, 1, "Older work")
+    newer = await _seed_action(dbsession, second, 1, "Newer work")
+    older.update_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    newer.update_date = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(_all_url(fastapi_app), json=PAGINATION_BODY)
+
+    assert response.status_code == status.HTTP_200_OK
+    rows = response.json()["designatedActions"]
+    assert [r["name"] for r in rows][:2] == ["Newer work", "Older work"]
+    # Each row says which agreement it belongs to, for the ID column and
+    # for navigating to the action.
+    by_name = {r["name"]: r for r in rows}
+    assert by_name["Newer work"]["initiativeAgreementId"] == (
+        second.initiative_agreement_id
+    )
+    assert by_name["Newer work"]["iaCode"] == "IA-26ALL2"
+    assert by_name["Older work"]["initiativeAgreementId"] == (
+        first.initiative_agreement_id
+    )
+
+
+@pytest.mark.anyio
+async def test_the_tab_shows_one_row_per_amended_action(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """A change order appends a version row; the tab shows the current one."""
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26ALL3")
+    original = await _seed_action(dbsession, agreement, 1, "Original scope")
+    await _seed_action(
+        dbsession,
+        agreement,
+        1,
+        "Amended scope",
+        group_uuid=original.group_uuid,
+        version=original.version + 1,
+    )
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(_all_url(fastapi_app), json=PAGINATION_BODY)
+
+    names = [r["name"] for r in response.json()["designatedActions"]]
+    assert "Amended scope" in names
+    assert "Original scope" not in names
+
+
+@pytest.mark.anyio
+async def test_the_tab_honours_a_caller_sort(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26ALL4")
+    await _seed_action(dbsession, agreement, 1, "Zebra crossing")
+    await _seed_action(dbsession, agreement, 2, "Apple orchard")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _all_url(fastapi_app),
+        json={**PAGINATION_BODY, "sortOrders": [{"field": "name", "direction": "asc"}]},
+    )
+
+    names = [r["name"] for r in response.json()["designatedActions"]]
+    assert names.index("Apple orchard") < names.index("Zebra crossing")
+
+
+@pytest.mark.anyio
+async def test_the_tab_is_closed_to_proponents(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
+
+    response = await client.post(_all_url(fastapi_app), json=PAGINATION_BODY)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN

@@ -1,11 +1,12 @@
 import Box from '@mui/material/Box'
-import { List } from '@mui/material'
+import List from '@mui/material/List'
 import prettyBytes from 'pretty-bytes'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 import { useDownloadDocument } from '@/hooks/useDocuments.js'
 import { timezoneFormatter } from '@/utils/formatters'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 // `detailed` adds the file size and the uploading organization's code to
 // each row (initiative agreement wireframes); other callers keep the
@@ -46,12 +47,18 @@ export const SupportingDocumentSummary = ({
                 font: 'inherit',
                 textAlign: 'left',
                 textDecoration: 'underline',
+                fontSize: '1rem',
                 cursor: 'pointer',
                 '&:hover': { color: 'info.main' }
               }}
             >
               {file.fileName}
             </BCTypography>
+            <DocumentPreviewButton
+              parentType={parentType}
+              parentID={parentID}
+              document={file}
+            />
             <BCTypography
               component="span"
               variant="subtitle2"

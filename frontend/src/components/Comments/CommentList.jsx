@@ -8,6 +8,8 @@ import AppBar from '@mui/material/AppBar'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import LanguageIcon from '@mui/icons-material/Language'
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import { useTranslation } from 'react-i18next'
 import CommentForm from './CommentForm'
 import { roles } from '@/constants/roles'
@@ -100,12 +102,14 @@ const CommentList = ({
   const handleEditCommentChange = (value) => {
     setEditCommentText(value)
   }
+  // Matches the organization Comment Log format, e.g. "September 24, 2026 at 2:15 PM".
   const formatDate = (dateString) => {
     const options = {
+      year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: 'numeric',
-      minute: 'numeric',
+      minute: '2-digit',
       hour12: true
     }
     return new Date(dateString).toLocaleDateString(undefined, options)
@@ -136,8 +140,10 @@ const CommentList = ({
             <span style={{ color: 'red' }} data-test="comment-edited-indicator">
               {editedLabel}
             </span>
+            {/* Focusable so keyboard users can open the tooltip; the Tooltip
+                names this span with tooltipLabel for screen readers. */}
             <Tooltip title={tooltipLabel} arrow>
-              <span style={{ marginLeft: '4px' }}>
+              <span role="img" tabIndex={0} style={{ marginLeft: '4px' }}>
                 <InfoOutlinedIcon
                   fontSize="medium"
                   sx={{
@@ -145,8 +151,6 @@ const CommentList = ({
                     verticalAlign: 'text-top',
                     transform: 'scale(0.8)'
                   }}
-                  aria-label={`Comment edited on ${formatDate(updateDate)}`}
-                  role="img"
                 />
               </span>
             </Tooltip>
@@ -172,10 +176,9 @@ const CommentList = ({
         // Non-gov views already have organization context around this section.
         return t('internalComment:addComment')
       }
-      // Gov user in dual mode: title depends on visibility selection
-      if (visibility === 'Public') {
-        return t('internalComment:commentToOrganization')
-      }
+      return visibility === 'Public'
+        ? t('internalComment:newPublicComment')
+        : t('internalComment:newInternalComment')
     }
     // Internal-only mode or internal visibility in dual mode
     if (hasAnyRole(roles.analyst) || hasAnyRole(roles.compliance_manager)) {
@@ -248,18 +251,12 @@ const CommentList = ({
             paddingLeft: '35px',
             marginTop: '0'
           },
-          'comment-content li': {
+          '.comment-content li': {
             lineHeight: '1.6'
           }
         }}
       />
-      <BCBox
-        variant="bordered"
-        borderRadius="sm"
-        mt={1}
-        mb={1}
-        sx={{ backgroundColor: '#f2f2f2' }}
-      >
+      <BCBox variant="bordered" borderRadius="sm" mt={1} mb={1}>
         {showSortTabs && (
           <BCBox
             sx={{
@@ -365,37 +362,77 @@ const CommentList = ({
             sx={{
               display: 'flex',
               alignItems: 'flex-start',
-              paddingLeft: 2,
-              paddingBottom: 1,
-              backgroundColor:
-                (filteredComments.length - 1 - index) % 2 === 0
-                  ? 'transparent'
-                  : '#ffffff'
+              px: 2,
+              pt: 1,
+              pb: 0
             }}
           >
-            <Tooltip title={comment.fullName} arrow>
-              <Avatar
-                sx={{
-                  width: 32,
-                  height: 32,
-                  fontSize: '0.75rem',
-                  fontWeight: 'bold',
-                  bgcolor: '#606060',
-                  marginTop: 2.5,
-                  marginRight: 2
-                }}
-                aria-label={`Comment by ${comment.fullName}`}
-                role="img"
-              >
-                {getInitials(comment.fullName)}
-              </Avatar>
-            </Tooltip>
             <BCBox
               sx={{
-                marginRight: 3,
-                padding: 1,
-                paddingLeft: 0,
-                borderBottom: '1px solid #666666',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                alignSelf: 'stretch',
+                marginRight: 2
+              }}
+            >
+              <Tooltip title={comment.fullName} arrow>
+                <Avatar
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    bgcolor:
+                      isDualMode && isGov
+                        ? comment.visibility === 'Public'
+                          ? '#2e7d32'
+                          : '#003366'
+                        : '#606060'
+                  }}
+                  aria-label={`Comment by ${comment.fullName}`}
+                  role="img"
+                >
+                  {getInitials(comment.fullName)}
+                </Avatar>
+              </Tooltip>
+              {index < filteredComments.length - 1 && (
+                <BCBox
+                  data-test="comment-avatar-connector"
+                  sx={{
+                    flex: 1,
+                    width: '2px',
+                    minHeight: 8,
+                    mt: 1,
+                    mb: 0,
+                    bgcolor: '#c9c9c9'
+                  }}
+                />
+              )}
+            </BCBox>
+            <BCBox
+              data-test="comment-card"
+              data-visibility={comment.visibility || 'Internal'}
+              sx={{
+                marginRight: 1,
+                padding: isDualMode && isGov ? 2 : 1,
+                paddingLeft: isDualMode && isGov ? 2 : 0,
+                border: isDualMode && isGov ? '2px solid' : 'none',
+                borderColor:
+                  isDualMode && isGov
+                    ? comment.visibility === 'Public'
+                      ? '#2e7d32'
+                      : '#1769aa'
+                    : 'transparent',
+                borderBottom:
+                  isDualMode && isGov ? undefined : '1px solid #666666',
+                borderRadius: isDualMode && isGov ? 2 : 0,
+                backgroundColor:
+                  isDualMode && isGov
+                    ? comment.visibility === 'Public'
+                      ? '#fbfefb'
+                      : '#fbfdff'
+                    : 'transparent',
                 width: '100%'
               }}
             >
@@ -511,6 +548,13 @@ const CommentList = ({
                     >
                       {isDualMode && isGov && comment.visibility && (
                         <Chip
+                          icon={
+                            comment.visibility === 'Public' ? (
+                              <LanguageIcon />
+                            ) : (
+                              <LockOutlinedIcon />
+                            )
+                          }
                           label={
                             comment.visibility === 'Public'
                               ? t('internalComment:public')
@@ -523,11 +567,17 @@ const CommentList = ({
                               comment.visibility === 'Public'
                                 ? '#187a11'
                                 : '#063267',
-                            minWidth: 88,
-                            height: 24,
+                            minWidth: 100,
+                            height: 30,
+                            borderRadius: '6px',
                             '& .MuiChip-label': {
-                              fontSize: '0.86rem',
-                              fontWeight: 600
+                              fontSize: '0.95rem',
+                              fontWeight: 400,
+                              px: 1.25
+                            },
+                            '& .MuiChip-icon': {
+                              color: '#fff',
+                              fontSize: '1.15rem'
                             }
                           }}
                         />

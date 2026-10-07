@@ -40,6 +40,7 @@
     "initiativeAgreementCode": "Initiative agreement:",
     "startDate": "Start date:",
     "endDate": "End date:",
+    "projectLocation": "Project location:",
     "sectionPlaceholder": "This section is under development and will be populated once the agreement management API is available.",
     "manageDocuments": "Manage documents",
     "noDocuments": "No documents have been attached to this agreement.",
@@ -75,7 +76,10 @@
     "editTitle": "Edit designated action",
     "save": "Save changes",
     "editFailed": "The changes could not be saved.",
-    "addTooltip": "Add a designated action to this agreement."
+    "addTooltip": "Add a designated action to this agreement.",
+    "tabTitle": "Designated actions",
+    "loadFailMsg": "Designated actions could not be loaded.",
+    "invalidCredits": "Compliance units must be a whole number."
   },
   "actionDetail": {
     "title": "Designated actions",
@@ -150,59 +154,77 @@
     "confirmDeleteFolderEmpty": "{{name}} has no files in it. It leaves the folder tree; nothing else is affected.",
     "showFolderFiles": "Show {{count}} file",
     "showFolderFiles_other": "Show {{count}} files",
-    "hideFolderFiles": "Hide files"
+    "hideFolderFiles": "Hide files",
+    "renameHint": "Enter to save · Esc to cancel",
+    "moveToRoot": "Move to top level",
+    "moveFileToRoot": "Move {{name}} to top level"
   },
   "evidence": {
     "sectionTitle": "Evidence of completion of designated action:",
     "addEoc": "Add EOC",
     "removeRequirement": "Remove this requirement",
+    "confirmRemoveTitle": "Remove this evidence requirement?",
+    "confirmRemoveBody": "{{name}} and its evaluation will be removed from this designated action's review. This cannot be undone from this page.",
+    "confirmRemove": "Remove",
     "evidencePlaceholder": "Enter evidence of completion...",
     "notesLabel": "Notes",
     "satisfactory": "Evidence is satisfactory",
     "requestInformation": "Request information",
     "reviewSummary": "Review summary",
+    "missingInformation": "Missing information",
+    "missingInformationPlaceholder": "Describe the information needed from the proponent...",
     "empty": "No evidence requirements have been added yet.",
     "loading": "Loading evidence requirements...",
     "newRequirementTitle": "New evidence requirement",
-    "requirementNamePlaceholder": "Describe what the proponent must provide",
     "reviewedBy": "Reviewed by {{name}}",
     "pending": "Not yet reviewed",
-    "evidenceFor": "Evidence of completion for {{name}}",
     "notesFor": "Notes for {{name}}",
     "createRequirement": "Create",
     "cancel": "Cancel",
     "saved": "Saved",
-    "autosaveHint": "Changes save as you go."
+    "addTitle": "Add evidence of completion",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description of the evidence required",
+    "descriptionFor": "Description of {{name}}",
+    "evaluationLabel": "Evaluation",
+    "evaluationFor": "Evaluation of {{name}}"
   },
   "workflow": {
     "accept": "Accept",
     "requestInformation": "Request additional information",
     "recommendToManager": "Recommend to manager",
+    "notRecommended": "Not recommended",
     "recommendToDirector": "Recommend to director",
     "approve": "Approve",
     "return": "Return for further work",
     "reject": "Reject",
     "submit": "Submit",
     "commentPrompt": "Explain what is needed. This is kept with the designated action's history.",
+    "prompt": {
+      "not_recommend": "Explain why you do not recommend this designated action. This is kept with the designated action's history."
+    },
     "actionFailed": "That action could not be completed.",
     "history": "Activity",
     "noHistory": "Nothing has happened on this designated action yet.",
     "confirm": {
       "request_information": "Request additional information",
+      "not_recommend": "Not recommended",
       "return": "Return for further work",
       "reject": "Reject this designated action"
     },
     "tip": {
       "accept_evidence": "Record that the evidence is accepted. Unlocks recommending.",
-      "request_information": "Send the designated action back for more evidence.",
+      "request_information": "Send the designated action back to the proponent with the missing information.",
       "recommend_to_manager": "Send your recommendation, with an amount, to a manager.",
+      "not_recommend": "Send the designated action to a manager without recommending credits.",
       "recommend_to_director": "Send the manager's endorsement to the director.",
       "approve": "Approve the designated action. No credits are issued by this.",
       "return": "Send it back to the previous reviewer for rework.",
       "reject": "Reject the designated action."
     },
     "blockedByEvidence": "Every evidence requirement must be marked satisfactory first.",
-    "blockedNoRequirements": "Add at least one evidence requirement and mark it satisfactory first."
+    "blockedNoRequirements": "Add at least one evidence requirement and mark it satisfactory first.",
+    "blockedNoMissingInformation": "Enter the missing information first."
   },
   "history": {
     "title": "Activity",
@@ -229,7 +251,24 @@
       "unknown": "Activity",
       "detailsEdited": "Details edited"
     },
-    "changed": "{{field}}: {{from}} → {{to}}"
+    "changed": "{{field}}: {{from}} → {{to}}",
+    "groups": {
+      "evidenceReview": "Evidence review",
+      "workflow": "Workflow",
+      "assignment": "Assignment",
+      "recordChanges": "Record changes",
+      "other": "Other activity"
+    },
+    "expandEntry": "Show details",
+    "requirementChanged": "Requirement {{number}}: {{title}}",
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "evaluation": "Evaluation",
+      "name": "Name",
+      "credit_allocation": "Compliance units to be issued",
+      "specified_date": "Date for completion"
+    }
   },
   "create": {
     "button": "New initiative agreement",
@@ -239,9 +278,15 @@
     "codeLabel": "Initiative agreement code",
     "typeLabel": "Agreement type",
     "titleLabel": "Project title",
+    "locationLabel": "Project location",
     "startLabel": "Start date",
     "endLabel": "End date",
     "created": "Agreement {{code}} created as a draft.",
     "failed": "The agreement could not be created."
+  },
+  "tabs": {
+    "initiativeAgreements": "Initiative agreements",
+    "designatedActions": "Designated actions",
+    "ariaLabel": "Initiative agreements navigation tabs"
   }
 }

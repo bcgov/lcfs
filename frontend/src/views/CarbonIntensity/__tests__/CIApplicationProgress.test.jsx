@@ -1,6 +1,6 @@
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, screen } from '@testing-library/react'
 
 import {
   buildCIWorkflowSteps,
@@ -8,7 +8,7 @@ import {
   CIApplicationProgress,
   getCIWorkflowConnectorStyle
 } from '@/views/CarbonIntensity/components/CIApplicationProgress'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -38,17 +38,37 @@ describe('CIApplicationProgress', () => {
     ])
   })
 
-  it('renders all step labels', () => {
-    render(<CIApplicationProgress activeStep={0} />, { wrapper })
+  test('renders all step labels', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<CIApplicationProgress activeStep={0} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByText('carbonIntensity:steps.step1')).toBeInTheDocument()
     expect(screen.getByText('carbonIntensity:steps.step2')).toBeInTheDocument()
     expect(screen.getByText('carbonIntensity:steps.step5')).toBeInTheDocument()
   })
 
-  it('marks the active step with Mui-active styling', () => {
-    render(<CIApplicationProgress activeStep={2} />, {
-      wrapper
-    })
+  test('marks the active step with Mui-active styling', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<CIApplicationProgress activeStep={2} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()
   })
@@ -99,7 +119,13 @@ describe('CIApplicationProgress', () => {
     expect(steps.map((step) => step.key)).toContain('verification2')
   })
 
-  it('renders submitted workflow details and target countdown', () => {
+  test('renders submitted workflow details and target countdown', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-19T12:00:00Z'))
     render(
@@ -116,7 +142,7 @@ describe('CIApplicationProgress', () => {
           proposedFuelCodeEffectiveDate: '2026-06-01'
         }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(screen.getByText('Submitted')).toBeInTheDocument()
@@ -127,7 +153,13 @@ describe('CIApplicationProgress', () => {
     vi.useRealTimers()
   })
 
-  it('keeps the 5-step wizard for BCeID users on submitted applications (ticket #4537)', () => {
+  test('keeps the 5-step wizard for BCeID users on submitted applications (ticket #4537)', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockHasAnyRole = vi.fn(() => false)
     render(
       <CIApplicationProgress
@@ -139,7 +171,7 @@ describe('CIApplicationProgress', () => {
           proposedFuelCodeEffectiveDate: '2026-06-01'
         }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     // The full 5-step wizard is shown, not the short government timeline.
@@ -153,7 +185,13 @@ describe('CIApplicationProgress', () => {
     expect(screen.queryByText('5')).not.toBeInTheDocument()
   })
 
-  it('marks the final step complete for BCeID users once the application is Completed (ticket #4652)', () => {
+  test('marks the final step complete for BCeID users once the application is Completed (ticket #4652)', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     mockHasAnyRole = vi.fn(() => false)
     render(
       <CIApplicationProgress
@@ -165,7 +203,7 @@ describe('CIApplicationProgress', () => {
           proposedFuelCodeEffectiveDate: '2026-06-01'
         }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     // All five steps, including Government decision, are complete so the BCeID
@@ -175,7 +213,13 @@ describe('CIApplicationProgress', () => {
     expect(screen.getByText('5')).toBeInTheDocument()
   })
 
-  it('adds an hourglass applicant-wait step with days counted from request date', () => {
+  test('adds an hourglass applicant-wait step with days counted from request date', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-19T12:00:00Z'))
     render(
@@ -190,7 +234,7 @@ describe('CIApplicationProgress', () => {
           proposedFuelCodeEffectiveDate: '2026-06-01'
         }}
       />,
-      { wrapper }
+      [query, theme, localization, router]
     )
 
     expect(screen.getByText('With applicant')).toBeInTheDocument()
@@ -200,7 +244,7 @@ describe('CIApplicationProgress', () => {
     vi.useRealTimers()
   })
 
-  it('keeps the workflow progress visible for Draft applications returned to the supplier', () => {
+  test('keeps the workflow progress visible for Draft applications returned to the supplier', () => {
     const steps = buildCIWorkflowSteps({
       status: { status: 'Draft' },
       signatureUserDisplayName: 'Jane Submitter',

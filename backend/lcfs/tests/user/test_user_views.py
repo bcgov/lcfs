@@ -484,3 +484,40 @@ async def test_update_email_success(
 
     # Assert: Check response status and content
     assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.anyio
+async def test_get_user_assigned_work_government(client, fastapi_app, set_mock_user):
+    mock_work = {
+        "compliance_reports": [
+            {"compliance_report_id": 1, "organization": "Acme Corp", "period": "2024", "status": "Submitted"}
+        ],
+        "ci_applications": [],
+    }
+    with patch(
+        "lcfs.web.api.user.views.UserServices.get_user_assigned_work",
+        return_value=mock_work,
+    ) as mock_svc:
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
+        url = fastapi_app.url_path_for("get_user_assigned_work", user_id=7)
+        response = await client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["complianceReports"]) == 1
+        assert data["complianceReports"][0]["organization"] == "Acme Corp"
+        assert data["ciApplications"] == []
+        mock_svc.assert_called_once_with(7)
+
+
+@pytest.mark.anyio
+async def test_get_user_assigned_work_forbidden_for_bceid(
+    client, fastapi_app, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    url = fastapi_app.url_path_for("get_user_assigned_work", user_id=7)
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN

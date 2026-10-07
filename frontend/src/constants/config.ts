@@ -13,6 +13,7 @@ export interface FeatureFlagsConfig {
   internalCommentSearch?: boolean
   deterministicReportSummary?: boolean
   creditMarketLoginPage?: boolean
+  publicMarketData?: boolean
   initiativeAgreements?: boolean
 }
 
@@ -48,6 +49,11 @@ const isProductionEnvironment = ['production', 'prod'].includes(
 
 export function getApiBaseUrl(): string {
   const hostnameParts = window.location.hostname.split('.')
+  const viteEnv = (
+    import.meta as ImportMeta & {
+      env?: Record<string, string | undefined>
+    }
+  ).env
 
   let baseUrl
   if (window.location.hostname === 'localhost') {
@@ -67,7 +73,12 @@ export function getApiBaseUrl(): string {
     }
   }
 
-  return window.lcfs_config.api_base ?? baseUrl
+  const localDevApiBase =
+    window.location.hostname === 'localhost'
+      ? viteEnv?.VITE_API_BASE_URL
+      : undefined
+
+  return localDevApiBase ?? window.lcfs_config.api_base ?? baseUrl
 }
 
 export const FEATURE_FLAGS = {
@@ -85,6 +96,7 @@ export const FEATURE_FLAGS = {
   INTERNAL_COMMENT_SEARCH: 'internalCommentSearch',
   DETERMINISTIC_REPORT_SUMMARY: 'deterministicReportSummary',
   CREDIT_MARKET_LOGIN_PAGE: 'creditMarketLoginPage',
+  PUBLIC_MARKET_DATA: 'publicMarketData',
   INITIATIVE_AGREEMENTS: 'initiativeAgreements'
 } as const
 
@@ -171,6 +183,8 @@ export const CONFIG: AppConfig = {
       window.lcfs_config.feature_flags.deterministicReportSummary ??
       !isProductionEnvironment,
     creditMarketLoginPage:
-      window.lcfs_config.feature_flags.creditMarketLoginPage ?? false
+      window.lcfs_config.feature_flags.creditMarketLoginPage ?? false,
+    publicMarketData:
+      window.lcfs_config.feature_flags.publicMarketData ?? false
   }
 }

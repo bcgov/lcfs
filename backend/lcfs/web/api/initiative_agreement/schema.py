@@ -171,6 +171,7 @@ class DesignatedActionSchema(BaseSchema):
     determination_date: Optional[date] = None
     credit_allocation: int
     recommended_credits: Optional[int] = None
+    missing_information: Optional[str] = None
     determination: Optional[str] = None
     current_status: DesignatedActionStatusSchema
     assigned_analyst: Optional[AssignedAnalystSchema] = None
@@ -188,6 +189,9 @@ class EvidenceRequirementSchema(BaseSchema):
     evidence_requirement_id: int
     designated_action_id: int
     requirement_number: int
+    # Nullable: requirements from before titles existed show their
+    # description as the heading until one is saved.
+    title: Optional[str] = None
     description: str
     evidence_type: Optional[str] = None
     is_active: bool = True
@@ -202,12 +206,14 @@ class EvidenceRequirementSchema(BaseSchema):
 
 
 class EvidenceRequirementCreateSchema(BaseSchema):
+    title: str
     description: str
     evidence_type: Optional[str] = None
     requirement_number: Optional[int] = None
 
 
 class EvidenceRequirementUpdateSchema(BaseSchema):
+    title: Optional[str] = None
     description: Optional[str] = None
     evidence_type: Optional[str] = None
     requirement_number: Optional[int] = None
@@ -229,6 +235,10 @@ class DesignatedActionWorkflowSchema(BaseSchema):
 
 class RecommendedCreditsSchema(BaseSchema):
     recommended_credits: Optional[int] = None
+
+
+class MissingInformationSchema(BaseSchema):
+    missing_information: Optional[str] = None
 
 
 class DesignatedActionHistorySchema(BaseSchema):
@@ -277,6 +287,22 @@ class DesignatedActionProfileSchema(DesignatedActionSchema):
 class DesignatedActionsListSchema(BaseSchema):
     pagination: PaginationResponseSchema
     designated_actions: List[DesignatedActionSchema]
+
+
+class DesignatedActionListItemSchema(DesignatedActionSchema):
+    """A row of the module-wide Designated actions tab (#5078).
+
+    Carries which agreement the action belongs to, for the ID column
+    (DA{n}-IA{agreement}) and for navigating to the action's page.
+    """
+
+    initiative_agreement_id: int
+    ia_code: Optional[str] = None
+
+
+class AllDesignatedActionsListSchema(BaseSchema):
+    pagination: PaginationResponseSchema
+    designated_actions: List[DesignatedActionListItemSchema]
 
 
 class AnalystAssignmentSchema(BaseSchema):
@@ -345,6 +371,7 @@ class InitiativeAgreementProfileSchema(InitiativeAgreementListItemSchema):
     # Overrides the grid's lean organization payload with the detail card's.
     organization: AgreementOrganizationSchema
     project_description: Optional[str] = None
+    project_location: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     create_date: datetime
@@ -365,6 +392,7 @@ class AgreementCreateSchema(BaseSchema):
     agreement_type: str = AGREEMENT_TYPE_INITIATIVE_AGREEMENT
     title: Optional[str] = None
     project_description: Optional[str] = None
+    project_location: Optional[str] = None
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None

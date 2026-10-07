@@ -11,6 +11,7 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.dashboard.schema import (
     CIApplicationCountsSchema,
     InitiativeAgreementCountsSchema,
+    OrgInitiativeAgreementCountsSchema,
     OrgFuelCodeCountsSchema,
 )
 
@@ -115,4 +116,37 @@ async def test_initiative_agreement_counts_forbidden_for_proponent(
     """The card is IDIR-only; a BCeID proponent is refused."""
     set_user_role(RoleEnum.IA_PROPONENT)
     response = await client.get("/api/dashboard/initiative-agreement-counts")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_org_initiative_agreement_counts_for_proponent(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    """The BCeID card gets its own organization's counts (#4893)."""
+    set_user_role(RoleEnum.IA_PROPONENT)
+    with patch(
+        "lcfs.web.api.dashboard.services.DashboardServices.get_org_initiative_agreement_counts"
+    ) as mock:
+        mock.return_value = OrgInitiativeAgreementCountsSchema(underway=3, completed=1)
+        response = await client.get("/api/dashboard/org-initiative-agreement-counts")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {"underway": 3, "completed": 1}
+        # Scoped to the caller's organization, never a global count.
+        called_with = mock.call_args.args[0]
+        assert called_with is not None
+
+
+@pytest.mark.anyio
+async def test_org_initiative_agreement_counts_forbidden_for_idir(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    """IDIR staff have no organization to scope to; they use the IDIR card."""
+    set_user_role(RoleEnum.IA_ANALYST)
+    response = await client.get("/api/dashboard/org-initiative-agreement-counts")
     assert response.status_code == status.HTTP_403_FORBIDDEN
