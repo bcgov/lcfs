@@ -18,6 +18,49 @@ import Tooltip from '@mui/material/Tooltip'
 import WarningIcon from '@mui/icons-material/Warning'
 import { Link, useLocation } from 'react-router-dom'
 
+const VANCOUVER_TIME_ZONE = 'America/Vancouver'
+
+const parseDateOnly = (value: string | Date | null | undefined): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+
+  const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (dateOnly && !/[T ]\d{2}:\d{2}/.test(String(value))) {
+    const [, year, month, day] = dateOnly
+    return new Date(Number(year), Number(month) - 1, Number(day))
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const formatDateOnly = (value: string | Date | null | undefined): string => {
+  if (!value) return ''
+  const dateOnly = String(value).match(/^(\d{4}-\d{2}-\d{2})/)
+  if (dateOnly && !/[T ]\d{2}:\d{2}/.test(String(value))) return dateOnly[1]
+
+  const date = parseDateOnly(value)
+  return date
+    ? date.toLocaleDateString('en-CA', { timeZone: VANCOUVER_TIME_ZONE })
+    : String(value)
+}
+
+const dateFilterComparator = (
+  filterLocalDateAtMidnight: Date,
+  cellValue: string | Date | null | undefined
+): number => {
+  const cellDate = parseDateOnly(formatDateOnly(cellValue))
+  if (!cellDate) return -1
+  const normalizedCellDate = new Date(
+    cellDate.getFullYear(),
+    cellDate.getMonth(),
+    cellDate.getDate()
+  )
+  if (normalizedCellDate < filterLocalDateAtMidnight) return -1
+  if (normalizedCellDate > filterLocalDateAtMidnight) return 1
+  return 0
+}
+
 // Cell renderer for Type column with 30-day supplemental flag
 const TypeCellRenderer = (isSupplier) => (props) => {
   const location = useLocation()
@@ -224,13 +267,15 @@ export const reportsColDefs = (
     headerName: t('report:reportColLabels.lastUpdated'),
     minWidth: 225,
     valueGetter: ({ data }) => data.updateDate || '',
+    filterValueGetter: ({ data }) => formatDateOnly(data.updateDate),
     valueFormatter: timezoneFormatter,
     filter: 'agDateColumnFilter',
     filterParams: {
       filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
       suppressAndOrCondition: true,
       buttons: ['clear'],
-      maxValidYear: 2400
+      maxValidYear: 2400,
+      comparator: dateFilterComparator
     },
     floatingFilterComponent: BCDateFloatingFilter,
     suppressFloatingFilterButton: true
