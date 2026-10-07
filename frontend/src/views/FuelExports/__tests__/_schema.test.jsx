@@ -94,6 +94,23 @@ describe('FuelExports Schema', () => {
       expect(colDef.cellStyle).toBeDefined()
     })
 
+    it('should round CNG energy content for display and preserve other fuel decimals', () => {
+      const colDef = columns.find((col) => col.field === 'energy')
+
+      expect(
+        colDef.valueFormatter({
+          value: 1234.56,
+          data: { fuelType: 'CNG', fuelCategory: 'Gasoline' }
+        })
+      ).toBe('1,235')
+      expect(
+        colDef.valueFormatter({
+          value: 1234.56,
+          data: { fuelType: 'Test Fuel', fuelCategory: 'Diesel' }
+        })
+      ).toBe('1,234.56')
+    })
+
     it('should format numbers with commas', () => {
       const colDef = columns.find((col) => col.field === 'complianceUnits')
       expect(colDef).toBeDefined()
