@@ -148,8 +148,10 @@ erDiagram
         int charging_equipment_id PK
         int charging_site_id FK
         int status_id FK
+        int level_of_equipment_id FK
         string equipment_number
     }
+    LEVEL_OF_EQUIPMENT ||--o{ CHARGING_EQUIPMENT : "level"
     CHARGING_EQUIPMENT }o--o{ END_USE_TYPE : "intended use (assoc.)"
     CHARGING_EQUIPMENT }o--o{ END_USER_TYPE : "intended user (assoc.)"
 

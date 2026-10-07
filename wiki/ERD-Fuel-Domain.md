@@ -61,11 +61,11 @@ erDiagram
     COMPLIANCE_PERIOD ||--o{ ENERGY_DENSITY : "effective period (external)"
 
     FUEL_CATEGORY ||--o{ ENERGY_EFFECTIVENESS_RATIO : "fuel_category_id"
-    FUEL_TYPE ||--o{ ENERGY_EFFECTIVENESS_RATIO : "fuel_type_id"
-    END_USE_TYPE ||--o{ ENERGY_EFFECTIVENESS_RATIO : "end_use_type_id"
+    FUEL_TYPE |o--o{ ENERGY_EFFECTIVENESS_RATIO : "fuel_type_id"
+    END_USE_TYPE |o--o{ ENERGY_EFFECTIVENESS_RATIO : "end_use_type_id"
     COMPLIANCE_PERIOD ||--o{ ENERGY_EFFECTIVENESS_RATIO : "effective period (external)"
 
-    FUEL_TYPE ||--o{ ADDITIONAL_CARBON_INTENSITY : "fuel_type_id"
+    FUEL_TYPE |o--o{ ADDITIONAL_CARBON_INTENSITY : "fuel_type_id"
     END_USE_TYPE |o--o{ ADDITIONAL_CARBON_INTENSITY : "end_use_type_id"
     UNIT_OF_MEASURE ||--o{ ADDITIONAL_CARBON_INTENSITY : "uom"
     COMPLIANCE_PERIOD ||--o{ ADDITIONAL_CARBON_INTENSITY : "effective period (external)"
