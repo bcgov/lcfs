@@ -376,7 +376,7 @@ describe('FinalSupplyEquipmentSummary', () => {
     it('generates defaultColDef for DRAFT status', () => {
       renderComponent({ status: COMPLIANCE_REPORT_STATUSES.DRAFT })
       const defaultColDef = gridViewerProps.defaultColDef
-      expect(defaultColDef.floatingFilter).toBe(false)
+      expect(defaultColDef.floatingFilter).toBe(true)
       expect(defaultColDef.filter).toBe(false)
       expect(defaultColDef.cellRenderer).toBeDefined()
       expect(defaultColDef.cellRendererParams.url()).toBe('fse-reporting')
