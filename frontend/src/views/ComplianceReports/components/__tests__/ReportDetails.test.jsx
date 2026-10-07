@@ -1,5 +1,6 @@
 import 'react'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
 import 'chai'
@@ -356,6 +357,65 @@ describe('ReportDetails', () => {
     })
   })
 
+  test('supports keyboard accordion control and a separate named edit action', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const user = userEvent.setup()
+    mockUseCurrentUser.mockReturnValue({
+      data: {
+        organization: { organizationId: '1' },
+        isGovernmentUser: false
+      },
+      hasRoles: (role) => ['Supplier', 'signing_authority'].includes(role),
+      isLoading: false
+    })
+
+    render(
+      <ReportDetails
+        currentStatus="Draft"
+        hasRoles={(role) => role === 'Supplier'}
+      />,
+      [query, theme, localization, router]
+    )
+
+    const toggleButton = await screen.findByRole('button', {
+      name: 'report:supportingDocs'
+    })
+    const editButton = screen.getByRole('button', {
+      name: 'common:editBtn report:supportingDocs'
+    })
+
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'false')
+    expect(toggleButton).toHaveAttribute('aria-controls', 'panel0-content')
+    expect(toggleButton).not.toContainElement(editButton)
+
+    const panel = document.getElementById('panel0-content')
+    expect(panel).toHaveAttribute('role', 'region')
+    expect(panel).toHaveAttribute('aria-labelledby', 'panel0-header')
+
+    await user.tab()
+    await user.tab()
+    await user.tab()
+    expect(editButton).toHaveFocus()
+    await user.tab()
+    expect(toggleButton).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'true')
+
+    await user.keyboard(' ')
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'false')
+
+    await user.tab({ shift: true })
+    expect(editButton).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getAllByText('Upload Dialog').length).toBeGreaterThan(0)
+  })
+
   test('hides empty sections in non-editing status for non-supplemental reports', async ({
     render,
     query,
@@ -419,7 +479,9 @@ describe('ReportDetails', () => {
 
     await waitFor(() => {
       // No edit buttons should be visible since user lacks required roles
-      const editButtons = screen.queryAllByLabelText('edit')
+      const editButtons = screen.queryAllByRole('button', {
+        name: /^common:editBtn /
+      })
       expect(editButtons.length).toBe(0)
     })
   })
@@ -450,7 +512,9 @@ describe('ReportDetails', () => {
     )
 
     await waitFor(() => {
-      const editButtons = screen.queryAllByLabelText('edit')
+      const editButtons = screen.queryAllByRole('button', {
+        name: /^common:editBtn /
+      })
       expect(editButtons.length).toBe(0)
     })
   })
@@ -774,7 +838,9 @@ describe('ReportDetails', () => {
     )
 
     await waitFor(() => {
-      const editButtons = screen.getAllByLabelText('edit')
+      const editButtons = screen.getAllByRole('button', {
+        name: /^common:editBtn /
+      })
       if (editButtons.length > 0) {
         fireEvent.click(editButtons[0])
         // Navigation function should be called

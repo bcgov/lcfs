@@ -1,4 +1,5 @@
 import BCTypography from '@/components/BCTypography'
+import Box from '@mui/material/Box'
 import Accordion from '@mui/material/Accordion'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import AccordionSummary from '@mui/material/AccordionSummary'
@@ -683,6 +684,82 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
               scheduleData.every((item) => item.actionType === 'DELETE')
 
         const showEditIcon = shouldShowEditIcon(activity.name)
+        const isSupportingDocs = activity.key === 'supportingDocs'
+
+        const accordionHeading = (
+          <BCTypography
+            style={{ display: 'flex', alignItems: 'center' }}
+            variant="h6"
+            color="primary"
+            component="span"
+          >
+            {activity.name}&nbsp;&nbsp;
+            {isEdited && !allRecordsDeleted && (
+              <Chip
+                component="span"
+                aria-label="changes were made since original report"
+                icon={<NewReleasesOutlined fontSize="small" />}
+                label={t('Edited')}
+                size="small"
+                sx={getChipStyles('edited')}
+              />
+            )}
+            {allRecordsDeleted && (
+              <Chip
+                component="span"
+                aria-label="all previous records deleted"
+                icon={<DeleteOutline fontSize="small" />}
+                label={t('Deleted')}
+                size="small"
+                sx={getChipStyles('deleted')}
+              />
+            )}
+            {hasNoData && (
+              <Chip
+                component="span"
+                aria-label="no records"
+                icon={<InfoOutlined fontSize="small" />}
+                label={t('Empty')}
+                size="small"
+                sx={getChipStyles('info')}
+              />
+            )}
+          </BCTypography>
+        )
+
+        const editAction = showEditIcon && (
+          <Role
+            roles={[
+              roles.signing_authority,
+              roles.compliance_reporting,
+              roles.analyst
+            ]}
+          >
+            <IconButton
+              color="primary"
+              aria-label={`${t('common:editBtn')} ${activity.name}`}
+              className="small-icon"
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                right: '3rem',
+                transform: 'translateY(-50%)',
+                zIndex: 1,
+                '&.Mui-focusVisible': {
+                  outline: '2px solid',
+                  outlineColor: 'primary.main',
+                  outlineOffset: '2px'
+                }
+              }}
+              onClick={(e) => {
+                e.stopPropagation()
+                activity.action(e)
+              }}
+            >
+              <Edit aria-hidden="true" />
+            </IconButton>
+          </Role>
+        )
 
         return (
           <Accordion
@@ -693,74 +770,85 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
             onChange={onExpand(panelId)}
             disabled={!showEditIcon && isDisabled}
           >
-            <AccordionSummary
-              expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
-              aria-controls={`${panelId}-content`}
+            <Box
+              component="span"
               id={`${panelId}-header`}
-              data-test={`${panelId}-summary`}
-              sx={{
-                '& .MuiAccordionSummary-content': { alignItems: 'center' }
-              }}
+              role="group"
+              aria-label={activity.name}
+              aria-controls={`${panelId}-content`}
+              sx={{ position: 'relative', display: 'block' }}
             >
-              <BCTypography
-                style={{ display: 'flex', alignItems: 'center' }}
-                variant="h6"
-                color="primary"
-                component="div"
-              >
-                {activity.name}&nbsp;&nbsp;
-                {showEditIcon && (
-                  <Role
-                    roles={[
-                      roles.signing_authority,
-                      roles.compliance_reporting,
-                      roles.analyst
-                    ]}
-                  >
-                    <IconButton
-                      color="primary"
-                      label="edit"
-                      sx={{ px: 2 }}
-                      aria-label="edit"
-                      className="small-icon"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        activity.action(e)
-                      }}
-                    >
-                      <Edit />
-                    </IconButton>
-                  </Role>
-                )}{' '}
-                {isEdited && !allRecordsDeleted && (
-                  <Chip
-                    aria-label="changes were made since original report"
-                    icon={<NewReleasesOutlined fontSize="small" />}
-                    label={t('Edited')}
-                    size="small"
-                    sx={getChipStyles('edited')}
+              {isSupportingDocs ? (
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    minHeight: 48,
+                    pl: 2,
+                    pr: showEditIcon ? '6rem' : '3rem'
+                  }}
+                >
+                  {accordionHeading}
+                </Box>
+              ) : (
+                <AccordionSummary
+                  expandIcon={
+                    <ExpandMore
+                      aria-hidden="true"
+                      sx={{ width: '2rem', height: '2rem' }}
+                    />
+                  }
+                  aria-controls={`${panelId}-content`}
+                  id={`${panelId}-toggle`}
+                  data-test={`${panelId}-summary`}
+                  sx={{
+                    pr: showEditIcon ? '7.5rem' : undefined,
+                    '& .MuiAccordionSummary-content': { alignItems: 'center' }
+                  }}
+                >
+                  {accordionHeading}
+                </AccordionSummary>
+              )}
+              {editAction}
+              {isSupportingDocs && (
+                <IconButton
+                  color="primary"
+                  aria-label={activity.name}
+                  aria-controls={`${panelId}-content`}
+                  aria-expanded={isExpanded}
+                  data-test={`${panelId}-summary`}
+                  disabled={!showEditIcon && isDisabled}
+                  className="small-icon"
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    right: 0,
+                    transform: 'translateY(-50%)',
+                    zIndex: 1,
+                    '&.Mui-focusVisible': {
+                      outline: '2px solid',
+                      outlineColor: 'primary.main',
+                      outlineOffset: '2px'
+                    }
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onExpand(panelId)(event, !isExpanded)
+                  }}
+                >
+                  <ExpandMore
+                    aria-hidden="true"
+                    sx={{
+                      width: '2rem',
+                      height: '2rem',
+                      transform: isExpanded ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 150ms ease-in-out'
+                    }}
                   />
-                )}
-                {allRecordsDeleted && (
-                  <Chip
-                    aria-label="all previous records deleted"
-                    icon={<DeleteOutline fontSize="small" />}
-                    label={t('Deleted')}
-                    size="small"
-                    sx={getChipStyles('deleted')}
-                  />
-                )}
-                {hasNoData && (
-                  <Chip
-                    aria-label="no records"
-                    icon={<InfoOutlined fontSize="small" />}
-                    label={t('Empty')}
-                    size="small"
-                    sx={getChipStyles('info')}
-                  />
-                )}
-              </BCTypography>
-            </AccordionSummary>
+                </IconButton>
+              )}
+            </Box>
             <AccordionDetails>
               {allRecordsDeleted && (
                 <BCAlert
