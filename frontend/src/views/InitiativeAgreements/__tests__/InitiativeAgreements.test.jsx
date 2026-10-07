@@ -137,7 +137,10 @@ describe('InitiativeAgreements', () => {
     expect(screen.getByTestId('alert-box')).toHaveTextContent('boom')
   })
 
-  it('passes onClearFilters to BCGridViewer and removes cached keys when called', () => {
+  test('passes onClearFilters to BCGridViewer and removes cached keys when called', ({
+    render,
+    app
+  }) => {
     mockUseGetInitiativeAgreements.mockReturnValue({
       data: {
         initiativeAgreements: [],
@@ -152,7 +155,7 @@ describe('InitiativeAgreements', () => {
     sessionStorage.setItem('initiative-agreements-grid-filter', '{"status":"Draft"}')
     sessionStorage.setItem('initiative-agreements-grid-pagination', '{"page":3,"size":25}')
 
-    render(<InitiativeAgreements />, { wrapper })
+    render(<InitiativeAgreements />, app)
 
     const gridProps = mockBCGridViewer.mock.calls.at(-1)[0]
     expect(typeof gridProps.onClearFilters).toBe('function')
