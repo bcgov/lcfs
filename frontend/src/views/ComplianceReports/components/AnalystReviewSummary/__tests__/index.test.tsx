@@ -6,7 +6,7 @@ import { AnalystReviewSummary } from '..'
 const mockUseGetComplianceReportReviewSummary = vi.fn()
 
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useGetComplianceReportReviewSummary: (...args: any[]) =>
+  useGetComplianceReportReviewSummary: (...args: unknown[]) =>
     mockUseGetComplianceReportReviewSummary(...args)
 }))
 
@@ -71,6 +71,36 @@ describe('AnalystReviewSummary', () => {
     expect(
       screen.getByText('Fuelbert pre-screen is unavailable.')
     ).toBeInTheDocument()
+  })
+
+  it('exposes a named accordion control with state and keyboard operation', async () => {
+    const user = userEvent.setup()
+    mockUseGetComplianceReportReviewSummary.mockReturnValue({
+      data: reviewData,
+      isLoading: false,
+      isError: false
+    })
+
+    render(<AnalystReviewSummary complianceReportId={101} />)
+
+    const summary = screen.getByRole('button', {
+      name: /^Fuelbert pre-screen/
+    })
+    expect(summary).toHaveAttribute('aria-expanded', 'false')
+
+    const panel = document.getElementById(
+      String(summary.getAttribute('aria-controls'))
+    )
+    expect(panel).toHaveAttribute('role', 'region')
+    expect(panel).toHaveAttribute('aria-labelledby', summary.id)
+
+    await user.tab()
+    expect(summary).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(summary).toHaveAttribute('aria-expanded', 'true')
+
+    await user.keyboard(' ')
+    expect(summary).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('deduplicates follow-up questions and persists addressed findings', async () => {
