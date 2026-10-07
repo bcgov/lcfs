@@ -514,7 +514,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
           minWidth: 150,
           field: 'status',
           cellRenderer: FSEStatusRenderer,
-          filter: false,
+          filter: 'agTextColumnFilter',
           sortable: false
         }
       ]
@@ -525,6 +525,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
     ),
     minWidth: 300,
     field: 'supplyDateRange',
+    filter: false,
     valueGetter: (params) => {
       const from = params.data?.supplyFromDate || '—'
       const to = params.data?.supplyToDate || '—'
@@ -537,6 +538,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
     ),
     minWidth: 135,
     field: 'kwhUsage',
+    filter: 'agNumberColumnFilter',
     valueFormatter: numberFormatter
   },
   ...(isIDIR
@@ -547,7 +549,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
           ),
           minWidth: 230,
           field: 'capacityUtilizationPercent',
-          filter: false,
+          filter: 'agNumberColumnFilter',
           sortable: false,
           suppressNavigable: true,
           valueGetter: (params) => {
@@ -567,35 +569,40 @@ export const finalSupplyEquipmentSummaryColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
     ),
     minWidth: 300,
-    field: 'complianceNotes'
+    field: 'complianceNotes',
+    filter: 'agTextColumnFilter'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.siteName'
     ),
     minWidth: 220,
-    field: 'siteName'
+    field: 'siteName',
+    filter: 'agTextColumnFilter'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
     ),
     minWidth: 160,
-    field: 'registrationNumber'
+    field: 'registrationNumber',
+    filter: 'agTextColumnFilter'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'
     ),
     minWidth: 200,
-    field: 'serialNumber'
+    field: 'serialNumber',
+    filter: 'agTextColumnFilter'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
     ),
     minWidth: 250,
-    field: 'manufacturer'
+    field: 'manufacturer',
+    filter: 'agTextColumnFilter'
   },
   {
     headerName: t(
@@ -603,19 +610,22 @@ export const finalSupplyEquipmentSummaryColDefs = (
     ),
     minWidth: 340,
     field: 'levelOfEquipment',
+    filter: 'agTextColumnFilter',
     valueGetter: (params) => params.data.levelOfEquipment
   },
   {
     headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'),
     minWidth: 160,
-    field: 'ports'
+    field: 'ports',
+    filter: 'agTextColumnFilter'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.allocatingOrganization'
     ),
     minWidth: 250,
-    field: 'allocatingOrganizationName'
+    field: 'allocatingOrganizationName',
+    filter: 'agTextColumnFilter'
   },
   {
     headerName: t(
@@ -623,6 +633,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
     ),
     minWidth: 300,
     field: 'intendedUses',
+    filter: false,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams:
       status === COMPLIANCE_REPORT_STATUSES.DRAFT
@@ -634,6 +645,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUserTypes'
     ),
     field: 'intendedUsers',
+    filter: false,
     minWidth: 400,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams:
@@ -646,7 +658,8 @@ export const finalSupplyEquipmentSummaryColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.equipmentNotes'
     ),
     minWidth: 300,
-    field: 'equipmentNotes'
+    field: 'equipmentNotes',
+    filter: 'agTextColumnFilter'
   }
 ]
 

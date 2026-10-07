@@ -499,6 +499,10 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
+      fireEvent.click(screen.getByTestId('fuelCategory1'))
+      fireEvent.click(screen.getByTestId('Gasoline'))
+      fireEvent.click(screen.getByTestId('Transportation'))
+
       await waitFor(() => {
         expect(
           screen.getByText(
@@ -510,6 +514,63 @@ describe('CreditCalculator', () => {
   })
 
   describe('Conditional Rendering', () => {
+    it('clears EC and credits until the new fuel has a valid end use', async () => {
+      const refetch = vi.fn()
+      const dieselResults = { current: undefined }
+      const gasolineOptions = {
+        data: {
+          ...mockFuelOptions.data,
+          eerRatios: [mockFuelOptions.data.eerRatios[0]]
+        }
+      }
+      const gasolineResults = {
+        data: { complianceUnits: 500, energyContent: 1000000 }
+      }
+      vi.mocked(useGetFuelTypeOptions).mockImplementation(({ fuelTypeId }) => ({
+        data: fuelTypeId === 1 ? gasolineOptions : mockFuelOptions,
+        isLoading: false
+      }))
+      vi.mocked(useCalculateComplianceUnits).mockImplementation(({ fuelTypeId }) => ({
+        data: fuelTypeId === 1 ? gasolineResults : dieselResults.current,
+        refetch
+      }))
+
+      const calculator = <TestWrapper><CreditCalculator /></TestWrapper>
+      const { rerender } = render(calculator)
+      fireEvent.click(screen.getByTestId('fuelCategory1'))
+      fireEvent.click(screen.getByTestId('Gasoline'))
+
+      await waitFor(() => {
+        expect(screen.getByText('1,000,000 MJ')).toBeInTheDocument()
+        expect(document.getElementById('complianceUnits')).toHaveValue('500')
+      })
+
+      refetch.mockClear()
+      fireEvent.click(screen.getByTestId('Diesel'))
+
+      const energyContentValue = screen.getByText('EC - Energy content:').nextElementSibling
+      expect(energyContentValue).toBeEmptyDOMElement()
+      expect(document.getElementById('complianceUnits')).toHaveValue('')
+      expect(screen.queryByText('1,000,000 MJ')).not.toBeInTheDocument()
+      await new Promise((resolve) => setTimeout(resolve, 350))
+      expect(refetch).not.toHaveBeenCalled()
+
+      // Even cached data must not restore results while End Use is blank.
+      dieselResults.current = {
+        data: { complianceUnits: 250, energyContent: 2000000 }
+      }
+      rerender(<TestWrapper><CreditCalculator /></TestWrapper>)
+      expect(energyContentValue).toBeEmptyDOMElement()
+      expect(document.getElementById('complianceUnits')).toHaveValue('')
+
+      fireEvent.click(screen.getByTestId('Heating'))
+      await waitFor(() => {
+        expect(screen.getByText('2,000,000 MJ')).toBeInTheDocument()
+        expect(document.getElementById('complianceUnits')).toHaveValue('250')
+      })
+      await waitFor(() => expect(refetch).toHaveBeenCalled())
+    })
+
     it('displays loading state for fuel types', () => {
       vi.mocked(useGetFuelTypeList).mockReturnValue({
         data: null,
@@ -652,6 +713,10 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
+
+      fireEvent.click(screen.getByTestId('fuelCategory1'))
+      fireEvent.click(screen.getByTestId('Gasoline'))
+      fireEvent.click(screen.getByTestId('Transportation'))
 
       await waitFor(() => {
         expect(screen.getByDisplayValue('75 gCO₂e/MJ')).toBeInTheDocument()

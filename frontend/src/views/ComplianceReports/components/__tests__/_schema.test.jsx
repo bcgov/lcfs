@@ -194,6 +194,24 @@ describe('ComplianceReports Schema', () => {
       )
     })
 
+    it('should filter the last updated column by date only', () => {
+      const colDefs = reportsColDefs(mockT, false, mockOnRefresh)
+      const updateDateCol = colDefs.find((col) => col.field === 'updateDate')
+
+      expect(updateDateCol.filter).toBe('agDateColumnFilter')
+      expect(
+        updateDateCol.filterValueGetter({
+          data: { updateDate: '2026-10-05T22:15:30+00:00' }
+        })
+      ).toBe('2026-10-05')
+      expect(
+        updateDateCol.filterParams.comparator(
+          new Date(2026, 9, 5),
+          '2026-10-05T22:15:30+00:00'
+        )
+      ).toBe(0)
+    })
+
     it('should pass onRefresh function to cell renderer params', () => {
       const customOnRefresh = vi.fn()
       const isSupplier = false

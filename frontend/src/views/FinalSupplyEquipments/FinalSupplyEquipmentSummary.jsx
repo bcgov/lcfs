@@ -60,7 +60,7 @@ export const FinalSupplyEquipmentSummary = ({
   )
   const defaultColDef = useMemo(
     () => ({
-      floatingFilter: false,
+      floatingFilter: true,
       filter: false,
       cellRenderer:
         status === COMPLIANCE_REPORT_STATUSES.DRAFT ? LinkRenderer : undefined,
