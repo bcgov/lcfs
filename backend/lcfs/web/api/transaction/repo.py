@@ -195,6 +195,26 @@ class TransactionRepository:
         return transactions, total_count
 
     @repo_handler
+    async def get_transfer_export_details(self, transfer_ids: List[int]) -> dict:
+        """
+        Agreement date and A1 flag for the given transfers, keyed by transfer_id.
+
+        mv_transaction_aggregate carries neither, so the transactions export
+        reads them from the transfer table for the transfers it includes.
+        """
+        if not transfer_ids:
+            return {}
+
+        result = await self.db.execute(
+            select(
+                Transfer.transfer_id,
+                Transfer.agreement_date,
+                Transfer.is_a1_category,
+            ).where(Transfer.transfer_id.in_(transfer_ids))
+        )
+        return {row.transfer_id: row for row in result.all()}
+
+    @repo_handler
     async def get_transaction_by_id(self, transaction_id: int) -> Transaction:
         """
         Retrieves a transaction by its ID.
@@ -327,57 +347,6 @@ class TransactionRepository:
             ).where(Transaction.organization_id == organization_id)
         )
         return available_balance or 0
-
-    @repo_handler
-    async def calculate_available_balance_for_period(
-        self, organization_id: int, compliance_period: int
-    ):
-        """
-        Calculate the available balance for a specific organization available to a specific compliance period.
-
-        Args:
-            organization_id (int): The ID of the organization for which to calculate the available balance.
-            compliance_period (int): The compliance period year in integer
-
-        Returns:
-            int: The available balance of compliance units for the specified organization and period. Returns 0 if no balance is calculated.
-        """
-        vancouver_timezone = zoneinfo.ZoneInfo("America/Vancouver")
-        compliance_period_end = datetime.strptime(
-            f"{str(compliance_period + 1)}-03-31", "%Y-%m-%d"
-        )
-        compliance_period_end_local = compliance_period_end.replace(
-            hour=23, minute=59, second=59, microsecond=999999, tzinfo=vancouver_timezone
-        )
-        # Calculate the sum of all transactions up to the specified date
-        balance_to_date = await self.db.scalar(
-            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
-                and_(
-                    Transaction.organization_id == organization_id,
-                    Transaction.create_date <= compliance_period_end_local,
-                    Transaction.transaction_action != TransactionActionEnum.Released,
-                )
-            )
-        )
-
-        # Calculate the sum of future negative transactions
-        future_negative_transactions = await self.db.scalar(
-            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
-                and_(
-                    Transaction.organization_id == organization_id,
-                    Transaction.create_date > compliance_period_end_local,
-                    Transaction.compliance_units < 0,
-                    Transaction.transaction_action != TransactionActionEnum.Released,
-                )
-            )
-        )
-
-        # Calculate the available balance, round to the nearest whole number, and if negative, set to zero
-        available_balance = max(
-            round(balance_to_date - abs(future_negative_transactions)), 0
-        )
-
-        return available_balance
 
     @staticmethod
     def _transfer_effective_date(transfer):

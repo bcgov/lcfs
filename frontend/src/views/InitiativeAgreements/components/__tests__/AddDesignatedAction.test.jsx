@@ -1,9 +1,11 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, screen } from '@testing-library/react'
+
+import { describe, expect, vi, beforeEach } from 'vitest'
+
 import { AddDesignatedAction } from '../AddDesignatedAction'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -34,18 +36,20 @@ describe('AddDesignatedAction', () => {
     mockRoles = [roles.ia_analyst]
   })
 
-  it('offers the control on a draft agreement', () => {
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, {
-      wrapper
-    })
+  test('offers the control on a draft agreement', ({ render, app }) => {
+    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
 
     expect(screen.getByTestId('add-designated-action')).toBeInTheDocument()
   })
 
-  it('stays visible but disabled once the agreement is no longer a draft', () => {
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft={false} />, {
-      wrapper
-    })
+  test('stays visible but disabled once the agreement is no longer a draft', ({
+    render,
+    app
+  }) => {
+    render(
+      <AddDesignatedAction initiativeAgreementId="1" isDraft={false} />,
+      app
+    )
 
     // Visible so nobody hunts for a button that was never rendered, and
     // the tooltip carries the reason.
@@ -56,21 +60,20 @@ describe('AddDesignatedAction', () => {
     )
   })
 
-  it('is absent for a director, who approves rather than drafts', () => {
+  test('is absent for a director, who approves rather than drafts', ({
+    render,
+    app
+  }) => {
     mockRoles = [roles.director]
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, {
-      wrapper
-    })
+    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
 
     expect(
       screen.queryByTestId('add-designated-action')
     ).not.toBeInTheDocument()
   })
 
-  it('will not create an action without a name', () => {
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, {
-      wrapper
-    })
+  test('will not create an action without a name', ({ render, app }) => {
+    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
     open()
 
     // Asserting the behaviour rather than the button's disabled attribute:
@@ -81,10 +84,8 @@ describe('AddDesignatedAction', () => {
     expect(mockCreate).not.toHaveBeenCalled()
   })
 
-  it('creates an action with the details given', () => {
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, {
-      wrapper
-    })
+  test('creates an action with the details given', ({ render, app }) => {
+    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
     open()
 
     fireEvent.change(screen.getByTestId('new-action-name'), {
@@ -108,10 +109,11 @@ describe('AddDesignatedAction', () => {
     )
   })
 
-  it('sends nulls rather than empty strings for the optional fields', () => {
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, {
-      wrapper
-    })
+  test('sends nulls rather than empty strings for the optional fields', ({
+    render,
+    app
+  }) => {
+    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
     open()
 
     fireEvent.change(screen.getByTestId('new-action-name'), {
@@ -125,13 +127,14 @@ describe('AddDesignatedAction', () => {
     )
   })
 
-  it('refuses a non-numeric credit amount rather than sending it as null', () => {
+  test('refuses a non-numeric credit amount rather than sending it as null', ({
+    render,
+    app
+  }) => {
     // A number input sanitises garbage to '' in a browser, so this cannot
     // happen from a keyboard; the guard is for the day something else
     // feeds the field, when NaN must not slip through as "no allocation".
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, {
-      wrapper
-    })
+    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
     open()
 
     fireEvent.change(screen.getByTestId('new-action-name'), {
@@ -148,7 +151,7 @@ describe('AddDesignatedAction', () => {
     )
   })
 
-  it('surfaces the reason the API refused', () => {
+  test('surfaces the reason the API refused', ({ render, app }) => {
     mockCreate.mockImplementation((_payload, handlers) =>
       handlers.onError({
         response: {
@@ -159,9 +162,7 @@ describe('AddDesignatedAction', () => {
         }
       })
     )
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, {
-      wrapper
-    })
+    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
     open()
     fireEvent.change(screen.getByTestId('new-action-name'), {
       target: { value: 'Too late' }

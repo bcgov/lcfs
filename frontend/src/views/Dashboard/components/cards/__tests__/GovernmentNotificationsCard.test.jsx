@@ -1,11 +1,8 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SnackbarProvider } from 'notistack'
-import { BrowserRouter } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material/styles'
-import theme from '@/themes'
+import { makeProvider, providerWrapper, test } from '@/tests/utils/fixtures'
 import GovernmentNotificationsCard from '../GovernmentNotificationsCard'
 
 // Mock dependencies
@@ -56,27 +53,17 @@ vi.mock('react-quill', () => ({
   )
 }))
 
-// Create test wrapper
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false }
-    }
-  })
-
-  return ({ children }) => (
-    <BrowserRouter>
-      <ThemeProvider theme={theme}>
-        <QueryClientProvider client={queryClient}>
-          <SnackbarProvider>{children}</SnackbarProvider>
-        </QueryClientProvider>
-      </ThemeProvider>
-    </BrowserRouter>
-  )
-}
+const snackbar = makeProvider('custom', (children) => (
+  <SnackbarProvider>{children}</SnackbarProvider>
+))
+let providers
+const createWrapper = () => providerWrapper(providers)
 
 describe('GovernmentNotificationsCard', () => {
+  test.beforeEach(({ query, theme, router, i18n }) => {
+    providers = [query, theme, router, i18n, snackbar]
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockHasRoles.mockReturnValue(false)
@@ -95,7 +82,7 @@ describe('GovernmentNotificationsCard', () => {
   })
 
   describe('Loading State', () => {
-    it('should display loading state when fetching notification', () => {
+    test('should display loading state when fetching notification', () => {
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
         isLoading: true
@@ -108,7 +95,7 @@ describe('GovernmentNotificationsCard', () => {
   })
 
   describe('Access Control', () => {
-    it('should not render card when no notification exists and user cannot edit', () => {
+    test('should not render card when no notification exists and user cannot edit', () => {
       mockHasRoles.mockReturnValue(false)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
@@ -122,7 +109,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(container.firstChild).toBeNull()
     })
 
-    it('should render empty state when no notification exists but user can edit', () => {
+    test('should render empty state when no notification exists but user can edit', () => {
       mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
@@ -136,7 +123,7 @@ describe('GovernmentNotificationsCard', () => {
       ).toBeInTheDocument()
     })
 
-    it('should show edit button for system admins', () => {
+    test('should show edit button for system admins', () => {
       mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
@@ -152,7 +139,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument()
     })
 
-    it('should not show edit button for regular users', () => {
+    test('should not show edit button for regular users', () => {
       mockHasRoles.mockReturnValue(false)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
@@ -172,7 +159,7 @@ describe('GovernmentNotificationsCard', () => {
   })
 
   describe('Notification Display', () => {
-    it('should display notification with title and text', () => {
+    test('should display notification with title and text', () => {
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
           notificationTitle: 'Important Update',
@@ -190,7 +177,7 @@ describe('GovernmentNotificationsCard', () => {
       ).toBeInTheDocument()
     })
 
-    it('should display notification with link when linkUrl is provided', () => {
+    test('should display notification with link when linkUrl is provided', () => {
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
           notificationTitle: 'Read More',
@@ -210,7 +197,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(link).toHaveAttribute('rel', 'noopener noreferrer')
     })
 
-    it('should display notification without link when linkUrl is not provided', () => {
+    test('should display notification without link when linkUrl is not provided', () => {
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
           notificationTitle: 'System Maintenance',
@@ -226,7 +213,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(screen.queryByRole('link')).not.toBeInTheDocument()
     })
 
-    it('should display correct card title based on notification type', () => {
+    test('should display correct card title based on notification type', () => {
       const types = [
         { type: 'Alert', title: 'Alert notification' },
         { type: 'Outage', title: 'Outage notification' },
@@ -254,7 +241,7 @@ describe('GovernmentNotificationsCard', () => {
   })
 
   describe('Text Truncation', () => {
-    it('should show More button when text exceeds 1000 characters', () => {
+    test('should show More button when text exceeds 1000 characters', () => {
       const longText = '<p>' + 'a'.repeat(1100) + '</p>'
 
       mockUseCurrentGovernmentNotification.mockReturnValue({
@@ -271,7 +258,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument()
     })
 
-    it('should not show More button when text is under 1000 characters', () => {
+    test('should not show More button when text is under 1000 characters', () => {
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
           notificationTitle: 'Short Notification',
@@ -288,7 +275,7 @@ describe('GovernmentNotificationsCard', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('should expand and collapse text when More/Less button is clicked', async () => {
+    test('should expand and collapse text when More/Less button is clicked', async () => {
       const user = userEvent.setup()
       const longText = '<p>' + 'a'.repeat(1100) + '</p>'
 
@@ -320,7 +307,7 @@ describe('GovernmentNotificationsCard', () => {
       mockHasRoles.mockReturnValue(true)
     })
 
-    it('should enter edit mode when edit button is clicked', async () => {
+    test('should enter edit mode when edit button is clicked', async () => {
       const user = userEvent.setup()
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
@@ -351,7 +338,7 @@ describe('GovernmentNotificationsCard', () => {
       ).toBeInTheDocument()
     })
 
-    it('should show all notification type pills in edit mode', async () => {
+    test('should show all notification type pills in edit mode', async () => {
       const user = userEvent.setup()
       mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
@@ -374,7 +361,7 @@ describe('GovernmentNotificationsCard', () => {
       ).toBeInTheDocument()
     })
 
-    it('should select notification type when pill is clicked', async () => {
+    test('should select notification type when pill is clicked', async () => {
       const user = userEvent.setup()
       mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
@@ -398,7 +385,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(screen.getByText('Alert notification')).toBeInTheDocument()
     })
 
-    it('should update form fields when user types', async () => {
+    test('should update form fields when user types', async () => {
       const user = userEvent.setup()
       mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
@@ -423,7 +410,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(messageInput).toHaveValue('New message content')
     })
 
-    it('should disable save button when title is empty', async () => {
+    test('should disable save button when title is empty', async () => {
       const user = userEvent.setup()
       mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
@@ -440,7 +427,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(saveButton).toBeDisabled()
     })
 
-    it('should disable save button when message is empty', async () => {
+    test('should disable save button when message is empty', async () => {
       const user = userEvent.setup()
       mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
@@ -460,7 +447,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(saveButton).toBeDisabled()
     })
 
-    it('should enable save button when both title and message are filled', async () => {
+    test('should enable save button when both title and message are filled', async () => {
       const user = userEvent.setup()
       mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
@@ -485,7 +472,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(saveButton).not.toBeDisabled()
     })
 
-    it('should exit edit mode when cancel button is clicked', async () => {
+    test('should exit edit mode when cancel button is clicked', async () => {
       const user = userEvent.setup()
       mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
@@ -524,7 +511,7 @@ describe('GovernmentNotificationsCard', () => {
       mockHasRoles.mockReturnValue(true)
     })
 
-    it('should show confirmation dialog when save button is clicked', async () => {
+    test('should show confirmation dialog when save button is clicked', async () => {
       const user = userEvent.setup()
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
@@ -563,7 +550,7 @@ describe('GovernmentNotificationsCard', () => {
       ).toBeInTheDocument()
     })
 
-    it('should call mutate with form data when "Post and send email" is clicked', async () => {
+    test('should call mutate with form data when "Post and send email" is clicked', async () => {
       const user = userEvent.setup()
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
@@ -601,7 +588,7 @@ describe('GovernmentNotificationsCard', () => {
       })
     })
 
-    it('should call mutate with form data when "Post without email sent" is clicked', async () => {
+    test('should call mutate with form data when "Post without email sent" is clicked', async () => {
       const user = userEvent.setup()
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
@@ -639,7 +626,7 @@ describe('GovernmentNotificationsCard', () => {
       })
     })
 
-    it('should close confirmation dialog when cancel button is clicked', async () => {
+    test('should close confirmation dialog when cancel button is clicked', async () => {
       const user = userEvent.setup()
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
@@ -687,7 +674,7 @@ describe('GovernmentNotificationsCard', () => {
       mockHasRoles.mockReturnValue(true)
     })
 
-    it('should show success snackbar on successful save', async () => {
+    test('should show success snackbar on successful save', async () => {
       const user = userEvent.setup()
       let onSuccessCallback
 
@@ -739,7 +726,7 @@ describe('GovernmentNotificationsCard', () => {
       })
     })
 
-    it('should show error snackbar on failed save', async () => {
+    test('should show error snackbar on failed save', async () => {
       const user = userEvent.setup()
       let onErrorCallback
 
@@ -796,7 +783,7 @@ describe('GovernmentNotificationsCard', () => {
       })
     })
 
-    it('should show default error message when error has no message', async () => {
+    test('should show default error message when error has no message', async () => {
       const user = userEvent.setup()
       let onErrorCallback
 
@@ -848,7 +835,7 @@ describe('GovernmentNotificationsCard', () => {
       })
     })
 
-    it('should exit edit mode after successful save', async () => {
+    test('should exit edit mode after successful save', async () => {
       const user = userEvent.setup()
       let onSuccessCallback
 
@@ -923,7 +910,7 @@ describe('GovernmentNotificationsCard', () => {
       mockHasRoles.mockReturnValue(true)
     })
 
-    it('should show delete button when user can edit and notification exists', () => {
+    test('should show delete button when user can edit and notification exists', () => {
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
           notificationTitle: 'Test Notification',
@@ -940,7 +927,7 @@ describe('GovernmentNotificationsCard', () => {
       ).toBeInTheDocument()
     })
 
-    it('should not show delete button when user cannot edit', () => {
+    test('should not show delete button when user cannot edit', () => {
       mockHasRoles.mockReturnValue(false)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
@@ -958,7 +945,7 @@ describe('GovernmentNotificationsCard', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('should not show delete button when no notification exists', () => {
+    test('should not show delete button when no notification exists', () => {
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
         isLoading: false
@@ -971,7 +958,7 @@ describe('GovernmentNotificationsCard', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('should show delete confirmation dialog when delete button is clicked', async () => {
+    test('should show delete confirmation dialog when delete button is clicked', async () => {
       const user = userEvent.setup()
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
@@ -999,7 +986,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
     })
 
-    it('should call delete mutation when delete is confirmed', async () => {
+    test('should call delete mutation when delete is confirmed', async () => {
       const user = userEvent.setup()
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
@@ -1023,7 +1010,7 @@ describe('GovernmentNotificationsCard', () => {
       expect(mockDeleteMutate).toHaveBeenCalled()
     })
 
-    it('should close delete dialog when cancel is clicked', async () => {
+    test('should close delete dialog when cancel is clicked', async () => {
       const user = userEvent.setup()
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
@@ -1055,7 +1042,7 @@ describe('GovernmentNotificationsCard', () => {
       })
     })
 
-    it('should show success snackbar on successful delete', async () => {
+    test('should show success snackbar on successful delete', async () => {
       const user = userEvent.setup()
       let onSuccessCallback
 
@@ -1099,7 +1086,7 @@ describe('GovernmentNotificationsCard', () => {
       })
     })
 
-    it('should show error snackbar on failed delete', async () => {
+    test('should show error snackbar on failed delete', async () => {
       const user = userEvent.setup()
       let onErrorCallback
 
@@ -1148,7 +1135,7 @@ describe('GovernmentNotificationsCard', () => {
       })
     })
 
-    it('should show default error message when delete error has no message', async () => {
+    test('should show default error message when delete error has no message', async () => {
       const user = userEvent.setup()
       let onErrorCallback
 

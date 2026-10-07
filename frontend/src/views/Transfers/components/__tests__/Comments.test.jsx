@@ -1,9 +1,9 @@
 import React from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { Comments } from '../Comments'
 import { FormProvider, useForm } from 'react-hook-form'
-import { wrapper } from '@/tests/utils/wrapper'
-import { describe, expect, it, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
+import { describe, expect, vi } from 'vitest'
 
 const MockFormProvider = ({ children, errors = {} }) => {
   const methods = useForm()
@@ -26,27 +26,33 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('Comments Component', () => {
-  it('renders correctly when commentField is provided', () => {
+  test('renders correctly when commentField is provided', ({
+    render,
+    theme
+  }) => {
     render(
       <MockFormProvider>
         <Comments commentField="comments" />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
     expect(screen.getByTestId('comments')).toBeInTheDocument()
   })
 
-  it('does not render when commentField is not provided', () => {
+  test('does not render when commentField is not provided', ({
+    render,
+    theme
+  }) => {
     render(
       <MockFormProvider>
         <Comments commentField="" />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
     expect(screen.queryByTestId('comments')).not.toBeInTheDocument()
   })
 
-  it('displays the correct label based on props', () => {
+  test('displays the correct label based on props', ({ render, theme }) => {
     render(
       <MockFormProvider>
         <Comments
@@ -55,7 +61,7 @@ describe('Comments Component', () => {
           commentField="comments"
         />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
     expect(screen.getByText('transfer:commentsLabel')).toBeInTheDocument()
 
@@ -67,7 +73,7 @@ describe('Comments Component', () => {
           commentField="comments"
         />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
     expect(screen.getByText('transfer:govCommentLabel')).toBeInTheDocument()
 
@@ -79,17 +85,17 @@ describe('Comments Component', () => {
           commentField="comments"
         />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
     expect(screen.getByText('transfer:toOrgCommentLabel')).toBeInTheDocument()
   })
 
-  it('toggles collapse state when clicked', async () => {
+  test('toggles collapse state when clicked', async ({ render, theme }) => {
     render(
       <MockFormProvider>
         <Comments commentField="comments" />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
     const toggleButton = screen.getByTestId('collapse-button')
 
@@ -109,34 +115,40 @@ describe('Comments Component', () => {
     expect(screen.getByTestId('external-comments')).toBeVisible()
   })
 
-  it('registers the TextField correctly', () => {
+  test('registers the TextField correctly', ({ render, theme }) => {
     const { getByRole } = render(
       <MockFormProvider>
         <Comments commentField="comments" />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
     const textField = getByRole('textbox')
     expect(textField).toHaveAttribute('id', 'external-comments')
   })
 
-  it('is initially expanded by default when isDefaultExpanded is false', () => {
+  test('is initially expanded by default when isDefaultExpanded is false', ({
+    render,
+    theme
+  }) => {
     render(
       <MockFormProvider>
         <Comments commentField="comments" isDefaultExpanded={false} />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
     // With isDefaultExpanded=false, the component should start expanded
     expect(screen.getByTestId('external-comments')).toBeVisible()
   })
 
-  it('is initially collapsed when isDefaultExpanded is true', async () => {
+  test('is initially collapsed when isDefaultExpanded is true', async ({
+    render,
+    theme
+  }) => {
     render(
       <MockFormProvider>
         <Comments commentField="comments" isDefaultExpanded={true} />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
     // With isDefaultExpanded=true, we useState(!true)=false, so it should start collapsed
     await waitFor(() =>
@@ -146,58 +158,70 @@ describe('Comments Component', () => {
     )
   })
 
-  it('displays error state when field has validation errors', () => {
-    const fieldErrors = { 
+  test('displays error state when field has validation errors', ({
+    render,
+    theme
+  }) => {
+    const fieldErrors = {
       comments: { message: 'This field is required' }
     }
-    
+
     render(
       <MockFormProvider errors={fieldErrors}>
         <Comments commentField="comments" />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
-    
+
     const textField = screen.getByRole('textbox')
     expect(textField).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByText('This field is required')).toBeInTheDocument()
   })
 
-  it('shows correct icons based on expanded state', () => {
+  test('shows correct icons based on expanded state', ({ render, theme }) => {
     render(
       <MockFormProvider>
         <Comments commentField="comments" isDefaultExpanded={false} />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
-    
+
     const toggleButton = screen.getByTestId('collapse-button')
-    
+
     // Initially expanded (isDefaultExpanded=false means useState(!false)=true)
     // Look for ExpandLess icon by its SVG path content
-    expect(toggleButton.querySelector('svg[data-testid="ExpandLessIcon"]')).toBeInTheDocument()
-    
+    expect(
+      toggleButton.querySelector('svg[data-testid="ExpandLessIcon"]')
+    ).toBeInTheDocument()
+
     // Click to collapse
     fireEvent.click(toggleButton)
-    
+
     // Now should show ExpandMore icon
-    expect(toggleButton.querySelector('svg[data-testid="ExpandMoreIcon"]')).toBeInTheDocument()
+    expect(
+      toggleButton.querySelector('svg[data-testid="ExpandMoreIcon"]')
+    ).toBeInTheDocument()
   })
 
-  it('handles Box click to toggle collapse state', async () => {
+  test('handles Box click to toggle collapse state', async ({
+    render,
+    theme
+  }) => {
     render(
       <MockFormProvider>
         <Comments commentField="comments" />
       </MockFormProvider>,
-      { wrapper }
+      [theme]
     )
-    
+
     // Find the Box with click handler (has cursor pointer style)
-    const clickableBox = screen.getByRole('button', { name: /expand comments/i }).parentElement
-    
+    const clickableBox = screen.getByRole('button', {
+      name: /expand comments/i
+    }).parentElement
+
     // Initially expanded, TextField should be visible
     expect(screen.getByTestId('external-comments')).toBeVisible()
-    
+
     // Click the Box to collapse
     fireEvent.click(clickableBox)
     await waitFor(() =>

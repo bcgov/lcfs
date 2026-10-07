@@ -102,12 +102,14 @@ const CommentList = ({
   const handleEditCommentChange = (value) => {
     setEditCommentText(value)
   }
+  // Matches the organization Comment Log format, e.g. "September 24, 2026 at 2:15 PM".
   const formatDate = (dateString) => {
     const options = {
+      year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: 'numeric',
-      minute: 'numeric',
+      minute: '2-digit',
       hour12: true
     }
     return new Date(dateString).toLocaleDateString(undefined, options)
@@ -138,8 +140,10 @@ const CommentList = ({
             <span style={{ color: 'red' }} data-test="comment-edited-indicator">
               {editedLabel}
             </span>
+            {/* Focusable so keyboard users can open the tooltip; the Tooltip
+                names this span with tooltipLabel for screen readers. */}
             <Tooltip title={tooltipLabel} arrow>
-              <span style={{ marginLeft: '4px' }}>
+              <span role="img" tabIndex={0} style={{ marginLeft: '4px' }}>
                 <InfoOutlinedIcon
                   fontSize="medium"
                   sx={{
@@ -147,8 +151,6 @@ const CommentList = ({
                     verticalAlign: 'text-top',
                     transform: 'scale(0.8)'
                   }}
-                  aria-label={`Comment edited on ${formatDate(updateDate)}`}
-                  role="img"
                 />
               </span>
             </Tooltip>

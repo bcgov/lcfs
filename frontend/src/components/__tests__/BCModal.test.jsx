@@ -16,13 +16,25 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Dialog: ({ children, open, onClose, 'data-test': dataTest, ...props }) => 
-    open ? <div data-test={dataTest || 'modal'} role="dialog">{children}</div> : null,
-  DialogTitle: ({ children }) => <div>{children}</div>,
-  DialogContent: ({ children }) => <div>{children}</div>,
-  DialogActions: ({ children }) => <div>{children}</div>,
-  IconButton: ({ children, onClick, 'aria-label': ariaLabel, 'data-test': dataTest, sx, ...props }) => (
+vi.mock('@mui/material/Dialog', () => ({
+    default: ({ children, open, onClose, 'data-test': dataTest, ...props }) =>
+    open ? <div data-test={dataTest || 'modal'} role="dialog">{children}</div> : null
+}))
+
+vi.mock('@mui/material/DialogTitle', () => ({
+    default: ({ children }) => <div>{children}</div>
+}))
+
+vi.mock('@mui/material/DialogContent', () => ({
+    default: ({ children }) => <div>{children}</div>
+}))
+
+vi.mock('@mui/material/DialogActions', () => ({
+    default: ({ children }) => <div>{children}</div>
+}))
+
+vi.mock('@mui/material/IconButton', () => ({
+    default: ({ children, onClick, 'aria-label': ariaLabel, 'data-test': dataTest, sx, ...props }) => (
     <button 
       onClick={onClick} 
       aria-label={ariaLabel} 
@@ -32,19 +44,28 @@ vi.mock('@mui/material', () => ({
     >
       {children}
     </button>
-  ),
-  Box: ({ children, dangerouslySetInnerHTML, 'data-test': dataTest, bgcolor, borderRadius, p, display, gap, ...props }) => {
+  )
+}))
+
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children, dangerouslySetInnerHTML, 'data-test': dataTest, bgcolor, borderRadius, p, display, gap, ...props }) => {
     if (dangerouslySetInnerHTML) {
       return <div data-test={dataTest} dangerouslySetInnerHTML={dangerouslySetInnerHTML} {...props} />
     }
     return <div data-test={dataTest} {...props}>{children}</div>
-  },
-  Divider: () => <hr />
+  }
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  Close: () => <span>×</span>,
-  Warning: () => <span>⚠</span>
+vi.mock('@mui/material/Divider', () => ({
+    default: () => <hr />
+}))
+
+vi.mock('@mui/icons-material/Close', () => ({
+    default: () => <span>×</span>
+}))
+
+vi.mock('@mui/icons-material/Warning', () => ({
+    default: () => <span>⚠</span>
 }))
 
 const baseData = {

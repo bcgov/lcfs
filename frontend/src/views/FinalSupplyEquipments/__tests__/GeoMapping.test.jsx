@@ -1,8 +1,16 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { screen, waitFor, fireEvent } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import GeoMapping from '../GeoMapping'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import * as utils from '../components/utils'
+
+let render
+const fixtureOptions = undefined
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [theme], options)
+    return fn()
+  })
 
 // Mock heavy dependencies
 vi.mock('react-leaflet', () => ({
@@ -127,7 +135,9 @@ describe('GeoMapping', () => {
   })
 
   it('shows no data state when data is null', () => {
-    render(<GeoMapping complianceReportId="123" data={null} />, { wrapper })
+    render(<GeoMapping complianceReportId="123" data={null} />, {
+      fixtureOptions
+    })
     expect(screen.getByTestId('no-data-state')).toBeInTheDocument()
   })
 
@@ -137,7 +147,7 @@ describe('GeoMapping', () => {
         complianceReportId="123"
         data={{ finalSupplyEquipments: [] }}
       />,
-      { wrapper }
+      { fixtureOptions }
     )
     expect(screen.getByTestId('error-state')).toBeInTheDocument()
   })
@@ -145,7 +155,7 @@ describe('GeoMapping', () => {
   it('renders the map when data is available', async () => {
     render(
       <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('map-container')).toBeInTheDocument()
@@ -162,7 +172,7 @@ describe('GeoMapping', () => {
 
     render(
       <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     await waitFor(() => {
@@ -178,7 +188,7 @@ describe('GeoMapping', () => {
 
     render(
       <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     await waitFor(() => {
@@ -196,7 +206,7 @@ describe('GeoMapping', () => {
 
     render(
       <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     await waitFor(() => {
@@ -215,7 +225,7 @@ describe('GeoMapping', () => {
 
     render(
       <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     await waitFor(() => {
@@ -237,7 +247,7 @@ describe('GeoMapping', () => {
 
     render(
       <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     await waitFor(() => {
@@ -255,7 +265,7 @@ describe('GeoMapping', () => {
 
     render(
       <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     await waitFor(() => {
@@ -284,7 +294,7 @@ describe('GeoMapping', () => {
 
     render(
       <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     expect(screen.getByTestId('map-container')).toBeInTheDocument()
@@ -305,7 +315,7 @@ describe('GeoMapping', () => {
 
     render(
       <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     await waitFor(() => {
@@ -330,7 +340,7 @@ describe('GeoMapping', () => {
 
     render(
       <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
-      { wrapper }
+      { fixtureOptions }
     )
 
     await waitFor(() => {

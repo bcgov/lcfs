@@ -2,13 +2,11 @@ import BCTypography from '@/components/BCTypography'
 import BCModal from '@/components/BCModal'
 import { useTransfer, useUpdateCategory } from '@/hooks/useTransfer'
 import { useLoadingStore } from '@/stores/useLoadingStore'
-import {
-  Box,
-  Checkbox,
-  FormControlLabel,
-  Radio,
-  RadioGroup
-} from '@mui/material'
+import Box from '@mui/material/Box'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'

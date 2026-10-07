@@ -1,5 +1,6 @@
 import React from 'react'
-import { Grid, Box } from '@mui/material'
+import Grid from '@mui/material/Grid'
+import Box from '@mui/material/Box'
 import { Role } from '@/components/Role'
 import { roles, govRoles, nonGovRoles } from '@/constants/roles'
 import {
@@ -50,7 +51,7 @@ export const Dashboard = () => {
             display="flex"
             flexDirection="column"
             gap={3}
-            sx={{ ml: { lg: 3 }, mt: 5 }}
+            sx={{ ml: { lg: 3 }, mt: { lg: 5 } }}
           >
             <Role roles={nonGovRoles}>
               <OrgBalanceCard />

@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { Box, Collapse, IconButton } from '@mui/material'
+import Box from '@mui/material/Box'
+import Collapse from '@mui/material/Collapse'
+import IconButton from '@mui/material/IconButton'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 import { LabelBox } from '@/views/Transactions/components/LabelBox.jsx'
 import DocumentTable from '@/components/Documents/DocumentTable.jsx'
-import { ExpandLess, ExpandMore } from '@mui/icons-material'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 
 function TransactionDocuments({ parentType, parentID }) {
   const { t } = useTranslation(['report'])

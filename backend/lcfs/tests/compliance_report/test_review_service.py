@@ -204,6 +204,35 @@ def test_comparison_point_can_use_magnitude_gap_delta_mode():
     assert point.delta == 710
 
 
+def test_comparison_points_normalize_petroleum_fuel_labels():
+    service = _service()
+
+    points = service._comparison_points(
+        {
+            "Diesel - Fossil-derived diesel": 150,
+            "Gasoline - Fossil-derived gasoline": 100,
+        },
+        {
+            "Diesel - Petroleum-based diesel": 100,
+            "Gasoline - Petroleum-based gasoline": 200,
+        },
+        units="reported units",
+    )
+
+    by_label = {point.label: point for point in points}
+
+    assert set(by_label) == {
+        "Diesel - Fossil-derived diesel",
+        "Gasoline - Fossil-derived gasoline",
+    }
+    assert by_label["Diesel - Fossil-derived diesel"].current_value == 150
+    assert by_label["Diesel - Fossil-derived diesel"].comparison_value == 100
+    assert by_label["Diesel - Fossil-derived diesel"].percent_change == 50
+    assert by_label["Gasoline - Fossil-derived gasoline"].current_value == 100
+    assert by_label["Gasoline - Fossil-derived gasoline"].comparison_value == 200
+    assert by_label["Gasoline - Fossil-derived gasoline"].percent_change == -50
+
+
 def test_correlation_findings_identify_aligned_supply_and_fse_trends():
     service = _service()
 
@@ -476,6 +505,39 @@ def test_build_summary_includes_analyst_style_highlights():
         "Diesel - HDRD for other uses shows a 64.0% year-over-year increase." in summary
     )
     assert "Prior-year assessed comparison was available." in summary
+
+
+def test_other_uses_variance_matches_legacy_fuel_rows_for_rationale():
+    service = _service()
+
+    findings = service._other_uses_variance_findings(
+        {
+            "other_uses": [
+                SimpleNamespace(
+                    quantity_supplied=150,
+                    rationale="Used outside BC",
+                    fuel_category=SimpleNamespace(category="Diesel"),
+                    fuel_type=SimpleNamespace(fuel_type="Petroleum-based diesel"),
+                )
+            ]
+        },
+        {
+            "other_uses": {
+                "Diesel - Petroleum-based diesel": 150,
+            }
+        },
+        {
+            "other_uses": {
+                "Diesel - Petroleum-based diesel": 100,
+            }
+        },
+    )
+
+    assert len(findings) == 1
+    assert findings[0].title == (
+        "Other uses variance needs explanation for Diesel - Fossil-derived diesel"
+    )
+    assert "Supplier rationale is captured on 1 record(s)." in findings[0].detail
 
 
 def test_zero_value_narratives_confirm_consistent_absence():

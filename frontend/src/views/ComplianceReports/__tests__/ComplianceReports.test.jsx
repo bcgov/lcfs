@@ -1,9 +1,9 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { ComplianceReports } from '../ComplianceReports'
 import { ROUTES } from '@/routes/routes'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock hooks
 vi.mock('react-i18next', () => ({
@@ -155,15 +155,27 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     })
   })
 
-  it('renders without crashing and calls handleRefresh through reportsColDefs', () => {
-    render(<ComplianceReports />, { wrapper })
+  test('renders without crashing and calls handleRefresh through reportsColDefs', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     expect(screen.getByText('report:title')).toBeInTheDocument()
     expect(mockRefetch).toHaveBeenCalled()
   })
 
-  it('handles pagination change callback', async () => {
-    render(<ComplianceReports />, { wrapper })
+  test('handles pagination change callback', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     const gridViewer = screen.getByTestId('bc-grid-viewer')
     fireEvent.click(gridViewer)
@@ -172,9 +184,14 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     expect(gridViewer).toBeInTheDocument()
   })
 
-
-  it('handles new compliance report creation', async () => {
-    render(<ComplianceReports />, { wrapper })
+  test('handles new compliance report creation', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     const newReportButton = screen.getByTestId('new-compliance-report-button')
     fireEvent.click(newReportButton)
@@ -186,14 +203,25 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     })
   })
 
-  it('displays alert from location state', async () => {
+  test('displays alert from location state', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     // Set up location with state
     vi.mocked(mockLocation).state = {
       message: 'Test message',
       severity: 'error'
     }
 
-    const { rerender } = render(<ComplianceReports />, { wrapper })
+    const { rerender } = render(<ComplianceReports />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     rerender(<ComplianceReports />)
 
@@ -203,10 +231,21 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     })
   })
 
-  it('displays alert with default severity when not provided', async () => {
+  test('displays alert with default severity when not provided', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.mocked(mockLocation).state = { message: 'Test message without severity' }
 
-    const { rerender } = render(<ComplianceReports />, { wrapper })
+    const { rerender } = render(<ComplianceReports />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     rerender(<ComplianceReports />)
 
@@ -215,8 +254,14 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     })
   })
 
-  it('navigates to credit calculator', () => {
-    render(<ComplianceReports />, { wrapper })
+  test('navigates to credit calculator', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     const calculatorButton = screen.getByTestId('credit-calculator')
     fireEvent.click(calculatorButton)
@@ -224,8 +269,14 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CREDIT_CALCULATOR)
   })
 
-  it('renders all main UI components', () => {
-    render(<ComplianceReports />, { wrapper })
+  test('renders all main UI components', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     expect(screen.getByText('report:title')).toBeInTheDocument()
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -235,43 +286,73 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     expect(screen.getByTestId('credit-calculator')).toBeInTheDocument()
   })
 
-  it('does not display alert when no message in location state', () => {
+  test('does not display alert when no message in location state', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.mocked(mockLocation).state = null
 
-    render(<ComplianceReports />, { wrapper })
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     expect(screen.queryByTestId('alert-box')).not.toBeInTheDocument()
   })
 
-  it('handles getRowId callback correctly', () => {
-    render(<ComplianceReports />, { wrapper })
+  test('handles getRowId callback correctly', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     // The getRowId function should be passed to BCGridViewer
     // We test this indirectly by ensuring the component renders successfully
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
-  it('tests getRowId function returns correct UUID', () => {
+  test('tests getRowId function returns correct UUID', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const testParams = {
       data: { complianceReportGroupUuid: 'test-uuid-123' }
     }
 
-    render(<ComplianceReports />, { wrapper })
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     // We can't directly test the useCallback function, but we ensure it's properly created
     // and used by the component
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
-  it('tests defaultColDef useMemo structure', () => {
-    render(<ComplianceReports />, { wrapper })
+  test('tests defaultColDef useMemo structure', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     // Verify the component renders, which means useMemo worked properly
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
-  it('tests component functionality without dynamic mock changes', () => {
-    render(<ComplianceReports />, { wrapper })
+  test('tests component functionality without dynamic mock changes', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     // Test that all basic functionality works
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -281,16 +362,28 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     expect(screen.getByTestId('credit-calculator')).toBeInTheDocument()
   })
 
-  it('handles location state effect with no severity', () => {
+  test('handles location state effect with no severity', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     vi.mocked(mockLocation).state = { message: 'Test message' }
 
-    render(<ComplianceReports />, { wrapper })
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     expect(screen.getByTestId('alert-box')).toBeInTheDocument()
     expect(screen.getByText('Test message')).toBeInTheDocument()
   })
 
-  it('tests defaultColDef cellRendererParams url function', () => {
+  test('tests defaultColDef cellRendererParams url function', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const testData = {
       data: {
         compliancePeriod: '2024',
@@ -298,58 +391,88 @@ describe('ComplianceReports - Comprehensive Tests', () => {
       }
     }
 
-    render(<ComplianceReports />, { wrapper })
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     // The component should render successfully with defaultColDef
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
-  it('tests defaultColDef cellRendererParams state function', () => {
+  test('tests defaultColDef cellRendererParams state function', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     const testData = {
       reportStatus: 'DRAFT'
     }
 
-    render(<ComplianceReports />, { wrapper })
+    render(<ComplianceReports />, [query, theme, localization, router])
 
     // The component should render successfully with defaultColDef
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   describe('Role-based Create Button Visibility', () => {
-    it('shows create button for user with compliance_reporting role', () => {
+    test('shows create button for user with compliance_reporting role', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = ['Compliance Reporting']
 
-      render(<ComplianceReports />, { wrapper })
+      render(<ComplianceReports />, [query, theme, localization, router])
 
       expect(
         screen.getByTestId('new-compliance-report-button')
       ).toBeInTheDocument()
     })
 
-    it('hides create button for user with only signing_authority role', () => {
+    test('hides create button for user with only signing_authority role', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = ['Signing Authority']
 
-      render(<ComplianceReports />, { wrapper })
+      render(<ComplianceReports />, [query, theme, localization, router])
 
       expect(
         screen.queryByTestId('new-compliance-report-button')
       ).not.toBeInTheDocument()
     })
 
-    it('shows create button for user with both compliance_reporting and signing_authority roles', () => {
+    test('shows create button for user with both compliance_reporting and signing_authority roles', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = ['Compliance Reporting', 'Signing Authority']
 
-      render(<ComplianceReports />, { wrapper })
+      render(<ComplianceReports />, [query, theme, localization, router])
 
       expect(
         screen.getByTestId('new-compliance-report-button')
       ).toBeInTheDocument()
     })
 
-    it('hides create button for user with no relevant roles', () => {
+    test('hides create button for user with no relevant roles', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUserRoles = ['Read Only']
 
-      render(<ComplianceReports />, { wrapper })
+      render(<ComplianceReports />, [query, theme, localization, router])
 
       expect(
         screen.queryByTestId('new-compliance-report-button')

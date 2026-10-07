@@ -18,7 +18,9 @@ import {
 } from '@/routes/routeConfig/organizationRoutes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
-import { AppBar, Tab, Tabs } from '@mui/material'
+import AppBar from '@mui/material/AppBar'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
 
 function TabPanel({ children, value, index }) {
   return (
@@ -27,6 +29,7 @@ function TabPanel({ children, value, index }) {
       hidden={value !== index}
       id={`organization-tabpanel-${index}`}
       aria-labelledby={`organization-tab-${index}`}
+      tabIndex={value === index ? 0 : -1}
     >
       {value === index && children}
     </BCBox>
@@ -194,12 +197,16 @@ export const OrganizationView = ({ addMode = false }) => {
             ))}
           </Tabs>
         </AppBar>
-        {organizationTitle && (
-          <BCTypography variant="h5" color="primary" mt={3}>
-            {organizationTitle}
-          </BCTypography>
-        )}
-        <BCBox sx={{ pt: 3 }}>{renderContent()}</BCBox>
+        {tabConfig.map((config, idx) => (
+          <TabPanel key={config.path} value={tabIndex} index={idx}>
+            {organizationTitle && (
+              <BCTypography variant="h5" color="primary" mt={3}>
+                {organizationTitle}
+              </BCTypography>
+            )}
+            <BCBox sx={{ pt: 3 }}>{idx === tabIndex && renderContent()}</BCBox>
+          </TabPanel>
+        ))}
       </BCBox>
     </BCBox>
   )

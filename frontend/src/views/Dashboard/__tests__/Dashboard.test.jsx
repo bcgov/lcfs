@@ -1,9 +1,9 @@
+import { test } from '@/tests/utils/fixtures'
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { Dashboard } from '../Dashboard'
 import { Dashboard as DashboardFromIndex } from '../index'
-import { wrapper } from '@/tests/utils/wrapper'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles, govRoles, nonGovRoles } from '@/constants/roles'
 
@@ -105,21 +105,29 @@ describe('Dashboard Component', () => {
     expect(Dashboard).toBe(DashboardFromIndex)
   })
 
-  it('renders the dashboard container with correct structure', () => {
-    render(<Dashboard />, { wrapper })
+  test('renders the dashboard container with correct structure', ({
+    render,
+    query,
+    theme
+  }) => {
+    render(<Dashboard />, [query, theme])
     const container = screen.getByTestId('dashboard-container')
     expect(container).toBeInTheDocument()
     expect(container).toHaveClass('MuiGrid-container')
   })
 
-  it('renders main Box with margin-top prop', () => {
-    render(<Dashboard />, { wrapper })
+  test('renders main Box with margin-top prop', ({ render, query, theme }) => {
+    render(<Dashboard />, [query, theme])
     const container = screen.getByTestId('dashboard-container')
     expect(container.parentElement).toHaveClass('MuiBox-root')
   })
 
-  it('renders three main grid sections with correct responsive props', () => {
-    const { container } = render(<Dashboard />, { wrapper })
+  test('renders three main grid sections with correct responsive props', ({
+    render,
+    query,
+    theme
+  }) => {
+    const { container } = render(<Dashboard />, [query, theme])
     const gridItems = container.querySelectorAll('.MuiGrid-item')
     expect(gridItems).toHaveLength(3)
 
@@ -140,8 +148,12 @@ describe('Dashboard Component', () => {
     expect(gridItems[2]).toHaveClass('MuiGrid-grid-lg-3')
   })
 
-  it('renders the appropriate cards for government analyst role', () => {
-    render(<Dashboard />, { wrapper })
+  test('renders the appropriate cards for government analyst role', ({
+    render,
+    query,
+    theme
+  }) => {
+    render(<Dashboard />, [query, theme])
 
     // Gov role related components
     expect(screen.getAllByTestId(govRolesTestId)).not.toHaveLength(0)
@@ -152,7 +164,11 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('User Settings Card')).toBeInTheDocument()
   })
 
-  it('renders the appropriate cards for non-government user with transfers role', () => {
+  test('renders the appropriate cards for non-government user with transfers role', ({
+    render,
+    query,
+    theme
+  }) => {
     // Mock a non-government user with transfers role
     useCurrentUser.mockReturnValue({
       data: {
@@ -160,7 +176,7 @@ describe('Dashboard Component', () => {
       }
     })
 
-    render(<Dashboard />, { wrapper })
+    render(<Dashboard />, [query, theme])
 
     // Non-gov role related components
     expect(screen.getByTestId('role-Transfer')).toBeInTheDocument()
@@ -173,7 +189,11 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('Org User Settings Card')).toBeInTheDocument()
   })
 
-  it('renders the appropriate cards for director role', () => {
+  test('renders the appropriate cards for director role', ({
+    render,
+    query,
+    theme
+  }) => {
     // Reset the mock with only Director role
     useCurrentUser.mockReturnValue({
       data: {
@@ -181,21 +201,25 @@ describe('Dashboard Component', () => {
       }
     })
 
-    render(<Dashboard />, { wrapper })
+    render(<Dashboard />, [query, theme])
 
     // Director specific components
     expect(screen.getByTestId(`role-${roles.director}`)).toBeInTheDocument()
     expect(screen.getByText('Director Review Card')).toBeInTheDocument()
   })
 
-  it('renders Left Section Role components with correct structure', () => {
+  test('renders Left Section Role components with correct structure', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         roles: [{ name: 'Supplier' }]
       }
     })
 
-    render(<Dashboard />, { wrapper })
+    render(<Dashboard />, [query, theme])
 
     // Test nonGovRoles components - using getAllByTestId since there are multiple instances
     expect(screen.getAllByTestId(nonGovRolesTestId)).toHaveLength(3)
@@ -204,28 +228,36 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('Website Card')).toBeInTheDocument()
   })
 
-  it('renders Central Section Role components for specific roles', () => {
+  test('renders Central Section Role components for specific roles', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         roles: [{ name: 'Transfer' }]
       }
     })
 
-    render(<Dashboard />, { wrapper })
+    render(<Dashboard />, [query, theme])
 
     // Test transfers role in central section
     expect(screen.getByTestId('role-Transfer')).toBeInTheDocument()
     expect(screen.getByText('Org Transactions Card')).toBeInTheDocument()
   })
 
-  it('renders Right Section admin and user settings components', () => {
+  test('renders Right Section admin and user settings components', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         roles: [{ name: 'Government' }, { name: 'Administrator' }]
       }
     })
 
-    render(<Dashboard />, { wrapper })
+    render(<Dashboard />, [query, theme])
 
     // Test admin role in right section - using more flexible approach
     expect(screen.getByText('Admin Links Card')).toBeInTheDocument()
@@ -234,7 +266,11 @@ describe('Dashboard Component', () => {
     expect(screen.getAllByTestId(govRolesTestId).length).toBeGreaterThan(0)
   })
 
-  it('renders the appropriate cards for compliance reporting role', () => {
+  test('renders the appropriate cards for compliance reporting role', ({
+    render,
+    query,
+    theme
+  }) => {
     // Mock a compliance reporting user
     useCurrentUser.mockReturnValue({
       data: {
@@ -242,7 +278,7 @@ describe('Dashboard Component', () => {
       }
     })
 
-    render(<Dashboard />, { wrapper })
+    render(<Dashboard />, [query, theme])
 
     // Compliance reporting specific components
     expect(
@@ -251,7 +287,11 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('Org Compliance Reports Card')).toBeInTheDocument()
   })
 
-  it('renders nested Role components in Central Section for government users', () => {
+  test('renders nested Role components in Central Section for government users', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         roles: [
@@ -262,7 +302,7 @@ describe('Dashboard Component', () => {
       }
     })
 
-    render(<Dashboard />, { wrapper })
+    render(<Dashboard />, [query, theme])
 
     expect(screen.getAllByTestId(govRolesTestId).length).toBeGreaterThan(0)
 
@@ -272,7 +312,11 @@ describe('Dashboard Component', () => {
     expect(screen.getByTestId('role-Analyst')).toBeInTheDocument()
   })
 
-  it('renders all card components when multiple roles are present', () => {
+  test('renders all card components when multiple roles are present', ({
+    render,
+    query,
+    theme
+  }) => {
     useCurrentUser.mockReturnValue({
       data: {
         roles: [
@@ -284,7 +328,7 @@ describe('Dashboard Component', () => {
       }
     })
 
-    render(<Dashboard />, { wrapper })
+    render(<Dashboard />, [query, theme])
 
     // Gov analyst cards
     expect(screen.getByText('Organizations Summary Card')).toBeInTheDocument()

@@ -2,8 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
-import { SupplyHistory } from '../SupplyHistory'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
+import {
+  SupplyHistory,
+  normalizeFuelTypeVolumeTrendRows
+} from '../SupplyHistory'
 import { roles } from '@/constants/roles'
 import theme from '@/themes'
 
@@ -83,6 +86,39 @@ describe('SupplyHistory', () => {
     mockUseOrganizationFuelSupply.mockReturnValue(queryData)
   })
 
+  it('shows the fuel category breakdown only when category data exists', () => {
+    const { unmount } = renderComponent()
+    expect(
+      screen.queryByText('Fuel category breakdown')
+    ).not.toBeInTheDocument()
+    unmount()
+
+    mockUseOrganizationFuelSupply.mockReturnValue({
+      ...queryData,
+      data: {
+        ...queryData.data,
+        analytics: {
+          ...queryData.data.analytics,
+          fuelCategoryTrend: [
+            {
+              reportingYear: '2025',
+              fuelCategory: 'Diesel',
+              totalEnergy: 1000,
+              totalLitres: 25,
+              totalComplianceUnits: 1
+            }
+          ]
+        }
+      }
+    })
+    renderComponent()
+
+    expect(screen.getByText('Fuel category breakdown')).toBeInTheDocument()
+    expect(screen.getByTestId('fuel-category-toggle-Diesel')).toHaveTextContent(
+      '1k MJ · 100%'
+    )
+  })
+
   it('uses a set compliance period filter for the selected year range', async () => {
     const user = userEvent.setup()
     renderComponent()
@@ -91,7 +127,9 @@ describe('SupplyHistory', () => {
     await user.click(fromSelect)
     await user.click(screen.getByRole('option', { name: '2023' }))
     await user.click(toSelect)
-    expect(screen.queryByRole('option', { name: '2023' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('option', { name: '2023' })
+    ).not.toBeInTheDocument()
     await user.click(screen.getByRole('option', { name: '2025' }))
 
     await waitFor(() => {
@@ -112,13 +150,127 @@ describe('SupplyHistory', () => {
     })
   })
 
+  it('shows the total renewable fuel (liquid) volume summary box', () => {
+    mockUseOrganizationFuelSupply.mockReturnValue({
+      ...queryData,
+      data: {
+        ...queryData.data,
+        analytics: {
+          ...queryData.data.analytics,
+          selectedYearSummary: {
+            reportingYear: '2025',
+            priorYear: '2024',
+            totalRenewableVolume: 1250000,
+            priorYearRenewableVolume: 1000000,
+            renewableVolumeChange: 250000,
+            renewableVolumePctChangeYoy: 25
+          }
+        }
+      }
+    })
+    renderComponent()
+
+    expect(
+      screen.getByText('Total renewable fuel (liquid) volume')
+    ).toBeInTheDocument()
+    expect(screen.getByText('1.25M L')).toBeInTheDocument()
+    expect(screen.getByText('+25.00% vs. previous year')).toBeInTheDocument()
+    expect(screen.getByText('Previous year: 2024 • 1M L')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Compliance units per unit of supply')
+    ).not.toBeInTheDocument()
+  })
+
   it('navigates to the selected organization supply history route', () => {
     renderComponent()
 
     fireEvent.click(screen.getByTestId('select-organization'))
+    expect(mockNavigate).toHaveBeenCalledWith('/organizations/3/supply-history')
+  })
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/organizations/3/supply-history'
-    )
+  it('sums duplicate supply history fuel type rows', () => {
+    expect(
+      normalizeFuelTypeVolumeTrendRows([
+        {
+          reportingYear: '2023',
+          fuelType: 'Fossil-derived diesel',
+          fuelCategory: 'Diesel',
+          totalVolume: 100,
+          fossilDerived: true
+        },
+        {
+          reportingYear: '2023',
+          fuelType: 'Fossil-derived diesel',
+          fuelCategory: 'Diesel',
+          totalVolume: 50,
+          fossilDerived: true
+        },
+        {
+          reportingYear: '2024',
+          fuelType: 'Fossil-derived diesel',
+          fuelCategory: 'Diesel',
+          totalVolume: 200,
+          fossilDerived: true
+        }
+      ])
+    ).toEqual([
+      {
+        reportingYear: '2023',
+        fuelType: 'Fossil-derived diesel',
+        fuelCategory: 'Diesel',
+        totalVolume: 150,
+        fossilDerived: true
+      },
+      {
+        reportingYear: '2024',
+        fuelType: 'Fossil-derived diesel',
+        fuelCategory: 'Diesel',
+        totalVolume: 200,
+        fossilDerived: true
+      }
+    ])
+  })
+
+  it('sums duplicate supply history fuel type rows', () => {
+    expect(
+      normalizeFuelTypeVolumeTrendRows([
+        {
+          reportingYear: '2023',
+          fuelType: 'Fossil-derived diesel',
+          fuelCategory: 'Diesel',
+          totalVolume: 100,
+          fossilDerived: true
+        },
+        {
+          reportingYear: '2023',
+          fuelType: 'Fossil-derived diesel',
+          fuelCategory: 'Diesel',
+          totalVolume: 50,
+          fossilDerived: true
+        },
+        {
+          reportingYear: '2024',
+          fuelType: 'Fossil-derived diesel',
+          fuelCategory: 'Diesel',
+          totalVolume: 200,
+          fossilDerived: true
+        }
+      ])
+    ).toEqual([
+      {
+        reportingYear: '2023',
+        fuelType: 'Fossil-derived diesel',
+        fuelCategory: 'Diesel',
+        totalVolume: 150,
+        fossilDerived: true
+      },
+      {
+        reportingYear: '2024',
+        fuelType: 'Fossil-derived diesel',
+        fuelCategory: 'Diesel',
+        totalVolume: 200,
+        fossilDerived: true
+      }
+    ])
   })
 })
