@@ -7,6 +7,7 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.schema import (
     AllDesignatedActionsListSchema,
     AgreementCreateSchema,
+    AgreementUpdateSchema,
     AnalystAssignmentSchema,
     DesignatedActionCreateSchema,
     DesignatedActionHistorySchema,
@@ -95,6 +96,24 @@ async def create_agreement(
 ):
     """Start a new initiative agreement as a draft."""
     return await service.create_agreement(data, request.user)
+
+
+@router.put(
+    "/agreements/{initiative_agreement_id}",
+    response_model=InitiativeAgreementProfileSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def update_agreement(
+    request: Request,
+    initiative_agreement_id: int,
+    data: AgreementUpdateSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Edit an existing agreement's details."""
+    return await service.update_agreement(
+        initiative_agreement_id, data, request.user
+    )
 
 
 @router.post(

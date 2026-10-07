@@ -76,6 +76,7 @@
     "editTitle": "Edit designated action",
     "save": "Save changes",
     "editFailed": "The changes could not be saved.",
+    "editSuccess": "Designated action updated.",
     "addTooltip": "Add a designated action to this agreement.",
     "tabTitle": "Designated actions",
     "loadFailMsg": "Designated actions could not be loaded.",
@@ -269,6 +270,15 @@
       "credit_allocation": "Compliance units to be issued",
       "specified_date": "Date for completion"
     }
+  },
+  "edit": {
+    "button": "Edit details",
+    "descriptionLabel": "Project description",
+    "tooLong": "Must be {{max}} characters or fewer.",
+    "codeRequired": "Initiative agreement code is required.",
+    "endBeforeStart": "The end date cannot be before the start date.",
+    "success": "Agreement {{code}} updated.",
+    "failed": "The agreement could not be updated."
   },
   "create": {
     "button": "New initiative agreement",

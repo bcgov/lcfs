@@ -366,6 +366,22 @@ describe('DesignatedActionDetail', () => {
     expect(screen.getByTestId('edit-designated-action')).toBeInTheDocument()
   })
 
+  test('places the edit control in the blue card header (#5169)', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
+    const header = screen.getByRole('heading', {
+      name: 'initiativeAgreement:actionDetail.cardHeader'
+    }).parentElement
+    expect(header).toContainElement(
+      screen.getByTestId('edit-designated-action')
+    )
+    expect(
+      screen.getByTestId('previous-action-button').parentElement
+    ).not.toContainElement(screen.getByTestId('edit-designated-action'))
+  })
+
   test('renders the audit trail panel', ({ render, app }) => {
     render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('designated-action-history')).toBeInTheDocument()
