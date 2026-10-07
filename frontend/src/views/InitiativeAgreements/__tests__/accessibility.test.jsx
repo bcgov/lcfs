@@ -10,18 +10,6 @@
  * in the Cypress pass; and axe finds machine-checkable failures, which is
  * a floor, not a substitute for driving the pages with a keyboard.
  */
-/**
- * Accessibility checks for the Initiative Agreements components.
- *
- * Every ticket in this module carries a WCAG 2.2 line on its checklist.
- * These run axe against each component so regressions are caught in CI
- * rather than by a person clicking around.
- *
- * Two limits worth stating: colour contrast cannot be judged in jsdom,
- * which does not lay out or paint, so that rule is off here and belongs
- * in the Cypress pass; and axe finds machine-checkable failures, which is
- * a floor, not a substitute for driving the pages with a keyboard.
- */
 import 'react';
 import { describe, expect, vi, beforeEach } from 'vitest'
 import axe from 'axe-core'
