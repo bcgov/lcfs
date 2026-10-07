@@ -68,7 +68,7 @@ const TableCell = styled(Box)({
 
 function DocumentTable({ parentType, parentID }) {
   const { t } = useTranslation(['report', 'common'])
-  const [isDragActive, setIsDragActive] = useState(false)
+  const [, setIsDragActive] = useState(false)
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
   const [errorMessage, setErrorMessage] = useState(null)
@@ -295,7 +295,6 @@ function DocumentTable({ parentType, parentID }) {
         onDragLeave={handleDragOut}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        isDragActive={isDragActive}
       >
         <CardContent>
           <IconButton aria-label="upload" size="medium">
