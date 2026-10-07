@@ -480,6 +480,66 @@ describe('ComplianceReports buttonConfigs', () => {
       })
     })
 
+    describe('Director on an Analyst adjustment', () => {
+      beforeEach(() => {
+        mockContext.currentStatus =
+          COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+        mockContext.isAnalystAdjustment = true
+        mockContext.isOriginalReport = false
+        mockContext.reportVersion = 1
+      })
+
+      const analystAdjustmentButtons = () =>
+        buttonClusterConfigFn(mockContext)[
+          COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+        ]
+
+      it('should offer Assess directly, next to Recommend acting as Analyst', () => {
+        const buttons = analystAdjustmentButtons()
+
+        expect(buttons.map((btn) => btn.id)).toEqual([
+          'recommend-by-analyst-btn',
+          'issue-assessment-btn'
+        ])
+        expect(
+          buttons.find((btn) => btn.id === 'recommend-by-analyst-btn')
+            .roleIndicator
+        ).toBe('Analyst')
+        expect(
+          buttons.find((btn) => btn.id === 'issue-assessment-btn').roleIndicator
+        ).toBeFalsy()
+      })
+
+      it('should assess straight from Analyst adjustment', () => {
+        const assessButton = analystAdjustmentButtons().find(
+          (btn) => btn.id === 'issue-assessment-btn'
+        )
+        const formData = { isNonAssessment: false }
+
+        assessButton.handler(formData)
+        mockContext.setModalData.mock.calls[0][0].primaryButtonAction()
+
+        expect(mockContext.updateComplianceReport).toHaveBeenCalledWith({
+          ...formData,
+          status: COMPLIANCE_REPORT_STATUSES.ASSESSED
+        })
+      })
+
+      it('should not offer Assess to an Analyst', () => {
+        mockContext.hasRoles.mockImplementation(
+          (role) => role === roles.analyst
+        )
+        mockContext.hasAnyRole.mockImplementation((...roleList) =>
+          roleList.includes(roles.analyst)
+        )
+
+        const ids = analystAdjustmentButtons().map((btn) => btn.id)
+
+        expect(ids).toContain('recommend-by-analyst-btn')
+        expect(ids).not.toContain('issue-assessment-btn')
+      })
+    })
+
     describe('Button Grouping', () => {
       it('should separate Director buttons from delegated authority buttons', () => {
         // Use ANALYST_ADJUSTMENT status where director has both:

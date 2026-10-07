@@ -15,6 +15,20 @@ import { AppBar, Tab, Tabs } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import OrganizationList from '@/views/Transactions/components/OrganizationList'
 
+function TabPanel({ children, value, index }) {
+  return (
+    <BCBox
+      role="tabpanel"
+      hidden={value !== index}
+      id={`organization-tabpanel-${index}`}
+      aria-labelledby={`organization-tab-${index}`}
+      tabIndex={value === index ? 0 : -1}
+    >
+      {value === index && children}
+    </BCBox>
+  )
+}
+
 function a11yProps(index) {
   return {
     id: `organization-tab-${index}`,
@@ -98,7 +112,8 @@ export const OrganizationView = ({ addMode = false }) => {
 
       const currentPath = location.pathname || ''
       const nextPath =
-        organizationId && currentPath.includes(`/organizations/${organizationId}`)
+        organizationId &&
+        currentPath.includes(`/organizations/${organizationId}`)
           ? currentPath.replace(
               `/organizations/${organizationId}`,
               `/organizations/${id}`
@@ -226,7 +241,11 @@ export const OrganizationView = ({ addMode = false }) => {
             )}
           </BCBox>
         )}
-        <BCBox sx={{ pt: 3 }}>{renderContent()}</BCBox>
+        {tabConfig.map((config, idx) => (
+          <TabPanel key={config.path} value={tabIndex} index={idx}>
+            <BCBox sx={{ pt: 3 }}>{idx === tabIndex && renderContent()}</BCBox>
+          </TabPanel>
+        ))}
       </BCBox>
     </BCBox>
   )

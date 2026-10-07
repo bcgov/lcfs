@@ -13,6 +13,9 @@ from lcfs.db.models.compliance import (
     FuelSupply,
     ComplianceReport,
 )
+from lcfs.db.models.compliance.ComplianceReport import (
+    QuantityUnitsEnum as FuelSupplyUnitsEnum,
+)
 from lcfs.db.models.fuel import (
     CategoryCarbonIntensity,
     DefaultCarbonIntensity,
@@ -922,7 +925,9 @@ class FuelSupplyRepository:
                         ProvisionOfTheAct.name.ilike(f"%{filter_value}%")
                     )
                 elif field == "report_submission_date":
-                    submission_date = _vancouver_date_field(ComplianceReport.update_date)
+                    submission_date = _vancouver_date_field(
+                        ComplianceReport.update_date
+                    )
                     filter_type = getattr(filter_item, "type", None)
                     if filter_type == "inRange" and len(date_values) == 2:
                         query = query.where(
@@ -1112,6 +1117,7 @@ class FuelSupplyRepository:
         total_by_fuel_code = {}
         yearly = {}
         yearly_fuel_type = {}
+        yearly_fuel_category = {}
         yearly_renewable_liquid_fuel = {}
         renewable_liquid_fuel_types_by_category = {}
 
@@ -1228,6 +1234,20 @@ class FuelSupplyRepository:
                     "positive_compliance_units"
                 ] = True
 
+            # Quantities are in mixed units (L, kg, kWh, m³) within a category,
+            # so energy (MJ) is the comparable total and volume only counts
+            # litre-denominated rows. fs.units is the row's reported unit (it
+            # is user-selected for "Other" fuel types); its enum is not the
+            # same class as fuel_type.units', so compare against the alias.
+            category_totals = yearly_fuel_category.setdefault(year, {}).setdefault(
+                category,
+                {"total_energy": 0, "total_litres": 0, "total_compliance_units": 0},
+            )
+            category_totals["total_energy"] += float(fs.energy or 0)
+            if fs.units == FuelSupplyUnitsEnum.Litres:
+                category_totals["total_litres"] += quantity
+            category_totals["total_compliance_units"] += compliance_units
+
         # Calculate most recent submission
         most_recent_submission = (
             max(submission_dates_set).isoformat() if submission_dates_set else None
@@ -1322,6 +1342,7 @@ class FuelSupplyRepository:
 
         compliance_unit_credit_debit_trend = []
         fuel_type_volume_trend = []
+        fuel_category_trend = []
         renewable_liquid_fuel_volume_trend = []
         top_fuel_codes = [
             {"fuelCode": fuel_code, "totalVolume": volume}
@@ -1359,6 +1380,20 @@ class FuelSupplyRepository:
                         "fuelCategory": fuel_type_data.get("fuel_category"),
                         "totalVolume": fuel_type_data.get("total_volume", 0),
                         "fossilDerived": fuel_type_data.get("fossil_derived", False),
+                    }
+                )
+            for category, category_data in sorted(
+                yearly_fuel_category.get(year, {}).items()
+            ):
+                fuel_category_trend.append(
+                    {
+                        "reportingYear": year,
+                        "fuelCategory": category,
+                        "totalEnergy": category_data.get("total_energy", 0),
+                        "totalLitres": category_data.get("total_litres", 0),
+                        "totalComplianceUnits": _round(
+                            category_data.get("total_compliance_units", 0)
+                        ),
                     }
                 )
             for renewable_liquid_group in ("Renewable", "Non-renewable"):
@@ -1420,6 +1455,7 @@ class FuelSupplyRepository:
             "fuel_type_yoy": fuel_type_yoy,
             "compliance_unit_credit_debit_trend": compliance_unit_credit_debit_trend,
             "fuel_type_volume_trend": fuel_type_volume_trend,
+            "fuel_category_trend": fuel_category_trend,
             "renewable_liquid_fuel_volume_trend": renewable_liquid_fuel_volume_trend,
             "renewable_liquid_fuel_types_by_category": {
                 category: sorted(fuel_types)

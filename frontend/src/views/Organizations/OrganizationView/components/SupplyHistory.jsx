@@ -33,6 +33,12 @@ import {
   defaultColDef,
   gridOptions
 } from './_supplyHistorySchema'
+import {
+  abbreviateNumber,
+  formatCompactAxisNumber,
+  formatPlainNumber
+} from './_supplyHistoryFormatters'
+import { FuelCategoryBreakdown } from './FuelCategoryBreakdown'
 
 const GRID_KEY = 'organization-supply-history'
 const YEAR_FILTER_STORAGE_KEY = `${GRID_KEY}-year-filter`
@@ -117,39 +123,6 @@ const getYearsInRange = ({ from, to }) => {
   )
 }
 
-const abbreviateNumber = (value, { unitLabel = '', prefix = '' } = {}) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return '—'
-  }
-
-  const absValue = Math.abs(value)
-  const thresholds = [
-    { limit: 1e12, suffix: 'T' },
-    { limit: 1e9, suffix: 'B' },
-    { limit: 1e6, suffix: 'M' },
-    { limit: 1e3, suffix: 'k' }
-  ]
-
-  let scaledValue = value
-  let suffix = ''
-
-  for (const threshold of thresholds) {
-    if (absValue >= threshold.limit) {
-      scaledValue = value / threshold.limit
-      suffix = threshold.suffix
-      break
-    }
-  }
-
-  const precision =
-    Math.abs(scaledValue) >= 100 ? 0 : Math.abs(scaledValue) >= 10 ? 1 : 2
-  const formattedValue = Number(scaledValue.toFixed(precision))
-
-  const unitText = unitLabel ? ` ${unitLabel}` : ''
-
-  return `${prefix}${formattedValue}${suffix}${unitText}`.trim()
-}
-
 const formatSignedPercent = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '—'
@@ -157,13 +130,6 @@ const formatSignedPercent = (value) => {
   const numericValue = Number(value)
   const sign = numericValue > 0 ? '+' : ''
   return `${sign}${numericValue.toFixed(2)}%`
-}
-
-const formatPlainNumber = (value, decimals = 0) => {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return '—'
-  }
-  return formatNumberWithCommas({ value: Number(value).toFixed(decimals) })
 }
 
 const formatDisplayDate = (value) => {
@@ -180,13 +146,6 @@ const formatDisplayDate = (value) => {
     day: 'numeric',
     timeZone: 'America/Vancouver'
   }).format(date)
-}
-
-const formatCompactAxisNumber = (value) => {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return ''
-  }
-  return abbreviateNumber(value)
 }
 
 const formatAccessibleChartValue = (value) => {
@@ -267,8 +226,7 @@ const getComparisonColor = (value) => {
 const hasNumericValue = (value) =>
   value !== null && value !== undefined && !Number.isNaN(Number(value))
 
-const hasNonZeroValue = (value) =>
-  hasNumericValue(value) && Number(value) !== 0
+const hasNonZeroValue = (value) => hasNumericValue(value) && Number(value) !== 0
 
 const chartSeriesHasData = (series = []) =>
   series.some((item) => (item.data || []).some(hasNonZeroValue))
@@ -491,6 +449,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
 
   const analytics = queryData?.data?.analytics || {}
   const selectedYearSummary = analytics.selectedYearSummary || {}
+  const fuelCategoryTrend = analytics.fuelCategoryTrend || []
 
   // Maintain a stable list of available years even after filtering
   useEffect(() => {
@@ -883,13 +842,19 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   const showTopFuelCodesChart =
     topFuelCodesChartData.labels.length > 1 &&
     chartValuesHaveData(topFuelCodesChartData.values)
+  const showFuelCategoryBreakdown = fuelCategoryTrend.some((row) =>
+    [row.totalEnergy, row.totalLitres, row.totalComplianceUnits].some(
+      hasNonZeroValue
+    )
+  )
 
   const hasDashboardContent =
     dashboardMetricCards.length > 0 ||
     showComplianceUnitCreditDebitChart ||
     showFuelTypeVolumeTrendChart ||
     showRenewableSupplyVolumeChangeChart ||
-    showTopFuelCodesChart
+    showTopFuelCodesChart ||
+    showFuelCategoryBreakdown
 
   const complianceUnitCreditDebitTrendOption = useMemo(
     () => ({
@@ -1216,13 +1181,13 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
           <AccordionDetails sx={{ minWidth: 0, overflow: 'hidden' }}>
             {dashboardMetricCards.length > 0 && (
               <Grid container spacing={2} sx={{ mb: 3 }}>
-                {dashboardMetricCards.map((card) => (
+                {dashboardMetricCards.map(({ key, ...card }) => (
                   <Grid
                     item
                     xs={12}
                     sm={6}
                     lg={3}
-                    key={card.key}
+                    key={key}
                     sx={{ minWidth: 0 }}
                   >
                     <SupplyMetricCard {...card} />
@@ -1232,6 +1197,12 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
             )}
 
             <Grid container spacing={3} sx={{ minWidth: 0 }}>
+              {showFuelCategoryBreakdown && (
+                <Grid item xs={12} sx={{ minWidth: 0 }}>
+                  <FuelCategoryBreakdown rows={fuelCategoryTrend} />
+                </Grid>
+              )}
+
               {showComplianceUnitCreditDebitChart && (
                 <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
                   <ChartPanel

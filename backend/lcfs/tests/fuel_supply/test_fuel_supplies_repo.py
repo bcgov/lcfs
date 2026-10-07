@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.compliance import FuelSupply
+from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository, _fuel_type_filter
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema, ModeEnum
 from lcfs.web.api.fuel_supply.schema import (
@@ -1111,6 +1112,8 @@ async def test_get_organization_fuel_supply_analytics_normalizes_petroleum_fuel_
             q3_quantity=None,
             q4_quantity=None,
             compliance_units=0,
+            energy=0,
+            units=QuantityUnitsEnum.Litres,
             fuel_type=SimpleNamespace(
                 fuel_type=fuel_type,
                 renewable=False,
