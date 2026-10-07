@@ -346,9 +346,11 @@ def test_supplier_compliance_report_submitted_filter_expands_to_masked_statuses(
     result = _effective_status_values_for_supplier(("Submitted",))
     values_casefold = {v.casefold() for v in result}
     assert "submitted" in values_casefold
-    assert "recommended by analyst" in values_casefold
-    assert "recommended by manager" in values_casefold
-    assert "analyst adjustment" in values_casefold
+    # Must be the DB-stored (underscored) names or the filter matches nothing.
+    assert "recommended_by_analyst" in values_casefold
+    assert "recommended_by_manager" in values_casefold
+    assert "analyst_adjustment" in values_casefold
+    assert "recommended by analyst" not in values_casefold
 
 
 def test_supplier_compliance_report_internal_status_names_are_stripped():
@@ -369,3 +371,61 @@ def test_supplier_transfer_recommended_filter_is_stripped():
     """An explicit 'recommended' status name must produce an empty filter."""
     result = _effective_transfer_status_values_for_supplier(("Recommended",))
     assert result == ()
+
+
+@pytest.mark.anyio
+async def test_supplier_internal_transfer_status_filter_returns_nothing():
+    """Filtering on Recommended must not fall back to no status filter."""
+    db = _db_without_rows()
+    context = SearchContext(
+        query=parse_query("recommended transfer"),
+        organization_id=17,
+        is_government=False,
+    )
+
+    results = await search_transfers(db, context)
+
+    assert results == []
+    db.execute.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_supplier_report_status_field_is_masked_in_match_context():
+    """Suppliers must not match or see the raw internal report status."""
+    db = _db_without_rows()
+    context = SearchContext(
+        query=parse_query("analyst"),
+        organization_id=17,
+        is_government=False,
+    )
+
+    await search_compliance_reports(db, context)
+
+    sql = _executed_sql(db)
+    assert "CASE WHEN" in sql and "'Submitted'" in sql
+    assert "'Recommended_by_analyst'" in sql  # only as the masked value list
+
+
+@pytest.mark.anyio
+async def test_government_report_status_field_is_not_masked():
+    db = _db_without_rows()
+
+    await search_compliance_reports(db, _government_context("analyst"))
+
+    assert "'Submitted'" not in _executed_sql(db)
+
+
+@pytest.mark.anyio
+async def test_supplier_transfer_status_field_is_masked_in_match_context():
+    """Suppliers must not match or see the raw Recommended transfer status."""
+    db = _db_without_rows()
+    context = SearchContext(
+        query=parse_query("example transfer"),
+        organization_id=17,
+        is_government=False,
+    )
+
+    await search_transfers(db, context)
+
+    sql = _executed_sql(db)
+    assert "'Recommended'" in sql and "'Submitted'" in sql

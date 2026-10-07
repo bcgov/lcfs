@@ -1,6 +1,6 @@
 """Transfer search definition."""
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -23,6 +23,7 @@ from lcfs.web.api.search.matching import (
     equals_any,
     match_context_expression,
     search_clause,
+    text_expression,
 )
 from lcfs.web.api.search.schema import SearchResultDetail, SearchResultItem
 
@@ -85,13 +86,27 @@ async def search_transfers(
         .correlate(Transfer)
         .scalar_subquery()
     )
+    # Suppliers see Recommended as "Submitted", so match and echo that
+    # instead of the raw internal status.
+    status_text = text_expression(TransferStatus.status)
+    supplier_status_text = case(
+        (
+            status_text.in_(sorted(_SUPPLIER_MASKED_TRANSFER_STATUSES)),
+            _TRANSFER_SUBMITTED_VALUE,
+        ),
+        else_=status_text,
+    )
     all_fields = [
         SearchField(
             "From organization", from_organization.name, primary=True, fuzzy=True
         ),
         SearchField("To organization", to_organization.name, primary=True, fuzzy=True),
         SearchField("Transfer ID", Transfer.transfer_id, primary=True),
-        SearchField("Status", TransferStatus.status, primary=True),
+        SearchField(
+            "Status",
+            status_text if context.is_government else supplier_status_text,
+            primary=True,
+        ),
         SearchField("Category", TransferCategory.category),
         SearchField("Quantity", Transfer.quantity),
         SearchField("Price per unit", Transfer.price_per_unit),
@@ -126,6 +141,10 @@ async def search_transfers(
     status_values = query.values("status")
     if not context.is_government and status_values:
         status_values = _effective_transfer_status_values_for_supplier(status_values)
+        if not status_values:
+            # Only internal-only statuses were requested; an empty filter
+            # would otherwise be treated as "no status restriction".
+            return []
 
     statement = (
         select(

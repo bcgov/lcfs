@@ -1,6 +1,6 @@
 """Compliance-report search definition."""
 
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.compliance.ComplianceReportListView import ComplianceReportListView
@@ -36,6 +36,14 @@ _SUPPLIER_MASKED_STATUS_VALUES: frozenset[str] = frozenset(
         ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
     }
 )
+# The same statuses as stored in the DB (enum member names, e.g.
+# "Recommended_by_analyst"). Status filters compare against the stored text,
+# so they need these rather than the display values above.
+_SUPPLIER_MASKED_STATUS_DB_VALUES: tuple[str, ...] = (
+    ComplianceReportStatusEnum.Recommended_by_analyst.name,
+    ComplianceReportStatusEnum.Recommended_by_manager.name,
+    ComplianceReportStatusEnum.Analyst_adjustment.name,
+)
 _SUBMITTED_VALUE = ComplianceReportStatusEnum.Submitted.value
 
 # Field labels that must not be included in supplier-facing searches.
@@ -58,7 +66,10 @@ def _effective_status_values_for_supplier(
       that is *displayed* as "Submitted" to suppliers, so the filter
       keeps working correctly after the status-masking step.
     """
-    masked_casefold = frozenset(v.casefold() for v in _SUPPLIER_MASKED_STATUS_VALUES)
+    masked_casefold = frozenset(
+        v.casefold()
+        for v in (*_SUPPLIER_MASKED_STATUS_VALUES, *_SUPPLIER_MASKED_STATUS_DB_VALUES)
+    )
     wants_submitted = any(
         v.strip().casefold() == _SUBMITTED_VALUE.casefold() for v in raw_values
     )
@@ -69,7 +80,7 @@ def _effective_status_values_for_supplier(
         # the supplier's "submitted" filter returns all visible records.
         safe = [v for v in safe if v.strip().casefold() != _SUBMITTED_VALUE.casefold()]
         safe.append(_SUBMITTED_VALUE)
-        safe.extend(_SUPPLIER_MASKED_STATUS_VALUES)
+        safe.extend(_SUPPLIER_MASKED_STATUS_DB_VALUES)
     return tuple(safe)
 
 
@@ -84,11 +95,22 @@ async def search_compliance_reports(
         return []
 
     view = ComplianceReportListView
+    # Suppliers see masked statuses as "Submitted", so match and echo that
+    # instead of the raw internal status.
+    status_text = text_expression(view.report_status)
+    supplier_status_text = case(
+        (status_text.in_(_SUPPLIER_MASKED_STATUS_DB_VALUES), _SUBMITTED_VALUE),
+        else_=status_text,
+    )
     all_fields = [
         SearchField("Organization", view.organization_name, primary=True, fuzzy=True),
         SearchField("Compliance period", view.compliance_period, primary=True),
         SearchField("Report type", view.report_type, primary=True),
-        SearchField("Status", text_expression(view.report_status), primary=True),
+        SearchField(
+            "Status",
+            status_text if context.is_government else supplier_status_text,
+            primary=True,
+        ),
         SearchField("Report ID", view.compliance_report_id, primary=True),
         SearchField(
             "Analyst first name", view.assigned_analyst_first_name, primary=True
@@ -124,6 +146,10 @@ async def search_compliance_reports(
     status_values = query.values("status")
     if not context.is_government and status_values:
         status_values = _effective_status_values_for_supplier(status_values)
+        if not status_values:
+            # Only internal-only statuses were requested; an empty filter
+            # would otherwise be treated as "no status restriction".
+            return []
 
     statement = select(view, match_context).where(view.is_latest.is_(True))
     statement = where_present(
