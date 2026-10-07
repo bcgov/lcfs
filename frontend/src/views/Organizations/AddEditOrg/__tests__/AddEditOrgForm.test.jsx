@@ -62,7 +62,10 @@ vi.mock('react-i18next', async (importOriginal) => {
   return {
     ...actual,
     useTranslation: vi.fn(() => ({
-      t: (key) => key,
+      t: (key) =>
+        key === 'org:sameAsLegalNameLabel'
+          ? 'Same as legal name'
+          : key,
       i18n: { changeLanguage: vi.fn() }
     })),
     I18nextProvider: ({ children }) => children
@@ -279,14 +282,10 @@ vi.mock('@mui/material/FormControl', () => ({
   }) => <div {...props}>{children}</div>
 }))
 
-vi.mock('@mui/material/FormControlLabel', () => ({
-    default: ({ control, label, ...props }) => (
-    <div {...props}>
-      {control}
-      <span>{label}</span>
-    </div>
-  )
-}))
+vi.mock('@mui/material/FormControlLabel', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { default: actual.default }
+})
 
 vi.mock('@mui/material/FormLabel', () => ({
     default: ({ children, ...props }) => <div {...props}>{children}</div>
@@ -321,17 +320,10 @@ vi.mock('@mui/material/Radio', () => ({
   ))
 }))
 
-vi.mock('@mui/material/Checkbox', () => ({
-    default: (props) => (
-    <input
-      type="checkbox"
-      checked={props.checked || false}
-      onChange={props.onChange}
-      data-test={props['data-test'] || 'checkbox'}
-      {...props}
-    />
-  )
-}))
+vi.mock('@mui/material/Checkbox', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { default: actual.default }
+})
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
@@ -528,7 +520,8 @@ describe('AddEditOrgForm Component', () => {
       expect(mockHandleCancelEdit).toHaveBeenCalled()
     })
 
-    it('handles same as legal name checkbox interaction', () => {
+    it('exposes and toggles the same as legal name checkbox by its visible label', async () => {
+      const user = userEvent.setup()
       mockWatch.mockImplementation((field) => {
         if (field === 'orgLegalName') return 'Test Legal Name'
         return ''
@@ -540,9 +533,22 @@ describe('AddEditOrgForm Component', () => {
         </Wrapper>
       )
 
-      const checkbox = screen.getByTestId('sameAsLegalName')
-      fireEvent.click(checkbox)
+      const checkbox = screen.getByRole('checkbox', {
+        name: 'Same as legal name'
+      })
+      expect(checkbox).not.toBeChecked()
 
+      await user.click(checkbox)
+
+      expect(checkbox).toBeChecked()
+      expect(mockSetValue).toHaveBeenCalledWith(
+        'orgOperatingName',
+        'Test Legal Name'
+      )
+
+      await user.click(checkbox)
+
+      expect(checkbox).not.toBeChecked()
       expect(mockSetValue).toHaveBeenCalledWith(
         'orgOperatingName',
         'Test Legal Name'
