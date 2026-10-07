@@ -43,6 +43,38 @@ async def seed_test_documents(session):
             "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "compliance_report_ids": [4],  # Associate with compliance report 4
         },
+        {
+            "document_id": 4,
+            "file_key": "lcfs-docs/compliance_report/113/7d8a4ac1-f1ad-4bbd-b8df-2b42f426dcc5",
+            "file_name": "2025 supporting records.pdf",
+            "file_size": 245760,
+            "mime_type": "application/pdf",
+            "compliance_report_ids": [113],  # Associate with report 113
+        },
+        {
+            "document_id": 5,
+            "file_key": "lcfs-docs/compliance_report/113/83021496-2f8b-4b81-9a79-25f68804e995",
+            "file_name": "Fuel supply evidence.xlsx",
+            "file_size": 23810,
+            "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "compliance_report_ids": [113],  # Associate with report 113
+        },
+        {
+            "document_id": 6,
+            "file_key": "lcfs-docs/compliance_report/1/98fc4884-c5d9-47fd-b6c0-8c41c4d1e6e9",
+            "file_name": "2024 compliance supporting records.pdf",
+            "file_size": 184320,
+            "mime_type": "application/pdf",
+            "compliance_report_ids": [1],  # Associate with compliance report 1
+        },
+        {
+            "document_id": 7,
+            "file_key": "lcfs-docs/compliance_report/2/82b2f3e9-207e-43dd-b381-a529e0e7dcec",
+            "file_name": "2024 fuel supply evidence.pdf",
+            "file_size": 172032,
+            "mime_type": "application/pdf",
+            "compliance_report_ids": [2],  # Associate with compliance report 2
+        },
     ]
 
     for document_data in documents_to_seed:

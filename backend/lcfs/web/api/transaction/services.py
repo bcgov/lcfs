@@ -233,6 +233,16 @@ class TransactionsService:
             repo_organization_id,
         )
 
+        # The transactions view has no agreement date or A1 flag, so look both
+        # up for the exported transfers.
+        transfer_details = await self.repo.get_transfer_export_details(
+            [
+                result.transaction_id
+                for result in results[0]
+                if result.transaction_type == "Transfer"
+            ]
+        )
+
         # Prepare data for the spreadsheet
         data = []
         for result in results[0]:
@@ -241,6 +251,19 @@ class TransactionsService:
                 TransferStatusEnum.Submitted.name
                 if result.status == TransferStatusEnum.Recommended.value
                 else result.status
+            )
+
+            # IDs are only unique per transaction type
+            transfer = (
+                transfer_details.get(result.transaction_id)
+                if result.transaction_type == "Transfer"
+                else None
+            )
+            # A1 is a flagged subset of Category A
+            category = (
+                "A1"
+                if transfer and transfer.is_a1_category and result.category == "A"
+                else result.category
             )
 
             prefix = transaction_type_to_id_prefix_map.get(result.transaction_type)
@@ -265,8 +288,14 @@ class TransactionsService:
                     result.to_organization,
                     result.quantity,
                     result.price_per_unit,
-                    result.category,
+                    category,
                     masked_status,
+                    # A calendar date, so no Pacific conversion
+                    (
+                        transfer.agreement_date.strftime("%Y-%m-%d")
+                        if transfer and transfer.agreement_date
+                        else None
+                    ),
                     (
                         result.transaction_effective_date.strftime("%Y-%m-%d")
                         if result.transaction_effective_date
