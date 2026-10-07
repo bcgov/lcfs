@@ -30,6 +30,7 @@ from lcfs.db.models.user import UserProfile
 from lcfs.web.api.compliance_report.dtos import ChangelogFuelSuppliesDTO
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
+from lcfs.web.api.base import FilterModel
 
 
 def _sql(stmt) -> str:
@@ -128,6 +129,22 @@ def test_minimal_report_options_join_no_collections(offline_repo):
     )
     assert "compliance_report_history" not in sql
     assert "JOIN transaction " not in sql
+
+
+def test_report_update_date_filter_accepts_date_only_value(offline_repo):
+    condition = offline_repo._generic_report_filter(
+        FilterModel(
+            field="updateDate",
+            filterType="date",
+            type="equals",
+            dateFrom="2026-10-05",
+        )
+    )
+
+    compiled = select(ComplianceReport).where(condition).compile(
+        dialect=postgresql.dialect()
+    )
+    assert compiled.params["date_1"] == "2026-10-05"
 
 
 @pytest.mark.anyio

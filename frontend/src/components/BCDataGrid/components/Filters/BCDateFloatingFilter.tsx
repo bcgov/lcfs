@@ -134,33 +134,53 @@ export const BCDateFloatingFilter = ({
         slotProps={{
           textField: {
             size: 'small',
-            label,
+            placeholder: label,
+            inputProps: {
+              'aria-label': label
+            },
+            sx: {
+              '& .MuiInputBase-root': {
+                minHeight: 34,
+                pr: 0.25
+              },
+              '& .MuiInputBase-input': {
+                minWidth: 0,
+                overflow: 'hidden',
+                pr: selectedDate ? '56px !important' : '30px !important',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              },
+              '& .MuiInputAdornment-root': {
+                flexShrink: 0,
+                ml: 0,
+                position: 'absolute',
+                right: 0
+              }
+            },
             onKeyDown: (event) => event.stopPropagation(),
             InputProps: {
-              startAdornment: (
-                <InputAdornment position="start">
+              endAdornment: (
+                <InputAdornment position="end" sx={{ gap: 0, mr: 0 }}>
+                  {selectedDate && (
+                    <IconButton
+                      sx={{ m: 0, p: 0.25 }}
+                      size="small"
+                      onClick={handleClear}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      edge="end"
+                      aria-label="Clear date"
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  )}
                   <IconButton
-                    sx={{ marginLeft: 0, paddingLeft: '6px' }}
+                    sx={{ m: 0, p: 0.25 }}
                     size="small"
-                    edge="start"
+                    edge="end"
                     onClick={() => setOpen(true)}
                     aria-label="Open calendar"
                   >
                     <CalendarIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ),
-              endAdornment: selectedDate && (
-                <InputAdornment position="end">
-                  <IconButton
-                    sx={{ marginRight: 0, paddingRight: '6px' }}
-                    size="small"
-                    onClick={handleClear}
-                    onMouseDown={(event) => event.stopPropagation()}
-                    edge="end"
-                    aria-label="Clear date"
-                  >
-                    <ClearIcon fontSize="small" />
                   </IconButton>
                 </InputAdornment>
               )

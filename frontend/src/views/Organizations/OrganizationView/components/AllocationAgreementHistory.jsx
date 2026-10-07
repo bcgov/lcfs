@@ -80,6 +80,25 @@ const formatSignedPercent = (value) => {
   return `${sign}${numericValue.toFixed(2)}%`
 }
 
+const chartValueLabel = (overrides = {}) => ({
+  show: true,
+  formatter: ({ value }) =>
+    Number(value) === 0 ? '' : formatCompactNumber(value),
+  color: CHART_COLORS.neutralText,
+  fontSize: 11,
+  fontWeight: 600,
+  ...overrides
+})
+
+const absoluteChartValueLabel = (overrides = {}) => ({
+  ...chartValueLabel(),
+  formatter: ({ value }) => {
+    const numericValue = Math.abs(Number(value))
+    return numericValue === 0 ? '' : formatCompactNumber(numericValue)
+  },
+  ...overrides
+})
+
 const getChangeColor = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return 'text'
@@ -332,6 +351,7 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
       },
       grid: {
         ...CHART_GRID,
+        left: 96,
         top: 24
       },
       xAxis: {
@@ -343,7 +363,7 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
         type: 'value',
         name: t('org:allocationAgreementHistory.fseReported'),
         nameLocation: 'middle',
-        nameGap: 52,
+        nameGap: 72,
         nameRotate: 90,
         nameTextStyle: {
           color: CHART_COLORS.neutralText,
@@ -364,6 +384,8 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
           data: filteredYears.map((year) => year.totalFse),
           itemStyle: { color: CHART_COLORS.green },
           lineStyle: { color: CHART_COLORS.green, width: 2 },
+          label: chartValueLabel({ position: 'top' }),
+          labelLayout: { hideOverlap: true },
           areaStyle: { color: 'rgba(0, 158, 115, 0.18)' }
         }
       ]
@@ -376,6 +398,7 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
       legend: { bottom: 0, left: 8, right: 8 },
       grid: {
         ...CHART_GRID,
+        left: 96,
         top: 24,
         bottom: 96
       },
@@ -388,7 +411,7 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
         type: 'value',
         name: t('org:allocationAgreementHistory.organizationsShort'),
         nameLocation: 'middle',
-        nameGap: 52,
+        nameGap: 72,
         nameRotate: 90,
         nameTextStyle: {
           color: CHART_COLORS.neutralText,
@@ -402,6 +425,8 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
           type: 'bar',
           stack: 'movement',
           data: filteredYears.map((year) => year.addedOrganizations.length),
+          label: chartValueLabel({ position: 'top' }),
+          labelLayout: { hideOverlap: true },
           itemStyle: { color: CHART_COLORS.green }
         },
         {
@@ -409,6 +434,8 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
           type: 'bar',
           stack: 'movement',
           data: filteredYears.map((year) => -year.removedOrganizations.length),
+          label: absoluteChartValueLabel({ position: 'bottom' }),
+          labelLayout: { hideOverlap: true },
           itemStyle: { color: CHART_COLORS.orange }
         }
       ]
