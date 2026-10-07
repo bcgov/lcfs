@@ -1,7 +1,7 @@
 import io
 import logging
-from datetime import datetime, timezone, date
-from typing import List, Dict, Union, Optional
+from datetime import datetime, timezone
+from typing import List, Dict, Union
 from fastapi import Depends
 from fastapi.responses import StreamingResponse
 from math import ceil
@@ -35,6 +35,7 @@ from lcfs.utils.constants import (
     id_prefix_to_transaction_type_map,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
+from lcfs.utils.dates import to_pacific_date
 
 
 logger = logging.getLogger(__name__)
@@ -45,17 +46,6 @@ class TransactionsService:
         self, repo: TransactionRepository = Depends(TransactionRepository)
     ) -> None:
         self.repo = repo
-
-    @staticmethod
-    def _export_date(value) -> Optional[date]:
-        """Return a plain date for Excel without timezone conversion."""
-        if value is None:
-            return None
-        if isinstance(value, datetime):
-            return value.date()
-        if isinstance(value, date):
-            return value
-        return None
 
     def apply_transaction_filters(self, pagination, conditions):
         """
@@ -287,11 +277,12 @@ class TransactionsService:
                     result.price_per_unit,
                     category,
                     masked_status,
-                    # A calendar date, so no Pacific conversion
-                    self._export_date(transfer.agreement_date if transfer else None),
-                    self._export_date(result.transaction_effective_date),
-                    self._export_date(result.recorded_date),
-                    self._export_date(result.approved_date),
+                    # The agreement date is stored as a calendar date and the
+                    # view emits the other three as Pacific calendar dates
+                    to_pacific_date(transfer.agreement_date if transfer else None),
+                    to_pacific_date(result.transaction_effective_date),
+                    to_pacific_date(result.recorded_date),
+                    to_pacific_date(result.approved_date),
                     result.from_org_comment,
                     result.to_org_comment,
                     result.government_comment,

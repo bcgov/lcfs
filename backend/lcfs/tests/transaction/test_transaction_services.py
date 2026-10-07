@@ -1,10 +1,12 @@
-from datetime import date, datetime, timezone
 import csv
 import io
+from datetime import date, datetime
 from math import ceil
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
+import openpyxl
 import pytest
+import xlrd
 from starlette.responses import StreamingResponse
 
 from lcfs.web.api.base import PaginationRequestSchema
@@ -131,95 +133,83 @@ async def test_export_transactions(transactions_service):
 
 
 @pytest.mark.anyio
-async def test_export_recorded_date_utc_midnight(transactions_service):
-    """The transaction MV already emits Vancouver-local dates for export."""
-    mock_transactions = [
-        MagicMock(
-            transaction_type="Transfer",
-            transaction_id=99,
-            compliance_period="2026",
-            from_organization="Org X",
-            to_organization="Org Y",
-            quantity=4338,
-            price_per_unit=189.40,
-            category="A",
-            status="Recorded",
-            transaction_effective_date=datetime(2026, 2, 10, 8, 0, 0),
-            recorded_date=datetime(2026, 2, 11, 0, 0, 0),
-            approved_date=None,
-            from_org_comment=None,
-            to_org_comment=None,
-            government_comment=None,
-        )
-    ]
-    transactions_service.repo.get_transactions_paginated.return_value = (
-        mock_transactions,
-        1,
+async def test_export_writes_view_dates_as_given(transactions_service):
+    """
+    The view emits effective, recorded and approved dates as Pacific calendar
+    dates, so the export writes them unchanged, with no second conversion.
+    """
+    reader = await _export_csv(
+        transactions_service,
+        [
+            _view_row(
+                transaction_id=99,
+                transaction_effective_date=date(2026, 2, 10),
+                recorded_date=date(2026, 2, 10),
+            )
+        ],
+        {99: _transfer_details(datetime(2026, 2, 9))},
     )
 
-    response = await transactions_service.export_transactions(export_format="csv")
+    (row,) = list(reader)
+    assert row["Agreement Date"] == "2026-02-09"
+    assert row["Effective Date"] == "2026-02-10"
+    assert row["Recorded"] == "2026-02-10"
 
-    content = b""
-    async for chunk in response.body_iterator:
-        content += chunk
-    content_str = content.decode("utf-8")
 
-    lines = content_str.strip().split("\n")
-    data_line = lines[1]  # first data row after header
-    assert "2026-02-11" in data_line
+def _first_row_dates(content: bytes, export_format: str):
+    """Header -> (value, number format) for the first data row of a workbook."""
+    if export_format == "xlsx":
+        sheet = openpyxl.load_workbook(io.BytesIO(content)).active
+        headers = [cell.value for cell in sheet[1]]
+        cells = [
+            (
+                cell.value.date() if isinstance(cell.value, datetime) else cell.value,
+                cell.number_format,
+            )
+            for cell in sheet[2]
+        ]
+        return dict(zip(headers, cells))
+
+    book = xlrd.open_workbook(file_contents=content, formatting_info=True)
+    sheet = book.sheet_by_index(0)
+    cells = []
+    for cell in sheet.row(1):
+        value = cell.value
+        if cell.ctype == xlrd.XL_CELL_DATE:
+            value = xlrd.xldate_as_datetime(value, book.datemode).date()
+        number_format = book.format_map[book.xf_list[cell.xf_index].format_key]
+        cells.append((value, number_format.format_str))
+    return dict(zip(sheet.row_values(0), cells))
 
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("export_format", ["xls", "xlsx"])
-async def test_export_transactions_writes_transaction_mv_dates_as_excel_dates(
-    transactions_service, export_format
-):
-    mock_transactions = [
-        MagicMock(
-            transaction_type="Transfer",
-            transaction_id=99,
-            compliance_period="2026",
-            from_organization="Org X",
-            to_organization="Org Y",
-            quantity=4338,
-            price_per_unit=189.40,
-            category="A",
-            status="Recorded",
-            transaction_effective_date=date(2026, 2, 11),
-            recorded_date=datetime(2026, 2, 11, 0, 0),
-            approved_date=datetime(2026, 7, 15, 6, 59),
-            from_org_comment=None,
-            to_org_comment=None,
-            government_comment=None,
-        )
-    ]
-    transactions_service.repo.get_transactions_paginated.return_value = (
-        mock_transactions,
+async def test_export_writes_excel_date_cells(transactions_service, export_format):
+    """Both Excel formats get real yyyy-mm-dd date cells, not text."""
+    repo = transactions_service.repo
+    repo.get_transactions_paginated.return_value = (
+        [
+            _view_row(
+                transaction_id=99,
+                transaction_effective_date=date(2026, 2, 11),
+                recorded_date=date(2026, 2, 11),
+            )
+        ],
         1,
     )
-    transactions_service.repo.get_transfer_export_details.return_value = {
-        99: MagicMock(
-            agreement_date=datetime(2026, 2, 9),
-            is_a1_category=False,
-        )
+    repo.get_transfer_export_details.return_value = {
+        99: _transfer_details(datetime(2026, 2, 9))
     }
 
-    with patch(
-        "lcfs.web.api.transaction.services.SpreadsheetBuilder.build_spreadsheet",
-        return_value=b"dummy-bytes",
-    ), patch(
-        "lcfs.web.api.transaction.services.SpreadsheetBuilder.add_sheet"
-    ) as mock_add_sheet:
-        await transactions_service.export_transactions(export_format=export_format)
+    response = await transactions_service.export_transactions(
+        export_format=export_format
+    )
+    content = b"".join([chunk async for chunk in response.body_iterator])
 
-    row = mock_add_sheet.call_args.kwargs["rows"][0]
-    assert row[9:13] == [
-        date(2026, 2, 9),
-        date(2026, 2, 11),
-        date(2026, 2, 11),
-        date(2026, 7, 15),
-    ]
-    assert all(not isinstance(value, datetime) for value in row[9:13])
+    cells = _first_row_dates(content, export_format)
+    assert cells["Agreement Date"] == (date(2026, 2, 9), "yyyy-mm-dd")
+    assert cells["Effective Date"] == (date(2026, 2, 11), "yyyy-mm-dd")
+    assert cells["Recorded"] == (date(2026, 2, 11), "yyyy-mm-dd")
 
 
 # A government export scoped to an organisation must not go through the
@@ -292,8 +282,9 @@ def _view_row(**overrides):
         price_per_unit=250.0,
         category="A",
         status="Recorded",
-        transaction_effective_date=datetime(2026, 3, 20),
-        recorded_date=datetime(2026, 3, 20, 18, 0, 0),
+        # The view emits these as Pacific calendar dates
+        transaction_effective_date=date(2026, 3, 20),
+        recorded_date=date(2026, 3, 20),
         approved_date=None,
         from_org_comment=None,
         to_org_comment=None,

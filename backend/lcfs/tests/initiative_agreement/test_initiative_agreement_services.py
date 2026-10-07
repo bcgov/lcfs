@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -202,3 +202,34 @@ async def test_non_director_approve_initiative_agreement(
 
     with pytest.raises(HTTPException):
         await service.director_approve_initiative_agreement(mock_agreement)
+
+
+class _EveningInVancouver(datetime):
+    """datetime whose now() is March 31, 2026 at 5:30 PM PDT."""
+
+    @classmethod
+    def now(cls, tz=None):
+        moment = datetime(2026, 4, 1, 0, 30, tzinfo=timezone.utc)
+        return moment.astimezone(tz) if tz else moment.replace(tzinfo=None)
+
+
+@pytest.mark.anyio
+async def test_director_approve_stamps_pacific_date_when_blank(service, monkeypatch):
+    """
+    A blank effective date takes the approval's Pacific date. At 5:30 PM PDT
+    on March 31 it is already April 1 in UTC, which would put the agreement
+    in the next compliance period.
+    """
+    monkeypatch.setattr(
+        "lcfs.web.api.initiative_agreement.services.datetime", _EveningInVancouver
+    )
+    agreement = InitiativeAgreement(
+        initiative_agreement_id=1,
+        compliance_units=150,
+        to_organization_id=3,
+        to_organization=Organization(name="name", organization_id=3),
+    )
+
+    await service.director_approve_initiative_agreement(agreement)
+
+    assert agreement.transaction_effective_date == date(2026, 3, 31)

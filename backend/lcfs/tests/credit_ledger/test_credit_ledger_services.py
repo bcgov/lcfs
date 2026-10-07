@@ -10,7 +10,10 @@ from starlette.responses import StreamingResponse
 
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.credit_ledger.schema import CreditLedgerTxnSchema
+from lcfs.web.api.credit_ledger.schema import (
+    CreditLedgerTxnSchema,
+    PeriodLedgerTxnSchema,
+)
 from lcfs.web.api.credit_ledger.services import CreditLedgerService
 
 
@@ -766,3 +769,49 @@ async def test_export_period_ledger_handles_timezone_aware_dates(
     dates = [r[1] for r in mock_add_sheet.call_args[1]["rows"]]
     assert dates == [date(2024, 4, 3), date(2024, 5, 1), date(2024, 6, 1)]
     assert all(not isinstance(d, datetime) for d in dates)
+
+
+@pytest.mark.anyio
+async def test_period_ledger_dates_creation_fallback_in_pacific_time(
+    credit_ledger_service, mock_repo
+):
+    """
+    Compliance reports carry no effective, recorded or approved date, so they
+    fall back to create_date, a timestamptz. A report created on a Pacific
+    evening is already the next day in UTC; the ledger shows the Pacific date.
+    """
+    report, version = _txn(
+        transaction_id=7,
+        transaction_type="ComplianceReport",
+        status="Assessed",
+        quantity=-5,
+        to_org=1,
+        version=0,
+    )
+    # March 12, 2025 at 6:30 PM PDT
+    report.create_date = datetime(2025, 3, 13, 1, 30, tzinfo=timezone.utc)
+    mock_repo.get_period_rows.return_value = [(report, version)]
+
+    data = await credit_ledger_service.get_period_ledger(
+        organization_id=1, compliance_period=2024
+    )
+
+    assert data.transactions[0].effective_date == date(2025, 3, 12)
+
+
+def test_period_ledger_sends_effective_date_as_plain_date():
+    """
+    The page formats effectiveDate with dateFormatter, which shifts a
+    timestamp by the browser's offset. A bare YYYY-MM-DD is parsed as UTC
+    midnight and comes back unchanged in every time zone.
+    """
+    txn = PeriodLedgerTxnSchema(
+        transaction_id=1,
+        transaction_type="Transfer",
+        effective_date=date(2025, 3, 31),
+        units_in=10,
+        units_out=0,
+        running_balance=10,
+    )
+
+    assert txn.model_dump(mode="json", by_alias=True)["effectiveDate"] == "2025-03-31"
