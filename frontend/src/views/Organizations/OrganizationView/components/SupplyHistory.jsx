@@ -1,11 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useMemo,
-  useCallback,
-  useEffect,
-  useId
-} from 'react'
+import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
 import FormControl from '@mui/material/FormControl'
@@ -18,10 +11,10 @@ import Accordion from '@mui/material/Accordion'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import ExpandMore from '@mui/icons-material/ExpandMore'
-import ReactECharts from 'echarts-for-react'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import { BCResponsiveEChart } from '@/components/charts/BCResponsiveEchart'
 import {
   BC_CHART_AXIS_LABEL,
   BC_CHART_CATEGORY_AXIS_LABEL,
@@ -32,12 +25,7 @@ import {
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useOrganizationFuelSupply } from '@/hooks/useFuelSupply'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
-import { roles } from '@/constants/roles'
-import { ROUTES } from '@/routes/routes'
-import OrganizationList from '@/views/Transactions/components/OrganizationList'
 import { formatNumberWithCommas } from '@/utils/formatters'
 import { defaultInitialPagination } from '@/constants/schedules'
 
@@ -46,6 +34,12 @@ import {
   defaultColDef,
   gridOptions
 } from './_supplyHistorySchema'
+import {
+  abbreviateNumber,
+  formatCompactAxisNumber,
+  formatPlainNumber
+} from './_supplyHistoryFormatters'
+import { FuelCategoryBreakdown } from './FuelCategoryBreakdown'
 
 const GRID_KEY = 'organization-supply-history'
 const YEAR_FILTER_STORAGE_KEY = `${GRID_KEY}-year-filter`
@@ -63,7 +57,6 @@ const CHART_PALETTE = BC_CHART_PALETTE
 const CHART_GRID = BC_CHART_GRID
 const CHART_AXIS_LABEL = BC_CHART_AXIS_LABEL
 const CHART_CATEGORY_AXIS_LABEL = BC_CHART_CATEGORY_AXIS_LABEL
-
 const getStoredYearRange = () => {
   if (typeof window === 'undefined') {
     return { from: '', to: '' }
@@ -115,39 +108,6 @@ const getYearsInRange = ({ from, to }) => {
   )
 }
 
-const abbreviateNumber = (value, { unitLabel = '', prefix = '' } = {}) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return '—'
-  }
-
-  const absValue = Math.abs(value)
-  const thresholds = [
-    { limit: 1e12, suffix: 'T' },
-    { limit: 1e9, suffix: 'B' },
-    { limit: 1e6, suffix: 'M' },
-    { limit: 1e3, suffix: 'k' }
-  ]
-
-  let scaledValue = value
-  let suffix = ''
-
-  for (const threshold of thresholds) {
-    if (absValue >= threshold.limit) {
-      scaledValue = value / threshold.limit
-      suffix = threshold.suffix
-      break
-    }
-  }
-
-  const precision =
-    Math.abs(scaledValue) >= 100 ? 0 : Math.abs(scaledValue) >= 10 ? 1 : 2
-  const formattedValue = Number(scaledValue.toFixed(precision))
-
-  const unitText = unitLabel ? ` ${unitLabel}` : ''
-
-  return `${prefix}${formattedValue}${suffix}${unitText}`.trim()
-}
-
 const formatSignedPercent = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '—'
@@ -155,13 +115,6 @@ const formatSignedPercent = (value) => {
   const numericValue = Number(value)
   const sign = numericValue > 0 ? '+' : ''
   return `${sign}${numericValue.toFixed(2)}%`
-}
-
-const formatPlainNumber = (value, decimals = 0) => {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return '—'
-  }
-  return formatNumberWithCommas({ value: Number(value).toFixed(decimals) })
 }
 
 const formatDisplayDate = (value) => {
@@ -175,15 +128,87 @@ const formatDisplayDate = (value) => {
   return new Intl.DateTimeFormat('en-CA', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
+    timeZone: 'America/Vancouver'
   }).format(date)
 }
 
-const formatCompactAxisNumber = (value) => {
+const formatAccessibleChartValue = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return ''
+    return 'No value'
   }
-  return abbreviateNumber(value)
+  return formatPlainNumber(value, 2)
+}
+
+const formatSignedAccessibleChartValue = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return 'No value'
+  }
+  const number = Number(value)
+  return `${number > 0 ? '+' : ''}${formatAccessibleChartValue(number)}`
+}
+
+const getSeriesChartSummaryRows = (
+  chartData,
+  formatValue = (series, index) =>
+    formatAccessibleChartValue(series.data[index])
+) =>
+  chartData.labels.map((label, index) => ({
+    label,
+    values: chartData.series.map((series) => ({
+      key: series.name,
+      value: formatValue(series, index)
+    }))
+  }))
+
+const getSingleSeriesChartSummaryRows = (labels, values, valueLabel) =>
+  labels.map((label, index) => ({
+    label,
+    values: [
+      {
+        key: valueLabel,
+        value: formatAccessibleChartValue(values[index])
+      }
+    ]
+  }))
+
+const getChartAriaLabel = (
+  title,
+  chartType,
+  rows,
+  {
+    rowType = 'rows',
+    maxRows = 4,
+    maxValuesPerRow = 5,
+    preferLatestRows = false
+  } = {}
+) => {
+  if (!rows.length) {
+    return `${title}. ${chartType}. No values are available. Open the data table for all values.`
+  }
+
+  const sampleRows = preferLatestRows
+    ? rows.slice(-maxRows)
+    : rows.slice(0, maxRows)
+  const rowDescriptions = sampleRows.map((row) => {
+    const sampleValues = row.values.slice(0, maxValuesPerRow)
+    const values = sampleValues
+      .map((item) => `${item.key}: ${item.value}`)
+      .join('; ')
+    const remainingValueCount = row.values.length - sampleValues.length
+    const omittedValues = remainingValueCount
+      ? `; ${remainingValueCount} more series are in the data table`
+      : ''
+    return `${row.label}: ${values}${omittedValues}.`
+  })
+  const remainingRowCount = rows.length - sampleRows.length
+  const omittedRows = remainingRowCount
+    ? preferLatestRows
+      ? ` ${remainingRowCount} earlier ${rowType} are in the data table.`
+      : ` ${remainingRowCount} more ${rowType} are in the data table.`
+    : ''
+
+  return `${title}. ${chartType}. ${rowDescriptions.join(' ')}${omittedRows} Open the data table for all values.`
 }
 
 const getComparisonColor = (value) => {
@@ -197,6 +222,22 @@ const getComparisonColor = (value) => {
 
 const hasNumericValue = (value) =>
   value !== null && value !== undefined && !Number.isNaN(Number(value))
+
+const hasNonZeroValue = (value) => hasNumericValue(value) && Number(value) !== 0
+
+const chartSeriesHasData = (series = []) =>
+  series.some((item) => (item.data || []).some(hasNonZeroValue))
+
+const chartValuesHaveData = (values = []) => values.some(hasNonZeroValue)
+
+const chartValueLabel = (overrides = {}) => ({
+  show: true,
+  formatter: ({ value }) => formatCompactAxisNumber(value),
+  color: CHART_COLORS.neutralText,
+  overflow: 'truncate',
+  width: 64,
+  ...overrides
+})
 
 const getTopFuelTypesByVolume = (rows, limit = 8) =>
   Array.from(
@@ -276,19 +317,30 @@ const SupplyMetricCard = ({ title, value, period, comparisons = [] }) => (
 )
 
 const ChartPanel = ({
-  id,
   title,
   subtitle,
+  description,
   option,
-  summary,
-  tableHeaders,
-  tableRows,
-  rowHeaderIndexes = [],
-  height = 340
+  height = 340,
+  summaryRows = [],
+  chartType,
+  summaryOptions = {}
 }) => {
+  const generatedId = React.useId().replace(/[^a-zA-Z0-9_-]/g, '')
+  const id = `supply-history-${generatedId}`
   const titleId = `${id}-title`
   const tableId = `${id}-data-table`
   const tableCaptionId = `${tableId}-caption`
+  const disclosureSummaryId = `${id}-data-disclosure-summary`
+  const columns = Array.from(
+    new Set(summaryRows.flatMap((row) => row.values.map((item) => item.key)))
+  )
+  const ariaLabel = getChartAriaLabel(
+    title,
+    chartType,
+    summaryRows,
+    summaryOptions
+  )
 
   return (
     <Card
@@ -315,37 +367,34 @@ const ChartPanel = ({
             {subtitle}
           </BCTypography>
         )}
-        <BCBox
-          id={`${id}-visualization`}
-          role="img"
-          aria-label={summary}
-          tabIndex={0}
+        {description && (
+          <BCTypography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {description}
+          </BCTypography>
+        )}
+        <BCResponsiveEChart
+          option={option}
+          height={height}
+          ariaLabel={ariaLabel}
+          ariaDescription={ariaLabel}
+          ariaDescribedBy={disclosureSummaryId}
           sx={{
-            width: '100%',
-            minWidth: 0,
-            overflow: 'hidden',
             '&:focus-visible': {
               outline: '2px solid',
               outlineColor: 'primary.main',
               outlineOffset: 2
             }
           }}
-        >
-          <BCBox aria-hidden="true" sx={{ width: '100%', minWidth: 0 }}>
-            <ReactECharts
-              option={option}
-              notMerge
-              lazyUpdate
-              style={{ height, width: '100%', minWidth: 0 }}
-            />
-          </BCBox>
-        </BCBox>
+        />
         <details id={`${id}-data-disclosure`} style={{ marginTop: 8 }}>
-          <summary aria-controls={tableId} style={{ cursor: 'pointer' }}>
-            {title}
+          <summary
+            id={disclosureSummaryId}
+            aria-controls={tableId}
+            style={{ cursor: 'pointer' }}
+          >
+            View data table for {title}
           </summary>
           <Box
-            component="div"
             role="region"
             aria-labelledby={tableCaptionId}
             tabIndex={0}
@@ -369,35 +418,38 @@ const ChartPanel = ({
               }}
             >
               <caption id={tableCaptionId} style={{ textAlign: 'left' }}>
-                {title}
+                {title} data values
               </caption>
               <thead>
                 <tr>
-                  {tableHeaders.map((header) => (
-                    <th key={header} scope="col" style={{ textAlign: 'left' }}>
-                      {header}
+                  <th scope="col" style={{ textAlign: 'left' }}>
+                    Label
+                  </th>
+                  {columns.map((key) => (
+                    <th key={key} scope="col" style={{ textAlign: 'left' }}>
+                      {key}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {tableRows.map(({ key, cells }) => (
-                  <tr key={key}>
-                    {cells.map((cell, index) =>
-                      rowHeaderIndexes.includes(index) ? (
-                        <th
-                          key={index}
-                          scope="row"
-                          style={{ textAlign: 'left' }}
-                        >
-                          {cell}
-                        </th>
-                      ) : (
-                        <td key={index}>{cell}</td>
-                      )
-                    )}
-                  </tr>
-                ))}
+                {summaryRows.map((row, rowIndex) => {
+                  const valueByKey = new Map(
+                    row.values.map((item) => [item.key, item.value])
+                  )
+                  return (
+                    <tr key={`${row.label}-${rowIndex}`}>
+                      <th scope="row" style={{ textAlign: 'left' }}>
+                        {row.label}
+                      </th>
+                      {columns.map((key) => (
+                        <td key={`${rowIndex}-${key}`}>
+                          {valueByKey.get(key) ?? '—'}
+                        </td>
+                      ))}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </Box>
@@ -407,81 +459,9 @@ const ChartPanel = ({
   )
 }
 
-const formatChartNumber = (value) => {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return '—'
-  }
-  return formatNumberWithCommas({ value: String(value) })
-}
-
-const formatSignedChartNumber = (value) => {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return '—'
-  }
-  const number = Number(value)
-  return `${number > 0 ? '+' : ''}${formatChartNumber(number)}`
-}
-
-const MAX_ANNOUNCED_ROWS = 5
-const MAX_ANNOUNCED_YEARS = 5
-
-const getChartAnnouncement = (
-  title,
-  chartType,
-  rows,
-  rowType,
-  preferLatestRows = false
-) => {
-  if (!rows.length) {
-    return `${title}. ${chartType}. No values are available. Open the data table for all values.`
-  }
-
-  const announcedRows = preferLatestRows
-    ? rows.slice(-MAX_ANNOUNCED_ROWS)
-    : rows.slice(0, MAX_ANNOUNCED_ROWS)
-  const rowSummaries = announcedRows.map(
-    ({ label, details }) => `${label}: ${details}.`
-  )
-  const remainingCount = rows.length - announcedRows.length
-  const remainingDescription = !remainingCount
-    ? ''
-    : preferLatestRows
-      ? ` ${remainingCount} earlier ${rowType} are available in the data table.`
-      : ` ${remainingCount} additional ${rowType} are available in the data table.`
-
-  return `${title}. ${chartType}. ${rowSummaries.join(' ')}${remainingDescription} Open the data table for all values.`
-}
-
-const getYearSummaries = (years, getSummary) => {
-  const startIndex = Math.max(0, years.length - MAX_ANNOUNCED_YEARS)
-  const summaries = years
-    .slice(startIndex)
-    .map((year, index) => getSummary(year, startIndex + index))
-  const remainingCount = years.length - summaries.length
-  if (remainingCount > 0) {
-    summaries.push(`${remainingCount} earlier years are in the data table`)
-  }
-  return summaries.join('; ')
-}
-
 export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   const { t } = useTranslation(['org'])
-  const navigate = useNavigate()
-  const generatedId = useId().replace(/[^a-zA-Z0-9_-]/g, '')
-  const chartId = useCallback(
-    (name) => `supply-history-${generatedId}-${name}`,
-    [generatedId]
-  )
   const gridRef = useRef(null)
-  const { data: currentUser, hasRoles } = useCurrentUser()
-  const isGovernment = hasRoles(roles.government)
-
-  // Use passed organizationId prop, fallback to current user's org for backward compatibility
-  const defaultOrganizationId =
-    propOrganizationId ?? currentUser?.organization?.organizationId
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState(
-    defaultOrganizationId
-  )
 
   const [paginationOptions, setPaginationOptions] = useState(() => ({
     ...defaultInitialPagination
@@ -494,8 +474,12 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   )
 
   useEffect(() => {
-    setSelectedOrganizationId(defaultOrganizationId)
-  }, [defaultOrganizationId])
+    setAvailableYears([])
+    setPaginationOptions((prev) => ({
+      ...prev,
+      page: 1
+    }))
+  }, [propOrganizationId])
 
   // Build filters based on selected years
   const yearFilter = useMemo(() => {
@@ -543,15 +527,16 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
 
   // Fetch fuel supply data
   const queryData = useOrganizationFuelSupply(
-    selectedOrganizationId,
+    propOrganizationId,
     paginationPayload,
     {
-      enabled: !!selectedOrganizationId
+      enabled: !!propOrganizationId
     }
   )
 
   const analytics = queryData?.data?.analytics || {}
   const selectedYearSummary = analytics.selectedYearSummary || {}
+  const fuelCategoryTrend = analytics.fuelCategoryTrend || []
 
   // Maintain a stable list of available years even after filtering
   useEffect(() => {
@@ -599,24 +584,6 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
       updateYearRange({ from, to })
     },
     [selectedYearRange.from, updateYearRange]
-  )
-
-  const handleOrganizationChange = useCallback(
-    ({ id }) => {
-      if (!id) {
-        return
-      }
-      setSelectedOrganizationId(id)
-      setAvailableYears([])
-      setPaginationOptions((prev) => ({
-        ...prev,
-        page: 1
-      }))
-      navigate(
-        ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(':orgID', String(id))
-      )
-    },
-    [navigate]
   )
 
   const handleGridPaginationChange = useCallback((newPagination) => {
@@ -885,9 +852,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   }, [analytics.fuelTypeVolumeTrend])
 
   const renewableSupplyVolumeChangeData = useMemo(() => {
-    const rows = normalizeFuelTypeVolumeTrendRows(
-      analytics.fuelTypeVolumeTrend || []
-    )
+    const rows = analytics.renewableLiquidFuelVolumeTrend || []
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()
@@ -897,9 +862,10 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     ]
     const totalsByYearAndGroup = rows.reduce((acc, row) => {
       const year = row.reportingYear
-      const group = row.fossilDerived
-        ? t('org:supplyHistory.analytics.nonRenewable')
-        : t('org:supplyHistory.analytics.renewable')
+      const group =
+        row.renewableCategory === 'Renewable'
+          ? t('org:supplyHistory.analytics.renewable')
+          : t('org:supplyHistory.analytics.nonRenewable')
       acc[year] ||= {}
       acc[year][group] = (acc[year][group] || 0) + (row.totalVolume || 0)
       return acc
@@ -919,7 +885,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
         })
       }))
     }
-  }, [analytics.fuelTypeVolumeTrend, t])
+  }, [analytics.renewableLiquidFuelVolumeTrend, t])
 
   const topFuelCodesChartData = useMemo(() => {
     const rows = analytics.topFuelCodes || []
@@ -929,19 +895,82 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     }
   }, [analytics.topFuelCodes])
 
+  const complianceUnitCreditDebitSummaryRows = useMemo(
+    () =>
+      getSeriesChartSummaryRows(
+        complianceUnitCreditDebitTrendData,
+        (series, index) =>
+          `${formatSignedAccessibleChartValue(series.data[index])} compliance units`
+      ),
+    [complianceUnitCreditDebitTrendData]
+  )
+  const fuelTypeVolumeTrendSummaryRows = useMemo(
+    () =>
+      getSeriesChartSummaryRows(fuelTypeVolumeTrendData, (series, index) => {
+        const year = fuelTypeVolumeTrendData.labels[index]
+        const comparison = fuelTypeYoyChangeData.lookup[series.name]?.[year]
+        let comparisonText = ''
+        if (comparison?.pct !== undefined) {
+          comparisonText = ` (${formatSignedPercent(comparison.pct)} ${t(
+            'org:supplyHistory.analytics.vsPreviousYear'
+          )})`
+        } else if (comparison?.previousVolume !== undefined) {
+          comparisonText = ` (${t(
+            'org:supplyHistory.analytics.previousYear'
+          )}: ${formatAccessibleChartValue(comparison.previousVolume)} L; percentage change unavailable from zero)`
+        }
+        return `${formatAccessibleChartValue(series.data[index])} L${comparisonText}`
+      }),
+    [fuelTypeVolumeTrendData, fuelTypeYoyChangeData, t]
+  )
+  const renewableSupplyVolumeChangeSummaryRows = useMemo(
+    () =>
+      getSeriesChartSummaryRows(
+        renewableSupplyVolumeChangeData,
+        (series, index) => {
+          const value = series.data[index]
+          return value == null
+            ? 'No previous year in range'
+            : `${formatSignedAccessibleChartValue(value)} L`
+        }
+      ),
+    [renewableSupplyVolumeChangeData]
+  )
+  const topFuelCodesSummaryRows = useMemo(
+    () =>
+      getSingleSeriesChartSummaryRows(
+        topFuelCodesChartData.labels,
+        topFuelCodesChartData.values,
+        `${t('org:supplyHistory.analytics.quantity')} (L)`
+      ),
+    [topFuelCodesChartData, t]
+  )
+
   const showComplianceUnitCreditDebitChart =
-    complianceUnitCreditDebitTrendData.labels.length > 1
-  const showFuelTypeVolumeTrendChart = fuelTypeVolumeTrendData.labels.length > 1
+    complianceUnitCreditDebitTrendData.labels.length > 1 &&
+    chartSeriesHasData(complianceUnitCreditDebitTrendData.series)
+  const showFuelTypeVolumeTrendChart =
+    fuelTypeVolumeTrendData.labels.length > 1 &&
+    chartSeriesHasData(fuelTypeVolumeTrendData.series)
   const showRenewableSupplyVolumeChangeChart =
-    renewableSupplyVolumeChangeData.labels.length > 1
-  const showTopFuelCodesChart = topFuelCodesChartData.labels.length > 1
+    renewableSupplyVolumeChangeData.labels.length > 1 &&
+    chartSeriesHasData(renewableSupplyVolumeChangeData.series)
+  const showTopFuelCodesChart =
+    topFuelCodesChartData.labels.length > 1 &&
+    chartValuesHaveData(topFuelCodesChartData.values)
+  const showFuelCategoryBreakdown = fuelCategoryTrend.some((row) =>
+    [row.totalEnergy, row.totalLitres, row.totalComplianceUnits].some(
+      hasNonZeroValue
+    )
+  )
 
   const hasDashboardContent =
     dashboardMetricCards.length > 0 ||
     showComplianceUnitCreditDebitChart ||
     showFuelTypeVolumeTrendChart ||
     showRenewableSupplyVolumeChangeChart ||
-    showTopFuelCodesChart
+    showTopFuelCodesChart ||
+    showFuelCategoryBreakdown
 
   const complianceUnitCreditDebitTrendOption = useMemo(
     () => ({
@@ -1000,13 +1029,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
             color: lineColor,
             width: 2
           },
-          label: {
-            show: true,
-            formatter: ({ value }) => formatCompactAxisNumber(value),
-            color: CHART_COLORS.neutralText,
-            overflow: 'truncate',
-            width: 56
-          }
+          label: chartValueLabel({ width: 56 })
         }
       })
     }),
@@ -1054,7 +1077,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
       color: CHART_PALETTE,
       grid: {
         ...CHART_GRID,
-        top: 20,
+        top: 40,
         bottom: 108
       },
       xAxis: {
@@ -1079,7 +1102,10 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
           formatter: (value) => formatCompactAxisNumber(value)
         }
       },
-      series: fuelTypeVolumeTrendData.series
+      series: fuelTypeVolumeTrendData.series.map((series) => ({
+        ...series,
+        label: chartValueLabel({ position: 'top' })
+      }))
     }),
     [fuelTypeVolumeTrendData, fuelTypeYoyChangeData, t]
   )
@@ -1090,7 +1116,10 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
         trigger: 'axis',
         appendToBody: true,
         axisPointer: { type: 'shadow' },
-        valueFormatter: (value) => `${formatCompactAxisNumber(value)} L`
+        valueFormatter: (value) =>
+          value == null
+            ? 'No previous year'
+            : `${formatCompactAxisNumber(value)} L`
       },
       legend: {
         bottom: 0,
@@ -1099,7 +1128,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
       },
       grid: {
         ...CHART_GRID,
-        top: 20,
+        top: 40,
         bottom: 96
       },
       xAxis: {
@@ -1126,6 +1155,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
       },
       series: renewableSupplyVolumeChangeData.series.map((series) => ({
         ...series,
+        label: chartValueLabel({ position: 'top' }),
         itemStyle: {
           color:
             series.name === t('org:supplyHistory.analytics.renewable')
@@ -1148,6 +1178,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
       grid: {
         ...CHART_GRID,
         top: 16,
+        right: 72,
         bottom: 48
       },
       xAxis: {
@@ -1175,9 +1206,10 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
       },
       series: [
         {
-          name: t('org:supplyHistory.analytics.quantity'),
+          name: `${t('org:supplyHistory.analytics.quantity')} (L)`,
           type: 'bar',
           data: topFuelCodesChartData.values,
+          label: chartValueLabel({ position: 'right' }),
           itemStyle: {
             color: CHART_COLORS.blue
           }
@@ -1187,136 +1219,11 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     [topFuelCodesChartData, t]
   )
 
-  const complianceUnitTableRows = complianceUnitCreditDebitTrendData.labels.map(
-    (year, yearIndex) => ({
-      key: year,
-      cells: [
-        year,
-        ...complianceUnitCreditDebitTrendData.series.map((series) =>
-          formatSignedChartNumber(series.data[yearIndex])
-        )
-      ]
-    })
-  )
-  const fuelTypeVolumeTableRows = fuelTypeVolumeTrendData.series.flatMap(
-    (series) =>
-      fuelTypeVolumeTrendData.labels.map((year, yearIndex) => {
-        const comparison = fuelTypeYoyChangeData.lookup[series.name]?.[year]
-        let comparisonText = '—'
-        if (comparison?.pct !== undefined) {
-          comparisonText = `${formatSignedPercent(comparison.pct)} ${t(
-            'org:supplyHistory.analytics.vsPreviousYear'
-          )}`
-        } else if (comparison?.previousVolume !== undefined) {
-          comparisonText = `${t(
-            'org:supplyHistory.analytics.previousYear'
-          )}: ${formatChartNumber(comparison.previousVolume)} L`
-        }
-
-        return {
-          key: `${year}-${series.name}`,
-          cells: [
-            year,
-            series.name,
-            formatChartNumber(series.data[yearIndex]),
-            comparisonText
-          ]
-        }
-      })
-  )
-  const topFuelCodeTableRows = topFuelCodesChartData.labels.map(
-    (fuelCode, index) => ({
-      key: fuelCode,
-      cells: [fuelCode, formatChartNumber(topFuelCodesChartData.values[index])]
-    })
-  )
-  const renewableVolumeChangeTableRows =
-    renewableSupplyVolumeChangeData.labels.map((year, yearIndex) => ({
-      key: year,
-      cells: [
-        year,
-        ...renewableSupplyVolumeChangeData.series.map((series) =>
-          formatSignedChartNumber(series.data[yearIndex])
-        )
-      ]
-    }))
-
-  const complianceUnitChartSummary = getChartAnnouncement(
-    t('org:supplyHistory.analytics.netCreditsDebitsYoy'),
-    'Line chart of positive and zero or negative compliance units by compliance year.',
-    complianceUnitCreditDebitTrendData.labels.map((year, yearIndex) => ({
-      label: year,
-      details: complianceUnitCreditDebitTrendData.series
-        .map(
-          (series) =>
-            `${series.name}: ${formatSignedChartNumber(series.data[yearIndex])} compliance units`
-        )
-        .join('; ')
-    })),
-    'years',
-    true
-  )
-
-  const topFuelCodeChartSummary = getChartAnnouncement(
-    t('org:supplyHistory.analytics.topFuelCodes'),
-    'Horizontal bar chart of fuel volume by fuel code, in litres.',
-    topFuelCodesChartData.labels.map((fuelCode, index) => ({
-      label: fuelCode,
-      details: `${formatChartNumber(topFuelCodesChartData.values[index])} litres`
-    })),
-    'fuel codes'
-  )
-
-  const fuelTypeVolumeChartSummary = getChartAnnouncement(
-    t('org:supplyHistory.analytics.fuelTypeVolumeTrend'),
-    'Line chart of supply volume by fuel type and compliance year, in litres.',
-    fuelTypeVolumeTrendData.series.map((series) => ({
-      label: series.name,
-      details: getYearSummaries(
-        fuelTypeVolumeTrendData.labels,
-        (year, yearIndex) => {
-          const comparison = fuelTypeYoyChangeData.lookup[series.name]?.[year]
-          let comparisonText = ''
-          if (comparison?.pct !== undefined) {
-            comparisonText = `, ${formatSignedPercent(comparison.pct)} ${t(
-              'org:supplyHistory.analytics.vsPreviousYear'
-            )}`
-          } else if (comparison?.previousVolume !== undefined) {
-            comparisonText = `, ${t(
-              'org:supplyHistory.analytics.previousYear'
-            )}: ${formatChartNumber(comparison.previousVolume)} L; percentage change unavailable from zero`
-          }
-
-          return `${year}: ${formatChartNumber(series.data[yearIndex])} L${comparisonText}`
-        }
-      )
-    })),
-    'fuel types'
-  )
-
-  const renewableVolumeChangeChartSummary = getChartAnnouncement(
-    t('org:supplyHistory.analytics.renewableSupplyVolumeChange'),
-    'Grouped bar chart of year-over-year renewable and non-renewable volume change, in litres.',
-    renewableSupplyVolumeChangeData.series.map((series) => ({
-      label: series.name,
-      details: getYearSummaries(
-        renewableSupplyVolumeChangeData.labels,
-        (year, yearIndex) => {
-          const value = series.data[yearIndex]
-          return value == null
-            ? `${year}: unavailable because there is no previous year in range`
-            : `${year}: ${formatSignedChartNumber(value)} L`
-        }
-      )
-    })),
-    'series'
-  )
-
   return (
     <BCBox py={0}>
       {/* Filters */}
       <Grid container spacing={2} alignItems="flex-end" sx={{ mb: 3 }}>
-        <Grid item xs={12} lg={6}>
+        <Grid item xs={12}>
           <Stack
             direction="row"
             spacing={1.5}
@@ -1369,27 +1276,6 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
             />
           </Stack>
         </Grid>
-        {isGovernment && (
-          <Grid
-            item
-            xs={12}
-            lg={6}
-            sx={{
-              display: 'flex',
-              justifyContent: { xs: 'flex-start', lg: 'flex-end' }
-            }}
-          >
-            <OrganizationList
-              selectedOrg={{ id: selectedOrganizationId }}
-              onOrgChange={handleOrganizationChange}
-              onlyRegistered={false}
-              includeAllOption={false}
-              label={t('org:supplyHistory.showOrganization')}
-              placeholder={t('org:supplyHistory.selectOrganization')}
-              showSelectedLabel={false}
-            />
-          </Grid>
-        )}
       </Grid>
 
       {hasDashboardContent && (
@@ -1414,13 +1300,13 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
           <AccordionDetails sx={{ minWidth: 0, overflow: 'hidden' }}>
             {dashboardMetricCards.length > 0 && (
               <Grid container spacing={2} sx={{ mb: 3 }}>
-                {dashboardMetricCards.map((card) => (
+                {dashboardMetricCards.map(({ key, ...card }) => (
                   <Grid
                     item
                     xs={12}
                     sm={6}
                     lg={3}
-                    key={card.key}
+                    key={key}
                     sx={{ minWidth: 0 }}
                   >
                     <SupplyMetricCard {...card} />
@@ -1430,25 +1316,24 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
             )}
 
             <Grid container spacing={3} sx={{ minWidth: 0 }}>
+              {showFuelCategoryBreakdown && (
+                <Grid item xs={12} sx={{ minWidth: 0 }}>
+                  <FuelCategoryBreakdown rows={fuelCategoryTrend} />
+                </Grid>
+              )}
+
               {showComplianceUnitCreditDebitChart && (
                 <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
                   <ChartPanel
-                    id={chartId('compliance-unit-trend')}
                     title={t('org:supplyHistory.analytics.netCreditsDebitsYoy')}
                     option={complianceUnitCreditDebitTrendOption}
-                    summary={complianceUnitChartSummary}
-                    tableHeaders={[
-                      t('org:supplyHistory.analytics.complianceYear'),
-                      ...complianceUnitCreditDebitTrendData.series.map(
-                        (series) =>
-                          `${series.name} (${t(
-                            'org:supplyHistory.analytics.complianceUnits'
-                          )})`
-                      )
-                    ]}
-                    tableRows={complianceUnitTableRows}
-                    rowHeaderIndexes={[0]}
+                    chartType="Line chart of positive and zero or negative compliance units by compliance year"
+                    summaryOptions={{
+                      rowType: 'years',
+                      preferLatestRows: true
+                    }}
                     height={320}
+                    summaryRows={complianceUnitCreditDebitSummaryRows}
                   />
                 </Grid>
               )}
@@ -1456,17 +1341,12 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
               {showTopFuelCodesChart && (
                 <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
                   <ChartPanel
-                    id={chartId('top-fuel-codes')}
                     title={t('org:supplyHistory.analytics.topFuelCodes')}
                     option={topFuelCodesChartOption}
-                    summary={topFuelCodeChartSummary}
-                    tableHeaders={[
-                      t('org:supplyHistory.columns.fuelCode'),
-                      `${t('org:supplyHistory.analytics.quantity')} (L)`
-                    ]}
-                    tableRows={topFuelCodeTableRows}
-                    rowHeaderIndexes={[0]}
+                    chartType="Horizontal bar chart of fuel volume by fuel code, in litres"
+                    summaryOptions={{ rowType: 'fuel codes' }}
                     height={360}
+                    summaryRows={topFuelCodesSummaryRows}
                   />
                 </Grid>
               )}
@@ -1474,22 +1354,18 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
               {showFuelTypeVolumeTrendChart && (
                 <Grid item xs={12} sx={{ minWidth: 0 }}>
                   <ChartPanel
-                    id={chartId('fuel-type-volume-trend')}
                     title={t('org:supplyHistory.analytics.fuelTypeVolumeTrend')}
                     subtitle={t(
                       'org:supplyHistory.analytics.fuelTypeVolumeTrendHelp'
                     )}
                     option={fuelTypeVolumeTrendOption}
-                    summary={fuelTypeVolumeChartSummary}
-                    tableHeaders={[
-                      t('org:supplyHistory.analytics.complianceYear'),
-                      t('org:supplyHistory.columns.fuelType'),
-                      `${t('org:supplyHistory.analytics.quantity')} (L)`,
-                      t('org:supplyHistory.analytics.yoyChange')
-                    ]}
-                    tableRows={fuelTypeVolumeTableRows}
-                    rowHeaderIndexes={[1]}
+                    chartType="Line chart of supply volume by fuel type and compliance year, in litres"
+                    summaryOptions={{
+                      rowType: 'years',
+                      preferLatestRows: true
+                    }}
                     height={380}
+                    summaryRows={fuelTypeVolumeTrendSummaryRows}
                   />
                 </Grid>
               )}
@@ -1497,26 +1373,20 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
               {showRenewableSupplyVolumeChangeChart && (
                 <Grid item xs={12} sx={{ minWidth: 0 }}>
                   <ChartPanel
-                    id={chartId('renewable-volume-change')}
                     title={t(
                       'org:supplyHistory.analytics.renewableSupplyVolumeChange'
                     )}
+                    description={t(
+                      'org:supplyHistory.analytics.renewableSupplyVolumeChangeHelp'
+                    )}
                     option={renewableSupplyVolumeChangeOption}
-                    summary={renewableVolumeChangeChartSummary}
-                    tableHeaders={[
-                      t('org:supplyHistory.analytics.complianceYear'),
-                      ...renewableSupplyVolumeChangeData.series.map(
-                        (series) =>
-                          `${series.name} ${t(
-                            'org:supplyHistory.analytics.volumeChange'
-                          )} (${t(
-                            'org:supplyHistory.analytics.vsPreviousYear'
-                          )}) (L)`
-                      )
-                    ]}
-                    tableRows={renewableVolumeChangeTableRows}
-                    rowHeaderIndexes={[0]}
+                    chartType="Grouped bar chart of year-over-year renewable and non-renewable volume change, in litres"
+                    summaryOptions={{
+                      rowType: 'years',
+                      preferLatestRows: true
+                    }}
                     height={360}
+                    summaryRows={renewableSupplyVolumeChangeSummaryRows}
                   />
                 </Grid>
               )}

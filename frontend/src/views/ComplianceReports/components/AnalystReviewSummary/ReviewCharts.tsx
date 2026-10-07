@@ -51,6 +51,8 @@ interface FuelCodeSunburstFilters {
 type HistoricalChartMode = 'trend' | 'horizontal-bars' | 'grouped-bars'
 
 const ALL_FILTER_VALUE = 'all'
+const RENEWABLE_LIQUID_FUEL_VOLUME_HELP =
+  'Includes liquid gasoline, diesel, and jet fuel supply only. Renewable gasoline includes renewable gasoline, ethanol, renewable naphtha, and other applicable renewable gasoline fuels. Renewable diesel includes biodiesel, HDRD, other diesel fuel, and other applicable renewable diesel fuels. Renewable jet fuel includes alternative jet fuel and other applicable renewable jet fuels. Non-renewable includes liquid gasoline, diesel, and jet fuel types that are not marked renewable.'
 
 const chartGrid = { ...BC_CHART_GRID, bottom: 44 }
 const chartAxisLabel = BC_CHART_AXIS_LABEL
@@ -126,7 +128,7 @@ const getComplianceUnitsChartAriaLabel = () => {
 const getComplianceUnitsChartAriaDescription = (
   group: ComplianceUnitChartGroup
 ) => {
-  return `Stacked bar chart of compliance units by fuel category and type, split by schedule. ${getAccessibleRowsSummary(getComplianceUnitAccessibleRows(group))}`
+  return `${getComplianceUnitsChartAriaLabel()} Stacked bar chart by fuel category and type, split by schedule. ${getAccessibleRowsSummary(getComplianceUnitAccessibleRows(group))}`
 }
 
 const AccessibleChartSummary = ({
@@ -1178,6 +1180,7 @@ interface ReviewChartsProps {
 
 export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
   const historical = chartData?.historicalVariance || []
+  const renewableLiquidFuelVolume = chartData?.renewableLiquidFuelVolume || []
   const supplemental = chartData?.supplementalImpact || []
   const complianceUnits = chartData?.complianceUnitsByFuel || []
   const groupedHistorical = groupHistoricalSeries(
@@ -1190,6 +1193,7 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
 
   if (
     !groupedHistorical.length &&
+    !renewableLiquidFuelVolume.length &&
     !supplementalSeries.length &&
     !complianceUnits.length
   ) {
@@ -1211,6 +1215,38 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
         {complianceUnits.length > 0 && (
           <ComplianceUnitsChartCard group={complianceUnitGroup} />
         )}
+        {renewableLiquidFuelVolume.map((item) => (
+          <BCBox
+            key={`${item.title}-${item.comparisonLabel}-${item.currentLabel}`}
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              borderRadius: '4px',
+              p: 1,
+              minWidth: 0,
+              overflow: 'hidden'
+            }}
+          >
+            <BCTypography variant="body2" sx={{ mb: 0.5 }}>
+              {item.title}
+            </BCTypography>
+            <BCTypography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {RENEWABLE_LIQUID_FUEL_VOLUME_HELP}
+            </BCTypography>
+            <AccessibleChartSummary
+              id={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}-${item.currentLabel}-${item.comparisonLabel}`}
+              title={item.title}
+              ariaLabel={getSupplementalChartAriaLabel(item)}
+              rows={getSupplementalAccessibleRows(item)}
+            />
+            <BCResponsiveEChart
+              option={buildSupplementalImpactChartOptions(item)}
+              height={280}
+              ariaLabel={getSupplementalChartAriaLabel(item)}
+              ariaDescription={getSupplementalChartAriaDescription(item)}
+              ariaDescribedBy={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}-${item.currentLabel}-${item.comparisonLabel}`}
+            />
+          </BCBox>
+        ))}
         {groupedHistorical.map((item) =>
           isFuelCodeSunburstGroup(item) ? (
             <FuelCodeSunburstChartCard key={item.title} group={item} />

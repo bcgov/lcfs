@@ -10,7 +10,7 @@ import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { analystReviewAssistantName, robotVariants } from './constants'
 import { ReviewCharts } from './ReviewCharts'
 import { ReviewSections } from './ReviewSections'
@@ -38,10 +38,12 @@ export const AnalystReviewSummary = ({
     enabled: !!complianceReportId
   })
   const data = rawData as ReviewSummaryData | undefined
+  const accordionId = useId()
   const robot = useMemo(() => {
     const numericId = Number(complianceReportId) || 0
     return robotVariants[numericId % robotVariants.length]
   }, [complianceReportId])
+  const [accordionExpanded, setAccordionExpanded] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const [addressedFindingIds, setAddressedFindingIds] = useState<Set<string>>(
     new Set()
@@ -141,10 +143,20 @@ export const AnalystReviewSummary = ({
   const addressedCount = actionableFindingIds.filter((findingId) =>
     addressedFindingIds.has(findingId)
   ).length
+  const summaryLabelledBy = [
+    `${accordionId}-title`,
+    `${accordionId}-draft-status`,
+    `${accordionId}-concern-count`,
+    `${accordionId}-review-count`,
+    `${accordionId}-info-count`,
+    ...(actionableCount > 0 ? [`${accordionId}-addressed-count`] : [])
+  ].join(' ')
 
   return (
     <Accordion
       data-test="analyst-review-summary"
+      expanded={accordionExpanded}
+      onChange={(_, expanded) => setAccordionExpanded(expanded)}
       disableGutters
       elevation={0}
       sx={{
@@ -157,7 +169,15 @@ export const AnalystReviewSummary = ({
       }}
     >
       <AccordionSummary
-        expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
+        id={`${accordionId}-header`}
+        aria-controls={`${accordionId}-panel`}
+        aria-labelledby={summaryLabelledBy}
+        expandIcon={
+          <ExpandMoreIcon
+            aria-hidden="true"
+            sx={{ width: '2rem', height: '2rem' }}
+          />
+        }
         sx={{
           alignItems: 'flex-start',
           '& .MuiAccordionSummary-content': {
@@ -188,10 +208,15 @@ export const AnalystReviewSummary = ({
                   alignItems="center"
                   sx={{ minWidth: 0, flexWrap: 'wrap' }}
                 >
-                  <BCTypography variant="h6" color="primary">
+                  <BCTypography
+                    id={`${accordionId}-title`}
+                    variant="h6"
+                    color="primary"
+                  >
                     {analystReviewAssistantName} pre-screen
                   </BCTypography>
                   <Chip
+                    id={`${accordionId}-draft-status`}
                     size="small"
                     icon={<AutoAwesomeIcon />}
                     label={'Draft ready'}
@@ -213,22 +238,26 @@ export const AnalystReviewSummary = ({
             sx={{ minWidth: 0 }}
           >
             <Chip
+              id={`${accordionId}-concern-count`}
               size="small"
               color="error"
               label={`${counts.concern || 0} concerns`}
             />
             <Chip
+              id={`${accordionId}-review-count`}
               size="small"
               color="warning"
               label={`${counts.review || 0} review`}
             />
             <Chip
+              id={`${accordionId}-info-count`}
               size="small"
               color="info"
               label={`${counts.informational || 0} info`}
             />
             {actionableCount > 0 && (
               <Chip
+                id={`${accordionId}-addressed-count`}
                 size="small"
                 color={
                   addressedCount === actionableCount ? 'success' : 'default'

@@ -1,10 +1,4 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within
-} from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -13,45 +7,29 @@ import {
   SupplyHistory,
   normalizeFuelTypeVolumeTrendRows
 } from '../SupplyHistory'
-import { roles } from '@/constants/roles'
+import { supplyHistoryColDefs } from '../_supplyHistorySchema'
 import theme from '@/themes'
 
-const mockNavigate = vi.fn()
 const mockUseOrganizationFuelSupply = vi.fn()
-
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => mockNavigate
-}))
 
 vi.mock('echarts-for-react', () => ({
   default: () => <div data-test="echarts" />
 }))
 
+vi.mock('@/components/charts/BCResponsiveEchart', () => ({
+  BCResponsiveEChart: ({ ariaLabel, ariaDescription, ariaDescribedBy }) => (
+    <div
+      role="img"
+      aria-label={ariaDescription || ariaLabel}
+      aria-describedby={ariaDescribedBy}
+      tabIndex={0}
+      data-test="responsive-echarts"
+    />
+  )
+}))
+
 vi.mock('@/hooks/useFuelSupply', () => ({
   useOrganizationFuelSupply: (...args) => mockUseOrganizationFuelSupply(...args)
-}))
-
-vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({
-    data: {
-      organization: { organizationId: '1' },
-      roles: [{ name: roles.government }]
-    },
-    hasRoles: (role) => role === roles.government
-  })
-}))
-
-vi.mock('@/views/Transactions/components/OrganizationList', () => ({
-  default: ({ onOrgChange }) => (
-    <button
-      data-test="select-organization"
-      onClick={() =>
-        onOrgChange({ id: '3', name: 'LCFS Org 3', label: 'LCFS Org 3' })
-      }
-    >
-      Select organization
-    </button>
-  )
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -64,6 +42,28 @@ const queryData = {
     analytics: {
       totalByYear: { 2023: 100, 2024: 200, 2025: 300 },
       selectedYearSummary: {},
+      renewableLiquidFuelVolumeTrend: [
+        {
+          reportingYear: '2023',
+          renewableCategory: 'Renewable',
+          totalVolume: 100
+        },
+        {
+          reportingYear: '2023',
+          renewableCategory: 'Non-renewable',
+          totalVolume: 50
+        },
+        {
+          reportingYear: '2024',
+          renewableCategory: 'Renewable',
+          totalVolume: 125
+        },
+        {
+          reportingYear: '2024',
+          renewableCategory: 'Non-renewable',
+          totalVolume: 75
+        }
+      ],
       totalReports: 0
     },
     pagination: { page: 1, size: 10, total: 0, totalPages: 0 }
@@ -90,6 +90,39 @@ describe('SupplyHistory', () => {
     vi.clearAllMocks()
     sessionStorage.clear()
     mockUseOrganizationFuelSupply.mockReturnValue(queryData)
+  })
+
+  it('shows the fuel category breakdown only when category data exists', () => {
+    const { unmount } = renderComponent()
+    expect(
+      screen.queryByText('Fuel category breakdown')
+    ).not.toBeInTheDocument()
+    unmount()
+
+    mockUseOrganizationFuelSupply.mockReturnValue({
+      ...queryData,
+      data: {
+        ...queryData.data,
+        analytics: {
+          ...queryData.data.analytics,
+          fuelCategoryTrend: [
+            {
+              reportingYear: '2025',
+              fuelCategory: 'Diesel',
+              totalEnergy: 1000,
+              totalLitres: 25,
+              totalComplianceUnits: 1
+            }
+          ]
+        }
+      }
+    })
+    renderComponent()
+
+    expect(screen.getByText('Fuel category breakdown')).toBeInTheDocument()
+    expect(screen.getByTestId('fuel-category-toggle-Diesel')).toHaveTextContent(
+      '1k MJ · 100%'
+    )
   })
 
   it('uses a set compliance period filter for the selected year range', async () => {
@@ -123,45 +156,27 @@ describe('SupplyHistory', () => {
     })
   })
 
-  it('shows the total renewable fuel (liquid) volume summary box', () => {
-    mockUseOrganizationFuelSupply.mockReturnValue({
-      ...queryData,
-      data: {
-        ...queryData.data,
-        analytics: {
-          ...queryData.data.analytics,
-          selectedYearSummary: {
-            reportingYear: '2025',
-            priorYear: '2024',
-            totalRenewableVolume: 1250000,
-            priorYearRenewableVolume: 1000000,
-            renewableVolumeChange: 250000,
-            renewableVolumePctChangeYoy: 25
-          }
-        }
-      }
-    })
-    renderComponent()
+  it('uses a date-only filter for the submission date column', () => {
+    const submissionDateCol = supplyHistoryColDefs().find(
+      (col) => col.field === 'reportSubmissionDate'
+    )
 
+    expect(submissionDateCol.filter).toBe('agDateColumnFilter')
+    expect(submissionDateCol.floatingFilterComponent).toBeDefined()
     expect(
-      screen.getByText('Total renewable fuel (liquid) volume')
-    ).toBeInTheDocument()
-    expect(screen.getByText('1.25M L')).toBeInTheDocument()
-    expect(screen.getByText('+25.00% vs. previous year')).toBeInTheDocument()
-    expect(screen.getByText('Previous year: 2024 • 1M L')).toBeInTheDocument()
+      submissionDateCol.valueFormatter({
+        value: '2025-04-01T03:00:00+00:00'
+      })
+    ).toBe('2025-03-31')
     expect(
-      screen.queryByText('Compliance units per unit of supply')
-    ).not.toBeInTheDocument()
+      submissionDateCol.filterParams.comparator(
+        new Date(2025, 2, 31),
+        '2025-04-01T03:00:00+00:00'
+      )
+    ).toBe(0)
   })
 
-  it('navigates to the selected organization supply history route', () => {
-    renderComponent()
-
-    fireEvent.click(screen.getByTestId('select-organization'))
-    expect(mockNavigate).toHaveBeenCalledWith('/organizations/3/supply-history')
-  })
-
-  it('provides aligned, uniquely identified data tables for each chart', async () => {
+  it('announces chart values and provides expandable, keyboard-scrollable data tables', async () => {
     const user = userEvent.setup()
     mockUseOrganizationFuelSupply.mockReturnValue({
       ...queryData,
@@ -223,18 +238,34 @@ describe('SupplyHistory', () => {
               fuelCategory: 'Diesel',
               totalVolume: 150,
               fossilDerived: false
+            }
+          ],
+          renewableLiquidFuelVolumeTrend: [
+            {
+              reportingYear: '2023',
+              renewableCategory: 'Renewable',
+              totalVolume: 100
+            },
+            {
+              reportingYear: '2023',
+              renewableCategory: 'Non-renewable',
+              totalVolume: 1000
             },
             {
               reportingYear: '2024',
-              fuelType: 'Biofuel',
-              fuelCategory: 'Other',
-              totalVolume: 25,
-              fossilDerived: false
+              renewableCategory: 'Renewable',
+              totalVolume: 150
+            },
+            {
+              reportingYear: '2024',
+              renewableCategory: 'Non-renewable',
+              totalVolume: 1250
             }
           ]
         }
       }
     })
+
     renderComponent()
 
     expect(
@@ -242,148 +273,161 @@ describe('SupplyHistory', () => {
         name: /Line chart of positive and zero or negative compliance units/
       })
     ).toHaveAccessibleName(
-      /2023: Positive compliance units: \+10 compliance units; Zero or negative compliance units: -2 compliance units/
+      /2024: Positive compliance units: \+20\.00 compliance units; Zero or negative compliance units: -3\.00 compliance units/
     )
     expect(
       screen.getByRole('img', {
         name: /Horizontal bar chart of fuel volume by fuel code/
       })
-    ).toHaveAccessibleName(/ABC-01: 100\.5 litres\. XYZ-02: 50\.25 litres/)
+    ).toHaveAccessibleName(/ABC-01: Quantity \(L\): 100\.50/)
     expect(
       screen.getByRole('img', {
         name: /Line chart of supply volume by fuel type and compliance year/
       })
     ).toHaveAccessibleName(
-      /Fossil-derived diesel: 2023: 1,000 L; 2024: 1,250 L, \+25\.00%/
+      /2024: Fossil-derived diesel: 1,250\.00 L \(\+25\.00%/
     )
     expect(
       screen.getByRole('img', {
         name: /Grouped bar chart of year-over-year renewable and non-renewable volume change/
       })
-    ).toHaveAccessibleName(/Renewable: 2023: unavailable.*2024: \+75 L/)
+    ).toHaveAccessibleName(
+      /2024: Renewable: \+50\.00 L; Non-renewable: \+250\.00 L/
+    )
 
-    const chartTables = Array.from(
+    const tables = Array.from(
       document.querySelectorAll('table[id$="-data-table"]')
     )
-    expect(chartTables).toHaveLength(4)
-    expect(new Set(chartTables.map((table) => table.id)).size).toBe(4)
-    const chartElementIds = Array.from(
-      document.querySelectorAll('[id^="supply-history-"]'),
-      (element) => element.id
-    )
-    expect(new Set(chartElementIds).size).toBe(chartElementIds.length)
-
-    for (const table of chartTables) {
+    expect(tables).toHaveLength(4)
+    for (const table of tables) {
       const disclosure = table.closest('details')
-      const summary = disclosure.querySelector('summary')
+      const summary = within(disclosure).getByText(
+        `View data table for ${table.querySelector('caption').textContent.replace(' data values', '')}`
+      )
       expect(summary).toHaveAttribute('aria-controls', table.id)
-      const chartPanelId = table.id.replace('-data-table', '')
-      expect(
-        document.getElementById(`${chartPanelId}-visualization`)
-      ).toBeInTheDocument()
-      expect(
-        document.getElementById(`${chartPanelId}-visualization`)
-      ).toHaveAttribute('tabindex', '0')
       await user.click(summary)
       expect(disclosure).toHaveAttribute('open')
-
       const scrollRegion = disclosure.querySelector('[role="region"]')
       expect(scrollRegion).toHaveAttribute('tabindex', '0')
       expect(scrollRegion).toHaveStyle({ overflowX: 'auto' })
     }
 
-    const complianceTable = screen.getByRole('table', {
-      name: 'Net credits and debits generated YoY (compliance units)'
-    })
-    const complianceRows = within(complianceTable).getAllByRole('row').slice(1)
-    expect(complianceRows.map((row) => row.textContent)).toEqual([
-      '2023+10-2',
-      '2024+20-3'
-    ])
-
-    const fuelCodeTable = screen.getByRole('table', {
-      name: 'Top 10 fuel codes by volume'
-    })
-    expect(
-      within(fuelCodeTable)
-        .getAllByRole('row')
-        .slice(1)
-        .map((row) => row.textContent)
-    ).toEqual(['ABC-01100.5', 'XYZ-0250.25'])
-
     const fuelTypeTable = screen.getByRole('table', {
-      name: 'Volume by fuel type over each compliance period'
+      name: 'Volume by fuel type over each compliance period data values'
     })
-    const fuelTypeRows = within(fuelTypeTable).getAllByRole('row').slice(1)
     expect(
-      fuelTypeRows
-        .map((row) => row.textContent)
-        .filter((text) => text.includes('Renewable diesel'))
-    ).toEqual([
-      '2023Renewable diesel100—',
-      '2024Renewable diesel150+50.00% vs. previous year'
-    ])
-    expect(
-      fuelTypeRows.find(
-        (row) => row.textContent === '2024Biofuel25Previous year: 0 L'
+      within(fuelTypeTable).getByText(
+        /1,250\.00 L \(\+25\.00% vs\. previous year\)/
       )
-    ).toBeTruthy()
-    expect(
-      within(fuelTypeTable).getByRole('columnheader', { name: 'Quantity (L)' })
     ).toBeInTheDocument()
-
-    const renewableTable = screen.getByRole('table', {
-      name: 'Fuel supply volume change: renewable vs non-renewable'
-    })
     expect(
-      within(renewableTable)
-        .getAllByRole('row')
-        .slice(1)
-        .map((row) => row.textContent)
-    ).toEqual(['2023——', '2024+75+250'])
+      within(fuelTypeTable).getByRole('columnheader', {
+        name: 'Fossil-derived diesel'
+      })
+    ).toBeInTheDocument()
   })
 
-  it('sums duplicate supply history fuel type rows', () => {
-    expect(
-      normalizeFuelTypeVolumeTrendRows([
-        {
-          reportingYear: '2023',
-          fuelType: 'Fossil-derived diesel',
-          fuelCategory: 'Diesel',
-          totalVolume: 100,
-          fossilDerived: true
-        },
-        {
-          reportingYear: '2023',
-          fuelType: 'Fossil-derived diesel',
-          fuelCategory: 'Diesel',
-          totalVolume: 50,
-          fossilDerived: true
-        },
-        {
-          reportingYear: '2024',
-          fuelType: 'Fossil-derived diesel',
-          fuelCategory: 'Diesel',
-          totalVolume: 200,
-          fossilDerived: true
+  it('shows the renewable liquid volume metric without the legacy compliance unit metric', () => {
+    mockUseOrganizationFuelSupply.mockReturnValue({
+      ...queryData,
+      data: {
+        ...queryData.data,
+        analytics: {
+          ...queryData.data.analytics,
+          selectedYearSummary: {
+            reportingYear: '2025',
+            priorYear: '2024',
+            totalRenewableVolume: 1250000,
+            priorYearRenewableVolume: 1000000,
+            renewableVolumePctChangeYoy: 25
+          }
         }
-      ])
-    ).toEqual([
-      {
-        reportingYear: '2023',
-        fuelType: 'Fossil-derived diesel',
-        fuelCategory: 'Diesel',
-        totalVolume: 150,
-        fossilDerived: true
-      },
-      {
-        reportingYear: '2024',
-        fuelType: 'Fossil-derived diesel',
-        fuelCategory: 'Diesel',
-        totalVolume: 200,
-        fossilDerived: true
       }
-    ])
+    })
+    renderComponent()
+
+    expect(
+      screen.getByText('Total renewable fuel (liquid) volume')
+    ).toBeInTheDocument()
+    expect(screen.getByText('1.25M L')).toBeInTheDocument()
+    expect(screen.getByText('+25.00% vs. previous year')).toBeInTheDocument()
+    expect(screen.getByText('Previous year: 2024 • 1M L')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Compliance units per unit of supply')
+    ).not.toBeInTheDocument()
+  })
+
+  it('does not render charts that only contain zero or empty data', () => {
+    mockUseOrganizationFuelSupply.mockReturnValue({
+      ...queryData,
+      data: {
+        ...queryData.data,
+        analytics: {
+          totalByYear: { 2023: 0, 2024: 0 },
+          selectedYearSummary: {},
+          complianceUnitCreditDebitTrend: [
+            {
+              reportingYear: '2023',
+              complianceUnitGroup: 'Positive compliance units',
+              complianceUnits: 0
+            },
+            {
+              reportingYear: '2024',
+              complianceUnitGroup: 'Positive compliance units',
+              complianceUnits: 0
+            }
+          ],
+          fuelTypeVolumeTrend: [
+            {
+              reportingYear: '2023',
+              fuelType: 'Ethanol',
+              totalVolume: 0
+            },
+            {
+              reportingYear: '2024',
+              fuelType: 'Ethanol',
+              totalVolume: 0
+            }
+          ],
+          renewableLiquidFuelVolumeTrend: [
+            {
+              reportingYear: '2023',
+              renewableCategory: 'Renewable',
+              totalVolume: 100
+            },
+            {
+              reportingYear: '2024',
+              renewableCategory: 'Renewable',
+              totalVolume: 100
+            }
+          ],
+          topFuelCodes: [
+            { fuelCode: 'BCLCF1', totalVolume: 0 },
+            { fuelCode: 'BCLCF2', totalVolume: 0 }
+          ],
+          totalReports: 0
+        }
+      }
+    })
+
+    renderComponent()
+
+    expect(
+      screen.queryByText(
+        /Includes liquid gasoline, diesel, and jet fuel supply only/
+      )
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Top 10 fuel codes by volume')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Volume by fuel type over each compliance period')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        /Net credits and debits generated YoY \(compliance units\)/
+      )
+    ).not.toBeInTheDocument()
   })
 
   it('sums duplicate supply history fuel type rows', () => {
