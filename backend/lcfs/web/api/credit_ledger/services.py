@@ -1,6 +1,6 @@
 import io
 from collections import defaultdict
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, time
 from math import ceil
 from typing import Optional, List
 
@@ -8,7 +8,7 @@ from fastapi import Depends
 from fastapi.responses import StreamingResponse
 
 from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
-from lcfs.utils.dates import to_pacific_date
+from lcfs.utils.dates import PACIFIC_TZ, to_pacific_date
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.base import (
@@ -76,6 +76,15 @@ def _signed_units_for_org(row, organization_id: int) -> int:
     return int(row.quantity or 0)
 
 
+def _effective_value(row):
+    return (
+        row.transaction_effective_date
+        or row.recorded_date
+        or row.approved_date
+        or row.create_date
+    )
+
+
 def _effective_date(row) -> Optional[date]:
     """
     The Pacific calendar date a ledger row lands on.
@@ -85,11 +94,29 @@ def _effective_date(row) -> Optional[date]:
     transactions) fall back to when they were created, a timestamptz that is
     converted to its Pacific date the same way repo._EFFECTIVE_DATE_SQL does.
     """
-    return to_pacific_date(
-        row.transaction_effective_date
-        or row.recorded_date
-        or row.approved_date
-        or row.create_date
+    return to_pacific_date(_effective_value(row))
+
+
+def _chronological_key(row) -> tuple:
+    """
+    Order for the running balance: the Pacific date, then the Pacific time of
+    day for rows dated by a timestamp. Two rows that fall back to create_date
+    on the same day (say a pending transfer and a compliance report) keep the
+    order they happened in. Their IDs can't decide that, since each type has
+    its own sequence. Rows with only a date sort at the start of their day,
+    and the ID and type make any remaining tie deterministic.
+    """
+    value = _effective_value(row)
+    time_of_day = time.min
+    if isinstance(value, datetime):
+        if value.tzinfo is not None:
+            value = value.astimezone(PACIFIC_TZ)
+        time_of_day = value.time()
+    return (
+        to_pacific_date(value) or date.min,
+        time_of_day,
+        row.transaction_id,
+        row.transaction_type,
     )
 
 
@@ -247,15 +274,9 @@ class CreditLedgerService:
             if completed or (include_pending and pending):
                 selected.append((ledger_view, version, not completed and pending))
 
-        # 2. Sort chronologically (ascending effective date) so the running
-        #    balance accumulates from the start of the period. A stable
-        #    transaction_id tiebreaker keeps same-day rows deterministic.
-        selected.sort(
-            key=lambda t: (
-                _effective_date(t[0]) or date.min,
-                t[0].transaction_id,
-            )
-        )
+        # 2. Sort chronologically so the running balance accumulates from the
+        #    start of the period.
+        selected.sort(key=lambda t: _chronological_key(t[0]))
 
         # 3. Build transaction rows with signed units + running balance.
         transactions: List[PeriodLedgerTxnSchema] = []
