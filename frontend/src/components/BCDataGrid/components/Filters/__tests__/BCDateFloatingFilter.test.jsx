@@ -23,7 +23,7 @@ vi.mock('date-fns', () => ({
 
 // Mock @mui/material components
 vi.mock('@mui/material/FormControl', () => ({
-    default: vi.fn(({ children, fullWidth, size, role, sx, ...props }) => (
+  default: vi.fn(({ children, fullWidth, size, role, sx, ...props }) => (
     <div data-test="form-control" {...props}>
       {children}
     </div>
@@ -31,20 +31,22 @@ vi.mock('@mui/material/FormControl', () => ({
 }))
 
 vi.mock('@mui/material/IconButton', () => ({
-    default: vi.fn(({ children, onClick, onMouseDown, sx, size, edge, ...props }) => (
-    <button
-      data-test="icon-button"
-      onClick={onClick}
-      onMouseDown={onMouseDown}
-      {...props}
-    >
-      {children}
-    </button>
-  ))
+  default: vi.fn(
+    ({ children, onClick, onMouseDown, sx, size, edge, ...props }) => (
+      <button
+        data-test="icon-button"
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        {...props}
+      >
+        {children}
+      </button>
+    )
+  )
 }))
 
 vi.mock('@mui/material/InputAdornment', () => ({
-    default: vi.fn(({ children, position, ...props }) => (
+  default: vi.fn(({ children, position, ...props }) => (
     <div data-test={`input-adornment-${position}`} {...props}>
       {children}
     </div>
@@ -53,25 +55,43 @@ vi.mock('@mui/material/InputAdornment', () => ({
 
 // Mock @mui/icons-material
 vi.mock('@mui/icons-material/Clear', () => ({
-    default: vi.fn(() => <span data-test="clear-icon">Clear</span>)
+  default: vi.fn(() => <span data-test="clear-icon">Clear</span>)
 }))
 
 vi.mock('@mui/icons-material/CalendarToday', () => ({
-    default: vi.fn(() => <span data-test="calendar-icon">Calendar</span>)
+  default: vi.fn(() => <span data-test="calendar-icon">Calendar</span>)
 }))
 
 // Mock @mui/x-date-pickers
 const mockDatePickerProps = {}
 vi.mock('@mui/x-date-pickers/DatePicker', () => ({
-    DatePicker: vi.fn((props) => {
+  DatePicker: vi.fn((props) => {
     Object.assign(mockDatePickerProps, props)
-    const { value, onChange, onOpen, onClose, open, slotProps, minDate, maxDate, disabled, format, sx, id, ...domProps } = props
-    
+    const {
+      value,
+      onChange,
+      onOpen,
+      onClose,
+      open,
+      slotProps,
+      minDate,
+      maxDate,
+      disabled,
+      format,
+      sx,
+      id,
+      ...domProps
+    } = props
+
     return (
       <div data-test="date-picker">
         <input
           data-test="date-input"
-          value={value && !isNaN(value.getTime()) ? value.toISOString().split('T')[0] : ''}
+          value={
+            value && !isNaN(value.getTime())
+              ? value.toISOString().split('T')[0]
+              : ''
+          }
           onChange={(e) => {
             const val = e.target.value ? new Date(e.target.value) : null
             onChange?.(val)
@@ -138,7 +158,7 @@ describe('BCDateFloatingFilter', () => {
   describe('Basic Rendering', () => {
     it('renders with minimal props', () => {
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       expect(screen.getByTestId('form-control')).toBeInTheDocument()
       expect(screen.getByTestId('date-picker')).toBeInTheDocument()
       expect(screen.getByTestId('date-input')).toBeInTheDocument()
@@ -152,26 +172,34 @@ describe('BCDateFloatingFilter', () => {
         minDate: '2020-01-01',
         maxDate: '2030-12-31'
       }
-      
+
       render(<BCDateFloatingFilter {...customProps} />)
-      
+
       expect(screen.getByTestId('date-input')).toBeDisabled()
-      // Verify the custom label is passed through slotProps
-      expect(mockDatePickerProps.slotProps?.textField?.label).toBe('Custom Date Label')
+      // The grid floating filter uses this as placeholder text so it cannot
+      // overlap the calendar adornment like a floating label can.
+      expect(mockDatePickerProps.slotProps?.textField?.placeholder).toBe(
+        'Custom Date Label'
+      )
+      expect(
+        mockDatePickerProps.slotProps?.textField?.inputProps
+      ).toMatchObject({
+        'aria-label': 'Custom Date Label'
+      })
     })
 
     it('renders clear button when selectedDate exists', async () => {
       const validDate = new Date('2023-12-25')
       mockIsValid.mockReturnValue(true)
-      
+
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       const dateInput = screen.getByTestId('date-input')
-      
+
       await act(async () => {
         fireEvent.change(dateInput, { target: { value: '2023-12-25' } })
       })
-      
+
       const endAdornment = screen.getByTestId('end-adornment')
       expect(endAdornment).toBeInTheDocument()
     })
@@ -181,16 +209,16 @@ describe('BCDateFloatingFilter', () => {
     it('calls onModelChange with correct filter model for valid date', async () => {
       mockIsValid.mockReturnValue(true)
       mockFormat.mockReturnValue('2023-12-25')
-      
+
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       const dateInput = screen.getByTestId('date-input')
       const testDate = new Date('2023-12-25')
-      
+
       await act(async () => {
         fireEvent.change(dateInput, { target: { value: '2023-12-25' } })
       })
-      
+
       expect(mockOnModelChange).toHaveBeenCalledWith({
         filterType: 'date',
         type: 'equals',
@@ -201,15 +229,15 @@ describe('BCDateFloatingFilter', () => {
 
     it('calls onModelChange(undefined) for invalid date', async () => {
       mockIsValid.mockReturnValue(false)
-      
+
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       const dateInput = screen.getByTestId('date-input')
-      
+
       await act(async () => {
         fireEvent.change(dateInput, { target: { value: 'invalid-date' } })
       })
-      
+
       expect(mockOnModelChange).toHaveBeenCalledWith(undefined)
     })
 
@@ -217,53 +245,53 @@ describe('BCDateFloatingFilter', () => {
       // First set a valid date, then clear it
       mockIsValid.mockReturnValueOnce(true).mockReturnValueOnce(false)
       mockFormat.mockReturnValue('2023-12-25')
-      
+
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       const dateInput = screen.getByTestId('date-input')
-      
+
       // Set a valid date first
       await act(async () => {
         fireEvent.change(dateInput, { target: { value: '2023-12-25' } })
       })
-      
-      // Clear the date  
+
+      // Clear the date
       mockOnModelChange.mockClear()
-      
+
       await act(async () => {
         fireEvent.change(dateInput, { target: { value: '' } })
       })
-      
+
       expect(mockOnModelChange).toHaveBeenCalledWith(undefined)
     })
-
-
   })
 
   describe('handleClear Function', () => {
     it('stops event propagation and clears date', async () => {
       mockIsValid.mockReturnValue(true)
-      
+
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       // First set a date
       const dateInput = screen.getByTestId('date-input')
       await act(async () => {
         fireEvent.change(dateInput, { target: { value: '2023-12-25' } })
       })
-      
+
       // Find and click clear button
       const endAdornment = screen.getByTestId('end-adornment')
-      const clearButton = endAdornment.querySelector('[data-test="icon-button"]')
-      
+      const clearButton = endAdornment.querySelector(
+        '[data-test="icon-button"]'
+      )
+
       const mockEvent = {
         stopPropagation: vi.fn()
       }
-      
+
       await act(async () => {
         fireEvent.click(clearButton, mockEvent)
       })
-      
+
       expect(mockOnModelChange).toHaveBeenCalledWith(undefined)
     })
   })
@@ -271,32 +299,32 @@ describe('BCDateFloatingFilter', () => {
   describe('handleOpen and handleClose Functions', () => {
     it('opens date picker when handleOpen is called', async () => {
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       const openButton = screen.getByTestId('open-picker-button')
-      
+
       await act(async () => {
         fireEvent.click(openButton)
       })
-      
+
       expect(screen.getByTestId('close-picker-button')).toBeVisible()
       expect(screen.queryByTestId('open-picker-button')).not.toBeVisible()
     })
 
     it('closes date picker when handleClose is called', async () => {
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       // First open the picker
       const openButton = screen.getByTestId('open-picker-button')
       await act(async () => {
         fireEvent.click(openButton)
       })
-      
+
       // Then close it
       const closeButton = screen.getByTestId('close-picker-button')
       await act(async () => {
         fireEvent.click(closeButton)
       })
-      
+
       expect(screen.getByTestId('open-picker-button')).toBeVisible()
       expect(screen.queryByTestId('close-picker-button')).not.toBeVisible()
     })
@@ -304,36 +332,43 @@ describe('BCDateFloatingFilter', () => {
 
   describe('useEffect Hook', () => {
     it('clears selectedDate when model is null', async () => {
-      const { rerender } = render(<BCDateFloatingFilter {...defaultProps} model={{ dateFrom: '2023-12-25' }} />)
-      
+      const { rerender } = render(
+        <BCDateFloatingFilter
+          {...defaultProps}
+          model={{ dateFrom: '2023-12-25' }}
+        />
+      )
+
       await act(async () => {
         rerender(<BCDateFloatingFilter {...defaultProps} model={null} />)
       })
-      
+
       expect(screen.getByTestId('date-input')).toHaveValue('')
     })
 
     it('sets selectedDate when model has valid dateFrom', async () => {
       mockIsValid.mockReturnValue(true)
-      
+
       const modelWithDate = {
         dateFrom: '2023-12-25'
       }
-      
+
       render(<BCDateFloatingFilter {...defaultProps} model={modelWithDate} />)
-      
+
       expect(screen.getByTestId('date-input')).toHaveValue('2023-12-25')
     })
 
     it('sets selectedDate to null when model has invalid dateFrom', async () => {
       mockIsValid.mockReturnValue(false)
-      
+
       const modelWithInvalidDate = {
         dateFrom: 'invalid-date'
       }
-      
-      render(<BCDateFloatingFilter {...defaultProps} model={modelWithInvalidDate} />)
-      
+
+      render(
+        <BCDateFloatingFilter {...defaultProps} model={modelWithInvalidDate} />
+      )
+
       expect(screen.getByTestId('date-input')).toHaveValue('')
     })
 
@@ -342,9 +377,11 @@ describe('BCDateFloatingFilter', () => {
         filterType: 'date',
         type: 'any'
       }
-      
-      render(<BCDateFloatingFilter {...defaultProps} model={modelWithoutDateFrom} />)
-      
+
+      render(
+        <BCDateFloatingFilter {...defaultProps} model={modelWithoutDateFrom} />
+      )
+
       expect(screen.getByTestId('date-input')).toHaveValue('')
     })
   })
@@ -352,56 +389,58 @@ describe('BCDateFloatingFilter', () => {
   describe('Event Handlers', () => {
     it('opens date picker when calendar icon is clicked', async () => {
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       const endAdornment = screen.getByTestId('end-adornment')
       const calendarButton = endAdornment.querySelector(
         '[aria-label="Open calendar"]'
       )
-      
+
       await act(async () => {
         fireEvent.click(calendarButton)
       })
-      
+
       expect(screen.getByTestId('close-picker-button')).toBeVisible()
     })
 
     it('triggers handleChange when DatePicker onChange is called', async () => {
       mockIsValid.mockReturnValue(true)
       mockFormat.mockReturnValue('2023-12-25')
-      
+
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       const dateInput = screen.getByTestId('date-input')
-      
+
       await act(async () => {
         fireEvent.change(dateInput, { target: { value: '2023-12-25' } })
       })
-      
+
       expect(mockOnModelChange).toHaveBeenCalled()
     })
 
     it('stops propagation on clear button mouseDown', async () => {
       mockIsValid.mockReturnValue(true)
-      
+
       render(<BCDateFloatingFilter {...defaultProps} />)
-      
+
       // Set a date first
       const dateInput = screen.getByTestId('date-input')
       await act(async () => {
         fireEvent.change(dateInput, { target: { value: '2023-12-25' } })
       })
-      
+
       const endAdornment = screen.getByTestId('end-adornment')
-      const clearButton = endAdornment.querySelector('[data-test="icon-button"]')
-      
+      const clearButton = endAdornment.querySelector(
+        '[data-test="icon-button"]'
+      )
+
       const mockEvent = {
         stopPropagation: vi.fn()
       }
-      
+
       await act(async () => {
         fireEvent.mouseDown(clearButton, mockEvent)
       })
-      
+
       // The component should handle the event without errors
       expect(clearButton).toBeInTheDocument()
     })
@@ -410,7 +449,7 @@ describe('BCDateFloatingFilter', () => {
   describe('Props Integration', () => {
     it('passes disabled prop correctly', () => {
       render(<BCDateFloatingFilter {...defaultProps} disabled={true} />)
-      
+
       expect(screen.getByTestId('date-input')).toBeDisabled()
     })
 
@@ -420,9 +459,9 @@ describe('BCDateFloatingFilter', () => {
         minDate: '2020-01-01',
         maxDate: '2030-12-31'
       }
-      
+
       render(<BCDateFloatingFilter {...customProps} />)
-      
+
       // Verify the DatePicker received the correct props
       expect(mockDatePickerProps.minDate).toEqual(new Date(2020, 0, 1))
       expect(mockDatePickerProps.maxDate).toEqual(new Date(2030, 11, 31))
