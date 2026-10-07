@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactQuill from 'react-quill'
 import { GlobalStyles } from '@mui/system'
 import Chip from '@mui/material/Chip'
@@ -137,17 +137,21 @@ const CommentForm = ({
 }) => {
   const { t } = useTranslation(['internalComment'])
   const fileInputRef = useRef(null)
+  const quillRef = useRef(null)
   const [attachmentError, setAttachmentError] = useState(null)
 
   const attachmentsEnabled = enableAttachments && !!onAttachmentsChange
+  const attachmentsEnabledRef = useRef(attachmentsEnabled)
+  attachmentsEnabledRef.current = attachmentsEnabled
 
   const handleSubmit = () => {
     onSubmit(commentText, visibility)
   }
 
-  const handleAttachClick = () => {
+  const handleAttachClick = useCallback(() => {
+    if (!attachmentsEnabledRef.current) return
     fileInputRef.current?.click()
-  }
+  }, [])
 
   const handleFilesSelected = (event) => {
     const selected = Array.from(event.target.files || [])
@@ -182,28 +186,107 @@ const CommentForm = ({
     onAttachmentsChange(attachments.filter((_, i) => i !== index))
   }
 
-  // Toolbar config is memoized so Quill doesn't reinitialize each render. The
-  // custom "attach" button triggers the hidden file input via its handler.
+  // ReactQuill treats a modules change as an editor regeneration. Keep this
+  // configuration stable and toggle the attachment control in place instead.
   const quillModules = useMemo(() => {
-    const container = [
-      ['bold', 'italic'],
-      [{ list: 'bullet' }, { list: 'ordered' }]
-    ]
-    if (attachmentsEnabled) {
-      container.push(['attach'])
-    }
     return {
       toolbar: {
-        container,
+        container: [
+          ['bold', 'italic'],
+          [{ list: 'bullet' }, { list: 'ordered' }],
+          ['attach']
+        ],
         handlers: { attach: handleAttachClick }
       },
       keyboard: {
         bindings: { tab: false }
       }
     }
-    // handleAttachClick only reads a stable ref, so depend on the toggle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attachmentsEnabled])
+  }, [handleAttachClick])
+
+  const quillInstanceKey = showVisibilityToggle ? visibility : 'static'
+
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor?.()
+    const toolbar = quill?.getModule?.('toolbar')?.container
+    if (!toolbar) return
+
+    toolbar.setAttribute('role', 'toolbar')
+    toolbar.setAttribute(
+      'aria-label',
+      t('internalComment:commentFormattingToolbar', {
+        defaultValue: 'Comment formatting'
+      })
+    )
+
+    const controls = [
+      ['.ql-bold', t('internalComment:formatBold', { defaultValue: 'Bold' })],
+      [
+        '.ql-italic',
+        t('internalComment:formatItalic', { defaultValue: 'Italic' })
+      ],
+      [
+        '.ql-list[value="bullet"]',
+        t('internalComment:formatBulletedList', {
+          defaultValue: 'Bulleted list'
+        })
+      ],
+      [
+        '.ql-list[value="ordered"]',
+        t('internalComment:formatNumberedList', {
+          defaultValue: 'Numbered list'
+        })
+      ]
+    ]
+    controls.forEach(([selector, label]) => {
+      toolbar.querySelectorAll(selector).forEach((button) => {
+        button.setAttribute('aria-label', label)
+      })
+    })
+    toolbar.querySelectorAll('.ql-attach').forEach((button) => {
+      button.setAttribute(
+        'aria-label',
+        t('internalComment:attachFile', { defaultValue: 'Attach file' })
+      )
+      button.removeAttribute('aria-pressed')
+      button.disabled = !attachmentsEnabled
+      button.hidden = !attachmentsEnabled
+      // Quill's author stylesheet can override the browser's default [hidden]
+      // styling, so set inline display as well to keep it out of view and the
+      // accessibility tree while attachments are unavailable.
+      button.style.display = attachmentsEnabled ? '' : 'none'
+      const group = button.closest('.ql-formats')
+      if (group) {
+        group.hidden = !attachmentsEnabled
+        group.style.display = attachmentsEnabled ? '' : 'none'
+      }
+    })
+
+    const updatePressedStates = () => {
+      toolbar
+        .querySelectorAll(
+          '.ql-bold, .ql-italic, .ql-list[value="bullet"], .ql-list[value="ordered"]'
+        )
+        .forEach((button) => {
+          button.setAttribute(
+            'aria-pressed',
+            String(button.classList.contains('ql-active'))
+          )
+        })
+    }
+
+    updatePressedStates()
+    // Quill changes ql-active after its editor-change callback has run. Watch
+    // the generated controls so aria-pressed always matches the actual state.
+    const observer = new MutationObserver(updatePressedStates)
+    observer.observe(toolbar, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    return () => observer.disconnect()
+  }, [t, quillInstanceKey, attachmentsEnabled])
 
   const isCommentEmpty = !commentText || commentText.trim() === ''
   const showVisibilityUnderTitle =
@@ -295,7 +378,8 @@ const CommentForm = ({
         </BCBox>
       )}
       <ReactQuill
-        key={showVisibilityToggle ? visibility : 'static'}
+        key={quillInstanceKey}
+        ref={quillRef}
         value={commentText}
         onChange={onCommentChange}
         placeholder={

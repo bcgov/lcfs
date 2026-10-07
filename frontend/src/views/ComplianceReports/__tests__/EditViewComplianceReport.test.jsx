@@ -4,6 +4,8 @@ import { forwardRef } from 'react'
 import userEvent from '@testing-library/user-event'
 import { EditViewComplianceReport } from '../EditViewComplianceReport'
 
+const { mockTriggerAlert } = vi.hoisted(() => ({ mockTriggerAlert: vi.fn() }))
+
 // Mock all external dependencies
 vi.mock('react-router-dom', () => ({
   useLocation: vi.fn(),
@@ -53,14 +55,14 @@ vi.mock('@/components/BCAlert', () => ({
   __esModule: true,
   default: ({ children }) => <div data-test="bc-alert">{children}</div>,
   FloatingAlert: forwardRef((props, ref) => {
-    // Create a mock triggerAlert function
-    const triggerAlert = vi.fn()
+    // Shared so tests can assert on the alerts the page raises
+    const triggerAlert = mockTriggerAlert
 
     // Assign triggerAlert to ref if provided
     if (ref) {
       if (typeof ref === 'function') {
         ref({ triggerAlert })
-      } else if (ref.current !== undefined) {
+      } else {
         ref.current = { triggerAlert }
       }
     }
@@ -934,6 +936,48 @@ describe('EditViewComplianceReport', () => {
       expect(useCreateSupplementalReport).toHaveBeenCalled()
       expect(useCreateAnalystAdjustment).toHaveBeenCalled()
       expect(useCreateIdirSupplementalReport).toHaveBeenCalled()
+    })
+
+    it('shows the backend reason when a status update is refused', () => {
+      render(<EditViewComplianceReport />)
+      const { onError } = useUpdateComplianceReport.mock.calls.at(-1)[1]
+
+      act(() =>
+        onError({
+          message: 'Request failed with status code 400',
+          response: {
+            status: 400,
+            data: { detail: 'Report summary must be locked before assessment.' }
+          }
+        })
+      )
+
+      expect(mockTriggerAlert).toHaveBeenCalledWith({
+        message: 'Report summary must be locked before assessment.',
+        severity: 'error'
+      })
+    })
+
+    it('falls back to the request error when the backend reason is not text', () => {
+      render(<EditViewComplianceReport />)
+      const { onError } = useUpdateComplianceReport.mock.calls.at(-1)[1]
+
+      act(() =>
+        onError({
+          message: 'Request failed with status code 422',
+          response: {
+            status: 422,
+            data: {
+              detail: [{ loc: ['body', 'status'], msg: 'Field required' }]
+            }
+          }
+        })
+      )
+
+      expect(mockTriggerAlert).toHaveBeenCalledWith({
+        message: 'Request failed with status code 422',
+        severity: 'error'
+      })
     })
   })
 
