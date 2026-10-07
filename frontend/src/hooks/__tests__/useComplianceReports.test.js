@@ -1,8 +1,8 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import {
   useCompliancePeriod,
   useListComplianceReports,
@@ -44,14 +44,17 @@ describe('useComplianceReports', () => {
   })
 
   describe('useCompliancePeriod', () => {
-    it('should fetch compliance periods successfully', async () => {
+    test('should fetch compliance periods successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = [
         { id: 1, description: '2023' },
         { id: 2, description: '2024' }
       ]
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useCompliancePeriod(), { wrapper })
+      const { result } = renderHook(() => useCompliancePeriod(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -63,7 +66,10 @@ describe('useComplianceReports', () => {
   })
 
   describe('useListComplianceReports', () => {
-    it('should fetch compliance reports list successfully', async () => {
+    test('should fetch compliance reports list successfully', async ({
+      renderHook,
+      query
+    }) => {
       const orgID = 123
       const mockData = {
         reports: [
@@ -73,9 +79,10 @@ describe('useComplianceReports', () => {
       }
       mockPost.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useListComplianceReports(orgID), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useListComplianceReports(orgID),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -90,10 +97,11 @@ describe('useComplianceReports', () => {
       })
     })
 
-    it('should not fetch when orgID is missing', async () => {
-      const { result } = renderHook(() => useListComplianceReports(), {
-        wrapper
-      })
+    test('should not fetch when orgID is missing', async ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useListComplianceReports(), [query])
 
       expect(result.current.isLoading).toBe(false)
       expect(mockPost).not.toHaveBeenCalled()
@@ -101,14 +109,18 @@ describe('useComplianceReports', () => {
   })
 
   describe('useCreateComplianceReport', () => {
-    it('should create compliance report successfully', async () => {
+    test('should create compliance report successfully', async ({
+      renderHook,
+      query
+    }) => {
       const orgID = 123
       const mockData = { complianceReportId: 1, status: 'Draft' }
       mockPost.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useCreateComplianceReport(orgID), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useCreateComplianceReport(orgID),
+        [query]
+      )
 
       const reportData = { compliancePeriodId: 1 }
       result.current.mutate(reportData)
@@ -126,7 +138,10 @@ describe('useComplianceReports', () => {
   })
 
   describe('useGetComplianceReport', () => {
-    it('should fetch compliance report successfully with orgID', async () => {
+    test('should fetch compliance report successfully with orgID', async ({
+      renderHook,
+      query
+    }) => {
       const orgID = 123
       const reportID = 1
       const mockData = { complianceReportId: 1, status: 'Draft' }
@@ -134,7 +149,7 @@ describe('useComplianceReports', () => {
 
       const { result } = renderHook(
         () => useGetComplianceReport(orgID, reportID),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -145,16 +160,17 @@ describe('useComplianceReports', () => {
       expect(mockGet).toHaveBeenCalledWith('/organization/123/reports/1')
     })
 
-    it('should fetch compliance report successfully without orgID', async () => {
+    test('should fetch compliance report successfully without orgID', async ({
+      renderHook,
+      query
+    }) => {
       const reportID = 1
       const mockData = { complianceReportId: 1, status: 'Draft' }
       mockGet.mockResolvedValue({ data: mockData })
 
       const { result } = renderHook(
         () => useGetComplianceReport(null, reportID),
-        {
-          wrapper
-        }
+        [query]
       )
 
       await waitFor(() => {
@@ -167,7 +183,10 @@ describe('useComplianceReports', () => {
   })
 
   describe('useGetComplianceReportSummary', () => {
-    it('should fetch compliance report summary successfully', async () => {
+    test('should fetch compliance report summary successfully', async ({
+      renderHook,
+      query
+    }) => {
       const reportID = 1
       const mockData = {
         complianceReportId: 1,
@@ -177,7 +196,7 @@ describe('useComplianceReports', () => {
 
       const { result } = renderHook(
         () => useGetComplianceReportSummary(reportID),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -190,7 +209,10 @@ describe('useComplianceReports', () => {
   })
 
   describe('useDeleteComplianceReport', () => {
-    it('should delete compliance report successfully', async () => {
+    test('should delete compliance report successfully', async ({
+      renderHook,
+      query
+    }) => {
       const orgID = 123
       const reportID = 1
       const mockData = { message: 'Report deleted successfully' }
@@ -198,7 +220,7 @@ describe('useComplianceReports', () => {
 
       const { result } = renderHook(
         () => useDeleteComplianceReport(orgID, reportID),
-        { wrapper }
+        [query]
       )
 
       result.current.mutate()
@@ -212,7 +234,10 @@ describe('useComplianceReports', () => {
   })
 
   describe('useGetComplianceReportList', () => {
-    it('should fetch compliance report list for government user', async () => {
+    test('should fetch compliance report list for government user', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         reports: [{ complianceReportId: 1, status: 'Draft' }],
         pagination: { total: 1, page: 1, size: 10 }
@@ -229,9 +254,7 @@ describe('useComplianceReports', () => {
         isLoading: false
       })
 
-      const { result } = renderHook(() => useGetComplianceReportList(), {
-        wrapper
-      })
+      const { result } = renderHook(() => useGetComplianceReportList(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -246,7 +269,10 @@ describe('useComplianceReports', () => {
       })
     })
 
-    it('should fetch org compliance reports for user with compliance_reporting role only', async () => {
+    test('should fetch org compliance reports for user with compliance_reporting role only', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         reports: [{ complianceReportId: 1, status: 'Draft' }],
         pagination: { total: 1, page: 1, size: 10 }
@@ -263,9 +289,7 @@ describe('useComplianceReports', () => {
         isLoading: false
       })
 
-      const { result } = renderHook(() => useGetComplianceReportList(), {
-        wrapper
-      })
+      const { result } = renderHook(() => useGetComplianceReportList(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -280,7 +304,10 @@ describe('useComplianceReports', () => {
       })
     })
 
-    it('should fetch org compliance reports for user with signing_authority role only', async () => {
+    test('should fetch org compliance reports for user with signing_authority role only', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         reports: [{ complianceReportId: 1, status: 'Draft' }],
         pagination: { total: 1, page: 1, size: 10 }
@@ -297,9 +324,7 @@ describe('useComplianceReports', () => {
         isLoading: false
       })
 
-      const { result } = renderHook(() => useGetComplianceReportList(), {
-        wrapper
-      })
+      const { result } = renderHook(() => useGetComplianceReportList(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -316,16 +341,20 @@ describe('useComplianceReports', () => {
   })
 
   describe('useGetComplianceReportStatuses', () => {
-    it('should fetch compliance report statuses successfully', async () => {
+    test('should fetch compliance report statuses successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = [
         { id: 1, status: 'Draft' },
         { id: 2, status: 'Submitted' }
       ]
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useGetComplianceReportStatuses(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useGetComplianceReportStatuses(),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)

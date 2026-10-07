@@ -1,11 +1,12 @@
 import React from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+
+import { cleanup, fireEvent, screen } from '@testing-library/react'
 
 import { InitiativeAgreementTabs } from '../InitiativeAgreementTabs'
-import { wrapper } from '@/tests/utils/wrapper'
 import { ROUTES } from '@/routes/routes'
 import { roles } from '@/constants/roles'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -44,8 +45,11 @@ describe('InitiativeAgreementTabs', () => {
   })
   afterEach(cleanup)
 
-  it('offers the agreements and designated actions tabs, and no ledger', () => {
-    render(<InitiativeAgreementTabs />, { wrapper })
+  test('offers the agreements and designated actions tabs, and no ledger', ({
+    render,
+    app
+  }) => {
+    render(<InitiativeAgreementTabs />, app)
 
     expect(
       screen.getByTestId('initiative-agreements-tab-initiativeAgreements')
@@ -58,23 +62,29 @@ describe('InitiativeAgreementTabs', () => {
     expect(screen.queryByText(/credit ledger/i)).not.toBeInTheDocument()
   })
 
-  it('selects the agreements tab on the index and an agreement page', () => {
-    render(<InitiativeAgreementTabs />, { wrapper })
+  test('selects the agreements tab on the index and an agreement page', ({
+    render,
+    app
+  }) => {
+    render(<InitiativeAgreementTabs />, app)
     expect(selected('initiativeAgreements')).toBe('true')
     cleanup()
 
     mockLocation = { pathname: '/initiative-agreements/7', search: '' }
-    render(<InitiativeAgreementTabs />, { wrapper })
+    render(<InitiativeAgreementTabs />, app)
     expect(selected('initiativeAgreements')).toBe('true')
     expect(selected('designatedActions')).toBe('false')
   })
 
-  it('selects the actions tab on its list and on an action page', () => {
+  test('selects the actions tab on its list and on an action page', ({
+    render,
+    app
+  }) => {
     mockLocation = {
       pathname: ROUTES.INITIATIVE_AGREEMENTS.ACTIONS_LIST,
       search: ''
     }
-    render(<InitiativeAgreementTabs />, { wrapper })
+    render(<InitiativeAgreementTabs />, app)
     expect(selected('designatedActions')).toBe('true')
     cleanup()
 
@@ -84,16 +94,19 @@ describe('InitiativeAgreementTabs', () => {
       pathname: '/initiative-agreements/7/designated-actions/12',
       search: ''
     }
-    render(<InitiativeAgreementTabs />, { wrapper })
+    render(<InitiativeAgreementTabs />, app)
     expect(selected('designatedActions')).toBe('true')
     expect(selected('initiativeAgreements')).toBe('false')
   })
 
-  it('offers a proponent only the agreements tab (#4893)', () => {
+  test('offers a proponent only the agreements tab (#4893)', ({
+    render,
+    app
+  }) => {
     // The actions list is IDIR-only and its endpoint refuses proponents;
     // a tab that bounces them off it would be worse than none.
     mockRoles = [roles.ia_proponent]
-    render(<InitiativeAgreementTabs />, { wrapper })
+    render(<InitiativeAgreementTabs />, app)
 
     expect(
       screen.getByTestId('initiative-agreements-tab-initiativeAgreements')
@@ -103,8 +116,8 @@ describe('InitiativeAgreementTabs', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('navigates to the tab that is clicked', () => {
-    render(<InitiativeAgreementTabs />, { wrapper })
+  test('navigates to the tab that is clicked', ({ render, app }) => {
+    render(<InitiativeAgreementTabs />, app)
 
     fireEvent.click(
       screen.getByTestId('initiative-agreements-tab-designatedActions')

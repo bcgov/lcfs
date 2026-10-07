@@ -7,7 +7,7 @@ import React, {
   forwardRef,
   useImperativeHandle
 } from 'react'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useTranslation } from 'react-i18next'
@@ -50,7 +50,7 @@ export const CreditMarketTable = forwardRef(
     } = useCreditMarketListings()
 
   // Transform and sort data - show current user's organization at top
-  const sortedData = useCallback(() => {
+  const sortedData = useMemo(() => {
     if (!creditMarketData) return []
 
     const userOrgId = currentUser?.organization?.organizationId
@@ -81,6 +81,11 @@ export const CreditMarketTable = forwardRef(
 
     return transformedData
   }, [creditMarketData, currentUser?.organization?.organizationId])
+
+  const pagedData = useMemo(() => {
+    const start = (paginationOptions.page - 1) * paginationOptions.size
+    return sortedData.slice(start, start + paginationOptions.size)
+  }, [paginationOptions.page, paginationOptions.size, sortedData])
 
   const getRowId = useCallback((params) => {
     return `credit-market-${params.data.id}`
@@ -135,12 +140,12 @@ export const CreditMarketTable = forwardRef(
   // Build query data structure for BCGridViewer
     const queryData = {
       data: {
-      creditMarketListings: sortedData(),
+      creditMarketListings: pagedData,
       pagination: {
         page: paginationOptions.page,
         size: paginationOptions.size,
-        total: sortedData().length,
-        totalPages: Math.ceil(sortedData().length / paginationOptions.size)
+        total: sortedData.length,
+        totalPages: Math.ceil(sortedData.length / paginationOptions.size)
       }
     },
     isLoading,

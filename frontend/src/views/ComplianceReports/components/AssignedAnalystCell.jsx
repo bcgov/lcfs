@@ -1,21 +1,19 @@
 import { useState } from 'react'
-import {
-  Select,
-  MenuItem,
-  FormControl,
-  Chip,
-  Box,
-  CircularProgress,
-  Tooltip,
-  useTheme
-} from '@mui/material'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import FormControl from '@mui/material/FormControl'
+import Chip from '@mui/material/Chip'
+import Box from '@mui/material/Box'
+import CircularProgress from '@mui/material/CircularProgress'
+import Tooltip from '@mui/material/Tooltip'
+import useTheme from '@mui/material/styles/useTheme'
 import { useTranslation } from 'react-i18next'
 import {
   useGetAvailableAnalysts,
   useAssignAnalyst
 } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { CancelScheduleSend } from '@mui/icons-material'
+import CancelScheduleSend from '@mui/icons-material/CancelScheduleSend'
 
 export const AssignedAnalystCell = ({ data, onRefresh }) => {
   const { t } = useTranslation(['report'])

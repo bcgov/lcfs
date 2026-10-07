@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 import {
   useOrganizationStatuses,
@@ -27,7 +27,10 @@ describe('useOrganizations', () => {
   })
 
   describe('useOrganizationStatuses', () => {
-    it('should fetch organization statuses successfully', async () => {
+    test('should fetch organization statuses successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         statuses: [
           { id: 1, name: 'Active', description: 'Active organization' },
@@ -36,9 +39,7 @@ describe('useOrganizations', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useOrganizationStatuses(), {
-        wrapper
-      })
+      const { result } = renderHook(() => useOrganizationStatuses(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -48,13 +49,11 @@ describe('useOrganizations', () => {
       expect(mockGet).toHaveBeenCalledWith('/organizations/statuses/')
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch statuses')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useOrganizationStatuses(), {
-        wrapper
-      })
+      const { result } = renderHook(() => useOrganizationStatuses(), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -63,14 +62,17 @@ describe('useOrganizations', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should pass through custom options', async () => {
+    test('should pass through custom options', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { statuses: [] }
       mockGet.mockResolvedValue({ data: mockData })
       const customOptions = { retry: 3 }
 
       const { result } = renderHook(
         () => useOrganizationStatuses(customOptions),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -82,7 +84,10 @@ describe('useOrganizations', () => {
   })
 
   describe('useOrganizationListStatuses', () => {
-    it('should filter organization statuses to only Registered and Unregistered', async () => {
+    test('should filter organization statuses to only Registered and Unregistered', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = [
         { status: ORGANIZATION_STATUSES.REGISTERED, organizationStatusId: 1 },
         { status: ORGANIZATION_STATUSES.UNREGISTERED, organizationStatusId: 2 },
@@ -91,9 +96,10 @@ describe('useOrganizations', () => {
       ]
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useOrganizationListStatuses(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useOrganizationListStatuses(),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -107,12 +113,13 @@ describe('useOrganizations', () => {
       expect(mockGet).toHaveBeenCalledWith('/organizations/statuses/')
     })
 
-    it('should handle empty data', async () => {
+    test('should handle empty data', async ({ renderHook, query }) => {
       mockGet.mockResolvedValue({ data: [] })
 
-      const { result } = renderHook(() => useOrganizationListStatuses(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useOrganizationListStatuses(),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -121,16 +128,20 @@ describe('useOrganizations', () => {
       expect(result.current.data).toEqual([])
     })
 
-    it('should handle only valid statuses in response', async () => {
+    test('should handle only valid statuses in response', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = [
         { status: ORGANIZATION_STATUSES.REGISTERED, organizationStatusId: 1 },
         { status: ORGANIZATION_STATUSES.UNREGISTERED, organizationStatusId: 2 }
       ]
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useOrganizationListStatuses(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useOrganizationListStatuses(),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -140,13 +151,14 @@ describe('useOrganizations', () => {
       expect(result.current.data).toEqual(mockData)
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch statuses')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useOrganizationListStatuses(), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useOrganizationListStatuses(),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -155,7 +167,10 @@ describe('useOrganizations', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should pass through custom options', async () => {
+    test('should pass through custom options', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = [
         { status: ORGANIZATION_STATUSES.REGISTERED, organizationStatusId: 1 }
       ]
@@ -164,7 +179,7 @@ describe('useOrganizations', () => {
 
       const { result } = renderHook(
         () => useOrganizationListStatuses(customOptions),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -176,7 +191,10 @@ describe('useOrganizations', () => {
   })
 
   describe('useOrganizationNames', () => {
-    it('should fetch organization names without status filter', async () => {
+    test('should fetch organization names without status filter', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         organizations: [
           { id: 1, name: 'Org A' },
@@ -185,7 +203,7 @@ describe('useOrganizations', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useOrganizationNames(), { wrapper })
+      const { result } = renderHook(() => useOrganizationNames(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -195,16 +213,20 @@ describe('useOrganizations', () => {
       expect(mockGet).toHaveBeenCalledWith('/organizations/names/')
     })
 
-    it('should fetch organization names with single status filter', async () => {
+    test('should fetch organization names with single status filter', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         organizations: [{ id: 1, name: 'Active Org A' }]
       }
       const statuses = ['active']
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useOrganizationNames(statuses), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useOrganizationNames(statuses),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -216,7 +238,10 @@ describe('useOrganizations', () => {
       )
     })
 
-    it('should fetch organization names with multiple status filters', async () => {
+    test('should fetch organization names with multiple status filters', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         organizations: [
           { id: 1, name: 'Active Org A' },
@@ -226,9 +251,10 @@ describe('useOrganizations', () => {
       const statuses = ['active', 'pending']
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useOrganizationNames(statuses), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useOrganizationNames(statuses),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -240,14 +266,15 @@ describe('useOrganizations', () => {
       )
     })
 
-    it('should handle empty status array', async () => {
+    test('should handle empty status array', async ({ renderHook, query }) => {
       const mockData = { organizations: [] }
       const statuses = []
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useOrganizationNames(statuses), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useOrganizationNames(statuses),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -256,13 +283,14 @@ describe('useOrganizations', () => {
       expect(mockGet).toHaveBeenCalledWith('/organizations/names/')
     })
 
-    it('should handle null status parameter', async () => {
+    test('should handle null status parameter', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { organizations: [] }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useOrganizationNames(null), {
-        wrapper
-      })
+      const { result } = renderHook(() => useOrganizationNames(null), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -271,13 +299,17 @@ describe('useOrganizations', () => {
       expect(mockGet).toHaveBeenCalledWith('/organizations/names/')
     })
 
-    it('should handle non-array status parameter', async () => {
+    test('should handle non-array status parameter', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { organizations: [] }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useOrganizationNames('active'), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useOrganizationNames('active'),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -286,11 +318,11 @@ describe('useOrganizations', () => {
       expect(mockGet).toHaveBeenCalledWith('/organizations/names/')
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch organization names')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useOrganizationNames(), { wrapper })
+      const { result } = renderHook(() => useOrganizationNames(), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -299,14 +331,17 @@ describe('useOrganizations', () => {
       expect(result.current.error).toEqual(mockError)
     })
 
-    it('should pass through custom options', async () => {
+    test('should pass through custom options', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { organizations: [] }
       mockGet.mockResolvedValue({ data: mockData })
       const customOptions = { staleTime: 5000 }
 
       const { result } = renderHook(
         () => useOrganizationNames(['active'], customOptions),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -318,13 +353,13 @@ describe('useOrganizations', () => {
       )
     })
 
-    it('should support custom org filters', async () => {
+    test('should support custom org filters', async ({ renderHook, query }) => {
       const mockData = { organizations: [] }
       mockGet.mockResolvedValue({ data: mockData })
 
       const { result } = renderHook(
         () => useOrganizationNames(['active'], { orgFilter: 'all' }),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -336,7 +371,10 @@ describe('useOrganizations', () => {
       )
     })
 
-    it('should append arbitrary organization filters', async () => {
+    test('should append arbitrary organization filters', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { organizations: [] }
       mockGet.mockResolvedValue({ data: mockData })
 
@@ -346,7 +384,7 @@ describe('useOrganizations', () => {
             orgFilter: 'all',
             filters: { name: ['Org A'], city: 'Victoria', active: true }
           }),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -358,7 +396,10 @@ describe('useOrganizations', () => {
       )
     })
 
-    it('should allow query params and react-query options together', async () => {
+    test('should allow query params and react-query options together', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { organizations: [] }
       mockGet.mockResolvedValue({ data: mockData })
 
@@ -369,7 +410,7 @@ describe('useOrganizations', () => {
             { orgFilter: 'all', filters: { city: 'Victoria' } },
             { staleTime: 1000 }
           ),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -383,7 +424,10 @@ describe('useOrganizations', () => {
   })
 
   describe('useRegExtOrgs', () => {
-    it('should fetch registered external organizations successfully', async () => {
+    test('should fetch registered external organizations successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = {
         organizations: [
           { id: 1, name: 'External Org A', type: 'external' },
@@ -392,7 +436,7 @@ describe('useOrganizations', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useRegExtOrgs(), { wrapper })
+      const { result } = renderHook(() => useRegExtOrgs(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -402,17 +446,17 @@ describe('useOrganizations', () => {
       expect(mockGet).toHaveBeenCalledWith('/organizations/registered/external')
     })
 
-    it('should have initial data as empty array', () => {
-      const { result } = renderHook(() => useRegExtOrgs(), { wrapper })
+    test('should have initial data as empty array', ({ renderHook, query }) => {
+      const { result } = renderHook(() => useRegExtOrgs(), [query])
 
       expect(result.current.data).toEqual([])
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('Failed to fetch external orgs')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useRegExtOrgs(), { wrapper })
+      const { result } = renderHook(() => useRegExtOrgs(), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -423,14 +467,15 @@ describe('useOrganizations', () => {
       expect(result.current.data).toEqual([])
     })
 
-    it('should pass through custom options', async () => {
+    test('should pass through custom options', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { organizations: [] }
       mockGet.mockResolvedValue({ data: mockData })
       const customOptions = { refetchOnWindowFocus: false }
 
-      const { result } = renderHook(() => useRegExtOrgs(customOptions), {
-        wrapper
-      })
+      const { result } = renderHook(() => useRegExtOrgs(customOptions), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -439,11 +484,14 @@ describe('useOrganizations', () => {
       expect(mockGet).toHaveBeenCalledWith('/organizations/registered/external')
     })
 
-    it('should use correct query key for caching', async () => {
+    test('should use correct query key for caching', async ({
+      renderHook,
+      query
+    }) => {
       const mockData = { organizations: [] }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useRegExtOrgs(), { wrapper })
+      const { result } = renderHook(() => useRegExtOrgs(), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)

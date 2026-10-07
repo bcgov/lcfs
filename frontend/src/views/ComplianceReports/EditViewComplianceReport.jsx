@@ -37,13 +37,18 @@ import { AssessmentStatement } from '@/views/ComplianceReports/components/Assess
 import { useOrganization } from '@/hooks/useOrganization.js'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
-import { Fab, Stack, Tooltip, Box, Divider } from '@mui/material'
+import Fab from '@mui/material/Fab'
+import Stack from '@mui/material/Stack'
+import Tooltip from '@mui/material/Tooltip'
+import Box from '@mui/material/Box'
+import Divider from '@mui/material/Divider'
 import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
 import { ReportYearNavigator } from '@/views/ComplianceReports/components/ReportYearNavigator.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import colors from '@/themes/base/colors.js'
 import ROUTES from '@/routes/routes.js'
-import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp'
 import { FILTER_KEYS, REPORT_SCHEDULES } from '@/constants/common'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { isQuarterEditable } from '@/utils/grid/cellEditables'
@@ -56,6 +61,13 @@ const iconStyle = {
   width: '2rem',
   height: '2rem',
   color: colors.white.main
+}
+
+// The backend explains a refused action in response.data.detail. Validation
+// errors (422) put a list there instead, so fall back to the axios message.
+const getErrorMessage = (error) => {
+  const detail = error?.response?.data?.detail
+  return typeof detail === 'string' && detail ? detail : error?.message
 }
 
 export const EditViewComplianceReport = ({ isError, error }) => {
@@ -399,7 +411,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         }
 
         alertRef.current?.triggerAlert({
-          message: error.message,
+          message: getErrorMessage(error),
           severity: 'error'
         })
       }
@@ -440,7 +452,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         setIsDeleted(false)
         setModalData(null)
         alertRef.current?.triggerAlert({
-          message: error.message,
+          message: getErrorMessage(error),
           severity: 'error'
         })
       }
@@ -459,7 +471,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       onError: (error) => {
         setModalData(null)
         alertRef.current?.triggerAlert({
-          message: error.message,
+          message: getErrorMessage(error),
           severity: 'error'
         })
       }
@@ -478,7 +490,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       onError: (error) => {
         setModalData(null)
         alertRef.current?.triggerAlert({
-          message: error.message,
+          message: getErrorMessage(error),
           severity: 'error'
         })
       }
@@ -504,7 +516,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       onError: (error) => {
         setModalData(null)
         alertRef.current?.triggerAlert({
-          message: error.message,
+          message: getErrorMessage(error),
           severity: 'error'
         })
       }
@@ -760,7 +772,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
     if (isError) {
       alertRef.current?.triggerAlert({
-        message: error.response?.data?.detail || error.message,
+        message: getErrorMessage(error),
         severity: 'error'
       })
     }

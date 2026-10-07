@@ -10,7 +10,7 @@ import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { validation, actions } from '@/components/BCDataGrid/columns'
-import { RequiredHeader } from '@/components/BCDataGrid/components'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 
 import {
   useOrganizationPenaltyLogs,

@@ -1,17 +1,15 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react'
-import {
-  Grid,
-  FormControl,
-  Select,
-  MenuItem,
-  Card,
-  CardContent,
-  Stack,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
-} from '@mui/material'
-import { ExpandMore } from '@mui/icons-material'
+import Grid from '@mui/material/Grid'
+import FormControl from '@mui/material/FormControl'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Stack from '@mui/material/Stack'
+import Accordion from '@mui/material/Accordion'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import ReactECharts from 'echarts-for-react'
 
 import BCBox from '@/components/BCBox'
@@ -32,7 +30,6 @@ import { useNavigate } from 'react-router-dom'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import OrganizationList from '@/views/Transactions/components/OrganizationList'
-import { formatNumberWithCommas } from '@/utils/formatters'
 import { defaultInitialPagination } from '@/constants/schedules'
 
 import {
@@ -40,6 +37,12 @@ import {
   defaultColDef,
   gridOptions
 } from './_supplyHistorySchema'
+import {
+  abbreviateNumber,
+  formatCompactAxisNumber,
+  formatPlainNumber
+} from './_supplyHistoryFormatters'
+import { FuelCategoryBreakdown } from './FuelCategoryBreakdown'
 
 const GRID_KEY = 'organization-supply-history'
 const YEAR_FILTER_STORAGE_KEY = `${GRID_KEY}-year-filter`
@@ -109,39 +112,6 @@ const getYearsInRange = ({ from, to }) => {
   )
 }
 
-const abbreviateNumber = (value, { unitLabel = '', prefix = '' } = {}) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return '—'
-  }
-
-  const absValue = Math.abs(value)
-  const thresholds = [
-    { limit: 1e12, suffix: 'T' },
-    { limit: 1e9, suffix: 'B' },
-    { limit: 1e6, suffix: 'M' },
-    { limit: 1e3, suffix: 'k' }
-  ]
-
-  let scaledValue = value
-  let suffix = ''
-
-  for (const threshold of thresholds) {
-    if (absValue >= threshold.limit) {
-      scaledValue = value / threshold.limit
-      suffix = threshold.suffix
-      break
-    }
-  }
-
-  const precision =
-    Math.abs(scaledValue) >= 100 ? 0 : Math.abs(scaledValue) >= 10 ? 1 : 2
-  const formattedValue = Number(scaledValue.toFixed(precision))
-
-  const unitText = unitLabel ? ` ${unitLabel}` : ''
-
-  return `${prefix}${formattedValue}${suffix}${unitText}`.trim()
-}
-
 const formatSignedPercent = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '—'
@@ -149,13 +119,6 @@ const formatSignedPercent = (value) => {
   const numericValue = Number(value)
   const sign = numericValue > 0 ? '+' : ''
   return `${sign}${numericValue.toFixed(2)}%`
-}
-
-const formatPlainNumber = (value, decimals = 0) => {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return '—'
-  }
-  return formatNumberWithCommas({ value: Number(value).toFixed(decimals) })
 }
 
 const formatDisplayDate = (value) => {
@@ -171,13 +134,6 @@ const formatDisplayDate = (value) => {
     month: 'short',
     day: 'numeric'
   }).format(date)
-}
-
-const formatCompactAxisNumber = (value) => {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return ''
-  }
-  return abbreviateNumber(value)
 }
 
 const getComparisonColor = (value) => {
@@ -204,6 +160,26 @@ const getTopFuelTypesByVolume = (rows, limit = 8) =>
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([fuelType]) => fuelType)
+
+export const normalizeFuelTypeVolumeTrendRows = (rows = []) =>
+  Array.from(
+    rows
+      .reduce((acc, row) => {
+        const fuelType = row.fuelType
+        const key = `${row.reportingYear}|${fuelType}|${row.fuelCategory || ''}`
+        const existing = acc.get(key) || {
+          ...row,
+          fuelType,
+          totalVolume: 0,
+          fossilDerived: false
+        }
+        existing.totalVolume += row.totalVolume || 0
+        existing.fossilDerived = existing.fossilDerived || row.fossilDerived
+        acc.set(key, existing)
+        return acc
+      }, new Map())
+      .values()
+  )
 
 const SupplyMetricCard = ({ title, value, period, comparisons = [] }) => (
   <Card
@@ -523,30 +499,28 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
         ]
       },
       {
-        key: 'cu-efficiency',
-        hasData: hasNumericValue(
-          selectedYearSummary.complianceUnitsPerUnitSupply
-        ),
-        title: t('org:supplyHistory.analytics.complianceUnitsPerUnitSupply'),
-        value: formatPlainNumber(
-          selectedYearSummary.complianceUnitsPerUnitSupply,
-          6
-        ),
+        key: 'renewable-volume',
+        hasData: hasNumericValue(selectedYearSummary.totalRenewableVolume),
+        title: t('org:supplyHistory.analytics.totalRenewableLiquidVolume'),
+        value: abbreviateNumber(selectedYearSummary.totalRenewableVolume, {
+          unitLabel: 'L'
+        }),
         period: year,
         comparisons: [
           {
-            label: `${formatPlainNumber(
-              selectedYearSummary.complianceUnitsPerUnitSupplyChange,
-              6
+            label: `${formatSignedPercent(
+              selectedYearSummary.renewableVolumePctChangeYoy
             )} ${t('org:supplyHistory.analytics.vsPreviousYear')}`,
             color: getComparisonColor(
-              selectedYearSummary.complianceUnitsPerUnitSupplyChange
+              selectedYearSummary.renewableVolumePctChangeYoy
             )
           },
           {
-            label: `${t('org:supplyHistory.analytics.previousYear')}: ${formatPlainNumber(
-              selectedYearSummary.priorYearComplianceUnitsPerUnitSupply,
-              6
+            label: `${t('org:supplyHistory.analytics.previousYear')}: ${
+              priorYear || t('org:supplyHistory.analytics.noData')
+            } • ${abbreviateNumber(
+              selectedYearSummary.priorYearRenewableVolume,
+              { unitLabel: 'L' }
             )}`,
             color: 'text'
           }
@@ -611,7 +585,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   }, [analytics.complianceUnitCreditDebitTrend])
 
   const fuelTypeVolumeTrendData = useMemo(() => {
-    const rows = analytics.fuelTypeVolumeTrend || []
+    const rows = normalizeFuelTypeVolumeTrendRows(
+      analytics.fuelTypeVolumeTrend || []
+    )
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()
@@ -644,7 +620,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
 
   // YoY % change per fuel type/year, used to annotate the volume trend tooltip.
   const fuelTypeYoyChangeData = useMemo(() => {
-    const rows = analytics.fuelTypeVolumeTrend || []
+    const rows = normalizeFuelTypeVolumeTrendRows(
+      analytics.fuelTypeVolumeTrend || []
+    )
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()
@@ -693,7 +671,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   }, [analytics.fuelTypeVolumeTrend])
 
   const renewableSupplyVolumeChangeData = useMemo(() => {
-    const rows = analytics.fuelTypeVolumeTrend || []
+    const rows = normalizeFuelTypeVolumeTrendRows(
+      analytics.fuelTypeVolumeTrend || []
+    )
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()
@@ -741,13 +721,16 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   const showRenewableSupplyVolumeChangeChart =
     renewableSupplyVolumeChangeData.labels.length > 1
   const showTopFuelCodesChart = topFuelCodesChartData.labels.length > 1
+  const fuelCategoryTrend = analytics.fuelCategoryTrend || []
+  const showFuelCategoryBreakdown = fuelCategoryTrend.length > 0
 
   const hasDashboardContent =
     dashboardMetricCards.length > 0 ||
     showComplianceUnitCreditDebitChart ||
     showFuelTypeVolumeTrendChart ||
     showRenewableSupplyVolumeChangeChart ||
-    showTopFuelCodesChart
+    showTopFuelCodesChart ||
+    showFuelCategoryBreakdown
 
   const complianceUnitCreditDebitTrendOption = useMemo(
     () => ({
@@ -1111,6 +1094,12 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
             )}
 
             <Grid container spacing={3} sx={{ minWidth: 0 }}>
+              {showFuelCategoryBreakdown && (
+                <Grid item xs={12} sx={{ minWidth: 0 }}>
+                  <FuelCategoryBreakdown rows={fuelCategoryTrend} />
+                </Grid>
+              )}
+
               {showComplianceUnitCreditDebitChart && (
                 <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
                   <ChartPanel

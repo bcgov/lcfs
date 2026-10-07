@@ -1,9 +1,9 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ChargingSitesList } from '../ChargingSitesList'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
 
 const mockNavigate = vi.fn()
 const mockUseLocation = vi.fn()
@@ -143,8 +143,14 @@ describe('ChargingSitesList', () => {
       })
     })
 
-    it('renders IDIR view with all components', () => {
-      render(<ChargingSitesList />, { wrapper })
+    test('renders IDIR view with all components', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       expect(screen.getByText('chargingSitesTitle')).toBeInTheDocument()
       expect(screen.getByText('csDescription')).toBeInTheDocument()
@@ -155,13 +161,19 @@ describe('ChargingSitesList', () => {
       expect(screen.getByText(/Height: 500/)).toBeInTheDocument()
     })
 
-    it('shows success alert when location state contains a message', async () => {
+    test('shows success alert when location state contains a message', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockUseLocation.mockReturnValue({
         pathname: '/compliance-reporting/charging-sites',
         state: { message: 'Deleted', severity: 'success' }
       })
 
-      render(<ChargingSitesList />, { wrapper })
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       await waitFor(() =>
         expect(mockAlertRef.current.triggerAlert).toHaveBeenCalledWith({
@@ -175,28 +187,46 @@ describe('ChargingSitesList', () => {
       )
     })
 
-    it('restores organization selection from sessionStorage', () => {
+    test('restores organization selection from sessionStorage', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockSessionStorage.getItem.mockReturnValue(
         '{"id":1,"label":"Organization 1"}'
       )
 
-      render(<ChargingSitesList />, { wrapper })
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       expect(mockSessionStorage.getItem).toHaveBeenCalledWith(
         'selectedOrganization'
       )
     })
 
-    it('handles invalid sessionStorage data gracefully', () => {
+    test('handles invalid sessionStorage data gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       mockSessionStorage.getItem.mockReturnValue('invalid-json')
 
       expect(() => {
-        render(<ChargingSitesList />, { wrapper })
+        render(<ChargingSitesList />, [query, theme, localization, router])
       }).not.toThrow()
     })
 
-    it('does not show new site button for IDIR users', () => {
-      render(<ChargingSitesList />, { wrapper })
+    test('does not show new site button for IDIR users', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       expect(screen.queryByText('newSiteBtn')).not.toBeInTheDocument()
     })
@@ -210,25 +240,35 @@ describe('ChargingSitesList', () => {
       })
     })
 
-    it('renders BCeID view with new site button', () => {
-      render(<ChargingSitesList />, { wrapper })
+    test('renders BCeID view with new site button', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       expect(screen.getByText('mngTitle')).toBeInTheDocument()
       expect(screen.getByText('mngCSdescription')).toBeInTheDocument()
       expect(screen.getByText('newSiteBtn')).toBeInTheDocument()
     })
 
-    it('navigates to add new site when button clicked', async () => {
+    test('navigates to add new site when button clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ChargingSitesList />, { wrapper })
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       const newSiteButton = screen.getByText('newSiteBtn')
       await user.click(newSiteButton)
 
       expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('add'))
     })
-
-
   })
 
   describe('Row Click Navigation', () => {
@@ -239,9 +279,15 @@ describe('ChargingSitesList', () => {
       })
     })
 
-    it('navigates to view site when grid row is clicked', async () => {
+    test('navigates to view site when grid row is clicked', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       const user = userEvent.setup()
-      render(<ChargingSitesList />, { wrapper })
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       const grid = screen.getByText(/Grid - Page: 1, Size: 10/)
       await user.click(grid)
@@ -251,31 +297,49 @@ describe('ChargingSitesList', () => {
   })
 
   describe('Loading States', () => {
-    it('handles organization loading state', () => {
+    test('handles organization loading state', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       orgNamesLoading = true
       useCurrentUser.mockReturnValue({
         hasAnyRole: () => true,
         data: { organization: { organizationId: 1 } }
       })
 
-      render(<ChargingSitesList />, { wrapper })
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       expect(screen.getByText('chargingSitesTitle')).toBeInTheDocument()
     })
 
-    it('handles empty organizations list', () => {
+    test('handles empty organizations list', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       orgNamesData = []
       useCurrentUser.mockReturnValue({
         hasAnyRole: () => true,
         data: { organization: { organizationId: 1 } }
       })
 
-      render(<ChargingSitesList />, { wrapper })
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       expect(screen.getByText('chargingSitesTitle')).toBeInTheDocument()
     })
 
-    it('handles empty charging sites data', () => {
+    test('handles empty charging sites data', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       chargingSitesData = {
         chargingSites: [],
         pagination: { page: 1, size: 10, total: 0, totalPages: 1 }
@@ -285,7 +349,7 @@ describe('ChargingSitesList', () => {
         data: { organization: { organizationId: 1 } }
       })
 
-      render(<ChargingSitesList />, { wrapper })
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       expect(screen.getByText(/Map - Sites: 0/)).toBeInTheDocument()
     })
@@ -299,8 +363,14 @@ describe('ChargingSitesList', () => {
       })
     })
 
-    it('passes correct props to map component', () => {
-      render(<ChargingSitesList />, { wrapper })
+    test('passes correct props to map component', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ChargingSitesList />, [query, theme, localization, router])
 
       // Check individual parts since text might be split
       expect(screen.getByText(/Map - Sites: 2/)).toBeInTheDocument()
@@ -308,8 +378,19 @@ describe('ChargingSitesList', () => {
       expect(screen.getByText(/Height: 500/)).toBeInTheDocument()
     })
 
-    it('updates map when charging sites data changes', () => {
-      const { rerender } = render(<ChargingSitesList />, { wrapper })
+    test('updates map when charging sites data changes', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      const { rerender } = render(<ChargingSitesList />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
 
       chargingSitesData = {
         chargingSites: [{ chargingSiteId: 1, siteName: 'Site 1' }],
@@ -323,18 +404,30 @@ describe('ChargingSitesList', () => {
   })
 
   describe('Error Handling', () => {
-    it('handles missing user organization gracefully', () => {
+    test('handles missing user organization gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       useCurrentUser.mockReturnValue({
         hasAnyRole: () => false,
         data: { organization: null }
       })
 
       expect(() => {
-        render(<ChargingSitesList />, { wrapper })
+        render(<ChargingSitesList />, [query, theme, localization, router])
       }).not.toThrow()
     })
 
-    it('handles missing charging sites data gracefully', () => {
+    test('handles missing charging sites data gracefully', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
       chargingSitesData = null
       useCurrentUser.mockReturnValue({
         hasAnyRole: () => true,
@@ -342,7 +435,7 @@ describe('ChargingSitesList', () => {
       })
 
       expect(() => {
-        render(<ChargingSitesList />, { wrapper })
+        render(<ChargingSitesList />, [query, theme, localization, router])
       }).not.toThrow()
     })
   })

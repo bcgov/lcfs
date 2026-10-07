@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { MapContainer } from 'react-leaflet'
-import { Paper } from '@mui/material'
+import Paper from '@mui/material/Paper'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import 'leaflet/dist/leaflet.css'

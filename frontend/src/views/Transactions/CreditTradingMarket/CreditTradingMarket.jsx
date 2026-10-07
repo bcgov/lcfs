@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { Box, Stack } from '@mui/material'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
 import { CreditMarketTable } from './CreditMarketTable'
 import { CreditMarketAccordion } from './CreditMarketAccordion'
 import { CreditMarketDetailsCard } from './CreditMarketDetailsCard'

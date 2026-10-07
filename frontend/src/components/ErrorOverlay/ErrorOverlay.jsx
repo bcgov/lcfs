@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { Box, IconButton } from '@mui/material'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
 import CloseIcon from '@mui/icons-material/Close'
 import { useTranslation } from 'react-i18next'
 import { useAuthorization } from '@/contexts/AuthorizationContext'

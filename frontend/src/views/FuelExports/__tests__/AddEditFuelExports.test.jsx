@@ -1,7 +1,15 @@
-import { render, screen, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { screen, act } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import { AddEditFuelExports } from '../AddEditFuelExports'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
+
+let render
+const fixtureOptions = undefined
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [theme], options)
+    return fn()
+  })
 
 // Mock React hooks
 const mockNavigate = vi.fn()
@@ -72,17 +80,27 @@ vi.mock('@/hooks/useComplianceReports', () => ({
 
 // Mock components
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCTypography', () => ({
   default: ({ children, variant, ...props }) => (
-    <div data-test="bc-typography" data-variant={variant} {...props}>{children}</div>
+    <div data-test="bc-typography" data-variant={variant} {...props}>
+      {children}
+    </div>
   )
 }))
 
 vi.mock('@mui/material/Grid2', () => ({
-  default: ({ children, ...props }) => <div data-test="grid2" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="grid2" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 // Mock BCGridEditor with comprehensive functionality
@@ -101,91 +119,102 @@ const mockNode = {
 }
 
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
-  BCGridEditor: vi.fn(({ 
-    onGridReady, 
-    onCellValueChanged, 
-    onCellEditingStopped, 
-    onAction, 
-    saveButtonProps, 
-    rowData = []
-  }) => {
-    // Simulate component lifecycle
-    const { useEffect } = require('react')
-    
-    useEffect(() => {
-      if (onGridReady) {
-        setTimeout(() => {
-          onGridReady({ api: mockGridApi })
-        }, 0)
-      }
-    }, [onGridReady])
+  BCGridEditor: vi.fn(
+    ({
+      onGridReady,
+      onCellValueChanged,
+      onCellEditingStopped,
+      onAction,
+      saveButtonProps,
+      rowData = []
+    }) => {
+      // Simulate component lifecycle
+      const { useEffect } = require('react')
 
-    return (
-      <div data-test="bc-grid-editor">
-        <div data-test="row-data-count">{rowData.length}</div>
-        <button
-          data-test="save-button"
-          onClick={saveButtonProps?.onSave}
-        >
-          {saveButtonProps?.text || 'Save'}
-        </button>
-        <button
-          data-test="trigger-cell-changed"
-          onClick={() => onCellValueChanged && onCellValueChanged({
-            column: { colId: 'fuelTypeId' },
-            node: mockNode,
-            data: { fuelType: 'Gasoline' },
-            api: mockGridApi
-          })}
-        >
-          Change Cell
-        </button>
-        <button
-          data-test="trigger-cell-stopped"
-          onClick={() => onCellEditingStopped && onCellEditingStopped({
-            oldValue: 'old',
-            newValue: 'new',
-            node: mockNode
-          })}
-        >
-          Stop Editing
-        </button>
-        <button
-          data-test="trigger-action"
-          onClick={() => onAction && onAction('delete', { node: mockNode })}
-        >
-          Delete
-        </button>
-      </div>
-    )
-  })
+      useEffect(() => {
+        if (onGridReady) {
+          setTimeout(() => {
+            onGridReady({ api: mockGridApi })
+          }, 0)
+        }
+      }, [onGridReady])
+
+      return (
+        <div data-test="bc-grid-editor">
+          <div data-test="row-data-count">{rowData.length}</div>
+          <button data-test="save-button" onClick={saveButtonProps?.onSave}>
+            {saveButtonProps?.text || 'Save'}
+          </button>
+          <button
+            data-test="trigger-cell-changed"
+            onClick={() =>
+              onCellValueChanged &&
+              onCellValueChanged({
+                column: { colId: 'fuelTypeId' },
+                node: mockNode,
+                data: { fuelType: 'Gasoline' },
+                api: mockGridApi
+              })
+            }
+          >
+            Change Cell
+          </button>
+          <button
+            data-test="trigger-cell-stopped"
+            onClick={() =>
+              onCellEditingStopped &&
+              onCellEditingStopped({
+                oldValue: 'old',
+                newValue: 'new',
+                node: mockNode
+              })
+            }
+          >
+            Stop Editing
+          </button>
+          <button
+            data-test="trigger-action"
+            onClick={() => onAction && onAction('delete', { node: mockNode })}
+          >
+            Delete
+          </button>
+        </div>
+      )
+    }
+  )
 }))
 
 describe('AddEditFuelExports', () => {
   const mockOptionsData = {
-    fuelTypes: [{
-      id: 1,
-      fuelType: 'Gasoline',
-      fuelCategories: [{ fuelCategory: 'Petroleum-based' }],
-      eerRatios: [{
-        endUseType: { type: 'Transport' },
-        fuelCategory: { fuelCategory: 'Petroleum-based' }
-      }],
-      provisions: [{ name: 'Provision A' }]
-    }]
+    fuelTypes: [
+      {
+        id: 1,
+        fuelType: 'Gasoline',
+        fuelCategories: [{ fuelCategory: 'Petroleum-based' }],
+        eerRatios: [
+          {
+            endUseType: { type: 'Transport' },
+            fuelCategory: { fuelCategory: 'Petroleum-based' }
+          }
+        ],
+        provisions: [{ name: 'Provision A' }]
+      }
+    ]
   }
 
   const mockFuelExportsData = {
-    fuelExports: [{
-      id: 1,
-      fuelCategory: { category: 'Petroleum-based' },
-      fuelType: { fuelType: 'Gasoline' },
-      provisionOfTheAct: { name: 'Provision A' },
-      fuelCode: { fuelCode: 'FC001' },
-      endUse: { type: 'Transport' },
-      ciOfFuel: 85.5,
-      complianceReportId: 123
-    }]
+    fuelExports: [
+      {
+        id: 1,
+        fuelCategory: { category: 'Petroleum-based' },
+        fuelType: { fuelType: 'Gasoline' },
+        provisionOfTheAct: { name: 'Provision A' },
+        fuelCode: { fuelCode: 'FC001' },
+        endUse: { type: 'Transport' },
+        ciOfFuel: 85.5,
+        complianceReportId: 123
+      }
+    ]
   }
 
   const mockComplianceReport = {
@@ -224,7 +253,9 @@ describe('AddEditFuelExports', () => {
     const arrayUtils = await import('@/utils/array.js')
     const scheduleUtils = await import('@/utils/schedules.js')
 
-    arrayUtils.isArrayEmpty.mockImplementation(arr => !arr || arr.length === 0)
+    arrayUtils.isArrayEmpty.mockImplementation(
+      (arr) => !arr || arr.length === 0
+    )
     scheduleUtils.handleScheduleDelete.mockResolvedValue()
     scheduleUtils.handleScheduleSave.mockResolvedValue({ saved: true })
   })
@@ -242,16 +273,18 @@ describe('AddEditFuelExports', () => {
         isFetched: false
       })
 
-      render(<AddEditFuelExports />, { wrapper })
-      
+      render(<AddEditFuelExports />, { fixtureOptions })
+
       expect(screen.queryByTestId('bc-grid-editor')).not.toBeInTheDocument()
     })
 
     it('renders component when all data is loaded', async () => {
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
-      expect(screen.getByText('fuelExport:addFuelExportRowsTitle')).toBeInTheDocument()
+      expect(
+        screen.getByText('fuelExport:addFuelExportRowsTitle')
+      ).toBeInTheDocument()
     })
 
     it('renders with no existing fuel export data', async () => {
@@ -263,7 +296,7 @@ describe('AddEditFuelExports', () => {
       const { isArrayEmpty } = await import('@/utils/array.js')
       isArrayEmpty.mockReturnValue(true)
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
@@ -274,7 +307,7 @@ describe('AddEditFuelExports', () => {
         isLoading: false
       })
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
@@ -287,7 +320,7 @@ describe('AddEditFuelExports', () => {
         severity: 'success'
       }
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       // Component should render normally even with message
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
@@ -296,7 +329,7 @@ describe('AddEditFuelExports', () => {
     it('updates column definitions when options data changes', async () => {
       const schema = await import('../_schema')
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       expect(schema.fuelExportColDefs).toHaveBeenCalledWith(
         mockOptionsData,
@@ -312,7 +345,7 @@ describe('AddEditFuelExports', () => {
       const { isArrayEmpty } = await import('@/utils/array.js')
       isArrayEmpty.mockReturnValue(false)
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       // Should process the data
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
@@ -324,10 +357,10 @@ describe('AddEditFuelExports', () => {
       const { isArrayEmpty } = await import('@/utils/array.js')
       isArrayEmpty.mockReturnValue(false)
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 10))
+        await new Promise((resolve) => setTimeout(resolve, 10))
       })
 
       expect(mockGridApi.sizeColumnsToFit).toHaveBeenCalled()
@@ -337,10 +370,10 @@ describe('AddEditFuelExports', () => {
       const { isArrayEmpty } = await import('@/utils/array.js')
       isArrayEmpty.mockReturnValue(true)
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 10))
+        await new Promise((resolve) => setTimeout(resolve, 10))
       })
 
       expect(mockGridApi.sizeColumnsToFit).toHaveBeenCalled()
@@ -349,7 +382,7 @@ describe('AddEditFuelExports', () => {
     it('starts editing on last row after timeout', async () => {
       vi.useFakeTimers()
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       await act(async () => {
         vi.advanceTimersByTime(600)
@@ -366,10 +399,10 @@ describe('AddEditFuelExports', () => {
 
   describe('onCellValueChanged Function', () => {
     it('handles fuelTypeId column changes', async () => {
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       const triggerButton = screen.getByTestId('trigger-cell-changed')
-      
+
       await act(async () => {
         triggerButton.click()
       })
@@ -378,7 +411,7 @@ describe('AddEditFuelExports', () => {
     })
 
     it('handles fuelCategory column changes', async () => {
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       // Mock different column
       const mockCellChangeEvent = {
@@ -389,9 +422,12 @@ describe('AddEditFuelExports', () => {
       }
 
       const gridEditor = screen.getByTestId('bc-grid-editor')
-      const gridEditorModule = await import('@/components/BCDataGrid/BCGridEditor')
+      const gridEditorModule = await import(
+        '@/components/BCDataGrid/BCGridEditor'
+      )
       const bcGridEditorMock = gridEditorModule.BCGridEditor
-      const lastCall = bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
+      const lastCall =
+        bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
       const onCellValueChanged = lastCall[0].onCellValueChanged
 
       await act(async () => {
@@ -402,7 +438,7 @@ describe('AddEditFuelExports', () => {
     })
 
     it('handles recalculation fields', async () => {
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       const mockRecalcEvent = {
         column: { colId: 'fuelCode' },
@@ -410,9 +446,12 @@ describe('AddEditFuelExports', () => {
         api: mockGridApi
       }
 
-      const gridEditorModule = await import('@/components/BCDataGrid/BCGridEditor')
+      const gridEditorModule = await import(
+        '@/components/BCDataGrid/BCGridEditor'
+      )
       const bcGridEditorMock = gridEditorModule.BCGridEditor
-      const lastCall = bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
+      const lastCall =
+        bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
       const onCellValueChanged = lastCall[0].onCellValueChanged
 
       await act(async () => {
@@ -424,7 +463,7 @@ describe('AddEditFuelExports', () => {
     })
 
     it('ignores changes to non-special columns', async () => {
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       const mockOtherEvent = {
         column: { colId: 'quantity' },
@@ -432,9 +471,12 @@ describe('AddEditFuelExports', () => {
         api: mockGridApi
       }
 
-      const gridEditorModule = await import('@/components/BCDataGrid/BCGridEditor')
+      const gridEditorModule = await import(
+        '@/components/BCDataGrid/BCGridEditor'
+      )
       const bcGridEditorMock = gridEditorModule.BCGridEditor
-      const lastCall = bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
+      const lastCall =
+        bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
       const onCellValueChanged = lastCall[0].onCellValueChanged
 
       await act(async () => {
@@ -448,7 +490,7 @@ describe('AddEditFuelExports', () => {
 
   describe('onCellEditingStopped Function', () => {
     it('returns early when values are unchanged', async () => {
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       const mockUnchangedEvent = {
         oldValue: 'same',
@@ -456,9 +498,12 @@ describe('AddEditFuelExports', () => {
         node: mockNode
       }
 
-      const gridEditorModule = await import('@/components/BCDataGrid/BCGridEditor')
+      const gridEditorModule = await import(
+        '@/components/BCDataGrid/BCGridEditor'
+      )
       const bcGridEditorMock = gridEditorModule.BCGridEditor
-      const lastCall = bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
+      const lastCall =
+        bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
       const onCellEditingStopped = lastCall[0].onCellEditingStopped
 
       await act(async () => {
@@ -470,27 +515,32 @@ describe('AddEditFuelExports', () => {
     })
 
     it('handles successful save scenario', async () => {
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       const triggerButton = screen.getByTestId('trigger-cell-stopped')
-      
+
       await act(async () => {
         triggerButton.click()
       })
 
-      expect(mockNode.updateData).toHaveBeenCalledWith(expect.objectContaining({ 
-        validationStatus: 'pending' 
-      }))
+      expect(mockNode.updateData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          validationStatus: 'pending'
+        })
+      )
     })
 
     it('processes save with schedule handler', async () => {
       const { handleScheduleSave } = await import('@/utils/schedules.js')
-      handleScheduleSave.mockResolvedValue({ saved: true, fuelType: { fuelType: 'Processed' } })
+      handleScheduleSave.mockResolvedValue({
+        saved: true,
+        fuelType: { fuelType: 'Processed' }
+      })
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       const triggerButton = screen.getByTestId('trigger-cell-stopped')
-      
+
       await act(async () => {
         triggerButton.click()
       })
@@ -502,10 +552,10 @@ describe('AddEditFuelExports', () => {
 
   describe('onAction Function', () => {
     it('handles delete action', async () => {
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       const triggerButton = screen.getByTestId('trigger-action')
-      
+
       await act(async () => {
         triggerButton.click()
       })
@@ -515,13 +565,16 @@ describe('AddEditFuelExports', () => {
     })
 
     it('handles undo action', async () => {
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       const mockUndoEvent = { action: 'undo', params: { node: mockNode } }
 
-      const gridEditorModule = await import('@/components/BCDataGrid/BCGridEditor')
+      const gridEditorModule = await import(
+        '@/components/BCDataGrid/BCGridEditor'
+      )
       const bcGridEditorMock = gridEditorModule.BCGridEditor
-      const lastCall = bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
+      const lastCall =
+        bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
       const onAction = lastCall[0].onAction
 
       await act(async () => {
@@ -537,10 +590,10 @@ describe('AddEditFuelExports', () => {
     it('navigates back with correct parameters', async () => {
       const routesModule = await import('@/routes/routes')
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       const saveButton = screen.getByTestId('save-button')
-      
+
       await act(async () => {
         saveButton.click()
       })
@@ -561,7 +614,7 @@ describe('AddEditFuelExports', () => {
         isFetched: false
       })
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       expect(screen.queryByTestId('bc-grid-editor')).not.toBeInTheDocument()
     })
@@ -572,7 +625,7 @@ describe('AddEditFuelExports', () => {
         isLoading: true
       })
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       expect(screen.queryByTestId('bc-grid-editor')).not.toBeInTheDocument()
     })
@@ -583,7 +636,7 @@ describe('AddEditFuelExports', () => {
         isLoading: true
       })
 
-      render(<AddEditFuelExports />, { wrapper })
+      render(<AddEditFuelExports />, { fixtureOptions })
 
       expect(screen.queryByTestId('bc-grid-editor')).not.toBeInTheDocument()
     })

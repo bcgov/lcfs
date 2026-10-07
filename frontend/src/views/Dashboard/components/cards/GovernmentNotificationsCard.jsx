@@ -1,19 +1,17 @@
 import React, { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Box,
-  Button,
-  TextField,
-  Stack,
-  Link as MuiLink,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Divider,
-  IconButton,
-  Tooltip
-} from '@mui/material'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
+import Stack from '@mui/material/Stack'
+import MuiLink from '@mui/material/Link'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import Divider from '@mui/material/Divider'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 import CloseIcon from '@mui/icons-material/Close'
 import { GlobalStyles } from '@mui/system'
 import ReactQuill from 'react-quill'
