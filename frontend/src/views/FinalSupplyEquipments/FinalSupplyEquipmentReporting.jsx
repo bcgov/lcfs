@@ -29,6 +29,10 @@ import {
   useGetFSEReportingUpdateJobStatus
 } from '@/hooks/useFinalSupplyEquipment'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
+import {
+  applySavedRows,
+  useFseReportingSavedRowsStore
+} from '@/stores/useFseReportingSavedRowsStore'
 import { handleScheduleSave } from '@/utils/schedules'
 import { defaultInitialPagination } from '@/constants/schedules'
 import '@/routes/routes'
@@ -41,6 +45,28 @@ const inactiveRowsFilter = {
   type: 'equals',
   filterType: 'text',
   filter: 'false'
+}
+
+// The values a successful cell save wrote. An update answers with the id of
+// the record it changed, which is a new revision when the row came from an
+// earlier report version, so later saves go to that record.
+const getSavedReportingValues = (updatedData, responseData) => {
+  const values = {
+    supplyFromDate: updatedData.supplyFromDate,
+    supplyToDate: updatedData.supplyToDate,
+    kwhUsage: updatedData.kwhUsage,
+    complianceNotes: updatedData.complianceNotes
+  }
+  const savedId = Number(responseData?.id)
+  if (
+    updatedData.chargingEquipmentComplianceId &&
+    responseData?.id != null &&
+    Number.isInteger(savedId) &&
+    savedId > 0
+  ) {
+    values.chargingEquipmentComplianceId = savedId
+  }
+  return values
 }
 
 export const FinalSupplyEquipmentReporting = () => {
@@ -106,9 +132,48 @@ export const FinalSupplyEquipmentReporting = () => {
     'all' // 'all' to fetch all equipments data.
   )
   const {
-  data,
-  refetch
-} = queryData
+    data,
+    error: listError,
+    isLoading,
+    isError,
+    refetch,
+    dataUpdatedAt
+  } = queryData
+
+  // The list is read from a materialized view that is refreshed in the
+  // background, so a refetch right after a save can return the row as it was.
+  // Show what was saved until the list catches up.
+  const savedRows = useFseReportingSavedRowsStore(
+    (state) => state.savedRows[String(complianceReportId)]
+  )
+  const rememberSavedRow = useFseReportingSavedRowsStore(
+    (state) => state.rememberSavedRow
+  )
+  const forgetSavedDates = useFseReportingSavedRowsStore(
+    (state) => state.forgetSavedDates
+  )
+  const forgetReport = useFseReportingSavedRowsStore(
+    (state) => state.forgetReport
+  )
+  const pruneSavedRows = useFseReportingSavedRowsStore(
+    (state) => state.pruneSavedRows
+  )
+  const displayData = useMemo(
+    () => applySavedRows(savedRows, data),
+    [savedRows, data]
+  )
+  const gridQueryData = useMemo(
+    () => ({ data: displayData, error: listError, isError, isLoading }),
+    [displayData, listError, isError, isLoading]
+  )
+
+  useEffect(() => {
+    pruneSavedRows(
+      complianceReportId,
+      data?.finalSupplyEquipments,
+      dataUpdatedAt
+    )
+  }, [complianceReportId, data, dataUpdatedAt, pruneSavedRows])
 
   // Mutation hook for saving changes
   const { mutateAsync: saveRow } = useSaveFSEReporting(
@@ -167,9 +232,10 @@ export const FinalSupplyEquipmentReporting = () => {
     }
   }, [siteNames, paginationOptions.filters, selectedSiteOption])
 
-  // Update grid selection when page data changes
+  // Update grid selection when the grid's rows change. Saved values laid over
+  // the list also replace row data, so this runs on the displayed rows.
   useEffect(() => {
-    if (isGridReady && fseGridRef.current?.api && data) {
+    if (isGridReady && fseGridRef.current?.api && displayData) {
       const currentPageSelection = new Set()
       const nodesToSelect = []
 
@@ -209,7 +275,7 @@ export const FinalSupplyEquipmentReporting = () => {
       }
       previousSelectionRef.current = currentPageSelection
     }
-  }, [data, isGridReady, paginationOptions.page])
+  }, [displayData, isGridReady, paginationOptions.page])
 
   const syncGridSelection = useCallback((targetSelection) => {
     if (!fseGridRef.current?.api) return
@@ -541,8 +607,13 @@ export const FinalSupplyEquipmentReporting = () => {
         t,
         updatedData
       })
+      const isSaved = responseData.validationStatus === 'success'
+      const savedValues = isSaved
+        ? getSavedReportingValues(updatedData, responseData)
+        : {}
       params.node.updateData({
         ...params.node.data,
+        ...savedValues,
         validationStatus: responseData.validationStatus,
         modified: responseData.modified
       })
@@ -551,6 +622,9 @@ export const FinalSupplyEquipmentReporting = () => {
           equipmentId,
           responseData.validationStatus
         )
+      }
+      if (isSaved) {
+        rememberSavedRow(complianceReportId, params.node.data, savedValues)
       }
       params.api?.autoSizeAllColumns?.()
     },
@@ -561,7 +635,8 @@ export const FinalSupplyEquipmentReporting = () => {
       reportData,
       defaultFromDate,
       defaultToDate,
-      organizationId
+      organizationId,
+      rememberSavedRow
     ]
   )
 
@@ -663,6 +738,7 @@ export const FinalSupplyEquipmentReporting = () => {
           reportData?.report?.complianceReportGroupUuid,
         organizationId
       })
+      forgetSavedDates(complianceReportId, equipmentIds)
       fseGridAlertRef.current?.triggerAlert({
         message: t('finalSupplyEquipment:defaultValuesSet'),
         severity: 'success'
@@ -681,7 +757,8 @@ export const FinalSupplyEquipmentReporting = () => {
     complianceReportId,
     reportData,
     organizationId,
-    t
+    t,
+    forgetSavedDates
   ])
 
   // Validate date range
@@ -941,7 +1018,7 @@ export const FinalSupplyEquipmentReporting = () => {
           singleClickEdit: true
         }}
         gridOptions={gridOptions}
-        queryData={queryData}
+        queryData={gridQueryData}
         dataKey="finalSupplyEquipments"
         getRowId={(params) => String(params.data.chargingEquipmentId + '-' + params.data.chargingEquipmentVersion)}
         onGridReady={handleGridReady}
@@ -980,6 +1057,8 @@ export const FinalSupplyEquipmentReporting = () => {
         importHook={useImportFSEReportingUpdate}
         getJobStatusHook={useGetFSEReportingUpdateJobStatus}
         onComplete={() => {
+          // The upload may have changed rows edited earlier; its values win.
+          forgetReport(complianceReportId)
           refetch()
         }}
       />
