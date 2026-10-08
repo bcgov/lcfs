@@ -13,7 +13,7 @@ export const KEY_PAGE_HOME = 'Home'
 export const KEY_PAGE_END = 'End'
 export const KEY_PERIOD = '.'
 
-type RoleBadgeSizes = Record<RoleName, number>
+type RoleBadgeSizes = Partial<Record<RoleName, number>>
 
 // badge sizes for various user roles:
 export const ROLES_BADGE_SIZE: RoleBadgeSizes = {

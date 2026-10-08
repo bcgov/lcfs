@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
@@ -23,6 +22,46 @@ import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { sortMixedStrings } from './components/utils'
+import type { ApiServiceInstance } from '@/services/useApiService'
+
+type FinalSupplyEquipmentGridRow = Record<string, unknown> & {
+  isNewSupplementalEntry?: boolean
+  organizationName?: string
+  supplyFromDate?: string
+  supplyToDate?: string
+  kwhUsage?: number
+  capacityUtilizationPercent?: number
+  serialNbr?: string
+  manufacturer?: string
+  model?: string
+  levelOfEquipment?: string | { name?: string }
+  ports?: string
+  intendedUseTypes?: Array<{ type?: string }>
+  intendedUserTypes?: Array<{ typeName?: string }>
+  streetAddress?: string
+  city?: string
+  postalCode?: string
+  latitude?: number | string
+  longitude?: number | string
+  complianceReportGroupUuid?: string
+  isActive?: boolean
+}
+
+type SuggestionQueryContext = {
+  client: ApiServiceInstance
+  queryKey: readonly unknown[]
+}
+
+type AddressSuggestion = {
+  full_address: string
+  street_address: string
+  city: string
+  province: string
+  postal_code: string
+  latitude: number
+  longitude: number
+  score: number
+}
 
 // Custom status renderer for FSE that handles flat status field
 const FSEStatusRenderer = createStatusRenderer(
@@ -39,9 +78,12 @@ const FSEStatusRenderer = createStatusRenderer(
 )
 
 // Helper function for address autocomplete within grid
-const addressAutocompleteQuery = async ({ client, queryKey }) => {
+const addressAutocompleteQuery = async ({
+  client,
+  queryKey
+}: SuggestionQueryContext) => {
   const partialAddress = queryKey[1]
-  if (!partialAddress || partialAddress.length < 3) {
+  if (typeof partialAddress !== 'string' || partialAddress.length < 3) {
     return []
   }
 
@@ -52,7 +94,7 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
       max_results: 5
     })
 
-    const data = response.data
+    const data = response.data as { suggestions?: AddressSuggestion[] }
 
     // Return in the format expected by AsyncSuggestionEditor
     // Now suggestions come as complete AddressSchema objects
@@ -81,10 +123,10 @@ export const finalSupplyEquipmentColDefs = (
   errors: GridErrors,
   warnings: GridWarnings,
   gridReady: boolean
-): ColDef[] => {
+): ColDef<FinalSupplyEquipmentGridRow>[] => {
   return [
     validation,
-    actions((params) => ({
+    actions((params: { data: FinalSupplyEquipmentGridRow }) => ({
       enableDuplicate: true,
       enableDelete: !params.data.isNewSupplementalEntry,
       enableUndo: false, // FSE doesn't use supplemental logic yet
@@ -131,7 +173,7 @@ export const finalSupplyEquipmentColDefs = (
       valueSetter: (params) => {
         if (params.newValue) {
           const isValidOrganizationName =
-            optionsData?.organizationNames.includes(params.newValue)
+            optionsData.organizationNames?.includes(params.newValue) ?? false
 
           params.data.organizationName = isValidOrganizationName
             ? params.newValue
@@ -140,8 +182,7 @@ export const finalSupplyEquipmentColDefs = (
         }
         return false
       },
-      tooltipValueGetter: (params) =>
-        'Select the organization name from the list'
+      tooltipValueGetter: () => 'Select the organization name from the list'
     },
     {
       field: 'supplyFromDate',
@@ -150,7 +191,7 @@ export const finalSupplyEquipmentColDefs = (
       ),
       headerComponent: RequiredHeader,
       minWidth: 200,
-      cellRenderer: (params) => (
+      cellRenderer: (params: { value?: unknown }) => (
         <BCTypography variant="body4">
           {params.value ? params.value : 'YYYY-MM-DD'}
         </BCTypography>
@@ -166,7 +207,7 @@ export const finalSupplyEquipmentColDefs = (
       },
       editable: true,
       valueGetter: (params) => {
-        return params.data.supplyFromDate || `${compliancePeriod}-01-01`
+        return params.data?.supplyFromDate || `${compliancePeriod}-01-01`
       },
       valueSetter: (params) => {
         params.data.supplyFromDate = params.newValue
@@ -180,7 +221,7 @@ export const finalSupplyEquipmentColDefs = (
       ),
       headerComponent: RequiredHeader,
       minWidth: 200,
-      cellRenderer: (params) => (
+      cellRenderer: (params: { value?: unknown }) => (
         <BCTypography variant="body4">
           {params.value ? params.value : 'YYYY-MM-DD'}
         </BCTypography>
@@ -196,7 +237,7 @@ export const finalSupplyEquipmentColDefs = (
       },
       editable: true,
       valueGetter: (params) => {
-        return params.data.supplyToDate || `${compliancePeriod}-12-31`
+        return params.data?.supplyToDate || `${compliancePeriod}-12-31`
       },
       valueSetter: (params) => {
         params.data.supplyToDate = params.newValue
@@ -242,11 +283,12 @@ export const finalSupplyEquipmentColDefs = (
       ),
       minWidth: 320,
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'fuel-code-search',
-        queryFn: async ({ client, queryKey }) => {
+        queryFn: async ({ client, queryKey }: SuggestionQueryContext) => {
           try {
             const [, searchTerm] = queryKey
+            if (typeof searchTerm !== 'string') return []
             const path = `${
               apiRoutes.searchFinalSupplyEquipments
             }manufacturer=${encodeURIComponent(searchTerm)}`
@@ -371,12 +413,12 @@ export const finalSupplyEquipmentColDefs = (
         'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
       ),
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'address-autocomplete',
         queryFn: addressAutocompleteQuery,
         optionLabel: 'label'
       }),
-      valueSetter: async (params) => {
+      valueSetter: (params) => {
         if (params.newValue === '' || params.newValue?.name === '') {
           params.data.streetAddress = ''
           params.data.city = ''
@@ -433,7 +475,7 @@ export const finalSupplyEquipmentColDefs = (
       ),
       valueSetter: (params) => {
         const newValue = params.newValue.toUpperCase()
-        params.data[params.colDef.field] = newValue
+        params.data.postalCode = newValue
         return true
       },
       cellEditor: TextCellEditor,
@@ -553,7 +595,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
           filter: 'agNumberColumnFilter',
           sortable: false,
           suppressNavigable: true,
-          valueGetter: (params) => {
+          valueGetter: (params: { data?: FinalSupplyEquipmentGridRow }) => {
             const hasUsage = params.data?.kwhUsage
             const value = params.data?.capacityUtilizationPercent
             if (!hasUsage || value === null || value === undefined) {
@@ -561,7 +603,8 @@ export const finalSupplyEquipmentSummaryColDefs = (
             }
             return Number(value)
           },
-          valueFormatter: (params) => numberFormatter(params, false, 0)
+          valueFormatter: (params: { value?: number | null }) =>
+            numberFormatter(params, false, 0)
         }
       ]
     : []),
@@ -678,9 +721,9 @@ export const getFSEReportingColDefs = (
   maxDate: string,
   errors: GridErrors = {},
   warnings: GridWarnings = {},
-  complianceReportId: string | number,
+  _complianceReportId: string | number,
   complianceReportGroupUuid: string
-): ColDef[] => [
+): ColDef<FinalSupplyEquipmentGridRow>[] => [
   validation,
   {
     field: 'chargingEquipmentComplianceId',
@@ -696,7 +739,7 @@ export const getFSEReportingColDefs = (
     ),
     headerComponent: RequiredHeader,
     minWidth: 200,
-    cellRenderer: (params) => (
+    cellRenderer: (params: { value?: unknown }) => (
       <BCTypography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
       </BCTypography>
@@ -711,10 +754,10 @@ export const getFSEReportingColDefs = (
       autoOpenLastRow: false
     },
     editable: (params) =>
-      params.data.complianceReportGroupUuid === complianceReportGroupUuid &&
-      params.data.isActive !== false,
+      params.data?.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data?.isActive !== false,
     valueGetter: (params) => {
-      return params.data.supplyFromDate || minDate
+      return params.data?.supplyFromDate || minDate
     },
     valueSetter: (params) => {
       params.data.supplyFromDate = params.newValue
@@ -730,7 +773,7 @@ export const getFSEReportingColDefs = (
     ),
     headerComponent: RequiredHeader,
     minWidth: 200,
-    cellRenderer: (params) => (
+    cellRenderer: (params: { value?: unknown }) => (
       <BCTypography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
       </BCTypography>
@@ -745,10 +788,10 @@ export const getFSEReportingColDefs = (
       autoOpenLastRow: false
     },
     editable: (params) =>
-      params.data.complianceReportGroupUuid === complianceReportGroupUuid &&
-      params.data.isActive !== false,
+      params.data?.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data?.isActive !== false,
     valueGetter: (params) => {
-      return params.data.supplyToDate || maxDate
+      return params.data?.supplyToDate || maxDate
     },
     valueSetter: (params) => {
       params.data.supplyToDate = params.newValue
@@ -762,7 +805,7 @@ export const getFSEReportingColDefs = (
     ),
     minWidth: 220,
     valueFormatter: numberFormatter,
-    valueGetter: (params) => params.data.kwhUsage || 0,
+    valueGetter: (params) => params.data?.kwhUsage || 0,
     cellEditor: NumberEditor,
     type: 'numericColumn',
     cellEditorParams: {
@@ -771,8 +814,8 @@ export const getFSEReportingColDefs = (
       showStepperButtons: false
     },
     editable: (params) =>
-      params.data.complianceReportGroupUuid === complianceReportGroupUuid &&
-      params.data.isActive !== false,
+      params.data?.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data?.isActive !== false,
     filter: false,
     sortable: false,
     cellStyle: (params) =>
@@ -786,8 +829,8 @@ export const getFSEReportingColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
     ),
     editable: (params) =>
-      params.data.complianceReportGroupUuid === complianceReportGroupUuid &&
-      params.data.isActive !== false,
+      params.data?.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data?.isActive !== false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     cellEditor: 'agTextCellEditor',

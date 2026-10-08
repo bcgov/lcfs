@@ -64,7 +64,11 @@ const getNotificationRoute = (
     const parsed = JSON.parse(notification.message)
     const { id, service, compliancePeriod } = parsed
     const serviceKey = service || notification.type
-    const routeTemplate = routesMapping(currentUser || {})[serviceKey]
+    const routeMap = routesMapping(currentUser || {})
+    if (!(serviceKey in routeMap)) {
+      return null
+    }
+    const routeTemplate = routeMap[serviceKey as keyof typeof routeMap]
 
     if (!routeTemplate) {
       return null
@@ -258,7 +262,9 @@ export const UserProfileActions = () => {
     setNotificationAnchorEl(event.currentTarget)
   }
 
-  const openNotificationMenuFromFocus = (event: ReactFocusEvent<HTMLElement>) => {
+  const openNotificationMenuFromFocus = (
+    event: ReactFocusEvent<HTMLElement>
+  ) => {
     cancelNotificationClose()
     setNotificationAnchorEl(event.currentTarget)
   }
@@ -476,7 +482,8 @@ export const UserProfileActions = () => {
                     disabled={notificationsCount === 0}
                   >
                     <BCTypography variant="body2" color="primary">
-                      {'✓ '}{t('notifications:markAllAsRead')}
+                      {'✓ '}
+                      {t('notifications:markAllAsRead')}
                     </BCTypography>
                   </Button>
                 </Stack>

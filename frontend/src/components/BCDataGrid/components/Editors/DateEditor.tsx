@@ -1,7 +1,12 @@
-// @ts-nocheck
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format, isValid, parseISO } from 'date-fns'
 import { useEffect, useRef, useState } from 'react'
+import type {
+  ComponentProps,
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent,
+  SyntheticEvent
+} from 'react'
 
 export interface DateEditorProps {
   value?: string | null
@@ -33,7 +38,11 @@ const stopEditingAfterValueChange = (
   }, 0)
 }
 
-const restoreWindowScroll = (scrollX: number, scrollY: number, callback?) => {
+const restoreWindowScroll = (
+  scrollX: number,
+  scrollY: number,
+  callback?: () => void
+) => {
   let hasRunCallback = false
   const restore = () => {
     if (!hasRunCallback) {
@@ -70,6 +79,14 @@ const formatDateValue = (val?: Date | null) => {
   return normalizedDate ? format(normalizedDate, 'yyyy-MM-dd') : null
 }
 
+const legacyDatePickerProps = {
+  fullWidth: true,
+  margin: 'normal',
+  id: 'date-picker-dialog',
+  variant: 'inline',
+  disableToolbar: true
+} as unknown as ComponentProps<typeof DatePicker>
+
 export const DateEditor = ({
   value,
   onValueChange,
@@ -81,23 +98,28 @@ export const DateEditor = ({
   autoOpenLastRow
 }: DateEditorProps) => {
   // Handle initial value properly - use null if value is falsy
-  const [selectedDate, setSelectedDate] = useState(parseDateValue(value))
+  const [selectedDate, setSelectedDate] = useState<Date | null>(
+    parseDateValue(value)
+  )
   const [isOpen, setIsOpen] = useState(() => {
     if (!autoOpenLastRow) return false
-    const lastRowIndex = api.getLastDisplayedRowIndex()
+    const lastRowIndex = api?.getLastDisplayedRowIndex?.() ?? -1
     return rowIndex === lastRowIndex
   })
-  const containerRef = useRef(null)
-  const initialValueRef = useRef(formatDateValue(parseDateValue(value)))
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const initialValueRef = useRef<string | null>(
+    formatDateValue(parseDateValue(value))
+  )
   const hasCommittedRef = useRef(false)
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = (event: globalThis.MouseEvent) => {
       const target = event.target
-      const isPickerPopperClick = target?.closest?.('.MuiPickersPopper-root')
+      const isPickerPopperClick =
+        target instanceof Element && target.closest('.MuiPickersPopper-root')
       if (
         containerRef.current &&
-        !containerRef.current.contains(target) &&
+        !(target instanceof Node && containerRef.current.contains(target)) &&
         !isPickerPopperClick
       ) {
         setIsOpen(false)
@@ -113,11 +135,11 @@ export const DateEditor = ({
     }
   }, [])
 
-  const updateValue = (val) => {
+  const updateValue = (val: Date | null) => {
     setSelectedDate(normalizeDate(val))
   }
 
-  const commitValue = (val = selectedDate) => {
+  const commitValue = (val: Date | null = selectedDate) => {
     if (val === null || val === undefined) {
       if (initialValueRef.current === null) return
       setSelectedDate(null)
@@ -152,7 +174,7 @@ export const DateEditor = ({
   }
 
   // Improved event handlers for better cross-browser support
-  const stopPropagation = (e) => {
+  const stopPropagation = (e: SyntheticEvent<HTMLElement>) => {
     if (e && e.stopPropagation) {
       e.stopPropagation()
     }
@@ -160,7 +182,7 @@ export const DateEditor = ({
   }
 
   // Handler for the icon click that forces the calendar to open
-  const handleIconClick = (e) => {
+  const handleIconClick = (e: MouseEvent<HTMLElement>) => {
     stopPropagation(e)
     if (e && e.preventDefault) {
       e.preventDefault()
@@ -169,14 +191,14 @@ export const DateEditor = ({
   }
 
   // Explicit handler for clearing the date
-  const handleClear = (e) => {
+  const handleClear = (e: MouseEvent<HTMLElement>) => {
     stopPropagation(e)
     setSelectedDate(null)
     onValueChange(null)
     stopEditingAfterValueChange(api, rowIndex, column)
   }
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: ReactKeyboardEvent<HTMLElement>) => {
     stopPropagation(e)
     if (e?.key === 'Enter') {
       e.preventDefault?.()
@@ -212,9 +234,7 @@ export const DateEditor = ({
     >
       <DatePicker
         className="ag-grid-date-editor ag-input-field"
-        fullWidth
-        margin="normal"
-        id="date-picker-dialog"
+        {...legacyDatePickerProps}
         format="yyyy-MM-dd"
         slotProps={{
           field: {
@@ -275,10 +295,8 @@ export const DateEditor = ({
         onOpen={handleDatePickerOpen}
         onClose={handleDatePickerClose}
         views={['year', 'month', 'day']}
-        variant="inline"
-        disableToolbar
-        minDate={minDate}
-        maxDate={maxDate}
+        minDate={minDate as unknown as Date | undefined}
+        maxDate={maxDate as unknown as Date | undefined}
         sx={{
           width: '100%',
           height: '100%',

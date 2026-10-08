@@ -1,5 +1,11 @@
-// @ts-nocheck
-import { forwardRef, useState, useCallback, useLayoutEffect } from 'react'
+import {
+  forwardRef,
+  useState,
+  useCallback,
+  useLayoutEffect,
+  type ChangeEvent,
+  type KeyboardEvent
+} from 'react'
 import InputBase from '@mui/material/InputBase'
 import Popper from '@mui/material/Popper'
 import Paper from '@mui/material/Paper'
@@ -9,28 +15,33 @@ export interface LargeTextareaEditorProps {
   onValueChange: (value: string) => void
   column: { actualWidth: number }
   api?: any
-  [key: string]: any
 }
 
-export const LargeTextareaEditor = forwardRef(
-  ({ value, onValueChange, column, ...props }: LargeTextareaEditorProps, ref) => {
+export const LargeTextareaEditor = forwardRef<
+  HTMLDivElement,
+  LargeTextareaEditorProps
+>(
+  (
+    { value, onValueChange, column, ...props }: LargeTextareaEditorProps,
+    _ref
+  ) => {
     const [valueState, setValueState] = useState(value)
-    const [anchorEl, setAnchorEl] = useState()
-    const [inputRef, setInputRef] = useState(null)
+    const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
+    const [inputRef, setInputRef] = useState<HTMLTextAreaElement | null>(null)
 
     useLayoutEffect(() => {
-      const focusedCell = props.api.getFocusedCell()
+      props.api.getFocusedCell()
       if (inputRef) {
         inputRef.focus()
       }
     }, [inputRef, props.api])
 
-    const handleRef = useCallback((el) => {
+    const handleRef = useCallback((el: HTMLDivElement | null) => {
       setAnchorEl(el)
     }, [])
 
     const handleChange = useCallback(
-      (event) => {
+      (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const newValue = event.target.value
         setValueState(newValue)
         onValueChange(newValue)
@@ -38,7 +49,9 @@ export const LargeTextareaEditor = forwardRef(
       [onValueChange]
     )
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (
+      event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+    ) => {
       if (event.key === 'Tab') {
         // setAnchorEl(null)
         // Move to the next cell

@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import type { ChangeEvent, ForwardedRef } from 'react'
 import { useDebounce } from '@/utils/debounce'
 
 export interface AsyncValidationEditorProps {
@@ -10,10 +10,16 @@ export interface AsyncValidationEditorProps {
   column?: { colId?: string }
   debounceLimit?: number
   condition: (value: string) => boolean | Promise<boolean>
-  [key: string]: any
 }
 
-export const AsyncValidationEditor = forwardRef(
+export const AsyncValidationEditor = forwardRef<
+  {
+    getValue: () => string | undefined
+    afterGuiAttached: () => void
+    isCancelAfterEnd: () => boolean
+  },
+  AsyncValidationEditorProps
+>(
   (
     {
       value,
@@ -22,10 +28,14 @@ export const AsyncValidationEditor = forwardRef(
       rowIndex,
       column,
       ...props
-    }: AsyncValidationEditorProps,
-    ref
+    }: Omit<AsyncValidationEditorProps, 'ref'>,
+    ref: ForwardedRef<{
+      getValue: () => string | undefined
+      afterGuiAttached: () => void
+      isCancelAfterEnd: () => boolean
+    }>
   ) => {
-    const [inputValue, setInputValue] = useState(value)
+    const [inputValue, setInputValue] = useState<string | undefined>(value)
     const [valid, setValid] = useState(true)
     const [validating, setValidating] = useState(false)
     const [touched, setTouched] = useState(false)
@@ -34,7 +44,7 @@ export const AsyncValidationEditor = forwardRef(
     // TODO: ability to show tool tip
     // TODO: ability to show error message
     // TODO: ability to perform both synchronous and asynhronous validations.
-    function inputHandler(e) {
+    function inputHandler(e: ChangeEvent<HTMLInputElement>) {
       setTouched(true)
       setInputValue(e.target.value)
       onValueChange(e.target.value)
@@ -44,16 +54,16 @@ export const AsyncValidationEditor = forwardRef(
     useEffect(() => {
       const timeout = props.debounceLimit
 
-      new Promise((resolve, reject) => {
+      new Promise<boolean>((resolve, _reject) => {
         if (inputValue === '') {
           resolve(false)
         } else {
           setTimeout(() => {
-            resolve(props.condition(inputValue))
+            resolve(props.condition(inputValue as string))
           }, timeout)
         }
       })
-        .then((valid) => {
+        .then((valid: boolean) => {
           setValid(valid)
           setValidating(false)
         })
@@ -103,7 +113,7 @@ export const AsyncValidationEditor = forwardRef(
           style={{ color: txtColor }}
           onChange={inputHandler}
           value={inputValue}
-          placeholder={'Enter ' + column.colId}
+          placeholder={'Enter ' + column!.colId}
         />
         {loadingElement}
       </div>

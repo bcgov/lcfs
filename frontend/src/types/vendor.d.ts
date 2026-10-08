@@ -22,3 +22,29 @@ declare module 'papaparse' {
   const Papa: any
   export default Papa
 }
+
+declare module 'lodash/startCase' {
+  export default function startCase(value?: string): string
+}
+
+declare module 'lodash' {
+  export function debounce<TArgs extends unknown[], TResult>(
+    func: (...args: TArgs) => TResult,
+    wait?: number
+  ): (...args: TArgs) => void
+}
+
+declare module 'react-input-mask' {
+  import type { ComponentType, InputHTMLAttributes, ReactNode } from 'react'
+
+  interface InputMaskProps
+    extends Omit<InputHTMLAttributes<HTMLInputElement>, 'children'> {
+    mask?: string | Array<string | RegExp>
+    maskChar?: string | null
+    formatChars?: Record<string, string>
+    children?: (props: InputHTMLAttributes<HTMLInputElement>) => ReactNode
+  }
+
+  const InputMask: ComponentType<InputMaskProps>
+  export default InputMask
+}

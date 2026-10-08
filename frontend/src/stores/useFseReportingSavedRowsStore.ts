@@ -36,6 +36,11 @@ type SavedRow = {
 
 export type SavedRowsForReport = Record<string, SavedRow>
 
+type ReportingResponse<T extends { finalSupplyEquipments?: ReportingRow[] }> =
+  Omit<T, 'finalSupplyEquipments'> & {
+    finalSupplyEquipments?: ReportingRow[]
+  }
+
 type FseReportingSavedRowsStore = {
   savedRows: Record<string, SavedRowsForReport>
   rememberSavedRow: (
@@ -85,7 +90,7 @@ export const applySavedRows = <
   savedRows: SavedRowsForReport | undefined,
   data: T | undefined,
   now = Date.now()
-): T | undefined => {
+): ReportingResponse<T> | undefined => {
   const rows = data?.finalSupplyEquipments
   if (!savedRows || !Array.isArray(rows)) return data
 
@@ -99,7 +104,9 @@ export const applySavedRows = <
     return { ...row, ...entry.values }
   })
 
-  return changed ? { ...data, finalSupplyEquipments: nextRows } : data
+  return changed
+    ? ({ ...data, finalSupplyEquipments: nextRows } as ReportingResponse<T>)
+    : data
 }
 
 const withReport = (

@@ -38,16 +38,13 @@ interface PaginationSort {
 interface PaginationOptions {
   page: number
   size: number
-  filters?: PaginationFilter[]
-  sortOrders?: PaginationSort[]
+  filters: PaginationFilter[]
+  sortOrders: PaginationSort[]
 }
 
-export const FuelExportSummary = ({
-  data,
-  status
-}: FuelExportSummaryProps) => {
+export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
-    defaultInitialPagination
+    defaultInitialPagination as unknown as PaginationOptions
   )
   const gridRef = useRef(null)
   const { t } = useTranslation(['common', 'fuelExport'])

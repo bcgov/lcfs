@@ -1,5 +1,5 @@
-// @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef } from 'ag-grid-community'
+import type { TFunction } from 'i18next'
 import BCBox from '@/components/BCBox'
 import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import {
@@ -41,7 +41,27 @@ const COMMENT_CHIP_SX = {
   '&:hover': { bgcolor: '#505050' }
 }
 
-const LastCommentRenderer = ({ data }) => {
+type InitiativeAgreementGridRow = Record<string, unknown> & {
+  lifecycleStatus?: { status?: string }
+  organization?: { name?: string }
+  contactName?: string
+  iaCode?: string
+  agreementStartDate?: string
+  agreementEndDate?: string
+  updateDate?: string
+  actionNumber?: number
+  initiativeAgreementId?: number
+  currentStatus?: { status?: string }
+  assignedAnalyst?: { userProfileId?: number }
+  lastComment?: { fullName?: string; comment?: string }
+  creditAllocation?: number | null
+}
+
+const LastCommentRenderer = ({
+  data
+}: {
+  data?: InitiativeAgreementGridRow
+}) => {
   const last = data?.lastComment
   if (!last?.fullName) {
     return <BCBox component="div" sx={{ width: '100%', height: '100%' }} />
@@ -84,7 +104,10 @@ const DATE_FLOATING_FILTER_PARAMS = {
   initialFilterType: 'equals'
 }
 
-const dateCol = (field, headerName) => ({
+const dateCol = (
+  field: ColDef<InitiativeAgreementGridRow>['field'],
+  headerName: string
+): ColDef<InitiativeAgreementGridRow> => ({
   field,
   headerName,
   valueFormatter: dateFormatter,
@@ -98,12 +121,16 @@ const dateCol = (field, headerName) => ({
 
 // A proponent's grid holds one organization, so the column would show
 // the same value in every row and its filter would filter nothing (#4893).
-export const proponentInitiativeAgreementColDefs = (t): ColDef[] =>
+export const proponentInitiativeAgreementColDefs = (
+  t: TFunction
+): ColDef<InitiativeAgreementGridRow>[] =>
   initiativeAgreementColDefs(t).filter(
     (colDef) => colDef.field !== 'organization.name'
   )
 
-export const initiativeAgreementColDefs = (t): ColDef[] => [
+export const initiativeAgreementColDefs = (
+  t: TFunction
+): ColDef<InitiativeAgreementGridRow>[] => [
   {
     field: 'lifecycleStatus.status',
     headerName: t('initiativeAgreement:columns.status'),
@@ -164,12 +191,17 @@ export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
 // the ID read off each row's own agreement and the analyst column left
 // out — the wireframe's tab has no analyst, and the rows come from many
 // agreements at once.
-export const allDesignatedActionColDefs = (t): ColDef[] =>
+export const allDesignatedActionColDefs = (
+  t: TFunction
+): ColDef<InitiativeAgreementGridRow>[] =>
   designatedActionColDefs(t, null).filter(
     (colDef) => colDef.colId !== 'assignedAnalyst'
   )
 
-export const designatedActionColDefs = (t, initiativeAgreementId): ColDef[] => [
+export const designatedActionColDefs = (
+  t: TFunction,
+  initiativeAgreementId: number | null
+): ColDef<InitiativeAgreementGridRow>[] => [
   {
     colId: 'actionNumber',
     field: 'actionNumber',

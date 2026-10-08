@@ -1462,10 +1462,10 @@ const MAP_CONFIG = {
  * - Responsive design with mobile support
  *
  * @param {Object} props
- * @param {number|string} props.organizationId - Organization ID for filtering (optional)
+ * @param {number|string} [props.organizationId] - Organization ID for filtering
  * @returns {React.ReactElement} The map component
  */
-const FSEFullMap = ({ organizationId: propOrgId }) => {
+const FSEFullMap = ({ organizationId: propOrgId } = {}) => {
   const { t } = useTranslation(['fse'])
 
   // Route params and user context

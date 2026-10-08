@@ -40,7 +40,9 @@ export const MainLayout = () => {
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const isGovernmentRole =
-    currentUser?.roles?.some(({ name }) => name === t('gov')) ?? false
+    currentUser?.roles?.some(
+      (role: { name?: string | null }) => role.name === t('gov')
+    ) ?? false
   const matches = useMatches()
   const location = useLocation()
   const currentMatch = matches[matches.length - 1] as

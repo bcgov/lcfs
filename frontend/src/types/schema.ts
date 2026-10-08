@@ -40,6 +40,7 @@ export interface FuelType {
   fuelType: string
   fuelTypeId: number
   unit: string
+  units?: string
   defaultCarbonIntensity: number
   unrecognized?: boolean
   fossilDerived?: boolean

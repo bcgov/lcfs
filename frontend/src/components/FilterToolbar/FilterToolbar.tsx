@@ -109,7 +109,7 @@ export const FilterToolbar = ({
             onChange={(_, option) => filter.onChange(option)}
             getOptionLabel={
               filter.getOptionLabel
-                ? (option) => filter.getOptionLabel?.(option as never)
+                ? (option) => filter.getOptionLabel?.(option as never) as string
                 : (option) => {
                     if (typeof option === 'string') {
                       return option

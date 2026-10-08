@@ -2,6 +2,16 @@ import Box from '@mui/material/Box'
 import * as echarts from 'echarts/core'
 import { useEffect, useRef } from 'react'
 
+/**
+ * @param {{
+ *   option: import('echarts').EChartsOption,
+ *   height?: number | string,
+ *   ariaLabel?: string,
+ *   ariaDescribedBy?: string,
+ *   tabIndex?: number,
+ *   sx?: import('@mui/system').SystemStyleObject<import('@mui/material/styles').Theme>
+ * }} props
+ */
 export const BCResponsiveEChart = ({
   option,
   height = 300,

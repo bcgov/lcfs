@@ -34,6 +34,26 @@ interface SeededUserAssociationFormValues {
   saltPhrase: string
 }
 
+interface SeededUserOption {
+  userProfileId: number | string
+  keycloakUsername?: string
+  roles?: Array<{ name?: string | null }>
+  organization?: OrganizationOption | null
+  title?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  keycloakEmail?: string | null
+  email?: string | null
+  phone?: string | null
+  mobilePhone?: string | null
+  isActive?: boolean
+}
+
+interface OrganizationOption {
+  organizationId: number | string
+  name: string
+}
+
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
     padding: '7.5px 4px 7.5px 5px',
@@ -134,13 +154,18 @@ export const SeededUserAssociation = () => {
   const selectedRoles = useWatch({ control, name: 'selectedRoles' }) || []
 
   const {
-    data: seededUsers = [],
+    data: seededUsersData = [],
     isLoading: isUsersLoading,
     refetch: refetchSeededUsers
-  } = useSeededTestUsers(seedEnv)
+  } = useSeededTestUsers(
+    seedEnv,
+    undefined as unknown as Parameters<typeof useSeededTestUsers>[1]
+  )
+  const seededUsers = seededUsersData as SeededUserOption[]
 
-  const { data: organizations = [], isLoading: isOrgsLoading } =
+  const { data: organizationsData = [], isLoading: isOrgsLoading } =
     useOrganizationNames(null, { orgFilter: 'all' })
+  const organizations = organizationsData as OrganizationOption[]
 
   const { mutate: updateUser, isPending } = useUpdateUser({
     onSuccess: () => {
@@ -496,20 +521,14 @@ export const SeededUserAssociation = () => {
                           }}
                           renderOption={(props, option, { selected }) => (
                             <li {...props} key={option.value}>
-                              <Checkbox
-                                checked={selected}
-                                sx={{ mr: 1 }}
-                              />
+                              <Checkbox checked={selected} sx={{ mr: 1 }} />
                               <BCTypography variant="body2">
                                 {option.label}
                               </BCTypography>
                             </li>
                           )}
                           renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              error={!!fieldState.error}
-                            />
+                            <TextField {...params} error={!!fieldState.error} />
                           )}
                         />
                         {renderError(fieldState.error?.message)}
@@ -622,12 +641,12 @@ export const SeededUserAssociation = () => {
 
                     <Box>
                       <BCButton
-                      color="primary"
-                      variant="outlined"
-                      disabled={isPending || isResolvingOrgName}
-                      onClick={handleResolveOrgName}
-                    >
-                      {t('admin:seededAssoc.resolveBtn')}
+                        color="primary"
+                        variant="outlined"
+                        disabled={isPending || isResolvingOrgName}
+                        onClick={handleResolveOrgName}
+                      >
+                        {t('admin:seededAssoc.resolveBtn')}
                       </BCButton>
                     </Box>
 

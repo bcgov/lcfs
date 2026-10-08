@@ -36,9 +36,7 @@ export interface FilterPillRendererParams {
   field: string
 }
 
-export type FilterPillRenderer = (
-  params: FilterPillRendererParams
-) => ReactNode
+export type FilterPillRenderer = (params: FilterPillRendererParams) => ReactNode
 
 export interface CreateAgGridPillsOptions {
   filters?: AgGridFilterModel[]
@@ -123,7 +121,7 @@ const extractFilterValues = (
     }
 
     if (startValue || endValue) {
-      return [startValue ?? endValue]
+      return [startValue ?? endValue ?? null]
     }
   }
 
@@ -131,14 +129,11 @@ const extractFilterValues = (
     if (filter.dateFrom && filter.dateTo) {
       return [`${filter.dateFrom} – ${filter.dateTo}`]
     }
-    return [filter.dateFrom ?? filter.dateTo]
+    return [filter.dateFrom ?? filter.dateTo ?? null]
   }
 
   if (filter.filter !== undefined && filter.filter !== null) {
-    if (
-      typeof filter.filter === 'string' &&
-      filter.filter.includes(',')
-    ) {
+    if (typeof filter.filter === 'string' && filter.filter.includes(',')) {
       return filter.filter
         .split(',')
         .map((value) => value.trim())

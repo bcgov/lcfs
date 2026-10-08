@@ -4,47 +4,47 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ComplianceReportPageNav } from '../ComplianceReportPageNav'
 
 vi.mock('@mui/icons-material/AutoAwesome', () => ({
-    default: () => <span data-test="auto-awesome-icon" />
+  default: () => <span data-test="auto-awesome-icon" />
 }))
 
 vi.mock('@mui/icons-material/Description', () => ({
-    default: () => <span data-test="description-icon" />
+  default: () => <span data-test="description-icon" />
 }))
 
 vi.mock('@mui/icons-material/ElectricBolt', () => ({
-    default: () => <span data-test="electric-bolt-icon" />
+  default: () => <span data-test="electric-bolt-icon" />
 }))
 
 vi.mock('@mui/icons-material/FactCheck', () => ({
-    default: () => <span data-test="fact-check-icon" />
+  default: () => <span data-test="fact-check-icon" />
 }))
 
 vi.mock('@mui/icons-material/Gavel', () => ({
-    default: () => <span data-test="gavel-icon" />
+  default: () => <span data-test="gavel-icon" />
 }))
 
 vi.mock('@mui/icons-material/Handshake', () => ({
-    default: () => <span data-test="handshake-icon" />
+  default: () => <span data-test="handshake-icon" />
 }))
 
 vi.mock('@mui/icons-material/LocalGasStation', () => ({
-    default: () => <span data-test="local-gas-station-icon" />
+  default: () => <span data-test="local-gas-station-icon" />
 }))
 
 vi.mock('@mui/icons-material/Recycling', () => ({
-    default: () => <span data-test="recycling-icon" />
+  default: () => <span data-test="recycling-icon" />
 }))
 
 vi.mock('@mui/icons-material/Summarize', () => ({
-    default: () => <span data-test="summarize-icon" />
+  default: () => <span data-test="summarize-icon" />
 }))
 
 vi.mock('@mui/icons-material/SwapHoriz', () => ({
-    default: () => <span data-test="swap-horiz-icon" />
+  default: () => <span data-test="swap-horiz-icon" />
 }))
 
 vi.mock('@mui/icons-material/UploadFile', () => ({
-    default: () => <span data-test="upload-file-icon" />
+  default: () => <span data-test="upload-file-icon" />
 }))
 
 const intersectionObservers: MockIntersectionObserver[] = []
@@ -140,8 +140,12 @@ describe('ComplianceReportPageNav', () => {
           {
             isIntersecting: true,
             intersectionRatio: 0.5,
-            target: document.getElementById('report-section-summary')!
-          } as IntersectionObserverEntry
+            target: document.getElementById('report-section-summary')!,
+            boundingClientRect: new DOMRect(),
+            intersectionRect: new DOMRect(),
+            rootBounds: null,
+            time: 0
+          }
         ],
         intersectionObservers[0] as unknown as IntersectionObserver
       )

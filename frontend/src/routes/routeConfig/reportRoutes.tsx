@@ -1,4 +1,3 @@
-import { ComplianceReports, CreditCalculator } from '@/views/ComplianceReports'
 import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector'
 import ROUTES from '../routes'
 import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
@@ -32,13 +31,11 @@ export const reportRoutes: AppRouteObject[] = [
         children: [
           {
             path: 'add',
-            // @ts-expect-error - Component handles missing props when used as route element
             element: <AddEditChargingSite isEditMode={false} />,
             handle: { title: 'Add charging site' }
           },
           {
             path: ':siteId/edit',
-            // @ts-expect-error - Component handles missing props when used as route element
             element: <AddEditChargingSite isEditMode={true} />,
             handle: { title: 'Edit charging site' }
           },

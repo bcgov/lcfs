@@ -1,5 +1,13 @@
 import type { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridOptions, IRowNode } from 'ag-grid-community'
+import type {
+  ColDef,
+  GridOptions,
+  GridApi,
+  CellClickedEvent,
+  CellEditingStoppedEvent,
+  GetRowIdParams,
+  RowDataTransaction
+} from 'ag-grid-community'
 import type { CSSProperties, MutableRefObject, ReactNode } from 'react'
 
 export type BCGridRow = Record<string, any>
@@ -66,6 +74,14 @@ export interface BCGridBaseProps<TData extends BCGridRow = BCGridRow>
   [key: string]: any
 }
 
+// Paste creates an edit context; AG Grid supplies additional event fields for
+// interactive edits. Consumers can rely on the row, node, and API in both cases.
+export type BCGridEditContext<TData extends BCGridRow = BCGridRow> = Pick<
+  CellEditingStoppedEvent<TData>,
+  'api' | 'node' | 'data'
+> &
+  Partial<Omit<CellEditingStoppedEvent<TData>, 'api' | 'node' | 'data'>>
+
 export interface BCGridEditorProps<TData extends BCGridRow = BCGridRow>
   extends GridOptions<TData> {
   addMultiRow?: boolean
@@ -73,22 +89,34 @@ export interface BCGridEditorProps<TData extends BCGridRow = BCGridRow>
   columnDefs?: ColDef<TData>[]
   defaultColDef?: ColDef<TData>
   enablePaste?: boolean
-  getRowId?: (params: any) => string
+  getRowId?: (params: GetRowIdParams<TData>) => string
   gridRef?: BCGridRef
-  handlePaste?: (params: any) => void
-  onAction?: (action: string, data?: TData, node?: IRowNode<TData>) => void
+  handlePaste?: (
+    event: ClipboardEvent,
+    grid: { api?: GridApi<TData>; columnApi?: unknown }
+  ) => void
+  onAction?: (
+    action: string,
+    params?: CellClickedEvent<TData>
+  ) =>
+    | RowDataTransaction<TData>
+    | void
+    | Promise<RowDataTransaction<TData> | void>
   onAddRows?: (rows: TData[]) => void
-  onCellEditingStopped?: (params: any) => void
-  onCellValueChanged?: (params: any) => void
+  onCellEditingStopped?: (
+    params: BCGridEditContext<TData>
+  ) => void | Promise<void>
+  onCellValueChanged?: (
+    params: import('ag-grid-community').CellValueChangedEvent<TData>
+  ) => void
   saveButtonProps?: BCSaveButtonProps
   showAddRowsButton?: boolean
   showMandatoryColumns?: boolean
   [key: string]: any
 }
 
-export interface BCGridEditorPaginatedProps<
-  TData extends BCGridRow = BCGridRow
-> extends BCGridEditorProps<TData> {
+export interface BCGridEditorPaginatedProps<TData extends BCGridRow = BCGridRow>
+  extends BCGridEditorProps<TData> {
   dataKey?: string
   enableCopyButton?: boolean
   enableExportButton?: boolean

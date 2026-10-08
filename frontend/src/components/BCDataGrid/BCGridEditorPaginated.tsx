@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// @ts-nocheck
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { isEqual } from '@/utils/grid/eventHandlers'
@@ -16,6 +15,7 @@ import {
   useRef,
   useState
 } from 'react'
+import type { CSSProperties, ChangeEvent, MouseEvent } from 'react'
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
@@ -40,11 +40,36 @@ import {
   syncGridScrollPositions as syncGridScrollPositionsUtil,
   syncCustomScrollbarToGrid as syncCustomScrollbarToGridUtil
 } from '@/components/BCDataGrid/floatingScrollbarUtils'
-import type { BCGridEditorPaginatedProps } from './types'
+import type {
+  BCGridEditorPaginatedProps,
+  BCGridRow,
+  BCPaginationOptions
+} from './types'
+import type { AgGridReact } from 'ag-grid-react'
+import type {
+  CellClickedEvent,
+  CellFocusedEvent,
+  CellValueChangedEvent,
+  Column,
+  ColumnState,
+  ColDef,
+  FirstDataRenderedEvent,
+  GridReadyEvent,
+  IRowNode
+} from 'ag-grid-community'
 
 export type { BCGridEditorPaginatedProps } from './types'
 
-// Styles for floating pagination
+const getColumnDef = (column: Column<BCGridRow>): ColDef<BCGridRow> =>
+  typeof column.getColDef === 'function'
+    ? column.getColDef()
+    : (column as unknown as { colDef: ColDef<BCGridRow> }).colDef
+
+const getColumnId = (column: Column<BCGridRow>): string =>
+  typeof column.getColId === 'function'
+    ? column.getColId()
+    : (getColumnDef(column).field ?? '')
+
 const floatingPaginationStyles = {
   position: 'fixed',
   bottom: '1rem',
@@ -78,9 +103,8 @@ const floatingScrollStyles = {
   background: '#fafafa'
 }
 
-const isIntersectionObserverSupported = () => {
-  return typeof window !== 'undefined' && 'IntersectionObserver' in window
-}
+const isIntersectionObserverSupported = () =>
+  typeof window !== 'undefined' && 'IntersectionObserver' in window
 
 /**
  * Hybrid Grid Editor with Pagination
@@ -105,7 +129,7 @@ const isIntersectionObserverSupported = () => {
  * @property {boolean} enableFloatingPagination - Enable floating pagination
  */
 export const BCGridEditorPaginated = ({
-  gridRef = useRef(null),
+  gridRef = useRef<AgGridReact<BCGridRow> | null>(null),
   alertRef,
   enablePaste = true,
   handlePaste,
@@ -145,25 +169,27 @@ export const BCGridEditorPaginated = ({
   columnDefs,
   ...props
 }: BCGridEditorPaginatedProps) => {
-  const localRef = useRef(null)
+  const localRef = useRef<AgGridReact<BCGridRow> | null>(null)
   const ref = gridRef || localRef
-  const firstEditableColumnRef = useRef(null)
-  const [anchorEl, setAnchorEl] = useState(null)
-  const buttonRef = useRef(null)
+  const firstEditableColumnRef = useRef<Column<BCGridRow> | null>(null)
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
   const { t } = useTranslation(['common'])
   const [showRequiredIndicator, setShowRequiredIndicator] = useState(false)
 
   // Pagination visibility refs and state
-  const paginationRef = useRef(null)
-  const gridContainerRef = useRef(null)
-  const customScrollbarRef = useRef(null)
+  const paginationRef = useRef<HTMLDivElement | null>(null)
+  const gridContainerRef = useRef<HTMLDivElement | null>(null)
+  const customScrollbarRef = useRef<HTMLDivElement | null>(null)
   const [isPaginationVisible, setIsPaginationVisible] = useState(true)
   const [isGridVisible, setIsGridVisible] = useState(true)
   const [showScrollbar, setShowScrollbar] = useState(false)
-  const [containerWidth, setContainerWidth] = useState(null)
+  const [containerWidth, setContainerWidth] = useState<number | null>(null)
   const syncingFromGridRef = useRef(false)
   const syncingFromCustomRef = useRef(false)
-  const [scrollContentWidth, setScrollContentWidth] = useState(null)
+  const [scrollContentWidth, setScrollContentWidth] = useState<number | null>(
+    null
+  )
   const minWidthRelaxedRef = useRef(false)
   const [minWidthRelaxed, setMinWidthRelaxed] = useState(false)
 
@@ -171,12 +197,12 @@ export const BCGridEditorPaginated = ({
   const previousGridKey = useRef(gridKey)
   const isRestoringFromCache = useRef(false)
 
-  const { data, error, isError, isLoading } = queryData || {}
+  const { data, isLoading } = queryData || {}
   const isPaginationFloating = !isPaginationVisible && isGridVisible
 
   // Cache pagination options to sessionStorage
   const cachePaginationOptions = useCallback(
-    (options) => {
+    (options: BCPaginationOptions) => {
       if (enablePageCaching && gridKey) {
         const cacheData = {
           page: options.page,
@@ -197,7 +223,9 @@ export const BCGridEditorPaginated = ({
   useEffect(() => {
     if (!showRequiredIndicator && columnDefs?.length) {
       const foundRequired = columnDefs.some(
-        (colDef) => colDef.headerComponent === RequiredHeader
+        (colDef) =>
+          'headerComponent' in colDef &&
+          colDef.headerComponent === RequiredHeader
       )
       if (foundRequired && showMandatoryColumns) {
         setShowRequiredIndicator(true)
@@ -223,7 +251,7 @@ export const BCGridEditorPaginated = ({
       if (!minWidthRelaxed) {
         return flexDefs
       }
-      return flexDefs.map((col) => ({
+      return flexDefs.map((col: ColDef<BCGridRow>) => ({
         ...col,
         minWidth: 50
       }))
@@ -254,22 +282,29 @@ export const BCGridEditorPaginated = ({
     // Find the minimum minWidth value from columnDefs (default to 100 if none set)
     const minWidths = columnDefs
       .filter((col) => col.minWidth)
-      .map((col) => col.minWidth)
+      .map((col: ColDef<BCGridRow>) => col.minWidth as number)
 
     // Use the minimum of all minWidths, or 100 as a fallback
-    const defaultMinWidth =
-      minWidths.length > 0 ? Math.min(...minWidths) : 100
+    const defaultMinWidth = minWidths.length > 0 ? Math.min(...minWidths) : 100
 
     return { type: 'fitGridWidth', defaultMinWidth }
   }, [columnDefs])
 
   // Expand columns to fill grid and reduce minWidth to allow user drag down to 50px
   const handleFirstDataRendered = useCallback(
-    (params) => {
+    (params: FirstDataRenderedEvent<BCGridRow>) => {
       // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
       // Preserve current widths to avoid visual jumps.
       if (minWidthRelaxedRef.current) return
-      relaxColumnMinWidths(params.api, params.columnApi, 50)
+      relaxColumnMinWidths(
+        params.api,
+        (
+          params as FirstDataRenderedEvent<BCGridRow> & {
+            columnApi?: unknown
+          }
+        ).columnApi,
+        50
+      )
       minWidthRelaxedRef.current = true
       setMinWidthRelaxed(true)
 
@@ -284,13 +319,13 @@ export const BCGridEditorPaginated = ({
   )
 
   const syncGridScrollPositions = useCallback(
-    (scrollLeft) =>
+    (scrollLeft: number) =>
       syncGridScrollPositionsUtil(gridContainerRef, scrollLeft),
     [gridContainerRef]
   )
 
   const syncCustomScrollbarToGrid = useCallback(
-    (infoOverride) => {
+    (infoOverride?: ReturnType<typeof getGridScrollInfo>) => {
       if (!showScrollbar || !customScrollbarRef.current) return
       syncingFromGridRef.current = true
       syncCustomScrollbarToGridUtil({
@@ -339,11 +374,8 @@ export const BCGridEditorPaginated = ({
     const handleResize = () => updateScrollMetrics()
     window.addEventListener('resize', handleResize)
 
-    let resizeObserver
-    if (
-      typeof ResizeObserver !== 'undefined' &&
-      gridContainerRef.current
-    ) {
+    let resizeObserver: ResizeObserver | undefined
+    if (typeof ResizeObserver !== 'undefined' && gridContainerRef.current) {
       const target =
         gridContainerRef.current.querySelector('.ag-body-horizontal-scroll') ||
         gridContainerRef.current.querySelector('.ag-center-cols-container')
@@ -362,9 +394,9 @@ export const BCGridEditorPaginated = ({
   useEffect(() => {
     if (!showScrollbar) return
 
-    let rafId = null
-    let listeners = []
-    let handleGridScroll = null
+    let rafId: number | null = null
+    let listeners: Element[] = []
+    let handleGridScroll: (() => void) | null = null
 
     const tryAttach = () => {
       if (!gridContainerRef.current || !customScrollbarRef.current) {
@@ -378,32 +410,34 @@ export const BCGridEditorPaginated = ({
         return
       }
 
-        const { centerViewport, horizontalViewport, headerViewport } = info
+      const { centerViewport, horizontalViewport, headerViewport } = info
 
-        handleGridScroll = () => {
-          if (syncingFromCustomRef.current) return
+      handleGridScroll = () => {
+        if (syncingFromCustomRef.current) return
 
-          const latestInfo = getGridScrollInfo()
-          syncCustomScrollbarToGrid(latestInfo ?? info)
-        }
+        const latestInfo = getGridScrollInfo()
+        syncCustomScrollbarToGrid(latestInfo ?? info)
+      }
 
       listeners = [centerViewport, horizontalViewport, headerViewport]
         .filter(Boolean)
         .map((element) => {
+          if (!element) return null
           element.addEventListener('scroll', handleGridScroll, {
             passive: true
           })
           return element
         })
+        .filter((element): element is Element => element !== null)
 
-        handleGridScroll()
-        updateScrollMetrics()
-      }
+      handleGridScroll()
+      updateScrollMetrics()
+    }
 
     tryAttach()
 
     return () => {
-      if (rafId) {
+      if (rafId !== null) {
         cancelAnimationFrame(rafId)
       }
       listeners.forEach((element) => {
@@ -412,7 +446,12 @@ export const BCGridEditorPaginated = ({
         }
       })
     }
-  }, [showScrollbar, updateScrollMetrics, getGridScrollInfo, syncCustomScrollbarToGrid])
+  }, [
+    showScrollbar,
+    updateScrollMetrics,
+    getGridScrollInfo,
+    syncCustomScrollbarToGrid
+  ])
 
   useEffect(() => {
     if (!showScrollbar) return
@@ -499,7 +538,7 @@ export const BCGridEditorPaginated = ({
 
     updateWidth()
 
-    let resizeObserver
+    let resizeObserver: ResizeObserver | undefined
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(updateWidth)
       resizeObserver.observe(container)
@@ -513,11 +552,13 @@ export const BCGridEditorPaginated = ({
   }, [])
 
   const handleGridReady = useCallback(
-    (params) => {
+    (params: GridReadyEvent<BCGridRow>) => {
       if (!showRequiredIndicator) {
         const actualCols = params.api.getColumnDefs() || []
         const foundRequired = actualCols.some(
-          (colDef) => colDef.headerComponent === RequiredHeader
+          (colDef) =>
+            'headerComponent' in colDef &&
+            colDef.headerComponent === RequiredHeader
         )
         if (foundRequired) {
           setShowRequiredIndicator(true)
@@ -526,10 +567,10 @@ export const BCGridEditorPaginated = ({
 
       // Restore filter and column state
       const filterState = JSON.parse(
-        sessionStorage.getItem(`${gridKey}-filter`)
+        sessionStorage.getItem(`${gridKey ?? ''}-filter`) ?? 'null'
       )
       const columnState = JSON.parse(
-        sessionStorage.getItem(`${gridKey}-column`)
+        sessionStorage.getItem(`${gridKey ?? ''}-column`) ?? 'null'
       )
 
       if (filterState) {
@@ -539,7 +580,7 @@ export const BCGridEditorPaginated = ({
         if (!enablePageCaching || !hasInitializedFromCache.current) {
           const filterArr = [
             ...Object.entries(filterState).map(([field, value]) => {
-              return { field, ...value }
+              return { field, ...(value as Record<string, unknown>) }
             })
           ]
           const updatedOptions = {
@@ -563,11 +604,14 @@ export const BCGridEditorPaginated = ({
           state: columnState,
           applyOrder: true
         })
-      } else if (paginationOptions.sortOrders?.length > 0) {
-        const state = paginationOptions.sortOrders.map((col) => ({
-          colId: col.field,
-          sort: col.direction
-        }))
+      } else if ((paginationOptions.sortOrders?.length ?? 0) > 0) {
+        const state: ColumnState[] = (
+          paginationOptions.sortOrders ?? []
+        ).flatMap((col) =>
+          col.field && (col.direction === 'asc' || col.direction === 'desc')
+            ? [{ colId: col.field, sort: col.direction as 'asc' | 'desc' }]
+            : []
+        )
         params.api.applyColumnState({
           state,
           defaultState: { sort: null }
@@ -576,7 +620,15 @@ export const BCGridEditorPaginated = ({
 
       requestAnimationFrame(() => {
         if (minWidthRelaxedRef.current) return
-        relaxColumnMinWidths(params.api, params.columnApi, 50)
+        relaxColumnMinWidths(
+          params.api,
+          (
+            params as GridReadyEvent<BCGridRow> & {
+              columnApi?: unknown
+            }
+          ).columnApi,
+          50
+        )
         minWidthRelaxedRef.current = true
         setMinWidthRelaxed(true)
       })
@@ -597,28 +649,33 @@ export const BCGridEditorPaginated = ({
 
     if (!firstEditableColumnRef.current) {
       const columns = ref.current.api.getAllDisplayedColumns()
-      firstEditableColumnRef.current = columns.find(
-        (col) =>
-          col.colDef.editable !== false &&
-          !['action', 'checkbox'].includes(col.colDef.field)
-      )
+      firstEditableColumnRef.current =
+        columns.find((col) => {
+          const colDef = getColumnDef(col)
+          return (
+            colDef.editable !== false &&
+            !['action', 'checkbox'].includes(colDef.field ?? '')
+          )
+        }) ?? null
     }
     return firstEditableColumnRef.current
   }, [])
 
   const startEditingFirstEditableCell = useCallback(
-    (rowIndex) => {
+    (rowIndex: number) => {
       if (!ref.current?.api) return
 
       const firstEditableColumn = findFirstEditableColumn()
       if (!firstEditableColumn) return
 
       setTimeout(() => {
-        ref.current.api.ensureIndexVisible(rowIndex)
-        ref.current.api.setFocusedCell(rowIndex, firstEditableColumn.getColId())
-        ref.current.api.startEditingCell({
+        const api = ref.current?.api
+        if (!api) return
+        api.ensureIndexVisible(rowIndex)
+        api.setFocusedCell(rowIndex, getColumnId(firstEditableColumn))
+        api.startEditingCell({
           rowIndex,
-          colKey: firstEditableColumn.getColId()
+          colKey: getColumnId(firstEditableColumn)
         })
       }, 100)
     },
@@ -626,39 +683,52 @@ export const BCGridEditorPaginated = ({
   )
 
   const handleExcelPaste = useCallback(
-    (params) => {
-      const newData = []
-      const clipboardData = params.clipboardData || window.clipboardData
+    (params: ClipboardEvent) => {
+      const gridApi = ref.current!.api
+      const newData: BCGridRow[] = []
+      const clipboardData = (params.clipboardData ||
+        (window as Window & { clipboardData?: DataTransfer })
+          .clipboardData) as DataTransfer
       const pastedData = clipboardData.getData('text/plain')
-      const headerRow = ref.current.api
+      const headerRow = gridApi
         .getAllDisplayedColumns()
-        .map((column) => column.colDef.field)
+        .map((column) => getColumnDef(column).field)
         .filter((col) => col)
         .join('\t')
       const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
         delimiter: '\t',
         header: true,
-        transform: (value) => {
+        transform: (value: string) => {
           const num = Number(value)
           return isNaN(num) ? value : num
         },
         skipEmptyLines: true
       })
-      if (parsedData.data.length < 0 || parsedData.data[1].length < 2) {
+      if (
+        parsedData.data.length < 0 ||
+        (parsedData.data as any[])[1].length < 2
+      ) {
         return
       }
-      parsedData.data.forEach((row) => {
+      parsedData.data.forEach((row: BCGridRow) => {
         const newRow = { ...row }
         newRow.id = uuid()
         newData.push(newRow)
       })
-      const transactions = ref.current.api.applyTransaction({ add: newData })
-      transactions.add.forEach((node) => {
+      const transactions = gridApi.applyTransaction({ add: newData })
+      transactions?.add?.forEach((node) => {
+        if (!onCellEditingStopped || !node.data) return
         onCellEditingStopped({
           node,
+          data: node.data,
           oldValue: '',
-          newValue: node.data[findFirstEditableColumn()],
-          ...props
+          newValue:
+            node.data[
+              findFirstEditableColumn()
+                ? getColumnId(findFirstEditableColumn()!)
+                : ''
+            ],
+          api: gridApi
         })
       })
     },
@@ -666,9 +736,15 @@ export const BCGridEditorPaginated = ({
   )
 
   useEffect(() => {
-    const pasteHandler = (event) => {
+    const pasteHandler = (event: ClipboardEvent) => {
       const gridApi = ref.current?.api
-      const columnApi = ref.current?.columnApi
+      const columnApi = (
+        ref.current as
+          | (AgGridReact<BCGridRow> & {
+              columnApi?: unknown
+            })
+          | null
+      )?.columnApi
 
       if (handlePaste) {
         handlePaste(event, { api: gridApi, columnApi })
@@ -685,8 +761,10 @@ export const BCGridEditorPaginated = ({
   }, [handleExcelPaste, handlePaste, ref, enablePaste])
 
   const handleOnCellEditingStopped = useCallback(
-    async (params) => {
-      if (params.data.modified && !params.data.deleted) {
+    async (
+      params: import('ag-grid-community').CellEditingStoppedEvent<BCGridRow>
+    ) => {
+      if (params.data?.modified && !params.data.deleted) {
         if (onCellEditingStopped) {
           onCellEditingStopped(params)
         }
@@ -696,7 +774,7 @@ export const BCGridEditorPaginated = ({
   )
 
   const handleOnCellValueChanged = useCallback(
-    (params) => {
+    (params: CellValueChangedEvent<BCGridRow>) => {
       if (!isEqual(params.oldValue, params.newValue)) {
         params.data.modified = true
       }
@@ -707,33 +785,37 @@ export const BCGridEditorPaginated = ({
     [onCellValueChanged]
   )
 
-  const onCellClicked = async (params) => {
+  const onCellClicked = async (params: CellClickedEvent<BCGridRow>) => {
     if (
-      params.column.colId === 'action' &&
+      params.column.getColId() === 'action' &&
+      params.event?.target instanceof HTMLElement &&
       params.event.target.dataset.action &&
       onAction
     ) {
-      const action = params.event.target.dataset.action
+      const action = (params.event?.target as HTMLElement).dataset.action
+      if (!action) return
       const transaction = await onAction(action, params)
 
-      if (transaction?.add?.length > 0) {
-        const res = ref.current.api.applyTransaction(transaction)
+      if (transaction && transaction.add?.length) {
+        const res = ref.current?.api.applyTransaction(transaction)
 
-        if (res.add && res.add.length > 0) {
+        if (res?.add?.length) {
           const firstNewRow = res.add[0]
-          startEditingFirstEditableCell(firstNewRow.rowIndex)
+          if (firstNewRow.rowIndex != null)
+            startEditingFirstEditableCell(firstNewRow.rowIndex)
         }
       }
     }
   }
 
-  const onCellFocused = (params) => {
-    if (params.column) {
+  const onCellFocused = (params: CellFocusedEvent<BCGridRow>) => {
+    if (params.column && typeof params.column !== 'string') {
       const COLUMN_BUFFER = 20
       const { left, right } = params.api.getHorizontalPixelRange()
-      const columnRight = params.column.left + params.column.actualWidth
+      const columnLeft = params.column.getLeft() ?? 0
+      const columnRight = columnLeft + params.column.getActualWidth()
       if (
-        params.column.left < left + COLUMN_BUFFER ||
+        columnLeft < left + COLUMN_BUFFER ||
         columnRight > right - COLUMN_BUFFER
       ) {
         params.api.ensureColumnVisible(params.column, 'middle')
@@ -741,7 +823,7 @@ export const BCGridEditorPaginated = ({
     }
   }
 
-  const handleAddRowsClick = (event) => {
+  const handleAddRowsClick = (event: MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget)
   }
 
@@ -750,14 +832,14 @@ export const BCGridEditorPaginated = ({
   }
 
   const handleAddRowsInternal = useCallback(
-    async (numRows) => {
-      let newRows = []
+    async (numRows: number) => {
+      let newRows: BCGridRow[] = []
 
       if (onAction) {
         try {
           for (let i = 0; i < numRows; i++) {
             const transaction = await onAction('add')
-            if (transaction?.add?.length > 0) {
+            if (transaction && transaction.add?.length) {
               newRows = [...newRows, ...transaction.add]
             }
           }
@@ -768,16 +850,16 @@ export const BCGridEditorPaginated = ({
 
       if (newRows.length === 0) {
         newRows = Array(numRows)
-          .fill()
+          .fill(undefined)
           .map(() => ({ id: uuid() }))
       }
 
-      const result = ref.current.api.applyTransaction({
+      const result = ref.current?.api.applyTransaction({
         add: newRows,
         addIndex: ref.current.api.getDisplayedRowCount()
       })
 
-      if (result.add && result.add.length > 0) {
+      if (result?.add?.length && result.add[0].rowIndex != null) {
         startEditingFirstEditableCell(result.add[0].rowIndex)
       }
 
@@ -787,7 +869,7 @@ export const BCGridEditorPaginated = ({
   )
 
   // Pagination handlers
-  const handleChangePage = (_, newPage) => {
+  const handleChangePage = (_event: unknown, newPage: number) => {
     const updatedOptions = { ...paginationOptions, page: newPage + 1 }
     onPaginationChange?.(updatedOptions)
     if (enablePageCaching) {
@@ -795,7 +877,7 @@ export const BCGridEditorPaginated = ({
     }
   }
 
-  const handleChangeRowsPerPage = (event) => {
+  const handleChangeRowsPerPage = (event: ChangeEvent<HTMLInputElement>) => {
     const updatedOptions = {
       ...paginationOptions,
       page: 1,
@@ -808,7 +890,7 @@ export const BCGridEditorPaginated = ({
   }
 
   const handleFilterChanged = useCallback(
-    (grid) => {
+    (grid: { api: import('ag-grid-community').GridApi<BCGridRow> }) => {
       if (isRestoringFromCache.current) {
         return
       }
@@ -844,15 +926,14 @@ export const BCGridEditorPaginated = ({
     const sortTemp = ref.current?.api
       .getColumnState()
       .filter((col) => col.sort)
-      .sort((a, b) => a.sortIndex - b.sortIndex)
-      .map((col) => {
-        return {
-          field: col.colId,
-          direction: col.sort
-        }
-      })
+      .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+      .flatMap((col) =>
+        col.colId && (col.sort === 'asc' || col.sort === 'desc')
+          ? [{ field: col.colId, direction: col.sort }]
+          : []
+      )
 
-    const updatedOptions = { ...paginationOptions, sortOrders: sortTemp }
+    const updatedOptions = { ...paginationOptions, sortOrders: sortTemp ?? [] }
     onPaginationChange?.(updatedOptions)
     if (enablePageCaching) {
       cachePaginationOptions(updatedOptions)
@@ -872,7 +953,7 @@ export const BCGridEditorPaginated = ({
   const isGridValid = () => {
     let isValid = true
 
-    ref.current.api.forEachNode((node) => {
+    ref.current?.api.forEachNode((node: IRowNode<BCGridRow>) => {
       if (!node.data || node.data.validationStatus === 'error') {
         isValid = false
       }
@@ -885,7 +966,7 @@ export const BCGridEditorPaginated = ({
   const onSaveExit = () => {
     const isValid = isGridValid()
     if (isValid) {
-      saveButtonProps.onSave()
+      saveButtonProps.onSave?.()
       return
     }
 
@@ -1010,8 +1091,8 @@ export const BCGridEditorPaginated = ({
                   <div
                     className="custom-horizontal-scroll"
                     ref={customScrollbarRef}
-                    style={{ ...floatingScrollStyles }}
-                    onScroll={(e) => {
+                    style={floatingScrollStyles as CSSProperties}
+                    onScroll={(_event) => {
                       if (syncingFromGridRef.current) return
                       if (!customScrollbarRef.current) return
 

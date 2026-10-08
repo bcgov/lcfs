@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 const SupplierBalance = () => {
   const { t } = useTranslation()
   const [showBalance, setShowBalance] = useState<boolean>(
-    !!+sessionStorage.getItem('showBalance') || true
+    !!+(sessionStorage.getItem('showBalance') as unknown as number) || true
   )
 
   // Update sessionStorage when showBalance changes
@@ -16,7 +16,9 @@ const SupplierBalance = () => {
     sessionStorage.setItem('showBalance', showBalance ? '1' : '0')
   }, [showBalance])
 
-  const { data: orgBalance } = useCurrentOrgBalance()
+  const { data: orgBalance } = useCurrentOrgBalance() as unknown as {
+    data?: { totalBalance?: number | null; reservedBalance?: number | null }
+  }
   const formattedTotalBalance =
     orgBalance?.totalBalance != null
       ? numberFormatter({ value: orgBalance.totalBalance })

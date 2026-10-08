@@ -1,9 +1,13 @@
-// @ts-nocheck
 import DoneAll from '@mui/icons-material/DoneAll'
 import Warning from '@mui/icons-material/Warning'
 import Icon from '@mui/material/Icon'
 import Tooltip from '@mui/material/Tooltip'
 import CircularProgress from '@mui/material/CircularProgress'
+import type { ComponentProps } from 'react'
+
+const legacyIconSizeProps = { size: 'medium' } as unknown as ComponentProps<
+  typeof Icon
+>
 
 export interface ValidationRenderer2Props {
   data: {
@@ -21,7 +25,7 @@ export const ValidationRenderer2 = ({ data }: ValidationRenderer2Props) => {
           <Icon
             aria-label="shows sign for validation"
             data-testid="validation-sign"
-            size="medium"
+            {...legacyIconSizeProps}
           >
             <Warning htmlColor="#fcba19" />
           </Icon>
@@ -33,7 +37,7 @@ export const ValidationRenderer2 = ({ data }: ValidationRenderer2Props) => {
           <Icon
             aria-label="shows sign for validation"
             data-testid="validation-sign"
-            size="medium"
+            {...legacyIconSizeProps}
           >
             <Warning color="error" />
           </Icon>
@@ -45,7 +49,7 @@ export const ValidationRenderer2 = ({ data }: ValidationRenderer2Props) => {
           <Icon
             aria-label="shows sign for validation"
             data-testid="validation-sign"
-            size="medium"
+            {...legacyIconSizeProps}
           >
             <DoneAll color="success" />
           </Icon>

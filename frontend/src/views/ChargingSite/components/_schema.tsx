@@ -1,11 +1,10 @@
-// @ts-nocheck
-import type { ColDef } from 'ag-grid-community'
+import type { CellClassParams, ColDef, GridApi } from 'ag-grid-community'
+import type { MouseEvent } from 'react'
 import type { GridErrors, GridWarnings } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
-import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 import { TextCellEditor } from '@/components/BCDataGrid/components/Editors/TextCellEditor'
@@ -14,12 +13,11 @@ import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   ChargingSiteStatusRenderer,
   CommonArrayRenderer,
-  createStatusRenderer,
-  MultiSelectRenderer
+  createStatusRenderer
 } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
-import { dateFormatter, numberFormatter } from '@/utils/formatters'
+import { dateFormatter } from '@/utils/formatters'
 import {
   useChargingEquipmentStatuses,
   useChargingSiteStatuses
@@ -28,11 +26,77 @@ import { StyledChip } from '@/components/StyledChip'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import ExpandLess from '@mui/icons-material/ExpandLess'
 import ExpandMore from '@mui/icons-material/ExpandMore'
+import type { ApiServiceInstance } from '@/services/useApiService'
+
+type ChargingSiteGridRow = Record<string, unknown> & {
+  isNewSupplementalEntry?: boolean
+  id?: number | string
+  siteName?: string
+  streetAddress?: string
+  city?: string
+  postalCode?: string
+  latitude?: number | string
+  longitude?: number | string
+  allocatingOrganization?: { organizationId?: number; name?: string }
+  allocatingOrganizationId?: number | null
+  allocatingOrganizationName?: string | null
+  apiDataCache?: unknown
+  status?: string | { status?: string }
+  chargingSite?: {
+    siteName?: string
+    allocatingOrganizationName?: string
+  }
+  isCurrentVersionRow?: boolean
+  hasHistory?: boolean
+  isHistoryVersion?: boolean
+  registrationNumber?: string | number
+  version?: number
+  complianceYears?: Array<string | number>
+  chargingEquipmentId?: number
+  serialNumber?: string
+  manufacturer?: string
+  model?: string
+  levelOfEquipment?: { name?: string }
+  levelOfEquipmentName?: string
+  ports?: string
+  intendedUseTypes?: Array<{ type?: string }>
+  intendedUses?: Array<{ type?: string }>
+  intendedUsers?: Array<{ typeName?: string }>
+  intendedUserTypes?: Array<{ typeName?: string }>
+}
+
+type SuggestionQueryContext = {
+  client: ApiServiceInstance
+  queryKey: readonly unknown[]
+}
+
+type AddressSuggestion = {
+  full_address: string
+  street_address: string
+  city: string
+  province: string
+  postal_code: string
+  latitude: number
+  longitude: number
+  score: number
+}
+
+const getHistoryCellStyle = (
+  params: CellClassParams<ChargingSiteGridRow>,
+  historyMode: boolean,
+  field: string
+) =>
+  historyMode && params.data?.isHistoryVersion
+    ? changelogCellStyle(params, field)
+    : undefined
 
 // Helper function for address autocomplete within grid
-const addressAutocompleteQuery = async ({ client, queryKey }) => {
+const addressAutocompleteQuery = async ({
+  client,
+  queryKey
+}: SuggestionQueryContext) => {
   const partialAddress = queryKey[1]
-  if (!partialAddress || partialAddress.length < 3) {
+  if (typeof partialAddress !== 'string' || partialAddress.length < 3) {
     return []
   }
 
@@ -43,7 +107,7 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
       max_results: 5
     })
 
-    const data = response.data
+    const data = response.data as { suggestions?: AddressSuggestion[] }
 
     // Return in the format expected by AsyncSuggestionEditor
     // Now suggestions come as complete AddressSchema objects
@@ -69,11 +133,11 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
 export const chargingSiteColDefs = (
   errors: GridErrors,
   warnings: GridWarnings,
-  gridReady: boolean
-): ColDef[] => {
+  _gridReady: boolean
+): ColDef<ChargingSiteGridRow>[] => {
   return [
     validation,
-    actions((params) => ({
+    actions((params: { data: ChargingSiteGridRow }) => ({
       enableDuplicate: false,
       enableDelete: !params.data.isNewSupplementalEntry,
       enableUndo: false,
@@ -103,19 +167,19 @@ export const chargingSiteColDefs = (
       valueGetter: (params) => {
         return params.data?.siteName || ''
       },
-      tooltipValueGetter: (p) => 'Enter a unique site identifier name'
+      tooltipValueGetter: () => 'Enter a unique site identifier name'
     },
     {
       field: 'streetAddress',
       headerComponent: RequiredHeader,
       headerName: i18n.t('chargingSite:columnLabels.streetAddress'),
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'address-autocomplete',
         queryFn: addressAutocompleteQuery,
         optionLabel: 'label'
       }),
-      valueSetter: async (params) => {
+      valueSetter: (params) => {
         if (params.newValue === '' || params.newValue?.name === '') {
           params.data.streetAddress = ''
           params.data.city = ''
@@ -168,7 +232,7 @@ export const chargingSiteColDefs = (
       headerName: i18n.t('chargingSite:columnLabels.postalCode'),
       valueSetter: (params) => {
         const newValue = params.newValue.toUpperCase()
-        params.data[params.colDef.field] = newValue
+        params.data.postalCode = newValue
         return true
       },
       cellEditor: TextCellEditor,
@@ -225,20 +289,26 @@ export const chargingSiteColDefs = (
       headerName: i18n.t('chargingSite:columnLabels.allocatingOrganization'),
       cellDataType: 'object',
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: {
+        api: GridApi<ChargingSiteGridRow>
+        node: { data?: ChargingSiteGridRow }
+      }) => ({
         queryKey: 'allocating-org-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({ queryKey, client }: SuggestionQueryContext) => {
           let path = apiRoutes.allocationOrganizationsSearch
-          path += 'query=' + encodeURIComponent(queryKey[1] || '')
+          const searchTerm = queryKey[1]
+          path += 'query=' + encodeURIComponent(String(searchTerm || ''))
           const response = await client.get(path)
-          params.node.data.apiDataCache = response.data
+          if (params.node.data) {
+            params.node.data.apiDataCache = response.data
+          }
           return response.data
         },
         optionLabel: 'name',
         api: params.api,
         minWords: 1
       }),
-      cellRenderer: (params) =>
+      cellRenderer: (params: { value?: unknown }) =>
         params.value ||
         (!params.value && (
           <BCTypography variant="body4">Enter or search a name</BCTypography>
@@ -265,7 +335,7 @@ export const chargingSiteColDefs = (
 
         return true
       },
-      tooltipValueGetter: (p) =>
+      tooltipValueGetter: () =>
         'Enter or select the allocating organization name. Suggestions include organizations from your allocation agreements and previously entered values.'
     },
     {
@@ -280,9 +350,19 @@ export const chargingSiteColDefs = (
 
 export const chargingEquipmentColDefs = (
   t: (key: string) => string,
-  isIDIR: boolean = false,
-  options: Record<string, any> = {}
-): ColDef[] => {
+  _isIDIR: boolean = false,
+  options: {
+    enableSelection?: boolean
+    historyMode?: boolean
+    onToggleHistory?: (registrationNumber?: string | number) => void
+    expandedRows?: Set<string | number>
+    showDateColumns?: boolean
+    showIntendedUsers?: boolean
+    showLocationFields?: boolean
+    showNotes?: boolean
+    showOrganizationColumn?: boolean
+  } = {}
+): ColDef<ChargingSiteGridRow>[] => {
   const {
     enableSelection = false,
     historyMode = false,
@@ -291,13 +371,11 @@ export const chargingEquipmentColDefs = (
     showDateColumns = false,
     showIntendedUsers = false,
     showLocationFields = true,
-    showPorts = false,
-    showFuelMeasurement = false,
     showNotes = false,
     showOrganizationColumn = false
   } = options
 
-  const cols = []
+  const cols: ColDef<ChargingSiteGridRow>[] = []
 
   if (historyMode) {
     cols.push({
@@ -310,19 +388,24 @@ export const chargingEquipmentColDefs = (
       sortable: false,
       filter: false,
       suppressHeaderMenuButton: true,
-      cellRenderer: (params) => {
+      cellRenderer: (params: {
+        data?: ChargingSiteGridRow
+        value?: unknown
+      }) => {
         if (!params.data?.isCurrentVersionRow || !params.data?.hasHistory)
           return null
+        const registrationNumber = params.data.registrationNumber
+        if (registrationNumber === undefined) return null
 
-        const isExpanded = expandedRows.has(params.data.registrationNumber)
+        const isExpanded = expandedRows.has(registrationNumber)
 
         return (
           <BCButton
             variant="text"
             color="primary"
-            onClick={(event) => {
+            onClick={(event: MouseEvent<HTMLButtonElement>) => {
               event.stopPropagation()
-              onToggleHistory?.(params.data.registrationNumber)
+              onToggleHistory?.(registrationNumber)
             }}
             sx={{ minWidth: 0, px: 0.5 }}
             title={
@@ -372,7 +455,8 @@ export const chargingEquipmentColDefs = (
     filter: true,
     headerName: t('chargingSite:fseColumnLabels.status'),
     valueGetter: (params) => {
-      return params.data?.status?.status || params.data?.status || ''
+      const status = params.data?.status
+      return typeof status === 'object' ? status?.status || '' : status || ''
     },
     cellRenderer: createStatusRenderer(
       {
@@ -384,10 +468,7 @@ export const chargingEquipmentColDefs = (
       },
       { statusField: 'status', replaceUnderscores: false }
     ),
-    cellStyle: (params) =>
-      historyMode &&
-      params.data?.isHistoryVersion &&
-      changelogCellStyle(params, 'status'),
+    cellStyle: (params) => getHistoryCellStyle(params, historyMode, 'status'),
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
@@ -408,7 +489,7 @@ export const chargingEquipmentColDefs = (
     sortable: false,
     minWidth: 310,
     valueGetter: (params) =>
-      params.data.chargingSite?.siteName || params.data.siteName || ''
+      params.data?.chargingSite?.siteName || params.data?.siteName || ''
   })
 
   // Organization column for IDIR users in list view
@@ -425,8 +506,8 @@ export const chargingEquipmentColDefs = (
     minWidth: 250,
     sortable: false,
     valueGetter: (params) =>
-      params.data.chargingSite?.allocatingOrganizationName ||
-      params.data.allocatingOrganizationName ||
+      params.data?.chargingSite?.allocatingOrganizationName ||
+      params.data?.allocatingOrganizationName ||
       ''
   })
 
@@ -437,7 +518,7 @@ export const chargingEquipmentColDefs = (
     sortable: false,
     filter: false,
     minWidth: 180,
-    cellRenderer: (params) => {
+    cellRenderer: (params: { data?: ChargingSiteGridRow; value?: unknown }) => {
       const value = params.value || ''
       if (!params.data?.isHistoryVersion) return value
       return `↳ ${value}`
@@ -451,10 +532,7 @@ export const chargingEquipmentColDefs = (
     minWidth: 120,
     filter: false,
     type: enableSelection ? 'numericColumn' : undefined,
-    cellStyle: (params) =>
-      historyMode &&
-      params.data?.isHistoryVersion &&
-      changelogCellStyle(params, 'version')
+    cellStyle: (params) => getHistoryCellStyle(params, historyMode, 'version')
   })
   if (historyMode) {
     cols.push({
@@ -464,7 +542,10 @@ export const chargingEquipmentColDefs = (
       sortable: false,
       filter: false,
       valueGetter: (params) => params.data?.complianceYears || [],
-      cellRenderer: (params) => {
+      cellRenderer: (params: {
+        data?: ChargingSiteGridRow
+        value?: Array<string | number>
+      }) => {
         const years = params.value || []
         if (!years.length) return ''
 
@@ -485,9 +566,7 @@ export const chargingEquipmentColDefs = (
         )
       },
       cellStyle: (params) =>
-        historyMode &&
-        params.data?.isHistoryVersion &&
-        changelogCellStyle(params, 'complianceYears')
+        getHistoryCellStyle(params, historyMode, 'complianceYears')
     })
   }
 
@@ -497,9 +576,7 @@ export const chargingEquipmentColDefs = (
     headerName: t('chargingSite:fseColumnLabels.serialNumber'),
     minWidth: 220,
     cellStyle: (params) =>
-      historyMode &&
-      params.data?.isHistoryVersion &&
-      changelogCellStyle(params, 'serialNumber')
+      getHistoryCellStyle(params, historyMode, 'serialNumber')
   })
 
   // Manufacturer
@@ -508,9 +585,7 @@ export const chargingEquipmentColDefs = (
     headerName: t('chargingSite:fseColumnLabels.manufacturer'),
     minWidth: 320,
     cellStyle: (params) =>
-      historyMode &&
-      params.data?.isHistoryVersion &&
-      changelogCellStyle(params, 'manufacturer')
+      getHistoryCellStyle(params, historyMode, 'manufacturer')
   })
 
   // Model
@@ -518,10 +593,7 @@ export const chargingEquipmentColDefs = (
     field: 'model',
     headerName: t('chargingSite:fseColumnLabels.model'),
     minWidth: 220,
-    cellStyle: (params) =>
-      historyMode &&
-      params.data?.isHistoryVersion &&
-      changelogCellStyle(params, 'model')
+    cellStyle: (params) => getHistoryCellStyle(params, historyMode, 'model')
   })
 
   // Level of Equipment
@@ -531,13 +603,11 @@ export const chargingEquipmentColDefs = (
     minWidth: 400,
     sortable: false,
     valueGetter: (params) =>
-      params.data.levelOfEquipment?.name ||
-      params.data.levelOfEquipmentName ||
+      params.data?.levelOfEquipment?.name ||
+      params.data?.levelOfEquipmentName ||
       '',
     cellStyle: (params) =>
-      historyMode &&
-      params.data?.isHistoryVersion &&
-      changelogCellStyle(params, 'levelOfEquipment')
+      getHistoryCellStyle(params, historyMode, 'levelOfEquipment')
   })
   // ports
   cols.push({
@@ -545,10 +615,7 @@ export const chargingEquipmentColDefs = (
     headerName: t('chargingSite:fseColumnLabels.ports'),
     minWidth: 160,
     sortable: false,
-    cellStyle: (params) =>
-      historyMode &&
-      params.data?.isHistoryVersion &&
-      changelogCellStyle(params, 'ports')
+    cellStyle: (params) => getHistoryCellStyle(params, historyMode, 'ports')
   })
 
   // Intended Uses
@@ -559,7 +626,7 @@ export const chargingEquipmentColDefs = (
     sortable: false,
     valueGetter: (params) => {
       const intendedUseTypes =
-        params.data.intendedUseTypes || params.data.intendedUses || []
+        params.data?.intendedUseTypes || params.data?.intendedUses || []
       return intendedUseTypes?.map((i) => i.type)
     },
     valueFormatter: (params) => {
@@ -569,9 +636,7 @@ export const chargingEquipmentColDefs = (
     cellRenderer: CommonArrayRenderer,
     cellRendererParams: { disableLink: true },
     cellStyle: (params) =>
-      historyMode &&
-      params.data?.isHistoryVersion &&
-      changelogCellStyle(params, 'intendedUseTypes')
+      getHistoryCellStyle(params, historyMode, 'intendedUseTypes')
   })
 
   // Intended Users
@@ -584,7 +649,7 @@ export const chargingEquipmentColDefs = (
       valueGetter: (params) => {
         // Handle both data structures: intendedUserTypes (site view) and intended_users (list view)
         const intendedUsers =
-          params.data.intendedUsers || params.data.intendedUserTypes || []
+          params.data?.intendedUsers || params.data?.intendedUserTypes || []
         return intendedUsers?.map((i) => i.typeName)
       },
       valueFormatter: (params) => {
@@ -594,9 +659,7 @@ export const chargingEquipmentColDefs = (
       cellRenderer: CommonArrayRenderer,
       cellRendererParams: { disableLink: true },
       cellStyle: (params) =>
-        historyMode &&
-        params.data?.isHistoryVersion &&
-        changelogCellStyle(params, 'intendedUserTypes')
+        getHistoryCellStyle(params, historyMode, 'intendedUserTypes')
     })
   }
   // Location fields (only for site view)
@@ -610,9 +673,7 @@ export const chargingEquipmentColDefs = (
         minWidth: 150,
         valueGetter: (params) => params.data?.latitude || '',
         cellStyle: (params) =>
-          historyMode &&
-          params.data?.isHistoryVersion &&
-          changelogCellStyle(params, 'latitude')
+          getHistoryCellStyle(params, historyMode, 'latitude')
       },
       {
         field: 'longitude',
@@ -622,9 +683,7 @@ export const chargingEquipmentColDefs = (
         minWidth: 150,
         valueGetter: (params) => params.data?.longitude || '',
         cellStyle: (params) =>
-          historyMode &&
-          params.data?.isHistoryVersion &&
-          changelogCellStyle(params, 'longitude')
+          getHistoryCellStyle(params, historyMode, 'longitude')
       }
     )
   }
@@ -657,10 +716,7 @@ export const chargingEquipmentColDefs = (
       minWidth: 600,
       filter: false,
       headerName: t('chargingSite:fseColumnLabels.notes'),
-      cellStyle: (params) =>
-        historyMode &&
-        params.data?.isHistoryVersion &&
-        changelogCellStyle(params, 'notes')
+      cellStyle: (params) => getHistoryCellStyle(params, historyMode, 'notes')
     })
   }
 

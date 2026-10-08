@@ -4,9 +4,8 @@ interface SuppressKeyboardOptions {
 }
 
 interface SuppressKeyboardEventParams {
-  event: KeyboardEvent & { srcElement: HTMLElement }
+  event: KeyboardEvent
   node?: unknown
-  [key: string]: unknown
 }
 
 export const suppressKeyboardEvent = (
@@ -55,7 +54,8 @@ export const suppressKeyboardEvent = (
         e.srcElement ===
           focusableChildrenOfParent[focusableChildrenOfParent.length - 1]) ||
       (e.shiftKey === true && e.srcElement === focusableChildrenOfParent[0]) ||
-      (e.shiftKey === true && e.srcElement.classList.contains('ag-cell'))
+      (e.shiftKey === true &&
+        (e.srcElement as HTMLElement).classList.contains('ag-cell'))
     )
       return false // do not suppress
 

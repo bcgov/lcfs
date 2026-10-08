@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
 import { dateFormatter } from '@/utils/formatters'
 import { actions } from '@/components/BCDataGrid/columns'
@@ -13,7 +12,7 @@ export const columnDefs = (
   {
     ...actions({ enableDelete: true }),
     headerName: 'Delete',
-    pinned: ''
+    pinned: false
   },
   {
     colId: 'type',

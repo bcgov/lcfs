@@ -5,10 +5,11 @@ import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema'
 import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { defaultInitialPagination } from '@/constants/schedules'
 import { useParams } from 'react-router-dom'
 import Loading from '@/components/Loading'
 import { useOtherUsesOptions } from '@/hooks/useOtherUses'
+import type { OptionsData } from '@/types/schema'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 interface OtherUse {
   otherUsesId: number | string
@@ -35,13 +36,13 @@ interface PaginationSort {
 interface PaginationOptions {
   page: number
   size: number
-  filters?: PaginationFilter[]
-  sortOrders?: PaginationSort[]
+  filters: PaginationFilter[]
+  sortOrders: PaginationSort[]
 }
 
 export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
-    defaultInitialPagination
+    defaultInitialPagination as unknown as PaginationOptions
   )
   const gridRef = useRef(null)
   const { compliancePeriod } = useParams<{ compliancePeriod: string }>()
@@ -154,7 +155,7 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
           getRowId={getRowId}
           columnDefs={otherUsesSummaryColDefs(
             parseInt(compliancePeriod ?? '0'),
-            optionsData
+            optionsData as OptionsData
           )}
           defaultColDef={defaultColDef}
           queryData={paginatedData}

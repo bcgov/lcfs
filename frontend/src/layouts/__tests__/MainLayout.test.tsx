@@ -66,7 +66,7 @@ vi.mock('@/components/RequireAuth', () => ({
 }))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 

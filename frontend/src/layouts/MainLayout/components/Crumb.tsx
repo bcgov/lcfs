@@ -4,6 +4,9 @@ import { useLocation, Link, useMatches, useParams } from 'react-router-dom'
 import NavigateNextIcon from '@mui/icons-material/NavigateNext'
 import { emphasize, styled } from '@mui/material/styles'
 import Chip from '@mui/material/Chip'
+import type { ChipProps } from '@mui/material/Chip'
+import type { ComponentType, ElementType } from 'react'
+import type { Theme } from '@mui/material/styles'
 import { isNumeric } from '@/utils/formatters'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
@@ -32,7 +35,15 @@ type BreadcrumbDefinition = Record<
   }
 >
 
+type ApplicationTheme = Theme & {
+  palette: Theme['palette'] & {
+    text: Theme['palette']['text'] & { main: string }
+  }
+  borders: { borderRadius: { xl: string | number } }
+}
+
 const StyledBreadcrumb = styled(Chip)(({ theme }) => {
+  const applicationTheme = theme as ApplicationTheme
   const backgroundColor =
     theme.palette.mode === 'light'
       ? theme.palette.common.white
@@ -40,10 +51,10 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
   return {
     backgroundColor,
     height: theme.spacing(3),
-    color: theme.palette.text.main,
+    color: applicationTheme.palette.text.main,
     fontWeight: theme.typography.fontWeightRegular,
     fontSize: theme.typography.pxToRem(16),
-    borderRadius: theme.borders.borderRadius.xl,
+    borderRadius: applicationTheme.borders.borderRadius.xl,
     '& span': {
       padding: 0
     },
@@ -55,7 +66,7 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
       backgroundColor: emphasize(backgroundColor, 0.12)
     }
   }
-})
+}) as ComponentType<ChipProps & { to?: string; component?: ElementType }>
 
 const ORG_TAB_SEGMENTS = new Set([
   'users',
@@ -193,7 +204,7 @@ const Crumb = () => {
           }
           const displayName =
             customCrumb.label ||
-            name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
+            name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g, ' ')
 
           // Skip numeric ID crumb for FSE routes (e.g., /fse/:id/edit)
           if (isNumeric(name) && pathnames[index - 1] === 'fse') {

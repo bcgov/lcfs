@@ -1,5 +1,9 @@
-// @ts-nocheck
-import type { ColDef } from 'ag-grid-community'
+import type {
+  ColDef,
+  ICellRendererParams,
+  ICellEditorParams,
+  RowClassParams
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
@@ -8,10 +12,7 @@ import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/Req
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import {
-  decimalFormatter,
-  formatNumberWithCommas as valueFormatter
-} from '@/utils/formatters'
+import { decimalFormatter, formatNumberWithCommas } from '@/utils/formatters'
 import { SelectRenderer } from '@/utils/grid/cellRenderers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
@@ -24,30 +25,40 @@ import {
   canEditCanadianProduced
 } from '@/utils/renewableClaimUtils'
 
+const valueFormatter = (params: {
+  value: string | number | null | undefined
+}) => formatNumberWithCommas(params) as string
+
+type OtherUsesOptionsData = Omit<OptionsData, 'fuelTypes'> & {
+  fuelTypes: Array<OptionsData['fuelTypes'][number] & { units?: string }>
+}
+
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_APPROVED_FUEL_CODE_LEGACY =
   'Approved fuel code - Section 6 (5) (c)'
 
-export const isFuelCodeProvision = (provision) =>
+export const isFuelCodeProvision = (provision: string | null | undefined) =>
   provision === PROVISION_APPROVED_FUEL_CODE ||
   provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
 export const otherUsesColDefs = (
-  optionsData: OptionsData,
+  optionsData: OtherUsesOptionsData,
   errors: GridErrors,
   warnings: GridWarnings,
   isSupplemental: boolean,
   compliancePeriod: string | number
 ): ColDef[] => [
   validation,
-  actions((params) => ({
+  actions((params: ICellRendererParams) => ({
     enableDuplicate: false,
     enableDelete: !params.data.isNewSupplementalEntry,
     enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
     enableStatus:
       isSupplemental &&
       params.data.isNewSupplementalEntry &&
-      ACTION_STATUS_MAP[params.data.actionType]
+      ACTION_STATUS_MAP[
+        params.data.actionType as keyof typeof ACTION_STATUS_MAP
+      ]
   })),
   {
     field: 'id',
@@ -90,7 +101,7 @@ export const otherUsesColDefs = (
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
     headerComponent: RequiredHeader,
     cellEditor: AutocompleteCellEditor,
-    cellEditorParams: (params) => {
+    cellEditorParams: (params: ICellEditorParams) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
@@ -124,13 +135,13 @@ export const otherUsesColDefs = (
     headerComponent: RequiredHeader,
     headerName: i18n.t('otherUses:otherUsesColLabels.provisionOfTheAct'),
     cellEditor: AutocompleteCellEditor,
-    cellEditorParams: (params) => {
+    cellEditorParams: (params: ICellEditorParams) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (type) => type.fuelType === params.data.fuelType
       )
 
       const provisionsOfTheAct = fuelType
-        ? fuelType.provisionOfTheAct.map((provision) => provision.name)
+        ? (fuelType.provisionOfTheAct?.map((provision) => provision.name) ?? [])
         : []
 
       return {
@@ -158,14 +169,14 @@ export const otherUsesColDefs = (
     },
     minWidth: 300,
     editable: true,
-    tooltipValueGetter: (p) =>
+    tooltipValueGetter: () =>
       'Select the method for determining carbon intensity'
   },
   {
     field: 'fuelCode',
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
     cellEditor: AutocompleteCellEditor,
-    cellEditorParams: (params) => {
+    cellEditorParams: (params: ICellEditorParams) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
@@ -192,7 +203,7 @@ export const otherUsesColDefs = (
       )
       return (
         isFuelCodeProvision(params.data.provisionOfTheAct) &&
-        fuelType?.fuelCodes?.length > 0
+        (fuelType?.fuelCodes?.length ?? 0) > 0
       )
     },
     tooltipValueGetter: () => 'Select the approved fuel code',
@@ -248,7 +259,7 @@ export const otherUsesColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    hide: parseInt(compliancePeriod, 10) < NEW_REGULATION_YEAR,
+    hide: parseInt(String(compliancePeriod), 10) < NEW_REGULATION_YEAR,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: (params) => {
@@ -304,7 +315,7 @@ export const otherUsesColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    hide: parseInt(compliancePeriod, 10) !== NEW_REGULATION_YEAR,
+    hide: parseInt(String(compliancePeriod), 10) !== NEW_REGULATION_YEAR,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: (params) => {
@@ -329,7 +340,12 @@ export const otherUsesColDefs = (
     valueGetter: (params) =>
       params.data.isQ1Supplied
         ? 'Yes'
-        : params.colDef?.editable(params)
+        : (
+              typeof params.colDef.editable === 'function'
+                ? params.node &&
+                  params.colDef.editable({ ...params, node: params.node })
+                : params.colDef.editable
+            )
           ? 'No'
           : '',
     valueSetter: (params) => {
@@ -360,7 +376,7 @@ export const otherUsesColDefs = (
     field: 'units',
     headerName: i18n.t('otherUses:otherUsesColLabels.units'),
     cellEditor: AutocompleteCellEditor,
-    cellEditorParams: (params) => {
+    cellEditorParams: (params: ICellEditorParams) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
@@ -424,7 +440,7 @@ export const otherUsesColDefs = (
     cellEditor: AutocompleteCellEditor,
     flex: 1,
     cellEditorParams: {
-      options: optionsData?.expectedUses.map((obj) => obj.name),
+      options: optionsData?.expectedUses?.map((obj) => obj.name),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -490,7 +506,7 @@ export const otherUsesSummaryColDefs = (
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
     field: 'isCanadaProduced',
-    hide: complianceYear < NEW_REGULATION_YEAR,
+    hide: Number(complianceYear) < NEW_REGULATION_YEAR,
     floatingFilter: false,
     valueGetter: (params) => {
       // For fuel codes with known location, show the system-determined value
@@ -557,7 +573,7 @@ export const otherUsesSummaryColDefs = (
     headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
     field: 'ciOfFuel',
     floatingFilter: false,
-    valueFormatter: decimalFormatter
+    valueFormatter: decimalFormatter as ColDef['valueFormatter']
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
@@ -592,25 +608,27 @@ export const changelogCommonColDefs = (
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType.fuelType',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
+    cellStyle: (params) =>
+      highlight ? changelogCellStyle(params, 'fuelType') : undefined
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
     field: 'fuelCategory.category',
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'fuelCategory')
+      highlight ? changelogCellStyle(params, 'fuelCategory') : undefined
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.provisionOfTheAct'),
     field: 'provisionOfTheAct.name',
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'provisionOfTheAct')
+      highlight ? changelogCellStyle(params, 'provisionOfTheAct') : undefined
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
     minWidth: 175,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode'),
+    cellStyle: (params) =>
+      highlight ? changelogCellStyle(params, 'fuelCode') : undefined,
     valueGetter: (params) => {
       const fuelCode = params.data.fuelCode
       if (fuelCode && fuelCode.fuelCode) {
@@ -625,7 +643,7 @@ export const changelogCommonColDefs = (
     headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
     field: 'isCanadaProduced',
     minWidth: 240,
-    hide: complianceYear < NEW_REGULATION_YEAR,
+    hide: Number(complianceYear) < NEW_REGULATION_YEAR,
     valueGetter: (params) => {
       // For fuel codes with known location, show the system-determined value
       const showCanadianProduced = canEditCanadianProduced(
@@ -648,7 +666,7 @@ export const changelogCommonColDefs = (
           : 'No'
     },
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'isCanadaProduced')
+      highlight ? changelogCellStyle(params, 'isCanadaProduced') : undefined
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
@@ -676,37 +694,40 @@ export const changelogCommonColDefs = (
       return ''
     },
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'isQ1Supplied')
+      highlight ? changelogCellStyle(params, 'isQ1Supplied') : undefined
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
     field: 'quantitySupplied',
     valueFormatter,
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'quantitySupplied')
+      highlight ? changelogCellStyle(params, 'quantitySupplied') : undefined
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.units'),
     field: 'units',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
+    cellStyle: (params) =>
+      highlight ? changelogCellStyle(params, 'units') : undefined
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
     field: 'ciOfFuel',
     valueFormatter,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
+    cellStyle: (params) =>
+      highlight ? changelogCellStyle(params, 'ciOfFuel') : undefined
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
     field: 'expectedUse.name',
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'expectedUse')
+      highlight ? changelogCellStyle(params, 'expectedUse') : undefined
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.otherExpectedUse'),
     field: 'rationale',
 
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'rationale')
+    cellStyle: (params) =>
+      highlight ? changelogCellStyle(params, 'rationale') : undefined
   }
 ]
 
@@ -767,7 +788,7 @@ export const changelogCommonGridOptions = {
 
 export const changelogGridOptions = {
   ...changelogCommonGridOptions,
-  getRowStyle: (params) => {
+  getRowStyle: (params: RowClassParams) => {
     if (params.data.actionType === 'DELETE') {
       return {
         backgroundColor: colors.alerts.error.background

@@ -13,7 +13,7 @@ vi.mock('../SupplierBalance', () => ({
 }))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => (key === 'govOrg' ? 'Government of BC' : key)
+    t: (key: string) => (key === 'govOrg' ? 'Government of BC' : key)
   })
 }))
 

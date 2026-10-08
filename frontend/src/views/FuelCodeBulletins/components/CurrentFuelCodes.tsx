@@ -15,8 +15,11 @@ import {
 } from '@/hooks/useFuelCode'
 import BCAlert from '@/components/BCAlert'
 import { ROUTES, buildPath } from '@/routes/routes'
+import type { BCPaginationOptions } from '@/components/BCDataGrid/types'
+import type { PaginationParams } from '@/hooks/types'
+import type { FuelCodeRow } from '../_schema'
 
-const initialPaginationOptions = {
+const initialPaginationOptions: BCPaginationOptions = {
   page: 1,
   size: 25,
   sortOrders: [],
@@ -38,15 +41,22 @@ export const CurrentFuelCodes = () => {
 
   const { data, isLoading, isError, error } = useFuelCodeBulletins(
     'current',
-    paginationOptions
+    paginationOptions as PaginationParams
   )
+
+  const bulletinData = data as
+    | {
+        fuelCodes?: FuelCodeRow[]
+        cutoffDate?: string | null
+      }
+    | undefined
 
   const colDefs = useMemo(() => buildColumnDefs(t, isIdirView), [t, isIdirView])
   const queryData = useMemo(
     () => ({
       data: {
-        ...data,
-        fuelCodes: normalizeRows(data?.fuelCodes || [])
+        ...bulletinData,
+        fuelCodes: normalizeRows(bulletinData?.fuelCodes || [])
       },
       isLoading,
       isError,
@@ -54,8 +64,8 @@ export const CurrentFuelCodes = () => {
     }),
     [data, isLoading, isError, error]
   )
-  const cutoffLabel = data?.cutoffDate
-    ? formatDate(data.cutoffDate)
+  const cutoffLabel = bulletinData?.cutoffDate
+    ? formatDate(bulletinData.cutoffDate)
     : t('current.cutoffLabel')
 
   const navigateToFuelCodeDetail = (fuelCodeId: unknown) => {
@@ -133,7 +143,7 @@ export const CurrentFuelCodes = () => {
           columnDefs={colDefs}
           gridKey="current-fuel-codes-grid"
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination) =>
+          onPaginationChange={(newPagination: BCPaginationOptions) =>
             setPaginationOptions((prev) => ({
               ...prev,
               ...newPagination
