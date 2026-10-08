@@ -509,6 +509,14 @@ describe('CreditCalculator', () => {
     })
 
     it('displays Hydrogen energy density per kilogram', async () => {
+      vi.mocked(useGetFuelTypeList).mockReturnValue({
+        data: {
+          data: [
+            { fuelType: 'Hydrogen', fuelCategoryId: 1, fuelTypeId: 3 }
+          ]
+        },
+        isLoading: false
+      })
       vi.mocked(useGetFuelTypeOptions).mockReturnValue({
         data: {
           ...mockFuelOptions,
@@ -538,6 +546,10 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
+
+      fireEvent.click(screen.getByTestId('fuelCategory1'))
+      fireEvent.click(screen.getByTestId('Hydrogen'))
+      fireEvent.click(screen.getByTestId('Transportation'))
 
       await waitFor(() => {
         expect(screen.getByText('141.76 MJ/kg')).toBeInTheDocument()
