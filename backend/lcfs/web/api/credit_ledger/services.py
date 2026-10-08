@@ -3,12 +3,12 @@ from collections import defaultdict
 from datetime import datetime, timezone, date, time
 from math import ceil
 from typing import Optional, List
-from zoneinfo import ZoneInfo
 
 from fastapi import Depends
 from fastapi.responses import StreamingResponse
 
 from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
+from lcfs.utils.dates import PACIFIC_TZ, to_pacific_date
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.base import (
@@ -76,12 +76,47 @@ def _signed_units_for_org(row, organization_id: int) -> int:
     return int(row.quantity or 0)
 
 
-def _effective_date(row):
+def _effective_value(row):
     return (
         row.transaction_effective_date
         or row.recorded_date
         or row.approved_date
         or row.create_date
+    )
+
+
+def _effective_date(row) -> Optional[date]:
+    """
+    The Pacific calendar date a ledger row lands on.
+
+    The aggregate view emits effective, recorded and approved dates as Pacific
+    calendar dates. Rows with none of them (compliance reports, pending
+    transactions) fall back to when they were created, a timestamptz that is
+    converted to its Pacific date the same way repo._EFFECTIVE_DATE_SQL does.
+    """
+    return to_pacific_date(_effective_value(row))
+
+
+def _chronological_key(row) -> tuple:
+    """
+    Order for the running balance: the Pacific date, then the Pacific time of
+    day for rows dated by a timestamp. Two rows that fall back to create_date
+    on the same day (say a pending transfer and a compliance report) keep the
+    order they happened in. Their IDs can't decide that, since each type has
+    its own sequence. Rows with only a date sort at the start of their day,
+    and the ID and type make any remaining tie deterministic.
+    """
+    value = _effective_value(row)
+    time_of_day = time.min
+    if isinstance(value, datetime):
+        if value.tzinfo is not None:
+            value = value.astimezone(PACIFIC_TZ)
+        time_of_day = value.time()
+    return (
+        to_pacific_date(value) or date.min,
+        time_of_day,
+        row.transaction_id,
+        row.transaction_type,
     )
 
 
@@ -110,39 +145,6 @@ def _display_transaction_id(transaction_type: str, transaction_id: int) -> str:
     return f"{_TYPE_ID_PREFIXES.get(transaction_type, '')}{transaction_id}"
 
 
-_PACIFIC_TZ = ZoneInfo("America/Vancouver")
-
-
-def _to_pacific_date(value) -> Optional[date]:
-    """Return a plain Vancouver calendar date for the full-ledger export."""
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        if value.tzinfo is not None:
-            return value.astimezone(_PACIFIC_TZ).date()
-        return value.date()
-    if isinstance(value, date):
-        return value
-    return None
-
-
-def _export_date(value) -> Optional[date]:
-    """
-    Reduce an effective date to a plain date for the period spreadsheet.
-
-    The period ledger UI displays effective_date as a date-only ISO value, so
-    this path keeps the source calendar date stable while still removing
-    timezone metadata that Excel cannot serialize.
-    """
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    return None
-
-
 def _display_transaction_type(transaction_type: str, description: Optional[str]) -> str:
     label = _TYPE_LABELS.get(transaction_type, transaction_type)
     if transaction_type == "ComplianceReport" and description:
@@ -169,19 +171,6 @@ def compliance_year_envelope(
         date(compliance_period, start_month, start_day),
         date(compliance_period + 1, 3, 31),
     )
-
-
-def _sort_key_datetime(value) -> datetime:
-    """Normalize a date/datetime (tz-aware or naive) to a naive datetime so the
-    aggregate's mixed effective-date types can be ordered together (real data
-    mixes ``date`` and tz-aware/naive ``datetime``)."""
-    if value is None:
-        return datetime.min
-    if isinstance(value, datetime):
-        return value.replace(tzinfo=None)
-    if isinstance(value, date):
-        return datetime.combine(value, time.min)
-    return datetime.min
 
 
 class CreditLedgerService:
@@ -285,15 +274,9 @@ class CreditLedgerService:
             if completed or (include_pending and pending):
                 selected.append((ledger_view, version, not completed and pending))
 
-        # 2. Sort chronologically (ascending effective date) so the running
-        #    balance accumulates from the start of the period. A stable
-        #    transaction_id tiebreaker keeps same-day rows deterministic.
-        selected.sort(
-            key=lambda t: (
-                _sort_key_datetime(_effective_date(t[0])),
-                t[0].transaction_id,
-            )
-        )
+        # 2. Sort chronologically so the running balance accumulates from the
+        #    start of the period.
+        selected.sort(key=lambda t: _chronological_key(t[0]))
 
         # 3. Build transaction rows with signed units + running balance.
         transactions: List[PeriodLedgerTxnSchema] = []
@@ -403,7 +386,7 @@ class CreditLedgerService:
         sheet_rows = [
             [
                 _display_transaction_id(txn.transaction_type, txn.transaction_id),
-                _export_date(txn.effective_date),
+                txn.effective_date,
                 _display_transaction_type(txn.transaction_type, txn.description),
                 txn.units_in,
                 txn.units_out,
@@ -494,7 +477,7 @@ class CreditLedgerService:
                     int(ledger_view.available_balance or 0),
                     int(ledger_view.compliance_units or 0),
                     transaction_type,
-                    _to_pacific_date(ledger_view.update_date),
+                    to_pacific_date(ledger_view.update_date),
                 ]
             )
 

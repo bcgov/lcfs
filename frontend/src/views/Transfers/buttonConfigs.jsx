@@ -4,7 +4,7 @@ import colors from '@/themes/base/colors'
 import { roles } from '@/constants/roles'
 // icons
 import { TRANSFER_STATUSES } from '@/constants/statuses'
-import { dateFormatter } from '@/utils/formatters'
+import { formatCalendarDate } from '@/utils/calendarDate'
 import {
   faFloppyDisk,
   faPencil,
@@ -27,27 +27,6 @@ const redBase = {
   variant: 'outlined',
   color: 'error',
   iconColor: colors.error.main
-}
-
-export const formatTransferDate = (value) => {
-  if (!value) return value
-  if (typeof value === 'string') return value.split('T')[0]
-  if (value instanceof Date) {
-    const isUtcMidnight =
-      value.getUTCHours() === 0 &&
-      value.getUTCMinutes() === 0 &&
-      value.getUTCSeconds() === 0 &&
-      value.getUTCMilliseconds() === 0
-    const year = isUtcMidnight ? value.getUTCFullYear() : value.getFullYear()
-    const month = String(
-      (isUtcMidnight ? value.getUTCMonth() : value.getMonth()) + 1
-    ).padStart(2, '0')
-    const day = String(
-      isUtcMidnight ? value.getUTCDate() : value.getDate()
-    ).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-  return dateFormatter(value)
 }
 
 export const redOutlinedButton = (label, startIcon) => ({
@@ -96,7 +75,7 @@ export const buttonClusterConfigFn = ({
             ...formData,
             fromOrganizationId: parseInt(formData.fromOrganizationId),
             toOrganizationId: parseInt(formData.toOrganizationId),
-            agreementDate: formatTransferDate(formData.agreementDate),
+            agreementDate: formatCalendarDate(formData.agreementDate),
             currentStatus: TRANSFER_STATUSES.DRAFT
           }
         })
@@ -111,7 +90,7 @@ export const buttonClusterConfigFn = ({
             createUpdateTransfer({
               data: {
                 ...formData,
-                agreementDate: formatTransferDate(formData.agreementDate),
+                agreementDate: formatCalendarDate(formData.agreementDate),
                 currentStatus: TRANSFER_STATUSES.DELETED
               }
             }),
@@ -136,7 +115,7 @@ export const buttonClusterConfigFn = ({
                 ...formData,
                 fromOrganizationId: parseInt(formData.fromOrganizationId),
                 toOrganizationId: parseInt(formData.toOrganizationId),
-                agreementDate: formatTransferDate(formData.agreementDate),
+                agreementDate: formatCalendarDate(formData.agreementDate),
                 currentStatus: TRANSFER_STATUSES.SENT
               }
             }),
@@ -167,7 +146,7 @@ export const buttonClusterConfigFn = ({
             createUpdateTransfer({
               data: {
                 ...formData,
-                agreementDate: formatTransferDate(formData.agreementDate),
+                agreementDate: formatCalendarDate(formData.agreementDate),
                 currentStatus: TRANSFER_STATUSES.SUBMITTED
               }
             }),
@@ -191,7 +170,7 @@ export const buttonClusterConfigFn = ({
             createUpdateTransfer({
               data: {
                 ...formData,
-                agreementDate: formatTransferDate(formData.agreementDate),
+                agreementDate: formatCalendarDate(formData.agreementDate),
                 currentStatus: TRANSFER_STATUSES.DECLINED
               }
             }),
@@ -215,7 +194,7 @@ export const buttonClusterConfigFn = ({
             createUpdateTransfer({
               data: {
                 ...formData,
-                agreementDate: formatTransferDate(formData.agreementDate),
+                agreementDate: formatCalendarDate(formData.agreementDate),
                 currentStatus: TRANSFER_STATUSES.RESCINDED
               }
             }),
@@ -234,7 +213,7 @@ export const buttonClusterConfigFn = ({
         createUpdateTransfer({
           data: {
             ...formData,
-            agreementDate: formatTransferDate(transferData.agreementDate),
+            agreementDate: formatCalendarDate(transferData.agreementDate),
             currentStatus: transferData.currentStatus.status
           }
         }),
@@ -249,7 +228,7 @@ export const buttonClusterConfigFn = ({
             createUpdateTransfer({
               data: {
                 ...formData,
-                agreementDate: formatTransferDate(transferData.agreementDate),
+                agreementDate: formatCalendarDate(transferData.agreementDate),
                 currentStatus: TRANSFER_STATUSES.REFUSED
               }
             }),
@@ -271,7 +250,7 @@ export const buttonClusterConfigFn = ({
             createUpdateTransfer({
               data: {
                 ...formData,
-                agreementDate: formatTransferDate(transferData.agreementDate),
+                agreementDate: formatCalendarDate(transferData.agreementDate),
                 currentStatus: TRANSFER_STATUSES.RECORDED
               }
             }),
@@ -294,7 +273,7 @@ export const buttonClusterConfigFn = ({
             createUpdateTransfer({
               data: {
                 ...formData,
-                agreementDate: formatTransferDate(transferData.agreementDate),
+                agreementDate: formatCalendarDate(transferData.agreementDate),
                 currentStatus: TRANSFER_STATUSES.RECOMMENDED
               }
             }),
@@ -314,7 +293,7 @@ export const buttonClusterConfigFn = ({
             createUpdateTransfer({
               data: {
                 ...formData,
-                agreementDate: formatTransferDate(transferData.agreementDate),
+                agreementDate: formatCalendarDate(transferData.agreementDate),
                 currentStatus: TRANSFER_STATUSES.SUBMITTED
               }
             }),

@@ -9,7 +9,7 @@
 
 -- ==========================================
 -- mv_transaction_aggregate
--- Source: 2025-12-02-12-00_b71c1d2e3f45.py
+-- Source: 2026-10-05-10-00_c4d6e8f0a2b5.py
 -- Depends on: transfer, initiative_agreement, admin_adjustment,
 --             compliance_report, transaction (standalone)
 -- ==========================================
@@ -295,7 +295,7 @@ CREATE UNIQUE INDEX mv_transaction_aggregate_unique_idx
 
 -- ==========================================
 -- mv_credit_ledger
--- Source: 2025-12-02-12-00_b71c1d2e3f45.py
+-- Source: 2026-10-05-10-00_c4d6e8f0a2b5.py
 -- Depends on: mv_transaction_aggregate
 -- ==========================================
 CREATE MATERIALIZED VIEW mv_credit_ledger AS

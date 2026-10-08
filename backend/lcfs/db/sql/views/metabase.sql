@@ -103,7 +103,9 @@ CREATE OR REPLACE VIEW vw_transfer_base AS
 SELECT
     transfer.transfer_id,
     transfer_status.status,
-    (coalesce(transfer.transaction_effective_date AT TIME ZONE 'UTC', transfer_history.update_date) AT TIME ZONE 'America/Vancouver')::date AS calculated_effective_date,
+    -- transaction_effective_date holds a Pacific calendar date. The history
+    -- timestamp is a timestamptz, so it is converted to Vancouver time once.
+    coalesce(transfer.transaction_effective_date::date, (transfer_history.update_date AT TIME ZONE 'America/Vancouver')::date) AS calculated_effective_date,
     from_organization.name AS from_organization,
     to_organization.name AS to_organization,
     price_per_unit,
@@ -113,7 +115,7 @@ SELECT
     (CASE
         WHEN transfer.is_a1_category IS TRUE THEN TRUE
         WHEN transfer.agreement_date IS NULL THEN FALSE
-        WHEN ABS(((coalesce(transfer.transaction_effective_date AT TIME ZONE 'UTC', transfer_history.update_date) AT TIME ZONE 'America/Vancouver')::date - transfer.agreement_date::date)::int) <= 30 THEN TRUE
+        WHEN ABS((coalesce(transfer.transaction_effective_date::date, (transfer_history.update_date AT TIME ZONE 'America/Vancouver')::date) - transfer.agreement_date::date)::int) <= 30 THEN TRUE
         ELSE FALSE
     END and transfer_category.category::text = 'A') AS is_a1_category
 FROM

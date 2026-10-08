@@ -33,15 +33,15 @@ log = structlog.get_logger(__name__)
 # compliance_report_status, so match the materialized views and accept both.
 _ASSESSED_STATUSES = ("Assessed", "Reassessed")
 
-# The date a transaction lands on, matching the fallback order the service uses
-# for display. Each column is cast to a plain date first: the aggregate view
-# emits a mix of date, naive and tz-aware timestamps, which Postgres refuses to
-# coalesce together.
+# The Pacific calendar date a transaction lands on, matching the fallback order
+# of the service's _effective_date. The view emits the first three as Pacific
+# dates. create_date is a timestamptz, so it is converted to Vancouver time
+# before taking the date; a plain cast would use the session's UTC date.
 _EFFECTIVE_DATE_SQL = func.coalesce(
     cast(TransactionView.transaction_effective_date, Date),
     cast(TransactionView.recorded_date, Date),
     cast(TransactionView.approved_date, Date),
-    cast(TransactionView.create_date, Date),
+    cast(func.timezone("America/Vancouver", TransactionView.create_date), Date),
 )
 
 
