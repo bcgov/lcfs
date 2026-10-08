@@ -160,13 +160,32 @@ export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
 // detail page (#4896). The ID renders as "DA{n}-IA{agreement}", matching
 // the wireframe; the analyst column assigns inline for managers and
 // directors and its floating filter sends the analyst's id.
-// The module-wide tab (#5078) reuses the agreement grid's columns, with
-// the ID read off each row's own agreement and the analyst column left
-// out — the wireframe's tab has no analyst, and the rows come from many
-// agreements at once.
+// The module-wide tab (#5078) shows the same columns, with the ID read off
+// each row's own agreement. Its rows come from many agreements, so the
+// agreement's organization and code follow the ID (#5203).
+const parentAgreementColDefs = (t): ColDef[] => [
+  {
+    field: 'organization.name',
+    headerName: t('initiativeAgreement:actions.columns.organization'),
+    valueGetter: (params) => params.data?.organization?.name,
+    minWidth: 180,
+    filter: 'agTextColumnFilter',
+    filterParams: TEXT_FILTER_PARAMS
+  },
+  {
+    field: 'iaCode',
+    headerName: t('initiativeAgreement:actions.columns.iaName'),
+    minWidth: 130,
+    filter: 'agTextColumnFilter',
+    filterParams: TEXT_FILTER_PARAMS
+  }
+]
+
 export const allDesignatedActionColDefs = (t): ColDef[] =>
-  designatedActionColDefs(t, null).filter(
-    (colDef) => colDef.colId !== 'assignedAnalyst'
+  designatedActionColDefs(t, null).flatMap((colDef) =>
+    colDef.colId === 'actionNumber'
+      ? [colDef, ...parentAgreementColDefs(t)]
+      : [colDef]
   )
 
 export const designatedActionColDefs = (t, initiativeAgreementId): ColDef[] => [
@@ -240,6 +259,14 @@ export const designatedActionColDefs = (t, initiativeAgreementId): ColDef[] => [
           })
         : '',
     valueGetter: ({ data }) => data?.creditAllocation
+  },
+  {
+    // The completion date from the agreement's schedule (#5203).
+    ...dateCol(
+      'specifiedDate',
+      t('initiativeAgreement:actions.columns.dateForCompletion')
+    ),
+    minWidth: 160
   },
   {
     ...dateCol(

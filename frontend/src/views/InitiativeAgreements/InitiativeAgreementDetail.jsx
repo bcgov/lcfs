@@ -17,6 +17,7 @@ import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import Comments from '@/components/Comments'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
 import { roles } from '@/constants/roles'
+import { INITIATIVE_AGREEMENT_OPEN_TO_NEW_ACTIONS } from '@/constants/statuses'
 import { useDocuments } from '@/hooks/useDocuments'
 import { ROUTES } from '@/routes/routes'
 import { constructAddress } from '@/utils/constructAddress'
@@ -81,7 +82,10 @@ const InitiativeAgreementDetailBase = () => {
     )
   }
 
-  const organization = agreement.organization ?? {}
+  // An agreement can be saved before its organization is known (#5186).
+  const organization = agreement.organization ?? {
+    name: t('initiativeAgreement:detail.noOrganization')
+  }
   const address = organization.orgAddress
     ? constructAddress(organization.orgAddress)
     : null
@@ -281,7 +285,9 @@ const InitiativeAgreementDetailBase = () => {
             </BCTypography>
             <AddDesignatedAction
               initiativeAgreementId={initiativeAgreementId}
-              isDraft={agreement.lifecycleStatus?.status === 'Draft'}
+              canAdd={INITIATIVE_AGREEMENT_OPEN_TO_NEW_ACTIONS.includes(
+                agreement.lifecycleStatus?.status
+              )}
             />
           </BCBox>
           <DesignatedActionsGrid

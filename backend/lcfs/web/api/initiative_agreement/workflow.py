@@ -17,14 +17,60 @@ from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_STATUS_CHANGE,
 )
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.role.schema import user_has_roles
+
+# Agreement lifecycle, distinct from the designated action statuses below.
+LIFECYCLE_STATUS_DRAFT = "Draft"
+LIFECYCLE_STATUS_UNDERWAY = "Underway"
+
+# Where a new agreement starts, by who starts it (#5186); the first rule the
+# creator matches wins. An agreement government enters is live from the
+# start. Draft is kept for the applications BCeID proponents will start.
+INITIAL_LIFECYCLE_STATUS_RULES = (
+    (RoleEnum.GOVERNMENT, LIFECYCLE_STATUS_UNDERWAY),
+    (RoleEnum.SUPPLIER, LIFECYCLE_STATUS_DRAFT),
+)
+
+# A draft is a proponent's application that has not been submitted, so IDIR
+# users do not see it: not in the grids, the counts or the status filter.
+LIFECYCLE_STATUSES_HIDDEN_FROM_GOVERNMENT = (LIFECYCLE_STATUS_DRAFT,)
+
+# Designated actions can be added while an agreement is being drafted or is
+# underway. A completed or terminated agreement takes no new ones.
+LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS = (
+    LIFECYCLE_STATUS_DRAFT,
+    LIFECYCLE_STATUS_UNDERWAY,
+)
+
+
+def initial_lifecycle_status(user):
+    """The lifecycle status an agreement this user creates starts in, or
+    None when no rule covers them."""
+    for role, lifecycle_status in INITIAL_LIFECYCLE_STATUS_RULES:
+        if user_has_roles(user, [role]):
+            return lifecycle_status
+    return None
+
+
+def hidden_lifecycle_statuses(user):
+    """Lifecycle statuses kept out of this user's sight."""
+    if user is not None and user_has_roles(user, [RoleEnum.GOVERNMENT]):
+        return LIFECYCLE_STATUSES_HIDDEN_FROM_GOVERNMENT
+    return ()
+
+
+def is_hidden_from(agreement, user) -> bool:
+    """Whether this agreement's lifecycle status keeps it from this user.
+    The agreement's lifecycle_status must already be loaded."""
+    lifecycle = (
+        agreement.lifecycle_status.status if agreement.lifecycle_status else None
+    )
+    return lifecycle in hidden_lifecycle_statuses(user)
+
 
 # Status names as seeded in designated_action_status. "Approved" is the
 # terminal reviewed state — the ticket calls it "Completed"; there is one
 # status and these are two names for it.
-# Agreement lifecycle, distinct from the designated action statuses below.
-# Designated actions may only be added while the agreement is a draft.
-LIFECYCLE_STATUS_DRAFT = "Draft"
-
 STATUS_NOT_STARTED = "Not started"
 STATUS_SUBMISSION_RECEIVED = "Submission received"
 STATUS_UNDERWAY = "Underway"

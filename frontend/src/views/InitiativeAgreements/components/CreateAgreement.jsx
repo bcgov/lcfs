@@ -22,9 +22,9 @@ import ModalField from './ModalField'
 export const AGREEMENT_TYPES = ['Initiative Agreement', 'P3A']
 
 // Starting an agreement from the index page. Deliberately thin: an analyst
-// opening a file has the organization and the agreement code, and little
-// else settled. The rest is filled in on the detail page as the agreement
-// is negotiated, which is why this lands there on success.
+// opening a file has the agreement code and little else settled, sometimes
+// not even the organization (#5186). The rest is filled in as the agreement
+// is negotiated, which is why this lands on the detail page on success.
 export const CreateAgreement = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const navigate = useNavigate()
@@ -69,16 +69,16 @@ export const CreateAgreement = () => {
     setError('')
   }
 
-  const canSubmit = Boolean(organization?.id) && Boolean(iaCode.trim())
+  const canSubmit = Boolean(iaCode.trim())
 
   const submit = () => {
     setError('')
-    // The modal disables its button without these, but the guard belongs
+    // The modal disables its button without a code, but the guard belongs
     // with the action rather than only in the control's appearance.
     if (!canSubmit) return
     createAgreement(
       {
-        organizationId: organization.id,
+        organizationId: organization?.id ?? null,
         iaCode: iaCode.trim(),
         agreementType,
         title: title.trim() || null,
@@ -89,8 +89,8 @@ export const CreateAgreement = () => {
       {
         onSuccess: (created) => {
           close()
-          // Straight to the new draft: creation is the start of the work,
-          // not the end of it.
+          // Straight to the new agreement: creation is the start of the
+          // work, not the end of it.
           navigate(`${created.initiativeAgreementId}`, {
             state: {
               message: t('initiativeAgreement:create.created', {
@@ -165,6 +165,9 @@ export const CreateAgreement = () => {
                 >
                   <BCTypography variant="label" component="span">
                     {t('initiativeAgreement:create.organizationLabel')}
+                    <span style={{ fontWeight: 'normal' }}>
+                      &nbsp;(optional)
+                    </span>
                   </BCTypography>
                 </InputLabel>
                 <Autocomplete

@@ -27,7 +27,8 @@ const CountDisplay = ({ count }) => (
 // IDIR dashboard links card for the Initiative Agreements module (#4895).
 // The wireframe's "Change order(s)" and "Expression of interest" counters
 // are undefined concepts (open PO question); until they are, the card
-// counts by lifecycle status.
+// counts by lifecycle status. There is no draft counter: drafts are
+// proponents' unsubmitted applications, which IDIR users do not see (#5186).
 export const InitiativeAgreementsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
@@ -113,16 +114,6 @@ export const InitiativeAgreementsCard = () => {
                   t('dashboard:initiativeAgreements.underway'),
                   counts?.underway || 0,
                   () => navigateWithStatus('Underway')
-                )}
-              </ListItemButton>
-              <ListItemButton
-                component="a"
-                onClick={() => navigateWithStatus('Draft')}
-              >
-                {renderLinkWithCount(
-                  t('dashboard:initiativeAgreements.draft'),
-                  counts?.draft || 0,
-                  () => navigateWithStatus('Draft')
                 )}
               </ListItemButton>
               <ListItemButton

@@ -54,8 +54,8 @@ vi.mock('@/components/Comments', () => ({
 }))
 
 vi.mock('../components/AddDesignatedAction', () => ({
-  AddDesignatedAction: ({ isDraft }) =>
-    isDraft ? <div data-test="add-designated-action" /> : null
+  AddDesignatedAction: ({ canAdd }) =>
+    canAdd ? <div data-test="add-designated-action" /> : null
 }))
 
 const daGridProps = vi.fn()
@@ -214,29 +214,31 @@ describe('InitiativeAgreementDetail', () => {
     )
   })
 
-  test('does not offer to add an action to an agreement that is underway', ({
+  test('offers to add an action while the agreement is underway (#5186)', ({
     render,
     app
   }) => {
-    render(<InitiativeAgreementDetail />, app)
-    expect(
-      screen.queryByTestId('add-designated-action')
-    ).not.toBeInTheDocument()
-  })
-
-  test('offers to add an action while the agreement is a draft', ({
-    render,
-    app
-  }) => {
-    mockAgreement.mockReturnValue({
-      data: { ...agreement, lifecycleStatus: { status: 'Draft' } },
-      isLoading: false,
-      isError: false,
-      error: null
-    })
+    // Agreements government enters start Underway, so that is where the
+    // schedule is set out.
     render(<InitiativeAgreementDetail />, app)
     expect(screen.getByTestId('add-designated-action')).toBeInTheDocument()
   })
+
+  test.for(['Completed', 'Terminated'])(
+    'does not offer to add an action to a %s agreement',
+    (status, { render, app }) => {
+      mockAgreement.mockReturnValue({
+        data: { ...agreement, lifecycleStatus: { status } },
+        isLoading: false,
+        isError: false,
+        error: null
+      })
+      render(<InitiativeAgreementDetail />, app)
+      expect(
+        screen.queryByTestId('add-designated-action')
+      ).not.toBeInTheDocument()
+    }
+  )
 
   test('renders the designated actions grid for IDIR IA roles', ({
     render,
@@ -283,6 +285,25 @@ describe('InitiativeAgreementDetail', () => {
     render(<InitiativeAgreementDetail />, app)
 
     expect(screen.queryByTestId('comments-component')).not.toBeInTheDocument()
+  })
+
+  test('says so when no organization is assigned yet (#5186)', ({
+    render,
+    app
+  }) => {
+    mockAgreement.mockReturnValue({
+      data: { ...agreement, organization: null },
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    render(<InitiativeAgreementDetail />, app)
+    expect(
+      screen.getByText('initiativeAgreement:detail.noOrganization')
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('agreement-status-chip')).toHaveTextContent(
+      'Underway'
+    )
   })
 
   test('tolerates an organization with no address', ({ render, app }) => {
