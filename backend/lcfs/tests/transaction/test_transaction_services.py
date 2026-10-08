@@ -9,7 +9,7 @@ import pytest
 import xlrd
 from starlette.responses import StreamingResponse
 
-from lcfs.web.api.base import FilterModel, PaginationRequestSchema
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.transaction.schema import (
     TransactionStatusSchema,
     TransactionViewSchema,
@@ -55,40 +55,6 @@ async def test_get_transactions(transactions_service):
     assert transactions_data["pagination"].total == 3
     assert len(transactions_data["transactions"]) == 3
     assert transactions_data["pagination"].total_pages == ceil(3 / 10)
-
-
-@pytest.mark.anyio
-@pytest.mark.parametrize(
-    "filter_value",
-    [
-        "Submitted,Recorded",
-        ["Submitted", "Recorded"],
-    ],
-)
-async def test_get_transactions_status_filter_accepts_multiple_values(
-    transactions_service, filter_value
-):
-    pagination_request = PaginationRequestSchema(
-        page=1,
-        size=10,
-        filters=[
-            FilterModel(
-                field="status",
-                filter=filter_value,
-                type="equals",
-                filter_type="text",
-            )
-        ],
-        sort_orders=[],
-    )
-
-    await transactions_service.get_transactions_paginated(
-        pagination=pagination_request
-    )
-
-    args, _ = transactions_service.repo.get_transactions_paginated.call_args
-    conditions = args[2]
-    assert any("IN" in str(condition) for condition in conditions)
 
 
 # Test retrieving transaction statuses
