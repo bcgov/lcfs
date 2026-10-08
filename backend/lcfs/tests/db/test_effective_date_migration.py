@@ -20,18 +20,16 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAg
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
 from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
 
-MIGRATION_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "db"
-    / "migrations"
-    / "versions"
-    / "2026-10-05-10-00_c4d6e8f0a2b5.py"
+MIGRATION_REVISION = "c4d6e8f0a2b5"
+MIGRATION_VERSIONS_PATH = (
+    Path(__file__).resolve().parents[2] / "db" / "migrations" / "versions"
 )
 
 
 def _load_migration():
+    (migration_path,) = MIGRATION_VERSIONS_PATH.glob(f"*_{MIGRATION_REVISION}.py")
     spec = importlib.util.spec_from_file_location(
-        "effective_date_migration", MIGRATION_PATH
+        "effective_date_migration", migration_path
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
