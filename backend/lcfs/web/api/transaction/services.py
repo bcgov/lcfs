@@ -90,12 +90,14 @@ class TransactionsService:
         field = cast(get_field_for_filter(TransactionView, "status"), String)
         filter_value = filter_model.filter
         filter_type = filter_model.filter_type
+        filter_option = filter_model.type
         if isinstance(filter_value, str) and "," in filter_value:
             filter_value = filter_value.split(",")
         if isinstance(filter_value, list):
             filter_type = "set"
+            filter_option = "set"
         return apply_filter_conditions(
-            field, filter_value, filter_model.type, filter_type
+            field, filter_value, filter_option, filter_type
         )
 
     @service_handler

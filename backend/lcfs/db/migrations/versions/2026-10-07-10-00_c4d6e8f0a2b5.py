@@ -27,7 +27,7 @@ Downgrade restores the previous view definitions. It keeps the corrected dates;
 the audit log records their old values.
 
 Revision ID: c4d6e8f0a2b5
-Revises: b1c3e5a7d9f2
+Revises: 5148a6b7c9d0
 Create Date: 2026-10-05 10:00:00.000000
 """
 
@@ -38,7 +38,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "c4d6e8f0a2b5"
-down_revision = "b1c3e5a7d9f2"
+down_revision = "5148a6b7c9d0"
 branch_labels = None
 depends_on = None
 
