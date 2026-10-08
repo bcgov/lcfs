@@ -1,7 +1,7 @@
 import structlog
 from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, delete, func, cast, String
+from sqlalchemy import and_, or_, select, delete, func, cast, String, Date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, contains_eager, joinedload
 from typing import List, Optional, Sequence, Any
@@ -12,6 +12,9 @@ from lcfs.db.models.compliance import (
     CompliancePeriod,
     FuelSupply,
     ComplianceReport,
+)
+from lcfs.db.models.compliance.ComplianceReport import (
+    QuantityUnitsEnum as FuelSupplyUnitsEnum,
 )
 from lcfs.db.models.fuel import (
     CategoryCarbonIntensity,
@@ -37,6 +40,14 @@ from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
+
+LIQUID_TARGET_FUEL_CATEGORIES = ("Gasoline", "Diesel", "Jet fuel")
+RENEWABLE_LIQUID_FUEL_CATEGORY_LABELS = {
+    "Gasoline": "Renewable gasoline",
+    "Diesel": "Renewable diesel",
+    "Jet fuel": "Renewable jet fuel",
+}
+
 
 def _normalized_supply_history_fuel_type(fuel_type_name):
     """
@@ -82,6 +93,61 @@ def _get_filter_values(filter_item):
     if filter_value not in (None, ""):
         return [str(filter_value)]
     return []
+
+
+def _is_litres_unit(unit):
+    if unit is None:
+        return False
+    unit_name = getattr(unit, "name", None)
+    unit_value = getattr(unit, "value", None)
+    return unit_name == "Litres" or unit_value == "L" or unit == "Litres"
+
+
+def _get_renewable_liquid_fuel_group(fuel_supply):
+    fuel_category = getattr(
+        getattr(fuel_supply, "fuel_category", None), "category", None
+    )
+    if fuel_category not in LIQUID_TARGET_FUEL_CATEGORIES:
+        return None
+
+    fuel_type = getattr(fuel_supply, "fuel_type", None)
+    if not _is_litres_unit(getattr(fuel_supply, "units", None)):
+        return None
+
+    if bool(getattr(fuel_type, "renewable", False)):
+        return "Renewable"
+    return "Non-renewable"
+
+
+def _get_renewable_liquid_fuel_category_label(fuel_supply):
+    fuel_category = getattr(
+        getattr(fuel_supply, "fuel_category", None), "category", None
+    )
+    if fuel_category not in LIQUID_TARGET_FUEL_CATEGORIES:
+        return None
+
+    fuel_type = getattr(fuel_supply, "fuel_type", None)
+    if not _is_litres_unit(getattr(fuel_supply, "units", None)):
+        return None
+
+    if bool(getattr(fuel_type, "renewable", False)):
+        return RENEWABLE_LIQUID_FUEL_CATEGORY_LABELS[fuel_category]
+    return f"Non-renewable {fuel_category.lower()}"
+
+
+def _vancouver_date_field(field):
+    return cast(func.timezone("America/Vancouver", field), Date)
+
+
+def _date_filter_values(filter_item):
+    values = []
+    date_from = getattr(filter_item, "date_from", None)
+    date_to = getattr(filter_item, "date_to", None)
+    if date_from:
+        values.append(str(date_from)[:10])
+    if date_to:
+        values.append(str(date_to)[:10])
+    return values
 
 
 def _scalar_reference_options(fuel_category_loader, fuel_type_loader):
@@ -825,8 +891,9 @@ class FuelSupplyRepository:
                 field = camel_to_snake(getattr(filter_item, "field", "") or "")
                 filter_value = getattr(filter_item, "filter", None)
                 filter_values = _get_filter_values(filter_item)
+                date_values = _date_filter_values(filter_item)
 
-                if not filter_value and not filter_values:
+                if not filter_value and not filter_values and not date_values:
                     continue
 
                 if field == "compliance_period":
@@ -857,6 +924,26 @@ class FuelSupplyRepository:
                     query = query.where(
                         ProvisionOfTheAct.name.ilike(f"%{filter_value}%")
                     )
+                elif field == "report_submission_date":
+                    submission_date = _vancouver_date_field(
+                        ComplianceReport.update_date
+                    )
+                    filter_type = getattr(filter_item, "type", None)
+                    if filter_type == "inRange" and len(date_values) == 2:
+                        query = query.where(
+                            and_(
+                                submission_date >= func.date(date_values[0]),
+                                submission_date <= func.date(date_values[1]),
+                            )
+                        )
+                    elif date_values:
+                        date_value = func.date(date_values[0])
+                        if filter_type == "lessThan":
+                            query = query.where(submission_date < date_value)
+                        elif filter_type == "greaterThan":
+                            query = query.where(submission_date > date_value)
+                        else:
+                            query = query.where(submission_date == date_value)
                 elif field == "fuel_code":
                     # FuelCode.fuel_code is a Python property (prefix + suffix),
                     # not a column, so it can't be used in SQL. Join the prefix
@@ -1030,6 +1117,9 @@ class FuelSupplyRepository:
         total_by_fuel_code = {}
         yearly = {}
         yearly_fuel_type = {}
+        yearly_fuel_category = {}
+        yearly_renewable_liquid_fuel = {}
+        renewable_liquid_fuel_types_by_category = {}
 
         for fs in all_fuel_supplies:
             quantity = _quantity(fs)
@@ -1104,6 +1194,22 @@ class FuelSupplyRepository:
                 yearly[year]["zero_or_negative_compliance_units"] += compliance_units
                 yearly[year]["non_positive_cu_volume"] += quantity
 
+            renewable_liquid_group = _get_renewable_liquid_fuel_group(fs)
+            if renewable_liquid_group:
+                yearly_renewable_liquid_fuel.setdefault(year, {})
+                yearly_renewable_liquid_fuel[year][renewable_liquid_group] = (
+                    yearly_renewable_liquid_fuel[year].get(renewable_liquid_group, 0)
+                    + quantity
+                )
+
+                if include_in_filtered_totals:
+                    fuel_type_label = getattr(fs.fuel_type, "fuel_type", None)
+                    category_label = _get_renewable_liquid_fuel_category_label(fs)
+                    if fuel_type_label and category_label:
+                        renewable_liquid_fuel_types_by_category.setdefault(
+                            category_label, set()
+                        ).add(fuel_type_label)
+
             raw_fuel_type_name = fs.fuel_type.fuel_type
             fuel_type_name = _normalized_supply_history_fuel_type(raw_fuel_type_name)
             yearly_fuel_type.setdefault(year, {})
@@ -1127,6 +1233,20 @@ class FuelSupplyRepository:
                 yearly_fuel_type[year][fuel_type_name][
                     "positive_compliance_units"
                 ] = True
+
+            # Quantities are in mixed units (L, kg, kWh, m³) within a category,
+            # so energy (MJ) is the comparable total and volume only counts
+            # litre-denominated rows. fs.units is the row's reported unit (it
+            # is user-selected for "Other" fuel types); its enum is not the
+            # same class as fuel_type.units', so compare against the alias.
+            category_totals = yearly_fuel_category.setdefault(year, {}).setdefault(
+                category,
+                {"total_energy": 0, "total_litres": 0, "total_compliance_units": 0},
+            )
+            category_totals["total_energy"] += float(fs.energy or 0)
+            if fs.units == FuelSupplyUnitsEnum.Litres:
+                category_totals["total_litres"] += quantity
+            category_totals["total_compliance_units"] += compliance_units
 
         # Calculate most recent submission
         most_recent_submission = (
@@ -1222,6 +1342,8 @@ class FuelSupplyRepository:
 
         compliance_unit_credit_debit_trend = []
         fuel_type_volume_trend = []
+        fuel_category_trend = []
+        renewable_liquid_fuel_volume_trend = []
         top_fuel_codes = [
             {"fuelCode": fuel_code, "totalVolume": volume}
             for fuel_code, volume in sorted(
@@ -1258,6 +1380,30 @@ class FuelSupplyRepository:
                         "fuelCategory": fuel_type_data.get("fuel_category"),
                         "totalVolume": fuel_type_data.get("total_volume", 0),
                         "fossilDerived": fuel_type_data.get("fossil_derived", False),
+                    }
+                )
+            for category, category_data in sorted(
+                yearly_fuel_category.get(year, {}).items()
+            ):
+                fuel_category_trend.append(
+                    {
+                        "reportingYear": year,
+                        "fuelCategory": category,
+                        "totalEnergy": category_data.get("total_energy", 0),
+                        "totalLitres": category_data.get("total_litres", 0),
+                        "totalComplianceUnits": _round(
+                            category_data.get("total_compliance_units", 0)
+                        ),
+                    }
+                )
+            for renewable_liquid_group in ("Renewable", "Non-renewable"):
+                renewable_liquid_fuel_volume_trend.append(
+                    {
+                        "reportingYear": year,
+                        "renewableCategory": renewable_liquid_group,
+                        "totalVolume": yearly_renewable_liquid_fuel.get(year, {}).get(
+                            renewable_liquid_group, 0
+                        ),
                     }
                 )
 
@@ -1309,5 +1455,13 @@ class FuelSupplyRepository:
             "fuel_type_yoy": fuel_type_yoy,
             "compliance_unit_credit_debit_trend": compliance_unit_credit_debit_trend,
             "fuel_type_volume_trend": fuel_type_volume_trend,
+            "fuel_category_trend": fuel_category_trend,
+            "renewable_liquid_fuel_volume_trend": renewable_liquid_fuel_volume_trend,
+            "renewable_liquid_fuel_types_by_category": {
+                category: sorted(fuel_types)
+                for category, fuel_types in sorted(
+                    renewable_liquid_fuel_types_by_category.items()
+                )
+            },
             "top_fuel_codes": top_fuel_codes,
         }
