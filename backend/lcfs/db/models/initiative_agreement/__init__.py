@@ -6,6 +6,7 @@ from .EvidenceSubmission import EvidenceSubmission
 from .EvidenceSubmissionStatus import EvidenceSubmissionStatus
 from .InitiativeAgreement import InitiativeAgreement
 from .InitiativeAgreementHistory import InitiativeAgreementHistory
+from .InitiativeAgreementLifecycleHistory import InitiativeAgreementLifecycleHistory
 from .InitiativeAgreementLifecycleStatus import InitiativeAgreementLifecycleStatus
 from .InitiativeAgreementStatus import InitiativeAgreementStatus
 
@@ -18,6 +19,7 @@ __all__ = [
     "EvidenceSubmissionStatus",
     "InitiativeAgreement",
     "InitiativeAgreementHistory",
+    "InitiativeAgreementLifecycleHistory",
     "InitiativeAgreementLifecycleStatus",
     "InitiativeAgreementStatus",
 ]

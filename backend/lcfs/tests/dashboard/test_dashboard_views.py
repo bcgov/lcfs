@@ -100,11 +100,12 @@ async def test_initiative_agreement_counts_success_for_ia_manager(
     with patch(
         "lcfs.web.api.dashboard.services.DashboardServices.get_initiative_agreement_counts"
     ) as mock:
-        mock.return_value = InitiativeAgreementCountsSchema(draft=2, underway=5)
+        mock.return_value = InitiativeAgreementCountsSchema(underway=5)
         response = await client.get("/api/dashboard/initiative-agreement-counts")
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json() == {"draft": 2, "underway": 5}
+        # No draft count: IDIR users do not see drafts (#5186).
+        assert response.json() == {"underway": 5}
 
 
 @pytest.mark.anyio

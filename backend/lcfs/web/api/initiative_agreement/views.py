@@ -93,7 +93,8 @@ async def create_agreement(
     data: AgreementCreateSchema = Body(...),
     service: InitiativeAgreementServices = Depends(),
 ):
-    """Start a new initiative agreement as a draft."""
+    """Start a new initiative agreement. One entered by government starts
+    Underway (#5186)."""
     return await service.create_agreement(data, request.user)
 
 
@@ -109,7 +110,7 @@ async def create_designated_action(
     data: DesignatedActionCreateSchema = Body(...),
     service: InitiativeAgreementServices = Depends(),
 ):
-    """Add a designated action while the agreement is still a draft."""
+    """Add a designated action while the agreement is a draft or underway."""
     return await service.create_designated_action(
         initiative_agreement_id, data, request.user
     )

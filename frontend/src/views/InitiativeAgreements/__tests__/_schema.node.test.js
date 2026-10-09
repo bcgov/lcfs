@@ -60,8 +60,21 @@ describe('designatedActionColDefs', () => {
       'assignedAnalyst',
       'lastComment',
       'creditAllocation',
+      'specifiedDate',
       'updateDate'
     ])
+  })
+
+  it('shows the date for completion just before Last updated (#5203)', () => {
+    const column = designatedActionColDefs(t, 7).find(
+      (colDef) => colDef.field === 'specifiedDate'
+    )
+    expect(column.headerName).toBe(
+      'initiativeAgreement:actions.columns.dateForCompletion'
+    )
+    // Filtered and sorted server-side like Last updated.
+    expect(column.filter).toBe('agDateColumnFilter')
+    expect(column.sortable).not.toBe(false)
   })
 
   it('reads the status off the same field the detail page renders', () => {
@@ -82,18 +95,47 @@ describe('designatedActionColDefs', () => {
 describe('allDesignatedActionColDefs (module tab, #5078)', () => {
   const t = (key) => key
 
-  it('drops the analyst column and keeps the rest in order', () => {
+  it('adds the organization and IA name after the ID and keeps the agreement grid columns (#5203)', () => {
     const ids = allDesignatedActionColDefs(t).map(
       (colDef) => colDef.colId ?? colDef.field
     )
     expect(ids).toEqual([
       'actionNumber',
+      'organization.name',
+      'iaCode',
       'name',
       'currentStatus',
+      'assignedAnalyst',
       'lastComment',
       'creditAllocation',
+      'specifiedDate',
       'updateDate'
     ])
+  })
+
+  it("reads the organization off the row's agreement", () => {
+    const column = allDesignatedActionColDefs(t).find(
+      (colDef) => colDef.field === 'organization.name'
+    )
+    expect(
+      column.valueGetter({ data: { organization: { name: 'Org A' } } })
+    ).toBe('Org A')
+    // An agreement saved before its organization is known (#5186).
+    expect(column.valueGetter({ data: { organization: null } })).toBe(undefined)
+    expect(column.filter).toBe('agTextColumnFilter')
+  })
+
+  it('shares the analyst column with the agreement grid', () => {
+    const tab = allDesignatedActionColDefs(t).find(
+      (colDef) => colDef.colId === 'assignedAnalyst'
+    )
+    const grid = designatedActionColDefs(t, 7).find(
+      (colDef) => colDef.colId === 'assignedAnalyst'
+    )
+    expect(tab.cellRenderer).toBe(grid.cellRenderer)
+    expect(tab.floatingFilterComponentParams).toEqual(
+      grid.floatingFilterComponentParams
+    )
   })
 
   it("builds the ID from each row's own agreement", () => {

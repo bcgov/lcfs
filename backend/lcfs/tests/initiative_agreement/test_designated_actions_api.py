@@ -3,7 +3,7 @@
 import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select
 
@@ -19,6 +19,7 @@ from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_ANALYST_UNASSIGNED,
     DesignatedActionHistory,
 )
+from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
@@ -504,8 +505,8 @@ async def test_action_documents_list_and_are_org_gated(
 
 
 # ---------------------------------------------------------------------------
-# Creating designated actions, which is only possible while the agreement
-# is still a draft.
+# Creating designated actions, which is possible while the agreement is a
+# draft or underway. Agreements government enters start Underway (#5186).
 # ---------------------------------------------------------------------------
 
 
@@ -516,21 +517,17 @@ def _create_action_url(fastapi_app, agreement):
     )
 
 
-async def _draft_agreement(dbsession, code):
+async def _open_agreement(dbsession, code):
+    """An agreement as an analyst creates it: Underway."""
     org_id, _ = await _two_org_ids(dbsession)
-    return await _seed_agreement(
-        dbsession,
-        org_id,
-        code,
-        lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
-    )
+    return await _seed_agreement(dbsession, org_id, code)
 
 
 @pytest.mark.anyio
-async def test_an_analyst_adds_an_action_to_a_draft_agreement(
+async def test_an_analyst_adds_an_action_to_an_underway_agreement(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    agreement = await _draft_agreement(dbsession, "IA-26NEW1")
+    agreement = await _open_agreement(dbsession, "IA-26NEW1")
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
     response = await client.post(
@@ -557,7 +554,7 @@ async def test_an_analyst_adds_an_action_to_a_draft_agreement(
 async def test_action_numbers_continue_from_what_is_there(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    agreement = await _draft_agreement(dbsession, "IA-26NEW2")
+    agreement = await _open_agreement(dbsession, "IA-26NEW2")
     await _seed_action(dbsession, agreement, 1, "Existing")
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
@@ -569,13 +566,17 @@ async def test_action_numbers_continue_from_what_is_there(
 
 
 @pytest.mark.anyio
-async def test_actions_cannot_be_added_once_the_agreement_is_underway(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+@pytest.mark.parametrize("lifecycle", ["Completed", "Terminated"])
+async def test_actions_cannot_be_added_once_the_agreement_is_closed(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, lifecycle
 ):
-    """Designated actions are the substance of the agreement, so they are
-    settled before it takes effect."""
     org_id, _ = await _two_org_ids(dbsession)
-    agreement = await _seed_agreement(dbsession, org_id, "IA-26NEW3")
+    agreement = await _seed_agreement(
+        dbsession,
+        org_id,
+        "IA-26NEW3",
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, lifecycle),
+    )
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
     response = await client.post(
@@ -583,14 +584,36 @@ async def test_actions_cannot_be_added_once_the_agreement_is_underway(
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert "draft" in response.json()["detail"].lower()
+    assert "draft or underway" in response.json()["detail"].lower()
+
+
+@pytest.mark.anyio
+async def test_an_analyst_cannot_reach_a_draft_to_add_an_action(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """A draft is a proponent's unsubmitted application, which IDIR users
+    do not see (#5186), so to them it does not exist."""
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(
+        dbsession,
+        org_id,
+        "IA-26NEW9",
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
+    )
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _create_action_url(fastapi_app, agreement), json={"name": "Hidden"}
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.anyio
 async def test_a_nameless_action_is_refused(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    agreement = await _draft_agreement(dbsession, "IA-26NEW4")
+    agreement = await _open_agreement(dbsession, "IA-26NEW4")
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
     response = await client.post(
@@ -604,7 +627,7 @@ async def test_a_nameless_action_is_refused(
 async def test_negative_credits_are_refused(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    agreement = await _draft_agreement(dbsession, "IA-26NEW5")
+    agreement = await _open_agreement(dbsession, "IA-26NEW5")
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
     response = await client.post(
@@ -619,7 +642,7 @@ async def test_negative_credits_are_refused(
 async def test_an_action_without_an_amount_starts_at_nought(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    agreement = await _draft_agreement(dbsession, "IA-26NEW6")
+    agreement = await _open_agreement(dbsession, "IA-26NEW6")
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
     response = await client.post(
@@ -635,7 +658,7 @@ async def test_a_director_cannot_add_an_action(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
     """Drafting the schedule is the analyst's job, not the approver's."""
-    agreement = await _draft_agreement(dbsession, "IA-26NEW7")
+    agreement = await _open_agreement(dbsession, "IA-26NEW7")
     set_mock_user(fastapi_app, IDIR_DIRECTOR)
 
     response = await client.post(
@@ -649,7 +672,7 @@ async def test_a_director_cannot_add_an_action(
 async def test_a_proponent_cannot_add_an_action(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    agreement = await _draft_agreement(dbsession, "IA-26NEW8")
+    agreement = await _open_agreement(dbsession, "IA-26NEW8")
     set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
 
     response = await client.post(
@@ -954,3 +977,228 @@ async def test_the_tab_is_closed_to_proponents(
     response = await client.post(_all_url(fastapi_app), json=PAGINATION_BODY)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# The index columns added by #5203: the tab's organization, IA name and
+# assigned analyst, and both grids' date for completion.
+# ---------------------------------------------------------------------------
+
+
+async def _org_name(dbsession, org_id):
+    return (
+        await dbsession.execute(
+            select(Organization.name).where(Organization.organization_id == org_id)
+        )
+    ).scalar_one()
+
+
+def _text_filter(field, value, filter_type="equals"):
+    return {"field": field, "filterType": "text", "type": filter_type, "filter": value}
+
+
+def _names(response, only):
+    """The row names, in order, of the rows this test seeded."""
+    return [
+        r["name"] for r in response.json()["designatedActions"] if r["name"] in only
+    ]
+
+
+@pytest.mark.anyio
+async def test_the_tab_carries_each_rows_organization_and_agreement_code(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    with_org = await _seed_agreement(dbsession, org_id, "IA-26COL1")
+    without_org = await _seed_agreement(dbsession, None, "IA-26COL2")
+    await _seed_action(
+        dbsession, with_org, 1, "Owned work", specified_date=date(2026, 11, 30)
+    )
+    await _seed_action(dbsession, without_org, 1, "Unowned work")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _all_url(fastapi_app), json={**PAGINATION_BODY, "size": 200}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    rows = {r["name"]: r for r in response.json()["designatedActions"]}
+    assert rows["Owned work"]["organization"] == {
+        "organizationId": org_id,
+        "name": await _org_name(dbsession, org_id),
+    }
+    assert rows["Owned work"]["iaCode"] == "IA-26COL1"
+    assert rows["Owned work"]["specifiedDate"] == "2026-11-30"
+    # An agreement saved before its organization was known (#5186).
+    assert rows["Unowned work"]["organization"] is None
+    assert rows["Unowned work"]["iaCode"] == "IA-26COL2"
+    assert rows["Unowned work"]["specifiedDate"] is None
+
+
+@pytest.mark.anyio
+async def test_the_tab_filters_and_sorts_by_organization_and_ia_name(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, other_org = await _two_org_ids(dbsession)
+    first = await _seed_agreement(dbsession, org_id, "IA-26COL3")
+    second = await _seed_agreement(dbsession, other_org, "IA-26COL4")
+    await _seed_action(dbsession, first, 1, "First org work")
+    await _seed_action(dbsession, second, 1, "Second org work")
+    mine = {"First org work", "Second org work"}
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    first_name = await _org_name(dbsession, org_id)
+    second_name = await _org_name(dbsession, other_org)
+
+    by_org = await client.post(
+        _all_url(fastapi_app),
+        json={
+            **PAGINATION_BODY,
+            "filters": [_text_filter("organization.name", first_name)],
+        },
+    )
+    assert _names(by_org, mine) == ["First org work"]
+
+    by_code = await client.post(
+        _all_url(fastapi_app),
+        json={
+            **PAGINATION_BODY,
+            "filters": [_text_filter("iaCode", "COL4", "contains")],
+        },
+    )
+    assert _names(by_code, mine) == ["Second org work"]
+
+    by_org_name = [
+        name
+        for _, name in sorted(
+            [(first_name, "First org work"), (second_name, "Second org work")]
+        )
+    ]
+    for field, ascending in (
+        ("organization.name", by_org_name),
+        ("iaCode", ["First org work", "Second org work"]),
+    ):
+        for direction, expected in (("asc", ascending), ("desc", ascending[::-1])):
+            response = await client.post(
+                _all_url(fastapi_app),
+                json={
+                    **PAGINATION_BODY,
+                    "size": 200,
+                    "sortOrders": [{"field": field, "direction": direction}],
+                },
+            )
+            assert _names(response, mine) == expected, (field, direction)
+
+
+@pytest.mark.anyio
+async def test_the_tab_shows_and_filters_by_the_assigned_analyst(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26ANL1")
+    analyst = await _seed_ia_analyst(dbsession, "tabanalyst", "Tab", "Analyst")
+    await _seed_action(
+        dbsession,
+        agreement,
+        1,
+        "Assigned work",
+        assigned_analyst_id=analyst.user_profile_id,
+    )
+    await _seed_action(dbsession, agreement, 2, "Unassigned work")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.post(
+        _all_url(fastapi_app),
+        json={
+            **PAGINATION_BODY,
+            "filters": [
+                {
+                    "field": "assignedAnalyst",
+                    "filterType": "number",
+                    "type": "equals",
+                    "filter": str(analyst.user_profile_id),
+                }
+            ],
+        },
+    )
+
+    rows = response.json()["designatedActions"]
+    assert [r["name"] for r in rows] == ["Assigned work"]
+    assert rows[0]["assignedAnalyst"]["firstName"] == "Tab"
+
+
+@pytest.mark.anyio
+async def test_both_grids_filter_and_sort_by_the_date_for_completion(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26DATE1")
+    await _seed_action(
+        dbsession, agreement, 1, "Due later", specified_date=date(2027, 3, 31)
+    )
+    await _seed_action(
+        dbsession, agreement, 2, "Due sooner", specified_date=date(2026, 12, 31)
+    )
+    await _seed_action(dbsession, agreement, 3, "No date yet")
+    mine = {"Due later", "Due sooner"}
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    for url in (_list_url(fastapi_app, agreement), _all_url(fastapi_app)):
+        ordered = await client.post(
+            url,
+            json={
+                **PAGINATION_BODY,
+                "size": 200,
+                "sortOrders": [{"field": "specifiedDate", "direction": "asc"}],
+            },
+        )
+        assert _names(ordered, mine) == ["Due sooner", "Due later"], url
+
+        before = await client.post(
+            url,
+            json={
+                **PAGINATION_BODY,
+                "size": 200,
+                "filters": [
+                    {
+                        "field": "specifiedDate",
+                        "filterType": "date",
+                        "type": "lessThan",
+                        "dateFrom": "2027-01-01",
+                    }
+                ],
+            },
+        )
+        assert _names(before, mine | {"No date yet"}) == ["Due sooner"], url
+
+
+@pytest.mark.anyio
+async def test_actions_of_a_draft_are_hidden_from_government(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """A draft is a proponent's unsubmitted application (#5186): its actions
+    stay out of the tab, and its grid and action pages read as missing."""
+    org_id, _ = await _two_org_ids(dbsession)
+    draft = await _seed_agreement(
+        dbsession,
+        org_id,
+        "IA-26HID1",
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
+    )
+    action = await _seed_action(dbsession, draft, 1, "Proposed work")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    tab = await client.post(
+        _all_url(fastapi_app), json={**PAGINATION_BODY, "size": 200}
+    )
+    assert _names(tab, {"Proposed work"}) == []
+
+    grid = await client.post(_list_url(fastapi_app, draft), json=PAGINATION_BODY)
+    assert grid.status_code == status.HTTP_404_NOT_FOUND
+
+    profile = await client.get(
+        fastapi_app.url_path_for(
+            "get_designated_action_profile",
+            designated_action_id=action.designated_action_id,
+        )
+    )
+    assert profile.status_code == status.HTTP_404_NOT_FOUND
