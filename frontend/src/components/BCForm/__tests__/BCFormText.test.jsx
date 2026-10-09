@@ -536,4 +536,38 @@ describe.sequential('BCFormText', () => {
       expect(screen.getByText('Checkbox Label')).toBeInTheDocument()
     })
   })
+
+  describe('multiline and test hook', () => {
+    test('renders a multiline textarea with the given rows', ({ render }) => {
+      render(
+        <FormWrapper defaultValues={{ notes: 'Line one' }}>
+          {({ control }) => (
+            <BCFormText
+              name="notes"
+              control={control}
+              label="Notes"
+              multiline
+              rows={4}
+            />
+          )}
+        </FormWrapper>
+      )
+
+      const textarea = screen.getByDisplayValue('Line one')
+      expect(textarea.tagName).toBe('TEXTAREA')
+      expect(textarea).toHaveAttribute('rows', '4')
+    })
+
+    test('exposes the field name as its data-test hook', ({ render }) => {
+      render(
+        <FormWrapper defaultValues={{ code: 'A1' }}>
+          {({ control }) => (
+            <BCFormText name="code" control={control} label="Code" />
+          )}
+        </FormWrapper>
+      )
+
+      expect(screen.getByTestId('code')).toHaveValue('A1')
+    })
+  })
 })

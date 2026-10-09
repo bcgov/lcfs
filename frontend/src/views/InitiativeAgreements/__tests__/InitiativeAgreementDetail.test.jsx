@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
 import { InitiativeAgreementDetail } from '../InitiativeAgreementDetail'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
@@ -34,7 +34,8 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 const mockAgreement = vi.fn()
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
-  useGetInitiativeAgreement: () => mockAgreement()
+  useGetInitiativeAgreement: () => mockAgreement(),
+  useUpdateAgreement: () => ({ mutate: vi.fn(), isPending: false })
 }))
 
 const mockDocuments = vi.fn()
@@ -136,6 +137,48 @@ describe('InitiativeAgreementDetail', () => {
   test('offers document upload to an IA analyst', ({ render, app }) => {
     render(<InitiativeAgreementDetail />, app)
     expect(screen.getByTestId('upload-documents-button')).toBeInTheDocument()
+  })
+
+  test('offers Edit in the card header to analysts, not proponents', ({
+    render,
+    app
+  }) => {
+    const { unmount } = render(<InitiativeAgreementDetail />, app)
+    expect(screen.getByTestId('edit-agreement')).toBeInTheDocument()
+    unmount()
+
+    mockRoles = [{ name: roles.ia_proponent }]
+    render(<InitiativeAgreementDetail />, app)
+    expect(screen.queryByTestId('edit-agreement')).not.toBeInTheDocument()
+  })
+
+  test('not offered to a director', ({ render, app }) => {
+    mockRoles = [{ name: roles.director }]
+    render(<InitiativeAgreementDetail />, app)
+    expect(screen.queryByTestId('edit-agreement')).not.toBeInTheDocument()
+  })
+
+  test('Edit switches the card into edit mode and Cancel returns', ({
+    render,
+    app
+  }) => {
+    render(<InitiativeAgreementDetail />, app)
+    expect(screen.queryByTestId('agreement-edit-form')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('edit-agreement'))
+
+    expect(screen.getByTestId('agreement-edit-form')).toBeInTheDocument()
+    expect(screen.queryByTestId('edit-agreement')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('initiative-agreement-brief-section')
+    ).not.toBeInTheDocument()
+    // The rest of the page stays available while editing.
+    expect(screen.getByTestId('designated-actions-grid')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('cancel-agreement-edit'))
+
+    expect(screen.queryByTestId('agreement-edit-form')).not.toBeInTheDocument()
+    expect(screen.getByTestId('edit-agreement')).toBeInTheDocument()
   })
 
   test('does not offer document upload to a BCeID proponent', ({

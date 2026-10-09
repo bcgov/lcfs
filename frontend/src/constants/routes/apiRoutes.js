@@ -74,6 +74,7 @@ export const apiRoutes = {
   // consumed by hooks/useInitiativeAgreements.ts
   getInitiativeAgreementsList: '/initiative-agreements/list',
   createAgreement: '/initiative-agreements/agreements',
+  updateAgreement: '/initiative-agreements/agreements/:initiativeAgreementId',
   getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
   getInitiativeAgreement:
     '/initiative-agreements/:initiativeAgreementId/profile',

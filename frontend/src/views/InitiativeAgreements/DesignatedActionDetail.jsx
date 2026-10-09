@@ -227,6 +227,9 @@ const DesignatedActionDetailBase = () => {
         title={t('initiativeAgreement:actionDetail.cardHeader')}
         color="nav"
         data-test="designated-action-card"
+        headerAction={
+          <EditDesignatedAction action={action} onChanged={refreshAction} />
+        }
         content={
           <BCBox p={1}>
             <BCBox
@@ -263,10 +266,6 @@ const DesignatedActionDetailBase = () => {
                 )}
               </BCBox>
               <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <EditDesignatedAction
-                  action={action}
-                  onChanged={refreshAction}
-                />
                 <IconButton
                   size="small"
                   data-test="previous-action-button"
