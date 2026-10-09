@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import AsyncMock, MagicMock
 
 from lcfs.db.models import ComplianceReport
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
@@ -1244,6 +1245,36 @@ async def test_transactions_in_have_correct_visibilities(
     # Also includes standalone transactions (Adjustment type) from the transaction table
     assert len(transactions_gov) == 10  # Limited by page size
     assert total_count_gov == 12  # Total includes 2 standalone Adjustment transactions
+
+
+@pytest.mark.anyio
+async def test_get_transactions_paginated_does_not_mutate_conditions(
+    monkeypatch,
+):
+    transaction_repo = TransactionRepository(db=MagicMock())
+    transaction_repo.get_visible_statuses = AsyncMock(
+        return_value=[
+            TransferStatusEnum.Submitted,
+            TransferStatusEnum.Recommended,
+            TransferStatusEnum.Recorded,
+        ]
+    )
+    paginate_mock = AsyncMock(return_value=([], 0))
+    monkeypatch.setattr(
+        "lcfs.web.api.transaction.repo.paginate_with_window_count",
+        paginate_mock,
+    )
+    sort_orders = [SortOrder(field="transaction_id", direction="asc")]
+    conditions = []
+
+    await transaction_repo.get_transactions_paginated(
+        0, 10, conditions, sort_orders
+    )
+    await transaction_repo.get_transactions_paginated(
+        0, 10, conditions, sort_orders, test_org_id
+    )
+
+    assert conditions == []
 
 
 @pytest.mark.anyio
