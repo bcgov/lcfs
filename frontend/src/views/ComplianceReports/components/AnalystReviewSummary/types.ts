@@ -58,6 +58,7 @@ export interface ComplianceUnitPoint {
 
 export interface ReviewChartData {
   historicalVariance?: ComparisonSeries[]
+  renewableLiquidFuelVolume?: ComparisonSeries[]
   supplementalImpact?: ComparisonSeries[]
   complianceUnitsByFuel?: ComplianceUnitPoint[]
 }

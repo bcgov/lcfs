@@ -186,7 +186,9 @@ export const CreditCalculator = () => {
       }
     })
 
-    return Array.from(uniqueEndUses.values())
+    return Array.from(uniqueEndUses.values()).sort((a, b) =>
+      a.label.localeCompare(b.label)
+    )
   }, [fuelTypeOptions])
   const customCiOption = useMemo(
     () => ({
@@ -372,6 +374,12 @@ export const CreditCalculator = () => {
   ])
 
   useEffect(() => {
+    if (!endUseId) {
+      setCalculatedResults(null)
+      setValue('complianceUnits', '')
+      return
+    }
+
     const latestResults =
       activeCalculatorMode === 'complianceUnits'
         ? calculatedQuantityData?.data
@@ -380,11 +388,17 @@ export const CreditCalculator = () => {
     if (latestResults) {
       setCalculatedResults(latestResults)
     }
-  }, [activeCalculatorMode, calculatedData, calculatedQuantityData])
+  }, [
+    activeCalculatorMode,
+    calculatedData,
+    calculatedQuantityData,
+    endUseId,
+    setValue
+  ])
 
   // Keep form fields in sync with whichever calculator response is active
   useEffect(() => {
-    if (!calculatedResults) return
+    if (!endUseId || !calculatedResults) return
 
     if (
       activeCalculatorMode === 'quantity' &&
@@ -409,7 +423,7 @@ export const CreditCalculator = () => {
         shouldTouch: false
       })
     }
-  }, [activeCalculatorMode, calculatedResults, setValue])
+  }, [activeCalculatorMode, calculatedResults, endUseId, setValue])
 
   useEffect(() => {
     if (!syncingField) return
@@ -530,13 +544,13 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
         eer: 0,
         ci: 0,
         uci: 0,
-        energyContent: 0,
+        energyContent: '',
         energyDensity: 0
       },
       formulaDisplay: '0 = (0 * 0 - (0 + N/A)) * 0 / 1,000,000'
     }
 
-    if (!calculatedResults) return fallback
+    if (!endUseId || !calculatedResults) return fallback
 
     const data = calculatedResults
 
@@ -552,7 +566,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
       },
       formulaDisplay: `${(data.complianceUnits || 0).toLocaleString()} = (${data.tci || 0} * ${data.eer || 0} - (${data.rci || 0} + ${data.uci || 'N/A'})) * ${numberFormatter(data.energyContent || 0)} / 1,000,000`
     }
-  }, [calculatedResults, fuelTypeOptions])
+  }, [calculatedResults, fuelTypeOptions, endUseId])
 
   const carbonIntensityDisplayValue = useMemo(() => {
     if (!provisionOfTheAct) return ''

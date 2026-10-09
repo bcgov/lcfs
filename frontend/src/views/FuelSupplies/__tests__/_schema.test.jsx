@@ -315,4 +315,28 @@ describe('Fuel Supply Schema', () => {
       expect(mockParams.data.fuelCodeId).toBe(1)
     })
   })
+
+  describe('Energy Content Field', () => {
+    it('rounds CNG energy content for display while preserving other fuel decimals', () => {
+      const energyColDef = fuelSupplyColDefs(
+        mockOptionsData,
+        mockErrors,
+        mockWarnings,
+        isSupplemental
+      ).find((col) => col.field === 'energy')
+
+      expect(
+        energyColDef.valueFormatter({
+          value: 1234.56,
+          data: { fuelType: 'CNG', fuelCategory: 'Diesel' }
+        })
+      ).toBe('1,235')
+      expect(
+        energyColDef.valueFormatter({
+          value: 1234.56,
+          data: { fuelType: 'Test Fuel', fuelCategory: 'Gasoline' }
+        })
+      ).toBe('1,234.56')
+    })
+  })
 })

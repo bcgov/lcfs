@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { vi } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import {
   Controller,
   FormProvider,
@@ -270,6 +270,11 @@ describe('CreditCalculator', () => {
     vi.mocked(copyToClipboard).mockResolvedValue(true)
   })
 
+  afterEach(() => {
+    vi.mocked(useGetFuelTypeList).mockReset()
+    vi.mocked(useGetFuelTypeOptions).mockReset()
+  })
+
   describe('Component Rendering', () => {
     it('renders without crashing', () => {
       render(
@@ -314,6 +319,75 @@ describe('CreditCalculator', () => {
         screen.getByText(mockT('report:qtySuppliedLabel'))
       ).toBeInTheDocument()
     })
+
+    it.each([
+      { fuelType: 'Diesel', fuelCategoryId: 2, fuelTypeId: 2 },
+      { fuelType: 'LNG', fuelCategoryId: 3, fuelTypeId: 3 }
+    ])(
+      'keeps $fuelType End Use options in the same alphabetical order across years',
+      ({ fuelType, fuelCategoryId, fuelTypeId }) => {
+        vi.mocked(useGetFuelTypeList).mockReturnValue({
+          data: { data: [{ fuelType, fuelCategoryId, fuelTypeId }] },
+          isLoading: false
+        })
+        vi.mocked(useGetFuelTypeOptions).mockImplementation(
+          ({ complianceYear }) => ({
+            data: {
+              data: {
+                ...mockFuelOptions.data,
+                eerRatios:
+                  complianceYear === '2023'
+                    ? [
+                        {
+                          endUseType: {
+                            type: 'Transportation',
+                            endUseTypeId: 1
+                          }
+                        },
+                        { endUseType: { type: 'Heating', endUseTypeId: 2 } }
+                      ]
+                    : [
+                        { endUseType: { type: 'Heating', endUseTypeId: 2 } },
+                        {
+                          endUseType: {
+                            type: 'Transportation',
+                            endUseTypeId: 1
+                          }
+                        }
+                      ]
+              }
+            },
+            isLoading: false
+          })
+        )
+
+        const getEndUseOrder = (complianceYear) => {
+          const { container, unmount } = render(
+            <TestWrapper
+              formProps={{
+                defaultValues: {
+                  complianceYear,
+                  fuelCategory: fuelType,
+                  fuelType
+                }
+              }}
+            >
+              <CreditCalculator />
+            </TestWrapper>
+          )
+          const options = Array.from(
+            container.querySelectorAll(
+              '[data-test="endUseType-radio-group"] [role="radio"]'
+            )
+          ).map((option) => option.textContent)
+          unmount()
+          return options
+        }
+
+        expect(getEndUseOrder('2023')).toEqual(['Heating', 'Transportation'])
+        expect(getEndUseOrder('2024')).toEqual(['Heating', 'Transportation'])
+      }
+    )
   })
 
   describe('Helper Functions', () => {
@@ -495,6 +569,10 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
+      fireEvent.click(screen.getByTestId('fuelCategory1'))
+      fireEvent.click(screen.getByTestId('Gasoline'))
+      fireEvent.click(screen.getByTestId('Transportation'))
+
       await waitFor(() => {
         expect(
           screen.getByText(
@@ -503,9 +581,112 @@ describe('CreditCalculator', () => {
         ).toBeInTheDocument()
       })
     })
+
+    it('displays Hydrogen energy density per kilogram', async () => {
+      vi.mocked(useGetFuelTypeList).mockReturnValue({
+        data: {
+          data: [
+            { fuelType: 'Hydrogen', fuelCategoryId: 1, fuelTypeId: 3 }
+          ]
+        },
+        isLoading: false
+      })
+      vi.mocked(useGetFuelTypeOptions).mockReturnValue({
+        data: {
+          ...mockFuelOptions,
+          data: {
+            ...mockFuelOptions.data,
+            unit: 'kg',
+            energyDensity: { unit: { name: 'MJ/kg' } }
+          }
+        }
+      })
+      vi.mocked(useCalculateComplianceUnits).mockReturnValue({
+        data: {
+          data: {
+            complianceUnits: 1500,
+            tci: 85,
+            eer: 1.2,
+            rci: 75,
+            uci: 10,
+            energyContent: 14176000,
+            energyDensity: 141.76
+          }
+        }
+      })
+
+      render(
+        <TestWrapper>
+          <CreditCalculator />
+        </TestWrapper>
+      )
+
+      fireEvent.click(screen.getByTestId('fuelCategory1'))
+      fireEvent.click(screen.getByTestId('Hydrogen'))
+      fireEvent.click(screen.getByTestId('Transportation'))
+
+      await waitFor(() => {
+        expect(screen.getByText('141.76 MJ/kg')).toBeInTheDocument()
+      })
+    })
   })
 
   describe('Conditional Rendering', () => {
+    it('clears EC and credits until the new fuel has a valid end use', async () => {
+      const refetch = vi.fn()
+      let dieselResults
+      const gasolineOptions = {
+        data: {
+          ...mockFuelOptions.data,
+          eerRatios: [mockFuelOptions.data.eerRatios[0]]
+        }
+      }
+      const gasolineResults = {
+        data: { complianceUnits: 500, energyContent: 1000000 }
+      }
+      vi.mocked(useGetFuelTypeOptions).mockImplementation(({ fuelTypeId }) => ({
+        data: fuelTypeId === 1 ? gasolineOptions : mockFuelOptions,
+        isLoading: false
+      }))
+      vi.mocked(useCalculateComplianceUnits).mockImplementation(({ fuelTypeId }) => ({
+        data: fuelTypeId === 1 ? gasolineResults : dieselResults,
+        refetch
+      }))
+
+      const calculator = <TestWrapper><CreditCalculator /></TestWrapper>
+      const { rerender } = render(calculator)
+      fireEvent.click(screen.getByTestId('fuelCategory1'))
+      fireEvent.click(screen.getByTestId('Gasoline'))
+
+      await waitFor(() => {
+        expect(screen.getByText('1,000,000 MJ')).toBeInTheDocument()
+        expect(document.getElementById('complianceUnits')).toHaveValue('500')
+      })
+
+      refetch.mockClear()
+      fireEvent.click(screen.getByTestId('Diesel'))
+
+      const energyContentValue = screen.getByText('EC - Energy content:').nextElementSibling
+      expect(energyContentValue).toBeEmptyDOMElement()
+      expect(document.getElementById('complianceUnits')).toHaveValue('')
+      expect(screen.queryByText('1,000,000 MJ')).not.toBeInTheDocument()
+      await new Promise((resolve) => setTimeout(resolve, 350))
+      expect(refetch).not.toHaveBeenCalled()
+
+      // Even cached data must not restore results while End Use is blank.
+      dieselResults = { data: { complianceUnits: 250, energyContent: 2000000 } }
+      rerender(<TestWrapper><CreditCalculator /></TestWrapper>)
+      expect(energyContentValue).toBeEmptyDOMElement()
+      expect(document.getElementById('complianceUnits')).toHaveValue('')
+
+      fireEvent.click(screen.getByTestId('Heating'))
+      await waitFor(() => {
+        expect(screen.getByText('2,000,000 MJ')).toBeInTheDocument()
+        expect(document.getElementById('complianceUnits')).toHaveValue('250')
+      })
+      await waitFor(() => expect(refetch).toHaveBeenCalled())
+    })
+
     it('displays loading state for fuel types', () => {
       vi.mocked(useGetFuelTypeList).mockReturnValue({
         data: null,
@@ -648,6 +829,10 @@ describe('CreditCalculator', () => {
           <CreditCalculator />
         </TestWrapper>
       )
+
+      fireEvent.click(screen.getByTestId('fuelCategory1'))
+      fireEvent.click(screen.getByTestId('Gasoline'))
+      fireEvent.click(screen.getByTestId('Transportation'))
 
       await waitFor(() => {
         expect(screen.getByDisplayValue('75 gCO₂e/MJ')).toBeInTheDocument()

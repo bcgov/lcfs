@@ -63,6 +63,13 @@ const iconStyle = {
   color: colors.white.main
 }
 
+// The backend explains a refused action in response.data.detail. Validation
+// errors (422) put a list there instead, so fall back to the axios message.
+const getErrorMessage = (error) => {
+  const detail = error?.response?.data?.detail
+  return typeof detail === 'string' && detail ? detail : error?.message
+}
+
 export const EditViewComplianceReport = ({ isError, error }) => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
@@ -404,7 +411,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         }
 
         alertRef.current?.triggerAlert({
-          message: error.message,
+          message: getErrorMessage(error),
           severity: 'error'
         })
       }
@@ -445,7 +452,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         setIsDeleted(false)
         setModalData(null)
         alertRef.current?.triggerAlert({
-          message: error.message,
+          message: getErrorMessage(error),
           severity: 'error'
         })
       }
@@ -464,7 +471,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       onError: (error) => {
         setModalData(null)
         alertRef.current?.triggerAlert({
-          message: error.message,
+          message: getErrorMessage(error),
           severity: 'error'
         })
       }
@@ -483,7 +490,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       onError: (error) => {
         setModalData(null)
         alertRef.current?.triggerAlert({
-          message: error.message,
+          message: getErrorMessage(error),
           severity: 'error'
         })
       }
@@ -509,7 +516,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       onError: (error) => {
         setModalData(null)
         alertRef.current?.triggerAlert({
-          message: error.message,
+          message: getErrorMessage(error),
           severity: 'error'
         })
       }
@@ -765,7 +772,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
     if (isError) {
       alertRef.current?.triggerAlert({
-        message: error.response?.data?.detail || error.message,
+        message: getErrorMessage(error),
         severity: 'error'
       })
     }

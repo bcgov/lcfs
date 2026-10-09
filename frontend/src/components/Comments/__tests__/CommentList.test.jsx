@@ -6,6 +6,7 @@ import {
   waitFor,
   within
 } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { roles } from '@/constants/roles'
 import CommentList from '../CommentList'
@@ -637,5 +638,91 @@ describe('CommentList admin edit mode', () => {
 
     const indicator = screen.getByTestId('comment-edited-indicator')
     expect(indicator.textContent).toBe('Edited')
+  })
+})
+
+describe('CommentList timestamps', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUserState.roles = [roles.government]
+    mockUserState.username = 'reader'
+  })
+
+  const expectedDate = (iso) =>
+    new Date(iso).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+
+  test('includes the creation year so comments from different years are distinguishable', ({
+    render,
+    theme
+  }) => {
+    const props = {
+      ...baseProps,
+      commentMode: 'internal-only',
+      comments: [
+        {
+          internalCommentId: 60,
+          comment: 'Older comment',
+          fullName: 'Alice',
+          createDate: '2025-06-01T12:00:00Z',
+          visibility: 'Internal',
+          createUser: 'alice'
+        },
+        {
+          internalCommentId: 61,
+          comment: 'Newer comment',
+          fullName: 'Alice',
+          createDate: '2026-06-01T12:00:00Z',
+          visibility: 'Internal',
+          createUser: 'alice'
+        }
+      ]
+    }
+
+    const { container } = render(<CommentList {...props} />, [theme])
+    const cards = container.querySelectorAll('[data-test="comment-card"]')
+
+    expect(cards[0].textContent).toContain(expectedDate('2025-06-01T12:00:00Z'))
+    expect(cards[0].textContent).toContain('2025')
+    expect(cards[0].textContent).not.toContain('2026')
+    expect(cards[1].textContent).toContain(expectedDate('2026-06-01T12:00:00Z'))
+    expect(cards[1].textContent).toContain('2026')
+  })
+
+  test('exposes the edited timestamp, with year, to keyboard and screen reader users', async ({
+    render,
+    theme
+  }) => {
+    const props = {
+      ...baseProps,
+      commentMode: 'internal-only',
+      comments: [
+        {
+          internalCommentId: 62,
+          comment: 'Edited across years',
+          fullName: 'Alice',
+          createDate: '2025-06-01T12:00:00Z',
+          updateDate: '2026-06-15T12:00:00Z',
+          updateUser: 'alice',
+          visibility: 'Internal',
+          createUser: 'alice'
+        }
+      ]
+    }
+
+    render(<CommentList {...props} />, [theme])
+
+    const editedInfo = screen.getByRole('img', {
+      name: new RegExp(`^Edited ${expectedDate('2026-06-15T12:00:00Z')}`)
+    })
+
+    await userEvent.tab()
+    expect(editedInfo).toHaveFocus()
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      expectedDate('2026-06-15T12:00:00Z')
+    )
   })
 })
