@@ -1,6 +1,6 @@
 import CheckBox from '@mui/icons-material/CheckBox'
 import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
+import '@/components/ClearFiltersButton'
 import { roles, govRoles } from '@/constants/roles'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFilterCircleXmark } from '@fortawesome/free-solid-svg-icons'
@@ -172,7 +172,7 @@ class ButtonActionFactory {
         this.context.selectedRows.length > 0 && !this.context.canSubmit
           ? this.context.t('chargingSite:tooltips.onlyDraftCanBeSubmitted')
           : '',
-      handler: (formData) =>
+      handler: () =>
         this.context.setModalData({
           primaryButtonAction: () =>
             this.context.handleBulkStatusUpdate(EQUIPMENT_STATUSES.SUBMITTED),
@@ -187,6 +187,7 @@ class ButtonActionFactory {
         })
     })
   }
+
   setSelectedAsValidated() {
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
@@ -204,6 +205,7 @@ class ButtonActionFactory {
         this.context.handleBulkStatusUpdate(EQUIPMENT_STATUSES.VALIDATED)
     })
   }
+
   setToDecommission() {
     return this.createButton({
       style: BUTTON_STYLES.ERROR_OUTLINED,
@@ -220,7 +222,7 @@ class ButtonActionFactory {
               'chargingSite:tooltips.onlyValidatedCanBeDecommissioned'
             )
           : '',
-      handler: (formData) =>
+      handler: () =>
         this.context.setModalData({
           primaryButtonAction: () =>
             this.context.handleBulkStatusUpdate(
@@ -236,6 +238,7 @@ class ButtonActionFactory {
         })
     })
   }
+
   returnSelectedToDraft() {
     return this.createButton({
       style: BUTTON_STYLES.ERROR_OUTLINED,
@@ -253,6 +256,7 @@ class ButtonActionFactory {
         this.context.handleBulkStatusUpdate(EQUIPMENT_STATUSES.DRAFT)
     })
   }
+
   clearFilters() {
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
@@ -334,8 +338,6 @@ const BUTTON_RULES = {
 // =============================================================================
 
 function shouldShowButton(buttonName, context) {
-  const { chargingSiteStatus, organizationId, currentUser } = context
-
   switch (buttonName) {
     case 'createFSE':
       // Only show for non-government users (BCeID)
@@ -348,6 +350,8 @@ function shouldShowButton(buttonName, context) {
       if (!context.isGovernmentUser) {
         return true
       }
+      // Government users share the same select-all action for these statuses.
+      return true
 
     case 'setSelectedAsValidated':
       // Only analysts and above can validate

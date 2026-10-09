@@ -13,7 +13,7 @@ import {
   useAssignAnalyst
 } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import CancelScheduleSend from '@mui/icons-material/CancelScheduleSend'
+import '@mui/icons-material/CancelScheduleSend'
 
 export const AssignedAnalystCell = ({ data, onRefresh }) => {
   const { t } = useTranslation(['report'])

@@ -1,13 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor
-} from '@testing-library/react'
+import 'react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { ProposedFuelPathwaysStep } from '@/views/CarbonIntensity/components/ProposedFuelPathwaysStep'
 vi.mock('react-i18next', () => ({
@@ -17,10 +11,8 @@ vi.mock('react-i18next', () => ({
 // BCGridEditor pulls in AG Grid which is heavy and not relevant to this
 // component's contract. Stub it out so we can drive its callbacks
 // directly from the test.
-let lastGridProps = null
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: (props) => {
-    lastGridProps = props
     if (props.gridRef) {
       props.gridRef.current = {
         api: {
@@ -66,7 +58,6 @@ const baseCi = {
 
 describe('ProposedFuelPathwaysStep', () => {
   beforeEach(() => {
-    lastGridProps = null
     vi.clearAllMocks()
   })
   afterEach(cleanup)

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
 import { FuelCodeStatusRenderer } from '@/utils/grid/cellRenderers'
 import { dateFormatter } from '@/utils/formatters'

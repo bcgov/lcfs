@@ -21,47 +21,16 @@ import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { v4 as uuid } from 'uuid'
 import Papa from 'papaparse'
 import { ROUTES, buildPath } from '@/routes/routes'
+import { flattenNestedFields } from './allocationAgreementUtils'
 import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
-import { useApiService } from '@/services/useApiService'
-import { apiRoutes } from '@/constants/routes/apiRoutes'
 import ImportDialog from '@/components/ImportDialog'
-import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
-import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
-import BCButton from '@/components/BCButton'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
-
-// The /list-all response returns provisionOfTheAct (and, defensively, other
-// reference fields) as nested objects, while the grid editors and the /save
-// endpoint expect plain strings. If an un-edited row is saved or deleted with
-// these objects still nested, the backend rejects provisionOfTheAct (a `str`
-// field), surfacing as a spurious "Determining carbon intensity" error and
-// blocking quantity edits and deletions. Flatten them so the payload is valid.
-export const flattenNestedFields = (row) => {
-  const normalized = { ...row }
-  if (
-    normalized.provisionOfTheAct &&
-    typeof normalized.provisionOfTheAct === 'object'
-  ) {
-    normalized.provisionOfTheActId =
-      normalized.provisionOfTheAct.provisionOfTheActId
-    normalized.provisionOfTheAct = normalized.provisionOfTheAct.name
-  }
-  if (normalized.fuelCode && typeof normalized.fuelCode === 'object') {
-    normalized.fuelCodeId = normalized.fuelCode.fuelCodeId
-    normalized.fuelCode = normalized.fuelCode.fuelCode
-  }
-  if (normalized.fuelType && typeof normalized.fuelType === 'object') {
-    normalized.fuelType = normalized.fuelType.fuelType
-  }
-  if (normalized.fuelCategory && typeof normalized.fuelCategory === 'object') {
-    normalized.fuelCategory =
-      normalized.fuelCategory.category || normalized.fuelCategory.fuelCategory
-  }
-  return normalized
-}
+import '@/constants/config'
+import '@mui/material/Menu'
+import '@mui/material/MenuItem'
+import '@/components/BCButton'
+import '@fortawesome/react-fontawesome'
+import '@fortawesome/free-solid-svg-icons'
 
 export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
@@ -69,15 +38,8 @@ export const AddEditAllocationAgreements = () => {
   const isPastingRef = useRef(false)
   const [errors, setErrors] = useState({})
   const [warnings, setWarnings] = useState({})
-  const [isDownloading, setIsDownloading] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
-  const [isOverwrite, setIsOverwrite] = useState(false)
-  const [hideOverwrite, setHideOverwrite] = useState(false)
-  const [downloadAnchorEl, setDownloadAnchorEl] = useState(null)
-  const [importAnchorEl, setImportAnchorEl] = useState(null)
-  const isDownloadOpen = Boolean(downloadAnchorEl)
-  const isImportOpen = Boolean(importAnchorEl)
-  const apiService = useApiService()
+  const [isOverwrite] = useState(false)
   const [columnDefs, setColumnDefs] = useState([])
   const alertRef = useRef()
   const location = useLocation()
@@ -87,7 +49,7 @@ export const AddEditAllocationAgreements = () => {
       t('allocationAgreement:allocationAgreementGuides', {
         returnObjects: true
       }),
-    []
+    [t]
   )
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
@@ -96,7 +58,7 @@ export const AddEditAllocationAgreements = () => {
     useComplianceReportWithCache(complianceReportId)
 
   const version = currentReport?.report?.version ?? 0
-  const isOriginalReport = version === 0
+
   const isSupplemental = version !== 0
   const isEarlyIssuance =
     currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
@@ -119,16 +81,6 @@ export const AddEditAllocationAgreements = () => {
     changelog: isSupplemental
   })
 
-  // Decide when to hide or show Overwrite based on isOriginalReport + existing data
-  useEffect(() => {
-    const hasData = data?.allocationAgreements?.length > 0
-    if (!isOriginalReport && hasData) {
-      setHideOverwrite(true)
-    } else {
-      setHideOverwrite(false)
-    }
-  }, [data, isOriginalReport])
-
   const gridOptions = useMemo(
     () => ({
       overlayNoRowsTemplate: t(
@@ -140,7 +92,7 @@ export const AddEditAllocationAgreements = () => {
         defaultMaxWidth: 600
       }
     }),
-    [t, isSupplemental]
+    [t]
   )
 
   useEffect(() => {
@@ -239,30 +191,32 @@ export const AddEditAllocationAgreements = () => {
       !allocationAgreementsLoading &&
       data?.allocationAgreements?.length > 0
     ) {
-      const updatedRowData = data.allocationAgreements.map((item) => {
-        let matchingRow = rowData.find(
-          (row) => row.allocationAgreementId === item.allocationAgreementId
-        )
-        if (!matchingRow) {
-          matchingRow = rowData.find(
-            (row) =>
-              row.allocationAgreementId === undefined ||
-              row.allocationAgreementId === null
+      setRowData((previousRows) => {
+        const updatedRowData = data.allocationAgreements.map((item) => {
+          let matchingRow = previousRows.find(
+            (row) => row.allocationAgreementId === item.allocationAgreementId
           )
-        }
-        return {
-          ...flattenNestedFields(item),
-          complianceReportId,
-          compliancePeriod,
-          isNewSupplementalEntry:
-            isSupplemental && item.complianceReportId === +complianceReportId,
-          id: matchingRow ? matchingRow.id : uuid()
-        }
+          if (!matchingRow) {
+            matchingRow = previousRows.find(
+              (row) =>
+                row.allocationAgreementId === undefined ||
+                row.allocationAgreementId === null
+            )
+          }
+          return {
+            ...flattenNestedFields(item),
+            complianceReportId,
+            compliancePeriod,
+            isNewSupplementalEntry:
+              isSupplemental && item.complianceReportId === +complianceReportId,
+            id: matchingRow ? matchingRow.id : uuid()
+          }
+        })
+        return [
+          ...updatedRowData,
+          { id: uuid(), complianceReportId, compliancePeriod }
+        ]
       })
-      setRowData([
-        ...updatedRowData,
-        { id: uuid(), complianceReportId, compliancePeriod }
-      ])
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
@@ -452,7 +406,7 @@ export const AddEditAllocationAgreements = () => {
       params.node.updateData(updatedData)
       params.api?.autoSizeAllColumns?.()
     },
-    [saveRow, t]
+    [currentReport?.report?.organization?.name, saveRow, t]
   )
 
   const handlePaste = useCallback(
@@ -568,51 +522,6 @@ export const AddEditAllocationAgreements = () => {
         'allocationTransactionType' // First editable column for focus after clearing
       )
     }
-  }
-
-  const handleDownload = async (includeData) => {
-    try {
-      handleCloseDownloadMenu()
-      setIsDownloading(true)
-
-      const url = includeData
-        ? apiRoutes.exportAllocationAgreements.replace(
-            ':reportID',
-            complianceReportId
-          )
-        : apiRoutes.downloadAllocationAgreementsTemplate.replace(
-            ':reportID',
-            complianceReportId
-          )
-
-      await apiService.download({ url })
-    } catch (error) {
-      console.error(
-        'Error downloading allocation agreement information:',
-        error
-      )
-    } finally {
-      setIsDownloading(false)
-    }
-  }
-
-  const openFileImportDialog = (isOverwrite) => {
-    setIsImportDialogOpen(true)
-    setIsOverwrite(isOverwrite)
-    handleCloseDownloadMenu()
-  }
-
-  const handleDownloadClick = (event) => {
-    setDownloadAnchorEl(event.currentTarget)
-  }
-  const handleCloseDownloadMenu = () => {
-    setDownloadAnchorEl(null)
-  }
-  const handleImportClick = (event) => {
-    setImportAnchorEl(event.currentTarget)
-  }
-  const handleCloseImportMenu = () => {
-    setImportAnchorEl(null)
   }
 
   const handleNavigateBack = useCallback(() => {

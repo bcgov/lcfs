@@ -1,18 +1,20 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import 'react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/user-event';
+import { describe, expect, beforeEach, vi } from 'vitest';
 import { AddEditUser } from '../AddEditUser'
-import { HttpResponse } from 'msw'
+import 'msw';
 import * as currentUserHooks from '@/hooks/useCurrentUser'
 import * as userHooks from '@/hooks/useUser'
 import * as organizationUserHooks from '@/hooks/useOrganization'
-import { ROUTES } from '@/routes/routes'
+import '@/routes/routes';
 import { roles } from '@/constants/roles'
-import { useForm, FormProvider, useWatch } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
-import { userInfoSchema, idirTextFields, bceidTextFields } from '../_schema'
+import { useWatch } from 'react-hook-form';
+import '@hookform/resolvers/yup';
+import '../_schema';
+
+// Mocking react-router-dom
 
 // Mocking react-router-dom
 const mockUseNavigate = vi.fn()
@@ -32,7 +34,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 // Mocking react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options = {}) => {
+    t: (key) => {
       // Basic translation mock, expand as needed for specific texts
       if (key === 'common:submitError')
         return 'An error occurred during submission.'
@@ -219,8 +221,10 @@ vi.mock('../components/IDIRSpecificRoleFields', () => ({
 }))
 
 vi.mock('../components/BCeIDSpecificRoleFields', () => ({
-  BCeIDSpecificRoleFields: ({ form, disabled, status, t }) => {
-    const { control } = form
+  BCeIDSpecificRoleFields: ({
+  form,
+  disabled
+}) => {
     return (
       <div data-test="bceid-roles">
         <input

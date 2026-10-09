@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { CreditMarketForm } from '../CreditMarketForm'

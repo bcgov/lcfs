@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react';
 import { screen, fireEvent } from '@testing-library/react'
 import { describe, expect, beforeEach, vi } from 'vitest'
 import { NotionalTransferSummary } from '../NotionalTransferSummary'
@@ -16,18 +16,16 @@ const it = (name, fn) =>
 // Mock BCGridViewer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-    gridKey,
-    columnDefs,
-    queryData,
-    dataKey,
-    defaultColDef,
-    suppressPagination,
-    paginationOptions,
-    onPaginationChange,
-    getRowId,
-    ...props
-  }) => (
-    <div data-test="bc-grid-viewer">
+  gridKey,
+  columnDefs,
+  queryData,
+  dataKey,
+  defaultColDef,
+  suppressPagination,
+  onPaginationChange,
+  getRowId,
+  ...props
+}) => { delete props.paginationOptions; return <div data-test="bc-grid-viewer">
       <div data-test="grid-key">{gridKey}</div>
       <div data-test="data-key">{dataKey}</div>
       <div data-test="row-count">
@@ -54,8 +52,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
       >
         Test GetRowId
       </button>
-    </div>
-  )
+    </div>; }
 }))
 
 // Mock other components

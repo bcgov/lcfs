@@ -4,7 +4,7 @@ import {
   orgDashboardRenderers
 } from '../organizationRoutes'
 import * as OrganizationsModule from '@/views/Organizations'
-import * as UsersModule from '@/views/Users'
+
 import UserDetailsCard from '@/views/Admin/AdminMenu/components/UserDetailsCard'
 
 /**

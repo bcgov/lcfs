@@ -14,7 +14,7 @@ const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less frequently)
 
 export const useFuelExportOptions = (
-  params: Record<string, any>,
+  params: Record<string, unknown>,
   options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
@@ -47,7 +47,7 @@ export const useFuelExportOptions = (
 }
 
 export const useGetFuelExports = (
-  params: Record<string, any>,
+  params: Record<string, unknown>,
   pagination: PaginationParams,
   options: QueryOptions<unknown> = {}
 ) => {
@@ -89,7 +89,7 @@ export const useGetFuelExports = (
 }
 
 export const useGetFuelExportsList = (
-  { complianceReportId, changelog = false }: any,
+  { complianceReportId, changelog = false }: Record<string, unknown>,
   pagination: PaginationParams,
   options: QueryOptions<unknown> = {}
 ) => {
@@ -126,8 +126,8 @@ export const useGetFuelExportsList = (
 }
 
 export const useSaveFuelExport = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
+  params: Record<string, unknown>,
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -141,7 +141,7 @@ export const useSaveFuelExport = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -163,7 +163,7 @@ export const useSaveFuelExport = (
                 query.queryKey[0] === 'fuel-exports-list') &&
               (query.queryKey.includes(params.complianceReportId) ||
                 query.queryKey.some(
-                  (key: any) => key === params.complianceReportId
+                  (key: unknown) => key === params.complianceReportId
                 ))
             )
           }
@@ -177,7 +177,7 @@ export const useSaveFuelExport = (
                 query.queryKey[0] === 'fuel-exports-list') &&
               (query.queryKey.includes(params.complianceReportId) ||
                 query.queryKey.some(
-                  (key: any) => key === params.complianceReportId
+                  (key: unknown) => key === params.complianceReportId
                 ))
             )
           }
@@ -202,7 +202,7 @@ export const useSaveFuelExport = (
               query.queryKey[0] === 'fuel-exports-list') &&
             (query.queryKey.includes(params.complianceReportId) ||
               query.queryKey.some(
-                (key: any) => key === params.complianceReportId
+                (key: unknown) => key === params.complianceReportId
               ))
           )
         }
@@ -215,8 +215,8 @@ export const useSaveFuelExport = (
 }
 
 export const useUpdateFuelExport = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
+  params: Record<string, unknown>,
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -230,7 +230,7 @@ export const useUpdateFuelExport = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -257,7 +257,7 @@ export const useUpdateFuelExport = (
                 query.queryKey[0] === 'fuel-exports-list') &&
               (query.queryKey.includes(params.complianceReportId) ||
                 query.queryKey.some(
-                  (key: any) => key === params.complianceReportId
+                  (key: unknown) => key === params.complianceReportId
                 ))
             )
           }
@@ -270,7 +270,7 @@ export const useUpdateFuelExport = (
                 query.queryKey[0] === 'fuel-exports-list') &&
               (query.queryKey.includes(params.complianceReportId) ||
                 query.queryKey.some(
-                  (key: any) => key === params.complianceReportId
+                  (key: unknown) => key === params.complianceReportId
                 ))
             )
           }
@@ -294,7 +294,7 @@ export const useUpdateFuelExport = (
               query.queryKey[0] === 'fuel-exports-list') &&
             (query.queryKey.includes(params.complianceReportId) ||
               query.queryKey.some(
-                (key: any) => key === params.complianceReportId
+                (key: unknown) => key === params.complianceReportId
               ))
           )
         }
@@ -307,8 +307,8 @@ export const useUpdateFuelExport = (
 }
 
 export const useDeleteFuelExport = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
+  params: Record<string, unknown>,
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -321,7 +321,7 @@ export const useDeleteFuelExport = (
   } = options
 
   return useMutation({
-    mutationFn: async (fuelExportId: any) => {
+    mutationFn: async (fuelExportId: unknown) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -340,7 +340,7 @@ export const useDeleteFuelExport = (
               query.queryKey[0] === 'fuel-exports-list') &&
             (query.queryKey.includes(params.complianceReportId) ||
               query.queryKey.some(
-                (key: any) => key === params.complianceReportId
+                (key: unknown) => key === params.complianceReportId
               ))
           )
         }
@@ -363,7 +363,7 @@ export const useDeleteFuelExport = (
               query.queryKey[0] === 'fuel-exports-list') &&
             (query.queryKey.includes(params.complianceReportId) ||
               query.queryKey.some(
-                (key: any) => key === params.complianceReportId
+                (key: unknown) => key === params.complianceReportId
               ))
           )
         }
@@ -377,7 +377,7 @@ export const useDeleteFuelExport = (
 
 export const useImportFuelExports = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -390,7 +390,7 @@ export const useImportFuelExports = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: any) => {
+    mutationFn: async ({ file, isOverwrite }: Record<string, unknown>) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -398,7 +398,7 @@ export const useImportFuelExports = (
         throw new Error('File is required for import')
       }
 
-      const path = (apiRoutes as any).importFuelExports.replace(
+      const path = (apiRoutes as unknown).importFuelExports.replace(
         ':reportID',
         complianceReportId
       )
@@ -422,7 +422,7 @@ export const useImportFuelExports = (
             (query.queryKey[0] === 'fuel-exports' ||
               query.queryKey[0] === 'fuel-exports-list') &&
             (query.queryKey.includes(complianceReportId) ||
-              query.queryKey.some((key: any) => key === complianceReportId))
+              query.queryKey.some((key: unknown) => key === complianceReportId))
           )
         }
       })

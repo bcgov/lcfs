@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { describe, expect, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import { Introduction } from '../Introduction'
@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key, options) => {
+      t: (key) => {
         // Handle the early issuance sections translation
         if (key === 'report:earlyIssuanceIntroSections') {
           return [
@@ -39,7 +39,9 @@ vi.mock('react-i18next', () => {
         return key
       }
     }),
-    Trans: ({ i18nKey, components }) => {
+    Trans: ({
+  i18nKey
+}) => {
       // Simple implementation to handle Trans component
       if (i18nKey === 'report:contact') {
         return <p>Contact us at email@example.com</p>
@@ -167,7 +169,7 @@ describe('Introduction component', () => {
     router
   }) => {
     // Temporarily spy on the useTranslation hook
-    const tSpy = vi.fn((key, options) => {
+    const tSpy = vi.fn((key) => {
       if (key === 'report:sections') {
         return [
           { header: 'Section 1', content: ['<p>Content for section 1.</p>'] }
@@ -210,7 +212,7 @@ describe('Introduction component', () => {
     localization,
     router
   }) => {
-    const tSpy = vi.fn((key, options) => {
+    const tSpy = vi.fn((key) => {
       if (key === 'report:sections') {
         return [
           { header: 'Section 1', content: ['<p>Content for section 1.</p>'] }
@@ -248,7 +250,7 @@ describe('Introduction component', () => {
     localization,
     router
   }) => {
-    const tSpy = vi.fn((key, options) => {
+    const tSpy = vi.fn((key) => {
       if (key === 'report:sections') {
         return []
       }
@@ -281,7 +283,7 @@ describe('Introduction component', () => {
     localization,
     router
   }) => {
-    const tSpy = vi.fn((key, options) => {
+    const tSpy = vi.fn((key) => {
       if (key === 'report:sections') {
         return [{ header: 'Empty Section', content: [] }]
       }
@@ -311,7 +313,7 @@ describe('Introduction component', () => {
     localization,
     router
   }) => {
-    const tSpy = vi.fn((key, options) => {
+    const tSpy = vi.fn((key) => {
       if (key === 'report:sections') {
         return [
           {

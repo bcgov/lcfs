@@ -1,53 +1,20 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
-import {
-  CommonArrayRenderer,
-  FuelCodePrefixRenderer,
-  FuelCodeStatusRenderer
-} from '@/utils/grid/cellRenderers'
+import { FuelCodeStatusRenderer } from '@/utils/grid/cellRenderers'
 import {
   dateFormatter,
   numberFormatter,
   timezoneFormatter
 } from '@/utils/formatters'
-import BCBadge from '@/components/BCBadge'
-import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
 import {
   CO_PROCESSED_OPTIONS,
-  FUEL_CODE_STATUSES,
-  getAllFuelCodeStatuses
+  FUEL_CODE_STATUSES
 } from '@/constants/statuses'
-
-const FuelCodeStatusBadge = (props) => {
-  const statusArr = getAllFuelCodeStatuses()
-  const statusIndex = statusArr.indexOf(props.data?.status)
-  const statusColors = ['info', 'info', 'success', 'error']
-  return (
-    <BCBox sx={{ width: '100%', height: '100%' }}>
-      <BCBox mt={1} sx={{ display: 'flex', justifyContent: 'center' }}>
-        <BCBadge
-          badgeContent={statusArr[statusIndex]}
-          color={statusColors[statusIndex] ?? 'info'}
-          variant="contained"
-          size="lg"
-          sx={{
-            '& .MuiBadge-badge': {
-              minWidth: '120px',
-              fontWeight: 'regular',
-              textTransform: 'capitalize',
-              fontSize: '0.875rem',
-              padding: '0.4em 0.6em'
-            }
-          }}
-        />
-      </BCBox>
-    </BCBox>
-  )
-}
+import { FuelCodeStatusBadge, TransportModeCellRenderer } from './FuelCodeGridRenderers'
+export { formatTransportModeDistances } from './fuelCodeGridUtils'
 
 const getCoProcessedOptions = () => ({
   data: CO_PROCESSED_OPTIONS.map((value) => ({ coProcessed: value })),
@@ -56,57 +23,8 @@ const getCoProcessedOptions = () => ({
   error: null
 })
 
-const getTransportModeName = (item, relationKey) => {
-  if (!item) return ''
-  if (typeof item === 'string' || typeof item === 'number') {
-    return item.toString()
-  }
-  const snakeRelationKey = relationKey.replace(
-    /[A-Z]/g,
-    (letter) => `_${letter.toLowerCase()}`
-  )
-  return (
-    item.transportMode ||
-    item.transport_mode ||
-    item[relationKey]?.transportMode ||
-    item[relationKey]?.transport_mode ||
-    item[snakeRelationKey]?.transportMode ||
-    item[snakeRelationKey]?.transport_mode ||
-    ''
-  )
-}
-
-export const formatTransportModeDistances = (value, relationKey) => {
-  const values = Array.isArray(value)
-    ? value
-    : typeof value === 'string' && value.trim()
-      ? value.split(',').map((item) => item.trim())
-      : []
-
-  return values
-    .map((item) => {
-      const mode = getTransportModeName(item, relationKey)
-      if (!mode) return null
-      const distance =
-        typeof item === 'object' && item !== null ? item.distance : null
-      return distance === null || distance === undefined || distance === ''
-        ? mode
-        : `${mode} (${distance} km)`
-    })
-    .filter(Boolean)
-}
-
-const TransportModeCellRenderer = (props) => (
-  <CommonArrayRenderer
-    {...props}
-    value={formatTransportModeDistances(props.value, props.relationKey)}
-    disableLink={props.disableLink}
-  />
-)
-
 export const fuelCodeColDefs = (
-  t: (key: string) => string,
-  status: string | null = null
+  t
 ): ColDef[] => [
   {
     field: 'status',
@@ -280,7 +198,7 @@ export const fuelCodeColDefs = (
     },
     suppressFloatingFilterButton: true,
     filterParams: {
-      textMatcher: (filter) => true,
+      textMatcher: () => true,
       suppressFilterButton: true
     },
     minWidth: 335,
@@ -305,7 +223,7 @@ export const fuelCodeColDefs = (
     suppressFloatingFilterButton: true,
     minWidth: 335,
     filterParams: {
-      textMatcher: (filter) => true,
+      textMatcher: () => true,
       suppressFilterButton: true
     },
     cellRenderer: (props) => (

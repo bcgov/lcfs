@@ -38,15 +38,16 @@ Cypress.on('uncaught:exception', (err) => {
     stack.includes('KeycloakProvider.jsx')
 
   const isGridTransactionRace =
-    message.includes("Cannot read properties of undefined (reading 'applyTransaction')") &&
-    stack.includes('BCGridEditor.jsx')
+    message.includes(
+      "Cannot read properties of undefined (reading 'applyTransaction')"
+    ) && stack.includes('BCGridEditor.jsx')
 
   if (isTrackLoginError || isGridTransactionRace) {
     return false
   }
 })
 
-cy.on('fail', (error, runnable) => {
+cy.on('fail', (error) => {
   console.error(error)
 
   throw error

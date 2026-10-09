@@ -1,8 +1,13 @@
-import React from 'react'
-import { screen, waitFor, act } from '@testing-library/react'
+import 'react'
+import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, beforeEach, vi } from 'vitest'
 import { OtherUsesChangelog } from '../OtherUsesChangelog'
 import { test } from '@/tests/utils/fixtures'
+
+import {
+  useComplianceReportWithCache,
+  useGetChangeLog
+} from '@/hooks/useComplianceReports'
 
 let render
 const fixtureOptions = undefined
@@ -48,12 +53,9 @@ vi.mock('react-router-dom', () => ({
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
     gridKey,
-    columnDefs,
     queryData,
     getRowId,
     suppressPagination,
-    gridOptions,
-    defaultColDef,
     paginationOptions,
     onPaginationChange
   }) => (
@@ -114,7 +116,7 @@ vi.mock('./_schema', () => ({
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'actionType', headerName: 'Action' }
   ],
-  changelogCommonColDefs: (highlight) => [
+  changelogCommonColDefs: () => [
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'quantitySupplied', headerName: 'Quantity Supplied' }
   ]
@@ -215,14 +217,9 @@ vi.mock('@mui/material/CardContent', () => ({
 
 // Mock MUI styles
 vi.mock('@mui/material/styles', () => ({
-  styled: (component) => (styles) => component,
+  styled: (component) => () => component,
   useTheme: () => ({ spacing: (val) => `${val * 8}px` })
 }))
-
-import {
-  useComplianceReportWithCache,
-  useGetChangeLog
-} from '@/hooks/useComplianceReports'
 
 describe('OtherUsesChangelog', () => {
   const mockCurrentReport = {
@@ -798,11 +795,6 @@ describe('OtherUsesChangelog', () => {
   })
 
   describe('Function Unit Tests', () => {
-    let component
-    let gridOptions
-    let getPaginatedData
-    let handlePaginationChange
-
     beforeEach(async () => {
       const mockChangelogData = [
         {

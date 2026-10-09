@@ -1,13 +1,10 @@
-// @ts-nocheck
-import { ColDef } from 'ag-grid-community'
+import { FuelCodeStatusBadge } from './components/FuelCodeStatusBadge'
+import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 import { TFunction } from 'i18next'
 import { Link } from 'react-router-dom'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { fuelCodeColDefs as idirFuelCodeColDefs } from '@/views/FuelCodes/_schema'
 import { ROUTES, buildPath } from '@/routes/routes'
-import BCBadge from '@/components/BCBadge'
-import BCBox from '@/components/BCBox'
-import { getAllFuelCodeStatuses } from '@/constants/statuses'
 
 const dateFormatter = new Intl.DateTimeFormat('en-CA', {
   year: 'numeric',
@@ -23,7 +20,7 @@ export const formatDate = (value: string | null | undefined): string => {
 }
 
 export const formatCarbonIntensity = (
-  value: number | null | undefined
+  value: number | string | null | undefined
 ): string => {
   if (value === null || value === undefined || value === '') return ''
   const num = Number(value)
@@ -94,59 +91,42 @@ const fuelCodeDetailPath = (fuelCodeId: unknown): string | null => {
   return buildPath(ROUTES.FUEL_CODES.VIEW, { fuelCodeID: id })
 }
 
-const linkCellRenderer = (originalRenderer?: ColDef['cellRenderer']) => {
-  return (params: any) => {
-    const path = fuelCodeDetailPath(params.data?.fuelCodeId)
-    const content =
-      typeof originalRenderer === 'function'
-        ? originalRenderer(params)
-        : params.valueFormatted || params.value || ''
-
-    if (!path) return content
-
-    return (
-      <Link
-        to={path}
-        style={{
-          color: 'inherit',
-          display: 'block',
-          height: '100%',
-          textDecoration: 'none',
-          width: '100%'
-        }}
-      >
-        {content}
-      </Link>
-    )
-  }
+export interface FuelCodeRow {
+  id: string
+  fuelCodeId?: number | string
+  status?: string
+  fuelCode: string
+  fuel: string
+  company: string
+  carbonIntensity: number
+  effectiveDate: string
+  expiryDate: string
+  [key: string]: unknown
 }
 
-const FuelCodeStatusBadge = (params: any) => {
-  const statusArr = getAllFuelCodeStatuses()
-  const statusIndex = statusArr.indexOf(params.data?.status)
-  const statusColors = ['info', 'info', 'success', 'error']
+type FuelCodeGridRow = FuelCodeRow & {
+  fuelCodeId?: number | string
+  status?: string
+}
 
-  return (
-    <BCBox sx={{ width: '100%', height: '100%' }}>
-      <BCBox mt={1} sx={{ display: 'flex', justifyContent: 'center' }}>
-        <BCBadge
-          badgeContent={statusArr[statusIndex] ?? params.data?.status}
-          color={statusColors[statusIndex] ?? 'info'}
-          variant="contained"
-          size="lg"
-          sx={{
-            '& .MuiBadge-badge': {
-              minWidth: '120px',
-              fontWeight: 'regular',
-              textTransform: 'capitalize',
-              fontSize: '0.875rem',
-              padding: '0.4em 0.6em'
-            }
-          }}
-        />
-      </BCBox>
-    </BCBox>
-  )
+export type FuelCodeCellParams = ICellRendererParams<FuelCodeGridRow>
+type FuelCodeValueParams = { value?: number | string | null }
+
+const linkCellRenderer = (originalRenderer?: ColDef<FuelCodeGridRow>['cellRenderer']) => {
+  return function FuelCodeLinkCellRenderer(params: FuelCodeCellParams) {
+  const path = fuelCodeDetailPath(params.data?.fuelCodeId);
+  const content = typeof originalRenderer === 'function' ? originalRenderer(params) : params.valueFormatted || params.value || '';
+  if (!path) return content;
+  return <Link to={path} style={{
+    color: 'inherit',
+    display: 'block',
+    height: '100%',
+    textDecoration: 'none',
+    width: '100%'
+  }}>
+        {content}
+      </Link>;
+}
 }
 
 const clickableFuelCodeColDefs = (colDefs: ColDef[]): ColDef[] =>
@@ -202,7 +182,8 @@ export const buildColumnDefs = (t: TFunction, isIdir = false): ColDef[] => {
       filter: false,
       sortable: true,
       minWidth: 210,
-      valueFormatter: (params: any) => formatCarbonIntensity(params.value)
+      valueFormatter: (params: FuelCodeValueParams) =>
+        formatCarbonIntensity(params.value)
     },
     {
       headerName: t('columns.effectiveDate'),
@@ -215,7 +196,7 @@ export const buildColumnDefs = (t: TFunction, isIdir = false): ColDef[] => {
       sortable: true,
       minWidth: 180,
       comparator: dateSortComparator,
-      valueFormatter: (params: any) => formatDate(params.value)
+      valueFormatter: (params: FuelCodeValueParams) => formatDate(params.value)
     },
     {
       headerName: t('columns.expiryDate'),
@@ -228,27 +209,20 @@ export const buildColumnDefs = (t: TFunction, isIdir = false): ColDef[] => {
       sortable: true,
       minWidth: 180,
       comparator: dateSortComparator,
-      valueFormatter: (params: any) => formatDate(params.value)
+      valueFormatter: (params: FuelCodeValueParams) => formatDate(params.value)
     }
   ]
 }
 
-export interface FuelCodeRow {
-  id: string
-  fuelCode: string
-  fuel: string
-  company: string
-  carbonIntensity: number
-  effectiveDate: string
-  expiryDate: string
-  [key: string]: any
-}
 
-export const normalizeRows = (rows: any[] = []): FuelCodeRow[] =>
-  rows.map((row, index) => ({
-    ...row,
-    id: `${row.fuelCode}-${row.effectiveDate || index}`,
-    // Aliases so the canonical IDIR fuelCodeColDefs can render unchanged
-    fuelType: row.fuel,
-    expirationDate: row.expiryDate
-  }))
+export const normalizeRows = (rows: unknown[] = []): FuelCodeRow[] =>
+  rows.map((value, index) => {
+    const row = value as Record<string, unknown>
+    return {
+      ...row,
+      id: `${row.fuelCode}-${row.effectiveDate || index}`,
+      // Aliases so the canonical IDIR fuelCodeColDefs can render unchanged
+      fuelType: row.fuel,
+      expirationDate: row.expiryDate
+    } as FuelCodeRow
+  })

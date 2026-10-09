@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createRef } from 'react'
-import { ThemeProvider } from '@mui/material/styles'
-import { createTheme } from '@mui/material/styles'
+import { ThemeProvider , createTheme } from '@mui/material/styles'
 import { NumberEditor } from '../NumberEditor'
 
 const theme = createTheme()

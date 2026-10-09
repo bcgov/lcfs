@@ -49,7 +49,7 @@ const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   }
 }))
 
-const FileTable = styled(Box)(({ theme }) => ({
+const FileTable = styled(Box)(() => ({
   width: '100%',
   maxWidth: '100%',
   display: 'grid',
@@ -68,7 +68,7 @@ const TableCell = styled(Box)({
 
 function DocumentTable({ parentType, parentID }) {
   const { t } = useTranslation(['report', 'common'])
-  const [isDragActive, setIsDragActive] = useState(false)
+  const [, setIsDragActive] = useState(false)
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
   const [errorMessage, setErrorMessage] = useState(null)
@@ -326,7 +326,7 @@ function DocumentTable({ parentType, parentID }) {
         </TableCell>
         <TableCell></TableCell>
 
-        {files.map((file, i) => {
+        {files.map((file) => {
           const displayName = getDocumentDisplayName(file)
           const canRename =
             renameEnabled &&

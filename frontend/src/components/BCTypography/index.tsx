@@ -1,4 +1,5 @@
-import { forwardRef, ReactNode } from 'react'
+import { forwardRef, type ReactNode } from 'react'
+import type { TypographyProps } from '@mui/material/Typography'
 
 // Custom styles for BCTypography
 import BCTypographyRoot from '@/components/BCTypography/BCTypographyRoot'
@@ -36,7 +37,7 @@ type BCTypographyVerticalAlign =
   | 'top'
   | 'bottom'
 
-interface BCTypographyProps {
+interface BCTypographyProps extends Omit<TypographyProps, 'color' | 'children'> {
   color?: BCTypographyColor
   fontWeight?: BCTypographyFontWeight
   textTransform?: BCTypographyTextTransform
@@ -44,7 +45,6 @@ interface BCTypographyProps {
   textGradient?: boolean
   opacity?: number
   children?: ReactNode
-  [key: string]: any // For spreading additional props like variant, etc.
 }
 
 const BCTypography = forwardRef<HTMLElement, BCTypographyProps>(
@@ -65,16 +65,14 @@ const BCTypography = forwardRef<HTMLElement, BCTypographyProps>(
       <BCTypographyRoot
         {...rest}
         ref={ref}
-        {...({
-          ownerState: {
-            color,
-            textTransform,
-            verticalAlign,
-            fontWeight,
-            opacity,
-            textGradient
-          }
-        } as any)}
+        ownerState={{
+          color,
+          textTransform,
+          verticalAlign,
+          fontWeight,
+          opacity,
+          textGradient
+        }}
       >
         {children}
       </BCTypographyRoot>

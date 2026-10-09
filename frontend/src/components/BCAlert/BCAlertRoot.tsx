@@ -4,22 +4,33 @@ import { styled } from '@mui/material/styles'
 
 export type AlertSeverity = 'info' | 'success' | 'warning' | 'error' | 'pending'
 
+export interface BCAlertTheme {
+  palette: {
+    gradients: Record<string, { main: string; state: string }>
+    alerts: Record<
+      AlertSeverity,
+      { color: string; background: string; border?: string }
+    >
+  }
+  typography: { fontSizeMD: string; fontWeightMedium: number }
+  borders: { borderRadius: { md: string } }
+  functions: {
+    pxToRem: (value: number) => string
+    linearGradient: (main: string, state: string) => string
+  }
+}
+
 interface BCAlertOwnerState {
   color?: AlertSeverity | null
 }
 
 const BCAlertRoot = styled(Box)<{ ownerState: BCAlertOwnerState }>(
   ({ theme, ownerState }) => {
-    const { palette, typography, borders, functions } = theme as any
+    const { palette, typography, borders, functions } =
+      theme as unknown as BCAlertTheme
     const { color } = ownerState
 
-    const { gradients, alerts } = palette as typeof palette & {
-      gradients: Record<string, { main: string; state: string }>
-      alerts: Record<
-        AlertSeverity,
-        { color: string; background: string; border?: string }
-      >
-    }
+    const { gradients, alerts } = palette
     const { fontSizeMD, fontWeightMedium } = typography
     const { borderRadius } = borders
     const { pxToRem, linearGradient } = functions

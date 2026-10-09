@@ -70,8 +70,18 @@ const ORG_BALANCE = {
 }
 
 const ORG_TYPES = [
-  { organizationTypeId: 1, orgType: 'fuel_supplier', description: 'Fuel supplier', isBceidUser: true },
-  { organizationTypeId: 2, orgType: 'aggregator', description: 'Aggregator', isBceidUser: true }
+  {
+    organizationTypeId: 1,
+    orgType: 'fuel_supplier',
+    description: 'Fuel supplier',
+    isBceidUser: true
+  },
+  {
+    organizationTypeId: 2,
+    orgType: 'aggregator',
+    description: 'Aggregator',
+    isBceidUser: true
+  }
 ]
 
 const USERS_LIST = {
@@ -114,7 +124,10 @@ const USER_DETAIL = {
   roles: [{ name: 'Signing Authority' }]
 }
 
-const USER_ACTIVITY = { activities: [], pagination: { total: 0, page: 1, size: 20 } }
+const USER_ACTIVITY = {
+  activities: [],
+  pagination: { total: 0, page: 1, size: 20 }
+}
 
 const LEDGER_YEARS = ['2024', '2023', '2022']
 
@@ -142,7 +155,12 @@ const LEDGER = {
 
 const PENALTY_ANALYTICS = {
   yearlyPenalties: [
-    { complianceYear: '2024', autoRenewable: 100, autoLowCarbon: 50, totalAutomatic: 150 }
+    {
+      complianceYear: '2024',
+      autoRenewable: 100,
+      autoLowCarbon: 50,
+      totalAutomatic: 150
+    }
   ],
   penaltyLogs: [{ complianceYear: '2024', penaltyAmount: 500 }],
   totals: {
@@ -207,7 +225,10 @@ const FUEL_SUPPLY = {
 
 // Shell requests fired by OrganizationView on every detail route.
 const stubShell = () => {
-  cy.intercept({ method: 'GET', pathname: /\/organizations\/1$/ }, { body: ORG }).as('org')
+  cy.intercept(
+    { method: 'GET', pathname: /\/organizations\/1$/ },
+    { body: ORG }
+  ).as('org')
   cy.intercept(
     { method: 'GET', pathname: /\/organizations\/balances\/1$/ },
     { body: ORG_BALANCE }
@@ -257,7 +278,7 @@ describe('IDIR organization admin detail views (#4091)', () => {
       cy.get('#orgOperatingName')
         .should('have.value', ORG.operatingName)
         .clear()
-        .type('Updated Operating Name')
+      cy.get('#orgOperatingName').type('Updated Operating Name')
 
       cy.getByDataTest('saveOrganization').click()
       cy.wait('@updateOrg')
@@ -275,7 +296,9 @@ describe('IDIR organization admin detail views (#4091)', () => {
 
       cy.visit(`/organizations/${ORG_ID}/users`)
       cy.wait('@usersList')
-      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should('be.visible')
+      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should(
+        'be.visible'
+      )
       cy.contains('.ag-cell', 'Jane Doe').should('be.visible')
       cy.contains('.ag-cell', 'jane.doe@testfuel.example.com').should('exist')
     })
@@ -322,8 +345,12 @@ describe('IDIR organization admin detail views (#4091)', () => {
       cy.visit(`/organizations/${ORG_ID}/credit-ledger`)
       cy.wait('@ledgerList')
 
-      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should('be.visible')
-      cy.contains('.ag-header-cell-text', 'Compliance year').should('be.visible')
+      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should(
+        'be.visible'
+      )
+      cy.contains('.ag-header-cell-text', 'Compliance year').should(
+        'be.visible'
+      )
       cy.contains('.ag-header-cell-text', 'Available balance').should('exist')
       cy.contains('Available credit balance').should('be.visible')
 
@@ -332,7 +359,9 @@ describe('IDIR organization admin detail views (#4091)', () => {
       cy.get('.MuiMenuItem-root').contains('2023').click()
       cy.get('@ledgerList.all', { timeout: 15000 }).should((calls) => {
         const filtered = calls.some((c) =>
-          (c.request.body.filters || []).some((f) => f.field === 'compliance_period')
+          (c.request.body.filters || []).some(
+            (f) => f.field === 'compliance_period'
+          )
         )
         expect(filtered, 'a year-filtered ledger request was sent').to.be.true
       })
@@ -353,30 +382,46 @@ describe('IDIR organization admin detail views (#4091)', () => {
     it('renders the penalty log with history', () => {
       stubShell()
       cy.intercept(
-        { method: 'GET', pathname: /\/organizations\/1\/penalties\/analytics$/ },
+        {
+          method: 'GET',
+          pathname: /\/organizations\/1\/penalties\/analytics$/
+        },
         { body: PENALTY_ANALYTICS }
       ).as('penaltyAnalytics')
       cy.intercept(
-        { method: 'POST', pathname: /\/organizations\/1\/penalties\/logs\/list$/ },
+        {
+          method: 'POST',
+          pathname: /\/organizations\/1\/penalties\/logs\/list$/
+        },
         { body: PENALTY_LOGS }
       ).as('penaltyLogs')
 
       cy.visit(`/organizations/${ORG_ID}/penalty-log`)
       cy.wait('@penaltyLogs')
       cy.contains('Penalty history').should('be.visible')
-      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should('be.visible')
+      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should(
+        'be.visible'
+      )
       cy.contains('.ag-cell', 'Single contravention').should('exist')
-      cy.contains('button', 'Add/Edit discretionary penalties').should('be.visible')
+      cy.contains('button', 'Add/Edit discretionary penalties').should(
+        'be.visible'
+      )
     })
 
     it('opens the manage (add/edit) penalty editor', () => {
       stubShell()
       cy.intercept(
-        { method: 'GET', pathname: /\/organizations\/1\/penalties\/analytics$/ },
+        {
+          method: 'GET',
+          pathname: /\/organizations\/1\/penalties\/analytics$/
+        },
         { body: PENALTY_ANALYTICS }
       ).as('penaltyAnalytics')
       cy.intercept(
-        { method: 'POST', pathname: /\/organizations\/1\/penalties\/logs\/list$/ },
+        {
+          method: 'POST',
+          pathname: /\/organizations\/1\/penalties\/logs\/list$/
+        },
         { body: PENALTY_LOGS }
       ).as('penaltyLogs')
       cy.intercept(
@@ -389,7 +434,9 @@ describe('IDIR organization admin detail views (#4091)', () => {
       cy.contains('button', 'Add/Edit discretionary penalties').click()
 
       cy.url().should('match', /\/penalty-log\/manage$/)
-      cy.contains('Confer discretionary penalty', { timeout: 15000 }).should('be.visible')
+      cy.contains('Confer discretionary penalty', { timeout: 15000 }).should(
+        'be.visible'
+      )
       cy.getByDataTest('save-btn').should('be.visible')
 
       // Adding a row expands the editable grid.
@@ -414,7 +461,9 @@ describe('IDIR organization admin detail views (#4091)', () => {
 
       cy.visit(`/organizations/${ORG_ID}/supply-history`)
       cy.wait('@fuelSupply')
-      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should('be.visible')
+      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should(
+        'be.visible'
+      )
       cy.contains('.ag-cell', 'Biodiesel').should('exist')
     })
   })
@@ -424,9 +473,9 @@ describe('IDIR organization admin detail views (#4091)', () => {
       stubShell()
       cy.visit(`/organizations/${ORG_ID}/compliance-tracking`)
       cy.wait('@org')
-      cy.contains('This section will contain compliance tracking information').should(
-        'be.visible'
-      )
+      cy.contains(
+        'This section will contain compliance tracking information'
+      ).should('be.visible')
     })
   })
 })

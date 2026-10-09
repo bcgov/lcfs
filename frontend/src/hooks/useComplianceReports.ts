@@ -1,3 +1,4 @@
+import { omitProperties } from '@/utils/omitProperties'
 import { roles } from '@/constants/roles'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
@@ -79,7 +80,7 @@ export const useListComplianceReports = (
 
 export const useCreateComplianceReport = (
   orgID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -92,7 +93,7 @@ export const useCreateComplianceReport = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!orgID) {
         throw new Error('Organization ID is required')
       }
@@ -162,7 +163,7 @@ export const useGetComplianceReport = (
 }
 
 export const useComplianceReportWithCache = (
-  reportId: any,
+  reportId: number | string,
   options: QueryOptions<unknown> = {}
 ) => {
   const { getCachedReport, shouldFetchReport } = useComplianceReportStore()
@@ -297,15 +298,17 @@ export const useComplianceReportScheduleOverview = (
 
 export const useUpdateComplianceReportSummary = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
-  const { onSuccess, onError, clearCache = false, ...restOptions } = options
+  const { onSuccess, onError, ...restOptions } = omitProperties(options, [
+    'clearCache'
+  ])
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }
@@ -338,7 +341,7 @@ export const useUpdateComplianceReportSummary = (
 
 export const useUpdateComplianceReportPenaltyStatus = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -346,7 +349,7 @@ export const useUpdateComplianceReportPenaltyStatus = (
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }
@@ -367,7 +370,7 @@ export const useUpdateComplianceReportPenaltyStatus = (
           return {
             ...old,
             nonCompliancePenaltySummary: old.nonCompliancePenaltySummary?.map(
-              (row: any) =>
+              (row: unknown) =>
                 Number(row.line) === Number(updatedStatus?.line)
                   ? {
                       ...row,
@@ -396,7 +399,7 @@ export const useUpdateComplianceReportPenaltyStatus = (
 
 export const useUpdateComplianceReport = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const { removeReport, cacheReport, setCurrentReport } =
@@ -420,7 +423,7 @@ export const useUpdateComplianceReport = (
     // request's tail and surfaces that 409 as a "network error" toast even
     // though the submit succeeded. See ticket #4431.
     retry: 0,
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }
@@ -438,10 +441,10 @@ export const useUpdateComplianceReport = (
         queryClient.setQueryData(['compliance-report', reportID], data.data)
       }
 
-      removeReport(reportID as any)
+      removeReport(reportID as unknown)
       if (data?.data) {
         setCurrentReport(data.data)
-        cacheReport(reportID as any, data.data)
+        cacheReport(reportID as unknown, data.data)
       }
 
       if (invalidateRelatedQueries) {
@@ -464,7 +467,7 @@ export const useUpdateComplianceReport = (
 export const useDeleteComplianceReport = (
   orgID: number | string | undefined | null,
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const { hasRoles } = useCurrentUser()
@@ -492,7 +495,7 @@ export const useDeleteComplianceReport = (
     },
     onSuccess: (data, variables, context) => {
       // Remove from Zustand store first
-      removeReport(reportID as any)
+      removeReport(reportID as unknown)
 
       const queriesToInvalidate = [
         ['compliance-reports'],
@@ -504,7 +507,7 @@ export const useDeleteComplianceReport = (
         ['other-uses', reportID]
       ]
 
-      queriesToInvalidate.forEach((query: any) =>
+      queriesToInvalidate.forEach((query: unknown) =>
         queryClient.invalidateQueries({ queryKey: query })
       )
 
@@ -555,7 +558,7 @@ export const useComplianceReportDocuments = (
 
 export const useCreateSupplementalReport = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -594,7 +597,7 @@ export const useCreateSupplementalReport = (
 
 export const useCreateAnalystAdjustment = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -633,7 +636,7 @@ export const useCreateAnalystAdjustment = (
 
 export const useCreateIdirSupplementalReport = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -708,7 +711,12 @@ export const useComplianceReportYearNavigation = (
 }
 
 export const useGetComplianceReportList = (
-  { page = 1, size = 10, sortOrders = [], filters = [] }: any = {},
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = []
+  }: Record<string, unknown> = {},
   options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
@@ -794,7 +802,7 @@ export const useGetComplianceReportStatuses = (
 }
 
 export const useGetChangeLog = (
-  { complianceReportGroupUuid, dataType }: any,
+  { complianceReportGroupUuid, dataType }: Record<string, unknown>,
   options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
@@ -862,7 +870,7 @@ export const useGetAvailableAnalysts = (
 }
 
 export const useAssignAnalyst = (
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -875,7 +883,10 @@ export const useAssignAnalyst = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ reportId, assignedAnalystId }: any) => {
+    mutationFn: async ({
+      reportId,
+      assignedAnalystId
+    }: Record<string, unknown>) => {
       const path = apiRoutes.assignAnalyst.replace(
         ':reportId',
         String(reportId ?? '')

@@ -1,14 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import '@testing-library/user-event';
 import { createRef } from 'react'
-import { ThemeProvider } from '@mui/material/styles'
-import { createTheme } from '@mui/material/styles'
+import { ThemeProvider , createTheme } from '@mui/material/styles'
 import { TextCellEditor } from '../TextCellEditor'
 
 // Mock InputMask since it's an external library
 vi.mock('react-input-mask', () => ({
-  default: ({ value, onChange, mask, formatChars, children, disabled }) => {
+  default: ({
+  onChange,
+  mask,
+  formatChars,
+  children,
+  disabled
+}) => {
     // Create a test button that triggers the onChange to test handleTextFieldChange
     const handleTestChange = () => {
       if (onChange) {

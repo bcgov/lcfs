@@ -16,7 +16,7 @@ vi.mock('@/themes/base/colors', () => ({
 }))
 
 vi.mock('@/utils/formatters', () => ({
-  dateFormatter: vi.fn((date) => '2024-01-01')
+  dateFormatter: vi.fn(() => '2024-01-01')
 }))
 
 vi.mock('@fortawesome/free-solid-svg-icons', () => ({

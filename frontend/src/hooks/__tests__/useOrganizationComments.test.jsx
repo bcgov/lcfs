@@ -18,8 +18,8 @@ const makeWrapper = (initialEntries) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 0 } }
   })
-  return ({ children }) =>
-    React.createElement(
+  return function QueryWrapper({ children }) {
+    return React.createElement(
       QueryClientProvider,
       { client },
       React.createElement(
@@ -28,6 +28,7 @@ const makeWrapper = (initialEntries) => {
         children
       )
     )
+  }
 }
 
 // Helper hook that surfaces the URL so we can assert on it.

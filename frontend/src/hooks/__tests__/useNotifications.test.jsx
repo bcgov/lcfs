@@ -46,9 +46,11 @@ const createWrapper = () => {
       mutations: { retry: false }
     }
   })
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  )
+  return function QueryWrapper({ children }) {
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+  }
 }
 
 describe('useNotifications', () => {
@@ -417,8 +419,18 @@ describe('useNotifications', () => {
   describe('useTargetUserNotificationSubscriptions', () => {
     it('fetches subscriptions for a given userId', async () => {
       const mockSubs = [
-        { notificationChannelSubscriptionId: 1, isEnabled: true, notificationTypeName: 'IDIR_ANALYST__GOVERNMENT_NOTIFICATION', notificationChannelName: 'EMAIL' },
-        { notificationChannelSubscriptionId: 2, isEnabled: false, notificationTypeName: 'IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW', notificationChannelName: 'IN_APP' }
+        {
+          notificationChannelSubscriptionId: 1,
+          isEnabled: true,
+          notificationTypeName: 'IDIR_ANALYST__GOVERNMENT_NOTIFICATION',
+          notificationChannelName: 'EMAIL'
+        },
+        {
+          notificationChannelSubscriptionId: 2,
+          isEnabled: false,
+          notificationTypeName: 'IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW',
+          notificationChannelName: 'IN_APP'
+        }
       ]
       mockApiService.get.mockResolvedValue({ data: mockSubs })
 
@@ -430,7 +442,9 @@ describe('useNotifications', () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
       expect(result.current.data).toEqual(mockSubs)
-      expect(mockApiService.get).toHaveBeenCalledWith('/notifications/subscriptions/user/42')
+      expect(mockApiService.get).toHaveBeenCalledWith(
+        '/notifications/subscriptions/user/42'
+      )
     })
 
     it('is disabled and returns empty array when userId is null', async () => {

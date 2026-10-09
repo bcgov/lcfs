@@ -3,7 +3,10 @@ import { useApiService } from '@/services/useApiService'
 import { useQuery } from '@tanstack/react-query'
 import type { QueryOptions } from './types'
 
-export const useRoleList = (params: Record<string, any>, options: QueryOptions<unknown>) => {
+export const useRoleList = (
+  params: Record<string, unknown>,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   const path = apiRoutes.roles + (params ? `?${params}` : '')
   return useQuery({

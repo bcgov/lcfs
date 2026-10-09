@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
@@ -43,7 +42,6 @@ export const fuelExportColDefs = (
   warnings: GridWarnings,
   gridReady: boolean,
   isSupplemental: boolean,
-  compliancePeriod: string | number
 ): ColDef[] => [
   validation,
   actions((params) => {
@@ -138,7 +136,7 @@ export const fuelExportColDefs = (
       }
       return true
     },
-    tooltipValueGetter: (p) => 'Select the fuel type from the list'
+    tooltipValueGetter: () => 'Select the fuel type from the list'
   },
   {
     field: 'fuelTypeOther',
@@ -146,7 +144,7 @@ export const fuelExportColDefs = (
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
       queryKey: 'fuel-type-others',
-      queryFn: async ({ queryKey, client }) => {
+      queryFn: async ({ client }) => {
         const path = apiRoutes.getFuelTypeOthers
 
         const response = await client.get(path)
@@ -224,7 +222,7 @@ export const fuelExportColDefs = (
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
         ?.fuelCategories.map((item) => item.fuelCategory).length > 1,
-    tooltipValueGetter: (p) => 'Select the fuel category from the list'
+    tooltipValueGetter: () => 'Select the fuel category from the list'
   },
   {
     field: 'endUseType',
@@ -326,7 +324,7 @@ export const fuelExportColDefs = (
       const cellParams = params.colDef?.cellEditorParams(params)
       return cellParams.options?.length > 1
     },
-    tooltipValueGetter: (p) =>
+    tooltipValueGetter: () =>
       'Act Relied Upon to Determine Carbon Intensity: Identify the appropriate provision of the Act relied upon to determine the carbon intensity of each fuel.'
   },
   {
@@ -470,7 +468,7 @@ export const fuelExportColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
     minWidth: 200,
     cellEditor: AutocompleteCellEditor,
-    cellEditorParams: (params) => ({
+    cellEditorParams: () => ({
       options: ['L', 'kg', 'kWh', 'm³ (15°C and 1 atm)'],
       multiple: false,
       disableCloseOnSelect: false,

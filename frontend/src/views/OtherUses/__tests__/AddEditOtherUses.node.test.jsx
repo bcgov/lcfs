@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { isOtherExpectedUseMissing } from '../AddEditOtherUses'
+import { isOtherExpectedUseMissing } from '../otherUsesHelpers'
 
 // Mock all external dependencies to prevent memory leaks
 vi.mock('react-router-dom', () => ({

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
@@ -17,7 +17,7 @@ import type { SxProps, Theme } from '@mui/system'
 const CONTROL_HEIGHT = 40
 const CONTROL_RADIUS = 20
 
-export interface FilterSelectConfig<TOption = any> {
+export interface FilterSelectConfig<TOption = unknown> {
   id: string
   label?: string
   placeholder?: string
@@ -25,7 +25,10 @@ export interface FilterSelectConfig<TOption = any> {
   options: TOption[]
   onChange: (option: TOption | TOption[] | null) => void
   getOptionLabel?: (option: TOption) => string
-  renderOption?: (props: any, option: TOption) => ReactNode
+  renderOption?: (
+    props: HTMLAttributes<HTMLLIElement> & { key: string },
+    option: TOption
+  ) => ReactNode
   isLoading?: boolean
   width?: number | string
   disabled?: boolean
@@ -105,7 +108,7 @@ export const FilterToolbar = ({
             size="small"
             disablePortal
             options={filter.options}
-            value={filter.value as any}
+            value={filter.value}
             onChange={(_, option) => filter.onChange(option)}
             getOptionLabel={
               filter.getOptionLabel
@@ -124,10 +127,10 @@ export const FilterToolbar = ({
                     return ''
                   }
             }
-            renderOption={filter.renderOption as any}
+            renderOption={filter.renderOption}
             loading={filter.isLoading}
             disabled={filter.disabled}
-            groupBy={filter.groupBy as any}
+            groupBy={filter.groupBy}
             noOptionsText={filter.noOptionsText}
             multiple={filter.multiple}
             isOptionEqualToValue={

@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
+import 'react'
 import { afterEach, describe, expect, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, screen } from '@testing-library/react'
 
 import { ApplicationSummary } from '@/views/CarbonIntensity/components/ApplicationSummary'
 
@@ -16,7 +16,7 @@ vi.mock('@/hooks/useDocuments', () => ({
 
 vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
   __esModule: true,
-  default: ({ document }) => (
+  default: () => (
     <button type="button" data-test="document-preview-button">
       Preview document
     </button>

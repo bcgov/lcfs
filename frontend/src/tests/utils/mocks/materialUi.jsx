@@ -1,14 +1,23 @@
 /**
  * Shared Material-UI component mocks for BC Form testing
  */
-import React from 'react'
+
 import { vi } from 'vitest'
 
 /**
  * Material-UI component mocks used by BC Form components
  */
 const createMaterialUiMocks = () => ({
-  TextField: ({ id, label, error, helperText, onChange, value, disabled, ...props }) => (
+  TextField: ({
+    id,
+    label,
+    error,
+    helperText,
+    onChange,
+    value,
+    disabled,
+    ...props
+  }) => (
     <div data-test="text-field">
       {label && <label htmlFor={id}>{label}</label>}
       <input
@@ -21,7 +30,11 @@ const createMaterialUiMocks = () => ({
         aria-describedby={error ? `${id}-error` : undefined}
         {...props}
       />
-      {helperText && <div data-test={`helper-text-${id}`} id={`${id}-error`}>{helperText}</div>}
+      {helperText && (
+        <div data-test={`helper-text-${id}`} id={`${id}-error`}>
+          {helperText}
+        </div>
+      )}
     </div>
   ),
 
@@ -32,11 +45,7 @@ const createMaterialUiMocks = () => ({
   ),
 
   InputLabel: ({ htmlFor, children, ...props }) => (
-    <label 
-      htmlFor={htmlFor} 
-      data-test={`label-${htmlFor}`}
-      {...props}
-    >
+    <label htmlFor={htmlFor} data-test={`label-${htmlFor}`} {...props}>
       {children}
     </label>
   ),
@@ -90,7 +99,12 @@ const createMaterialUiMocks = () => ({
   ),
 
   RadioGroup: ({ value, children, ...props }) => (
-    <div data-test="radio-group" data-value={value} role="radiogroup" {...props}>
+    <div
+      data-test="radio-group"
+      data-value={value}
+      role="radiogroup"
+      {...props}
+    >
       {children}
     </div>
   ),

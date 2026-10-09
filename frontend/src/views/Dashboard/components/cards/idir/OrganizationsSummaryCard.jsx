@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
@@ -38,12 +38,32 @@ const OrganizationsSummaryCard = () => {
     [organizations]
   )
 
+  const allOrganizationsLabel = t('txn:allOrganizations')
+
   const [formattedOrgs, setFormattedOrgs] = useState([])
   const [selectedOrganization, setSelectedOrganization] = useState({
-    name: t('txn:allOrganizations'),
+    name: allOrganizationsLabel,
     totalBalance: 0,
     reservedBalance: 0
   })
+
+  const setAllOrgSelected = useCallback(
+    (orgs = organizationList) => {
+      const totalBalance = orgs.reduce((total, org) => {
+        return total + (org.totalBalance || 0)
+      }, 0)
+      const reservedBalance = orgs.reduce((total, org) => {
+        return total + Math.abs(org.reservedBalance || 0)
+      }, 0)
+
+      setSelectedOrganization({
+        name: allOrganizationsLabel,
+        totalBalance,
+        reservedBalance
+      })
+    },
+    [organizationList, allOrganizationsLabel]
+  )
 
   useEffect(() => {
     if (!isLoading) {
@@ -56,7 +76,7 @@ const OrganizationsSummaryCard = () => {
       setFormattedOrgs(formattedOrgs)
       setAllOrgSelected(organizationList)
     }
-  }, [organizationList, isLoading])
+  }, [organizationList, isLoading, setAllOrgSelected])
 
   const onSelectOrganization = (event) => {
     const orgName = event.target.value
@@ -66,27 +86,12 @@ const OrganizationsSummaryCard = () => {
       const selectedOrg = formattedOrgs.find((org) => org.name === orgName)
       setSelectedOrganization(
         selectedOrg || {
-          name: t('txn:allOrganizations'),
+          name: allOrganizationsLabel,
           totalBalance: 0,
           reservedBalance: 0
         }
       )
     }
-  }
-
-  const setAllOrgSelected = (orgs = organizationList) => {
-    const totalBalance = orgs.reduce((total, org) => {
-      return total + (org.totalBalance || 0)
-    }, 0)
-    const reservedBalance = orgs.reduce((total, org) => {
-      return total + Math.abs(org.reservedBalance || 0)
-    }, 0)
-
-    setSelectedOrganization({
-      name: t('txn:allOrganizations'),
-      totalBalance,
-      reservedBalance
-    })
   }
 
   return (

@@ -88,7 +88,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { compliancePeriod, complianceReportId } = useParams()
-  const { data: complianceReportData, isLoading: currentReportLoading } =
+  const {
+  data: complianceReportData
+} =
     useComplianceReportWithCache(complianceReportId)
   const {
     data: scheduleOverview,
@@ -374,7 +376,8 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
       reportInfo,
       wasEdited,
       canEdit,
-      currentStatus
+      currentStatus,
+      complianceReportData?.report?.organizationId
     ]
   )
 

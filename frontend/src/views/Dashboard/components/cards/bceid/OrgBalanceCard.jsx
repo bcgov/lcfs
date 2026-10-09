@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { useTranslation } from 'react-i18next'
 import Box from '@mui/material/Box'
 import Tooltip from '@mui/material/Tooltip'

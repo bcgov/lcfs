@@ -1,8 +1,8 @@
 import { Unauthorized } from '@/components/Unauthorized'
-import { screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react';
 import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
-import { BrowserRouter } from 'react-router-dom'
+import 'react-router-dom';
 import * as keycloakUtils from '@/utils/keycloak'
 
 // Mock Keycloak
@@ -209,10 +209,6 @@ describe('Unauthorized Component', () => {
       render(<Unauthorized />, [theme, router])
 
       const loginButton = screen.getByTestId('return-login-button')
-      const mockEvent = {
-        preventDefault: vi.fn()
-      }
-
       // Simulate click with preventDefault
       fireEvent.click(loginButton)
 

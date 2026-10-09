@@ -1,10 +1,17 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider , useQueryClient } from '@tanstack/react-query'
+import { MemoryRouter , useLocation, useMatches, useNavigate, useParams } from 'react-router-dom'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
+
+import { AddEditViewTransfer } from '../AddEditViewTransfer'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useRegExtOrgs } from '@/hooks/useOrganizations'
+import { useTransfer, useCreateUpdateTransfer } from '@/hooks/useTransfer'
+import { buttonClusterConfigFn } from '../buttonConfigs'
+import { TRANSFER_STATUSES } from '@/constants/statuses'
 
 // Mock all external dependencies
 vi.mock('react-i18next', () => ({
@@ -98,9 +105,13 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  default: React.forwardRef(({ children, ...props }, ref) => (
-    <div data-test="bc-alert" ref={ref} {...props}>{children}</div>
-  ))
+  default: React.forwardRef(function BCAlertMock({ children, ...props }, ref) {
+    return (
+      <div data-test="bc-alert" ref={ref} {...props}>
+        {children}
+      </div>
+    )
+  })
 }))
 
 vi.mock('@/components/BCBox', () => ({
@@ -159,15 +170,6 @@ vi.mock('../_schema', () => ({
 vi.mock('../buttonConfigs', () => ({
   buttonClusterConfigFn: vi.fn()
 }))
-
-import { AddEditViewTransfer } from '../AddEditViewTransfer'
-import { useLocation, useMatches, useNavigate, useParams } from 'react-router-dom'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useRegExtOrgs } from '@/hooks/useOrganizations'
-import { useTransfer, useCreateUpdateTransfer } from '@/hooks/useTransfer'
-import { useQueryClient } from '@tanstack/react-query'
-import { buttonClusterConfigFn } from '../buttonConfigs'
-import { TRANSFER_STATUSES } from '@/constants/statuses'
 
 const renderComponent = () => {
   const queryClient = new QueryClient({

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import 'react'
 import { screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
@@ -6,6 +6,8 @@ import { router } from '../index'
 import { useKeycloak } from '@react-keycloak/web'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
+
+// Import the mocked logout to verify calls
 
 // Mock special route components
 vi.mock('@/components/ApiDocs', () => ({
@@ -58,8 +60,8 @@ vi.mock('@/views/Organizations', () => ({
   )
 }))
 
-vi.mock('@/layouts/MainLayout', () => {
-  const { Outlet } = require('react-router-dom')
+vi.mock('@/layouts/MainLayout', async () => {
+  const { Outlet } = await import('react-router-dom')
   return {
     MainLayout: () => (
       <div data-test="main-layout">
@@ -69,8 +71,8 @@ vi.mock('@/layouts/MainLayout', () => {
   }
 })
 
-vi.mock('@/layouts/PublicLayout', () => {
-  const { Outlet } = require('react-router-dom')
+vi.mock('@/layouts/PublicLayout', async () => {
+  const { Outlet } = await import('react-router-dom')
   return {
     __esModule: true,
     default: () => (
@@ -85,9 +87,6 @@ vi.mock('@/layouts/PublicLayout', () => {
 vi.mock('@/utils/keycloak', () => ({
   logout: vi.fn()
 }))
-
-// Import the mocked logout to verify calls
-import { logout as mockLogout } from '@/utils/keycloak'
 
 // Mock authentication
 vi.mock('@react-keycloak/web')
@@ -112,13 +111,6 @@ vi.mock('@/components/Role', () => ({
 }))
 
 // Test component to track loader calls
-const LoaderTestComponent = ({ onLoaderCall }) => {
-  useEffect(() => {
-    onLoaderCall?.('loader-called')
-  }, [onLoaderCall])
-
-  return <div data-test="loader-test">Loader Test</div>
-}
 
 // Helper function to create test router
 const createTestRouter = (initialEntries = ['/']) => {
@@ -445,9 +437,6 @@ describe('Special Routes', () => {
   describe('Error Boundaries Integration', () => {
     test('should handle component loading errors gracefully', async () => {
       // Mock a component that throws an error
-      const ErrorComponent = () => {
-        throw new Error('Component failed to load')
-      }
 
       // This test would require actual error boundary setup
       // For now, we just ensure the router structure supports error boundaries

@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, act } from '@testing-library/react'
-import { createPortal } from 'react-dom'
-import { useMap, Marker, Popup, TileLayer } from 'react-leaflet'
+import 'react-dom'
+import { useMap, Marker, TileLayer } from 'react-leaflet'
 import { Control, DomEvent, DomUtil } from 'leaflet'
-import Paper from '@mui/material/Paper'
-import CircularProgress from '@mui/material/CircularProgress'
-import BCTypography from '@/components/BCTypography'
+import '@mui/material/Paper'
+import '@mui/material/CircularProgress'
+import '@/components/BCTypography'
 import {
   MapControl,
   MapBoundsHandler,
@@ -428,7 +428,7 @@ describe('MapComponents', () => {
         />
       )
 
-      expect(mockGeneratePopupContent).toHaveBeenCalledWith('coord1', mockGroupedLocations['coord1'])
+      expect(mockGeneratePopupContent).toHaveBeenCalledWith('coord1', mockGroupedLocations.coord1)
     })
 
     it('handles empty groupedLocations', () => {

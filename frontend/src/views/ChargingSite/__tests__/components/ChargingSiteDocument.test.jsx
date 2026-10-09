@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import 'react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
 import { ChargingSiteDocument } from '../../components/ChargingSiteDocument'
 vi.mock('react-router-dom', () => ({
   useParams: () => ({ siteId: '123' })
@@ -19,7 +19,7 @@ vi.mock('@/hooks/useDocuments', () => ({
 
 vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
   __esModule: true,
-  default: ({ document }) => (
+  default: () => (
     <button type="button" data-test="document-preview-button">
       Preview document
     </button>
@@ -28,7 +28,9 @@ vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
 
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   __esModule: true,
-  default: ({ open, close }) =>
+  default: ({
+  open
+}) =>
     open ? <div data-testid="document-upload-dialog">Upload Dialog</div> : null
 }))
 

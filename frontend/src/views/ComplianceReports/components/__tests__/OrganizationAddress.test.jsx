@@ -1,14 +1,16 @@
 import { test } from '@/tests/utils/fixtures'
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import * as OrganizationSnapshotHooks from '@/hooks/useOrganizationSnapshot.js'
 import {
-  addressHasPostalCode,
-  addressWithPostalCode,
   OrganizationAddress
 } from '../OrganizationAddress'
+import {
+  addressHasPostalCode,
+  addressWithPostalCode
+} from '../organizationAddressUtils'
 // Mock react-router-dom
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', () => ({
@@ -61,12 +63,21 @@ vi.mock('react-hook-form', () => ({
     getValues: mockGetValues,
     formState: { errors: {} }
   }),
-  FormProvider: ({ children, control, setValue, ...props }) => {
+  FormProvider: ({
+  children,
+  ...props
+}) => {
+delete props.control; delete props.setValue;
+
     // Create a form wrapper that properly handles submit events, but filter out non-DOM props
     const { ...domProps } = props
     return React.createElement('div', domProps, children)
   },
-  Controller: ({ render, control, name, defaultValue }) => {
+  Controller: ({
+  render,
+  name,
+  defaultValue
+}) => {
     return render({
       field: {
         onChange: vi.fn(),
@@ -129,7 +140,7 @@ describe('OrganizationAddress', () => {
     })
 
     mockGetValues.mockReturnValue(snapshotData)
-    mockHandleSubmit.mockImplementation((onSubmit, onError) => (e) => {
+    mockHandleSubmit.mockImplementation((onSubmit) => (e) => {
       if (e && e.preventDefault) e.preventDefault()
       return onSubmit(snapshotData)
     })

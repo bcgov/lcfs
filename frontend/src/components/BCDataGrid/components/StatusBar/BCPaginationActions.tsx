@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// @ts-nocheck
 import PropTypes from 'prop-types'
 import { useCallback, useState } from 'react'
 import Pagination from '@mui/material/Pagination'
@@ -12,6 +11,7 @@ import BCBox from '@/components/BCBox'
 import * as XLSX from 'xlsx'
 import { copyToClipboard } from '@/utils/clipboard'
 import type { TablePaginationActionsProps } from '@mui/material/TablePagination/TablePaginationActions'
+import type { BCGridRef } from '@/components/BCDataGrid/types'
 
 export interface BCPaginationActionsProps
   extends TablePaginationActionsProps {
@@ -19,8 +19,7 @@ export interface BCPaginationActionsProps
   enableCopyButton?: boolean
   enableExportButton?: boolean
   exportName?: string
-  gridRef?: any
-  [key: string]: any
+  gridRef?: BCGridRef
 }
 
 export function BCPaginationActions({

@@ -278,7 +278,7 @@ export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
   const handleClearFilters = useCallback(() => {
     try {
       penaltyLogGridRef.current?.clearFilters?.()
-    } catch (e) {
+    } catch {
       // no-op
     }
     setPaginationOptions({ ...initialPaginationOptions })

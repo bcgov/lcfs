@@ -5,7 +5,7 @@ import AccordionDetails from '@mui/material/AccordionDetails'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import IconButton from '@mui/material/IconButton'
 import List from '@mui/material/List'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import colors from '@/themes/base/colors'
 import Edit from '@mui/icons-material/Edit'
 import ExpandMore from '@mui/icons-material/ExpandMore'
@@ -40,11 +40,6 @@ export const ChargingSiteDocument = ({ attachments }) => {
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false)
   }
-  // Handle attachments accordion toggle
-  const handleAttachmentsAccordionChange = useCallback((event, isExpanded) => {
-    setIsAttachmentsExpanded(isExpanded)
-  }, [])
-
   const handleFileDialogOpen = useCallback(() => {
     setFileDialogOpen(true)
   }, [])

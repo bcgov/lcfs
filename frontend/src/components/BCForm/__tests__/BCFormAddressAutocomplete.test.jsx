@@ -2,13 +2,13 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
-import { cleanup, screen, waitFor, act } from '@testing-library/react'
+import { cleanup, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event'
 import { useForm, FormProvider } from 'react-hook-form'
 import {
-  addressHasPostalCode,
   BCFormAddressAutocomplete
 } from '@/components/BCForm/BCFormAddressAutocomplete'
+import { addressHasPostalCode } from '@/components/BCForm/addressHelpers'
 import { test as fixtureTest } from '@/tests/utils/fixtures'
 
 const test = (name, callback) =>
@@ -90,7 +90,7 @@ describe.sequential('BCFormAddressAutocomplete', () => {
     // Mock setTimeout and clearTimeout for tooltip functionality
     mockSetTimeout = vi
       .spyOn(global, 'setTimeout')
-      .mockImplementation((fn, delay) => {
+      .mockImplementation((fn) => {
         // Execute immediately for testing
         fn()
         return 123
@@ -112,7 +112,7 @@ describe.sequential('BCFormAddressAutocomplete', () => {
   }
 
   describe('Postal code detection', () => {
-    test('recognizes Canadian postal codes in address strings', (_fixtures) => {
+    test('recognizes Canadian postal codes in address strings', () => {
       expect(addressHasPostalCode('123 Test St, Vancouver, BC V6B 1A1')).toBe(
         true
       )
@@ -127,7 +127,7 @@ describe.sequential('BCFormAddressAutocomplete', () => {
       ).toBe(true)
     })
 
-    test('does not treat addresses without postal codes as complete', (_fixtures) => {
+    test('does not treat addresses without postal codes as complete', () => {
       expect(addressHasPostalCode('123 Test St, Vancouver, BC')).toBe(false)
       expect(addressHasPostalCode('')).toBe(false)
       expect(addressHasPostalCode(undefined)).toBe(false)
@@ -135,7 +135,10 @@ describe.sequential('BCFormAddressAutocomplete', () => {
   })
 
   const renderBCFormAddressAutocomplete = (
-    { render, query, theme, localization, router, i18n },
+    {
+  render,
+  theme
+},
     props = {},
     formDefaults = {}
   ) => {
@@ -270,13 +273,9 @@ describe.sequential('BCFormAddressAutocomplete', () => {
     })
 
     test('handles form validation errors', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       // Test with form that has validation error
       const FormWithError = () => {
         const methods = useForm({
@@ -598,13 +597,9 @@ describe.sequential('BCFormAddressAutocomplete', () => {
     })
 
     test('provides proper error announcement for screen readers', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       const FormWithError = () => {
         const methods = useForm({
           defaultValues: { testError: '' },
@@ -686,13 +681,9 @@ describe.sequential('BCFormAddressAutocomplete', () => {
 
   describe('Edge Cases and Error Handling', () => {
     test('handles undefined control prop gracefully', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       expect(() => {
         render(
           <BCFormAddressAutocomplete
@@ -723,13 +714,9 @@ describe.sequential('BCFormAddressAutocomplete', () => {
     })
 
     test('handles undefined name prop', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       expect(() => {
         render(
           <FormWrapper>
@@ -816,13 +803,9 @@ describe.sequential('BCFormAddressAutocomplete', () => {
 
   describe('PropTypes and API', () => {
     test('renders with minimal required props', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       render(
         <FormWrapper>
           {({ control }) => (

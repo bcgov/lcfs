@@ -1,22 +1,19 @@
 import BCBox from '@/components/BCBox'
 import Grid2 from '@mui/material/Grid2'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
-import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement.js'
+import '@/hooks/useAllocationAgreement.js'
 import { allocationAgreementSummaryColDef } from './_schema'
-import { useParams } from 'react-router-dom'
 
 export const AllocationAgreementSummary = ({
   data,
   status,
   isEarlyIssuance
 }) => {
-  const { complianceReportId } = useParams()
-
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )

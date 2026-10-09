@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react'
+import { forwardRef } from 'react'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, vi } from 'vitest'
@@ -15,9 +15,9 @@ vi.mock('@/hooks/useReportOpenings', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  FloatingAlert: forwardRef((props, ref) => (
-    <div ref={ref} data-test="floating-alert" {...props} />
-  ))
+  FloatingAlert: forwardRef(function FloatingAlertMock(props, ref) {
+  return <div ref={ref} data-test="floating-alert" {...props} />;
+})
 }))
 
 const useReportOpeningsMock = useReportOpenings

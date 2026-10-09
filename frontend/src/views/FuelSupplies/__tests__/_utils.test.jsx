@@ -1,14 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import {
-  processFuelSupplyRowData,
-  calculateColumnVisibility,
-  updateGridColumnsVisibility,
-  handleFuelTypeChange,
-  handleFuelCategoryChange,
-  validateFuelSupply,
-  processCellEditingComplete,
-  createGridOptions
-} from '../_utils'
+import '../_utils';
+
+// Mock uuid
 
 // Mock uuid
 vi.mock('uuid', () => ({
@@ -308,7 +301,7 @@ describe('fuelSupplyUtils', () => {
 
     it('updates column visibility when changed', () => {
       mockGridApi.getColumn.mockImplementation((colId) => ({
-        isVisible: () => (colId === 'isCanadaProduced' ? false : true)
+        isVisible: () => (colId !== 'isCanadaProduced')
       }))
 
       const columnVisibility = {

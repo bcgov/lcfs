@@ -1,6 +1,25 @@
 // @mui material components
 import Typography from '@mui/material/Typography'
 import { styled } from '@mui/material/styles'
+import type { Theme } from '@mui/material/styles'
+import type { CSSObject } from '@emotion/react'
+
+interface BCTypographyTheme {
+  palette: {
+    gradients: Record<string, { main: string; state: string }>
+    transparent: { main: string }
+    white: { main: string }
+  }
+  typography: Theme['typography'] & {
+    fontWeightLight: number
+    fontWeightRegular: number
+    fontWeightMedium: number
+    fontWeightBold: number
+  }
+  functions?: {
+    linearGradient?: (main: string, state: string) => string
+  }
+}
 
 // Define the ownerState interface for BCTypography
 interface BCTypographyOwnerState {
@@ -15,7 +34,8 @@ interface BCTypographyOwnerState {
 const BCTypographyRoot = styled(Typography, {
   shouldForwardProp: (prop) => prop !== 'ownerState'
 })<{ ownerState: BCTypographyOwnerState }>(({ theme, ownerState }) => {
-  const { palette, typography, functions = {} } = theme as any
+  const { palette, typography, functions = {} } =
+    theme as unknown as BCTypographyTheme
   const {
     color,
     textTransform,
@@ -25,14 +45,15 @@ const BCTypographyRoot = styled(Typography, {
     textGradient
   } = ownerState
 
-  const { gradients, transparent, white } = palette as any
+  const { gradients, transparent, white } = palette
   const {
     fontWeightLight,
     fontWeightRegular,
     fontWeightMedium,
     fontWeightBold
   } = typography
-  const { linearGradient } = functions as any
+  const { linearGradient } = functions
+  const paletteColors = palette as unknown as Record<string, { main: string }>
 
   // fontWeight styles
   const fontWeights = {
@@ -60,9 +81,9 @@ const BCTypographyRoot = styled(Typography, {
 
   // color value
   let colorValue =
-    color === 'inherit' || !(palette as any)[color]
+    color === 'inherit' || !paletteColors[color]
       ? 'inherit'
-      : (palette as any)[color].main
+      : paletteColors[color].main
 
   if (color === 'dark') colorValue = white.main
 
@@ -76,7 +97,7 @@ const BCTypographyRoot = styled(Typography, {
       fontWeights[fontWeight as keyof typeof fontWeights] &&
       fontWeights[fontWeight as keyof typeof fontWeights],
     ...(textGradient && gradientStyles())
-  } as any
+  } as CSSObject
 })
 
 export default BCTypographyRoot

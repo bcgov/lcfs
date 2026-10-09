@@ -21,14 +21,12 @@ import {
   PROVISION_APPROVED_FUEL_CODE,
   isFuelCodeProvision
 } from './_schema'
-import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
+import { NEW_REGULATION_YEAR } from '@/constants/common';
 import {
   calculateRenewableClaimColumnVisibility,
   applyRenewableClaimColumnVisibility
 } from '@/utils/renewableClaimUtils'
-
-export const isOtherExpectedUseMissing = (data) =>
-  data?.expectedUse === 'Other' && !data?.rationale?.trim()
+import { isOtherExpectedUseMissing } from './otherUsesHelpers'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])

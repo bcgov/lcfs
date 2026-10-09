@@ -90,7 +90,7 @@ const OrganizationList = ({
                 String(option.organizationId) === String(selectedOrg?.id)
             ) || null
           }
-          sx={({ functions: { pxToRem }, palette: { primary, light } }) => ({
+          sx={({ functions: { pxToRem } }) => ({
             width: 300,
             '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
           })}

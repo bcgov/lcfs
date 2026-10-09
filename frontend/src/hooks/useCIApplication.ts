@@ -6,8 +6,8 @@ import type { PaginationParams, QueryOptions } from './types'
 
 const QUERY_KEYS = {
   options: ['ci-application-options'],
-  list: (pagination: any) => ['ci-applications', pagination],
-  detail: (id: any) => ['ci-application', String(id)],
+  list: (pagination: unknown) => ['ci-applications', pagination],
+  detail: (id: unknown) => ['ci-application', String(id)],
   locationSearch: (params: {
     city?: string
     province?: string
@@ -16,19 +16,19 @@ const QUERY_KEYS = {
 }
 
 const updateCIApplicationListCaches = (
-  queryClient: any,
-  updatedCIApplication: any
+  queryClient: unknown,
+  updatedCIApplication: unknown
 ) => {
   if (!updatedCIApplication?.ciApplicationId) return
 
   queryClient.setQueriesData(
     { queryKey: ['ci-applications'] },
-    (current: any) => {
+    (current: unknown) => {
       if (!current?.ciApplications) return current
 
       return {
         ...current,
-        ciApplications: current.ciApplications.map((item: any) =>
+        ciApplications: current.ciApplications.map((item: unknown) =>
           item.ciApplicationId === updatedCIApplication.ciApplicationId
             ? {
                 ...item,
@@ -67,7 +67,7 @@ export const useCIApplicationStatuses = (
   const result = useCIApplicationOptions(options)
   return {
     ...result,
-    data: (result.data as any)?.statuses ?? []
+    data: (result.data as unknown)?.statuses ?? []
   }
 }
 
@@ -155,7 +155,7 @@ export const useCreateCIApplication = () => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (await client.post(apiRoutes.createCIApplication, payload)).data
     },
     onSuccess: (data) => {
@@ -173,7 +173,7 @@ export const useUpdateCIApplicationStep1 = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.put(
           apiRoutes.updateCIApplicationStep1.replace(
@@ -197,7 +197,7 @@ export const useUpdateCIApplicationStep2 = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.put(
           apiRoutes.updateCIApplicationStep2.replace(
@@ -221,7 +221,7 @@ export const useUpdateCIApplicationStep3 = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.put(
           apiRoutes.updateCIApplicationStep3.replace(
@@ -250,7 +250,7 @@ export const useUpdateCIApplicationStep4 = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.put(
           apiRoutes.updateCIApplicationStep4.replace(
@@ -274,7 +274,7 @@ export const useSubmitCIApplication = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.post(
           apiRoutes.submitCIApplication.replace(
@@ -298,7 +298,7 @@ export const useRecordCIDecision = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.post(
           apiRoutes.ciApplicationDecision.replace(
@@ -337,7 +337,7 @@ export const useAssignCIApplicationAnalyst = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (assignedAnalystId: any) => {
+    mutationFn: async (assignedAnalystId: unknown) => {
       return (
         await client.put(
           apiRoutes.assignCIApplicationAnalyst.replace(
@@ -368,7 +368,7 @@ export const useUpdateCIApplicationRiskAssessment = (
   )
 
   return useMutation({
-    mutationFn: (payload: any) => {
+    mutationFn: (payload: unknown) => {
       const request = saveQueueRef.current
         .catch(() => undefined)
         .then(async () => (await client.put(url, payload)).data)
@@ -393,7 +393,10 @@ export const useCompleteCIApplicationVerification1 = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ preliminaryRiskAssessment, priorityScore }: any) => {
+    mutationFn: async ({
+      preliminaryRiskAssessment,
+      priorityScore
+    }: Record<string, unknown>) => {
       return (
         await client.post(
           apiRoutes.completeCIApplicationVerification1.replace(
@@ -420,7 +423,7 @@ export const useCompleteCIApplicationVerification2 = (
     mutationFn: async ({
       preliminaryRiskAssessment,
       priorityScore
-    }: any = {}) => {
+    }: Record<string, unknown> = {}) => {
       return (
         await client.post(
           apiRoutes.completeCIApplicationVerification2.replace(
@@ -545,7 +548,7 @@ export const useUpdateCIApplicationGeneratedFuelCode = (
       payload
     }: {
       generatedFuelCodeId: string
-      payload: any
+      payload: unknown
     }) => {
       return (
         await client.put(

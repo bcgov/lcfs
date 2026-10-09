@@ -60,7 +60,7 @@ vi.mock('../components/utils', () => ({
 }))
 
 // Mock the location service
-let mockLocationService = {
+const mockLocationService = {
   batchProcessGeofencing: vi.fn(() => Promise.resolve({}))
 }
 

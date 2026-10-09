@@ -5,7 +5,7 @@ import Loading from '@/components/Loading.jsx'
 import { useLocation, useParams } from 'react-router-dom'
 import { EditViewComplianceReport } from '@/views/ComplianceReports/EditViewComplianceReport.jsx'
 import { useEffect } from 'react'
-import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import '@/stores/useComplianceReportStore'
 
 export const ComplianceReportViewSelector = () => {
   const { complianceReportId } = useParams()
@@ -28,17 +28,28 @@ export const ComplianceReportViewSelector = () => {
     }
   )
 
+  const requestedReportStatus = location.state?.reportStatus
+  const currentReportStatus = reportData?.report?.currentStatus.status
+  const hasReportData = Boolean(reportData)
+
   useEffect(() => {
     // if the status of the report doesn't match with the cached report data then refetch by invalidating cache
     if (
-      reportData &&
-      location.state?.reportStatus &&
-      location.state?.reportStatus !== reportData?.report?.currentStatus.status
+      hasReportData &&
+      requestedReportStatus &&
+      requestedReportStatus !== currentReportStatus
     ) {
       queryClient.invalidateQueries(['compliance-report', complianceReportId])
       refetch()
     }
-  }, [location.state, reportData?.report?.currentStatus.status])
+  }, [
+    complianceReportId,
+    currentReportStatus,
+    hasReportData,
+    queryClient,
+    refetch,
+    requestedReportStatus
+  ])
 
   if (isReportLoading || isCurrentUserLoading) {
     return <Loading />

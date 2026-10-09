@@ -53,7 +53,7 @@ export const useTransactionMutation = (
         ? 'adminadjustment-'
         : 'initiativeagreement-'
     const txnId = response.data[idField]
-    const { editRoute, viewRoute } = getTransactionRoutes(
+    const { editRoute } = getTransactionRoutes(
       transactionType,
       txnId
     )

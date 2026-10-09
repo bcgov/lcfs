@@ -122,7 +122,7 @@ export const useUpdateFolder = (
       }
       return { previous }
     },
-    onError: (_error, _variables, context: any) => {
+    onError: (_error, _variables, context: unknown) => {
       if (context?.previous) {
         queryClient.setQueryData(key, context.previous)
       }
@@ -197,7 +197,7 @@ export const useMoveDocuments = (
       }
       return { previous }
     },
-    onError: (_error, _variables, context: any) => {
+    onError: (_error, _variables, context: unknown) => {
       if (context?.previous) {
         queryClient.setQueryData(key, context.previous)
       }
@@ -254,13 +254,18 @@ export const useFolderUpload = (
             headers: { 'Content-Type': 'multipart/form-data' }
           })
           documentIds.push(response.data.documentId)
-        } catch (error: any) {
+        } catch (error: AxiosError<{
+          message?: string
+          detail?: string
+          errors?: unknown
+          reference_number?: string
+        }>) {
           await fileIntoFolder()
           // Name the file: "that file type is not allowed" is no help
           // when five were dropped at once.
           const detail =
             error?.response?.data?.detail || error?.message || 'Upload failed'
-          const failure: any = new Error(`${file.name}: ${detail}`)
+          const failure: unknown = new Error(`${file.name}: ${detail}`)
           failure.uploadedCount = documentIds.length
           throw failure
         }
@@ -303,7 +308,7 @@ export const useDeletedDocuments = (
 const useBinMutation = (
   parentType: string,
   parentID: number | string,
-  run: (client: any) => (documentId: number) => Promise<unknown>
+  run: (client: unknown) => (documentId: number) => Promise<unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()

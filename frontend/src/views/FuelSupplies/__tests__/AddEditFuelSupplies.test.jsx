@@ -175,16 +175,15 @@ vi.mock('@/hooks/useFuelSupply')
 // Mock BCGridEditor with comprehensive callback support
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
-    gridRef,
-    alertRef,
-    onGridReady,
-    rowData,
-    onCellValueChanged,
-    onCellEditingStopped,
-    onAction,
-    saveButtonProps
-  }) => {
-    const gridApi = {
+  gridRef,
+  onGridReady,
+  rowData,
+  onCellValueChanged,
+  onCellEditingStopped,
+  onAction,
+  saveButtonProps
+}) => {
+    const gridApi = React.useMemo(() => ({
       getLastDisplayedRowIndex: vi.fn(() => rowData.length - 1),
       startEditingCell: vi.fn(),
       forEachNode: vi.fn((callback) => {
@@ -201,14 +200,14 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
       autoSizeAllColumns: vi.fn(),
       getColumn: vi.fn().mockReturnValue({ isVisible: () => false }),
       setColumnsVisible: vi.fn()
-    }
+    }), [rowData])
 
     // Set up gridRef if provided
     React.useEffect(() => {
       if (gridRef) {
         gridRef.current = { api: gridApi }
       }
-    }, [gridRef])
+    }, [gridRef, gridApi])
 
     // Trigger onGridReady if provided
     React.useEffect(() => {
@@ -217,7 +216,7 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
           onGridReady({ api: gridApi })
         }, 0)
       }
-    }, [onGridReady])
+    }, [onGridReady, gridApi])
 
     return (
       <div data-test="bc-grid-editor">
@@ -596,12 +595,6 @@ describe('AddEditFuelSupplies', () => {
 
       // Mock a case where old and new values are the same
       const gridEditor = screen.getByTestId('bc-grid-editor')
-      const mockParams = {
-        oldValue: 'same',
-        newValue: 'same',
-        colDef: { field: 'quantity' },
-        node: { data: { quantity: 100 }, updateData: vi.fn() }
-      }
 
       // This would be handled internally by onCellEditingStopped
       await act(async () => {

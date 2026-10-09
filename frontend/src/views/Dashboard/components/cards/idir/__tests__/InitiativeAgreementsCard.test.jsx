@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { screen, fireEvent } from '@testing-library/react'
 import { vi, describe, expect, beforeEach } from 'vitest'
 import { InitiativeAgreementsCard } from '../InitiativeAgreementsCard'

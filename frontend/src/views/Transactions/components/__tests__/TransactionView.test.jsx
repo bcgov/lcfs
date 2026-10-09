@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react';
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { TransactionView } from '../TransactionView'
@@ -29,7 +29,7 @@ vi.mock('@/hooks/useDocuments.js', () => ({
 
 vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
   __esModule: true,
-  default: ({ document }) => (
+  default: () => (
     <button type="button" data-test="document-preview-button">
       Preview document
     </button>

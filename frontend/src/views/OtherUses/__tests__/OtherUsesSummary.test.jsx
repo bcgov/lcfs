@@ -15,19 +15,17 @@ const it = (name, fn) =>
 // Mock BCGridViewer with comprehensive props capture
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-    gridKey,
-    columnDefs,
-    queryData,
-    dataKey,
-    defaultColDef,
-    suppressPagination,
-    paginationOptions,
-    onPaginationChange,
-    getRowId,
-    autoSizeStrategy,
-    enableCellTextSelection,
-    enablePageCaching
-  }) => (
+  gridKey,
+  queryData,
+  dataKey,
+  defaultColDef,
+  suppressPagination,
+  onPaginationChange,
+  getRowId,
+  autoSizeStrategy,
+  enableCellTextSelection,
+  enablePageCaching
+}) => (
     <div data-test="bc-grid-viewer">
       <div data-test="grid-key">{gridKey}</div>
       <div data-test="data-key">{dataKey}</div>

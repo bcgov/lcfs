@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
-import React, { act } from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import 'react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 
 import ComplianceReportSummary from '../ComplianceReportSummary'
 import {
@@ -25,12 +25,12 @@ vi.mock('react-i18next', () => ({
 
 // Mock schema columns that require data access
 vi.mock('../_schema', () => ({
-  renewableFuelColumns: (t, data, canEdit, year) => [
+  renewableFuelColumns: () => [
     { field: 'line', headerName: 'Line' },
     { field: 'gasoline', headerName: 'Gasoline' },
     { field: 'diesel', headerName: 'Diesel' }
   ],
-  lowCarbonColumns: (t) => [
+  lowCarbonColumns: () => [
     { field: 'line', headerName: 'Line' },
     { field: 'diesel', headerName: 'Diesel' }
   ],
@@ -43,14 +43,13 @@ vi.mock('../_schema', () => ({
 // Mock components with proper test attributes
 vi.mock('../SummaryTable', () => ({
   default: ({
-    onCellEditStopped,
-    data,
-    useParenthesis,
-    title,
-    columns,
-    width,
-    ...props
-  }) => {
+  onCellEditStopped,
+  data,
+  title,
+  ...props
+}) => {
+delete props.useParenthesis; delete props.columns; delete props.width;
+
     // Filter out non-DOM props
     const { 'data-test': dataTest, ...domProps } = props
     const filteredProps = Object.keys(domProps).reduce((acc, key) => {
@@ -117,16 +116,14 @@ vi.mock('@/components/BCButton', () => ({
   default: ({
     children,
     'data-test': dataTest,
+    id,
     disabled,
     onClick,
     startIcon,
     variant,
     color,
-    size,
-    ...props
+    size
   }) => {
-    // Filter out React-specific props that shouldn't go to DOM
-    const { id, ...domProps } = props
     return (
       <button
         id={id}
@@ -201,11 +198,12 @@ vi.mock('@mui/material/Checkbox', () => ({
 }))
 
 vi.mock('@mui/material/Box', () => ({
-    default: ({ children, sx, ...props }) => (
-    <div data-test="box" {...props}>
+    default: ({
+  children,
+  ...props
+}) => { delete props.sx; return <div data-test="box" {...props}>
       {children}
-    </div>
-  )
+    </div>; }
 }))
 
 vi.mock('@mui/material/TextField', () => ({

@@ -1,4 +1,4 @@
-import { screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { screen, fireEvent, act } from '@testing-library/react'
 import OrganizationsSummaryCard from '../OrganizationsSummaryCard'
 import { vi, describe, expect, beforeEach } from 'vitest'
 import { useOrganizationNames } from '@/hooks/useOrganizations'

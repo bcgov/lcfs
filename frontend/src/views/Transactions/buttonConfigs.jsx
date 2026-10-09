@@ -42,7 +42,6 @@ const redOutlinedButton = (label, startIcon) => ({
 export const buttonClusterConfigFn = ({
   transactionId,
   transactionType,
-  methods,
   hasRoles,
   t,
   setModalData,

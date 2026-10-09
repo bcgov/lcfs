@@ -89,7 +89,9 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock Role component
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => (
+  Role: ({
+  children
+}) => (
     <div data-testid="role-wrapper">{children}</div>
   )
 }))

@@ -2,13 +2,24 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import {
+  GeofencingStatus,
+  OverlapSummary,
+  LoadingState,
+  ErrorState,
+  NoDataState
+} from '../StatusComponent'
+
 // Mock external components
 vi.mock('@/components/BCButton', () => ({
   default: ({ children, ...rest }) => <button {...rest}>{children}</button>
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, gutterBottom, ...rest }) => <div {...rest}>{children}</div>
+  default: ({
+  children,
+  ...rest
+}) => { delete rest.gutterBottom; return <div {...rest}>{children}</div>; }
 }))
 
 vi.mock('@mui/material/Alert', () => ({
@@ -24,14 +35,6 @@ vi.mock('@mui/material/CircularProgress', () => ({
     <div data-test="progress" data-size={size} />
   )
 }))
-
-import {
-  GeofencingStatus,
-  OverlapSummary,
-  LoadingState,
-  ErrorState,
-  NoDataState
-} from '../StatusComponent'
 
 describe('StatusComponent', () => {
   beforeEach(() => {

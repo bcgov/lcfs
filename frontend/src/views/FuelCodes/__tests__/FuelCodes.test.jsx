@@ -1,11 +1,13 @@
-import React from 'react'
+import 'react'
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
-import { fireEvent, screen, waitFor, act } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { FuelCodes } from '@/views/FuelCodes'
-import { formatTransportModeDistances } from '@/views/FuelCodes/_schema'
+import { formatTransportModeDistances } from '../fuelCodeGridUtils'
 import { roles } from '@/constants/roles'
 import { test } from '@/tests/utils/fixtures'
 import { ROUTES } from '@/routes/routes'
+
+import '@/views/FuelCodes/FuelCodes.jsx'
 
 let render
 const fixtureOptions = undefined
@@ -17,7 +19,7 @@ const it = (name, fn) =>
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options) => {
+    t: (key) => {
       const translations = {
         FuelCodes: 'Fuel codes',
         'fuelCode:fuelCodes': 'Fuel codes',
@@ -61,7 +63,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: ({ gridRef, columnDefs, queryData, dataKey, className }) => (
+  BCGridViewer: ({ dataKey, className }) => (
     <div
       data-test="bc-grid-container"
       className={className || 'ag-theme-material'}
@@ -124,27 +126,14 @@ vi.mock('@/hooks/useFuelCode', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, jsx, ...props }) => <div {...props}>{children}</div>
+  default: ({ children, ...props }) => {
+    delete props.jsx
+    return <div {...props}>{children}</div>
+  }
 }))
 
-import { FuelCodes as FuelCodesComponent } from '@/views/FuelCodes/FuelCodes.jsx'
-
-const createMockGridRef = (filterModel = {}, columnState = []) => ({
-  current: {
-    api: {
-      getFilterModel: vi.fn(() => filterModel),
-      clearFilters: vi.fn(),
-      getColumnState: vi.fn(() => columnState)
-    },
-    clearFilters: vi.fn()
-  }
-})
-
 describe('FuelCodes Component Tests', () => {
-  let mockGridRef
-
   beforeEach(() => {
-    mockGridRef = createMockGridRef()
     mockDownloadMutate = vi.fn().mockResolvedValue(undefined)
     mockLocationState.state = null
     vi.clearAllMocks()
@@ -450,14 +439,6 @@ describe('FuelCodes Component Tests', () => {
     })
 
     it('should handle export payload with filters', async () => {
-      const mockFilterModel = {
-        name: {
-          filterType: 'text',
-          type: 'contains',
-          filter: 'test'
-        }
-      }
-
       render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 

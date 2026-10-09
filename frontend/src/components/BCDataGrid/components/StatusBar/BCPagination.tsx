@@ -4,6 +4,7 @@ import TablePagination from '@mui/material/TablePagination'
 import ArrowDropDown from '@mui/icons-material/ArrowDropDown'
 import { BCPaginationActions } from './BCPaginationActions'
 import type { ChangeEventHandler } from 'react'
+import type { BCGridRef } from '@/components/BCDataGrid/types'
 
 export interface BCPaginationProps {
   total?: number
@@ -15,7 +16,7 @@ export interface BCPaginationProps {
   enableCopyButton?: boolean
   enableExportButton?: boolean
   exportName?: string
-  gridRef?: any
+  gridRef?: BCGridRef
   rowsPerPageOptions?: number[]
 }
 

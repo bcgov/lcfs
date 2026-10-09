@@ -1,16 +1,36 @@
+import type { QueryOptions } from './types'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useApiService } from '@/services/useApiService'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useState, useCallback, useMemo, useEffect } from 'react'
 
+interface CommentRecord extends Record<string, unknown> {
+  internalCommentId: number
+  comment: string
+  isOptimistic?: boolean
+}
+interface CommentOptions extends QueryOptions<CommentRecord[]> {
+  autoFetch?: boolean
+  optimisticUpdates?: boolean
+  sortOrder?: 'asc' | 'desc'
+  commentMode?: 'internal-only' | 'dual'
+}
+interface EditComment {
+  commentId: number | string
+  commentText: string
+  visibility?: string
+  newFiles?: File[]
+  removedDocumentIds?: (number | string)[]
+}
+
 const DEFAULT_STALE_TIME = 5 * 60 * 1000
 const DEFAULT_CACHE_TIME = 15 * 60 * 1000
 
 export const useComments = (
-  entityType: any,
-  entityId: any,
-  options: Record<string, any> = {}
+  entityType: string,
+  entityId: number | string,
+  options: CommentOptions = {}
 ) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
@@ -23,7 +43,7 @@ export const useComments = (
   // Attachments live on the comment via parent_type "internal_comment" in the
   // shared document API; upload one staged file against a known comment id.
   const uploadAttachment = useCallback(
-    async (commentId: any, file: File) => {
+    async (commentId: number | string, file: File) => {
       const formData = new FormData()
       formData.append('file', file)
       formData.append('filename', file.name)
@@ -49,7 +69,7 @@ export const useComments = (
 
   const [sortOrder, setSortOrder] = useState(initialSortOrder)
 
-  const handleSortOrderChange = useCallback((newSortOrder: any) => {
+  const handleSortOrderChange = useCallback((newSortOrder: 'asc' | 'desc') => {
     setSortOrder(newSortOrder)
   }, [])
 
@@ -84,7 +104,7 @@ export const useComments = (
   }, [isDualMode, isGov, visibility])
 
   const handleVisibilityChange = useCallback(
-    (newVisibility: any) => {
+    (newVisibility: string) => {
       // BCeID users cannot switch to Internal
       if (!isGov && newVisibility === 'Internal') return
       setVisibility(newVisibility)
@@ -140,7 +160,9 @@ export const useComments = (
   })
 
   const addCommentMutation = useMutation({
-    mutationFn: async (variables: any) => {
+    mutationFn: async (
+      variables: string | { commentText: string; files?: File[] }
+    ) => {
       // Callers may pass a bare comment string (legacy) or
       // { commentText, files } so staged attachments are uploaded after the
       // comment is created and has an id.
@@ -193,7 +215,7 @@ export const useComments = (
         'internal-comments',
         entityType,
         entityId
-      ]) as any
+      ]) as CommentRecord[] | undefined
 
       if (previousComments) {
         const optimisticComment = {
@@ -230,16 +252,16 @@ export const useComments = (
     onSuccess: (newComment) => {
       queryClient.setQueryData(
         ['internal-comments', entityType, entityId],
-        (oldData: any) => {
+        (oldData: CommentRecord[] | undefined) => {
           if (!oldData) return [newComment]
 
           const realComments = oldData.filter(
-            (comment: any) => !comment.isOptimistic
+            (comment: CommentRecord) => !comment.isOptimistic
           )
 
           if (sortOrder === 'desc') {
             const insertIndex = realComments.findIndex(
-              (comment: any) =>
+              (comment: CommentRecord) =>
                 newComment.internalCommentId > comment.internalCommentId
             )
             if (insertIndex === -1) {
@@ -253,7 +275,7 @@ export const useComments = (
             }
           } else {
             const insertIndex = realComments.findIndex(
-              (comment: any) =>
+              (comment: CommentRecord) =>
                 newComment.internalCommentId < comment.internalCommentId
             )
             if (insertIndex === -1) {
@@ -285,12 +307,12 @@ export const useComments = (
 
   const editCommentMutation = useMutation({
     mutationFn: async ({
-      commentId: commentId,
-      commentText: commentText,
+      commentId,
+      commentText,
       visibility: editVisibility,
       newFiles = [],
       removedDocumentIds = []
-    }: any) => {
+    }: EditComment) => {
       if (!commentId) {
         throw new Error('Comment ID is required for editing')
       }
@@ -298,7 +320,7 @@ export const useComments = (
         throw new Error('Comment text is required')
       }
 
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         comment: commentText.trim()
       }
       if (typeof editVisibility === 'string') {
@@ -337,20 +359,21 @@ export const useComments = (
         'internal-comments',
         entityType,
         entityId
-      ]) as any
+      ]) as CommentRecord[] | undefined
 
       if (previousComments) {
-        const updatedComments = previousComments.map((comment: any) =>
-          comment.internalCommentId === commentId
-            ? {
-                ...comment,
-                comment: commentText.trim(),
-                ...(typeof editVisibility === 'string'
-                  ? { visibility: editVisibility }
-                  : {}),
-                isOptimistic: true
-              }
-            : comment
+        const updatedComments = previousComments.map(
+          (comment: CommentRecord) =>
+            comment.internalCommentId === commentId
+              ? {
+                  ...comment,
+                  comment: commentText.trim(),
+                  ...(typeof editVisibility === 'string'
+                    ? { visibility: editVisibility }
+                    : {}),
+                  isOptimistic: true
+                }
+              : comment
         )
 
         queryClient.setQueryData(
@@ -372,8 +395,8 @@ export const useComments = (
     onSuccess: (updatedComment) => {
       queryClient.setQueryData(
         ['internal-comments', entityType, entityId],
-        (oldData: any) =>
-          oldData?.map((comment: any) =>
+        (oldData: CommentRecord[] | undefined) =>
+          oldData?.map((comment: CommentRecord) =>
             comment.internalCommentId === updatedComment.internalCommentId
               ? { ...updatedComment, isOptimistic: false }
               : comment
@@ -388,7 +411,7 @@ export const useComments = (
   })
 
   const deleteCommentMutation = useMutation({
-    mutationFn: async (commentId: any) => {
+    mutationFn: async (commentId: number | string) => {
       if (!commentId) {
         throw new Error('Comment ID is required for deletion')
       }
@@ -398,7 +421,7 @@ export const useComments = (
       )
       return { commentId, response: response.data }
     },
-    onMutate: async (commentId: any) => {
+    onMutate: async (commentId: number | string) => {
       if (!optimisticUpdates) return
 
       await queryClient.cancelQueries({
@@ -409,11 +432,11 @@ export const useComments = (
         'internal-comments',
         entityType,
         entityId
-      ]) as any
+      ]) as CommentRecord[] | undefined
 
       if (previousComments) {
         const filteredComments = previousComments.filter(
-          (comment: any) => comment.internalCommentId !== commentId
+          (comment: CommentRecord) => comment.internalCommentId !== commentId
         )
 
         queryClient.setQueryData(
@@ -435,9 +458,9 @@ export const useComments = (
     onSuccess: ({ commentId }) => {
       queryClient.setQueryData(
         ['internal-comments', entityType, entityId],
-        (oldData: any) =>
+        (oldData: CommentRecord[] | undefined) =>
           oldData?.filter(
-            (comment: any) => comment.internalCommentId !== commentId
+            (comment: CommentRecord) => comment.internalCommentId !== commentId
           ) || []
       )
     },
@@ -448,7 +471,7 @@ export const useComments = (
     }
   })
 
-  const handleCommentInputChange = useCallback((value: any) => {
+  const handleCommentInputChange = useCallback((value: string) => {
     setCommentInput(value)
   }, [])
 
@@ -476,7 +499,7 @@ export const useComments = (
       visibility: editVisibility,
       newFiles = [],
       removedDocumentIds = []
-    }: any) => {
+    }: EditComment) => {
       return editCommentMutation.mutateAsync({
         commentId,
         commentText,
@@ -490,7 +513,11 @@ export const useComments = (
 
   // Download an attachment that belongs to a saved comment.
   const downloadCommentAttachment = useCallback(
-    async (commentId: any, documentId: any, filename?: string) => {
+    async (
+      commentId: number | string,
+      documentId: unknown,
+      filename?: string
+    ) => {
       const response = await apiService.get(
         `/documents/internal_comment/${commentId}/${documentId}`,
         { responseType: 'blob' }
@@ -508,7 +535,7 @@ export const useComments = (
   )
 
   const handleDeleteComment = useCallback(
-    (commentId: any) => {
+    (commentId: number | string) => {
       return deleteCommentMutation.mutateAsync(commentId)
     },
     [deleteCommentMutation]
@@ -533,7 +560,7 @@ export const useComments = (
 
   const sortedComments = useMemo(() => {
     const comments = commentsQuery.data || []
-    return [...comments].sort((a: any, b: any) =>
+    return [...comments].sort((a: CommentRecord, b: CommentRecord) =>
       sortOrder === 'desc'
         ? b.internalCommentId - a.internalCommentId
         : a.internalCommentId - b.internalCommentId

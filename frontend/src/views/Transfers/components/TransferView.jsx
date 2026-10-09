@@ -19,7 +19,6 @@ import { Comments } from '@/views/Transfers/components'
 import { CommentList } from '@/views/Transfers/components/CommentList'
 
 export const TransferView = ({
-  transferId,
   editorMode,
   transferData,
   categoryOverride

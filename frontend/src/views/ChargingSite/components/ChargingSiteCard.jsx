@@ -30,7 +30,7 @@ export const ChargingSiteCard = ({
   const canEdit =
     !historyMode &&
     hasRoles(roles.supplier) &&
-    data.status.status != 'Submitted'
+    data.status.status !== 'Submitted'
 
   const handleEditClick = useCallback(() => {
     setIsEditMode(true)

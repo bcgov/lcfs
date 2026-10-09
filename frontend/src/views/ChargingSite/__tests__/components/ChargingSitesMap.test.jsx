@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { describe, expect, vi } from 'vitest'
 import ChargingSitesMap from '../../components/ChargingSitesMap'
 import { test as fixtureTest } from '@/tests/utils/fixtures'

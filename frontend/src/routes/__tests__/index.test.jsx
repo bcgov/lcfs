@@ -1,4 +1,3 @@
-import React from 'react'
 import { screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
@@ -7,9 +6,11 @@ import { useKeycloak } from '@react-keycloak/web'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
 
+// Import the mocked logout to verify calls
+
 // Simplified mocks but keep Outlet for routing functionality
-vi.mock('@/layouts/MainLayout', () => {
-  const { Outlet } = require('react-router-dom')
+vi.mock('@/layouts/MainLayout', async () => {
+  const { Outlet } = await import('react-router-dom')
   return {
     MainLayout: () => (
       <div data-test="main-layout">
@@ -19,8 +20,8 @@ vi.mock('@/layouts/MainLayout', () => {
   }
 })
 
-vi.mock('@/layouts/PublicLayout', () => {
-  const { Outlet } = require('react-router-dom')
+vi.mock('@/layouts/PublicLayout', async () => {
+  const { Outlet } = await import('react-router-dom')
   return {
     __esModule: true,
     default: () => (
@@ -206,9 +207,6 @@ vi.mock('@/utils/keycloak', () => ({
   logout: vi.fn()
 }))
 
-// Import the mocked logout to verify calls
-import { logout as mockLogout } from '@/utils/keycloak'
-
 // Mock authorization context and any role-related hooks
 vi.mock('@/contexts/AuthorizationContext', () => ({
   useAuthorization: () => ({
@@ -261,7 +259,7 @@ vi.mock('@/components/RequireAuth', () => ({
 
 // Mock Role component
 vi.mock('@/components/Role', () => ({
-  Role: ({ allowedRoles, children }) => {
+  Role: ({ children }) => {
     return <div data-test="role-wrapper">{children}</div>
   }
 }))

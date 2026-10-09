@@ -9,11 +9,12 @@ import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import Tooltip from '@mui/material/Tooltip'
 import type { ReactNode } from 'react'
+import type { GridApi } from 'ag-grid-community'
 
 export interface ActionsRendererProps {
-  api: any
+  api: GridApi
   node: { rowIndex: number | null }
-  data: { validationStatus?: string; [key: string]: any }
+  data: { validationStatus?: string; [key: string]: unknown }
   enableDuplicate?: boolean
   enableEdit?: boolean
   enableDelete?: boolean

@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { screen } from '@testing-library/react'
 import { beforeEach, describe, expect, vi } from 'vitest'
 import { FuelCodeDetail } from '../FuelCodeDetail'

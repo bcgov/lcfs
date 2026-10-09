@@ -7,17 +7,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useUser, useUserActivities } from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
-import { phoneNumberFormatter } from '@/utils/formatters'
-import {
-  LinkRenderer,
-  RoleSpanRenderer,
-  StatusRenderer
-} from '@/utils/grid/cellRenderers'
+import '@/utils/formatters'
+import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import {
   defaultSortModel,
   userActivityColDefs
 } from '@/views/Admin/AdminMenu/components/_schema'
-import { apiRoutes } from '@/constants/routes'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { roles } from '@/constants/roles'
 import { useOrganizationUser } from '@/hooks/useOrganization'
@@ -51,9 +46,7 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
   const navigate = useNavigate()
   const { data: currentUser, hasRoles } = useCurrentUser()
 
-  const { data, isLoading, isLoadingError, isError, error, refetch } = hasRoles(
-    roles.supplier
-  )
+  const { data, isLoading, isError, error, refetch } = hasRoles(roles.supplier)
     ? // eslint-disable-next-line react-hooks/rules-of-hooks
       useOrganizationUser(
         orgID || currentUser?.organization.organizationId,
@@ -63,7 +56,6 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
       useUser(parseInt(userID))
 
   const canEdit = hasRoles(roles.administrator) || hasRoles(roles.manage_users)
-  const apiEndpoint = apiRoutes.getUserActivities.replace(':userID', userID)
   const gridKey = `user-activity-grid-${userID}`
 
   // Use the user activities hook
@@ -113,7 +105,7 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
     setIsEditMode(true)
   }, [])
 
-  const handleNavigation = () => {
+  const handleNavigation = useCallback(() => {
     const statusMessage = {
       state: {
         message: t('admin:createSuccessMessage'),
@@ -127,7 +119,7 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
     } else {
       navigate(ROUTES.ADMIN.USERS.LIST, statusMessage)
     }
-  }
+  }, [t, hasRoles, navigate, orgID])
   const handleCancelEdit = useCallback(() => {
     if (addMode) {
       handleNavigation()
@@ -135,7 +127,7 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
       setIsEditMode(false)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }, [])
+  }, [addMode, handleNavigation])
 
   const handleSaveSuccess = useCallback(() => {
     if (addMode) {
@@ -149,7 +141,7 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
       refetch()
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }, [])
+  }, [addMode, handleNavigation, refetch, t])
 
   useEffect(() => {
     if (isError) {

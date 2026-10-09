@@ -6,7 +6,7 @@ import { useTheme } from '@mui/material/styles'
 import { useParams } from 'react-router-dom'
 
 import BCBox from '@/components/BCBox'
-import BCTypography from '@/components/BCTypography'
+import '@/components/BCTypography';
 import Loading from '@/components/Loading'
 import BCAlert from '@/components/BCAlert'
 
@@ -27,6 +27,10 @@ import {
   useSparklineOption,
   useStackedBarOption
 } from '../_charts'
+import {
+  buildAutomaticPenaltyRows,
+  processSparklineData
+} from './penaltyLogHelpers'
 import {
   MetricCardsSection,
   PenaltySummaryTable,
@@ -99,78 +103,6 @@ const processPenaltyTotals = (rawTotals) => {
   }
 }
 
-// Helper function to process discretionary sparkline data
-const processDiscretionaryData = (rawPenaltyLogs, yearLabels) => {
-  const sums = new Map()
-  rawPenaltyLogs.forEach((entry) => {
-    const key = normalizeYear(entry?.complianceYear)
-    const amount = Number(entry?.penaltyAmount ?? 0)
-    sums.set(key, (sums.get(key) ?? 0) + amount)
-  })
-
-  return yearLabels.map((year) => sums.get(year) ?? 0)
-}
-
-export const processSparklineData = (
-  rawPenaltyLogs,
-  yearLabels,
-  yearlyPenalties
-) => {
-  const discretionary = processDiscretionaryData(rawPenaltyLogs, yearLabels)
-  const automatic = yearlyPenalties.map((item) => item.totalAutomatic)
-  return {
-    total: automatic.map((amount, index) => amount + discretionary[index]),
-    automatic,
-    discretionary
-  }
-}
-
-const defaultTranslate = (key) => key
-
-export const buildAutomaticPenaltyRows = (
-  yearlyPenalties,
-  t = defaultTranslate
-) =>
-  yearlyPenalties.flatMap((item) => {
-    const dueDate =
-      item.reportStatus === 'Assessed' && item.assessedDate
-        ? String(item.assessedDate).split('T')[0]
-        : ''
-    const rows = []
-    const autoRenewable = Number(item.autoRenewable ?? 0)
-    const autoLowCarbon = Number(item.autoLowCarbon ?? 0)
-
-    if (autoRenewable > 0) {
-      rows.push({
-        id: `automatic-renewable-${item.compliancePeriodId}`,
-        penaltyLogId: `automatic-renewable-${item.compliancePeriodId}`,
-        complianceYear: item.complianceYear,
-        description: t('org:penaltyLog.automaticDescriptions.renewable'),
-        penaltyAmount: autoRenewable,
-        dueDate,
-        invoiceSent: item.renewableInvoiceSent ?? null,
-        paymentReceived: item.renewablePaymentReceived ?? null,
-        source: 'automatic'
-      })
-    }
-
-    if (autoLowCarbon > 0) {
-      rows.push({
-        id: `automatic-low-carbon-${item.compliancePeriodId}`,
-        penaltyLogId: `automatic-low-carbon-${item.compliancePeriodId}`,
-        complianceYear: item.complianceYear,
-        description: t('org:penaltyLog.automaticDescriptions.lowCarbon'),
-        penaltyAmount: autoLowCarbon,
-        dueDate,
-        invoiceSent: item.lowCarbonInvoiceSent ?? null,
-        paymentReceived: item.lowCarbonPaymentReceived ?? null,
-        source: 'automatic'
-      })
-    }
-
-    return rows
-  })
-
 export const PenaltyLog = () => {
   const { t } = useTranslation(['org'])
   const theme = useTheme()
@@ -186,8 +118,14 @@ export const PenaltyLog = () => {
     error: analyticsError
   } = useOrganizationPenaltyAnalytics(organizationId)
 
-  const rawYearlyPenalties = penaltyAnalytics?.yearlyPenalties ?? []
-  const rawPenaltyLogs = penaltyAnalytics?.penaltyLogs ?? []
+  const rawYearlyPenalties = useMemo(
+    () => penaltyAnalytics?.yearlyPenalties ?? [],
+    [penaltyAnalytics?.yearlyPenalties]
+  )
+  const rawPenaltyLogs = useMemo(
+    () => penaltyAnalytics?.penaltyLogs ?? [],
+    [penaltyAnalytics?.penaltyLogs]
+  )
   const rawTotals = penaltyAnalytics?.totals
 
   const allYears = useMemo(() => {
@@ -230,29 +168,29 @@ export const PenaltyLog = () => {
   const stackedBarOption = useStackedBarOption(yearlyPenalties, theme)
   const penaltyMixOption = usePenaltyMixOption(penaltyTotals, theme)
 
-  const sparklineOptions = useMemo(
-    () => ({
-      total: useSparklineOption(
-        yearLabels,
-        sparklineData.total,
-        t('org:penaltyLog.totalPenalties'),
-        { formatCurrency: true, theme }
-      ),
-      automatic: useSparklineOption(
-        yearLabels,
-        sparklineData.automatic,
-        t('org:penaltyLog.autoPenalties'),
-        { formatCurrency: true, theme }
-      ),
-      discretionary: useSparklineOption(
-        yearLabels,
-        sparklineData.discretionary,
-        t('org:penaltyLog.discretionaryPenalties'),
-        { formatCurrency: true, theme }
-      )
-    }),
-    [yearLabels, sparklineData, t, theme]
+  const totalSparklineOption = useSparklineOption(
+    yearLabels,
+    sparklineData.total,
+    t('org:penaltyLog.totalPenalties'),
+    { formatCurrency: true, theme }
   )
+  const automaticSparklineOption = useSparklineOption(
+    yearLabels,
+    sparklineData.automatic,
+    t('org:penaltyLog.autoPenalties'),
+    { formatCurrency: true, theme }
+  )
+  const discretionarySparklineOption = useSparklineOption(
+    yearLabels,
+    sparklineData.discretionary,
+    t('org:penaltyLog.discretionaryPenalties'),
+    { formatCurrency: true, theme }
+  )
+  const sparklineOptions = {
+    total: totalSparklineOption,
+    automatic: automaticSparklineOption,
+    discretionary: discretionarySparklineOption
+  }
 
   if (analyticsLoading || currentUserLoading) {
     return <Loading />

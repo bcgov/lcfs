@@ -1,35 +1,34 @@
-import {
-  faArrowLeft,
-  faFloppyDisk,
-  faTrashCan,
-  faPlus
-} from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { yupResolver } from '@hookform/resolvers/yup'
 import Box from '@mui/material/Box'
-import FormControl from '@mui/material/FormControl'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import FormLabel from '@mui/material/FormLabel'
+import '@mui/material/FormControl'
+import '@mui/material/FormControlLabel'
+import '@mui/material/FormLabel'
 import Grid from '@mui/material/Grid'
-import InputLabel from '@mui/material/InputLabel'
-import MenuItem from '@mui/material/MenuItem'
+import '@mui/material/InputLabel'
+import '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
-import Radio from '@mui/material/Radio'
-import RadioGroup from '@mui/material/RadioGroup'
-import Select from '@mui/material/Select'
-import TextField from '@mui/material/TextField'
-import Chip from '@mui/material/Chip'
-import OutlinedInput from '@mui/material/OutlinedInput'
-import Checkbox from '@mui/material/Checkbox'
-import ListItemText from '@mui/material/ListItemText'
+import '@mui/material/Radio'
+import '@mui/material/RadioGroup'
+import '@mui/material/Select'
+import '@mui/material/TextField'
+import '@mui/material/Chip'
+import '@mui/material/OutlinedInput'
+import '@mui/material/Checkbox'
+import '@mui/material/ListItemText'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { chargingEquipmentSchema } from './_formSchema'
 import { bulkChargingEquipmentColDefs, defaultBulkColDef } from './_bulkSchema'
+import {
+  createDuplicatedBulkRow,
+  isRowValid
+} from './bulkRowHelpers'
 
 import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
@@ -53,98 +52,6 @@ import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes'
 import { v4 as uuid } from 'uuid'
-
-// Row validation helper - checks all required fields, returns boolean
-export const isRowValid = (row) => {
-  return Boolean(
-    row.chargingSiteId &&
-      row.serialNumber &&
-      row.manufacturer &&
-      row.levelOfEquipmentId &&
-      row.intendedUseIds?.length > 0 &&
-      row.intendedUserIds?.length > 0
-  )
-}
-
-const parseRegistrationNumber = (value) => {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  const trimmedValue = value.trim()
-  if (!trimmedValue) {
-    return null
-  }
-
-  const match = trimmedValue.match(/^(.*?)(\d+)$/)
-  if (!match) {
-    return null
-  }
-
-  return {
-    prefix: match[1],
-    number: parseInt(match[2], 10),
-    width: match[2].length
-  }
-}
-
-export const getNextRegistrationNumber = (
-  registrationNumber,
-  existingRows = []
-) => {
-  const parsed = parseRegistrationNumber(registrationNumber)
-  if (!parsed) {
-    return ''
-  }
-
-  const { prefix, number, width } = parsed
-  let maxNumber = number
-
-  existingRows.forEach((row) => {
-    const rowParsed = parseRegistrationNumber(row?.registrationNumber)
-    if (rowParsed && rowParsed.prefix === prefix) {
-      maxNumber = Math.max(maxNumber, rowParsed.number)
-    }
-  })
-
-  const nextValue = (maxNumber + 1).toString().padStart(width, '0')
-  return `${prefix}${nextValue}`
-}
-
-export const createDuplicatedBulkRow = (
-  row = {},
-  existingRows = [],
-  idGenerator = uuid
-) => {
-  const duplicatedRow = {
-    ...row,
-    id: idGenerator(),
-    serialNumber: '',
-    status: 'Draft',
-    registrationNumber: getNextRegistrationNumber(
-      row?.registrationNumber,
-      existingRows
-    ),
-    modified: false,
-    isImportPending: false
-  }
-
-  delete duplicatedRow.chargingEquipmentId
-  delete duplicatedRow.charging_equipment_id
-  delete duplicatedRow.validationStatus
-  delete duplicatedRow.validationMsg
-  delete duplicatedRow.isNewSupplementalEntry
-  delete duplicatedRow.actionType
-
-  duplicatedRow.intendedUseIds = Array.isArray(row?.intendedUseIds)
-    ? [...row.intendedUseIds]
-    : []
-  duplicatedRow.intendedUserIds = Array.isArray(row?.intendedUserIds)
-    ? [...row.intendedUserIds]
-    : []
-
-  return duplicatedRow
-}
 
 export const AddEditChargingEquipment = ({ mode }) => {
   const { t } = useTranslation(['common', 'chargingEquipment'])
@@ -187,16 +94,15 @@ export const AddEditChargingEquipment = ({ mode }) => {
   } = useGetChargingEquipment(fseId)
 
   const {
-    statuses,
-    levels,
-    endUseTypes,
-    endUserTypes,
-    isLoading: metadataLoading
-  } = useChargingEquipmentMetadata()
+  levels,
+  endUseTypes,
+  endUserTypes,
+  isLoading: metadataLoading
+} = useChargingEquipmentMetadata()
 
   const { data: chargingSites, isLoading: sitesLoading } = useChargingSites()
   const { data: organizations, isLoading: orgsLoading } = useOrganizations()
-  const { data: hasAllocationAgreements } = useHasAllocationAgreements()
+  useHasAllocationAgreements();
 
   const createMutation = useCreateChargingEquipment()
   const updateMutation = useUpdateChargingEquipment()
@@ -205,13 +111,13 @@ export const AddEditChargingEquipment = ({ mode }) => {
   // Bulk mode state (grid-based input like Charging Site/FSE)
   const [bulkData, setBulkData] = useState([])
   const [singleRowData, setSingleRowData] = useState([])
-  const hasUnsavedRows = useMemo(
+  useMemo(
     () =>
       bulkData.some(
         (row) => !row.chargingEquipmentId && !row.charging_equipment_id
       ),
     [bulkData]
-  )
+  );
   const [gridErrors, setGridErrors] = useState({})
   const [gridWarnings, setGridWarnings] = useState({})
   const gridRef = useRef(null)
@@ -506,15 +412,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
   )
 
   // Form setup with react-hook-form and yup validation
-  const {
-    register,
-    handleSubmit,
-    formState: { errors: formErrors, isDirty },
-    watch,
-    setValue,
-    control,
-    reset
-  } = useForm({
+  const { reset } = useForm({
     resolver: yupResolver(chargingEquipmentSchema),
     defaultValues: {
       chargingSiteId: '',
@@ -553,57 +451,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
   }, [equipment, reset, isEdit])
 
   // Handle form submission
-  const onSubmit = async (formData) => {
-    try {
-      if (isEdit) {
-        await updateMutation.mutateAsync({
-          id: parseInt(fseId),
-          data: formData
-        })
-        alertRef.current?.triggerAlert({
-          message: t('chargingEquipment:updateSuccess'),
-          severity: 'success'
-        })
-      } else {
-        const result = await createMutation.mutateAsync(formData)
-        alertRef.current?.triggerAlert({
-          message: t('chargingEquipment:createSuccess'),
-          severity: 'success'
-        })
-        // Navigate to edit mode for the new equipment
-        navigate(
-          `${ROUTES.REPORTS.LIST}/fse/${result.chargingEquipmentId}/edit`
-        )
-      }
-    } catch (error) {
-      alertRef.current?.triggerAlert({
-        message: error.message || t('chargingEquipment:saveError'),
-        severity: 'error'
-      })
-    }
-  }
 
   // Handle delete
-  const handleDelete = async () => {
-    if (!window.confirm(t('chargingEquipment:deleteConfirmation'))) {
-      return
-    }
-
-    try {
-      await deleteMutation.mutateAsync(parseInt(fseId))
-      navigate(`${ROUTES.REPORTS.LIST}/fse`, {
-        state: {
-          message: t('chargingEquipment:deleteSuccess'),
-          severity: 'success'
-        }
-      })
-    } catch (error) {
-      alertRef.current?.triggerAlert({
-        message: error.message || t('chargingEquipment:deleteError'),
-        severity: 'error'
-      })
-    }
-  }
 
   // Default empty row template
   const getEmptyRow = useCallback(
@@ -830,8 +679,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
     !isEdit ||
     (equipment?.status &&
       ['Draft', 'Updated', 'Validated'].includes(equipment.status))
-
-  const canDelete = isEdit && equipment?.status === 'Draft'
 
   const containerSx = { width: '100%', px: { xs: 2, md: 3 } }
 

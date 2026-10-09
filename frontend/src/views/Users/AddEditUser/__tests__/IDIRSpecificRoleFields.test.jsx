@@ -2,6 +2,9 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
+import { IDIRSpecificRoleFields } from '../components/IDIRSpecificRoleFields'
+import { adminRoleOptions, iaRoleOptions } from '../_schema'
+
 // Local override for @/components/BCForm so that BCFormRadio propagates `disabled`
 // to its rendered inputs. This lets us assert the new behaviour where IA radio
 // inputs are NOT disabled simply because Director is selected.
@@ -57,7 +60,10 @@ vi.mock('@/components/BCForm/CustomLabel', () => ({
 }))
 
 vi.mock('react-hook-form', () => ({
-  Controller: ({ name, control, render: renderFn }) =>
+  Controller: ({
+  control,
+  render: renderFn
+}) =>
     renderFn({
       field: {
         onChange: vi.fn(),
@@ -129,9 +135,6 @@ vi.mock('@/constants/roles', () => ({
     ia_manager: 'IA Manager'
   }
 }))
-
-import { IDIRSpecificRoleFields } from '../components/IDIRSpecificRoleFields'
-import { adminRoleOptions, iaRoleOptions } from '../_schema'
 
 const t = vi.fn((key) => key)
 

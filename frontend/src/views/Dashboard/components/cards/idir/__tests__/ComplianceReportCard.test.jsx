@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { screen, fireEvent } from '@testing-library/react'
 import { vi, describe, expect, beforeEach } from 'vitest'
 import { ComplianceReportCard } from '../ComplianceReportCard'
@@ -25,12 +25,14 @@ vi.mock('react-i18next', () => ({
 // Mock components
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
   __esModule: true,
-  default: ({ title, content, disableHover, ...domProps }) => (
-    <div data-testid="bc-widget-card" {...domProps}>
+  default: ({
+  title,
+  content,
+  ...domProps
+}) => { delete domProps.disableHover; return <div data-testid="bc-widget-card" {...domProps}>
       <div data-testid="widget-title">{title}</div>
       <div data-testid="widget-content">{content}</div>
-    </div>
-  )
+    </div>; }
 }))
 
 vi.mock('@/components/Loading', () => ({

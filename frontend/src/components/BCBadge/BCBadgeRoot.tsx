@@ -18,6 +18,25 @@ export type BCBadgeColor =
 export type BCBadgeVariant = 'gradient' | 'contained' | 'outlined'
 export type BCBadgeSize = 'xs' | 'sm' | 'md' | 'lg'
 
+interface BCBadgeTheme {
+  palette: {
+    white: { main: string }
+    dark: { main: string }
+    transparent: { main: string }
+    gradients: Record<string, { main: string; state: string }>
+    badgeColors: Record<string, { background: string; text: string }>
+  }
+  typography: { size: { xxs: string; xs: string }; fontWeightBold: number }
+  borders: {
+    borderRadius: Record<string, string>
+    borderWidth: Record<number, string>
+  }
+  functions: {
+    pxToRem: (value: number) => string
+    linearGradient: (main: string, state: string) => string
+  }
+}
+
 interface BCBadgeOwnerState {
   color: BCBadgeColor
   variant: BCBadgeVariant
@@ -34,7 +53,8 @@ const defaultShadows = shadows as unknown as Record<string, string>
 const BCBadgeRoot = styled(Badge, {
   shouldForwardProp: (prop) => prop !== 'ownerState'
 })<{ ownerState: BCBadgeOwnerState }>(({ theme, ownerState }) => {
-  const { palette, typography, borders, functions } = theme as any
+  const { palette, typography, borders, functions } =
+    theme as unknown as BCBadgeTheme
   const {
     color,
     circular,
@@ -46,10 +66,10 @@ const BCBadgeRoot = styled(Badge, {
     children
   } = ownerState
 
-  const { white, dark, gradients, badgeColors, transparent } = palette as any
+  const { white, dark, gradients, badgeColors, transparent } = palette
   const { size: fontSize, fontWeightBold } = typography
-  const { borderRadius, borderWidth } = borders as any
-  const { pxToRem, linearGradient } = functions as any
+  const { borderRadius, borderWidth } = borders
+  const { pxToRem, linearGradient } = functions
 
   // padding values
   const paddings: Record<BCBadgeSize, string> = {

@@ -1,10 +1,8 @@
 import {
-  KeycloakProvider,
-  KeycloakContext
+  KeycloakProvider
 } from '@/components/KeycloakProvider'
-import { apiRoutes } from '@/constants/routes'
-import { CONFIG } from '@/constants/config'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { KeycloakContext } from '@/components/KeycloakContext'
+import { render, screen, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { useContext } from 'react'
 

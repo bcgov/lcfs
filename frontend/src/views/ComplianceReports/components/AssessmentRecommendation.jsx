@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import BCButton from '@/components/BCButton'
 import {
   useCreateAnalystAdjustment,
@@ -19,7 +19,6 @@ import Checkbox from '@mui/material/Checkbox'
 import Fade from '@mui/material/Fade'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useMemo } from 'react'
 
 export const AssessmentRecommendation = ({
   reportData,
@@ -29,7 +28,7 @@ export const AssessmentRecommendation = ({
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
-  const ref = useRef(null)
+  useRef(null);
   const { hasRoles, data: currentUser } = useCurrentUser()
 
   const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false)
@@ -67,13 +66,13 @@ export const AssessmentRecommendation = ({
   const isComplianceManager = hasRoles(roles.compliance_manager)
 
   // Determine if this is an original report (kept for backward compatibility)
-  const isOriginalReport = useMemo(() => {
+  useMemo(() => {
     return (
       reportData?.report?.version === 0 &&
       !reportData?.report?.supplementalInitiator &&
       reportData?.report?.reportingFrequency !== 'Quarterly'
     )
-  }, [reportData])
+  }, [reportData]);
 
   // Allow editing non-assessment checkbox when user is analyst or director and report is submitted
   const canEditNonAssessmentStatus = useMemo(() => {

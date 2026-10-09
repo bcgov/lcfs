@@ -14,7 +14,7 @@ const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less frequently)
 
 export const useOtherUsesOptions = (
-  params: Record<string, any>,
+  params: Record<string, unknown>,
   options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
@@ -83,7 +83,7 @@ export const useGetAllOtherUses = (
 }
 
 export const useGetAllOtherUsesList = (
-  { complianceReportId, changelog = false }: any,
+  { complianceReportId, changelog = false }: Record<string, unknown>,
   options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
@@ -124,7 +124,7 @@ export const useGetOtherUses = (
     sortOrders = [],
     filters = [],
     complianceReportId
-  }: any = {},
+  }: Record<string, unknown> = {},
   options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
@@ -163,7 +163,7 @@ export const useGetOtherUses = (
 
 export const useSaveOtherUses = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -177,7 +177,7 @@ export const useSaveOtherUses = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!data) {
         throw new Error('Other uses data is required')
       }
@@ -202,7 +202,7 @@ export const useSaveOtherUses = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as any)?.complianceReportId === complianceReportId
+                    (key as unknown)?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -219,7 +219,7 @@ export const useSaveOtherUses = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as any)?.complianceReportId === complianceReportId
+                    (key as unknown)?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -247,7 +247,7 @@ export const useSaveOtherUses = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as any)?.complianceReportId === complianceReportId
+                  (key as unknown)?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -261,7 +261,7 @@ export const useSaveOtherUses = (
 
 export const useUpdateOtherUses = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -275,7 +275,7 @@ export const useUpdateOtherUses = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!data?.id) {
         throw new Error('Other uses ID is required for update')
       }
@@ -305,7 +305,7 @@ export const useUpdateOtherUses = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as any)?.complianceReportId === complianceReportId
+                    (key as unknown)?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -321,7 +321,7 @@ export const useUpdateOtherUses = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as any)?.complianceReportId === complianceReportId
+                    (key as unknown)?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -348,7 +348,7 @@ export const useUpdateOtherUses = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as any)?.complianceReportId === complianceReportId
+                  (key as unknown)?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -362,7 +362,7 @@ export const useUpdateOtherUses = (
 
 export const useDeleteOtherUses = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -375,7 +375,7 @@ export const useDeleteOtherUses = (
   } = options
 
   return useMutation({
-    mutationFn: async (otherUsesId: any) => {
+    mutationFn: async (otherUsesId: unknown) => {
       if (!otherUsesId) {
         throw new Error('Other uses ID is required for deletion')
       }
@@ -397,7 +397,7 @@ export const useDeleteOtherUses = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as any)?.complianceReportId === complianceReportId
+                  (key as unknown)?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -423,7 +423,7 @@ export const useDeleteOtherUses = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as any)?.complianceReportId === complianceReportId
+                  (key as unknown)?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -437,7 +437,7 @@ export const useDeleteOtherUses = (
 
 export const useImportOtherUses = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -450,7 +450,7 @@ export const useImportOtherUses = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: any) => {
+    mutationFn: async ({ file, isOverwrite }: Record<string, unknown>) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -458,7 +458,7 @@ export const useImportOtherUses = (
         throw new Error('File is required for import')
       }
 
-      const path = (apiRoutes as any).importOtherUses.replace(
+      const path = (apiRoutes as unknown).importOtherUses.replace(
         ':reportID',
         complianceReportId
       )
@@ -486,7 +486,7 @@ export const useImportOtherUses = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as any)?.complianceReportId === complianceReportId
+                  (key as unknown)?.complianceReportId === complianceReportId
               ))
           )
         }

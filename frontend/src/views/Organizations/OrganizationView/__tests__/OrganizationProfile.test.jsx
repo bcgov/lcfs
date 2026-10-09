@@ -1,7 +1,21 @@
+import { omitProperties } from '@/utils/omitProperties'
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import 'react';
+import { vi, describe, expect, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
+
+// Now import the other modules
+import { OrganizationProfile } from '../OrganizationProfile.jsx'
+import * as formatters from '@/utils/formatters'
+import * as addressUtils from '@/utils/constructAddress.js'
+
+// Import the mocked functions to control their behavior
+import { isFeatureEnabled } from '@/constants/config'
+
+// ============ MOCKS MUST BE FIRST ============
+// Mock all dependencies before any imports
+
+// Mock Keycloak first - this is the root cause
 
 // ============ MOCKS MUST BE FIRST ============
 // Mock all dependencies before any imports
@@ -60,7 +74,9 @@ vi.mock('@/hooks/useOrganization', () => ({
 vi.mock(
   '@/views/Organizations/OrganizationView/components/LinkKeyManagement',
   () => ({
-    LinkKeyManagement: ({ orgData, orgID }) => (
+    LinkKeyManagement: ({
+  orgID
+}) => (
       <div data-test="link-key-management" data-org-id={orgID}>
         LinkKeyManagement Component
       </div>
@@ -70,17 +86,14 @@ vi.mock(
 
 // Also mock relative path
 vi.mock('./components/LinkKeyManagement', () => ({
-  LinkKeyManagement: ({ orgData, orgID }) => (
+  LinkKeyManagement: ({
+  orgID
+}) => (
     <div data-test="link-key-management" data-org-id={orgID}>
       LinkKeyManagement Component
     </div>
   )
 }))
-
-// Now import the other modules
-import { OrganizationProfile } from '../OrganizationProfile.jsx'
-import * as formatters from '@/utils/formatters'
-import * as addressUtils from '@/utils/constructAddress.js'
 
 // Component mocks
 vi.mock('react-i18next', () => ({
@@ -93,24 +106,8 @@ vi.mock('@/components/BCBox', () => ({
   default: ({ children, className, ...props }) => {
     // Filter out style-related props that shouldn't be passed to DOM
     const {
-      p,
-      m,
-      mt,
-      mb,
-      ml,
-      mr,
-      pt,
-      pb,
-      pl,
-      pr,
-      display,
-      flexDirection,
-      gap,
-      gridTemplateColumns,
-      columnGap,
-      rowGap,
-      ...domProps
-    } = props
+  ...domProps
+} = omitProperties(props, ["p","m","mt","mb","ml","mr","pt","pb","pl","pr","display","flexDirection","gap","gridTemplateColumns","columnGap","rowGap"])
 
     return (
       <div data-test="bc-box" className={className} {...domProps}>
@@ -123,7 +120,9 @@ vi.mock('@/components/BCBox', () => ({
 vi.mock('@/components/BCTypography', () => ({
   default: ({ children, variant, className, ...props }) => {
     // Filter out any non-standard DOM props
-    const { color, fontWeight, fontSize, ...domProps } = props
+    const {
+  ...domProps
+} = omitProperties(props, ["color","fontWeight","fontSize"])
 
     return (
       <div
@@ -184,9 +183,6 @@ vi.mock('@/constants/config', () => ({
 vi.mock('@/utils/formatters')
 vi.mock('@/utils/constructAddress')
 
-// Import the mocked functions to control their behavior
-import { isFeatureEnabled } from '@/constants/config'
-
 const mockOrgData = {
   name: 'Test Organization',
   operatingName: 'Test Org',
@@ -224,12 +220,7 @@ const mockUnregisteredOrgData = {
   }
 }
 
-const mockMinimalOrgData = {
-  name: 'Minimal Org',
-  orgStatus: {
-    status: 'unregistered'
-  }
-}
+
 
 describe('OrganizationProfile Component', () => {
   const mockHasRoles = vi.fn()
@@ -253,7 +244,7 @@ describe('OrganizationProfile Component', () => {
     })
 
     // Default hasRoles implementation
-    mockHasRoles.mockImplementation((role) => false)
+    mockHasRoles.mockImplementation(() => false)
 
     // Default feature flag behavior
     vi.mocked(isFeatureEnabled).mockReturnValue(false)
@@ -439,13 +430,13 @@ describe('OrganizationProfile Component', () => {
 
       // Use more flexible text matching for numbers that might be separated by whitespace
       expect(
-        screen.getByText((content, element) => {
+        screen.getByText((content) => {
           return content.includes('15,000')
         })
       ).toBeInTheDocument()
 
       expect(
-        screen.getByText((content, element) => {
+        screen.getByText((content) => {
           return content.includes('2,500')
         })
       ).toBeInTheDocument()

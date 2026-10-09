@@ -13,7 +13,7 @@ interface FuelExport {
   fuelExportId: number | string
   actionType?: string
   fuelType?: { fuelType?: string }
-  [key: string]: any
+  [key: string]: unknown
 }
 
 interface FuelExportSummaryProps {

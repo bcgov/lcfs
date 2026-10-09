@@ -178,13 +178,9 @@ describe.sequential('AddressAutocomplete', () => {
 
   describe('Basic Rendering', () => {
     test('renders autocomplete input with correct structure', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderAddressAutocomplete({
         render,
         theme
@@ -691,14 +687,7 @@ describe.sequential('AddressAutocomplete', () => {
       expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
 
-    test('has correct displayName', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+    test('has correct displayName', () => {
       expect(AddressAutocomplete.displayName).toBe('AddressAutocomplete')
     })
   })

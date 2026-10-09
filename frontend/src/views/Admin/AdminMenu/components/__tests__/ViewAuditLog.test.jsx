@@ -260,10 +260,10 @@ describe('ViewAuditLog Component', () => {
         rowId: '{"id":4}',
         createDate: '2023-08-04T12:00:00Z',
         createUser: 'admin',
-        oldValues: { 
+        oldValues: {
           metadata: { role: 'user', permissions: ['read'] }
         },
-        newValues: { 
+        newValues: {
           metadata: { role: 'admin', permissions: ['read', 'write'] }
         },
         delta: { metadata: { role: 'admin', permissions: ['read', 'write'] } }
@@ -273,15 +273,26 @@ describe('ViewAuditLog Component', () => {
 
     // Check that object values are formatted as JSON
     expect(screen.getByText('metadata')).toBeInTheDocument()
-    
+
     // The object should be JSON stringified - use more flexible text matching
-    expect(screen.getByText((content, element) => {
-      return content.includes('"role": "user"') && content.includes('"permissions"')
-    })).toBeInTheDocument()
-    
-    expect(screen.getByText((content, element) => {
-      return content.includes('"role": "admin"') && content.includes('"read"') && content.includes('"write"')
-    })).toBeInTheDocument()
+    expect(
+      screen.getByText((content) => {
+        return (
+          content.includes('"role": "user"') &&
+          content.includes('"permissions"')
+        )
+      })
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByText((content) => {
+        return (
+          content.includes('"role": "admin"') &&
+          content.includes('"read"') &&
+          content.includes('"write"')
+        )
+      })
+    ).toBeInTheDocument()
   })
 
   it('handles null and undefined values with formatValue function', () => {
@@ -296,12 +307,12 @@ describe('ViewAuditLog Component', () => {
         rowId: '{"id":5}',
         createDate: '2023-08-05T12:00:00Z',
         createUser: 'admin',
-        oldValues: { 
+        oldValues: {
           name: 'Test User',
           email: null,
           phone: undefined
         },
-        newValues: { 
+        newValues: {
           name: 'Test User',
           email: 'test@example.com',
           phone: '123-456-7890'

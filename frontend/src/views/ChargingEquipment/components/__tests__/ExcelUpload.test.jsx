@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { ThemeProvider } from '@mui/material/styles'

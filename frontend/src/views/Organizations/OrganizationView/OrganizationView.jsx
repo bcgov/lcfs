@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'

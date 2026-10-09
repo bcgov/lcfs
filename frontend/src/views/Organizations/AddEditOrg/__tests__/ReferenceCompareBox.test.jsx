@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, act } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, vi, beforeEach, afterAll } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
 import ReferenceCompareBox from '../ReferenceCompareBox'
@@ -102,7 +102,7 @@ describe('ReferenceCompareBox', () => {
     const firstItem = screen.getByText('Test Company Ltd.').closest('div')
 
     // Before hover, buttons should be hidden
-    let copyButtons = screen.queryAllByLabelText('Copy to clipboard')
+    const copyButtons = screen.queryAllByLabelText('Copy to clipboard')
     expect(copyButtons.length).toBeGreaterThanOrEqual(0)
 
     fireEvent.mouseEnter(firstItem)

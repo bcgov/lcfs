@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
+import { BCeIDSpecificRoleFields } from '../components/BCeIDSpecificRoleFields'
+import { bceidRoleOptions, iaSignerOption } from '../_schema'
+
 // @/components/BCForm is globally mocked in testSetup.js:
 //   BCFormCheckbox → <div data-test="{name}-checkbox-group"> with child <input> per option
 // Our mock for CustomLabel and MUI components uses `data-test` (testIdAttribute config).
@@ -14,7 +17,10 @@ vi.mock('@/components/BCForm/CustomLabel', () => ({
 }))
 
 vi.mock('react-hook-form', () => ({
-  Controller: ({ name, control, render: renderFn }) =>
+  Controller: ({
+  control,
+  render: renderFn
+}) =>
     renderFn({
       field: {
         onChange: vi.fn(),
@@ -81,9 +87,6 @@ vi.mock('@/constants/roles', () => ({
     ia_signer: 'IA Signer'
   }
 }))
-
-import { BCeIDSpecificRoleFields } from '../components/BCeIDSpecificRoleFields'
-import { bceidRoleOptions, iaSignerOption } from '../_schema'
 
 const t = vi.fn((key) => key)
 

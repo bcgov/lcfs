@@ -21,7 +21,7 @@ vi.mock('react-router-dom', async () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options) => {
+    t: (key) => {
       const translations = {
         'report:assessment': 'Assessment',
         'report:orgDetails': 'Organization Details',
@@ -145,23 +145,13 @@ vi.mock('@/components/BCButton', () => ({
     disabled,
     loading,
     'data-test': dataTest,
-    className,
-    variant,
-    color,
-    size,
-    sx,
-    startIcon,
-    ...props
+    className
   }) => (
     <button
       onClick={onClick}
       disabled={disabled || loading}
       data-test={dataTest}
       className={className}
-      variant={variant}
-      color={color}
-      sx={sx}
-      // Don't pass startIcon to DOM
     >
       {loading ? 'Loading...' : children}
     </button>

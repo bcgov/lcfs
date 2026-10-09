@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import CloseIcon from '@mui/icons-material/Close'
@@ -16,8 +16,9 @@ export const ErrorOverlay = () => {
   const { t } = useTranslation('common')
   const { errorStatus, errorRefs, setErrorStatus, clearErrorRefs, resetServerError } =
     useAuthorization()
+  const resetServerErrorOnMountRef = useRef(resetServerError)
 
-  useEffect(() => router.subscribe(resetServerError), [])
+  useEffect(() => router.subscribe(resetServerErrorOnMountRef.current), [])
 
   const handleClose = () => {
     setErrorStatus(null)

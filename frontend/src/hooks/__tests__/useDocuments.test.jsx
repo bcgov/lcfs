@@ -1,5 +1,17 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
+import { useQuery, useMutation } from '@tanstack/react-query'
+
+import {
+  useDocuments,
+  useUploadDocument,
+  useDeleteDocument,
+  useDownloadDocument,
+  useFetchDocument,
+  useGetDocumentInfo,
+  useUpdateDocument
+} from '../useDocuments'
+
 // Mock the API service
 const mockApiService = {
   get: vi.fn(),
@@ -28,18 +40,6 @@ vi.mock('@tanstack/react-query', () => ({
     removeQueries: vi.fn()
   })
 }))
-
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { useApiService } from '@/services/useApiService'
-import {
-  useDocuments,
-  useUploadDocument,
-  useDeleteDocument,
-  useDownloadDocument,
-  useFetchDocument,
-  useGetDocumentInfo,
-  useUpdateDocument
-} from '../useDocuments'
 
 // Get the mocked functions
 const mockUseQuery = useQuery

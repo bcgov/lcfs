@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useGetAvailableAnalysts, useAssignAnalyst } from '../useComplianceReports'
+import {
+  useGetAvailableAnalysts,
+  useAssignAnalyst
+} from '../useComplianceReports'
 import * as useApiService from '@/services/useApiService'
 
 // Mock the API service
@@ -22,11 +25,11 @@ const createWrapper = () => {
     }
   })
 
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
+  return function QueryWrapper({ children }) {
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+  }
 }
 
 describe('Analyst Assignment Hooks', () => {
@@ -78,26 +81,37 @@ describe('Analyst Assignment Hooks', () => {
       const mockError = new Error('API Error')
       mockApiClient.get.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useGetAvailableAnalysts({
-        retry: false // Disable retries for faster test
-      }), {
-        wrapper: createWrapper()
-      })
+      const { result } = renderHook(
+        () =>
+          useGetAvailableAnalysts({
+            retry: false // Disable retries for faster test
+          }),
+        {
+          wrapper: createWrapper()
+        }
+      )
 
-      await waitFor(() => {
-        expect(result.current.isError).toBe(true)
-      }, { timeout: 5000 })
+      await waitFor(
+        () => {
+          expect(result.current.isError).toBe(true)
+        },
+        { timeout: 5000 }
+      )
 
       expect(result.current.error).toEqual(mockError)
     })
 
     it('should use correct cache configuration', async () => {
-      const { result } = renderHook(() => useGetAvailableAnalysts({
-        staleTime: 300000,
-        cacheTime: 600000
-      }), {
-        wrapper: createWrapper()
-      })
+      const { result } = renderHook(
+        () =>
+          useGetAvailableAnalysts({
+            staleTime: 300000,
+            cacheTime: 600000
+          }),
+        {
+          wrapper: createWrapper()
+        }
+      )
 
       // Query should be configured with the provided options
       expect(result.current).toBeDefined()
@@ -124,7 +138,7 @@ describe('Analyst Assignment Hooks', () => {
         data: []
       })
 
-      const { result } = renderHook(() => useGetAvailableAnalysts(), {
+      renderHook(() => useGetAvailableAnalysts(), {
         wrapper: createWrapper()
       })
 
@@ -135,14 +149,18 @@ describe('Analyst Assignment Hooks', () => {
     })
 
     it('should respect enabled option', async () => {
-      const { result } = renderHook(() => useGetAvailableAnalysts({
-        enabled: false
-      }), {
-        wrapper: createWrapper()
-      })
+      renderHook(
+        () =>
+          useGetAvailableAnalysts({
+            enabled: false
+          }),
+        {
+          wrapper: createWrapper()
+        }
+      )
 
       // Give it time to potentially make a call
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       expect(mockApiClient.get).not.toHaveBeenCalled()
     })
@@ -171,10 +189,9 @@ describe('Analyst Assignment Hooks', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      expect(mockApiClient.put).toHaveBeenCalledWith(
-        '/reports/1/assign',
-        { assignedAnalystId: 123 }
-      )
+      expect(mockApiClient.put).toHaveBeenCalledWith('/reports/1/assign', {
+        assignedAnalystId: 123
+      })
     })
 
     it('should unassign analyst successfully', async () => {
@@ -199,10 +216,9 @@ describe('Analyst Assignment Hooks', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      expect(mockApiClient.put).toHaveBeenCalledWith(
-        '/reports/1/assign',
-        { assignedAnalystId: null }
-      )
+      expect(mockApiClient.put).toHaveBeenCalledWith('/reports/1/assign', {
+        assignedAnalystId: null
+      })
     })
 
     it('should handle assignment error', async () => {
@@ -228,10 +244,6 @@ describe('Analyst Assignment Hooks', () => {
     })
 
     it('should invalidate related queries on success', async () => {
-      const mockQueryClient = {
-        invalidateQueries: vi.fn()
-      }
-
       const mockResponse = {
         data: { success: true }
       }
@@ -265,11 +277,15 @@ describe('Analyst Assignment Hooks', () => {
 
       mockApiClient.put.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useAssignAnalyst({
-        onSuccess: mockOnSuccess
-      }), {
-        wrapper: createWrapper()
-      })
+      const { result } = renderHook(
+        () =>
+          useAssignAnalyst({
+            onSuccess: mockOnSuccess
+          }),
+        {
+          wrapper: createWrapper()
+        }
+      )
 
       const assignmentData = {
         reportId: 1,
@@ -295,11 +311,15 @@ describe('Analyst Assignment Hooks', () => {
 
       mockApiClient.put.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useAssignAnalyst({
-        onError: mockOnError
-      }), {
-        wrapper: createWrapper()
-      })
+      const { result } = renderHook(
+        () =>
+          useAssignAnalyst({
+            onError: mockOnError
+          }),
+        {
+          wrapper: createWrapper()
+        }
+      )
 
       const assignmentData = {
         reportId: 1,
@@ -326,11 +346,15 @@ describe('Analyst Assignment Hooks', () => {
 
       mockApiClient.put.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useAssignAnalyst({
-        invalidateRelatedQueries: false
-      }), {
-        wrapper: createWrapper()
-      })
+      const { result } = renderHook(
+        () =>
+          useAssignAnalyst({
+            invalidateRelatedQueries: false
+          }),
+        {
+          wrapper: createWrapper()
+        }
+      )
 
       const assignmentData = {
         reportId: 1,

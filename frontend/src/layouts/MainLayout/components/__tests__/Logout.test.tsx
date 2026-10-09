@@ -60,13 +60,13 @@ const setupMocks = ({
         }
       : undefined,
     hasRoles: vi.fn((role) => role === roles.government && isGovernmentUser)
-  } as any)
+  } as unknown as ReturnType<typeof currentUserHooks.useCurrentUser>)
 
   vi.mocked(notificationHooks.useNotificationsCount).mockReturnValue({
     data: { count: notificationsCount },
     isLoading,
     refetch: mockRefetch
-  } as any)
+  } as unknown as ReturnType<typeof notificationHooks.useNotificationsCount>)
 }
 
 describe('UserProfileActions (Logout)', () => {
