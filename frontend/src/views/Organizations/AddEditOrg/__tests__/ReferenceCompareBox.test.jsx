@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, vi, beforeEach, afterAll } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
 import ReferenceCompareBox from '../ReferenceCompareBox'
@@ -86,6 +87,41 @@ describe('ReferenceCompareBox', () => {
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
         'Test Company Ltd.'
+      )
+    })
+  })
+
+  test('supports keyboard focus and copies a row value with Enter and Space', async ({
+    render
+  }) => {
+    render(
+      <ReferenceCompareBox
+        title="Reference Data"
+        data={singleItemData}
+        onDismiss={vi.fn()}
+      />
+    )
+
+    const rowButton = screen.getByRole('button', {
+      name: 'Single Item: Single Value'
+    })
+
+    await userEvent.tab()
+    expect(rowButton).toHaveFocus()
+
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenNthCalledWith(
+        1,
+        'Single Value'
+      )
+    })
+
+    await userEvent.keyboard(' ')
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenNthCalledWith(
+        2,
+        'Single Value'
       )
     })
   })
