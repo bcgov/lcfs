@@ -186,7 +186,9 @@ export const CreditCalculator = () => {
       }
     })
 
-    return Array.from(uniqueEndUses.values())
+    return Array.from(uniqueEndUses.values()).sort((a, b) =>
+      a.label.localeCompare(b.label)
+    )
   }, [fuelTypeOptions])
   const customCiOption = useMemo(
     () => ({
