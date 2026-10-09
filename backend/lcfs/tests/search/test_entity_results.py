@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import (
     AdminAdjustmentStatusEnum,
 )
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
@@ -16,6 +17,7 @@ from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.web.api.search.entities.admin_adjustments import search_admin_adjustments
 from lcfs.web.api.search.entities.base import SearchContext
+from lcfs.web.api.search.entities.compliance_reports import search_compliance_reports
 from lcfs.web.api.search.entities.fuel_codes import (
     FUEL_CODE_RESULT_LIMIT,
     search_fuel_codes,
@@ -259,3 +261,175 @@ async def test_admin_adjustment_link_uses_entity_id(
     assert len(results) == 1
     assert results[0].entity_id == 24
     assert results[0].route == expected_route
+
+
+# ---------------------------------------------------------------------------
+# Compliance report: status masking and analyst-field hiding for suppliers
+# ---------------------------------------------------------------------------
+
+def _compliance_report_row(
+    status: ComplianceReportStatusEnum,
+    analyst_first: str = "Jane",
+    analyst_last: str = "Analyst",
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        compliance_report_id=1,
+        organization_name="Test Org",
+        compliance_period="2025",
+        report_type="Annual",
+        report_status=status,
+        assigned_analyst_first_name=analyst_first,
+        assigned_analyst_last_name=analyst_last,
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "internal_status",
+    [
+        ComplianceReportStatusEnum.Recommended_by_analyst,
+        ComplianceReportStatusEnum.Recommended_by_manager,
+        ComplianceReportStatusEnum.Analyst_adjustment,
+    ],
+    ids=lambda s: s.name,
+)
+async def test_supplier_compliance_report_masks_internal_statuses(
+    internal_status: ComplianceReportStatusEnum,
+):
+    """Any internal workflow status must be presented as 'Submitted' to suppliers."""
+    db = _db_returning((_compliance_report_row(internal_status), None))
+    context = SearchContext(
+        query=parse_query("report"),
+        organization_id=17,
+        is_government=False,
+    )
+
+    results = await search_compliance_reports(db, context)
+
+    assert len(results) == 1
+    assert results[0].status == "Submitted"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "internal_status",
+    [
+        ComplianceReportStatusEnum.Recommended_by_analyst,
+        ComplianceReportStatusEnum.Recommended_by_manager,
+        ComplianceReportStatusEnum.Analyst_adjustment,
+    ],
+    ids=lambda s: s.name,
+)
+async def test_government_compliance_report_shows_raw_internal_status(
+    internal_status: ComplianceReportStatusEnum,
+):
+    """Government users must see the real (unmasked) status."""
+    db = _db_returning((_compliance_report_row(internal_status), None))
+    context = SearchContext(
+        query=parse_query("report"),
+        organization_id=None,
+        is_government=True,
+    )
+
+    results = await search_compliance_reports(db, context)
+
+    assert len(results) == 1
+    assert results[0].status == internal_status.value
+
+
+@pytest.mark.anyio
+async def test_supplier_compliance_report_hides_analyst_in_result():
+    """Analyst name must not appear in meta or details for supplier users."""
+    db = _db_returning(
+        (_compliance_report_row(ComplianceReportStatusEnum.Submitted), None)
+    )
+    context = SearchContext(
+        query=parse_query("report"),
+        organization_id=17,
+        is_government=False,
+    )
+
+    results = await search_compliance_reports(db, context)
+
+    assert len(results) == 1
+    assert results[0].meta is not None
+    assert "Analyst" not in (results[0].meta or "")
+    detail_labels = [d.label for d in results[0].details]
+    assert "Analyst" not in detail_labels
+
+
+@pytest.mark.anyio
+async def test_government_compliance_report_shows_analyst_in_result():
+    """Government users must see the assigned analyst in meta and details."""
+    db = _db_returning(
+        (_compliance_report_row(ComplianceReportStatusEnum.Submitted), None)
+    )
+    context = SearchContext(
+        query=parse_query("report"),
+        organization_id=None,
+        is_government=True,
+    )
+
+    results = await search_compliance_reports(db, context)
+
+    assert len(results) == 1
+    assert "Analyst: Jane Analyst" in (results[0].meta or "")
+    detail_labels = [d.label for d in results[0].details]
+    assert "Analyst" in detail_labels
+
+
+# ---------------------------------------------------------------------------
+# Transfer: Recommended status masked as Submitted for suppliers
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_supplier_transfer_masks_recommended_status():
+    """Transfers in Recommended state must appear as Submitted to suppliers."""
+    transfer = SimpleNamespace(
+        transfer_id=8,
+        from_name="Supplier A",
+        to_name="Supplier B",
+        status=TransferStatusEnum.Recommended,
+        quantity=None,
+        price_per_unit=None,
+        agreement_date=None,
+        match_context=None,
+    )
+    db = _db_returning(transfer)
+    context = SearchContext(
+        query=parse_query("transfer"),
+        organization_id=17,
+        is_government=False,
+    )
+
+    results = await search_transfers(db, context)
+
+    assert len(results) == 1
+    assert results[0].status == "Submitted"
+
+
+@pytest.mark.anyio
+async def test_government_transfer_shows_recommended_status():
+    """Government users must see the unmasked Recommended status on transfers."""
+    transfer = SimpleNamespace(
+        transfer_id=9,
+        from_name="Supplier A",
+        to_name="Supplier B",
+        status=TransferStatusEnum.Recommended,
+        quantity=None,
+        price_per_unit=None,
+        agreement_date=None,
+        match_context=None,
+    )
+    db = _db_returning(transfer)
+    context = SearchContext(
+        query=parse_query("transfer"),
+        organization_id=None,
+        is_government=True,
+    )
+
+    results = await search_transfers(db, context)
+
+    assert len(results) == 1
+    assert results[0].status == "Recommended"
