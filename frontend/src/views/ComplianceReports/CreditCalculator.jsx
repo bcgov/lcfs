@@ -8,6 +8,7 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputAdornment from '@mui/material/InputAdornment'
+import Tooltip from '@mui/material/Tooltip'
 import Check from '@mui/icons-material/Check'
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import colors from '@/themes/base/colors'
@@ -181,13 +182,18 @@ export const CreditCalculator = () => {
       if (endUse) {
         uniqueEndUses.set(endUse.type, {
           value: endUse.type,
-          label: endUse.type
+          sortLabel: endUse.type,
+          label: (
+            <Tooltip title={endUse.type} placement="top" arrow>
+              <span>{endUse.type}</span>
+            </Tooltip>
+          )
         })
       }
     })
 
     return Array.from(uniqueEndUses.values()).sort((a, b) =>
-      a.label.localeCompare(b.label)
+      a.sortLabel.localeCompare(b.sortLabel)
     )
   }, [fuelTypeOptions])
   const customCiOption = useMemo(
@@ -687,7 +693,46 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                   />
                 </Grid>
 
-                <Grid size={{ xs: 12, md: 3 }} flex={1.6}>
+                <Grid
+                  size={{ xs: 12, md: 3 }}
+                  flex={1.6}
+                  sx={{
+                    minWidth: 0,
+                    maxWidth: '100%',
+                    '& .MuiFormControl-root': {
+                      width: '100%',
+                      minWidth: 0
+                    },
+                    '& .MuiRadioGroup-root': {
+                      flexDirection: 'column',
+                      flexWrap: 'nowrap',
+                      alignItems: 'flex-start',
+                      gap: '12px !important',
+                      width: '100%',
+                      maxWidth: '100%',
+                      maxHeight: { xs: 240, md: 360 },
+                      overflowX: 'auto',
+                      overflowY: 'auto',
+                      pr: 1,
+                      scrollbarGutter: 'stable'
+                    },
+                    '& .MuiFormControlLabel-root': {
+                      mr: 0,
+                      mb: 0,
+                      alignItems: 'flex-start',
+                      width: 'max-content',
+                      maxWidth: 'none',
+                      whiteSpace: 'nowrap'
+                    },
+                    '& .MuiRadio-root': {
+                      flexShrink: 0
+                    },
+                    '& .MuiFormControlLabel-label': {
+                      whiteSpace: 'nowrap',
+                      lineHeight: 1.35
+                    }
+                  }}
+                >
                   {isLoadingFuelOptions && <Loading />}
                   <BCFormRadio
                     label={t('report:endUse')}
