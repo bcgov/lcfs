@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import BCTypography from '@/components/BCTypography'
 import { BCMetricCard } from '@/components/charts/BCMetricCard'
 import { BCResponsiveEChart } from '@/components/charts/BCResponsiveEchart'
@@ -9,6 +10,7 @@ import Grid from '@mui/material/Grid'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
+import TableContainer from '@mui/material/TableContainer'
 import TableCell from '@mui/material/TableCell'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
@@ -80,6 +82,132 @@ export const StackedBarChart = ({ stackedBarOption }) => (
     </CardContent>
   </Card>
 )
+
+const PenaltyMixCard = ({ penaltyMixOption }) => {
+  const idPrefix = useId()
+  const penaltyMixDescriptionId = `${idPrefix}-penalty-mix-description`
+  const penaltyMixTableCaptionId = `${idPrefix}-penalty-mix-table-caption`
+  const penaltyMixSeries = Array.isArray(penaltyMixOption?.series)
+    ? penaltyMixOption.series.find((series) => series.type === 'pie')
+    : undefined
+  const penaltyMixData = Array.isArray(penaltyMixSeries?.data)
+    ? penaltyMixSeries.data
+    : []
+  const penaltyMixTotal = penaltyMixData.reduce((sum, item) => {
+    const value = Number(item?.value)
+    return Number.isFinite(value) && value > 0 ? sum + value : sum
+  }, 0)
+  const penaltyMixRows = penaltyMixData.map((item, index) => {
+    const value = Number(item?.value)
+    const share =
+      penaltyMixTotal > 0 && Number.isFinite(value) && value > 0
+        ? Math.round((value / penaltyMixTotal) * 1000) / 10
+        : 0
+
+    return {
+      key: `${item?.name ?? 'category'}-${index}`,
+      name: item?.name ?? '',
+      amount: currencyFormatter(item?.value),
+      share: `${share.toFixed(1)}%`
+    }
+  })
+  const announcedRows = penaltyMixRows.slice(0, 5)
+  const additionalCategories = penaltyMixRows.length - announcedRows.length
+  const penaltyMixAnnouncement = penaltyMixRows.length
+    ? `Penalty mix donut chart by penalty type. Total penalties: ${currencyFormatter(penaltyMixTotal)}. ${announcedRows
+        .map(
+          ({ name, amount, share }) => `${name}: ${amount}, ${share} of total.`
+        )
+        .join(' ')}${
+        additionalCategories > 0
+          ? ` ${additionalCategories} more categories are listed in the data table.`
+          : ''
+      } Open the data table for all values.`
+    : 'Penalty mix donut chart by penalty type. No penalty mix data is available.'
+
+  return (
+    <Card sx={{ height: '100%', width: '100%', ...cardBorderSx }}>
+      <CardContent>
+        <Stack spacing={2}>
+          <BCTypography variant="h6">Penalty mix by penalty type</BCTypography>
+          <BCTypography id={penaltyMixDescriptionId} variant="body2">
+            Exact penalty amounts and shares of the total are available in the
+            data table.
+          </BCTypography>
+          <BCResponsiveEChart
+            option={penaltyMixOption}
+            height={320}
+            ariaLabel="Penalty mix donut chart by penalty type"
+            ariaDescription={penaltyMixAnnouncement}
+            ariaDescribedBy={`${penaltyMixDescriptionId} ${penaltyMixTableCaptionId}`}
+          />
+          <TableContainer
+            role="region"
+            aria-labelledby={penaltyMixTableCaptionId}
+            tabIndex={0}
+            sx={{
+              maxWidth: '100%',
+              overflowX: 'auto',
+              '&:focus-visible': {
+                outline: '2px solid',
+                outlineColor: 'primary.main',
+                outlineOffset: '2px'
+              }
+            }}
+          >
+            <Table
+              size="small"
+              aria-labelledby={penaltyMixTableCaptionId}
+              aria-describedby={penaltyMixDescriptionId}
+              sx={{ minWidth: 420 }}
+            >
+              <caption
+                id={penaltyMixTableCaptionId}
+                style={{
+                  captionSide: 'top',
+                  paddingBottom: '8px',
+                  textAlign: 'left'
+                }}
+              >
+                Penalty mix data
+              </caption>
+              <TableHead>
+                <TableRow>
+                  <TableCell scope="col">Penalty category</TableCell>
+                  <TableCell scope="col" align="right">
+                    Amount
+                  </TableCell>
+                  <TableCell scope="col" align="right">
+                    Share of total
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {penaltyMixRows.length > 0 ? (
+                  penaltyMixRows.map(({ key, name, amount, share }) => (
+                    <TableRow key={key}>
+                      <TableCell component="th" scope="row">
+                        {name}
+                      </TableCell>
+                      <TableCell align="right">{amount}</TableCell>
+                      <TableCell align="right">{share}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3}>
+                      No penalty mix data available.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Stack>
+      </CardContent>
+    </Card>
+  )
+}
 
 // Component for penalty summary table
 export const PenaltySummaryTable = ({
@@ -170,20 +298,7 @@ export const PenaltySummaryTable = ({
             </Grid>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%', width: '100%', ...cardBorderSx }}>
-              <CardContent>
-                <Stack spacing={2}>
-                  <BCTypography variant="h6">
-                    Penalty mix by penalty type
-                  </BCTypography>
-                  <BCResponsiveEChart
-                    option={penaltyMixOption}
-                    height={320}
-                    ariaLabel="Penalty mix donut chart by penalty type"
-                  />
-                </Stack>
-              </CardContent>
-            </Card>
+            <PenaltyMixCard penaltyMixOption={penaltyMixOption} />
           </Grid>
         </Grid>
       </Stack>

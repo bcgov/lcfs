@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ReviewCharts } from '../ReviewCharts'
 import type { ReviewChartData } from '../types'
@@ -8,7 +8,14 @@ const chartProps: any[] = []
 vi.mock('@/components/charts/BCResponsiveEchart', () => ({
   BCResponsiveEChart: (props: any) => {
     chartProps.push(props)
-    return <div data-test="echarts" role="img" aria-label={props.ariaLabel} />
+    return (
+      <div
+        data-test="echarts"
+        role="img"
+        aria-label={props.ariaDescription || props.ariaLabel}
+        aria-describedby={props.ariaDescribedBy}
+      />
+    )
   }
 }))
 
@@ -49,10 +56,36 @@ describe('ReviewCharts', () => {
     render(<ReviewCharts chartData={chartData} />)
 
     expect(
-      screen.getByLabelText(/FSE kWh usage and capacity utilization/i)
+      screen.getByRole('img', {
+        name: /FSE kWh usage and capacity utilization/i
+      })
     ).toBeInTheDocument()
+    expect(chartProps[0].ariaDescription).toContain(
+      'Total kWh usage: 2024: 1,000 kWh; 2025: 1,200 kWh; 2024 to 2025 delta: 200 kWh; 2024 to 2025 percent change: 20%.'
+    )
     expect(screen.getByText('Total kWh usage')).toBeInTheDocument()
     expect(screen.getByText('Average capacity utilization')).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByText(
+        'View data table for FSE kWh usage and capacity utilization'
+      )
+    )
+    const table = screen.getByRole('table', {
+      name: 'FSE kWh usage and capacity utilization data values'
+    })
+    expect(within(table).getByText('1,200 kWh')).toBeInTheDocument()
+    expect(within(table).getByText('1,000 kWh')).toBeInTheDocument()
+    expect(within(table).getByText('200 kWh')).toBeInTheDocument()
+    expect(within(table).getByText('20%')).toBeInTheDocument()
+    expect(
+      within(table).getByRole('columnheader', { name: '2024 to 2025 delta' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', {
+        name: 'FSE kWh usage and capacity utilization data table'
+      })
+    ).toHaveAttribute('tabindex', '0')
 
     const fseOption = chartProps[0].option
     expect(fseOption.yAxis).toHaveLength(2)
@@ -97,7 +130,7 @@ describe('ReviewCharts', () => {
     render(<ReviewCharts chartData={chartData} />)
 
     expect(
-      screen.getByLabelText(/Fuel supply by fuel code/i)
+      screen.getByRole('img', { name: /Fuel supply by fuel code/i })
     ).toBeInTheDocument()
     expect(screen.getByLabelText('Compliance year')).toBeInTheDocument()
     expect(screen.getByLabelText('Fuel type')).toBeInTheDocument()
@@ -107,8 +140,173 @@ describe('ReviewCharts', () => {
     expect(fuelType.name).toBe('Diesel - HDRD')
     expect(fuelType.children[0].name).toBe('D123')
     expect(fuelType.children[0].children).toEqual([
-      { name: '2025', value: 500 }
+      { name: '2025', value: 500, units: 'L' }
     ])
+  })
+
+  it('updates the sunburst description and table to match active filters', () => {
+    const chartData: ReviewChartData = {
+      historicalVariance: [
+        {
+          title: 'Fuel supply by fuel code',
+          currentLabel: '2025',
+          comparisonLabel: '2024',
+          points: [
+            {
+              label: 'D123 (Diesel - HDRD)',
+              currentValue: 500,
+              comparisonValue: 700,
+              delta: -200,
+              percentChange: -28.6,
+              units: 'L'
+            },
+            {
+              label: 'G456 (Gasoline - Ethanol)',
+              currentValue: 125,
+              comparisonValue: 250,
+              delta: -125,
+              percentChange: -50,
+              units: 'L'
+            }
+          ]
+        }
+      ]
+    }
+
+    render(<ReviewCharts chartData={chartData} />)
+
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: 'Compliance year' })
+    )
+    fireEvent.click(screen.getByRole('option', { name: '2024' }))
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Fuel type' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Diesel - HDRD' }))
+
+    expect(chartProps[chartProps.length - 1].ariaLabel).toContain(
+      'filtered to compliance year 2024 and Diesel - HDRD'
+    )
+    expect(chartProps[chartProps.length - 1].ariaDescription).toContain(
+      'Fuel supply by fuel code. Sunburst chart filtered to compliance year 2024 and Diesel - HDRD. Diesel - HDRD / D123: 2024: 700 L.'
+    )
+    const sunburstData = chartProps[chartProps.length - 1].option.series[0].data
+    expect(sunburstData).toEqual([
+      {
+        name: 'Diesel - HDRD',
+        children: [
+          {
+            name: 'D123',
+            children: [{ name: '2024', value: 700, units: 'L' }]
+          }
+        ]
+      }
+    ])
+
+    fireEvent.click(
+      screen.getByText('View data table for Fuel supply by fuel code')
+    )
+    const table = screen.getByRole('table', {
+      name: 'Fuel supply by fuel code data values'
+    })
+    expect(
+      within(table).getByRole('rowheader', { name: 'Diesel - HDRD / D123' })
+    ).toBeInTheDocument()
+    expect(within(table).getByText('700 L')).toBeInTheDocument()
+    expect(within(table).queryByText('500 L')).not.toBeInTheDocument()
+    expect(
+      within(table).queryByText('Gasoline - Ethanol / G456')
+    ).not.toBeInTheDocument()
+  })
+
+  it('includes units and percent change in supplemental comparison tables', () => {
+    const chartData: ReviewChartData = {
+      supplementalImpact: [
+        {
+          title: 'Supplemental fuel impact',
+          currentLabel: '2025',
+          comparisonLabel: '2024',
+          points: [
+            {
+              label: 'Total fuel',
+              currentValue: 150,
+              comparisonValue: 100,
+              delta: 50,
+              percentChange: 50,
+              units: 'L'
+            },
+            {
+              label: 'Fuel count',
+              currentValue: 4,
+              comparisonValue: 2,
+              delta: 2,
+              units: 'count'
+            }
+          ]
+        }
+      ]
+    }
+
+    render(<ReviewCharts chartData={chartData} />)
+    expect(chartProps[0].ariaDescription).toContain(
+      'Total fuel: 2024: 100 L; 2025: 150 L; Delta: 50 L; Percent change: 50%.'
+    )
+    fireEvent.click(
+      screen.getByText('View data table for Supplemental fuel impact')
+    )
+
+    const table = screen.getByRole('table', {
+      name: 'Supplemental fuel impact data values'
+    })
+    expect(within(table).getByText('100 L')).toBeInTheDocument()
+    expect(within(table).getByText('150 L')).toBeInTheDocument()
+    expect(within(table).getByText('50 L')).toBeInTheDocument()
+    expect(within(table).getByText('50%')).toBeInTheDocument()
+    expect(within(table).getByText('—')).toBeInTheDocument()
+    expect(
+      within(table).getByRole('columnheader', { name: 'Percent change' })
+    ).toBeInTheDocument()
+  })
+
+  it('uses unique generated IDs for chart descriptions and sunburst filter labels', () => {
+    const chartData: ReviewChartData = {
+      historicalVariance: [
+        {
+          title: 'Fuel supply by fuel code',
+          currentLabel: '2025',
+          comparisonLabel: '2024',
+          points: [
+            {
+              label: 'D123 (Diesel - HDRD)',
+              currentValue: 500,
+              comparisonValue: 300,
+              delta: 200,
+              units: 'L'
+            }
+          ]
+        }
+      ]
+    }
+
+    render(
+      <>
+        <ReviewCharts chartData={chartData} />
+        <ReviewCharts chartData={chartData} />
+      </>
+    )
+
+    const descriptionIds = screen
+      .getAllByRole('img')
+      .map((chart) => chart.getAttribute('aria-describedby'))
+    const filterLabelIds = [
+      ...screen.getAllByLabelText('Compliance year'),
+      ...screen.getAllByLabelText('Fuel type')
+    ].map((filter) => filter.getAttribute('aria-labelledby'))
+    const allIds = [...descriptionIds, ...filterLabelIds]
+
+    expect(new Set(allIds).size).toBe(allIds.length)
+    allIds.forEach((id) => {
+      expect(id).toBeTruthy()
+      expect(document.getElementById(id!)).toBeInTheDocument()
+    })
   })
 
   it('renders compliance units by fuel and schedule as a stacked bar chart', () => {
@@ -118,7 +316,7 @@ describe('ReviewCharts', () => {
           fuelCategory: 'Diesel',
           fuelType: 'HDRD',
           schedule: 'Fuel supply',
-          complianceUnits: 120
+          complianceUnits: 20
         },
         {
           fuelCategory: 'Diesel',
@@ -132,8 +330,13 @@ describe('ReviewCharts', () => {
     render(<ReviewCharts chartData={chartData} />)
 
     expect(
-      screen.getByLabelText(/Compliance units by fuel category, type, and schedule/i)
+      screen.getByRole('img', {
+        name: /Compliance units by fuel category, type, and schedule/i
+      })
     ).toBeInTheDocument()
+    expect(chartProps[0].ariaDescription).toContain(
+      'Diesel - HDRD: Fuel supply: 20 compliance units; Allocation agreements: 40 compliance units.'
+    )
 
     const option = chartProps[0].option
     expect(option.xAxis.data).toEqual(['Diesel - HDRD'])
@@ -142,7 +345,7 @@ describe('ReviewCharts', () => {
         expect.objectContaining({
           name: 'Fuel supply',
           stack: 'compliance-units',
-          data: [120]
+          data: [20]
         }),
         expect.objectContaining({
           name: 'Allocation agreements',
@@ -184,9 +387,18 @@ describe('ReviewCharts', () => {
 
     expect(
       screen.getAllByText('Renewable vs non-renewable liquid fuel supply')
-    ).toHaveLength(2)
+    ).toHaveLength(1)
     expect(
-      screen.getByText(/Includes liquid gasoline, diesel, and jet fuel supply only/)
+      screen.getByRole('img', {
+        name: /Renewable vs non-renewable liquid fuel supply/
+      })
+    ).toHaveAccessibleName(
+      /Renewable: 2024: 250 litres; 2025: 6,000 litres; Delta: 5,750 litres/
+    )
+    expect(
+      screen.getByText(
+        /Includes liquid gasoline, diesel, and jet fuel supply only/
+      )
     ).toBeInTheDocument()
     expect(screen.getByText(/renewable naphtha/)).toBeInTheDocument()
     expect(
@@ -194,7 +406,9 @@ describe('ReviewCharts', () => {
     ).toBeInTheDocument()
     expect(screen.getByText(/alternative jet fuel/)).toBeInTheDocument()
     expect(
-      screen.getByText(/Non-renewable includes liquid gasoline, diesel, and jet fuel/)
+      screen.getByText(
+        /Non-renewable includes liquid gasoline, diesel, and jet fuel/
+      )
     ).toBeInTheDocument()
 
     const option = chartProps[0].option
@@ -245,7 +459,7 @@ describe('ReviewCharts', () => {
     render(<ReviewCharts chartData={chartData} />)
 
     expect(
-      screen.getByLabelText(/Fuel supply and FSE count trend/i)
+      screen.getByRole('img', { name: /Fuel supply and FSE count trend/i })
     ).toBeInTheDocument()
 
     const option = chartProps[0].option
@@ -292,7 +506,9 @@ describe('ReviewCharts', () => {
     render(<ReviewCharts chartData={chartData} />)
 
     expect(
-      screen.getByLabelText(/Fuel supply presence by fuel category and type/i)
+      screen.getByRole('img', {
+        name: /Fuel supply presence by fuel category and type/i
+      })
     ).toBeInTheDocument()
 
     const option = chartProps[0].option

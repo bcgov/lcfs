@@ -14,7 +14,7 @@ import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import type {
   ComparisonSeries,
   ComplianceUnitPoint,
@@ -26,6 +26,8 @@ interface HistoricalChartGroup {
   labels: string[]
   periodLabels: string[]
   valuesByPeriod: Map<string, Map<string, number>>
+  unitsByPeriod: Map<string, Map<string, string | null | undefined>>
+  comparisonDetailsByLabel: Map<string, Array<{ key: string; value: string }>>
 }
 
 interface ComplianceUnitChartGroup {
@@ -37,6 +39,7 @@ interface ComplianceUnitChartGroup {
 interface SunburstNode {
   name: string
   value?: number
+  units?: string | null
   children?: SunburstNode[]
 }
 
@@ -53,21 +56,6 @@ const RENEWABLE_LIQUID_FUEL_VOLUME_HELP =
 
 const chartGrid = { ...BC_CHART_GRID, bottom: 44 }
 const chartAxisLabel = BC_CHART_AXIS_LABEL
-const srOnlySx = {
-  border: 0,
-  clip: 'rect(0 0 0 0)',
-  clipPath: 'inset(50%)',
-  height: 1,
-  left: 0,
-  m: -1,
-  maxHeight: 1,
-  maxWidth: 1,
-  overflow: 'hidden',
-  p: 0,
-  position: 'absolute',
-  top: 0,
-  width: 1
-} as const
 
 const getHistoricalChartMode = (
   group: HistoricalChartGroup
@@ -82,102 +70,138 @@ const getHistoricalChartMode = (
 }
 
 const getHistoricalChartModeLabel = (group: HistoricalChartGroup) => {
-  if (isFuelCodeSunburstGroup(group)) return 'fuel-code hierarchy'
-  if (isSupplyFseCorrelationGroup(group)) return 'correlation'
-  if (isFuelPresenceHeatmapGroup(group)) return 'presence heatmap'
+  if (isFuelCodeSunburstGroup(group)) return 'fuel-code sunburst'
+  if (isSupplyFseCorrelationGroup(group) || isFseUsageUtilizationGroup(group)) {
+    return 'dual-axis line'
+  }
+  if (isFuelPresenceHeatmapGroup(group)) return 'heatmap'
   const mode = getHistoricalChartMode(group)
-  if (mode === 'trend') return 'trend'
-  if (mode === 'horizontal-bars') return 'wide variance'
-  return 'comparison'
+  if (mode === 'trend') return 'line'
+  if (mode === 'horizontal-bars') return 'horizontal bar'
+  return 'grouped bar'
 }
 
 const formatAccessibleNumber = (value: number) => value.toLocaleString()
 
-const getHistoricalChartAriaLabel = (group: HistoricalChartGroup) => {
-  const samplePoints = group.labels.slice(0, 4).map((label) => {
-    const values = group.periodLabels
-      .map((period) => {
-        const value = group.valuesByPeriod.get(period)?.get(label) || 0
-        return `${period}: ${formatAccessibleNumber(value)}`
-      })
-      .join(', ')
-    return `${label}. ${values}.`
+const MAX_ANNOUNCED_CATEGORIES = 5
+
+const getAccessibleRowsSummary = (
+  rows: Array<{ label: string; values: Array<{ key: string; value: string }> }>
+) => {
+  if (!rows.length) return 'No values are available for this chart.'
+
+  const announcedRows = rows.slice(0, MAX_ANNOUNCED_CATEGORIES)
+  const rowDescriptions = announcedRows.map((row) => {
+    const values = row.values
+      .map(({ key, value }) => `${key}: ${value}`)
+      .join('; ')
+    return `${row.label}: ${values}.`
   })
-  return `${group.title}. ${getHistoricalChartModeLabel(group)} chart. Periods: ${group.periodLabels.join(', ')}. ${samplePoints.join(' ')}`
+  const remainingCount = rows.length - announcedRows.length
+  const remainingDescription = remainingCount
+    ? ` ${remainingCount} more categories are available in the data table.`
+    : ''
+
+  return `${rowDescriptions.join(' ')}${remainingDescription} Open the data table for all values.`
+}
+
+const getHistoricalChartAriaLabel = (group: HistoricalChartGroup) => {
+  return `${group.title}. ${getHistoricalChartModeLabel(group)} chart.`
+}
+
+const getHistoricalChartAriaDescription = (group: HistoricalChartGroup) => {
+  return `${group.title}. ${getHistoricalChartModeLabel(group)} chart. ${getAccessibleRowsSummary(getHistoricalAccessibleRows(group))}`
 }
 
 const getSupplementalChartAriaLabel = (series: ComparisonSeries) => {
-  const pointSummary = series.points
-    .slice(0, 5)
-    .map(
-      (point) =>
-        `${point.label}: ${series.comparisonLabel} ${formatAccessibleNumber(point.comparisonValue)}, ${series.currentLabel} ${formatAccessibleNumber(point.currentValue)}, delta ${formatAccessibleNumber(point.delta)}`
-    )
-    .join('. ')
-  return `${series.title}. Comparison between ${series.comparisonLabel} and ${series.currentLabel}. ${pointSummary}.`
+  return `${series.title}. Comparison between ${series.comparisonLabel} and ${series.currentLabel}.`
 }
 
-const getComplianceUnitsChartAriaLabel = (group: ComplianceUnitChartGroup) => {
-  const sampleLabels = group.fuelLabels.slice(0, 4).map((fuelLabel) => {
-    const scheduleValues = group.schedules
-      .map((schedule) => {
-        const value = group.values.get(`${schedule}|${fuelLabel}`) || 0
-        return `${schedule}: ${formatAccessibleNumber(value)}`
-      })
-      .join(', ')
-    return `${fuelLabel}. ${scheduleValues}.`
-  })
-  return `Compliance units by fuel category, type, and schedule. ${sampleLabels.join(' ')}`
+const getSupplementalChartAriaDescription = (series: ComparisonSeries) => {
+  return `${series.title}. Comparison chart with bars for ${series.comparisonLabel} and ${series.currentLabel}, and a line for the delta. ${getAccessibleRowsSummary(getSupplementalAccessibleRows(series))}`
+}
+
+const getComplianceUnitsChartAriaLabel = () => {
+  return 'Compliance units by fuel category, type, and schedule.'
+}
+
+const getComplianceUnitsChartAriaDescription = (
+  group: ComplianceUnitChartGroup
+) => {
+  return `${getComplianceUnitsChartAriaLabel()} Stacked bar chart by fuel category and type, split by schedule. ${getAccessibleRowsSummary(getComplianceUnitAccessibleRows(group))}`
 }
 
 const AccessibleChartSummary = ({
   title,
-  ariaLabel,
   rows,
   id
 }: {
   title: string
-  ariaLabel: string
   rows: Array<{ label: string; values: Array<{ key: string; value: string }> }>
   id: string
-}) => (
-  <BCBox id={id} sx={srOnlySx}>
-    <BCTypography component="p">{ariaLabel}</BCTypography>
-    <table>
-      <caption>{title}</caption>
-      <thead>
-        <tr>
-          <th scope="col">Label</th>
-          {rows[0]?.values.map((item) => (
-            <th key={item.key} scope="col">
-              {item.key}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.label}>
-            <th scope="row">{row.label}</th>
-            {row.values.map((item) => (
-              <td key={`${row.label}-${item.key}`}>{item.value}</td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </BCBox>
-)
+}) => {
+  const columns = Array.from(
+    new Set(rows.flatMap((row) => row.values.map((item) => item.key)))
+  )
+
+  return (
+    <BCBox id={id}>
+      <details>
+        <summary>View data table for {title}</summary>
+        <BCBox
+          role="region"
+          aria-label={`${title} data table`}
+          tabIndex={0}
+          sx={{ maxWidth: '100%', overflowX: 'auto' }}
+        >
+          <table>
+            <caption>{title} data values</caption>
+            <thead>
+              <tr>
+                <th scope="col">Label</th>
+                {columns.map((key) => (
+                  <th key={key} scope="col">
+                    {key}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIndex) => {
+                const valueByKey = new Map(
+                  row.values.map((item) => [item.key, item.value])
+                )
+                return (
+                  <tr key={`${row.label}-${rowIndex}`}>
+                    <th scope="row">{row.label}</th>
+                    {columns.map((key) => (
+                      <td key={`${rowIndex}-${key}`}>
+                        {valueByKey.get(key) ?? '—'}
+                      </td>
+                    ))}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </BCBox>
+      </details>
+    </BCBox>
+  )
+}
 
 const getHistoricalAccessibleRows = (group: HistoricalChartGroup) =>
   group.labels.map((label) => ({
     label,
-    values: group.periodLabels.map((period) => ({
-      key: period,
-      value: formatAccessibleNumber(
-        group.valuesByPeriod.get(period)?.get(label) || 0
-      )
-    }))
+    values: [
+      ...group.periodLabels.map((period) => ({
+        key: period,
+        value: `${formatAccessibleNumber(
+          group.valuesByPeriod.get(period)?.get(label) || 0
+        )}${group.unitsByPeriod.get(period)?.get(label) ? ` ${group.unitsByPeriod.get(period)?.get(label)}` : ''}`
+      })),
+      ...(group.comparisonDetailsByLabel.get(label) || [])
+    ]
   }))
 
 const getSupplementalAccessibleRows = (series: ComparisonSeries) =>
@@ -186,16 +210,24 @@ const getSupplementalAccessibleRows = (series: ComparisonSeries) =>
     values: [
       {
         key: series.comparisonLabel,
-        value: formatAccessibleNumber(point.comparisonValue)
+        value: `${formatAccessibleNumber(point.comparisonValue)}${point.units ? ` ${point.units}` : ''}`
       },
       {
         key: series.currentLabel,
-        value: formatAccessibleNumber(point.currentValue)
+        value: `${formatAccessibleNumber(point.currentValue)}${point.units ? ` ${point.units}` : ''}`
       },
       {
         key: 'Delta',
-        value: formatAccessibleNumber(point.delta)
-      }
+        value: `${formatAccessibleNumber(point.delta)}${point.units ? ` ${point.units}` : ''}`
+      },
+      ...(point.percentChange == null
+        ? []
+        : [
+            {
+              key: 'Percent change',
+              value: `${formatAccessibleNumber(point.percentChange)}%`
+            }
+          ])
     ]
   }))
 
@@ -204,7 +236,7 @@ const getComplianceUnitAccessibleRows = (group: ComplianceUnitChartGroup) =>
     label: fuelLabel,
     values: group.schedules.map((schedule) => ({
       key: schedule,
-      value: formatAccessibleNumber(group.values.get(`${schedule}|${fuelLabel}`) || 0)
+      value: `${formatAccessibleNumber(group.values.get(`${schedule}|${fuelLabel}`) || 0)} compliance units`
     }))
   }))
 
@@ -276,6 +308,11 @@ const groupHistoricalSeries = (
       currentLabel: string
       periods: Map<string, Map<string, number>>
       labels: Set<string>
+      unitsByPeriod: Map<string, Map<string, string | null | undefined>>
+      comparisonDetailsByLabel: Map<
+        string,
+        Array<{ key: string; value: string }>
+      >
     }
   >()
 
@@ -285,23 +322,49 @@ const groupHistoricalSeries = (
         title: series.title,
         currentLabel: series.currentLabel,
         periods: new Map([[series.currentLabel, new Map()]]),
-        labels: new Set()
+        labels: new Set(),
+        unitsByPeriod: new Map([[series.currentLabel, new Map()]]),
+        comparisonDetailsByLabel: new Map()
       })
     }
 
     const group = grouped.get(series.title)!
-    if (!group.periods.has(series.comparisonLabel)) {
-      group.periods.set(series.comparisonLabel, new Map())
+    for (const period of [series.comparisonLabel, series.currentLabel]) {
+      if (!group.periods.has(period)) {
+        group.periods.set(period, new Map())
+        group.unitsByPeriod.set(period, new Map())
+      }
     }
 
     series.points.forEach((point) => {
       group.labels.add(point.label)
+      group.unitsByPeriod
+        .get(series.currentLabel)!
+        .set(point.label, point.units)
+      group.unitsByPeriod
+        .get(series.comparisonLabel)!
+        .set(point.label, point.units)
       group.periods
         .get(series.currentLabel)!
         .set(point.label, point.currentValue)
       group.periods
         .get(series.comparisonLabel)!
         .set(point.label, point.comparisonValue)
+
+      const details = group.comparisonDetailsByLabel.get(point.label) || []
+      const interval = `${series.comparisonLabel} to ${series.currentLabel}`
+      const unitSuffix = point.units ? ` ${point.units}` : ''
+      details.push({
+        key: `${interval} delta`,
+        value: `${formatAccessibleNumber(point.delta)}${unitSuffix}`
+      })
+      if (point.percentChange != null) {
+        details.push({
+          key: `${interval} percent change`,
+          value: `${formatAccessibleNumber(point.percentChange)}%`
+        })
+      }
+      group.comparisonDetailsByLabel.set(point.label, details)
     })
   })
 
@@ -313,7 +376,9 @@ const groupHistoricalSeries = (
       if (b === group.currentLabel) return -1
       return Number(a) - Number(b)
     }),
-    valuesByPeriod: group.periods
+    valuesByPeriod: group.periods,
+    unitsByPeriod: group.unitsByPeriod,
+    comparisonDetailsByLabel: group.comparisonDetailsByLabel
   }))
 }
 
@@ -649,10 +714,10 @@ const getFuelCodeSunburstFilterOptions = (group: HistoricalChartGroup) => {
   }
 }
 
-const buildFuelCodeSunburstOptions = (
+const buildFuelCodeSunburstData = (
   group: HistoricalChartGroup,
   filters: FuelCodeSunburstFilters
-) => {
+): SunburstNode[] => {
   const fuelTypeMap = new Map<string, Map<string, SunburstNode[]>>()
 
   group.labels.forEach((label) => {
@@ -688,12 +753,13 @@ const buildFuelCodeSunburstOptions = (
 
       fuelCodeMap.get(fuelCode)!.push({
         name: period,
-        value
+        value,
+        units: group.unitsByPeriod.get(period)?.get(label)
       })
     })
   })
 
-  const data = Array.from(fuelTypeMap.entries())
+  return Array.from(fuelTypeMap.entries())
     .map(([fuelType, fuelCodes]) => ({
       name: fuelType,
       children: Array.from(fuelCodes.entries())
@@ -704,6 +770,52 @@ const buildFuelCodeSunburstOptions = (
         .filter((fuelCode) => fuelCode.children.length > 0)
     }))
     .filter((fuelType) => fuelType.children.length > 0)
+}
+
+const getFuelCodeSunburstAccessibleRows = (data: SunburstNode[]) =>
+  data.flatMap((fuelType) =>
+    (fuelType.children || []).map((fuelCode) => ({
+      label: `${fuelType.name} / ${fuelCode.name}`,
+      values: (fuelCode.children || []).map((year) => ({
+        key: year.name,
+        value: `${formatAccessibleNumber(year.value || 0)}${year.units ? ` ${year.units}` : ''}`
+      }))
+    }))
+  )
+
+const getFuelCodeSunburstAriaLabel = (
+  group: HistoricalChartGroup,
+  filters: FuelCodeSunburstFilters
+) => {
+  const yearDescription =
+    filters.complianceYear === ALL_FILTER_VALUE
+      ? 'all compliance years'
+      : `compliance year ${filters.complianceYear}`
+  const fuelTypeDescription =
+    filters.fuelType === ALL_FILTER_VALUE ? 'all fuel types' : filters.fuelType
+  return `${group.title}. Fuel-code hierarchy chart filtered to ${yearDescription} and ${fuelTypeDescription}.`
+}
+
+const getFuelCodeSunburstAriaDescription = (
+  group: HistoricalChartGroup,
+  filters: FuelCodeSunburstFilters,
+  data: SunburstNode[]
+) => {
+  const yearDescription =
+    filters.complianceYear === ALL_FILTER_VALUE
+      ? 'all compliance years'
+      : `compliance year ${filters.complianceYear}`
+  const fuelTypeDescription =
+    filters.fuelType === ALL_FILTER_VALUE ? 'all fuel types' : filters.fuelType
+  const rows = getFuelCodeSunburstAccessibleRows(data)
+  return `${group.title}. Sunburst chart filtered to ${yearDescription} and ${fuelTypeDescription}. ${getAccessibleRowsSummary(rows)}`
+}
+
+const buildFuelCodeSunburstOptions = (
+  group: HistoricalChartGroup,
+  filters: FuelCodeSunburstFilters
+) => {
+  const data = buildFuelCodeSunburstData(group, filters)
 
   return getStandardChartOptions({
     tooltip: {
@@ -717,7 +829,10 @@ const buildFuelCodeSunburstOptions = (
           typeof params.value === 'number'
             ? Number(params.value).toLocaleString()
             : ''
-        return value ? `${treePath}<br/>Quantity supplied: ${value}` : treePath
+        const units = params.data?.units ? ` ${params.data.units}` : ''
+        return value
+          ? `${treePath}<br/>Quantity supplied: ${value}${units}`
+          : treePath
       }
     },
     series: [
@@ -771,6 +886,10 @@ const FuelCodeSunburstChartCard = ({
 }: {
   group: HistoricalChartGroup
 }) => {
+  const id = useId()
+  const summaryId = `chart-summary-${id}`
+  const yearFilterLabelId = `fuel-code-year-filter-label-${id}`
+  const fuelTypeFilterLabelId = `fuel-code-type-filter-label-${id}`
   const [complianceYear, setComplianceYear] = useState(ALL_FILTER_VALUE)
   const [fuelType, setFuelType] = useState(ALL_FILTER_VALUE)
   const filterOptions = useMemo(
@@ -785,8 +904,23 @@ const FuelCodeSunburstChartCard = ({
       }),
     [complianceYear, fuelType, group]
   )
-  const ariaLabel = useMemo(() => getHistoricalChartAriaLabel(group), [group])
-  const summaryId = `chart-summary-${group.title.replace(/\s+/g, '-').toLowerCase()}`
+  const sunburstData = useMemo(
+    () => buildFuelCodeSunburstData(group, { complianceYear, fuelType }),
+    [complianceYear, fuelType, group]
+  )
+  const ariaLabel = useMemo(
+    () => getFuelCodeSunburstAriaLabel(group, { complianceYear, fuelType }),
+    [complianceYear, fuelType, group, sunburstData]
+  )
+  const ariaDescription = useMemo(
+    () =>
+      getFuelCodeSunburstAriaDescription(
+        group,
+        { complianceYear, fuelType },
+        sunburstData
+      ),
+    [complianceYear, fuelType, group, sunburstData]
+  )
 
   return (
     <BCBox
@@ -805,8 +939,7 @@ const FuelCodeSunburstChartCard = ({
       <AccessibleChartSummary
         id={summaryId}
         title={group.title}
-        ariaLabel={ariaLabel}
-        rows={getHistoricalAccessibleRows(group)}
+        rows={getFuelCodeSunburstAccessibleRows(sunburstData)}
       />
       <Stack
         direction={{ xs: 'column', md: 'row' }}
@@ -818,16 +951,15 @@ const FuelCodeSunburstChartCard = ({
           option={chartOptions}
           height={520}
           ariaLabel={ariaLabel}
+          ariaDescription={ariaDescription}
           ariaDescribedBy={summaryId}
           sx={{ flex: 1, minWidth: 0 }}
         />
         <Stack direction={'column'} spacing={8} sx={{ pt: 2, flexShrink: 0 }}>
           <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel id="fuel-code-year-filter-label">
-              Compliance year
-            </InputLabel>
+            <InputLabel id={yearFilterLabelId}>Compliance year</InputLabel>
             <Select
-              labelId="fuel-code-year-filter-label"
+              labelId={yearFilterLabelId}
               label="Compliance year"
               value={complianceYear}
               onChange={(event) => setComplianceYear(event.target.value)}
@@ -841,9 +973,9 @@ const FuelCodeSunburstChartCard = ({
             </Select>
           </FormControl>
           <FormControl size="small" sx={{ minWidth: 190 }}>
-            <InputLabel id="fuel-code-type-filter-label">Fuel type</InputLabel>
+            <InputLabel id={fuelTypeFilterLabelId}>Fuel type</InputLabel>
             <Select
-              labelId="fuel-code-type-filter-label"
+              labelId={fuelTypeFilterLabelId}
               label="Fuel type"
               value={fuelType}
               onChange={(event) => setFuelType(event.target.value)}
@@ -935,14 +1067,120 @@ const buildComplianceUnitChartOptions = (group: ComplianceUnitChartGroup) =>
     }))
   })
 
+const ComplianceUnitsChartCard = ({
+  group
+}: {
+  group: ComplianceUnitChartGroup
+}) => {
+  const summaryId = `chart-summary-${useId()}`
+  const title = 'Compliance units by fuel category, type, and schedule'
+  const ariaLabel = getComplianceUnitsChartAriaLabel()
+  const ariaDescription = getComplianceUnitsChartAriaDescription(group)
+
+  return (
+    <BCBox
+      sx={{
+        border: '1px solid rgba(0, 0, 0, 0.12)',
+        borderRadius: '4px',
+        p: 1,
+        minWidth: 0,
+        overflow: 'hidden'
+      }}
+    >
+      <BCTypography variant="body2" sx={{ mb: 1 }}>
+        {title}
+      </BCTypography>
+      <AccessibleChartSummary
+        id={summaryId}
+        title={title}
+        rows={getComplianceUnitAccessibleRows(group)}
+      />
+      <BCResponsiveEChart
+        option={buildComplianceUnitChartOptions(group)}
+        height={280}
+        ariaLabel={ariaLabel}
+        ariaDescription={ariaDescription}
+        ariaDescribedBy={summaryId}
+      />
+    </BCBox>
+  )
+}
+
+const HistoricalChartCard = ({ group }: { group: HistoricalChartGroup }) => {
+  const summaryId = `chart-summary-${useId()}`
+  const ariaLabel = getHistoricalChartAriaLabel(group)
+  const ariaDescription = getHistoricalChartAriaDescription(group)
+
+  return (
+    <BCBox
+      sx={{
+        border: '1px solid rgba(0, 0, 0, 0.12)',
+        borderRadius: '4px',
+        p: 1,
+        minWidth: 0,
+        overflow: 'hidden'
+      }}
+    >
+      <BCTypography variant="body2" sx={{ mb: 1 }}>
+        {group.title} ({getHistoricalChartModeLabel(group)})
+      </BCTypography>
+      <AccessibleChartSummary
+        id={summaryId}
+        title={group.title}
+        rows={getHistoricalAccessibleRows(group)}
+      />
+      <BCResponsiveEChart
+        option={buildHistoricalChartOptions(group)}
+        height={280}
+        ariaLabel={ariaLabel}
+        ariaDescription={ariaDescription}
+        ariaDescribedBy={summaryId}
+      />
+    </BCBox>
+  )
+}
+
+const SupplementalChartCard = ({ series }: { series: ComparisonSeries }) => {
+  const summaryId = `chart-summary-${useId()}`
+  const ariaLabel = getSupplementalChartAriaLabel(series)
+  const ariaDescription = getSupplementalChartAriaDescription(series)
+
+  return (
+    <BCBox
+      sx={{
+        border: '1px solid rgba(0, 0, 0, 0.12)',
+        borderRadius: '4px',
+        p: 1,
+        minWidth: 0,
+        overflow: 'hidden'
+      }}
+    >
+      <BCTypography variant="body2" sx={{ mb: 1 }}>
+        {series.title}
+      </BCTypography>
+      <AccessibleChartSummary
+        id={summaryId}
+        title={series.title}
+        rows={getSupplementalAccessibleRows(series)}
+      />
+      <BCResponsiveEChart
+        option={buildSupplementalImpactChartOptions(series)}
+        height={280}
+        ariaLabel={ariaLabel}
+        ariaDescription={ariaDescription}
+        ariaDescribedBy={summaryId}
+      />
+    </BCBox>
+  )
+}
+
 interface ReviewChartsProps {
   chartData?: ReviewChartData
 }
 
 export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
   const historical = chartData?.historicalVariance || []
-  const renewableLiquidFuelVolume =
-    chartData?.renewableLiquidFuelVolume || []
+  const renewableLiquidFuelVolume = chartData?.renewableLiquidFuelVolume || []
   const supplemental = chartData?.supplementalImpact || []
   const complianceUnits = chartData?.complianceUnitsByFuel || []
   const groupedHistorical = groupHistoricalSeries(
@@ -975,31 +1213,7 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
         }}
       >
         {complianceUnits.length > 0 && (
-          <BCBox
-            sx={{
-              border: '1px solid rgba(0, 0, 0, 0.12)',
-              borderRadius: '4px',
-              p: 1,
-              minWidth: 0,
-              overflow: 'hidden'
-            }}
-          >
-            <BCTypography variant="body2" sx={{ mb: 1 }}>
-              Compliance units by fuel category, type, and schedule
-            </BCTypography>
-            <AccessibleChartSummary
-              id="compliance-units-chart-summary"
-              title="Compliance units by fuel category, type, and schedule"
-              ariaLabel={getComplianceUnitsChartAriaLabel(complianceUnitGroup)}
-              rows={getComplianceUnitAccessibleRows(complianceUnitGroup)}
-            />
-            <BCResponsiveEChart
-              option={buildComplianceUnitChartOptions(complianceUnitGroup)}
-              height={280}
-              ariaLabel={getComplianceUnitsChartAriaLabel(complianceUnitGroup)}
-              ariaDescribedBy="compliance-units-chart-summary"
-            />
-          </BCBox>
+          <ComplianceUnitsChartCard group={complianceUnitGroup} />
         )}
         {renewableLiquidFuelVolume.map((item) => (
           <BCBox
@@ -1028,6 +1242,7 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
               option={buildSupplementalImpactChartOptions(item)}
               height={280}
               ariaLabel={getSupplementalChartAriaLabel(item)}
+              ariaDescription={getSupplementalChartAriaDescription(item)}
               ariaDescribedBy={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}-${item.currentLabel}-${item.comparisonLabel}`}
             />
           </BCBox>
@@ -1036,61 +1251,14 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
           isFuelCodeSunburstGroup(item) ? (
             <FuelCodeSunburstChartCard key={item.title} group={item} />
           ) : (
-            <BCBox
-              key={item.title}
-              sx={{
-                border: '1px solid rgba(0, 0, 0, 0.12)',
-                borderRadius: '4px',
-                p: 1,
-                minWidth: 0,
-                overflow: 'hidden'
-              }}
-            >
-              <BCTypography variant="body2" sx={{ mb: 1 }}>
-                {item.title} ({getHistoricalChartModeLabel(item)})
-              </BCTypography>
-              <AccessibleChartSummary
-                id={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}`}
-                title={item.title}
-                ariaLabel={getHistoricalChartAriaLabel(item)}
-                rows={getHistoricalAccessibleRows(item)}
-              />
-              <BCResponsiveEChart
-                option={buildHistoricalChartOptions(item)}
-                height={280}
-                ariaLabel={getHistoricalChartAriaLabel(item)}
-                ariaDescribedBy={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}`}
-              />
-            </BCBox>
+            <HistoricalChartCard key={item.title} group={item} />
           )
         )}
         {supplementalSeries.map((item) => (
-          <BCBox
+          <SupplementalChartCard
             key={`${item.title}-${item.comparisonLabel}-${item.currentLabel}`}
-            sx={{
-              border: '1px solid rgba(0, 0, 0, 0.12)',
-              borderRadius: '4px',
-              p: 1,
-              minWidth: 0,
-              overflow: 'hidden'
-            }}
-          >
-            <BCTypography variant="body2" sx={{ mb: 1 }}>
-              {item.title}
-            </BCTypography>
-            <AccessibleChartSummary
-              id={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}-${item.currentLabel}-${item.comparisonLabel}`}
-              title={item.title}
-              ariaLabel={getSupplementalChartAriaLabel(item)}
-              rows={getSupplementalAccessibleRows(item)}
-            />
-            <BCResponsiveEChart
-              option={buildSupplementalImpactChartOptions(item)}
-              height={280}
-              ariaLabel={getSupplementalChartAriaLabel(item)}
-              ariaDescribedBy={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}-${item.currentLabel}-${item.comparisonLabel}`}
-            />
-          </BCBox>
+            series={item}
+          />
         ))}
       </BCBox>
     </BCBox>
