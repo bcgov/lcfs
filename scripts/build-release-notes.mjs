@@ -275,6 +275,9 @@ const summary = looksLikeRawNotes(enhancedMarkdown)
   ? composeSummary(sections)
   : enhancedMarkdown.trim();
 
+// Notes are generated on the open release branch, so this is a provisional
+// date. The prod build replaces it with the day the release merged into main
+// (frontend/scripts/releaseDates.mjs, called from prod-ci).
 const today = new Date().toISOString().split("T")[0];
 const REPO_URL = "https://github.com/bcgov/lcfs";
 
