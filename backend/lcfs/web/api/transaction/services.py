@@ -1,6 +1,5 @@
 import io
 import logging
-import zoneinfo
 from datetime import datetime, timezone
 from typing import List, Dict, Union
 from fastapi import Depends
@@ -36,6 +35,7 @@ from lcfs.utils.constants import (
     id_prefix_to_transaction_type_map,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
+from lcfs.utils.dates import to_pacific_date
 
 
 logger = logging.getLogger(__name__)
@@ -46,19 +46,6 @@ class TransactionsService:
         self, repo: TransactionRepository = Depends(TransactionRepository)
     ) -> None:
         self.repo = repo
-
-    @staticmethod
-    def _to_pacific(dt):
-        """Convert a naive-UTC or aware datetime to America/Vancouver."""
-        from datetime import date as date_type
-
-        # MV columns cast to ::date return date objects, not datetime
-        if isinstance(dt, date_type) and not isinstance(dt, datetime):
-            return dt
-        pacific = zoneinfo.ZoneInfo("America/Vancouver")
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(pacific)
 
     def apply_transaction_filters(self, pagination, conditions):
         """
@@ -103,10 +90,12 @@ class TransactionsService:
         field = cast(get_field_for_filter(TransactionView, "status"), String)
         filter_value = filter_model.filter
         filter_type = filter_model.filter_type
+
         if isinstance(filter_value, str) and "," in filter_value:
             filter_value = filter_value.split(",")
         if isinstance(filter_value, list):
             filter_type = "set"
+
         return apply_filter_conditions(
             field, filter_value, filter_model.type, filter_type
         )
@@ -290,27 +279,12 @@ class TransactionsService:
                     result.price_per_unit,
                     category,
                     masked_status,
-                    # A calendar date, so no Pacific conversion
-                    (
-                        transfer.agreement_date.strftime("%Y-%m-%d")
-                        if transfer and transfer.agreement_date
-                        else None
-                    ),
-                    (
-                        result.transaction_effective_date.strftime("%Y-%m-%d")
-                        if result.transaction_effective_date
-                        else None
-                    ),
-                    (
-                        self._to_pacific(result.recorded_date).strftime("%Y-%m-%d")
-                        if result.recorded_date
-                        else None
-                    ),
-                    (
-                        self._to_pacific(result.approved_date).strftime("%Y-%m-%d")
-                        if result.approved_date
-                        else None
-                    ),
+                    # The agreement date is stored as a calendar date and the
+                    # view emits the other three as Pacific calendar dates
+                    to_pacific_date(transfer.agreement_date if transfer else None),
+                    to_pacific_date(result.transaction_effective_date),
+                    to_pacific_date(result.recorded_date),
+                    to_pacific_date(result.approved_date),
                     result.from_org_comment,
                     result.to_org_comment,
                     result.government_comment,

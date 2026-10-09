@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import HTTPException
@@ -296,3 +296,35 @@ async def test_analyst_can_recommend():
         result = await service.update_admin_adjustment(update_data)
 
     assert result is not None
+
+
+class _EveningInVancouver(datetime):
+    """datetime whose now() is March 31, 2026 at 5:30 PM PDT."""
+
+    @classmethod
+    def now(cls, tz=None):
+        moment = datetime(2026, 4, 1, 0, 30, tzinfo=timezone.utc)
+        return moment.astimezone(tz) if tz else moment.replace(tzinfo=None)
+
+
+@pytest.mark.anyio
+async def test_director_approve_stamps_pacific_date_when_blank(monkeypatch):
+    """
+    A blank effective date takes the approval's Pacific date. At 5:30 PM PDT
+    on March 31 it is already April 1 in UTC.
+    """
+    monkeypatch.setattr(
+        "lcfs.web.api.admin_adjustment.services.datetime", _EveningInVancouver
+    )
+    aa = _make_admin_adjustment(AdminAdjustmentStatusEnum.Recommended)
+    aa.transaction = None
+    aa.transaction_effective_date = None
+    service = _make_service(
+        aa,
+        _make_status(AdminAdjustmentStatusEnum.Approved),
+        user_roles=[RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR],
+    )
+
+    await service.director_approve_admin_adjustment(aa)
+
+    assert aa.transaction_effective_date == date(2026, 3, 31)
