@@ -132,7 +132,7 @@ SELECT
     rv.organization_id,
     o.name AS organization_name,
     cp.description::integer AS reporting_year,
-    rv.version + 1 AS version_number, -- LCFS stores versions as 0, 1, 2; expose as business versions 1, 2, 3.
+    rv.version + 1 AS version_number, -- expose as business versions 1, 2, 3.
     CASE
         WHEN rv.version = 0 THEN 'Original'
         ELSE 'Supplemental'
