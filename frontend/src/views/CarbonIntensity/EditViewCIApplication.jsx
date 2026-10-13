@@ -398,6 +398,7 @@ const EditViewCIApplicationBase = () => {
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
         readOnly={!isAdd && !isDraft}
+        showEffectiveDateNotice={!isGovernment}
       />
     ),
     step2: ciApplicationId ? (

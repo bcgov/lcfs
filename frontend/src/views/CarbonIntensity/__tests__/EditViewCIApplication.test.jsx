@@ -178,8 +178,16 @@ vi.mock('@/views/CarbonIntensity/components/ApplicationSummary', () => ({
 vi.mock(
   '@/views/CarbonIntensity/components/ApplicationInformationStep',
   () => ({
-    ApplicationInformationStep: ({ onSave, onDelete, organization }) => (
-      <div data-test="step1-stub">
+    ApplicationInformationStep: ({
+      onSave,
+      onDelete,
+      organization,
+      showEffectiveDateNotice
+    }) => (
+      <div
+        data-test="step1-stub"
+        data-show-effective-date-notice={String(!!showEffectiveDateNotice)}
+      >
         <div data-test="org-name">{organization?.name || ''}</div>
         <button
           data-test="step1-save-trigger"
@@ -361,6 +369,47 @@ describe('EditViewCIApplication', () => {
         'true'
       )
     })
+  })
+
+  test('shows the effective date notice in Step 1 for BCeID applicants', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<EditViewCIApplication />, [query, theme, localization, router])
+
+    expect(await screen.findByTestId('step1-stub')).toHaveAttribute(
+      'data-show-effective-date-notice',
+      'true'
+    )
+  })
+
+  test('does not show the effective date notice to government users', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockParams = { ciApplicationId: '10' }
+    mockUserRoles = [{ name: roles.government }, { name: roles.analyst }]
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Draft' }
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, [query, theme, localization, router])
+
+    expect(await screen.findByTestId('step1-stub')).toHaveAttribute(
+      'data-show-effective-date-notice',
+      'false'
+    )
   })
 
   test('creates a new draft and navigates to the edit URL on Save (add mode)', async ({

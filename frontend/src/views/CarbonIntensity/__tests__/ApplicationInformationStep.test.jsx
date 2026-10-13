@@ -11,6 +11,7 @@ import {
 import userEvent from '@testing-library/user-event'
 
 import { ApplicationInformationStep } from '@/views/CarbonIntensity/components/ApplicationInformationStep'
+import carbonIntensityEn from '@/assets/locales/en/carbonIntensity.json'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
@@ -479,5 +480,76 @@ describe('ApplicationInformationStep', () => {
       router
     ])
     expect(screen.getByTestId('ci-step1-save-btn')).toBeDisabled()
+  })
+
+  describe('proposed effective date notice (#5225)', () => {
+    test('shows the notice above the effective date field and links it to the input', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(
+        <ApplicationInformationStep {...baseProps} showEffectiveDateNotice />,
+        [query, theme, localization, router]
+      )
+
+      const notice = screen.getByRole('note')
+      expect(notice).toHaveTextContent(
+        'carbonIntensity:step1.proposedFuelCodeEffectiveNotice'
+      )
+      const input = document.getElementById('proposedFuelCodeEffectiveDate')
+      expect(
+        notice.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+      expect(input).toHaveAttribute('aria-describedby', notice.id)
+      expect(input).toHaveAccessibleDescription(
+        'carbonIntensity:step1.proposedFuelCodeEffectiveNotice'
+      )
+    })
+
+    test('keeps the notice visible when the step is read-only', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(
+        <ApplicationInformationStep
+          {...baseProps}
+          showEffectiveDateNotice
+          readOnly
+        />,
+        [query, theme, localization, router]
+      )
+      expect(screen.getByRole('note')).toBeInTheDocument()
+    })
+
+    test('hides the notice unless requested', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<ApplicationInformationStep {...baseProps} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
+      expect(screen.queryByRole('note')).not.toBeInTheDocument()
+      expect(
+        document.getElementById('proposedFuelCodeEffectiveDate')
+      ).not.toHaveAttribute('aria-describedby')
+    })
+
+    it('uses the approved wording', () => {
+      expect(carbonIntensityEn.step1.proposedFuelCodeEffectiveNotice).toBe(
+        'Effective dates more than six months after the application date require additional supporting information to confirm that the information provided remains accurate and applicable at the requested effective date.'
+      )
+    })
   })
 })
