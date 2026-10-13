@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { vi } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import {
   Controller,
   FormProvider,
@@ -270,6 +270,11 @@ describe('CreditCalculator', () => {
     vi.mocked(copyToClipboard).mockResolvedValue(true)
   })
 
+  afterEach(() => {
+    vi.mocked(useGetFuelTypeList).mockReset()
+    vi.mocked(useGetFuelTypeOptions).mockReset()
+  })
+
   describe('Component Rendering', () => {
     it('renders without crashing', () => {
       render(
@@ -314,6 +319,75 @@ describe('CreditCalculator', () => {
         screen.getByText(mockT('report:qtySuppliedLabel'))
       ).toBeInTheDocument()
     })
+
+    it.each([
+      { fuelType: 'Diesel', fuelCategoryId: 2, fuelTypeId: 2 },
+      { fuelType: 'LNG', fuelCategoryId: 3, fuelTypeId: 3 }
+    ])(
+      'keeps $fuelType End Use options in the same alphabetical order across years',
+      ({ fuelType, fuelCategoryId, fuelTypeId }) => {
+        vi.mocked(useGetFuelTypeList).mockReturnValue({
+          data: { data: [{ fuelType, fuelCategoryId, fuelTypeId }] },
+          isLoading: false
+        })
+        vi.mocked(useGetFuelTypeOptions).mockImplementation(
+          ({ complianceYear }) => ({
+            data: {
+              data: {
+                ...mockFuelOptions.data,
+                eerRatios:
+                  complianceYear === '2023'
+                    ? [
+                        {
+                          endUseType: {
+                            type: 'Transportation',
+                            endUseTypeId: 1
+                          }
+                        },
+                        { endUseType: { type: 'Heating', endUseTypeId: 2 } }
+                      ]
+                    : [
+                        { endUseType: { type: 'Heating', endUseTypeId: 2 } },
+                        {
+                          endUseType: {
+                            type: 'Transportation',
+                            endUseTypeId: 1
+                          }
+                        }
+                      ]
+              }
+            },
+            isLoading: false
+          })
+        )
+
+        const getEndUseOrder = (complianceYear) => {
+          const { container, unmount } = render(
+            <TestWrapper
+              formProps={{
+                defaultValues: {
+                  complianceYear,
+                  fuelCategory: fuelType,
+                  fuelType
+                }
+              }}
+            >
+              <CreditCalculator />
+            </TestWrapper>
+          )
+          const options = Array.from(
+            container.querySelectorAll(
+              '[data-test="endUseType-radio-group"] [role="radio"]'
+            )
+          ).map((option) => option.textContent)
+          unmount()
+          return options
+        }
+
+        expect(getEndUseOrder('2023')).toEqual(['Heating', 'Transportation'])
+        expect(getEndUseOrder('2024')).toEqual(['Heating', 'Transportation'])
+      }
+    )
   })
 
   describe('Helper Functions', () => {
