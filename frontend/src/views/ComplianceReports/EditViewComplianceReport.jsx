@@ -265,10 +265,13 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     if (isQuarterly) {
       const isDraft = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
       const now = new Date()
-      const submittedHistory = reportData?.report?.history?.find(
-        (h) => h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
-      )
-      const createDateFromHistory = submittedHistory?.createDate
+      // A resubmitted report has several Submitted entries; use the latest
+      const createDateFromHistory = reportData?.report?.history
+        ?.filter(
+          (h) => h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+        )
+        .map((h) => h.createDate)
+        .sort((a, b) => new Date(b) - new Date(a))[0]
       const updateDate = reportData?.report?.updateDate
 
       const submittedDate = createDateFromHistory

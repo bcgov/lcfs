@@ -937,8 +937,12 @@ def prepareStatements(Connection conn) {
             create_date,
             update_user,
             update_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT (compliance_report_id, status_id) DO NOTHING
+        )
+        SELECT ?, ?, ?, ?, ?, ?, ?
+        WHERE NOT EXISTS (
+            SELECT 1 FROM compliance_report_history
+            WHERE compliance_report_id = ? AND status_id = ?
+        )
     """
 
     def INSERT_TRANSACTION_SQL = '''
@@ -1064,6 +1068,8 @@ def insertComplianceReportHistory(Integer lcfsReportId, List historyRecords,
             historyStmt.setTimestamp(5, timestamp)
             historyStmt.setString(6, reportUpdateUser)
             historyStmt.setTimestamp(7, timestamp)
+            historyStmt.setInt(8, lcfsReportId)
+            historyStmt.setInt(9, statusId)
 
             historyStmt.addBatch()
             count++
