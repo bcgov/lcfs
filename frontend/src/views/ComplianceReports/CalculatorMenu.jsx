@@ -36,7 +36,7 @@ function TabPanel({ children, description, value, index }) {
               <BCTypography
                 key={paragraphIndex}
                 component="p"
-                variant="body1"
+                variant="body2"
                 sx={paragraphIndex > 0 ? { mt: 1 } : undefined}
               >
                 {paragraph}
