@@ -69,35 +69,60 @@ const ReferenceCompareBox = ({
                     // transform: 'translateX(2px)'
                   }
                 }}
-                onClick={() => copyToClipboard(item.value, index)}
               >
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  {item.label && (
+                <Box
+                  component="button"
+                  type="button"
+                  aria-label={`${item.label ? `${item.label}: ` : ''}${item.value ?? ''}`}
+                  onClick={() => copyToClipboard(item.value, index)}
+                  sx={{
+                    display: 'flex',
+                    flex: 1,
+                    minWidth: 0,
+                    p: 0,
+                    border: 0,
+                    appearance: 'none',
+                    backgroundColor: 'transparent',
+                    color: 'inherit',
+                    font: 'inherit',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    borderRadius: 1,
+                    '&:focus-visible': {
+                      outline: '3px solid #005ea8',
+                      outlineOffset: '2px',
+                      zIndex: 1
+                    }
+                  }}
+                >
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    {item.label && (
+                      <BCTypography
+                        variant="caption"
+                        component="span"
+                        sx={{
+                          color: '#666',
+                          fontWeight: 500,
+                          fontSize: '0.975rem'
+                        }}
+                      >
+                        {item.label}
+                        {': '}
+                      </BCTypography>
+                    )}
                     <BCTypography
-                      variant="caption"
                       component="span"
+                      variant="body2"
                       sx={{
-                        color: '#666',
+                        color: '#333',
                         fontWeight: 500,
-                        fontSize: '0.975rem'
+                        wordBreak: 'break-word',
+                        lineHeight: 1.4
                       }}
                     >
-                      {item.label}
-                      {': '}
+                      {item.value}
                     </BCTypography>
-                  )}
-                  <BCTypography
-                    component="span"
-                    variant="body2"
-                    sx={{
-                      color: '#333',
-                      fontWeight: 500,
-                      wordBreak: 'break-word',
-                      lineHeight: 1.4
-                    }}
-                  >
-                    {item.value}
-                  </BCTypography>
+                  </Box>
                 </Box>
 
                 {/* Copy Button */}
@@ -114,6 +139,7 @@ const ReferenceCompareBox = ({
                     >
                       <IconButton
                         size="small"
+                        onClick={() => copyToClipboard(item.value, index)}
                         sx={{
                           color: copiedItem === index ? '#fcba19' : '#999',
                           bgcolor:
