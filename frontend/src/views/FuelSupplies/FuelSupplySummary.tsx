@@ -184,7 +184,7 @@ export const FuelSupplySummary = ({
         parseInt(compliancePeriod ?? '0'),
         optionsData
       ),
-    [isEarlyIssuance, showFuelTypeOther, compliancePeriod, optionsData]
+    [isEarlyIssuance, showFuelTypeOther, compliancePeriod, optionsData, t]
   )
 
   const getRowId = (params: { data: FuelSupply }) => {

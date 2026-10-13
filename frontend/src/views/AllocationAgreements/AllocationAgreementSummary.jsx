@@ -135,7 +135,7 @@ export const AllocationAgreementSummary = ({
 
   const columns = useMemo(
     () => allocationAgreementSummaryColDef(isEarlyIssuance),
-    [isEarlyIssuance]
+    [isEarlyIssuance, t]
   )
 
   const getRowId = (params) => {
