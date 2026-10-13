@@ -312,6 +312,23 @@ export const formatNumberWithCommas = ({
   return number
 }
 
+export const formatEnergyContentWithCommas = ({
+  value,
+  fuelType
+}: {
+  value: string | number | null | undefined
+  fuelType?: string
+}): string | number => {
+  if (fuelType !== 'CNG' || value == null || value === '') {
+    return formatNumberWithCommas({ value })
+  }
+
+  const numericValue = Number(value)
+  return formatNumberWithCommas({
+    value: Number.isFinite(numericValue) ? Math.round(numericValue) : value
+  })
+}
+
 /**
  * Formats a number with commas and a fixed number of decimal places.
  */

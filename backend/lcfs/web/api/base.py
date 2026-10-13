@@ -450,7 +450,12 @@ class PaginatedQueryBuilder:
                     conditions.append(condition)
                 continue
 
-            filter_value = filter_model.filter
+            filter_value = (
+                filter_model.values
+                if filter_model.filter_type == "set"
+                and filter_model.values is not None
+                else filter_model.filter
+            )
             if filter_model.filter_type == "date":
                 if filter_model.type == "inRange":
                     if not filter_model.date_from and not filter_model.date_to:

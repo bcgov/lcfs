@@ -15,6 +15,7 @@ import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
 import {
+  formatEnergyContentWithCommas,
   formatNumberWithCommas,
   formatNumberWithDecimals
 } from '@/utils/formatters'
@@ -737,7 +738,11 @@ export const fuelSupplyColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
-      valueFormatter: numberCellFormatter,
+      valueFormatter: (params) =>
+        formatEnergyContentWithCommas({
+          value: params.value,
+          fuelType: params.data?.fuelType
+        }) as string,
       minWidth: 100,
       editable: false
     }

@@ -101,7 +101,11 @@ class TransactionsService:
     @staticmethod
     def _status_filter(filter_model):
         field = cast(get_field_for_filter(TransactionView, "status"), String)
-        filter_value = filter_model.filter
+        filter_value = (
+            filter_model.values
+            if filter_model.filter_type == "set" and filter_model.values is not None
+            else filter_model.filter
+        )
         filter_type = filter_model.filter_type
         if isinstance(filter_value, str) and "," in filter_value:
             filter_value = filter_value.split(",")
@@ -113,11 +117,12 @@ class TransactionsService:
 
     @service_handler
     async def get_transactions_paginated(
-        self, pagination: PaginationRequestSchema = {}, organization_id: int = None
+        self, pagination: PaginationRequestSchema = None, organization_id: int = None
     ) -> Dict[str, Union[List[TransactionViewSchema], PaginationResponseSchema]]:
         """
         Fetch transactions with filters, sorting, and pagination.
         """
+        pagination = pagination or PaginationRequestSchema()
         pagination.filters.append(
             FilterModel(
                 field="status", filter="Deleted", type="notEqual", filter_type="text"
