@@ -13,24 +13,7 @@ import { roles } from '@/constants/roles'
 import { FEATURE_FLAGS } from '@/constants/config'
 import { ROUTES } from '@/routes/routes'
 import { useOrgFuelCodeCounts } from '@/hooks/useDashboard'
-
-// When `hidden`, the number is rendered invisibly but still occupies layout,
-// so plain links (with no count) share the same indent and row height as the
-// counted links above them.
-const CountDisplay = ({ count, hidden = false }) => (
-  <BCTypography
-    component="span"
-    variant="h3"
-    aria-hidden={hidden || undefined}
-    sx={{
-      color: 'success.main',
-      marginX: 3,
-      ...(hidden && { visibility: 'hidden' })
-    }}
-  >
-    {count}
-  </BCTypography>
-)
+import { CountDisplay, countDigits } from '../../CountDisplay'
 
 const linkSx = {
   textDecoration: 'underline',
@@ -48,11 +31,13 @@ const OrgFuelCodeCard = () => {
   const draftCount = counts?.draft || 0
   const submittedCount = counts?.submitted || 0
   const hasApplications = draftCount > 0 || submittedCount > 0
+  // One counter width for the whole list, so its links line up (#4911).
+  const digits = countDigits(draftCount, submittedCount)
 
   const renderLinkWithCount = (text, count, onClick) => {
     return count > 0 ? (
       <ListItemButton component="a" onClick={onClick}>
-        <CountDisplay count={count} />
+        <CountDisplay count={count} digits={digits} />
         <BCTypography
           variant="body2"
           color="link"
@@ -67,7 +52,7 @@ const OrgFuelCodeCard = () => {
 
   const renderPlainLink = (text, onClick) => (
     <ListItemButton component="a" onClick={onClick}>
-      <CountDisplay count={0} hidden />
+      <CountDisplay digits={digits} hidden />
       <BCTypography variant="body2" color="link" sx={linkSx} onClick={onClick}>
         {text}
       </BCTypography>

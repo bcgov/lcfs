@@ -13,20 +13,7 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgTransactionCounts } from '@/hooks/useDashboard'
 import { FILTER_KEYS } from '@/constants/common'
 import { TRANSACTION_TYPES, TRANSFER_STATUSES } from '@/constants/statuses'
-
-const CountDisplay = ({ count }) => (
-  <BCTypography
-    component="span"
-    variant="h3"
-    sx={{
-      color: 'success.main',
-      marginX: 3,
-      visibility: count != null ? 'visible' : 'hidden'
-    }}
-  >
-    {count ?? 0}
-  </BCTypography>
-)
+import { CountDisplay, countDigits } from '../../CountDisplay'
 
 const OrgTransactionsCard = () => {
   const { t } = useTranslation(['dashboard'])
@@ -58,10 +45,15 @@ const OrgTransactionsCard = () => {
     navigate(route)
   }
 
+  // One counter width for the whole list, so its links line up (#4911); a
+  // link without a count keeps an empty counter, so it lines up too.
+  const transfers = counts?.transfers || 0
+  const digits = countDigits(transfers)
+
   const renderLinkWithCount = (text, count, onClick) => {
     return (
       <>
-        <CountDisplay count={count} />
+        <CountDisplay count={count} digits={digits} hidden={count == null} />
         <BCTypography
           variant="body2"
           color="link"
@@ -107,7 +99,7 @@ const OrgTransactionsCard = () => {
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.transfersInProgress'),
-                  counts?.transfers || 0,
+                  transfers,
                   () => handleNavigation(ROUTES.TRANSACTIONS.LIST)
                 )}
               </ListItemButton>

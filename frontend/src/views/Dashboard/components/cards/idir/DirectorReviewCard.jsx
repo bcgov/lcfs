@@ -18,6 +18,7 @@ import {
   TRANSFER_STATUSES,
   FUEL_CODE_STATUSES
 } from '@/constants/statuses'
+import { CountDisplay, countDigits } from '../../CountDisplay'
 
 // Constants for filter configurations
 const FILTER_CONFIGS = {
@@ -127,19 +128,19 @@ const DirectorReviewCard = () => {
     [navigate]
   )
 
+  // One counter width for the whole list, so its links line up (#4911).
+  const digits = countDigits(
+    counts.transfers,
+    counts.complianceReports,
+    counts.initiativeAgreements,
+    counts.adminAdjustments,
+    counts.fuelCodes
+  )
+
   const renderLinkWithCount = useCallback(
     (text, count, onClick) => (
       <>
-        <BCTypography
-          component="span"
-          variant="h3"
-          sx={{
-            color: 'success.main',
-            marginX: 3
-          }}
-        >
-          {count}
-        </BCTypography>
+        <CountDisplay count={count} digits={digits} />
         <BCTypography
           variant="body2"
           color="link"
@@ -150,7 +151,7 @@ const DirectorReviewCard = () => {
         </BCTypography>
       </>
     ),
-    []
+    [digits]
   )
 
   const reviewItems = useMemo(
