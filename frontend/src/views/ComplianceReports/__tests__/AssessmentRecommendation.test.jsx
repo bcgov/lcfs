@@ -282,6 +282,62 @@ describe('AssessmentRecommendation', () => {
     })
   })
 
+  describe('Exemption editing', () => {
+    it.each([roles.analyst, roles.director])(
+      'allows %s to select an exemption during Analyst adjustment',
+      (role) => {
+        mockHasRoles.mockImplementation(
+          (candidateRole) => candidateRole === role
+        )
+
+        const props = {
+          ...defaultProps,
+          currentStatus: COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+        }
+
+        render(<AssessmentRecommendation {...props} />)
+
+        const renewableExemption = screen.getByLabelText(
+          'report:renewableFuelExemptionDescription'
+        )
+        expect(renewableExemption).toBeEnabled()
+
+        fireEvent.click(renewableExemption)
+
+        expect(props.methods.setValue).toHaveBeenCalledWith(
+          'isRenewableFuelExempted',
+          true
+        )
+        expect(mockUpdateComplianceReport).toHaveBeenCalledWith(
+          {
+            status: COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+            isRenewableFuelExempted: true
+          },
+          expect.objectContaining({ onSuccess: expect.any(Function) })
+        )
+      }
+    )
+
+    it('keeps exemptions disabled when the report is marked as non-assessment', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+
+      const props = {
+        ...defaultProps,
+        currentStatus: COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+        methods: {
+          ...defaultProps.methods,
+          watch: vi.fn((field) => field === 'isNonAssessment')
+        }
+      }
+
+      render(<AssessmentRecommendation {...props} />)
+
+      expect(
+        screen.getByLabelText('report:renewableFuelExemptionDescription')
+      ).toBeDisabled()
+    })
+  })
+
   describe('Conditional Rendering - Reassessment Button', () => {
     it('shows reassessment button for Analyst when feature enabled and status is assessed', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
