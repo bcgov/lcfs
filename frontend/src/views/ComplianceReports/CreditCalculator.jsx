@@ -29,7 +29,10 @@ import {
   FUEL_CATEGORIES,
   LEGISLATION_TRANSITION_YEAR
 } from '@/constants/common'
-import { numberFormatter } from '@/utils/formatters'
+import {
+  formatEnergyContentWithCommas,
+  numberFormatter
+} from '@/utils/formatters'
 import { copyToClipboard } from '@/utils/clipboard'
 
 const CUSTOM_CI_OPTION_VALUE = 'customCi'
@@ -553,6 +556,10 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
     if (!endUseId || !calculatedResults) return fallback
 
     const data = calculatedResults
+    const formattedEnergyContent = formatEnergyContentWithCommas({
+      value: data.energyContent || 0,
+      fuelType
+    })
 
     return {
       credits: data.complianceUnits || 0,
@@ -561,12 +568,12 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
         eer: (data.eer || 0).toFixed(2),
         ci: `${data.rci || 0} ${CARBON_INTENSITY_UNIT}`,
         uci: data.uci ? `${data.uci} ${CARBON_INTENSITY_UNIT}` : 'N/A',
-        energyContent: `${numberFormatter(data.energyContent || 0)} MJ`,
+        energyContent: `${formattedEnergyContent} MJ`,
         energyDensity: `${data.energyDensity || 0} ${fuelTypeOptions?.data?.energyDensity?.unit?.name || ''}`
       },
-      formulaDisplay: `${(data.complianceUnits || 0).toLocaleString()} = (${data.tci || 0} * ${data.eer || 0} - (${data.rci || 0} + ${data.uci || 'N/A'})) * ${numberFormatter(data.energyContent || 0)} / 1,000,000`
+      formulaDisplay: `${(data.complianceUnits || 0).toLocaleString()} = (${data.tci || 0} * ${data.eer || 0} - (${data.rci || 0} + ${data.uci || 'N/A'})) * ${formattedEnergyContent} / 1,000,000`
     }
-  }, [calculatedResults, fuelTypeOptions, endUseId])
+  }, [calculatedResults, fuelTypeOptions, endUseId, fuelType])
 
   const carbonIntensityDisplayValue = useMemo(() => {
     if (!provisionOfTheAct) return ''
