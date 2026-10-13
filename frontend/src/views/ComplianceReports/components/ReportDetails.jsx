@@ -2,7 +2,6 @@ import BCTypography from '@/components/BCTypography'
 import Box from '@mui/material/Box'
 import Accordion from '@mui/material/Accordion'
 import AccordionDetails from '@mui/material/AccordionDetails'
-import AccordionSummary from '@mui/material/AccordionSummary'
 import Chip from '@mui/material/Chip'
 import CircularProgress from '@mui/material/CircularProgress'
 import IconButton from '@mui/material/IconButton'
@@ -681,7 +680,36 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
               scheduleData.every((item) => item.actionType === 'DELETE')
 
         const showEditIcon = shouldShowEditIcon(activity.name)
-        const isSupportingDocs = activity.key === 'supportingDocs'
+        const editAction = showEditIcon && (
+          <Role
+            roles={[
+              roles.signing_authority,
+              roles.compliance_reporting,
+              roles.analyst
+            ]}
+          >
+            <IconButton
+              color="primary"
+              aria-label={`${t('common:editBtn')} ${activity.name}`}
+              className="small-icon"
+              sx={{
+                px: 2,
+                flexShrink: 0,
+                '&.Mui-focusVisible': {
+                  outline: '2px solid',
+                  outlineColor: 'primary.main',
+                  outlineOffset: '2px'
+                }
+              }}
+              onClick={(e) => {
+                e.stopPropagation()
+                activity.action(e)
+              }}
+            >
+              <Edit aria-hidden="true" />
+            </IconButton>
+          </Role>
+        )
 
         const accordionHeading = (
           <BCTypography
@@ -691,6 +719,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
             component="span"
           >
             {activity.name}&nbsp;&nbsp;
+            {editAction}{' '}
             {isEdited && !allRecordsDeleted && (
               <Chip
                 component="span"
@@ -724,40 +753,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
           </BCTypography>
         )
 
-        const editAction = showEditIcon && (
-          <Role
-            roles={[
-              roles.signing_authority,
-              roles.compliance_reporting,
-              roles.analyst
-            ]}
-          >
-            <IconButton
-              color="primary"
-              aria-label={`${t('common:editBtn')} ${activity.name}`}
-              className="small-icon"
-              sx={{
-                position: 'absolute',
-                top: '50%',
-                right: '3rem',
-                transform: 'translateY(-50%)',
-                zIndex: 1,
-                '&.Mui-focusVisible': {
-                  outline: '2px solid',
-                  outlineColor: 'primary.main',
-                  outlineOffset: '2px'
-                }
-              }}
-              onClick={(e) => {
-                e.stopPropagation()
-                activity.action(e)
-              }}
-            >
-              <Edit aria-hidden="true" />
-            </IconButton>
-          </Role>
-        )
-
         return (
           <Accordion
             sx={{ ...accordionStyles, scrollMarginTop: 96 }}
@@ -773,78 +768,63 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
               role="group"
               aria-label={activity.name}
               aria-controls={`${panelId}-content`}
-              sx={{ position: 'relative', display: 'block' }}
+              sx={{
+                position: 'relative',
+                display: 'block',
+                cursor: !showEditIcon && isDisabled ? 'default' : 'pointer'
+              }}
+              onClick={(event) => {
+                if (!showEditIcon && isDisabled) return
+                onExpand(panelId)(event, !isExpanded)
+              }}
             >
-              {isSupportingDocs ? (
-                <Box
-                  component="span"
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    minHeight: 48,
-                    pl: 2,
-                    pr: showEditIcon ? '6rem' : '3rem'
-                  }}
-                >
-                  {accordionHeading}
-                </Box>
-              ) : (
-                <AccordionSummary
-                  expandIcon={
-                    <ExpandMore
-                      aria-hidden="true"
-                      sx={{ width: '2rem', height: '2rem' }}
-                    />
+              <Box
+                component="span"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  minHeight: 48,
+                  pl: 2,
+                  pr: '4rem'
+                }}
+              >
+                {accordionHeading}
+              </Box>
+              <IconButton
+                color="primary"
+                aria-label={activity.name}
+                aria-controls={`${panelId}-content`}
+                aria-expanded={isExpanded}
+                data-test={`${panelId}-summary`}
+                disabled={!showEditIcon && isDisabled}
+                className="small-icon"
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  right: 8,
+                  transform: 'translateY(-50%)',
+                  zIndex: 1,
+                  '&.Mui-focusVisible': {
+                    outline: '2px solid',
+                    outlineColor: 'primary.main',
+                    outlineOffset: '2px'
                   }
-                  aria-controls={`${panelId}-content`}
-                  id={`${panelId}-toggle`}
-                  data-test={`${panelId}-summary`}
+                }}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onExpand(panelId)(event, !isExpanded)
+                }}
+              >
+                <ExpandMore
+                  aria-hidden="true"
                   sx={{
-                    pr: showEditIcon ? '7.5rem' : undefined,
-                    '& .MuiAccordionSummary-content': { alignItems: 'center' }
+                    width: '2rem',
+                    height: '2rem',
+                    transform: isExpanded ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 150ms ease-in-out'
                   }}
-                >
-                  {accordionHeading}
-                </AccordionSummary>
-              )}
-              {editAction}
-              {isSupportingDocs && (
-                <IconButton
-                  color="primary"
-                  aria-label={activity.name}
-                  aria-controls={`${panelId}-content`}
-                  aria-expanded={isExpanded}
-                  data-test={`${panelId}-summary`}
-                  disabled={!showEditIcon && isDisabled}
-                  className="small-icon"
-                  sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    right: 0,
-                    transform: 'translateY(-50%)',
-                    zIndex: 1,
-                    '&.Mui-focusVisible': {
-                      outline: '2px solid',
-                      outlineColor: 'primary.main',
-                      outlineOffset: '2px'
-                    }
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onExpand(panelId)(event, !isExpanded)
-                  }}
-                >
-                  <ExpandMore
-                    aria-hidden="true"
-                    sx={{
-                      width: '2rem',
-                      height: '2rem',
-                      transform: isExpanded ? 'rotate(180deg)' : 'none',
-                      transition: 'transform 150ms ease-in-out'
-                    }}
-                  />
-                </IconButton>
-              )}
+                />
+              </IconButton>
             </Box>
             <AccordionDetails>
               {allRecordsDeleted && (
