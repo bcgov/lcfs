@@ -63,8 +63,8 @@ class TransactionRepository:
         self,
         offset: int,
         limit: Optional[int] = None,
-        conditions: list = [],
-        sort_orders: list = [],
+        conditions: Optional[list] = None,
+        sort_orders: Optional[list] = None,
         organization_id: Optional[int] = None,
     ):
         """
@@ -81,7 +81,8 @@ class TransactionRepository:
         Returns:
             A tuple of (list of TransactionView instances, total count).
         """
-        query_conditions = conditions
+        query_conditions = list(conditions or [])
+        sort_orders = sort_orders or []
 
         # Base condition for transaction type "Transfer"
         transfer_type_condition = TransactionView.transaction_type == "Transfer"
@@ -169,10 +170,6 @@ class TransactionRepository:
             query_conditions.append(
                 or_(gov_transfer_condition, gov_non_transfer_condition)
             )
-
-        # Add additional conditions
-        if conditions:
-            query_conditions.extend(conditions)
 
         query = select(TransactionView).where(and_(*query_conditions))
 
