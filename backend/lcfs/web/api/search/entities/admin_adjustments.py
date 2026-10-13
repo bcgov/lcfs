@@ -4,7 +4,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
-from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatus
+from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import (
+    AdminAdjustmentStatus,
+    AdminAdjustmentStatusEnum,
+)
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.web.api.search.entities.base import (
     RESULT_LIMIT,
@@ -26,6 +29,10 @@ from lcfs.web.api.search.schema import SearchResultDetail, SearchResultItem
 ENTITY_TYPE = "admin_adjustment"
 SUPPORTED_FILTERS = {"status", "year"}
 
+# Fields that must not be searchable or echoed to non-government users.
+# gov_comment is an internal note never communicated to the recipient org.
+_SUPPLIER_EXCLUDED_FIELD_LABELS: frozenset[str] = frozenset({"Government comment"})
+
 
 async def search_admin_adjustments(
     db: AsyncSession, context: SearchContext
@@ -37,7 +44,7 @@ async def search_admin_adjustments(
     ):
         return []
 
-    fields = [
+    all_fields = [
         SearchField("Organization", Organization.name, primary=True, fuzzy=True),
         SearchField("Adjustment ID", AdminAdjustment.admin_adjustment_id, primary=True),
         SearchField("Status", AdminAdjustmentStatus.status, primary=True),
@@ -48,6 +55,16 @@ async def search_admin_adjustments(
             date_text_expression(AdminAdjustment.transaction_effective_date),
         ),
     ]
+    # Supplier users must not be able to search or see the government comment.
+    fields = (
+        all_fields
+        if context.is_government
+        else [
+            f
+            for f in all_fields
+            if f.label not in _SUPPLIER_EXCLUDED_FIELD_LABELS
+        ]
+    )
     match_context = match_context_expression(fields, query)
     clause, score = search_clause(fields, query)
     if clause is None and query.numeric_id is not None:
@@ -81,6 +98,13 @@ async def search_admin_adjustments(
         (
             AdminAdjustment.to_organization_id == context.organization_id
             if not context.is_government and context.organization_id is not None
+            else None
+        ),
+        # Suppliers may only see Approved adjustments.  Draft and Recommended
+        # are internal workflow states never communicated to the recipient org.
+        (
+            AdminAdjustmentStatus.status == AdminAdjustmentStatusEnum.Approved
+            if not context.is_government
             else None
         ),
     )
