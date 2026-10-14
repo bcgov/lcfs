@@ -147,7 +147,16 @@ vi.mock('@/utils/clipboard', () => ({
 }))
 
 vi.mock('@/utils/formatters', () => ({
-  numberFormatter: vi.fn((value) => value?.toLocaleString() || '0')
+  numberFormatter: vi.fn((value) => value?.toLocaleString() || '0'),
+  formatEnergyContentWithCommas: vi.fn(({ value, fuelType }) => {
+    const numericValue = Number(value)
+    const displayValue =
+      fuelType === 'CNG' && Number.isFinite(numericValue)
+        ? Math.round(numericValue)
+        : value
+
+    return displayValue?.toLocaleString() || '0'
+  })
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -631,6 +640,56 @@ describe('CreditCalculator', () => {
 
       await waitFor(() => {
         expect(screen.getByText('141.76 MJ/kg')).toBeInTheDocument()
+      })
+    })
+
+    it('displays CNG energy content as a whole number in calculator results', async () => {
+      vi.mocked(useGetFuelTypeList).mockReturnValue({
+        data: {
+          data: [{ fuelType: 'CNG', fuelCategoryId: 1, fuelTypeId: 4 }]
+        },
+        isLoading: false
+      })
+      vi.mocked(useGetFuelTypeOptions).mockReturnValue({
+        data: {
+          ...mockFuelOptions,
+          data: {
+            ...mockFuelOptions.data,
+            unit: 'm³',
+            energyDensity: { unit: { name: 'MJ/m³ (15°C and 1 atm)' } }
+          }
+        },
+        isLoading: false
+      })
+      vi.mocked(useCalculateComplianceUnits).mockReturnValue({
+        data: {
+          data: {
+            complianceUnits: 1500,
+            tci: 74.93772,
+            eer: 0.9,
+            rci: 63.91,
+            uci: null,
+            energyContent: 3827000.0000000005,
+            energyDensity: 38.27
+          }
+        }
+      })
+
+      render(
+        <TestWrapper>
+          <CreditCalculator />
+        </TestWrapper>
+      )
+
+      fireEvent.click(screen.getByTestId('fuelCategory1'))
+      fireEvent.click(screen.getByTestId('CNG'))
+      fireEvent.click(screen.getByTestId('Transportation'))
+
+      await waitFor(() => {
+        expect(screen.getByText('3,827,000 MJ')).toBeInTheDocument()
+        expect(
+          screen.queryByText('3,827,000.0000000005 MJ')
+        ).not.toBeInTheDocument()
       })
     })
   })

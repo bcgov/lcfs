@@ -2,7 +2,7 @@ import {
   redOutlinedButton, 
   outlinedButton, 
   containedButton, 
-  buttonClusterConfigFn 
+  buttonClusterConfigFn
 } from '../buttonConfigs'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'

@@ -29,6 +29,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
 )
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.utils.dates import PACIFIC_TZ
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -1236,10 +1237,12 @@ class InitiativeAgreementServices:
         )
         initiative_agreement.transaction = to_transaction
 
-        # Set effective date to today if the analyst left it blank
+        # Set effective date to today if the analyst left it blank. The
+        # transaction views read it as a Pacific calendar date, so take
+        # today's Pacific date, not UTC's (which is tomorrow after 5 PM).
         if initiative_agreement.transaction_effective_date is None:
             initiative_agreement.transaction_effective_date = datetime.now(
-                timezone.utc
+                PACIFIC_TZ
             ).date()
 
         await self.repo.refresh_initiative_agreement(initiative_agreement)
