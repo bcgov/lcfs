@@ -29,9 +29,7 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
-const valueFormatter = formatNumberWithCommas as NonNullable<
-  ColDef['valueFormatter']
->
+type NumberCellFormatter = NonNullable<ColDef['valueFormatter']>
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_APPROVED_FUEL_CODE_LEGACY =
@@ -114,7 +112,7 @@ export const fuelExportColDefs = (
     field: 'complianceUnits',
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     minWidth: 100,
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     editable: false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings)
@@ -469,7 +467,7 @@ export const fuelExportColDefs = (
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
     minWidth: 200,
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
@@ -705,7 +703,7 @@ export const fuelExportSummaryColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
     minWidth: 180,
-    valueFormatter
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
@@ -754,7 +752,7 @@ export const fuelExportSummaryColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
     field: 'quantity',
     minWidth: 185,
-    valueFormatter
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
@@ -824,7 +822,7 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
     minWidth: 180,
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     cellStyle: (params) =>
       (highlight && changelogCellStyle(params, 'complianceUnits')) as unknown as ReturnType<typeof changelogCellStyle>
   },
@@ -876,7 +874,7 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
     field: 'quantity',
     minWidth: 185,
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     cellStyle: (params) =>
       (highlight && changelogCellStyle(params, 'quantity')) as unknown as ReturnType<typeof changelogCellStyle>
   },
@@ -928,7 +926,7 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
     field: 'energy',
     minWidth: 170,
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     cellStyle: (params) =>
       (highlight && changelogCellStyle(params, 'energy')) as unknown as ReturnType<typeof changelogCellStyle>
   }

@@ -35,9 +35,7 @@ import {
   canEditCanadianProduced
 } from '@/utils/renewableClaimUtils'
 
-const numberCellFormatter = formatNumberWithCommas as NonNullable<
-  ColDef['valueFormatter']
->
+type NumberCellFormatter = NonNullable<ColDef['valueFormatter']>
 
 const isFuelSupplyQ1Editable = (
   data: { isCanadaProduced?: boolean; [key: string]: unknown },
@@ -137,7 +135,7 @@ export const fuelSupplyColDefs = (
       field: 'complianceUnits',
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
       minWidth: 100,
-      valueFormatter: numberCellFormatter,
+      valueFormatter: formatNumberWithCommas as NumberCellFormatter,
       editable: false,
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings)
@@ -619,7 +617,7 @@ export const fuelSupplyColDefs = (
       field: 'quantity',
       headerComponent: RequiredHeader,
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
-      valueFormatter: numberCellFormatter,
+      valueFormatter: formatNumberWithCommas as NumberCellFormatter,
       cellEditor: NumberEditor,
       cellEditorParams: {
         precision: 0,
@@ -750,7 +748,7 @@ export const fuelSupplyColDefs = (
             field: 'q1Quantity',
             headerComponent: RequiredHeader,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -767,7 +765,7 @@ export const fuelSupplyColDefs = (
             field: 'q2Quantity',
             headerComponent: RequiredHeader,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -784,7 +782,7 @@ export const fuelSupplyColDefs = (
             field: 'q3Quantity',
             headerComponent: RequiredHeader,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -801,7 +799,7 @@ export const fuelSupplyColDefs = (
             field: 'q4Quantity',
             headerComponent: RequiredHeader,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -817,7 +815,7 @@ export const fuelSupplyColDefs = (
           {
             field: 'totalQuantity',
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
               StandardCellWarningAndErrors(params, errors, warnings),
             valueGetter: (params) => {
@@ -852,7 +850,7 @@ export const fuelSupplySummaryColDef = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
       field: 'complianceUnits',
       minWidth: 180,
-      valueFormatter: numberCellFormatter
+      valueFormatter: formatNumberWithCommas as NumberCellFormatter
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
@@ -948,7 +946,7 @@ export const fuelSupplySummaryColDef = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
       field: 'quantity',
       minWidth: 185,
-      valueFormatter: numberCellFormatter
+      valueFormatter: formatNumberWithCommas as NumberCellFormatter
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
@@ -1012,31 +1010,31 @@ export const fuelSupplySummaryColDef = (
             field: 'q1Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
-            valueFormatter: numberCellFormatter
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter
           },
           {
             field: 'q2Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
-            valueFormatter: numberCellFormatter
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter
           },
           {
             field: 'q3Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
-            valueFormatter: numberCellFormatter
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter
           },
           {
             field: 'q4Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
-            valueFormatter: numberCellFormatter
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter
           },
           {
             field: 'totalQuantity',
             minWidth: 160,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -1076,7 +1074,7 @@ export const changelogCommonColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
       field: 'complianceUnits',
       minWidth: 180,
-      valueFormatter: numberCellFormatter,
+      valueFormatter: formatNumberWithCommas as NumberCellFormatter,
       cellStyle: (params) =>
         (highlight && changelogCellStyle(params, 'complianceUnits')) as unknown as ReturnType<typeof changelogCellStyle>
     },
@@ -1178,7 +1176,7 @@ export const changelogCommonColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
       field: 'quantity',
       minWidth: 185,
-      valueFormatter: numberCellFormatter,
+      valueFormatter: formatNumberWithCommas as NumberCellFormatter,
       cellStyle: (params) =>
         (highlight && changelogCellStyle(params, 'quantity')) as unknown as ReturnType<typeof changelogCellStyle>
     },
@@ -1242,7 +1240,7 @@ export const changelogCommonColDefs = (
             field: 'q1Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
               (highlight && changelogCellStyle(params, 'q1Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
@@ -1250,7 +1248,7 @@ export const changelogCommonColDefs = (
             field: 'q2Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
               (highlight && changelogCellStyle(params, 'q2Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
@@ -1258,7 +1256,7 @@ export const changelogCommonColDefs = (
             field: 'q3Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
               (highlight && changelogCellStyle(params, 'q3Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
@@ -1266,7 +1264,7 @@ export const changelogCommonColDefs = (
             field: 'q4Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
               (highlight && changelogCellStyle(params, 'q4Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
@@ -1274,7 +1272,7 @@ export const changelogCommonColDefs = (
             field: 'totalQuantity',
             minWidth: 160,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
               (highlight && changelogCellStyle(params, 'totalQuantity')) as unknown as ReturnType<typeof changelogCellStyle>,
             valueGetter: (params) => {
@@ -1350,31 +1348,31 @@ export const changelogColDefs = (
             field: 'q1Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
-            valueFormatter: numberCellFormatter
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter
           },
           {
             field: 'q2Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
-            valueFormatter: numberCellFormatter
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter
           },
           {
             field: 'q3Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
-            valueFormatter: numberCellFormatter
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter
           },
           {
             field: 'q4Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
-            valueFormatter: numberCellFormatter
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter
           },
           {
             field: 'totalQuantity',
             minWidth: 160,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
-            valueFormatter: numberCellFormatter,
+            valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             valueGetter: (params) => {
               const data = params.data
               return (
