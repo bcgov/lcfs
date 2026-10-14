@@ -15,7 +15,9 @@ export const NotionalTransferSummary = ({ data, status }) => {
     defaultInitialPagination
   )
   const gridRef = useRef()
-  const { complianceReportId, compliancePeriod } = useParams()
+  const {
+  compliancePeriod
+} = useParams()
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {

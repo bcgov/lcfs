@@ -47,8 +47,6 @@ vi.mock('@mui/icons-material/UploadFile', () => ({
     default: () => <span data-test="upload-file-icon" />
 }))
 
-const intersectionObservers: MockIntersectionObserver[] = []
-
 class MockIntersectionObserver {
   callback: IntersectionObserverCallback
 
@@ -62,6 +60,8 @@ class MockIntersectionObserver {
   unobserve = vi.fn()
   takeRecords = vi.fn(() => [])
 }
+
+const intersectionObservers: MockIntersectionObserver[] = []
 
 class MockMutationObserver {
   observe = vi.fn()

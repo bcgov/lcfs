@@ -1,5 +1,3 @@
-/* eslint-disable cypress/unsafe-to-chain-command */
-
 const idirCreds = () => ({
   username: Cypress.env('IDIR_TEST_USER') || Cypress.env('ADMIN_IDIR_USERNAME'),
   password: Cypress.env('IDIR_TEST_PASS') || Cypress.env('ADMIN_IDIR_PASSWORD')

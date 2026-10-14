@@ -4,6 +4,13 @@ import { AllocationAgreementChangelog } from '../AllocationAgreementChangelog'
 import { test } from '@/tests/utils/fixtures'
 import { useState } from 'react'
 
+// Import the actual hooks to mock them
+import {
+  useComplianceReportWithCache,
+  useGetChangeLog
+} from '@/hooks/useComplianceReports'
+import { useParams } from 'react-router-dom'
+
 // Mock hooks
 vi.mock('@/hooks/useComplianceReports', () => ({
   useComplianceReportWithCache: vi.fn(),
@@ -29,16 +36,15 @@ vi.mock('react-i18next', () => ({
 // Mock BCGridViewer with function execution for coverage
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-    gridKey,
-    columnDefs,
-    queryData,
-    getRowId,
-    suppressPagination,
-    gridOptions,
-    defaultColDef,
-    paginationOptions,
-    onPaginationChange
-  }) => {
+  gridKey,
+  columnDefs,
+  queryData,
+  getRowId,
+  suppressPagination,
+  gridOptions,
+  paginationOptions,
+  onPaginationChange
+}) => {
     // Actually call functions to increase coverage
     let rowIds = []
     let rowStyles = []
@@ -111,16 +117,19 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, color, component, ...props }) => (
-    <div
+  default: ({
+  children,
+  variant,
+  color,
+  ...props
+}) => { delete props.component; return <div
       data-test="bc-typography"
       data-variant={variant}
       data-color={color}
       {...props}
     >
       {children}
-    </div>
-  )
+    </div>; }
 }))
 
 // Mock Loading component
@@ -142,7 +151,7 @@ vi.mock('./_schema', () => ({
       headerName: `Common Field ${i}`
     }))
   ],
-  changelogCommonColDefs: (highlight) => [
+  changelogCommonColDefs: () => [
     // Mock 17 columns for common column definitions
     ...Array.from({ length: 17 }, (_, i) => ({
       field: `commonField${i}`,
@@ -175,13 +184,6 @@ vi.mock('@/themes/base/colors', async () => {
     }
   }
 })
-
-// Import the actual hooks to mock them
-import {
-  useComplianceReportWithCache,
-  useGetChangeLog
-} from '@/hooks/useComplianceReports'
-import { useParams } from 'react-router-dom'
 
 // Mock useState for testing
 vi.mock('react', async () => {

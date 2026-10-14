@@ -12,8 +12,8 @@
  * React component test context (third-party grid API interactions).
  */
 import { vi, describe, expect, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import '@testing-library/user-event'
 import React from 'react'
 import { Users } from '../Users.jsx'
 import { test } from '@/tests/utils/fixtures'
@@ -22,14 +22,6 @@ import { test } from '@/tests/utils/fixtures'
 const mockNavigate = vi.fn()
 const mockLocation = { state: null }
 const mockT = vi.fn((key) => key)
-const mockGridRef = {
-  current: {
-    api: {
-      deselectAll: vi.fn()
-    }
-  }
-}
-
 // Global storage for captured callback functions
 const capturedCallbacks = {
   getRowId: null,
@@ -54,50 +46,52 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, my, color, ...props }) => (
-    <div data-test="bc-typography" {...props}>
-      {children}
-    </div>
-  )
+  default: ({ children, ...props }) => {
+    delete props.variant
+    delete props.my
+    delete props.color
+    return (
+      <div data-test="bc-typography" {...props}>
+        {children}
+      </div>
+    )
+  }
 }))
 
-vi.mock(
-  '@/components/BCButton',
-  ({ render, query, theme, localization, router }) => {
-    const { forwardRef } = require('react')
-    return {
-      default: forwardRef(
-        (
-          { children, onClick, startIcon, variant, size, color, ...props },
-          ref
-        ) => (
-          <button data-test="bc-button" onClick={onClick} ref={ref} {...props}>
-            {startIcon}
-            {children}
-          </button>
-        )
+vi.mock('@/components/BCButton', () => {
+  const { forwardRef } = React
+  return {
+    default: forwardRef(function DefaultMock(
+      { children, onClick, startIcon, ...props },
+      ref
+    ) {
+      delete props.variant
+      delete props.size
+      delete props.color
+      return (
+        <button data-test="bc-button" onClick={onClick} ref={ref} {...props}>
+          {startIcon}
+          {children}
+        </button>
       )
-    }
+    })
   }
-)
+})
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({
-    children,
-    component,
-    display,
-    alignItems,
-    gap,
-    mt,
-    my,
-    className,
-    style,
-    ...props
-  }) => (
-    <div data-test="bc-box" className={className} style={style} {...props}>
-      {children}
-    </div>
-  )
+  default: ({ children, className, style, ...props }) => {
+    delete props.component
+    delete props.display
+    delete props.alignItems
+    delete props.gap
+    delete props.mt
+    delete props.my
+    return (
+      <div data-test="bc-box" className={className} style={style} {...props}>
+        {children}
+      </div>
+    )
+  }
 }))
 
 vi.mock('@/components/BCAlert', () => ({
@@ -123,62 +117,56 @@ vi.mock('@/hooks/useUser', () => ({
 
 // Mock BCGridViewer to capture and utilize callback props - FIXED
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: React.forwardRef(
-    (
-      {
-        gridRef,
-        apiEndpoint,
-        apiData,
-        columnDefs,
-        gridKey,
-        getRowId,
-        gridOptions,
-        defaultSortModel,
-        handleGridKey,
-        enableResetButton,
-        enableCopyButton,
-        defaultColDef,
-        onSetResetGrid,
-        ...props
-      },
-      ref
-    ) => {
-      React.useEffect(() => {
-        // Store the actual callback functions
-        if (getRowId) capturedCallbacks.getRowId = getRowId
-        if (handleGridKey) capturedCallbacks.handleGridKey = handleGridKey
-        if (onSetResetGrid) capturedCallbacks.onSetResetGrid = onSetResetGrid
+  BCGridViewer: React.forwardRef(function BCGridViewerMock({
+    gridRef,
+    apiEndpoint,
+    apiData,
+    gridKey,
+    getRowId,
+    handleGridKey,
+    enableResetButton,
+    enableCopyButton,
+    onSetResetGrid,
+    ...props
+  }) {
+    delete props.columnDefs
+    delete props.gridOptions
+    delete props.defaultSortModel
+    delete props.defaultColDef
+    React.useEffect(() => {
+      // Store the actual callback functions
+      if (getRowId) capturedCallbacks.getRowId = getRowId
+      if (handleGridKey) capturedCallbacks.handleGridKey = handleGridKey
+      if (onSetResetGrid) capturedCallbacks.onSetResetGrid = onSetResetGrid
 
-        // Set up gridRef with API methods for handleGridKey to use
-        if (gridRef) {
-          gridRef.current = {
-            api: {
-              deselectAll: vi.fn()
-            }
+      // Set up gridRef with API methods for handleGridKey to use
+      if (gridRef) {
+        gridRef.current = {
+          api: {
+            deselectAll: vi.fn()
           }
         }
+      }
 
-        // Call onSetResetGrid to establish resetGridFn in component state
-        if (onSetResetGrid) {
-          const mockResetFn = vi.fn()
-          capturedCallbacks.resetGridFn = mockResetFn
-          onSetResetGrid(mockResetFn)
-        }
-      }, [gridRef, getRowId, handleGridKey, onSetResetGrid])
-
-      return (
-        <div
-          data-test="bc-grid-viewer" // ✅ Updated test id
-          data-api-endpoint={apiEndpoint}
-          data-api-data={apiData}
-          data-grid-key={gridKey}
-          data-enable-reset-button={enableResetButton}
-          data-enable-copy-button={enableCopyButton}
-          {...props}
-        />
-      )
-    }
-  )
+      // Call onSetResetGrid to establish resetGridFn in component state
+      if (onSetResetGrid) {
+        const mockResetFn = vi.fn()
+        capturedCallbacks.resetGridFn = mockResetFn
+        onSetResetGrid(mockResetFn)
+      }
+    }, [gridRef, getRowId, handleGridKey, onSetResetGrid])
+    return (
+      <div
+        data-test="bc-grid-viewer" // ✅ Updated test id
+        data-api-endpoint={apiEndpoint}
+        data-api-data={apiData}
+        data-grid-key={gridKey}
+        data-enable-reset-button={enableResetButton}
+        data-enable-copy-button={enableCopyButton}
+        {...props}
+      />
+    )
+  })
 }))
 
 vi.mock('@/components/ClearFiltersButton', () => ({

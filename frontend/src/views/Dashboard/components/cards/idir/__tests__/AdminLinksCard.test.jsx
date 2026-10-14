@@ -7,6 +7,9 @@ import { roles } from '@/constants/roles'
 import { CONFIG } from '@/constants/config'
 import { test } from '@/tests/utils/fixtures'
 
+// Import after mocks are set up
+import AdminLinksCard from '../AdminLinksCard'
+
 // Mock dependencies
 vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
@@ -80,9 +83,6 @@ vi.mock('@mui/material/ListItemButton', () => ({
     </button>
   )
 }))
-
-// Import after mocks are set up
-import AdminLinksCard from '../AdminLinksCard'
 
 describe('AdminLinksCard Component', () => {
   const mockNavigate = vi.fn()

@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// @ts-nocheck
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { isEqual } from '@/utils/grid/eventHandlers'
@@ -50,7 +49,7 @@ export type { BCGridEditorProps } from './types'
  * @returns {JSX.Element}
  */
 export const BCGridEditor = ({
-  gridRef = useRef(null),
+  gridRef: suppliedGridRef,
   alertRef,
   enablePaste = true,
   handlePaste,
@@ -64,13 +63,15 @@ export const BCGridEditor = ({
     enabled: false
   },
   showMandatoryColumns = true,
-  onAddRows,
   defaultColDef,
   columnDefs,
   ...props
 }: BCGridEditorProps) => {
   const localRef = useRef(null)
-  const ref = gridRef || localRef
+  const ref = suppliedGridRef || localRef
+  const gridProps = Object.fromEntries(
+    Object.entries(props).filter(([key]) => key !== 'onAddRows')
+  )
   const gridContainerRef = useRef(null)
   const pendingSavePromiseRef = useRef(null)
   const firstEditableColumnRef = useRef(null)
@@ -338,9 +339,7 @@ export const BCGridEditor = ({
     (params) => {
       if (params.data.modified && !params.data.deleted) {
         if (onCellEditingStopped) {
-          let trackedPromise
-          const promise = Promise.resolve(onCellEditingStopped(params))
-          trackedPromise = promise
+          const trackedPromise = Promise.resolve(onCellEditingStopped(params))
             .catch((error) => {
               console.error('Error saving row:', error)
               throw error
@@ -534,7 +533,7 @@ export const BCGridEditor = ({
           ...defaultColDef
         }}
         columnDefs={transformedColumnDefs}
-        {...props}
+        {...gridProps}
       />
       <BCBox sx={{ height: '40px', margin: '15px 0', width: '100%' }}>
         <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />

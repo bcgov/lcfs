@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import { useKeycloak } from '@react-keycloak/web'
@@ -37,7 +37,7 @@ export default function FormView() {
       }
     }
     if (formSlug) load()
-  }, [formSlug, linkKey, keycloak.authenticated, keycloak.token])
+  }, [formSlug, linkKey, isAnonymous, keycloak.authenticated, keycloak.token])
 
   if (loading) return <Loading message="Loading form..." />
 

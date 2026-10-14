@@ -4,21 +4,14 @@ import Grid from '@mui/material/Grid'
 import Stack from '@mui/material/Stack'
 import { BCResponsiveEChart } from './BCResponsiveEchart'
 import BCTypography from '../BCTypography'
-import { useTheme } from '@mui/material/styles'
-import { faSackDollar } from '@fortawesome/free-solid-svg-icons'
 
 export const BCMetricCard = ({
   title,
   value,
   subtitle = undefined,
   option = undefined,
-  ariaLabel = undefined,
-  icon = undefined
+  ariaLabel = undefined
 }) => {
-  const theme = useTheme()
-  const accentColor = theme.palette.primary.main
-  const resolvedIcon = icon || faSackDollar
-
   return (
     <Card
       tabIndex={0}

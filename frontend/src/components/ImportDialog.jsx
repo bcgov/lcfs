@@ -32,7 +32,7 @@ function LinearProgressWithLabel(props) {
   )
 }
 
-const StyledCard = styled(Card)(({ theme }) => ({
+const StyledCard = styled(Card)(() => ({
   width: '100%',
   textAlign: 'center',
   border: '1px solid #ccc',
@@ -176,7 +176,7 @@ function ImportDialog({
               setJobID(null)
             }
           }
-        } catch (error) {
+        } catch {
           clearInterval(intervalId)
           setIntervalID(null)
         }

@@ -52,7 +52,7 @@ export const TransferDetails = () => {
     if (totalValue !== newTotalValue) {
       setTotalValue(newTotalValue)
     }
-  }, [quantity, pricePerUnit])
+  }, [quantity, pricePerUnit, totalValue])
 
   const renderError = (fieldName, sameAsField = null) => {
     // If the sameAsField is provided and is true, hide errors for this field
