@@ -30,10 +30,7 @@ import {
   FUEL_CATEGORIES,
   LEGISLATION_TRANSITION_YEAR
 } from '@/constants/common'
-import {
-  formatEnergyContentWithCommas,
-  numberFormatter
-} from '@/utils/formatters'
+import { formatEnergyContentWithCommas } from '@/utils/formatters'
 import { copyToClipboard } from '@/utils/clipboard'
 
 const CUSTOM_CI_OPTION_VALUE = 'customCi'

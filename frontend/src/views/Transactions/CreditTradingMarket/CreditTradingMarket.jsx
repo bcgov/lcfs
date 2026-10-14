@@ -50,20 +50,6 @@ export const CreditTradingMarket = () => {
     tableRef.current?.refreshListings?.()
   }, [])
 
-  useCallback(() => {
-    gridRef.current?.clearFilters?.()
-    gridRef.current?.api?.setSortModel?.([])
-    if (isGovernmentUser) {
-      setSelectedListing(null)
-    } else if (userOrgId) {
-      setSelectedListing({
-        organizationId: userOrgId,
-        organizationName: userOrgName
-      })
-    }
-    handleRefreshListings()
-  }, [handleRefreshListings, isGovernmentUser, userOrgId, userOrgName]);
-
   const tableSelectedOrgId = isGovernmentUser
     ? (selectedListing?.organizationId ?? null)
     : (userOrgId ?? null)
