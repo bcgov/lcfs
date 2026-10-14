@@ -6,6 +6,7 @@ import {
   DesignatedActions,
   defaultActionsSortModel
 } from '../DesignatedActions'
+import { DAAssignedAnalystCell } from '../components/DAAssignedAnalystCell'
 import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
@@ -104,6 +105,28 @@ describe('DesignatedActions (module tab)', () => {
     // absolute; without this the link reads
     // /initiative-agreements/designated-actions/initiative-agreements/5/...
     expect(defaultColDef.cellRendererParams.isAbsolute).toBe(true)
+  })
+
+  test('offers the assigned analyst column, assignable and filterable (#5197)', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActions />, app)
+
+    const { columnDefs } = mockBCGridViewer.mock.calls[0][0]
+    const analystColumn = columnDefs.find(
+      (colDef) => colDef.colId === 'assignedAnalyst'
+    )
+    expect(analystColumn).toBeDefined()
+    expect(analystColumn.cellRenderer).toBe(DAAssignedAnalystCell)
+    expect(analystColumn.headerName).toBe(
+      'initiativeAgreement:actions.columns.assignedAnalyst'
+    )
+    // The floating filter sends the analyst's id, which the endpoint
+    // already filters on.
+    expect(analystColumn.floatingFilterComponentParams.valueKey).toBe(
+      'userProfileId'
+    )
   })
 
   test('surfaces a load failure in the alert box', ({ render, app }) => {

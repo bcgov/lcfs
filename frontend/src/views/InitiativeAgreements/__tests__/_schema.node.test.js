@@ -82,7 +82,7 @@ describe('designatedActionColDefs', () => {
 describe('allDesignatedActionColDefs (module tab, #5078)', () => {
   const t = (key) => key
 
-  it('drops the analyst column and keeps the rest in order', () => {
+  it('includes the assigned analyst column (#5197) in order', () => {
     const ids = allDesignatedActionColDefs(t).map(
       (colDef) => colDef.colId ?? colDef.field
     )
@@ -90,6 +90,7 @@ describe('allDesignatedActionColDefs (module tab, #5078)', () => {
       'actionNumber',
       'name',
       'currentStatus',
+      'assignedAnalyst',
       'lastComment',
       'creditAllocation',
       'updateDate'
