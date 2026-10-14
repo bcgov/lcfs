@@ -9,6 +9,7 @@ import { defaultInitialPagination } from '@/constants/schedules'
 import { useParams } from 'react-router-dom'
 import Loading from '@/components/Loading'
 import { useOtherUsesOptions } from '@/hooks/useOtherUses'
+import { useTranslation } from 'react-i18next'
 
 interface OtherUse {
   otherUsesId: number | string
@@ -44,6 +45,7 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
     defaultInitialPagination
   )
   const gridRef = useRef(null)
+  const { t } = useTranslation(['otherUses'])
   const { compliancePeriod } = useParams<{ compliancePeriod: string }>()
   const { data: optionsData, isLoading: optionsLoading } = useOtherUsesOptions({
     compliancePeriod
@@ -142,6 +144,12 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
 
   const getRowId = (params: { data: OtherUse }) =>
     params.data.otherUsesId.toString()
+  const columnDefs = useMemo(
+    () =>
+      otherUsesSummaryColDefs(parseInt(compliancePeriod ?? '0'), optionsData),
+    [compliancePeriod, optionsData, t]
+  )
+
   if (optionsLoading) {
     return <Loading />
   }
@@ -152,10 +160,7 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
           gridKey="other-uses"
           gridRef={gridRef}
           getRowId={getRowId}
-          columnDefs={otherUsesSummaryColDefs(
-            parseInt(compliancePeriod ?? '0'),
-            optionsData
-          )}
+          columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="otherUses"

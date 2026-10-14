@@ -8,7 +8,7 @@ import {
 import { defaultInitialPagination } from '@/constants/schedules'
 import colors from '@/themes/base/colors'
 import Box from '@mui/material/Box'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
@@ -37,6 +37,26 @@ export const OtherUsesChangelog = () => {
   const getRowId = (params) => {
     return params.data.otherUsesId.toString()
   }
+
+  const currentOrOriginalColumnDefs = useMemo(
+    () =>
+      changelogCommonColDefs(false, parseInt(compliancePeriod), optionsData),
+    [compliancePeriod, optionsData, t]
+  )
+
+  const changedColumnDefs = useMemo(
+    () => changelogColDefs(true, parseInt(compliancePeriod), optionsData),
+    [compliancePeriod, optionsData, t]
+  )
+
+  const defaultColDef = useMemo(
+    () => ({
+      floatingFilter: false,
+      filter: false,
+      sortable: false
+    }),
+    []
+  )
 
   const gridOptions = (highlight = true) => ({
     overlayNoRowsTemplate: t('otherUses:noOtherUsesFound'),
@@ -170,8 +190,8 @@ export const OtherUsesChangelog = () => {
                 gridKey={`other-uses-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false, parseInt(compliancePeriod), optionsData)
-                    : changelogColDefs(true, parseInt(compliancePeriod), optionsData)
+                    ? currentOrOriginalColumnDefs
+                    : changedColumnDefs
                 }
                 queryData={queryData}
                 getRowId={getRowId}
@@ -181,11 +201,7 @@ export const OtherUsesChangelog = () => {
                     ? gridOptions(false)
                     : gridOptions()
                 }
-                defaultColDef={{
-                  floatingFilter: false,
-                  filter: false,
-                  sortable: false
-                }}
+                defaultColDef={defaultColDef}
                 paginationOptions={
                   shouldPaginate ? paginationOptions : undefined
                 }
