@@ -1,3 +1,4 @@
+import { createStatusRenderer } from '../grid/createStatusRenderer'
 import { describe, expect, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import {
@@ -8,8 +9,7 @@ import {
   MultiSelectRenderer,
   StatusRenderer,
   CommonArrayRenderer,
-  ChargingSiteStatusRenderer,
-  createStatusRenderer
+  ChargingSiteStatusRenderer
 } from '../grid/cellRenderers'
 import { test } from '@/tests/utils/fixtures'
 

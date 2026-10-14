@@ -1,11 +1,9 @@
-import React from 'react'
+import 'react';
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
-import {
-  DesignatedActions,
-  defaultActionsSortModel
-} from '../DesignatedActions'
+import { DesignatedActions } from '../DesignatedActions'
+import { defaultActionsSortModel } from '../designatedActionsConfig'
 import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({

@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// @ts-nocheck
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { isEqual } from '@/utils/grid/eventHandlers'
@@ -105,7 +104,7 @@ const isIntersectionObserverSupported = () => {
  * @property {boolean} enableFloatingPagination - Enable floating pagination
  */
 export const BCGridEditorPaginated = ({
-  gridRef = useRef(null),
+  gridRef: suppliedGridRef,
   alertRef,
   enablePaste = true,
   handlePaste,
@@ -119,7 +118,6 @@ export const BCGridEditorPaginated = ({
     enabled: false
   },
   showMandatoryColumns = true,
-  onAddRows,
 
   // Pagination props
   suppressPagination = false,
@@ -146,7 +144,10 @@ export const BCGridEditorPaginated = ({
   ...props
 }: BCGridEditorPaginatedProps) => {
   const localRef = useRef(null)
-  const ref = gridRef || localRef
+  const ref = suppliedGridRef || localRef
+  const gridProps = Object.fromEntries(
+    Object.entries(props).filter(([key]) => key !== 'onAddRows')
+  )
   const firstEditableColumnRef = useRef(null)
   const [anchorEl, setAnchorEl] = useState(null)
   const buttonRef = useRef(null)
@@ -171,7 +172,10 @@ export const BCGridEditorPaginated = ({
   const previousGridKey = useRef(gridKey)
   const isRestoringFromCache = useRef(false)
 
-  const { data, error, isError, isLoading } = queryData || {}
+  const {
+  data,
+  isLoading
+} = queryData || {}
   const isPaginationFloating = !isPaginationVisible && isGridVisible
 
   // Cache pagination options to sessionStorage
@@ -658,7 +662,7 @@ export const BCGridEditorPaginated = ({
           node,
           oldValue: '',
           newValue: node.data[findFirstEditableColumn()],
-          ...props
+          ...gridProps
         })
       })
     },
@@ -956,7 +960,7 @@ export const BCGridEditorPaginated = ({
         }}
         enableCellTextSelection={true}
         columnDefs={transformedColumnDefs}
-        {...props}
+        {...gridProps}
       />
 
       {/* Pagination Controls */}
@@ -1011,7 +1015,7 @@ export const BCGridEditorPaginated = ({
                     className="custom-horizontal-scroll"
                     ref={customScrollbarRef}
                     style={{ ...floatingScrollStyles }}
-                    onScroll={(e) => {
+                    onScroll={() => {
                       if (syncingFromGridRef.current) return
                       if (!customScrollbarRef.current) return
 

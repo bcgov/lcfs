@@ -5,11 +5,10 @@ import Tooltip from '@mui/material/Tooltip'
 import Fade from '@mui/material/Fade'
 import CloseIcon from '@mui/icons-material/Close'
 import CopyIcon from '@mui/icons-material/ContentCopy'
-import VisibilityIcon from '@mui/icons-material/Visibility'
+import '@mui/icons-material/Visibility';
 import BCTypography from '@/components/BCTypography'
 
 const ReferenceCompareBox = ({
-  title,
   data,
   onDismiss,
   isDismissed = false

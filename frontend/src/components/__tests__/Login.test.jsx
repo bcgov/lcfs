@@ -1,9 +1,9 @@
 import { Login } from '@/components/Login'
 import { IDENTITY_PROVIDERS } from '@/constants/auth'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react';
 import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
-import { BrowserRouter } from 'react-router-dom'
+import 'react-router-dom';
 
 const mockNavigate = vi.fn()
 

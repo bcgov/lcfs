@@ -726,7 +726,8 @@ export const DocumentTree = ({
       const key = uploadKey(folderId)
       const next = (prev[key] ?? 0) + delta
       if (next <= 0) {
-        const { [key]: _done, ...rest } = prev
+        const rest = { ...prev }
+        delete rest[key]
         return rest
       }
       return { ...prev, [key]: next }

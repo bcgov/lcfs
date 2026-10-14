@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { screen, act } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { AddEditFuelExports } from '../AddEditFuelExports'
@@ -129,8 +130,6 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
       rowData = []
     }) => {
       // Simulate component lifecycle
-      const { useEffect } = require('react')
-
       useEffect(() => {
         if (onGridReady) {
           setTimeout(() => {
@@ -421,7 +420,7 @@ describe('AddEditFuelExports', () => {
         api: mockGridApi
       }
 
-      const gridEditor = screen.getByTestId('bc-grid-editor')
+      screen.getByTestId('bc-grid-editor')
       const gridEditorModule = await import(
         '@/components/BCDataGrid/BCGridEditor'
       )
@@ -566,8 +565,6 @@ describe('AddEditFuelExports', () => {
 
     it('handles undo action', async () => {
       render(<AddEditFuelExports />, { fixtureOptions })
-
-      const mockUndoEvent = { action: 'undo', params: { node: mockNode } }
 
       const gridEditorModule = await import(
         '@/components/BCDataGrid/BCGridEditor'

@@ -26,7 +26,7 @@ describe('Role.jsx', () => {
       query,
       server
     }) => {
-      void server
+      if (!server) throw new Error('MSW server fixture failed to initialize')
       const { getByTestId } = renderWithProviders(<Role />, [query])
 
       expect(getByTestId('loading')).toBeInTheDocument()

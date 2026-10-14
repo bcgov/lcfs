@@ -1,4 +1,4 @@
-import React, { useCallback, useId, useMemo, useState } from 'react'
+import { useCallback, useId, useMemo, useState } from 'react'
 import {
   Card,
   CardContent,
@@ -37,7 +37,7 @@ const STRIPE_COLOR = 'rgba(255, 255, 255, 0.35)'
 // Fixed colour and pattern per category, so hiding one never repaints the
 // others and colour is never the only cue. Blue/orange/magenta keep their
 // separation under the common colour-vision deficiencies.
-export const FUEL_CATEGORIES = [
+const FUEL_CATEGORIES = [
   { name: 'Gasoline', color: BC_CHART_COLORS.blue, stripeAngle: null },
   { name: 'Diesel', color: BC_CHART_COLORS.orange, stripeAngle: 45 },
   { name: 'Jet fuel', color: BC_CHART_COLORS.magenta, stripeAngle: -45 }

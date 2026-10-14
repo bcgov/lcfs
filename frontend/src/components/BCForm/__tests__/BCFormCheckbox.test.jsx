@@ -483,13 +483,9 @@ describe.sequential('BCFormCheckbox', () => {
 
   describe('Edge Cases and Error Handling', () => {
     test('handles undefined form prop gracefully', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       expect(() => {
         render(
           <BCFormCheckbox
@@ -657,13 +653,9 @@ describe.sequential('BCFormCheckbox', () => {
     })
 
     test('maintains selection state during re-renders', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       const { rerender } = render(
         <FormWrapper defaultValues={{ testCheckbox: ['option1'] }}>
           {({ form }) => (
@@ -729,13 +721,9 @@ describe.sequential('BCFormCheckbox', () => {
 
   describe('PropTypes and API', () => {
     test('renders with minimal required props', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       render(
         <FormWrapper defaultValues={{ minimal: [] }}>
           {({ form }) => (
@@ -801,14 +789,7 @@ describe.sequential('BCFormCheckbox', () => {
       })
     })
 
-    test('has correct display name', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+    test('has correct display name', () => {
       expect(BCFormCheckbox.displayName).toBe('BCFormCheckbox')
     })
   })

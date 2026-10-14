@@ -21,7 +21,7 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('lodash', () => ({
-  debounce: vi.fn((fn, delay) => {
+  debounce: vi.fn((fn) => {
     // Simple debounce mock that executes immediately for testing
     const debounced = (...args) => fn(...args)
     debounced.cancel = vi.fn()
@@ -143,7 +143,7 @@ describe('AsyncSuggestionEditor', () => {
     renderComponent()
     
     const autocomplete = screen.getByRole('combobox')
-    const container = autocomplete.closest('[data-test="ag-grid-editor-select-options"]')
+    autocomplete.closest('[data-test="ag-grid-editor-select-options"]');
     
     await act(async () => {
       fireEvent.change(autocomplete, { target: { value: 'Option 1' } })

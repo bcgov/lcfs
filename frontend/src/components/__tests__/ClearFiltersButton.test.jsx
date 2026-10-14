@@ -250,7 +250,7 @@ describe('ClearFiltersButton', () => {
     })
 
     it('handles filter clearing with complex state object', async () => {
-      const mockComplexClear = vi.fn((event) => {
+      const mockComplexClear = vi.fn(() => {
         // Simulate clearing multiple filters
         const filters = {
           searchText: '',

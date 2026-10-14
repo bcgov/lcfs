@@ -1,4 +1,5 @@
-import { forwardRef, ReactNode } from 'react'
+import { forwardRef, type ReactNode } from 'react'
+import type { ButtonProps } from '@mui/material/Button'
 import BCButtonRoot from './BCButtonRoot'
 import CircularProgress from '@mui/material/CircularProgress'
 
@@ -18,7 +19,7 @@ type BCButtonVariant = 'text' | 'contained' | 'outlined' | 'gradient'
 
 type BCButtonSize = 'small' | 'medium' | 'large'
 
-interface BCButtonProps {
+interface BCButtonProps extends Omit<ButtonProps, 'color' | 'variant' | 'size'> {
   color?: BCButtonColor
   variant?: BCButtonVariant
   size?: BCButtonSize
@@ -26,7 +27,6 @@ interface BCButtonProps {
   iconOnly?: boolean
   isLoading?: boolean
   children: ReactNode
-  [key: string]: any // For spreading additional props like onClick, disabled, etc.
 }
 
 const BCButton = forwardRef<HTMLButtonElement, BCButtonProps>(
@@ -50,7 +50,7 @@ const BCButton = forwardRef<HTMLButtonElement, BCButtonProps>(
         color="primary"
         variant={variant === 'gradient' ? 'contained' : variant}
         size={size}
-        {...({ ownerState: { color, variant, size, circular, iconOnly } } as any)}
+        ownerState={{ color, variant, size, circular, iconOnly }}
       >
         {isLoading ? (
           <CircularProgress
