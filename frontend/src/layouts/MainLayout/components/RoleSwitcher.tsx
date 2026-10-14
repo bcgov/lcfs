@@ -72,9 +72,8 @@ const RoleSwitcherComponent = ({
   const [roleUpdateError, setRoleUpdateError] = useState<string | null>(null)
   const [areOptionsVisible, setAreOptionsVisible] = useState<boolean>(false)
 
-  const isGovernmentAdmin = Boolean(
-    currentUser?.isGovernmentUser && hasRoles?.(roles.administrator)
-  )
+  const isGovernmentAdmin = (currentUser?.isGovernmentUser &&
+    hasRoles?.(roles.administrator)) as boolean
   const idirOptions = useMemo<RoleOption[]>(() => idirRoleOptions(t), [t])
   const optionsContainerId = 'role-switcher-options'
 

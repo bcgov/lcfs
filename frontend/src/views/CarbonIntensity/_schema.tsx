@@ -9,6 +9,20 @@ import {
 import { LastCommentRenderer, CIApplicationListStatusRenderer } from './components/CIApplicationListRenderers'
 import { CIAssignedAnalystCell } from './components/CIAssignedAnalystCell'
 
+type CIApplicationListRow = {
+  ciApplicationId?: number | string
+  status?: { status?: string }
+  organization?: { name?: string }
+  assignedAnalyst?: { userProfileId?: number | string; firstName?: string; lastName?: string; initials?: string }
+  lastComment?: { fullName?: string; comment?: string }
+  facilityCity?: string | null
+  facilityProvinceState?: string | null
+  facilityCountry?: string | null
+  verificationLevel?: string | null
+  verification?: { verificationLevel?: string | null }
+  [key: string]: unknown
+}
+
 const TEXT_FILTER_PARAMS = {
   filterOptions: ['contains', 'startsWith', 'equals'],
   buttons: ['clear']
@@ -43,11 +57,11 @@ const productionFacilityLocation = (data?: CIApplicationListRow) => {
   return cityProvince || country
 }
 
-const statusCol = (t) => ({
+const statusCol = (t: (key: string) => string) => ({
   field: 'status.status',
   headerName: t('carbonIntensity:columns.status'),
   cellRenderer: CIApplicationListStatusRenderer,
-  valueGetter: (params) => params.data?.status?.status,
+  valueGetter: (params: { data?: CIApplicationListRow }) => params.data?.status?.status,
   minWidth: 140,
   sortable: false,
   floatingFilterComponent: BCSelectFloatingFilter,

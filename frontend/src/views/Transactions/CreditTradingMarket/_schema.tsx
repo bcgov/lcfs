@@ -1,4 +1,4 @@
-import type { ColDef } from 'ag-grid-community'
+import type { ICellRendererParams, ColDef } from 'ag-grid-community'
 import {
   numberFormatter,
   phoneNumberFormatter,
@@ -59,8 +59,8 @@ export const creditMarketColDefs = (
     floatingFilter: true,
     cellRenderer: (params: ICellRendererParams<CreditMarketGridRow>) => {
       const roles = []
-      if (params.data?.isSeller) roles.push('Seller')
-      if (params.data?.isBuyer) roles.push('Buyer')
+      if (params.data!.isSeller) roles.push('Seller')
+      if (params.data!.isBuyer) roles.push('Buyer')
       return roles.length > 0 ? (
         <RoleRenderer value={roles} disableLink={true} />
       ) : (

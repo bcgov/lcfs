@@ -1,4 +1,4 @@
-import type { ColDef } from 'ag-grid-community'
+import type { ICellRendererParams, ValueSetterParams, ColDef } from 'ag-grid-community'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
 import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'

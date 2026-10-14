@@ -1,4 +1,5 @@
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef } from 'ag-grid-community'
+import type { TFunction } from 'i18next'
 import {
   BCDateFloatingFilter,
   BCSelectFloatingFilter
@@ -10,6 +11,18 @@ import {
 import { DAAssignedAnalystCell } from './components/DAAssignedAnalystCell'
 import { dateFormatter } from '@/utils/formatters'
 import { InitiativeAgreementStatusRenderer, LastCommentRenderer } from './components/AgreementGridRenderers'
+
+type InitiativeAgreementGridRow = {
+  lifecycleStatus?: { status?: string }
+  organization?: { name?: string }
+  actionNumber?: number | string
+  initiativeAgreementId?: number | string
+  currentStatus?: { status?: string }
+  assignedAnalyst?: { userProfileId?: number | string }
+  lastComment?: { fullName?: string; comment?: string }
+  creditAllocation?: number | null
+  [key: string]: unknown
+}
 
 // Column definitions staged for the agreements index grid (#4833). Field
 // names follow the camelCase wire format of the initiative_agreement model;

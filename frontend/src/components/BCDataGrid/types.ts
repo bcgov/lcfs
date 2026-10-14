@@ -6,10 +6,12 @@ import type {
   ColumnState,
   GetRowIdParams,
   GridOptions,
-  IRowNode
+  RowDataTransaction
 } from 'ag-grid-community'
 import type { CSSProperties, MutableRefObject, ReactNode } from 'react'
 import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
+import type { FilterSelectConfig } from '@/components/FilterToolbar/FilterToolbar'
+import type { FilterToolbarPill } from '@/components/FilterToolbar/filterUtils'
 
 export type BCGridRow = Record<string, unknown>
 
@@ -62,17 +64,20 @@ export interface BCSaveButtonProps {
 }
 
 export interface BCGridBaseProps<TData extends BCGridRow = BCGridRow>
-  extends GridOptions<TData> {
+  extends Omit<GridOptions<TData>, 'autoSizeStrategy'> {
+  autoSizeStrategy?: GridOptions<TData>['autoSizeStrategy'] | null
   autoHeight?: boolean
+  className?: string
   containerStyle?: CSSProperties
   dataKey?: string
+  enableMinWidthRelaxation?: boolean
   enableCellTextSelection?: boolean
+  gridOptions?: GridOptions<TData>
   loading?: boolean
   onPaginationChange?: (pagination: BCPaginationOptions) => void
   paginationOptions?: BCPaginationOptions
   queryData?: BCGridQueryData<TData>
   suppressMovableColumns?: boolean
-  [key: string]: unknown
 }
 
 // Paste creates an edit context; AG Grid supplies additional event fields for
@@ -84,7 +89,8 @@ export type BCGridEditContext<TData extends BCGridRow = BCGridRow> = Pick<
   Partial<Omit<CellEditingStoppedEvent<TData>, 'api' | 'node' | 'data'>>
 
 export interface BCGridEditorProps<TData extends BCGridRow = BCGridRow>
-  extends GridOptions<TData> {
+  extends Omit<GridOptions<TData>, 'autoSizeStrategy'> {
+  autoSizeStrategy?: GridOptions<TData>['autoSizeStrategy'] | null
   addMultiRow?: boolean
   alertRef?:
     | MutableRefObject<FloatingAlertHandle | null>
@@ -95,15 +101,17 @@ export interface BCGridEditorProps<TData extends BCGridRow = BCGridRow>
   enablePaste?: boolean
   getRowId?: (params: GetRowIdParams<TData>) => string
   gridRef?: BCGridRef
-  handlePaste?: (params: unknown) => void
-  onAction?: (action: string, data?: TData, node?: IRowNode<TData>) => void
+  handlePaste?: (event: ClipboardEvent, context?: unknown) => void
+  onAction?: (
+    action: string,
+    params?: unknown
+  ) => RowDataTransaction<TData> | void | Promise<RowDataTransaction<TData> | void>
   onAddRows?: (rows: TData[]) => void
-  onCellEditingStopped?: (params: CellEditingStoppedEvent<TData>) => void
+  onCellEditingStopped?: (params: BCGridEditContext<TData>) => void | Promise<unknown>
   onCellValueChanged?: (params: CellValueChangedEvent<TData>) => void
   saveButtonProps?: BCSaveButtonProps
   showAddRowsButton?: boolean
   showMandatoryColumns?: boolean
-  [key: string]: unknown
 }
 
 export interface BCGridEditorPaginatedProps<TData extends BCGridRow = BCGridRow>
@@ -140,7 +148,10 @@ export interface BCGridViewerProps<TData extends BCGridRow = BCGridRow>
   enablePageCaching?: boolean
   enableResetButton?: boolean
   exportName?: string
-  filterToolbarConfig?: Record<string, unknown>
+  filterToolbarConfig?: {
+    selectFilters?: FilterSelectConfig[]
+    additionalPills?: FilterToolbarPill[]
+  }
   gridKey?: string
   gridRef?: BCGridRef
   loading?: boolean

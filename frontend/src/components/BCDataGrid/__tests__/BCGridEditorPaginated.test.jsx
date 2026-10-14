@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import React, { createRef } from 'react'
 import { BCGridEditorPaginated } from '../BCGridEditorPaginated'
@@ -118,6 +118,7 @@ const mockGridApi = {
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
   BCGridBase: React.forwardRef(function MockGridBase(props, ref) {
+    mockBCGridBaseProps = props
     React.useImperativeHandle(ref, () => ({ api: mockGridApi, columnApi: {} }))
 
     const { onGridReady } = props
@@ -339,7 +340,7 @@ describe('BCGridEditorPaginated - Simplified Coverage Test Suite', () => {
     target.dataset.action = 'delete'
     const rowData = { id: 'row-1', name: 'Fuel' }
     const cellEvent = {
-      column: { getColId: () => 'action' },
+      column: { colId: 'action', getColId: () => 'action' },
       data: rowData,
       node: { data: rowData },
       event: { target },

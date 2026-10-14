@@ -1,4 +1,4 @@
-import type { ColDef } from 'ag-grid-community'
+import type { ColDef, ValueSetterFunc, ValueSetterParams } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
@@ -82,8 +82,8 @@ const addressAutocompleteQuery = async ({
   client,
   queryKey
 }: SuggestionQueryContext) => {
-  const partialAddress = queryKey[1]
-  if (typeof partialAddress !== 'string' || partialAddress.length < 3) {
+  const partialAddress = queryKey[1] as string
+  if (!partialAddress || partialAddress.length < 3) {
     return []
   }
 
@@ -173,7 +173,7 @@ export const finalSupplyEquipmentColDefs = (
       valueSetter: (params) => {
         if (params.newValue) {
           const isValidOrganizationName =
-            optionsData.organizationNames?.includes(params.newValue) ?? false
+            optionsData?.organizationNames!.includes(params.newValue)
 
           params.data.organizationName = isValidOrganizationName
             ? params.newValue
@@ -192,7 +192,7 @@ export const finalSupplyEquipmentColDefs = (
       ),
       headerComponent: RequiredHeader,
       minWidth: 200,
-      cellRenderer: (params: { value?: unknown }) => (
+      cellRenderer: (params: { value?: string | null }) => (
         <BCTypography variant="body4">
           {params.value ? params.value : 'YYYY-MM-DD'}
         </BCTypography>
@@ -208,7 +208,7 @@ export const finalSupplyEquipmentColDefs = (
       },
       editable: true,
       valueGetter: (params) => {
-        return params.data?.supplyFromDate || `${compliancePeriod}-01-01`
+        return params.data!.supplyFromDate || `${compliancePeriod}-01-01`
       },
       valueSetter: (params) => {
         params.data.supplyFromDate = params.newValue
@@ -222,7 +222,7 @@ export const finalSupplyEquipmentColDefs = (
       ),
       headerComponent: RequiredHeader,
       minWidth: 200,
-      cellRenderer: (params: { value?: unknown }) => (
+      cellRenderer: (params: { value?: string | null }) => (
         <BCTypography variant="body4">
           {params.value ? params.value : 'YYYY-MM-DD'}
         </BCTypography>
@@ -238,7 +238,7 @@ export const finalSupplyEquipmentColDefs = (
       },
       editable: true,
       valueGetter: (params) => {
-        return params.data?.supplyToDate || `${compliancePeriod}-12-31`
+        return params.data!.supplyToDate || `${compliancePeriod}-12-31`
       },
       valueSetter: (params) => {
         params.data.supplyToDate = params.newValue
@@ -289,10 +289,9 @@ export const finalSupplyEquipmentColDefs = (
         queryFn: async ({ client, queryKey }: SuggestionQueryContext) => {
           try {
             const [, searchTerm] = queryKey
-            if (typeof searchTerm !== 'string') return []
             const path = `${
               apiRoutes.searchFinalSupplyEquipments
-            }manufacturer=${encodeURIComponent(searchTerm)}`
+            }manufacturer=${encodeURIComponent(searchTerm as string)}`
             const response = await client.get(path)
             return response.data
           } catch (error) {
@@ -419,35 +418,38 @@ export const finalSupplyEquipmentColDefs = (
         queryFn: addressAutocompleteQuery,
         optionLabel: 'label'
       }),
-      valueSetter: (params) => {
+      valueSetter: (async (
+        params: ValueSetterParams<FinalSupplyEquipmentGridRow>
+      ) => {
+        const row = params.data as FinalSupplyEquipmentGridRow
         if (params.newValue === '' || params.newValue?.name === '') {
-          params.data.streetAddress = ''
-          params.data.city = ''
-          params.data.postalCode = ''
-          params.data.latitude = ''
-          params.data.longitude = ''
+          row.streetAddress = ''
+          row.city = ''
+          row.postalCode = ''
+          row.latitude = ''
+          row.longitude = ''
         } else if (typeof params.newValue === 'string') {
           // Directly set the street address if it's a custom input
-          params.data.streetAddress = params.newValue
+          row.streetAddress = params.newValue
         } else if (params.newValue?.fullAddress) {
           // Address selected from autocomplete - we already have all the data
-          params.data.streetAddress =
+          row.streetAddress =
             params.newValue.streetAddress || params.newValue.fullAddress
-          params.data.city = params.newValue.city || ''
-          params.data.postalCode = params.newValue.postalCode || ''
-          params.data.latitude = params.newValue.latitude || ''
-          params.data.longitude = params.newValue.longitude || ''
+          row.city = params.newValue.city || ''
+          row.postalCode = params.newValue.postalCode || ''
+          row.latitude = params.newValue.latitude || ''
+          row.longitude = params.newValue.longitude || ''
         } else if (params.newValue?.label && params.newValue?.coordinates) {
           // Handle geocoder API response format with label and coordinates
           const addressParts = params.newValue.label.split(', ')
-          params.data.streetAddress = addressParts[0] || ''
-          params.data.city = addressParts[1] || ''
-          params.data.postalCode = addressParts[2] || ''
-          params.data.latitude = params.newValue.coordinates[1] || ''
-          params.data.longitude = params.newValue.coordinates[0] || ''
+          row.streetAddress = addressParts[0] || ''
+          row.city = addressParts[1] || ''
+          row.postalCode = addressParts[2] || ''
+          row.latitude = params.newValue.coordinates[1] || ''
+          row.longitude = params.newValue.coordinates[0] || ''
         }
         return true
-      },
+      }) as unknown as ValueSetterFunc<FinalSupplyEquipmentGridRow>,
       cellDataType: 'object',
       suppressKeyboardEvent,
       cellStyle: (params) =>
@@ -476,7 +478,7 @@ export const finalSupplyEquipmentColDefs = (
       ),
       valueSetter: (params) => {
         const newValue = params.newValue.toUpperCase()
-        params.data.postalCode = newValue
+        params.data[params.colDef.field!] = newValue
         return true
       },
       cellEditor: TextCellEditor,
@@ -740,7 +742,7 @@ export const getFSEReportingColDefs = (
     ),
     headerComponent: RequiredHeader,
     minWidth: 200,
-    cellRenderer: (params: { value?: unknown }) => (
+    cellRenderer: (params: { value?: string | null }) => (
       <BCTypography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
       </BCTypography>
@@ -755,10 +757,10 @@ export const getFSEReportingColDefs = (
       autoOpenLastRow: false
     },
     editable: (params) =>
-      params.data?.complianceReportGroupUuid === complianceReportGroupUuid &&
-      params.data?.isActive !== false,
+      params.data!.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data!.isActive !== false,
     valueGetter: (params) => {
-      return params.data?.supplyFromDate || minDate
+      return params.data!.supplyFromDate || minDate
     },
     valueSetter: (params) => {
       params.data.supplyFromDate = params.newValue
@@ -774,7 +776,7 @@ export const getFSEReportingColDefs = (
     ),
     headerComponent: RequiredHeader,
     minWidth: 200,
-    cellRenderer: (params: { value?: unknown }) => (
+    cellRenderer: (params: { value?: string | null }) => (
       <BCTypography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
       </BCTypography>
@@ -789,10 +791,10 @@ export const getFSEReportingColDefs = (
       autoOpenLastRow: false
     },
     editable: (params) =>
-      params.data?.complianceReportGroupUuid === complianceReportGroupUuid &&
-      params.data?.isActive !== false,
+      params.data!.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data!.isActive !== false,
     valueGetter: (params) => {
-      return params.data?.supplyToDate || maxDate
+      return params.data!.supplyToDate || maxDate
     },
     valueSetter: (params) => {
       params.data.supplyToDate = params.newValue
@@ -806,7 +808,7 @@ export const getFSEReportingColDefs = (
     ),
     minWidth: 220,
     valueFormatter: numberFormatter,
-    valueGetter: (params) => params.data?.kwhUsage || 0,
+    valueGetter: (params) => params.data!.kwhUsage || 0,
     cellEditor: NumberEditor,
     type: 'numericColumn',
     cellEditorParams: {
@@ -815,8 +817,8 @@ export const getFSEReportingColDefs = (
       showStepperButtons: false
     },
     editable: (params) =>
-      params.data?.complianceReportGroupUuid === complianceReportGroupUuid &&
-      params.data?.isActive !== false,
+      params.data!.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data!.isActive !== false,
     filter: false,
     sortable: false,
     cellStyle: (params) =>
@@ -830,8 +832,8 @@ export const getFSEReportingColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
     ),
     editable: (params) =>
-      params.data?.complianceReportGroupUuid === complianceReportGroupUuid &&
-      params.data?.isActive !== false,
+      params.data!.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data!.isActive !== false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     cellEditor: 'agTextCellEditor',

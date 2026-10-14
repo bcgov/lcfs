@@ -65,8 +65,8 @@ describe('ReviewCharts', () => {
 
     const fseOption = chartProps[0].option
     expect(fseOption.yAxis).toHaveLength(2)
-    expect(fseOption.yAxis[0].name).toBe('kWh usage')
-    expect(fseOption.yAxis[1].name).toBe('Utilization %')
+    expect(fseOption.yAxis![0].name).toBe('kWh usage')
+    expect(fseOption.yAxis![1].name).toBe('Utilization %')
     expect(fseOption.series).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -112,10 +112,20 @@ describe('ReviewCharts', () => {
     expect(screen.getByLabelText('Fuel type')).toBeInTheDocument()
 
     const sunburstOption = chartProps[0].option
-    const fuelType = sunburstOption.series[0].data[0]
+    const fuelType = (
+      sunburstOption.series![0] as {
+        data: Array<{
+          name?: string
+          children?: Array<{
+            name?: string
+            children?: Array<{ name?: string; value?: number }>
+          }>
+        }>
+      }
+    ).data[0]
     expect(fuelType.name).toBe('Diesel - HDRD')
-    expect(fuelType.children[0].name).toBe('D123')
-    expect(fuelType.children[0].children).toEqual([
+    expect(fuelType.children![0].name).toBe('D123')
+    expect(fuelType.children![0].children).toEqual([
       { name: '2025', value: 500 }
     ])
   })
@@ -145,7 +155,9 @@ describe('ReviewCharts', () => {
     ).toBeInTheDocument()
 
     const option = chartProps[0].option
-    expect(option.xAxis.data).toEqual(['Diesel - HDRD'])
+    expect((option.xAxis as { data: string[] }).data).toEqual([
+      'Diesel - HDRD'
+    ])
     expect(option.series).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -207,7 +219,10 @@ describe('ReviewCharts', () => {
     ).toBeInTheDocument()
 
     const option = chartProps[0].option
-    expect(option.xAxis.data).toEqual(['Renewable', 'Non-renewable'])
+    expect((option.xAxis as { data: string[] }).data).toEqual([
+      'Renewable',
+      'Non-renewable'
+    ])
     expect(option.series).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -259,8 +274,8 @@ describe('ReviewCharts', () => {
 
     const option = chartProps[0].option
     expect(option.yAxis).toHaveLength(2)
-    expect(option.yAxis[0].name).toBe('Supply volume')
-    expect(option.yAxis[1].name).toBe('FSE count')
+    expect(option.yAxis![0].name).toBe('Supply volume')
+    expect(option.yAxis![1].name).toBe('FSE count')
     expect(option.series).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -305,7 +320,11 @@ describe('ReviewCharts', () => {
     ).toBeInTheDocument()
 
     const option = chartProps[0].option
-    expect(option.series[0].type).toBe('heatmap')
+    const firstSeries = option.series![0] as {
+      type?: string
+      data?: unknown[]
+    }
+    expect(firstSeries.type).toBe('heatmap')
     expect(option.tooltip).toEqual(
       expect.objectContaining({
         appendTo: 'body',
@@ -314,10 +333,15 @@ describe('ReviewCharts', () => {
         extraCssText: expect.stringContaining('z-index')
       })
     )
-    expect(option.visualMap.text).toEqual(['Higher volume', 'Missing'])
-    expect(option.visualMap.dimension).toBe(3)
-    expect(option.visualMap.max).toBeCloseTo(Math.log10(101))
-    expect(option.series[0].data).toEqual(
+    const visualMap = option.visualMap as {
+      text?: string[]
+      dimension?: number
+      max?: number
+    }
+    expect(visualMap.text).toEqual(['Higher volume', 'Missing'])
+    expect(visualMap.dimension).toBe(3)
+    expect(visualMap.max).toBeCloseTo(Math.log10(101))
+    expect(firstSeries.data).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           value: [0, 0, 100, Math.log10(101)]

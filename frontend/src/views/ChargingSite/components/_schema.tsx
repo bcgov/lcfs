@@ -1,5 +1,12 @@
-import type { ColDef } from 'ag-grid-community'
-import type {} from '@/types/schema';
+import type {
+  CellClassParams,
+  CellStyle,
+  GridApi,
+  ValueSetterFunc,
+  ValueSetterParams
+, ColDef } from 'ag-grid-community'
+import type { GridErrors, GridWarnings } from '@/types/schema'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
@@ -83,17 +90,17 @@ const getHistoryCellStyle = (
   historyMode: boolean,
   field: string
 ) =>
-  historyMode && params.data?.isHistoryVersion
-    ? changelogCellStyle(params, field)
-    : undefined
+  (historyMode &&
+    params.data?.isHistoryVersion &&
+    changelogCellStyle(params, field)) as unknown as CellStyle
 
 // Helper function for address autocomplete within grid
 const addressAutocompleteQuery = async ({
   client,
   queryKey
 }: SuggestionQueryContext) => {
-  const partialAddress = queryKey[1]
-  if (typeof partialAddress !== 'string' || partialAddress.length < 3) {
+  const partialAddress = queryKey[1] as string
+  if (!partialAddress || partialAddress.length < 3) {
     return []
   }
 
@@ -128,7 +135,8 @@ const addressAutocompleteQuery = async ({
 }
 
 export const chargingSiteColDefs = (
-  errors, warnings
+  errors: GridErrors,
+  warnings: GridWarnings
 ): ColDef[] => {
   return [
     validation,
@@ -174,7 +182,9 @@ export const chargingSiteColDefs = (
         queryFn: addressAutocompleteQuery,
         optionLabel: 'label'
       }),
-      valueSetter: (params) => {
+      valueSetter: (async (
+        params: ValueSetterParams<ChargingSiteGridRow>
+      ) => {
         if (params.newValue === '' || params.newValue?.name === '') {
           params.data.streetAddress = ''
           params.data.city = ''
@@ -202,7 +212,7 @@ export const chargingSiteColDefs = (
           params.data.longitude = params.newValue.coordinates[0] || ''
         }
         return true
-      },
+      }) as unknown as ValueSetterFunc<ChargingSiteGridRow>,
       cellDataType: 'object',
       suppressKeyboardEvent,
       cellStyle: (params) =>
@@ -227,7 +237,7 @@ export const chargingSiteColDefs = (
       headerName: i18n.t('chargingSite:columnLabels.postalCode'),
       valueSetter: (params) => {
         const newValue = params.newValue.toUpperCase()
-        params.data.postalCode = newValue
+        params.data[params.colDef.field!] = newValue
         return true
       },
       cellEditor: TextCellEditor,
@@ -292,11 +302,10 @@ export const chargingSiteColDefs = (
         queryFn: async ({ queryKey, client }: SuggestionQueryContext) => {
           let path = apiRoutes.allocationOrganizationsSearch
           const searchTerm = queryKey[1]
-          path += 'query=' + encodeURIComponent(String(searchTerm || ''))
+          path +=
+            'query=' + encodeURIComponent((searchTerm as string) || '')
           const response = await client.get(path)
-          if (params.node.data) {
-            params.node.data.apiDataCache = response.data
-          }
+          params.node.data!.apiDataCache = response.data
           return response.data
         },
         optionLabel: 'name',
@@ -393,8 +402,9 @@ export const chargingEquipmentColDefs = (
       }) => {
         if (!params.data?.isCurrentVersionRow || !params.data?.hasHistory)
           return null
-        const registrationNumber = params.data.registrationNumber
-        if (registrationNumber === undefined) return null
+        const registrationNumber = params.data!.registrationNumber as
+          | number
+          | string
 
         const isExpanded = expandedRows.has(registrationNumber)
 
@@ -402,9 +412,11 @@ export const chargingEquipmentColDefs = (
           <BCButton
             variant="text"
             color="primary"
-            onClick={(event: MouseEvent<HTMLButtonElement>) => {
+            onClick={(event: ReactMouseEvent<HTMLButtonElement>) => {
               event.stopPropagation()
-              onToggleHistory?.(registrationNumber)
+              onToggleHistory?.(
+                params.data!.registrationNumber as number | string
+              )
             }}
             sx={{ minWidth: 0, px: 0.5 }}
             title={
@@ -455,7 +467,9 @@ export const chargingEquipmentColDefs = (
     headerName: t('chargingSite:fseColumnLabels.status'),
     valueGetter: (params) => {
       const status = params.data?.status
-      return typeof status === 'object' ? status?.status || '' : status || ''
+      return (
+        (status as { status?: string } | undefined)?.status || status || ''
+      )
     },
     cellRenderer: createStatusRenderer(
       {
@@ -488,7 +502,7 @@ export const chargingEquipmentColDefs = (
     sortable: false,
     minWidth: 310,
     valueGetter: (params) =>
-      params.data?.chargingSite?.siteName || params.data?.siteName || ''
+      params.data!.chargingSite?.siteName || params.data!.siteName || ''
   })
 
   // Organization column for IDIR users in list view
@@ -505,8 +519,8 @@ export const chargingEquipmentColDefs = (
     minWidth: 250,
     sortable: false,
     valueGetter: (params) =>
-      params.data?.chargingSite?.allocatingOrganizationName ||
-      params.data?.allocatingOrganizationName ||
+      params.data!.chargingSite?.allocatingOrganizationName ||
+      params.data!.allocatingOrganizationName ||
       ''
   })
 
@@ -602,8 +616,8 @@ export const chargingEquipmentColDefs = (
     minWidth: 400,
     sortable: false,
     valueGetter: (params) =>
-      params.data?.levelOfEquipment?.name ||
-      params.data?.levelOfEquipmentName ||
+      params.data!.levelOfEquipment?.name ||
+      params.data!.levelOfEquipmentName ||
       '',
     cellStyle: (params) =>
       getHistoryCellStyle(params, historyMode, 'levelOfEquipment')
@@ -625,7 +639,7 @@ export const chargingEquipmentColDefs = (
     sortable: false,
     valueGetter: (params) => {
       const intendedUseTypes =
-        params.data?.intendedUseTypes || params.data?.intendedUses || []
+        params.data!.intendedUseTypes || params.data!.intendedUses || []
       return intendedUseTypes?.map((i) => i.type)
     },
     valueFormatter: (params) => {
@@ -648,7 +662,7 @@ export const chargingEquipmentColDefs = (
       valueGetter: (params) => {
         // Handle both data structures: intendedUserTypes (site view) and intended_users (list view)
         const intendedUsers =
-          params.data?.intendedUsers || params.data?.intendedUserTypes || []
+          params.data!.intendedUsers || params.data!.intendedUserTypes || []
         return intendedUsers?.map((i) => i.typeName)
       },
       valueFormatter: (params) => {

@@ -1,6 +1,12 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import PropTypes from 'prop-types'
-import { useCallback, useState, type ChangeEvent, type MouseEvent } from 'react'
+import {
+  useCallback,
+  useState,
+  type ChangeEvent,
+  type DependencyList,
+  type MouseEvent
+} from 'react'
 import Pagination from '@mui/material/Pagination'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
@@ -10,7 +16,6 @@ import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined'
 import BCBox from '@/components/BCBox'
 import * as XLSX from 'xlsx'
 import { copyToClipboard } from '@/utils/clipboard'
-import type { BCGridRef } from '../../types'
 import type { ColDef } from 'ag-grid-community'
 import type { TablePaginationActionsProps } from '@mui/material/TablePagination/TablePaginationActions'
 import type { BCGridRef } from '@/components/BCDataGrid/types'
@@ -23,7 +28,7 @@ export interface BCPaginationActionsProps extends TablePaginationActionsProps {
   enableCopyButton?: boolean
   enableExportButton?: boolean
   exportName?: string
-  gridRef?: BCGridRef
+  gridRef?: BCGridRef | null
 }
 
 export function BCPaginationActions({
@@ -68,8 +73,7 @@ export function BCPaginationActions({
     const fieldToHeaderNameMap = columnDefs.reduce<
       Record<string, string | undefined>
     >((map, colDef) => {
-      const field = colDef.field
-      if (field) map[field] = colDef.headerName
+      map[colDef.field as string] = colDef.headerName
       return map
     }, {})
 
@@ -95,7 +99,9 @@ export function BCPaginationActions({
     // Adjust column widths
     const colWidths = renamedRows.reduce<number[]>((widths, row) => {
       Object.keys(row).forEach((key, i) => {
-        const value = row[key] ? String(row[key]) : ''
+        const value = row[key]
+          ? (row[key] as { toString: () => string }).toString()
+          : ''
         widths[i] = Math.max(widths[i] || 12, value.length)
       })
       return widths
@@ -125,7 +131,7 @@ export function BCPaginationActions({
       gridRef?.current?.api?.showLoadingOverlay()
       onPageChange(event as MouseEvent<HTMLButtonElement>, newPage - 1)
     },
-    [currentPage, gridRef, onPageChange]
+    undefined as unknown as DependencyList
   )
 
   return (

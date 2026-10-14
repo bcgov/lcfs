@@ -1,5 +1,6 @@
-import type { ColDef } from 'ag-grid-community'
+import type { ICellEditorParams, ICellRendererParams, RowClassParams, ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
+import type { ApiServiceInstance } from '@/services/useApiService'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
 import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
@@ -10,7 +11,7 @@ import { apiRoutes } from '@/constants/routes'
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import { formatNumberWithCommas } from '@/utils/formatters'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
@@ -23,10 +24,6 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { isQuarterEditable } from '@/utils/grid/cellEditables'
-
-const valueFormatter = (params: {
-  value: string | number | null | undefined
-}) => formatNumberWithCommas(params) as string
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -94,7 +91,7 @@ export const allocationAgreementColDefs = (
       },
       cellRenderer: SelectRenderer,
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       suppressKeyboardEvent,
       minWidth: 175,
       editable: true,
@@ -137,7 +134,7 @@ export const allocationAgreementColDefs = (
           <BCTypography variant="body4">Enter or search a name</BCTypography>
         )),
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       suppressKeyboardEvent,
       minWidth: 310,
       editable: true,
@@ -170,7 +167,7 @@ export const allocationAgreementColDefs = (
       ),
       cellEditor: 'agTextCellEditor',
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       editable: true,
       minWidth: 350
     },
@@ -182,7 +179,7 @@ export const allocationAgreementColDefs = (
       ),
       cellEditor: 'agTextCellEditor',
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       editable: true,
       minWidth: 200
     },
@@ -194,7 +191,7 @@ export const allocationAgreementColDefs = (
       ),
       cellEditor: 'agTextCellEditor',
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       editable: true,
       minWidth: 200
     },
@@ -214,7 +211,7 @@ export const allocationAgreementColDefs = (
       },
       cellRenderer: SelectRenderer,
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       suppressKeyboardEvent,
       minWidth: 200,
       editable: true,
@@ -228,7 +225,7 @@ export const allocationAgreementColDefs = (
           params.data.fuelTypeId = fuelType?.fuelTypeId
           params.data.fuelTypeOther = undefined
           params.data.fuelCategory =
-            fuelType?.fuelCategories?.[0]?.category ?? null
+            fuelType!.fuelCategories?.[0]?.category ?? null
           params.data.units = fuelType?.unit
           params.data.unrecognized = fuelType?.unrecognized
           params.data.provisionOfTheAct = null
@@ -246,9 +243,7 @@ export const allocationAgreementColDefs = (
       cellEditor: AsyncSuggestionEditor,
       cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'fuel-type-others',
-        queryFn: async ({
-  client
-}) => {
+        queryFn: async ({ client }: { client: ApiServiceInstance }) => {
           const path = apiRoutes.getFuelTypeOthers
 
           const response = await client.get(path)
@@ -296,7 +291,7 @@ export const allocationAgreementColDefs = (
       suppressKeyboardEvent,
       cellRenderer: SelectRenderer,
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 150,
       valueSetter: (params) => {
         if (params.newValue) {
@@ -315,7 +310,7 @@ export const allocationAgreementColDefs = (
       editable: (params) =>
         (optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
-        )?.fuelCategories.length ?? 0) > 1 && params.data.fuelType != null
+        )?.fuelCategories.length as number) > 1 && params.data.fuelType != null
     },
     {
       field: 'provisionOfTheAct',
@@ -336,7 +331,7 @@ export const allocationAgreementColDefs = (
       }),
       cellRenderer: SelectRenderer,
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       suppressKeyboardEvent,
       minWidth: 300,
       valueGetter: (params) =>
@@ -381,7 +376,7 @@ export const allocationAgreementColDefs = (
       },
       cellRenderer: SelectRenderer,
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       suppressKeyboardEvent,
       minWidth: 175,
       editable: (params) =>
@@ -454,7 +449,7 @@ export const allocationAgreementColDefs = (
         return params.value != null ? parseFloat(params.value).toFixed(2) : ''
       },
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       editable: false,
       minWidth: 100
     },
@@ -464,7 +459,8 @@ export const allocationAgreementColDefs = (
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.quantity'
       ),
-      valueFormatter: (params) => valueFormatter({ value: params.value }),
+      valueFormatter: (params) =>
+        valueFormatter({ value: params.value }) as string,
       cellEditor: NumberEditor,
       cellEditorParams: {
         precision: 0,
@@ -472,7 +468,7 @@ export const allocationAgreementColDefs = (
         showStepperButtons: false
       },
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 100,
       editable: true
     },
@@ -482,7 +478,7 @@ export const allocationAgreementColDefs = (
         'allocationAgreement:allocationAgreementColLabels.units'
       ),
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       editable: false,
       minWidth: 200
     }
@@ -499,7 +495,8 @@ export const allocationAgreementColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q1Quantity'
             ),
-            valueFormatter: (params) => valueFormatter({ value: params.value }),
+            valueFormatter: (params) =>
+              valueFormatter({ value: params.value }) as string,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -507,12 +504,7 @@ export const allocationAgreementColDefs = (
               showStepperButtons: false
             },
             cellStyle: (params) =>
-              StandardCellWarningAndErrors(
-                params,
-                errors,
-                warnings,
-                isSupplemental
-              ),
+              StandardCellWarningAndErrors(params, errors, warnings),
             minWidth: 175,
             editable: () => {
               return isQuarterEditable(1, compliancePeriod)
@@ -524,7 +516,8 @@ export const allocationAgreementColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q2Quantity'
             ),
-            valueFormatter: (params) => valueFormatter({ value: params.value }),
+            valueFormatter: (params) =>
+              valueFormatter({ value: params.value }) as string,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -532,12 +525,7 @@ export const allocationAgreementColDefs = (
               showStepperButtons: false
             },
             cellStyle: (params) =>
-              StandardCellWarningAndErrors(
-                params,
-                errors,
-                warnings,
-                isSupplemental
-              ),
+              StandardCellWarningAndErrors(params, errors, warnings),
             minWidth: 175,
             editable: () => {
               return isQuarterEditable(2, compliancePeriod)
@@ -549,7 +537,8 @@ export const allocationAgreementColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q3Quantity'
             ),
-            valueFormatter: (params) => valueFormatter({ value: params.value }),
+            valueFormatter: (params) =>
+              valueFormatter({ value: params.value }) as string,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -557,12 +546,7 @@ export const allocationAgreementColDefs = (
               showStepperButtons: false
             },
             cellStyle: (params) =>
-              StandardCellWarningAndErrors(
-                params,
-                errors,
-                warnings,
-                isSupplemental
-              ),
+              StandardCellWarningAndErrors(params, errors, warnings),
             minWidth: 175,
             editable: () => {
               return isQuarterEditable(3, compliancePeriod)
@@ -574,7 +558,8 @@ export const allocationAgreementColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q4Quantity'
             ),
-            valueFormatter: (params) => valueFormatter({ value: params.value }),
+            valueFormatter: (params) =>
+              valueFormatter({ value: params.value }) as string,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -582,12 +567,7 @@ export const allocationAgreementColDefs = (
               showStepperButtons: false
             },
             cellStyle: (params) =>
-              StandardCellWarningAndErrors(
-                params,
-                errors,
-                warnings,
-                isSupplemental
-              ),
+              StandardCellWarningAndErrors(params, errors, warnings),
             minWidth: 175,
             editable: () => {
               return isQuarterEditable(4, compliancePeriod)
@@ -598,14 +578,10 @@ export const allocationAgreementColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.totalQuantity'
             ),
-            valueFormatter: (params) => valueFormatter({ value: params.value }),
+            valueFormatter: (params) =>
+              valueFormatter({ value: params.value }) as string,
             cellStyle: (params) =>
-              StandardCellWarningAndErrors(
-                params,
-                errors,
-                warnings,
-                isSupplemental
-              ),
+              StandardCellWarningAndErrors(params, errors, warnings),
             minWidth: 175,
             valueGetter: (params) => {
               const data = params.data
@@ -710,7 +686,7 @@ export const allocationAgreementSummaryColDef = (
       ),
       minWidth: 185,
       field: 'quantity',
-      valueFormatter
+      valueFormatter: valueFormatter as ColDef['valueFormatter']
     },
     {
       headerName: i18n.t(
@@ -731,7 +707,7 @@ export const allocationAgreementSummaryColDef = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q1Quantity'
             ),
-            valueFormatter
+            valueFormatter: valueFormatter as ColDef['valueFormatter']
           },
           {
             field: 'q2Quantity',
@@ -739,7 +715,7 @@ export const allocationAgreementSummaryColDef = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q2Quantity'
             ),
-            valueFormatter
+            valueFormatter: valueFormatter as ColDef['valueFormatter']
           },
           {
             field: 'q3Quantity',
@@ -747,7 +723,7 @@ export const allocationAgreementSummaryColDef = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q3Quantity'
             ),
-            valueFormatter
+            valueFormatter: valueFormatter as ColDef['valueFormatter']
           },
           {
             field: 'q4Quantity',
@@ -755,7 +731,7 @@ export const allocationAgreementSummaryColDef = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q4Quantity'
             ),
-            valueFormatter
+            valueFormatter: valueFormatter as ColDef['valueFormatter']
           },
           {
             field: 'totalQuantity',
@@ -763,7 +739,7 @@ export const allocationAgreementSummaryColDef = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.totalQuantity'
             ),
-            valueFormatter,
+            valueFormatter: valueFormatter as ColDef['valueFormatter'],
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -806,9 +782,7 @@ export const changelogCommonColDefs = (
       field: 'allocationTransactionType.type',
       minWidth: 160,
       cellStyle: (params) =>
-        highlight
-          ? changelogCellStyle(params, 'allocationTransactionType')
-          : undefined
+        (highlight && changelogCellStyle(params, 'allocationTransactionType')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -817,7 +791,7 @@ export const changelogCommonColDefs = (
       minWidth: 320,
       field: 'transactionPartner',
       cellStyle: (params) =>
-        highlight ? changelogCellStyle(params, 'transactionPartner') : undefined
+        (highlight && changelogCellStyle(params, 'transactionPartner')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -826,7 +800,7 @@ export const changelogCommonColDefs = (
       minWidth: 400,
       field: 'postalAddress',
       cellStyle: (params) =>
-        highlight ? changelogCellStyle(params, 'postalAddress') : undefined
+        (highlight && changelogCellStyle(params, 'postalAddress')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -835,9 +809,7 @@ export const changelogCommonColDefs = (
       minWidth: 200,
       field: 'transactionPartnerEmail',
       cellStyle: (params) =>
-        highlight
-          ? changelogCellStyle(params, 'transactionPartnerEmail')
-          : undefined
+        (highlight && changelogCellStyle(params, 'transactionPartnerEmail')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -846,9 +818,7 @@ export const changelogCommonColDefs = (
       minWidth: 150,
       field: 'transactionPartnerPhone',
       cellStyle: (params) =>
-        highlight
-          ? changelogCellStyle(params, 'transactionPartnerPhone')
-          : undefined
+        (highlight && changelogCellStyle(params, 'transactionPartnerPhone')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -857,7 +827,7 @@ export const changelogCommonColDefs = (
       minWidth: 200,
       field: 'fuelType.fuelType',
       cellStyle: (params) =>
-        highlight ? changelogCellStyle(params, 'fuelType') : undefined
+        (highlight && changelogCellStyle(params, 'fuelType')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -866,7 +836,7 @@ export const changelogCommonColDefs = (
       minWidth: 250,
       field: 'fuelTypeOther',
       cellStyle: (params) =>
-        highlight ? changelogCellStyle(params, 'fuelTypeOther') : undefined
+        (highlight && changelogCellStyle(params, 'fuelTypeOther')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -875,7 +845,7 @@ export const changelogCommonColDefs = (
       minWidth: 150,
       field: 'fuelCategory.category',
       cellStyle: (params) =>
-        highlight ? changelogCellStyle(params, 'fuelCategory') : undefined
+        (highlight && changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -884,7 +854,7 @@ export const changelogCommonColDefs = (
       minWidth: 370,
       field: 'provisionOfTheAct.name',
       cellStyle: (params) =>
-        highlight ? changelogCellStyle(params, 'provisionOfTheAct') : undefined
+        (highlight && changelogCellStyle(params, 'provisionOfTheAct')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -893,7 +863,7 @@ export const changelogCommonColDefs = (
       minWidth: 175,
       field: 'fuelCode.fuelCode',
       cellStyle: (params) =>
-        highlight ? changelogCellStyle(params, 'fuelCode') : undefined
+        (highlight && changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -902,7 +872,7 @@ export const changelogCommonColDefs = (
       minWidth: 90,
       field: 'ciOfFuel',
       cellStyle: (params) =>
-        highlight ? changelogCellStyle(params, 'ciOfFuel') : undefined
+        (highlight && changelogCellStyle(params, 'ciOfFuel')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -911,7 +881,7 @@ export const changelogCommonColDefs = (
       minWidth: 185,
       field: 'quantity',
       cellStyle: (params) =>
-        highlight ? changelogCellStyle(params, 'quantity') : undefined
+        (highlight && changelogCellStyle(params, 'quantity')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -920,7 +890,7 @@ export const changelogCommonColDefs = (
       minWidth: 200,
       field: 'units',
       cellStyle: (params) =>
-        highlight ? changelogCellStyle(params, 'units') : undefined
+        (highlight && changelogCellStyle(params, 'units')) as unknown as ReturnType<typeof changelogCellStyle>
     }
   ]
   if (isEarlyIssuance) {
@@ -933,9 +903,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q1Quantity'
             ),
-            valueFormatter,
+            valueFormatter: valueFormatter as ColDef['valueFormatter'],
             cellStyle: (params) =>
-              highlight ? changelogCellStyle(params, 'q1Quantity') : undefined
+              (highlight && changelogCellStyle(params, 'q1Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q2Quantity',
@@ -943,9 +913,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q2Quantity'
             ),
-            valueFormatter,
+            valueFormatter: valueFormatter as ColDef['valueFormatter'],
             cellStyle: (params) =>
-              highlight ? changelogCellStyle(params, 'q2Quantity') : undefined
+              (highlight && changelogCellStyle(params, 'q2Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q3Quantity',
@@ -953,9 +923,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q3Quantity'
             ),
-            valueFormatter,
+            valueFormatter: valueFormatter as ColDef['valueFormatter'],
             cellStyle: (params) =>
-              highlight ? changelogCellStyle(params, 'q3Quantity') : undefined
+              (highlight && changelogCellStyle(params, 'q3Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q4Quantity',
@@ -963,9 +933,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q4Quantity'
             ),
-            valueFormatter,
+            valueFormatter: valueFormatter as ColDef['valueFormatter'],
             cellStyle: (params) =>
-              highlight ? changelogCellStyle(params, 'q4Quantity') : undefined
+              (highlight && changelogCellStyle(params, 'q4Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'totalQuantity',
@@ -973,11 +943,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.totalQuantity'
             ),
-            valueFormatter,
+            valueFormatter: valueFormatter as ColDef['valueFormatter'],
             cellStyle: (params) =>
-              highlight
-                ? changelogCellStyle(params, 'totalQuantity')
-                : undefined,
+              (highlight && changelogCellStyle(params, 'totalQuantity')) as unknown as ReturnType<typeof changelogCellStyle>,
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -1045,7 +1013,7 @@ export const changelogColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q1Quantity'
             ),
-            valueFormatter
+            valueFormatter: valueFormatter as ColDef['valueFormatter']
           },
           {
             field: 'q2Quantity',
@@ -1053,14 +1021,14 @@ export const changelogColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q2Quantity'
             ),
-            valueFormatter
+            valueFormatter: valueFormatter as ColDef['valueFormatter']
           },
           {
             field: 'q3Quantity',
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q3Quantity'
             ),
-            valueFormatter
+            valueFormatter: valueFormatter as ColDef['valueFormatter']
           },
           {
             field: 'q4Quantity',
@@ -1068,7 +1036,7 @@ export const changelogColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q4Quantity'
             ),
-            valueFormatter
+            valueFormatter: valueFormatter as ColDef['valueFormatter']
           },
           {
             field: 'totalQuantity',
@@ -1076,7 +1044,7 @@ export const changelogColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.totalQuantity'
             ),
-            valueFormatter,
+            valueFormatter: valueFormatter as ColDef['valueFormatter'],
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -1191,7 +1159,7 @@ export const allocAgrmtSummaryColDefs = (
   {
     headerName: t('allocationAgreement:allocationAgreementColLabels.quantity'),
     field: 'quantity',
-    valueFormatter
+    valueFormatter: valueFormatter as ColDef['valueFormatter']
   },
   {
     headerName: t('allocationAgreement:allocationAgreementColLabels.units'),

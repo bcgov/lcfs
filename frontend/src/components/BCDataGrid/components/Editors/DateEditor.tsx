@@ -1,7 +1,8 @@
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format, isValid, parseISO } from 'date-fns'
 import { useEffect, useRef, useState } from 'react'
-import type { Column, GridApi } from 'ag-grid-community'
+import type { ComponentProps, MouseEvent, SyntheticEvent, KeyboardEvent } from 'react'
+import type { ColDef, Column, GridApi } from 'ag-grid-community'
 
 interface DateEditorApi extends Pick<GridApi, 'stopEditing' | 'setFocusedCell'> {
   getLastDisplayedRowIndex: () => number
@@ -9,6 +10,7 @@ interface DateEditorApi extends Pick<GridApi, 'stopEditing' | 'setFocusedCell'> 
 
 interface DateEditorColumn extends Pick<Column, 'getColId' | 'getColDef'> {
   colId?: string
+  colDef?: ColDef
 }
 
 export interface DateEditorProps {
@@ -106,7 +108,7 @@ export const DateEditor = ({
   )
   const [isOpen, setIsOpen] = useState(() => {
     if (!autoOpenLastRow) return false
-    const lastRowIndex = api?.getLastDisplayedRowIndex?.() ?? -1
+    const lastRowIndex = api!.getLastDisplayedRowIndex()
     return rowIndex === lastRowIndex
   })
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -117,12 +119,11 @@ export const DateEditor = ({
 
   useEffect(() => {
     const handleClickOutside = (event: globalThis.MouseEvent) => {
-      const target = event.target
-      const isPickerPopperClick =
-        target instanceof Element && target.closest('.MuiPickersPopper-root')
+      const target = event.target as Element | null
+      const isPickerPopperClick = target?.closest?.('.MuiPickersPopper-root')
       if (
         containerRef.current &&
-        !(target instanceof Node && containerRef.current.contains(target)) &&
+        !containerRef.current.contains(target as Node) &&
         !isPickerPopperClick
       ) {
         setIsOpen(false)
@@ -201,7 +202,7 @@ export const DateEditor = ({
     stopEditingAfterValueChange(api, rowIndex, column)
   }
 
-  const handleKeyDown = (e: ReactKeyboardEvent<HTMLElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     stopPropagation(e)
     if (e?.key === 'Enter') {
       e.preventDefault?.()

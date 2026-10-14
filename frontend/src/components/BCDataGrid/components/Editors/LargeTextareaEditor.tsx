@@ -1,4 +1,5 @@
 import { forwardRef, useState, useCallback, useLayoutEffect } from 'react'
+import type { ChangeEvent, KeyboardEvent } from 'react'
 import InputBase from '@mui/material/InputBase'
 import Popper from '@mui/material/Popper'
 import Paper from '@mui/material/Paper'
@@ -9,10 +10,9 @@ export interface LargeTextareaEditorProps {
   onValueChange: (value: string) => void
   column: { actualWidth: number }
   api?: Pick<GridApi, 'getFocusedCell' | 'tabToNextCell'>
-  [key: string]: unknown
 }
 
-export const LargeTextareaEditor = forwardRef(
+export const LargeTextareaEditor = forwardRef<unknown, LargeTextareaEditorProps>(
   ({
   value,
   onValueChange,
@@ -20,7 +20,9 @@ export const LargeTextareaEditor = forwardRef(
   api
 }) => {
     const [valueState, setValueState] = useState(value)
-    const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
+    const [anchorEl, setAnchorEl] = useState<
+      HTMLDivElement | null | undefined
+    >()
     const [inputRef, setInputRef] = useState<HTMLTextAreaElement | null>(null)
 
     useLayoutEffect(() => {

@@ -29,18 +29,19 @@ export interface NumberEditorProps {
   column?: unknown
   min?: number
   max?: number
-  [key: string]: unknown
 }
 
 export const NumberEditor = forwardRef<unknown, NumberEditorProps>(
   (
-    { value, onValueChange, ...props }: NumberEditorProps,
+    { value, onValueChange, ...props },
     ref
   ) => {
     const inputRef = useRef<HTMLInputElement | null>(null)
 
     useEffect(() => {
-      inputRef.current?.focus()
+      if (inputRef) {
+        inputRef.current!.focus()
+      }
     }, [])
 
     useImperativeHandle(ref, () => {
@@ -71,9 +72,9 @@ export const NumberEditor = forwardRef<unknown, NumberEditorProps>(
           !Number.isNaN(parseFloat(newValue)))
       ) {
         let numValue = parseFloat(newValue)
-        if (props.min != null && numValue < props.min) numValue = props.min
-        if (props.max != null && numValue > props.max) numValue = props.max
-        onValueChange(parseInt(String(numValue), 10) || 0)
+        if (numValue < (props.min as number)) numValue = props.min as number
+        if (numValue > (props.max as number)) numValue = props.max as number
+        onValueChange(parseInt(numValue as unknown as string) || 0)
       }
     }
 

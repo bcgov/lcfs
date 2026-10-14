@@ -169,7 +169,12 @@ export const useFuelCodeBulletins = (
 }
 
 export const useDownloadFuelCodeBulletins = (
-  options: ExtMutationOptions<unknown, unknown>
+  options: ExtMutationOptions<unknown, {
+    bulletinType: string
+    format?: string
+    body?: Record<string, unknown>
+    idir?: boolean
+  }>
 ) => {
   const client = useApiService()
   return useMutation({
@@ -178,7 +183,12 @@ export const useDownloadFuelCodeBulletins = (
       format = 'xlsx',
       body,
       idir
-    }: Record<string, unknown>) => {
+      }: {
+        bulletinType: string
+        format?: string
+        body?: Record<string, unknown>
+        idir?: boolean
+      }) => {
       if (!bulletinType) {
         throw new Error('bulletinType is required for bulletin download')
       }
@@ -210,7 +220,15 @@ export const useTransportModes = (options: QueryOptions<unknown>) => {
 
 // Single unified mutation hook for all fuel code operations
 export const useFuelCodeMutation = (
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, {
+    action: 'create' | 'save' | 'update' | 'approve' | 'delete' | 'download'
+    data?: Record<string, unknown> & {
+      format?: string
+      excludeArchived?: boolean
+      body?: Record<string, unknown>
+    }
+    fuelCodeId?: number | string
+  }> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -220,7 +238,15 @@ export const useFuelCodeMutation = (
       action,
       data,
       fuelCodeId
-    }: Record<string, unknown>) => {
+    }: {
+      action: 'create' | 'save' | 'update' | 'approve' | 'delete' | 'download'
+      data?: Record<string, unknown> & {
+        format?: string
+        excludeArchived?: boolean
+        body?: Record<string, unknown>
+      }
+      fuelCodeId?: number | string
+    }) => {
       switch (action) {
         case 'create':
         case 'save':
@@ -320,58 +346,68 @@ export const useFuelCodeMutation = (
 }
 
 // Convenience hooks for backward compatibility (optional)
+type FuelCodeMutationVariables = {
+  action: 'create' | 'save' | 'update' | 'approve' | 'delete' | 'download'
+  data?: Record<string, unknown> & {
+    format?: string
+    excludeArchived?: boolean
+    body?: Record<string, unknown>
+  }
+  fuelCodeId?: number | string
+}
+
 export const useCreateFuelCode = (
-  options: ExtMutationOptions<unknown, unknown>
+  options: ExtMutationOptions<unknown, FuelCodeMutationVariables>
 ) => {
   const mutation = useFuelCodeMutation(options)
   return {
     ...mutation,
-    mutateAsync: (data: unknown) =>
+    mutateAsync: (data: Record<string, unknown>) =>
       mutation.mutateAsync({ action: 'create', data })
   }
 }
 
 export const useUpdateFuelCode = (
-  fuelCodeId: unknown,
-  options: ExtMutationOptions<unknown, unknown>
+  fuelCodeId: number | string,
+  options: ExtMutationOptions<unknown, FuelCodeMutationVariables>
 ) => {
   const mutation = useFuelCodeMutation(options)
   return {
     ...mutation,
-    mutateAsync: (data: unknown) =>
+    mutateAsync: (data: Record<string, unknown>) =>
       mutation.mutateAsync({ action: 'update', data, fuelCodeId })
   }
 }
 
 export const useDeleteFuelCode = (
-  options: ExtMutationOptions<unknown, unknown>
+  options: ExtMutationOptions<unknown, FuelCodeMutationVariables>
 ) => {
   const mutation = useFuelCodeMutation(options)
   return {
     ...mutation,
-    mutateAsync: (fuelCodeId: unknown) =>
+    mutateAsync: (fuelCodeId: number | string) =>
       mutation.mutateAsync({ action: 'delete', fuelCodeId })
   }
 }
 
 export const useApproveFuelCode = (
-  options: ExtMutationOptions<unknown, unknown>
+  options: ExtMutationOptions<unknown, FuelCodeMutationVariables>
 ) => {
   const mutation = useFuelCodeMutation(options)
   return {
     ...mutation,
-    mutateAsync: (fuelCodeId: unknown) =>
+    mutateAsync: (fuelCodeId: number | string) =>
       mutation.mutateAsync({ action: 'approve', fuelCodeId })
   }
 }
 
 export const useDownloadFuelCodes = (
-  options: ExtMutationOptions<unknown, unknown>
+  options: ExtMutationOptions<unknown, FuelCodeMutationVariables>
 ) => {
   const mutation = useFuelCodeMutation(options)
   return {
     ...mutation,
-    mutateAsync: (data: unknown) =>
+    mutateAsync: (data: Record<string, unknown>) =>
       mutation.mutateAsync({ action: 'download', data })
   }
 }

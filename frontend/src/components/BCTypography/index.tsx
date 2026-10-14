@@ -17,6 +17,7 @@ type BCTypographyColor =
   | 'text'
   | 'link'
   | 'white'
+  | (string & {})
 
 type BCTypographyFontWeight = false | 'light' | 'regular' | 'medium' | 'bold'
 
@@ -37,7 +38,8 @@ type BCTypographyVerticalAlign =
   | 'top'
   | 'bottom'
 
-interface BCTypographyProps extends Omit<TypographyProps, 'color' | 'children'> {
+interface BCTypographyProps
+  extends Omit<TypographyProps, 'color' | 'children' | 'fontWeight'> {
   color?: BCTypographyColor
   fontWeight?: BCTypographyFontWeight
   textTransform?: BCTypographyTextTransform
@@ -45,6 +47,7 @@ interface BCTypographyProps extends Omit<TypographyProps, 'color' | 'children'> 
   textGradient?: boolean
   opacity?: number
   children?: ReactNode
+  to?: string
 }
 
 const BCTypography = forwardRef<HTMLElement, BCTypographyProps>(

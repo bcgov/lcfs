@@ -1,4 +1,6 @@
-import type { ColDef } from 'ag-grid-community'
+import type { CellClassParams, ICellEditorParams, ICellRendererParams, ValueSetterParams, ColDef } from 'ag-grid-community'
+import type { AxiosInstance } from 'axios'
+import type { ReactNode } from 'react'
 import type { GridErrors, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
@@ -28,7 +30,7 @@ const cellErrorStyle = (params: CellClassParams) => {
       ? params.data.validationMsg
       : null)
 
-  if (params.colDef.field && validationFields?.[params.colDef.field]) {
+  if (validationFields?.[params.colDef.field as string]) {
     return { borderColor: 'red' }
   }
   return { borderColor: 'unset' }
@@ -58,7 +60,6 @@ const getTransportModeName = (value: unknown): string => {
   if (typeof value === 'string' || typeof value === 'number') {
     return value.toString()
   }
-  if (typeof value !== 'object') return ''
   const record = value as Record<string, unknown>
   return (
     getTransportModeName(record.transportMode) ||
@@ -87,7 +88,7 @@ export const normalizeTransportModeDistances = (value: unknown) => {
       if (typeof item === 'object') {
         return {
           transportMode: getTransportModeName(item),
-          distance: ('distance' in item ? item.distance : undefined) ?? ''
+          distance: (item as Record<string, unknown>).distance ?? ''
         }
       }
       return { transportMode: getTransportModeName(item), distance: '' }
@@ -117,8 +118,7 @@ const renderTransportModeDistances = (params: ICellRendererParams) => {
 }
 
 const transportModeValueSetter = (params: ValueSetterParams) => {
-  if (!params.colDef.field) return false
-  params.data[params.colDef.field] = normalizeTransportModeDistances(
+  params.data[params.colDef.field as string] = normalizeTransportModeDistances(
     params.newValue
   )
   return true

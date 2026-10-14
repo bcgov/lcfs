@@ -28,23 +28,29 @@ const checkedIcon = <CheckBox fontSize="medium" />
 export interface AutocompleteCellEditorOption {
   label?: string
   name?: string
-  value?: any
-  [key: string]: any
+  value?: unknown
+  [key: string]: unknown
 }
 
 export interface AutocompleteCellEditorProps {
-  value?: any
+  value?: unknown
   options?: AutocompleteCellEditorOption[]
   limitTags?: number
   multiple?: boolean
   disableCloseOnSelect?: boolean
   openOnFocus?: boolean
   freeSolo?: boolean
-  colDef?: any
-  column?: any
-  node?: any
-  api?: any
-  onValueChange?: (value: any) => void
+  colDef?: { cellEditorParams?: { returnObject?: boolean; noLabel?: boolean; label?: string } }
+  column?: unknown
+  node?: unknown
+  api?: {
+    stopEditing?: () => void
+    tabToPreviousCell?: () => void
+    tabToNextCell?: () => void
+    getFocusedCell?: () => { rowIndex: number; column: { getId: () => string } } | null
+    startEditingCell?: (params: { rowIndex: number; colKey: string }) => void
+  }
+  onValueChange?: (value: unknown) => void
   onKeyDownCapture?: (event: KeyboardEvent) => void
   onBlur?: (event: FocusEvent) => void
   onPaste?: (event: ClipboardEvent) => void
@@ -53,7 +59,7 @@ export interface AutocompleteCellEditorProps {
 
 export const AutocompleteCellEditor = forwardRef<
   {
-    getValue: () => any
+    getValue: () => unknown
     isCancelBeforeStart: () => boolean
     isCancelAfterEnd: () => boolean
     afterGuiAttached: () => void
@@ -81,47 +87,45 @@ export const AutocompleteCellEditor = forwardRef<
     returnObjectProp ?? colDef?.cellEditorParams?.returnObject ?? false
   const shouldUseInputState = freeSolo && !multiple
 
-  const getLabel = (
-    option: AutocompleteCellEditorOption | string | number | null | undefined
-  ): string => {
+  const getLabel = (option: unknown): string => {
     if (option == null) return ''
     if (typeof option === 'string' || typeof option === 'number') {
       return option.toString()
     }
-    return (option.label || option.name || option.value || '') as string
+    const record = option as AutocompleteCellEditorOption
+    return (record.label || record.name || record.value || '') as string
   }
 
   // Helpers to map between raw values (ids/strings) and option objects
-  const getRawValue = (optionOrValue: any): any => {
+  const getRawValue = (optionOrValue: unknown): unknown => {
     if (optionOrValue == null) return null
     if (typeof optionOrValue === 'object') {
       // Expect shape { value, label }
-      return Object.prototype.hasOwnProperty.call(optionOrValue, 'value')
-        ? optionOrValue.value
+      const record = optionOrValue as Record<string, unknown>
+      return Object.prototype.hasOwnProperty.call(record, 'value')
+        ? record.value
         : optionOrValue
     }
     return optionOrValue
   }
 
-  const findOptionByRaw = (raw: any): AutocompleteCellEditorOption | null => {
+  const findOptionByRaw = (raw: unknown): AutocompleteCellEditorOption | null => {
     if (raw == null) return null
-    return (
-      options.find((opt) =>
-        typeof opt === 'object' ? opt?.value === raw : opt === raw
-      ) ?? null
-    )
+    return options.find((opt) =>
+      typeof opt === 'object' ? opt?.value === raw : opt === raw
+    ) as AutocompleteCellEditorOption | null
   }
 
   const initSelected = ():
     | AutocompleteCellEditorOption
-    | AutocompleteCellEditorOption[]
+    | (AutocompleteCellEditorOption | string)[]
     | null => {
     if (multiple) {
       if (Array.isArray(value)) {
         // `value` could be an array of objects or ids/strings
         return value
           .map((v) => (typeof v === 'object' ? v : findOptionByRaw(v)))
-          .filter(Boolean)
+          .filter((option): option is AutocompleteCellEditorOption => option != null)
       }
       if (value == null || value === '') return []
       if (typeof value === 'string') {
@@ -129,23 +133,24 @@ export const AutocompleteCellEditor = forwardRef<
           .split(',')
           .map((v) => v.trim())
           .map((rv) => findOptionByRaw(rv))
-          .filter(Boolean)
+          .filter((option): option is AutocompleteCellEditorOption => option != null)
       }
       // single primitive
-      return [findOptionByRaw(value)].filter(Boolean)
+      const option = findOptionByRaw(value)
+      return option ? [option] : []
     }
     // single mode
     if (value == null || value === '') return null
-    if (typeof value === 'object') return value
+    if (typeof value === 'object') return value as AutocompleteCellEditorOption
     if (typeof value === 'string') {
       const first = value.split(',')[0]?.trim()
       return findOptionByRaw(first)
     }
-    return findOptionByRaw(value)
+    return findOptionByRaw(value as string | number)
   }
   const [selected, setSelected] = useState<
     | AutocompleteCellEditorOption
-    | AutocompleteCellEditorOption[]
+    | (AutocompleteCellEditorOption | string)[]
     | string
     | null
   >(initSelected)
@@ -216,7 +221,14 @@ export const AutocompleteCellEditor = forwardRef<
     inputRef.current?.focus()
   }, [])
 
-  const handleChange = (_event: SyntheticEvent, newValue: any) => {
+  const handleChange = (
+    _event: SyntheticEvent,
+    newValue:
+      | AutocompleteCellEditorOption
+      | (AutocompleteCellEditorOption | string)[]
+      | string
+      | null
+  ) => {
     // newValue is an option object (single) or array of option objects (multiple)
     setSelected(newValue)
     if (shouldUseInputState && !multiple) {
@@ -245,15 +257,15 @@ export const AutocompleteCellEditor = forwardRef<
 
   const navigateToAdjacentCell = (direction: 'next' | 'previous' = 'next') => {
     if (direction === 'previous') {
-      api.tabToPreviousCell?.()
+      api!.tabToPreviousCell?.()
     } else {
-      api.tabToNextCell?.()
+      api!.tabToNextCell?.()
     }
 
     setTimeout(() => {
-      const focusedCell = api.getFocusedCell?.()
+      const focusedCell = api!.getFocusedCell?.()
       if (focusedCell) {
-        api.startEditingCell?.({
+        api!.startEditingCell?.({
           rowIndex: focusedCell.rowIndex,
           colKey: focusedCell.column.getId()
         })
@@ -272,7 +284,7 @@ export const AutocompleteCellEditor = forwardRef<
     if (event.key === 'Tab') {
       event.preventDefault()
       onValueChange?.(getCurrentValue())
-      api.stopEditing()
+      api!.stopEditing!()
       if (event.shiftKey) {
         navigateToAdjacentCell('previous')
       } else {
@@ -283,7 +295,7 @@ export const AutocompleteCellEditor = forwardRef<
 
   const handleBlur = (event: FocusEvent<HTMLInputElement>) => {
     onBlur?.(event)
-    api.stopEditing()
+    api!.stopEditing!()
   }
 
   const handleInputChange = (
@@ -331,7 +343,9 @@ export const AutocompleteCellEditor = forwardRef<
         openOnFocus={openOnFocus}
         value={selected}
         onChange={handleChange}
-        onHighlightChange={(_, option) => setHighlightedOption(option ?? null)}
+        onHighlightChange={(_, option) =>
+          setHighlightedOption(option as AutocompleteCellEditorOption | null)
+        }
         multiple={multiple}
         disableCloseOnSelect={disableCloseOnSelect}
         limitTags={limitTags}
@@ -354,7 +368,7 @@ export const AutocompleteCellEditor = forwardRef<
               key={
                 typeof option === 'string'
                   ? option
-                  : (option.value ?? option.label)
+                  : ((option as AutocompleteCellEditorOption).value as string | number | undefined) ?? (option as AutocompleteCellEditorOption).label
               }
             >
               <Box
@@ -362,8 +376,8 @@ export const AutocompleteCellEditor = forwardRef<
                 className={`${selected || isSelected ? 'selected' : ''} ag-custom-component-popup`}
                 role="option"
                 sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
-                aria-label={`select ${typeof option === 'string' ? option : option.label}`}
-                data-testid={`select-${typeof option === 'string' ? option : option.label}`}
+                aria-label={`select ${typeof option === 'string' ? option : (option as AutocompleteCellEditorOption).label}`}
+                data-testid={`select-${typeof option === 'string' ? option : (option as AutocompleteCellEditorOption).label}`}
                 {...props}
                 tabIndex={0}
               >
@@ -378,7 +392,7 @@ export const AutocompleteCellEditor = forwardRef<
                     inputProps={{ 'aria-label': 'controlled' }}
                   />
                 )}
-                {typeof option === 'string' ? option : option.label}
+                {typeof option === 'string' ? option : (option as AutocompleteCellEditorOption).label}
               </Box>
               <Divider />
             </React.Fragment>
@@ -407,9 +421,9 @@ export const AutocompleteCellEditor = forwardRef<
                 key={
                   typeof option === 'string'
                     ? option
-                    : (option.value ?? option.label)
+                    : ((option as AutocompleteCellEditorOption).value as string | number | undefined) ?? (option as AutocompleteCellEditorOption).label
                 }
-                label={typeof option === 'string' ? option : option.label}
+                label={typeof option === 'string' ? option : (option as AutocompleteCellEditorOption).label}
               />
             ))}
             {value.length > limitTags && (

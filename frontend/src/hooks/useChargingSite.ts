@@ -1,6 +1,7 @@
 import { omitProperties } from '@/utils/omitProperties'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
+import type { AxiosRequestConfig } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import type {
@@ -42,7 +43,7 @@ export const useGetAllocationOrganizations = (
 
 export const useGetChargingSiteById = (
   siteId: number | string | undefined | null,
-  { historyMode = false, ...options }: Record<string, unknown> = {}
+  { historyMode = false, ...options }: { historyMode?: boolean } & QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
   const {
@@ -115,7 +116,7 @@ export const useGetAllChargingSites = (
 
 export const useSaveChargingSite = (
   organizationId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, Record<string, unknown> & { chargingSiteId?: number | string }> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -128,7 +129,7 @@ export const useSaveChargingSite = (
   } = omitProperties(options, ['invalidateRelatedQueries'])
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown> & { chargingSiteId?: number | string }) => {
       if (!organizationId) {
         throw new Error('Organization ID is required')
       }
@@ -141,7 +142,7 @@ export const useSaveChargingSite = (
         }
         return await client.delete(
           `${apiRoutes.saveChargingSite.replace(':orgID', String(organizationId ?? ''))}/${chargingSiteId}`,
-          data
+          data as AxiosRequestConfig
         )
       } else if (data.chargingSiteId) {
         // Update operation (has ID and not explicitly creating)
@@ -161,7 +162,9 @@ export const useSaveChargingSite = (
       }
     },
     onSuccess: (data, variables, context) => {
-      const responseSiteId = data?.data?.chargingSiteId
+      const responseSiteId = (
+        data as { data?: { chargingSiteId?: number | string } }
+      )?.data?.chargingSiteId
 
       // Comprehensive cache invalidation for charging site mutations
       if (clearCache) {
@@ -260,7 +263,7 @@ export const useSiteNames = (
     queryKey: ['site-names', organizationId],
     queryFn: async () => {
       const isIDIR = currentUser?.roles?.some(
-        (role: unknown) => role.name === 'Government'
+        (role: { name?: string }) => role.name === 'Government'
       )
       const url =
         isIDIR && organizationId
@@ -312,7 +315,13 @@ export const useUpdateChargingSiteStatus = (
 }
 
 export const useBulkUpdateEquipmentStatus = (
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, {
+    siteId?: number | string
+    equipmentIds?: Array<number | string>
+    equipment_ids?: Array<number | string>
+    newStatus?: string
+    new_status?: string
+  }> = {}
 ) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
@@ -447,7 +456,7 @@ export const useChargingSiteEquipmentPaginated = (
       // Don't retry if it's a validation error about invalid site ID
       if (
         error?.message?.includes('Invalid site ID') ||
-        (error as unknown)?.response?.status === 400
+        (error as { response?: { status?: number } })?.response?.status === 400
       ) {
         return false
       }
@@ -461,14 +470,14 @@ export const useChargingSiteEquipmentPaginated = (
 // Charging site import/export hooks
 export const useImportChargingSites = (
   _organizationId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, { file: File; isOverwrite: boolean }> = {}
 ) => {
   const client = useApiService()
 
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: Record<string, unknown>) => {
+    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
       if (!file) {
         throw new Error('File is required for import')
       }
@@ -476,7 +485,7 @@ export const useImportChargingSites = (
       const formData = new FormData()
       formData.append('file', file)
       formData.append('filename', file.name)
-      formData.append('overwrite', isOverwrite)
+      formData.append('overwrite', isOverwrite as unknown as string)
 
       return await client.post(apiRoutes.importChargingSites, formData, {
         headers: {
@@ -524,7 +533,11 @@ export const useGetChargingSitesImportJobStatus = (
     gcTime,
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
-      const responseData = (data as unknown)?.state?.data
+      const responseData = (
+        data as {
+          state?: { data?: { status?: string; progress?: number } }
+        } | undefined
+      )?.state?.data
       // Stop polling when job is complete or failed
       if (
         responseData?.status === 'Import process completed.' ||

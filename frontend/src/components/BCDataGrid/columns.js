@@ -58,5 +58,5 @@ export const actions = (props) => ({
   editable: false,
   suppressKeyboardEvent,
   filter: false,
-  hide: typeof props === 'function' ? undefined : props.hide
+  hide: /** @type {{ hide?: boolean }} */ (props).hide
 })

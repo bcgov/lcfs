@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import type { TFunction } from 'i18next'
@@ -78,19 +78,6 @@ type FuelCodeGroup = {
 }
 
 type FuelCodeGridRow = FuelCodeIteration & { id: number | string }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const isFuelCodeIteration = (value: unknown): value is FuelCodeIteration =>
-  isRecord(value)
-
-const isFuelCodeGroup = (value: unknown): value is FuelCodeGroup =>
-  isRecord(value) &&
-  isFuelCodeIteration(value.latestIteration) &&
-  Array.isArray(value.iterations) &&
-  Array.isArray(value.volumeOverTime) &&
-  Array.isArray(value.complianceUnitsOverTime)
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return '—'
@@ -179,9 +166,7 @@ const DetailRow = ({
   </BCBox>
 )
 
-const IterationCardContent = ({
-  data
-}) => {
+const IterationCardContent = ({ data }: { data?: FuelCodeIteration }) => {
   if (!data) return null
 
   const facilityLocation = [
@@ -395,8 +380,7 @@ const VolumeChart = ({
     tooltip: {
       trigger: 'axis',
       formatter: (params) => {
-        const p = Array.isArray(params) ? params[0] : params
-        if (!p) return ''
+        const p = (params as Array<{ name: string; value: number }>)[0]
         return `${p.name}<br/>${t('fuelCode:detail.totalVolume')}: ${Number(p.value).toLocaleString()}`
       }
     },
@@ -495,8 +479,7 @@ const ComplianceUnitsChart = ({
     tooltip: {
       trigger: 'axis',
       formatter: (params) => {
-        const p = Array.isArray(params) ? params[0] : params
-        if (!p) return ''
+        const p = (params as Array<{ name: string; value: number }>)[0]
         return `${p.name}<br/>${t('fuelCode:detail.totalComplianceUnits')}: ${Number(p.value).toLocaleString()}`
       }
     },
@@ -588,17 +571,11 @@ const FuelCodeDetailBase = () => {
 
   const activeQuery = isGovernmentUser ? groupQuery : fuelCodeQuery
   const { isLoading, isError, error } = activeQuery
-  const groupData = isFuelCodeGroup(groupQuery.data)
-    ? groupQuery.data
-    : undefined
-  const singleFuelCode = isFuelCodeIteration(fuelCodeQuery.data)
-    ? fuelCodeQuery.data
-    : undefined
   const data: FuelCodeGroup | undefined = isGovernmentUser
-    ? groupData
-    : singleFuelCode
+    ? (groupQuery.data as FuelCodeGroup | undefined)
+    : fuelCodeQuery.data
       ? {
-          latestIteration: singleFuelCode,
+          latestIteration: fuelCodeQuery.data as FuelCodeIteration,
           iterations: [],
           volumeOverTime: [],
           complianceUnitsOverTime: []
@@ -643,14 +620,10 @@ const FuelCodeDetailBase = () => {
       cellRenderer: LinkRenderer,
       cellRendererParams: {
         isAbsolute: true,
-        url: (params: { data?: FuelCodeGridRow }) => {
-          const fuelCodeId = params.data?.fuelCodeId
-          return fuelCodeId == null
-            ? ''
-            : buildPath(ROUTES.FUEL_CODES.EDIT, {
-                fuelCodeID: fuelCodeId
-              })
-        }
+        url: (params: { data?: FuelCodeGridRow }) =>
+          buildPath(ROUTES.FUEL_CODES.EDIT, {
+            fuelCodeID: params.data?.fuelCodeId as number
+          })
       }
     }),
     []
@@ -784,8 +757,8 @@ const FuelCodeDetailBase = () => {
                   onPaginationChange={handleIterationPaginationChange}
                   enablePageCaching={false}
                   overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
-                  getRowId={(params: { data: FuelCodeGridRow }) =>
-                    params.data.id ?? params.data.fuelCodeId?.toString()
+                  getRowId={(params) =>
+                    (params.data.id ?? params.data.fuelCodeId?.toString()) as string
                   }
                 />
               )}

@@ -1,4 +1,4 @@
-import type { AxiosResponse, AxiosError } from 'axios'
+import type { AxiosError, AxiosResponse } from 'axios'
 import {
   sanitizeOrgRoles,
   isValidOrgRolePayload,
@@ -32,24 +32,6 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import type { BCAlert2Handle } from '@/components/BCAlert/BCAlert2'
 
-interface OrganizationOption {
-  organizationId: number
-  name: string
-}
-interface SeededUser {
-  userProfileId: number
-  firstName?: string
-  lastName?: string
-  keycloakUsername?: string
-  roles?: { name: string }[]
-  organization?: OrganizationOption
-  title?: string
-  keycloakEmail?: string
-  email?: string
-  phone?: string
-  mobilePhone?: string
-  isActive?: boolean
-}
 interface ResolverResult {
   resolved?: boolean
   message?: string
@@ -67,6 +49,11 @@ interface SeededUserAssociationFormValues {
   saltPhrase: string
 }
 
+interface OrganizationOption {
+  organizationId: number | string
+  name: string
+}
+
 interface SeededUserOption {
   userProfileId: number | string
   keycloakUsername?: string
@@ -80,11 +67,6 @@ interface SeededUserOption {
   phone?: string | null
   mobilePhone?: string | null
   isActive?: boolean
-}
-
-interface OrganizationOption {
-  organizationId: number | string
-  name: string
 }
 
 const fieldSx = {
@@ -164,18 +146,21 @@ export const SeededUserAssociation = () => {
       showAlert('success', t('admin:seededAssoc.success'))
       refetchSeededUsers()
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
+    onError: (error: Error) => {
+      const detail = (error as AxiosError<{ detail?: string }>)?.response?.data
+        ?.detail
       showAlert(
         'error',
-        error?.response?.data?.detail || t('common:submitError')
+        detail || t('common:submitError')
       )
     }
   })
 
   const { mutate: resolveOrgName, isPending: isResolvingOrgName } =
     useResolveOrgName({
-      onSuccess: (response: AxiosResponse<ResolverResult>) => {
-        const data = response?.data
+      onSuccess: (response: unknown) => {
+        const data = (response as AxiosResponse<ResolverResult> | undefined)
+          ?.data
         if (data?.resolved) {
           setResolverResult(data)
           showAlert('success', t('admin:seededAssoc.resolveSuccess'))
@@ -184,18 +169,20 @@ export const SeededUserAssociation = () => {
         setResolverResult(data || null)
         showAlert('error', data?.message || t('common:submitError'))
       },
-      onError: (error: AxiosError<{ detail?: string }>) => {
+      onError: (error: Error) => {
         setResolverResult(null)
+        const detail = (error as AxiosError<{ detail?: string }>)?.response?.data
+          ?.detail
         showAlert(
           'error',
-          error?.response?.data?.detail || t('common:submitError')
+          detail || t('common:submitError')
         )
       }
     })
 
   const seededUsersForSelection = useMemo(
     () =>
-      seededUsers.filter((user: SeededUser) =>
+      seededUsers.filter((user) =>
         isSeededUserSelectable(user?.keycloakUsername || '')
       ),
     [seededUsers]
@@ -204,7 +191,7 @@ export const SeededUserAssociation = () => {
   const selectedUser = useMemo(
     () =>
       seededUsersForSelection.find(
-        (user: SeededUser) => String(user.userProfileId) === selectedUserId
+        (user) => String(user.userProfileId) === selectedUserId
       ),
     [seededUsersForSelection, selectedUserId]
   )
@@ -234,7 +221,7 @@ export const SeededUserAssociation = () => {
     setResolverResult(null)
   }
 
-  const getUserOptionLabel = (user: SeededUser) =>
+  const getUserOptionLabel = (user: SeededUserOption) =>
     `${`${user?.firstName || ''} ${user?.lastName || ''}`.trim()} (${
       user?.keycloakUsername || ''
     })`
@@ -248,7 +235,7 @@ export const SeededUserAssociation = () => {
 
   useEffect(() => {
     const user = seededUsersForSelection.find(
-      (candidate: SeededUser) =>
+      (candidate) =>
         String(candidate.userProfileId) === selectedUserId
     )
 
@@ -259,7 +246,7 @@ export const SeededUserAssociation = () => {
     }
 
     const userRoles = sanitizeOrgRoles(
-      user?.roles?.map((role: { name: string }) => role.name?.toLowerCase()) ||
+      user?.roles?.map((role) => role.name?.toLowerCase() as string) ||
         []
     )
     setValue('selectedRoles', userRoles)
@@ -420,13 +407,12 @@ export const SeededUserAssociation = () => {
                             options={seededUsersForSelection}
                             value={selectedUser || null}
                             getOptionLabel={getUserOptionLabel}
-                            isOptionEqualToValue={(
-                              option: SeededUser,
-                              value: SeededUser
-                            ) => option?.userProfileId === value?.userProfileId}
+                            isOptionEqualToValue={(option, value) =>
+                              option?.userProfileId === value?.userProfileId
+                            }
                             onOpen={() => setIsTestUserOpen(true)}
                             onClose={() => setIsTestUserOpen(false)}
-                            onChange={(_, user: SeededUser | null) => {
+                            onChange={(_, user: SeededUserOption | null) => {
                               clearTransientState()
                               setIsTestUserOpen(false)
                               field.onChange(

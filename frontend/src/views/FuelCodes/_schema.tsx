@@ -1,4 +1,5 @@
-import type { ColDef } from 'ag-grid-community'
+import type { ICellRendererParams, ColDef } from 'ag-grid-community'
+import type { TFunction } from 'i18next'
 import { FuelCodeStatusRenderer } from '@/utils/grid/cellRenderers'
 import {
   dateFormatter,
@@ -24,7 +25,7 @@ const getCoProcessedOptions = () => ({
 })
 
 export const fuelCodeColDefs = (
-  t
+  t: TFunction
 ): ColDef[] => [
   {
     field: 'status',

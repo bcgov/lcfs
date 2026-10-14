@@ -1,4 +1,4 @@
-import type { ColDef } from 'ag-grid-community'
+import type { ICellRendererParams, ColDef } from 'ag-grid-community'
 import type { SummaryColumn } from '@/types/schema'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
@@ -424,13 +424,13 @@ export const renewableFuelColumns = (
     jetFuelEditableCells = [SUMMARY.LINE_6]
   } else if (
     data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel &&
-    parseInt(String(compliancePeriodYear)) >= 2028
+    parseInt(compliancePeriodYear as string) >= 2028
   ) {
     // Deficiency: Line 8 editable (only from 2028 onward), Line 6 not editable
     jetFuelEditableCells = [SUMMARY.LINE_8]
   }
 
-  if (parseInt(String(compliancePeriodYear)) === 2024) {
+  if (parseInt(compliancePeriodYear as string) === 2024) {
     // by default enable in editing mode for compliance period 2024, but respect locks for Lines 7 & 9
     if (!lines7And9Locked) {
       // Line 7 and Line 9 are editable when not locked
@@ -447,7 +447,7 @@ export const renewableFuelColumns = (
         SUMMARY.LINE_9
       ]
     }
-  } else if (parseInt(String(compliancePeriodYear)) >= 2025) {
+  } else if (parseInt(compliancePeriodYear as string) >= 2025) {
     // For 2025+ reports, only allow editing Lines 7 & 9 if not locked
     if (!lines7And9Locked) {
       // Line 7 and Line 9 are editable when not locked
@@ -463,7 +463,7 @@ export const renewableFuelColumns = (
       ]
     }
   }
-  if (parseInt(String(compliancePeriodYear)) < 2029) {
+  if (parseInt(compliancePeriodYear as string) < 2029) {
     // The Jet Fuel cells for lines 7 and 9 should remain unavailable until 2029 (one year after the first renewable requirements come into effect for 2028).
     jetFuelEditableCells = []
   }
@@ -538,7 +538,7 @@ export const renewableFuelColumns = (
   return allColumns.filter((column) => {
     if (
       column.id === 'jetFuel' &&
-      parseInt(String(compliancePeriodYear)) < 2024
+      parseInt(compliancePeriodYear as string) < 2024
     ) {
       return false
     }

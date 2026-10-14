@@ -90,6 +90,7 @@ const mockGridApi = {
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
   BCGridBase: React.forwardRef(function MockGridBase(props, ref) {
+    mockBCGridBaseProps = props
     React.useImperativeHandle(ref, () => ({ api: mockGridApi, columnApi: {} }))
     const { onGridReady } = props
     // Prevent setTimeout errors by calling onGridReady properly
@@ -236,7 +237,7 @@ describe('BCGridEditor - Simplified Coverage Test Suite', () => {
     target.dataset.action = 'duplicate'
     const rowData = { id: 'row-1', name: 'Fuel' }
     const cellEvent = {
-      column: { getColId: () => 'action' },
+      column: { colId: 'action', getColId: () => 'action' },
       data: rowData,
       node: { data: rowData },
       event: { target },

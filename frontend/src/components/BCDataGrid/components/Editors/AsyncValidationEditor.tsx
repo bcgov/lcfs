@@ -16,7 +16,6 @@ export interface AsyncValidationEditorProps {
   column?: { colId?: string }
   debounceLimit?: number
   condition: (value: string) => boolean | Promise<boolean>
-  [key: string]: unknown
 }
 
 export const AsyncValidationEditor = forwardRef<
@@ -34,7 +33,7 @@ export const AsyncValidationEditor = forwardRef<
       column,
       debounceLimit,
       condition
-    }: AsyncValidationEditorProps,
+      },
     ref
   ) => {
     const [inputValue, setInputValue] = useState<string | undefined>(value)
@@ -70,7 +69,7 @@ export const AsyncValidationEditor = forwardRef<
           resolve(false)
         } else {
           setTimeout(() => {
-            resolve(currentCondition(currentInputValue))
+            resolve(currentCondition(currentInputValue as string))
           }, timeout)
         }
       })

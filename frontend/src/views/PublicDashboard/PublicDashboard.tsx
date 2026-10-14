@@ -101,10 +101,12 @@ export const PublicDashboard = () => {
   const { t } = useTranslation()
   const { keycloak, initialized } = useKeycloak()
   const navigate = useNavigate()
-  const { data: overviewData } = useCreditMarketPublicOverview('quarter')
-  const { data: activeBackground } = useActiveLoginBgImage()
-  const data = overviewData as PublicMarketOverview | undefined
-  const activeBg = activeBackground as ActiveLoginBackground | undefined
+  const { data } = useCreditMarketPublicOverview('quarter') as {
+    data: PublicMarketOverview | undefined
+  }
+  const { data: activeBg } = useActiveLoginBgImage() as {
+    data: ActiveLoginBackground | undefined
+  }
   const publicMarketDataEnabled = CONFIG.feature_flags.publicMarketData
 
   // After login the OIDC callback returns to the app root, which can briefly
@@ -127,7 +129,7 @@ export const PublicDashboard = () => {
   const bgUrl = activeBg?.loginBgImageId
     ? `${CONFIG.API_BASE}${apiRoutes.loginBgImageStream.replace(
         ':imageId',
-        String(activeBg.loginBgImageId)
+        activeBg.loginBgImageId as string
       )}`
     : bgFallbackImage
   const credits = activeBg
@@ -147,7 +149,8 @@ export const PublicDashboard = () => {
       latestPeriod: last?.period ?? '',
       deltaPct:
         last && prev && prev.vwap
-          ? ((Number(last.vwap) - Number(prev.vwap)) / Number(prev.vwap)) * 100
+          ? (((last.vwap as number) - (prev.vwap as number)) /
+              (prev.vwap as number)) * 100
           : null
     }
   }, [priceIndex])

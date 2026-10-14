@@ -117,7 +117,14 @@ export const PublicBreadcrumb = ({
     }
 
     // Default formatting: capitalize and replace hyphens with spaces
-    return name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g, ' ')
+    return (
+      name.charAt(0).toUpperCase() +
+      (
+        name.slice(1) as unknown as {
+          replaceAll(searchValue: string, replaceValue: string): string
+        }
+      ).replaceAll('-', ' ')
+    )
   }
 
   const getBreadcrumbRoute = (name: string, index: number): string => {

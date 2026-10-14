@@ -34,7 +34,8 @@ import type {
   Column,
   ColDef,
   GridReadyEvent,
-  IRowNode
+  IRowNode,
+  RowDataTransaction
 } from 'ag-grid-community'
 import type { AgGridReact } from 'ag-grid-react'
 import {
@@ -47,14 +48,10 @@ import type { BCGridEditorProps, BCGridRow } from './types'
 export type { BCGridEditorProps } from './types'
 
 const getColumnDef = (column: Column<BCGridRow>): ColDef<BCGridRow> =>
-  typeof column.getColDef === 'function'
-    ? column.getColDef()
-    : (column as unknown as { colDef: ColDef<BCGridRow> }).colDef
+  (column as unknown as { colDef: ColDef<BCGridRow> }).colDef
 
 const getColumnId = (column: Column<BCGridRow>): string =>
-  typeof column.getColId === 'function'
-    ? column.getColId()
-    : (getColumnDef(column).field ?? '')
+  column.getColId()
 
 /**
  * @typedef {import('ag-grid-community').GridOptions} GridOptions
@@ -77,7 +74,7 @@ export const BCGridEditor = ({
   onCellEditingStopped,
   onCellValueChanged,
   onAction,
-  getRowId = (params) => params.data.id,
+  getRowId = (params) => params.data.id as string,
   showAddRowsButton = true,
   addMultiRow = false,
   saveButtonProps = {
@@ -88,16 +85,16 @@ export const BCGridEditor = ({
   columnDefs,
   ...props
 }: BCGridEditorProps) => {
-  const localRef = useRef(null)
+  const localRef = useRef<AgGridReact<BCGridRow> | null>(null)
   const ref = suppliedGridRef || localRef
   const gridProps = Object.fromEntries(
     Object.entries(props).filter(([key]) => key !== 'onAddRows')
   )
-  const gridContainerRef = useRef(null)
-  const pendingSavePromiseRef = useRef(null)
-  const firstEditableColumnRef = useRef(null)
-  const [anchorEl, setAnchorEl] = useState(null)
-  const buttonRef = useRef(null)
+  const gridContainerRef = useRef<HTMLDivElement | null>(null)
+  const pendingSavePromiseRef = useRef<Promise<unknown> | null>(null)
+  const firstEditableColumnRef = useRef<Column<BCGridRow> | null>(null)
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
   const { t } = useTranslation(['common'])
   const [showRequiredIndicator, setShowRequiredIndicator] = useState(false)
   const [containerWidth, setContainerWidth] = useState<number | null>(null)
@@ -158,7 +155,7 @@ export const BCGridEditor = ({
   // This prevents the "squished then expand" visual effect on page load
   const computedAutoSizeStrategy = useMemo(() => {
     if (!columnDefs || columnDefs.length === 0) {
-      return { type: 'fitGridWidth', defaultMinWidth: 100 }
+      return { type: 'fitGridWidth' as const, defaultMinWidth: 100 }
     }
 
     // Find the minimum minWidth value from columnDefs (default to 100 if none set)
@@ -169,7 +166,7 @@ export const BCGridEditor = ({
     // Use the minimum of all minWidths, or 100 as a fallback
     const defaultMinWidth = minWidths.length > 0 ? Math.min(...minWidths) : 100
 
-    return { type: 'fitGridWidth', defaultMinWidth }
+    return { type: 'fitGridWidth' as const, defaultMinWidth }
   }, [columnDefs])
 
   const handleGridReady = useCallback(
@@ -178,8 +175,7 @@ export const BCGridEditor = ({
         const actualCols = params.api.getColumnDefs() || []
         const foundRequired = actualCols.some(
           (colDef) =>
-            'headerComponent' in colDef &&
-            colDef.headerComponent === RequiredHeader
+            (colDef as ColDef<BCGridRow>).headerComponent === RequiredHeader
         )
         if (foundRequired) {
           setShowRequiredIndicator(true)
@@ -231,14 +227,13 @@ export const BCGridEditor = ({
 
     if (!firstEditableColumnRef.current) {
       const columns = ref.current.api.getAllDisplayedColumns()
-      firstEditableColumnRef.current =
-        columns.find((col) => {
+      firstEditableColumnRef.current = columns.find((col) => {
           const colDef = getColumnDef(col)
           return (
             colDef.editable !== false &&
             !['action', 'checkbox'].includes(colDef.field ?? '')
           )
-        }) ?? null
+        }) as Column<BCGridRow> | null
     }
     return firstEditableColumnRef.current
   }, [])
@@ -254,8 +249,7 @@ export const BCGridEditor = ({
 
       // Use setTimeout to ensure the grid is ready
       setTimeout(() => {
-        const api = ref.current?.api
-        if (!api) return
+        const api = ref.current!.api
         api.ensureIndexVisible(rowIndex)
         api.setFocusedCell(rowIndex, getColumnId(firstEditableColumn))
         api.startEditingCell({
@@ -284,7 +278,7 @@ export const BCGridEditor = ({
       const headerRow = editableColumns
         .map((column) => getColumnDef(column).field)
         .join('\t')
-      const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
+      const parsedData = Papa.parse<BCGridRow>(headerRow + '\n' + pastedData, {
         delimiter: '\t',
         header: true,
         transform: (value: string) => {
@@ -293,7 +287,7 @@ export const BCGridEditor = ({
           return isNaN(num) ? value : num
         },
         skipEmptyLines: true
-      })
+      }) as Exclude<ReturnType<typeof Papa.parse<BCGridRow>>, void>
       if (
         parsedData.data.length <= 0 ||
         Object.keys(parsedData.data[0]).length < 2
@@ -311,30 +305,29 @@ export const BCGridEditor = ({
       // Build a proper params-like object for each pasted row so downstream
       // handlers (which expect AG Grid CellEditingStopped params) don't crash.
       const firstEditableCol = findFirstEditableColumn()
-      const colDef = firstEditableCol
-        ? getColumnDef(firstEditableCol)
-        : {
-            field: editableColumns[0]
-              ? getColumnDef(editableColumns[0]).field
-              : undefined
-          }
-      const field = colDef.field
-      if (!field) return
-      const column = firstEditableCol || editableColumns[0]
+      const colDef =
+        (firstEditableCol as
+          | (Column<BCGridRow> & { colDef?: ColDef<BCGridRow> })
+          | null)?.colDef || {
+          field: (
+            editableColumns[0] as
+              | (Column<BCGridRow> & { colDef?: ColDef<BCGridRow> })
+              | undefined
+          )?.colDef?.field
+        }
 
       // Save rows sequentially so each save completes before the next starts.
       // This prevents cache invalidation from wiping unsaved rows.
-      for (const node of transactions?.add ?? []) {
-        if (!onCellEditingStopped || !node.data) continue
-        await onCellEditingStopped({
+      for (const node of transactions!.add) {
+        await onCellEditingStopped!({
           node,
           data: node.data,
           oldValue: '',
-          newValue: node.data[field],
+          newValue: node.data![colDef.field as string],
           colDef,
-          column,
+          column: firstEditableCol || editableColumns[0],
           api: gridApi
-        })
+        } as import('./types').BCGridEditContext<BCGridRow>)
       }
     },
     [findFirstEditableColumn, onCellEditingStopped, ref]
@@ -394,7 +387,7 @@ export const BCGridEditor = ({
 
   const handleOnCellEditingStopped = useCallback(
     (params: CellEditingStoppedEvent<BCGridRow>) => {
-      if (params.data?.modified && !params.data.deleted) {
+      if (params.data!.modified && !params.data!.deleted) {
         if (onCellEditingStopped) {
           const trackedPromise = Promise.resolve(onCellEditingStopped(params))
             .catch((error) => {
@@ -428,39 +421,42 @@ export const BCGridEditor = ({
 
   const onCellClicked = async (params: CellClickedEvent<BCGridRow>) => {
     if (
-      params.column.getColId() === 'action' &&
-      params.event?.target instanceof HTMLElement &&
-      params.event.target.dataset.action &&
+      (params.column as unknown as { colId: string }).colId === 'action' &&
+      ((params.event as MouseEvent).target as HTMLElement).dataset.action &&
       onAction
     ) {
-      const action = (params.event?.target as HTMLElement).dataset.action
-      if (!action) return
-      const transaction = await onAction?.(action, params)
+      const action = ((params.event as MouseEvent).target as HTMLElement).dataset.action
+      const transaction = (await onAction(action as string, params)) as
+        | RowDataTransaction<BCGridRow>
+        | undefined
 
       // Apply the transaction if it exists
-      if (transaction && transaction.add?.length) {
-        const res = ref.current?.api.applyTransaction(transaction)
+      if ((transaction?.add?.length as number) > 0) {
+        const res = ref.current!.api.applyTransaction(transaction!)
 
         // Focus and edit the first editable column of the added rows
-        if (res?.add?.length) {
-          const firstNewRow = res.add[0]
-          if (firstNewRow.rowIndex != null)
-            startEditingFirstEditableCell(firstNewRow.rowIndex)
+        if (res!.add && res!.add.length > 0) {
+          const firstNewRow = res!.add[0]
+          startEditingFirstEditableCell(firstNewRow.rowIndex as number)
         }
       }
     }
   }
   const onCellFocused = (params: CellFocusedEvent<BCGridRow>) => {
-    if (params.column && typeof params.column !== 'string') {
+    if (params.column) {
       const COLUMN_BUFFER = 20
       const { left, right } = params.api.getHorizontalPixelRange()
-      const columnLeft = params.column.getLeft() ?? 0
-      const columnRight = columnLeft + params.column.getActualWidth()
+      const column = params.column as Column<BCGridRow> & {
+        left: number
+        actualWidth: number
+      }
+      const columnLeft = column.left
+      const columnRight = column.left + column.actualWidth
       if (
         columnLeft < left + COLUMN_BUFFER ||
         columnRight > right - COLUMN_BUFFER
       ) {
-        params.api.ensureColumnVisible(params.column, 'middle')
+        params.api.ensureColumnVisible(column, 'middle')
       }
     }
   }
@@ -480,9 +476,11 @@ export const BCGridEditor = ({
       if (onAction) {
         try {
           for (let i = 0; i < numRows; i++) {
-            const transaction = await onAction('add')
-            if (transaction && transaction.add?.length) {
-              newRows = [...newRows, ...transaction.add]
+            const transaction = (await onAction('add')) as
+              | RowDataTransaction<BCGridRow>
+              | undefined
+            if ((transaction?.add?.length as number) > 0) {
+              newRows = [...newRows, ...transaction!.add!]
             }
           }
         } catch (error) {
@@ -498,14 +496,14 @@ export const BCGridEditor = ({
       }
 
       // Apply the new rows to the grid
-      const result = ref.current?.api.applyTransaction({
+      const result = ref.current!.api.applyTransaction({
         add: newRows,
-        addIndex: ref.current.api.getDisplayedRowCount()
+        addIndex: ref.current!.api.getDisplayedRowCount()
       })
 
       // Focus the first editable cell in the first new row
-      if (result?.add?.length && result.add[0].rowIndex != null) {
-        startEditingFirstEditableCell(result.add[0].rowIndex)
+      if (result!.add && result!.add.length > 0) {
+        startEditingFirstEditableCell(result!.add[0].rowIndex as number)
       }
 
       setAnchorEl(null)
@@ -516,7 +514,7 @@ export const BCGridEditor = ({
   const isGridValid = () => {
     let isValid = true
 
-    ref.current?.api.forEachNode((node: IRowNode<BCGridRow>) => {
+    ref.current!.api.forEachNode((node: IRowNode<BCGridRow>) => {
       if (!node.data || node.data.validationStatus === 'error') {
         isValid = false
       }
@@ -597,7 +595,11 @@ export const BCGridEditor = ({
         {...gridProps}
       />
       <BCBox sx={{ height: '40px', margin: '15px 0', width: '100%' }}>
-        <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
+        <BCAlert2
+          dismissible={true}
+          ref={alertRef as React.Ref<import('@/components/BCAlert/BCAlert2').BCAlert2Handle>}
+          data-test="alert-box"
+        />
       </BCBox>
       <BCBox flex={1}>
         {showAddRowsButton && (

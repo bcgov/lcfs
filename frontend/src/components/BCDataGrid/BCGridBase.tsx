@@ -11,8 +11,10 @@ import {
 import type {
   CellClickedEvent,
   CellKeyDownEvent,
+  Column,
   ColDef,
   DomLayoutType,
+  AutoSizeStrategy,
   GridApi,
   GridReadyEvent,
   RowClickedEvent,
@@ -151,13 +153,11 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
     // Handle keyboard events for row navigation
     const onCellKeyDown = useCallback(
       (params: CellKeyDownEvent<BCGridRow>) => {
-        const e = params.event as KeyboardEvent | null | undefined
-        if (!e) return
+        const e = params.event as KeyboardEvent
 
         if (e.code === 'Enter' && params.node) {
-          const target = e.target
-          const cellEl =
-            target instanceof Element ? target.closest('.ag-cell') : null
+          const target = e.target as Element
+          const cellEl = target.closest('.ag-cell')
           if (!cellEl) return
 
           // Look for links in the cell - check both direct children and nested elements
@@ -187,7 +187,9 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
           if (onRowClicked) {
             e.preventDefault()
             e.stopPropagation()
-            onRowClicked({ ...params, event: e })
+            onRowClicked(
+              { ...params, event: e } as unknown as RowClickedEvent<BCGridRow>
+            )
             return
           }
         }
@@ -202,7 +204,11 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
     // Helper to check if a column is a checkbox selection column
     const isCheckboxColumn = useCallback(
       (params: CellClickedEvent<BCGridRow> | RowClickedEvent<BCGridRow>) => {
-        const column = 'column' in params ? params.column : undefined
+        const column = (
+          params as CellClickedEvent<BCGridRow> & {
+            column?: Column<BCGridRow>
+          }
+        ).column
         const colId = column?.getColId?.()
         const colDef = column?.getColDef?.()
 
@@ -223,9 +229,8 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
         }
 
         // Fallback: check if the clicked cell contains a checkbox (DOM-based check)
-        const target = params.event?.target
-        const cellElement =
-          target instanceof Element ? target.closest('.ag-cell') : null
+        const target = params.event?.target as Element | null | undefined
+        const cellElement = target?.closest?.('.ag-cell')
         if (cellElement) {
           // Check for checkbox input or AG Grid's selection wrapper
           const hasCheckbox = cellElement.querySelector(
@@ -241,8 +246,7 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
 
         // Also check if we clicked directly on the selection checkbox wrapper
         if (
-          target instanceof Element &&
-          target.closest('.ag-selection-checkbox')
+          target?.closest?.('.ag-selection-checkbox')
         ) {
           return true
         }
@@ -262,9 +266,12 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
 
           if (isRowSelectable) {
             // Check if clicking directly on the checkbox input - if so, AG Grid handles it
-            const target = params.event?.target
+            const target = params.event?.target as
+              | (HTMLInputElement & { tagName?: string; type?: string })
+              | null
+              | undefined
             if (
-              target instanceof HTMLInputElement &&
+              target?.tagName === 'INPUT' &&
               target.type === 'checkbox'
             ) {
               return // Let AG Grid handle the direct checkbox click
@@ -310,13 +317,13 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
       })
     )
 
-    const resolvedAutoSizeStrategy = useMemo(() => {
+    const resolvedAutoSizeStrategy = useMemo<AutoSizeStrategy | undefined>(() => {
       if (autoSizeStrategy === null) {
         return undefined
       }
 
       return {
-        type: 'fitGridWidth',
+        type: 'fitGridWidth' as const,
         defaultMinWidth: 50,
         ...autoSizeStrategy
       }

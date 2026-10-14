@@ -116,7 +116,7 @@ test.beforeEach(() => {
   ])
 
   vi.mocked(useUpdateUser).mockImplementation((options) => {
-    hookOptions = options
+    hookOptions = options as unknown as typeof hookOptions
     return { mutate: mutateMock, isPending: false } as unknown as ReturnType<
       typeof useUpdateUser
     >
@@ -280,9 +280,11 @@ describe('RoleSwitcher', () => {
     const directorRadio = screen.getByRole('radio', { name: 'Director' })
     fireEvent.click(directorRadio)
 
-    expect(hookOptions).toBeDefined()
+    const onSuccess = hookOptions?.onSuccess
+    expect(onSuccess).toBeDefined()
+    if (!onSuccess) throw new Error('useUpdateUser onSuccess option was missing')
     act(() => {
-      hookOptions.onSuccess(
+      onSuccess(
         {},
         {
           meta: {

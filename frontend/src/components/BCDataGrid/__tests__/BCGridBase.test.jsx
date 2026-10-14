@@ -16,8 +16,8 @@ let shouldTriggerCallbacks = true
 let shouldAttachApiRef = true
 let capturedGridProps
 
-vi.mock('ag-grid-react', () => ({
-  AgGridReact: React.forwardRef((props, ref) => {
+vi.mock('ag-grid-react', () => {
+  const MockAgGridReact = React.forwardRef((props, ref) => {
     capturedGridProps = props
     const { onGridReady, onRowDataUpdated, getRowStyle } = props
 
@@ -46,7 +46,9 @@ vi.mock('ag-grid-react', () => ({
 
     return <div data-testid="ag-grid-react">AgGrid</div>
   })
-}))
+  MockAgGridReact.displayName = 'AgGridReact'
+  return { AgGridReact: MockAgGridReact }
+})
 
 // Mock DataGridLoading
 vi.mock('@/components/DataGridLoading', () => ({

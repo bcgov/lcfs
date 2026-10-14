@@ -8,6 +8,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
+import type { BCPaginationOptions , BCGridRow } from '@/components/BCDataGrid/types'
 
 interface FuelExport {
   fuelExportId: number | string
@@ -28,11 +29,13 @@ interface PaginationFilter {
   field: string
   type: string
   filter?: string
+  [key: string]: unknown
 }
 
 interface PaginationSort {
   field: string
   direction: 'asc' | 'desc'
+  [key: string]: unknown
 }
 
 interface PaginationOptions {
@@ -40,6 +43,7 @@ interface PaginationOptions {
   size: number
   filters: PaginationFilter[]
   sortOrders: PaginationSort[]
+  [key: string]: unknown
 }
 
 export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
@@ -96,8 +100,8 @@ export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
     ) {
       paginationOptions.sortOrders.forEach((sort) => {
         filteredData.sort((a, b) => {
-          const aVal = a[sort.field]
-          const bVal = b[sort.field]
+          const aVal = a[sort.field] as string | number
+          const bVal = b[sort.field] as string | number
 
           let comparison = 0
           if (aVal > bVal) comparison = 1
@@ -136,7 +140,7 @@ export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
     () => ({
       overlayNoRowsTemplate: t('fuelExport:noFuelExportsFound'),
       autoSizeStrategy: {
-        type: 'fitCellContents',
+        type: 'fitCellContents' as const,
         defaultMinWidth: 50,
         defaultMaxWidth: 600
       },
@@ -159,8 +163,8 @@ export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
     [status]
   )
 
-  const getRowId = (params: { data: FuelExport }) => {
-    return params.data.fuelExportId.toString()
+  const getRowId = (params: { data: BCGridRow }) => {
+    return (params.data.fuelExportId as string | number).toString()
   }
 
   return (
@@ -186,11 +190,11 @@ export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
           defaultColDef={defaultColDef}
           suppressPagination={(data?.fuelExports?.length || 0) <= 10}
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination: Partial<PaginationOptions>) =>
+          onPaginationChange={(newPagination: BCPaginationOptions) =>
             setPaginationOptions((prev) => ({
               ...prev,
               ...newPagination
-            }))
+            }) as PaginationOptions)
           }
           enablePageCaching={false}
         />
