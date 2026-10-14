@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -149,8 +149,9 @@ describe('PenaltyLogManage - Year Filtering', () => {
     const mockHook = vi.mocked(useCompliancePeriod)
 
     // Mock Date.prototype.getFullYear
-    const originalGetFullYear = Date.prototype.getFullYear
-    Date.prototype.getFullYear = vi.fn(() => 2024)
+    const getFullYearSpy = vi
+      .spyOn(Date.prototype, 'getFullYear')
+      .mockReturnValue(2024)
 
     const { container } = renderComponent()
 
@@ -160,13 +161,14 @@ describe('PenaltyLogManage - Year Filtering', () => {
     expect(container).toBeTruthy()
 
     // Restore Date
-    Date.prototype.getFullYear = originalGetFullYear
+    getFullYearSpy.mockRestore()
   })
 
   it('should include compliance periods with years <= current year', () => {
     // Mock Date.prototype.getFullYear
-    const originalGetFullYear = Date.prototype.getFullYear
-    Date.prototype.getFullYear = vi.fn(() => 2024)
+    const getFullYearSpy = vi
+      .spyOn(Date.prototype, 'getFullYear')
+      .mockReturnValue(2024)
 
     const { container } = renderComponent()
 
@@ -176,7 +178,7 @@ describe('PenaltyLogManage - Year Filtering', () => {
     expect(container).toBeTruthy()
 
     // Restore Date
-    Date.prototype.getFullYear = originalGetFullYear
+    getFullYearSpy.mockRestore()
   })
 
   it('should handle compliance periods with no year in description', async () => {

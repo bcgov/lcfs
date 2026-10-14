@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 
+import { transactionsColDefs, defaultSortModel } from '../_schema'
+
 // useTransactionStatuses is used inside the floatingFilterComponentParams of
 // the status column – mock it to avoid a real hook call at import time.
 vi.mock('@/hooks/useTransactions', () => ({
   useTransactionStatuses: vi.fn()
 }))
-
-import { transactionsColDefs, defaultSortModel } from '../_schema'
 
 const t = (key) => key
 const colDefs = transactionsColDefs(t)

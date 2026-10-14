@@ -3,7 +3,7 @@ import colors from '@/themes/base/colors'
 
 import { pxToRem, linearGradient } from '@/themes/utils'
 
-const { borderWidth, borderColor } = borders
+const { borderWidth } = borders
 const { transparent, primary, background } = colors
 
 const handleToggleOnEnter = (event) => {

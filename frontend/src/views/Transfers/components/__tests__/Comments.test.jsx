@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { Comments } from '../Comments'
 import { FormProvider, useForm } from 'react-hook-form'

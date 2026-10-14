@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { ComplianceReports } from '../ComplianceReports'
 import { ROUTES } from '@/routes/routes'
 import { test } from '@/tests/utils/fixtures'
@@ -46,24 +46,31 @@ const mockGridRef = { current: { clearFilters: vi.fn() } }
 const mockAlertRef = { current: { triggerAlert: vi.fn() } }
 
 vi.mock('../components/NewComplianceReportButton', () => ({
-  NewComplianceReportButton: React.forwardRef((props, ref) => {
-    // Expose the ref for testing
-    React.useEffect(() => {
-      if (ref && typeof ref === 'object') {
-        ref.current = { test: 'newButtonRef' }
-      }
-    }, [ref])
-
-    return (
-      <button
-        data-test="new-compliance-report-button"
-        onClick={() => props.handleNewReport({ description: '2024' })}
-        disabled={props.isButtonLoading}
-      >
-        New Report
-      </button>
-    )
-  })
+  NewComplianceReportButton: React.forwardRef(
+    function NewComplianceReportButtonMock(props, ref) {
+      // Expose the ref for testing
+      React.useEffect(() => {
+        if (ref && typeof ref === 'object') {
+          ref.current = {
+            test: 'newButtonRef'
+          }
+        }
+      }, [ref])
+      return (
+        <button
+          data-test="new-compliance-report-button"
+          onClick={() =>
+            props.handleNewReport({
+              description: '2024'
+            })
+          }
+          disabled={props.isButtonLoading}
+        >
+          New Report
+        </button>
+      )
+    }
+  )
 }))
 
 vi.mock('../components/_schema', () => ({
@@ -78,13 +85,12 @@ vi.mock('../components/_schema', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: React.forwardRef((props, ref) => {
+  BCGridViewer: React.forwardRef(function BCGridViewerMock(props, ref) {
     React.useEffect(() => {
       if (ref && typeof ref === 'object') {
         ref.current = mockGridRef.current
       }
     }, [ref])
-
     return (
       <div
         data-test="bc-grid-viewer"
@@ -108,15 +114,14 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 vi.mock('@/components/BCAlert', () => ({
   __esModule: true,
-  default: React.forwardRef((props, ref) => {
+  default: React.forwardRef(function DefaultMock(props, ref) {
     React.useEffect(() => {
       if (ref && typeof ref === 'object') {
         ref.current = mockAlertRef.current
       }
     }, [ref])
-
     return props.children ? (
-      <div data-test="alert-box" severity={props.severity}>
+      <div data-test="alert-box" data-severity={props.severity}>
         {props.children}
       </div>
     ) : null
@@ -321,10 +326,6 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     localization,
     router
   }) => {
-    const testParams = {
-      data: { complianceReportGroupUuid: 'test-uuid-123' }
-    }
-
     render(<ComplianceReports />, [query, theme, localization, router])
 
     // We can't directly test the useCallback function, but we ensure it's properly created
@@ -384,13 +385,6 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     localization,
     router
   }) => {
-    const testData = {
-      data: {
-        compliancePeriod: '2024',
-        complianceReportId: 123
-      }
-    }
-
     render(<ComplianceReports />, [query, theme, localization, router])
 
     // The component should render successfully with defaultColDef
@@ -404,10 +398,6 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     localization,
     router
   }) => {
-    const testData = {
-      reportStatus: 'DRAFT'
-    }
-
     render(<ComplianceReports />, [query, theme, localization, router])
 
     // The component should render successfully with defaultColDef

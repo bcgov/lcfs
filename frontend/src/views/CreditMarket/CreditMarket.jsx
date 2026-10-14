@@ -22,6 +22,9 @@ const COLORS = {
   net: 'rgba(33, 150, 243, 0.55)'
 }
 
+const EMPTY_ARRAY = []
+const EMPTY_OBJECT = {}
+
 const numberFmt = new Intl.NumberFormat('en-CA')
 const currencyFmt = new Intl.NumberFormat('en-CA', {
   style: 'currency',
@@ -79,9 +82,9 @@ const CreditMarketBase = () => {
   const [interval, setInterval] = useState('quarter')
   const { data, isLoading, isError } = useCreditMarketOverview(interval)
 
-  const priceIndex = data?.priceIndex ?? []
-  const marketBalance = data?.marketBalance ?? []
-  const concentration = data?.concentration ?? {}
+  const priceIndex = data?.priceIndex ?? EMPTY_ARRAY
+  const marketBalance = data?.marketBalance ?? EMPTY_ARRAY
+  const concentration = data?.concentration ?? EMPTY_OBJECT
 
   const periods = useMemo(() => priceIndex.map((p) => p.period), [priceIndex])
 

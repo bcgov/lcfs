@@ -65,7 +65,7 @@ export function useFormExport({ formSlug, linkKey, organizationName }) {
         setDownloading(null)
       }
     },
-    [formSlug, linkKey, organizationName, authenticated, token]
+    [formSlug, linkKey, organizationName, authenticated, token, enqueueSnackbar]
   )
 
   return { exportForm, downloading, downloadSuccess }

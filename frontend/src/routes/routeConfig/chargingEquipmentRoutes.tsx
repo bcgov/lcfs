@@ -1,18 +1,18 @@
 import { lazy } from 'react'
-import ROUTES from '../routes'
+
 import { AppRouteObject } from '../types'
 // TODO: Implement RoleRoute component for role-based access control
 // import { RoleRoute } from '@/components/RoleRoute'
 // import { roles } from '@/constants/roles'
 
 // Lazy load components
-const ChargingEquipment = lazy(() =>
+lazy(() =>
   import('@/views/ChargingEquipment').then((module) => ({
     default: module.ChargingEquipment
   }))
 )
 
-const AddEditChargingEquipment = lazy(() =>
+lazy(() =>
   import('@/views/ChargingEquipment/AddEditChargingEquipment').then(
     (module) => ({
       default: module.AddEditChargingEquipment

@@ -152,14 +152,14 @@ export const useOrganizationPenaltyLogs = (
 
 export const useSaveOrganizationPenaltyLog = (
   orgID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!orgID) {
         throw new Error('Organization ID is required')
       }
@@ -405,7 +405,7 @@ export const useOrgEarlyIssuance = (
 // Mutation hooks for updating organization data
 export const useUpdateOrganization = (
   orgID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -419,7 +419,7 @@ export const useUpdateOrganization = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!orgID) {
         throw new Error('Organization ID is required')
       }
@@ -453,7 +453,7 @@ export const useUpdateOrganization = (
 export const useUpdateOrganizationUser = (
   orgID: number | string | undefined | null,
   userID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -467,7 +467,7 @@ export const useUpdateOrganizationUser = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!orgID || !userID) {
         throw new Error('Organization ID and User ID are required')
       }
@@ -504,7 +504,7 @@ export const useUpdateOrganizationUser = (
 
 // Mutation hook for updating current organization's credit market details
 export const useUpdateCurrentOrgCreditMarket = (
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -519,7 +519,7 @@ export const useUpdateCurrentOrgCreditMarket = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       return await client.put('/organizations/current/credit-market', data)
     },
     onSuccess: (data, variables, context) => {
@@ -555,7 +555,7 @@ export const useUpdateCurrentOrgCreditMarket = (
 // Mutation hook for updating any organization's credit market details (IDIR users)
 export const useUpdateOrganizationCreditMarket = (
   orgID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -569,7 +569,7 @@ export const useUpdateOrganizationCreditMarket = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!orgID) {
         throw new Error('Organization ID is required')
       }
@@ -631,7 +631,12 @@ export const useCreditMarketListings = (
 }
 
 export const useCreditMarketAuditLogs = (
-  { page = 1, size = 10, sortOrders = [], filters = [] }: any = {},
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = []
+  }: Record<string, unknown> = {},
   options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
@@ -712,7 +717,7 @@ export const useOrganizationLinkKeys = (
 
 export const useGenerateLinkKey = (
   orgID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -725,7 +730,7 @@ export const useGenerateLinkKey = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ formId }: any) => {
+    mutationFn: async ({ formId }: Record<string, unknown>) => {
       if (!orgID) {
         throw new Error('Organization ID is required')
       }
@@ -750,7 +755,7 @@ export const useGenerateLinkKey = (
 
 export const useRegenerateLinkKey = (
   orgID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -763,7 +768,7 @@ export const useRegenerateLinkKey = (
   } = options
 
   return useMutation({
-    mutationFn: async (formId: any) => {
+    mutationFn: async (formId: unknown) => {
       if (!orgID) {
         throw new Error('Organization ID is required')
       }

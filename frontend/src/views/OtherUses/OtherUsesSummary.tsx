@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next'
 interface OtherUse {
   otherUsesId: number | string
   actionType?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 interface OtherUsesSummaryProps {

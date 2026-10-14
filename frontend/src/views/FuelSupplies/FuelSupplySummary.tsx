@@ -17,7 +17,7 @@ interface FuelSupply {
   fuelSupplyId: number | string
   actionType?: string
   fuelType?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 interface FuelSupplySummaryProps {
@@ -62,8 +62,8 @@ export const FuelSupplySummary = ({
     { compliancePeriod }
   )
 
-  const columnState = useFuelSupplyColumnStore((s: any) => s.columnState)
-  const setColumnState = useFuelSupplyColumnStore((s: any) => s.setColumnState)
+  const columnState = useFuelSupplyColumnStore((s) => s.columnState)
+  const setColumnState = useFuelSupplyColumnStore((s) => s.setColumnState)
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {

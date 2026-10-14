@@ -17,7 +17,6 @@ import { govRoles } from '@/constants/roles'
 import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/ComplianceUnitsTotal'
 
 export const FinalSupplyEquipmentSummary = ({
-  data,
   status,
   organizationId
 }) => {
@@ -37,7 +36,9 @@ export const FinalSupplyEquipmentSummary = ({
     'summary',
     'vw_fse_base'
   )
-  const { data: fseData, isLoading, isError, refetch } = queryData
+  const {
+  data: fseData
+} = queryData
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'finalSupplyEquipment'])

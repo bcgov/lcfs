@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
@@ -95,7 +94,7 @@ export const notionalTransferColDefs = (
       suppressKeyboardEvent,
       minWidth: 320,
       valueSetter: (params) => {
-        const { newValue: selectedName, node, data } = params
+        const { newValue: selectedName, data } = params
         if (typeof selectedName === 'object') {
           // If selectedName is an object, set the legalName directly
           data.legalName = selectedName.name
@@ -268,7 +267,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q1Quantity'
             ),
-            valueFormatter: valueFormatter,
+            valueFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -293,7 +292,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q2Quantity'
             ),
-            valueFormatter: valueFormatter,
+            valueFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -318,7 +317,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q3Quantity'
             ),
-            valueFormatter: valueFormatter,
+            valueFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -343,7 +342,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q4Quantity'
             ),
-            valueFormatter: valueFormatter,
+            valueFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -367,7 +366,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.totalQuantity'
             ),
-            valueFormatter: valueFormatter,
+            valueFormatter,
             cellStyle: (params) =>
               StandardCellWarningAndErrors(
                 params,

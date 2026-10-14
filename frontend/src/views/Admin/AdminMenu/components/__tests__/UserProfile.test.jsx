@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { vi, describe, expect, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import { test } from '@/tests/utils/fixtures'
@@ -70,7 +70,7 @@ describe('UserProfile Component', () => {
 
     // Mock the cell renderers with safe defaults
     vi.mocked(cellRenderers.StatusRenderer).mockImplementation(
-      ({ data, isView }) => `Status: ${data?.status || 'Active'}`
+      ({ data }) => `Status: ${data?.status || 'Active'}`
     )
 
     vi.mocked(cellRenderers.RoleSpanRenderer).mockImplementation(({ data }) => {
