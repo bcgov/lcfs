@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
@@ -94,7 +93,9 @@ const DetailRow = ({ label, value, labelWidth = 210, sx = {} }) => (
   </BCBox>
 )
 
-const IterationCardContent = ({ data, t }) => {
+const IterationCardContent = ({
+  data
+}) => {
   if (!data) return null
 
   const facilityLocation = [
@@ -498,7 +499,7 @@ const FuelCodeDetailBase = () => {
       : undefined
 
   const latest = data?.latestIteration
-  const iterations = data?.iterations ?? []
+  const iterations = useMemo(() => data?.iterations ?? [], [data?.iterations])
   const volumeOverTime = data?.volumeOverTime ?? []
   const complianceUnitsOverTime = data?.complianceUnitsOverTime ?? []
 

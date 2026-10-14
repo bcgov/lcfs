@@ -84,7 +84,7 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => <>{children}</>
+  Role: ({ children }) => <>{children}</>
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -100,13 +100,13 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  BCAlert2: React.forwardRef((props, ref) => {
+  BCAlert2: React.forwardRef(function BCAlert2Mock(props, ref) {
     React.useImperativeHandle(ref, () => ({
       triggerAlert: vi.fn()
     }))
     return <div data-test="bc-alert">Alert Component</div>
   }),
-  FloatingAlert: React.forwardRef((props, ref) => {
+  FloatingAlert: React.forwardRef(function FloatingAlertMock(props, ref) {
     React.useImperativeHandle(ref, () => ({
       triggerAlert: vi.fn()
     }))

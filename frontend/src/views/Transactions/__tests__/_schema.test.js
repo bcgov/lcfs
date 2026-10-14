@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 
+import { transactionsColDefs } from '../_schema'
+
 vi.mock('@/hooks/useTransactions', () => ({
   useTransactionStatuses: vi.fn()
 }))
-
-import { transactionsColDefs } from '../_schema'
 
 const colDefs = transactionsColDefs((key) => key)
 const txnIdCol = colDefs.find((col) => col.colId === 'transactionId')

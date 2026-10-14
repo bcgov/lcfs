@@ -1,8 +1,11 @@
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { QueryOptions , ExtMutationOptions} from './types'
+import type { QueryOptions, ExtMutationOptions } from './types'
 
-export const useTransfer = (transferID: number | string | undefined | null, options: QueryOptions<unknown>) => {
+export const useTransfer = (
+  transferID: number | string | undefined | null,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
 
   return useQuery({
@@ -12,12 +15,16 @@ export const useTransfer = (transferID: number | string | undefined | null, opti
   })
 }
 
-export const useCreateUpdateTransfer = (orgId: number | string | undefined | null, transferId: number | string | undefined | null, options: ExtMutationOptions<unknown, any>) => {
+export const useCreateUpdateTransfer = (
+  orgId: number | string | undefined | null,
+  transferId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, unknown>
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
     ...options,
-    mutationFn: async ({ data }: any) => {
+    mutationFn: async ({ data }: Record<string, unknown>) => {
       if (orgId && transferId) {
         return await client.put(
           `organization/${orgId}/transfers/${transferId}`,
@@ -40,13 +47,16 @@ export const useCreateUpdateTransfer = (orgId: number | string | undefined | nul
   })
 }
 
-export const useUpdateCategory = (transferId: number | string | undefined | null, options: ExtMutationOptions<unknown, any>) => {
+export const useUpdateCategory = (
+  transferId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, unknown>
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
   return useMutation({
     ...options,
-    mutationFn: async (category: any) => {
+    mutationFn: async (category: string) => {
       return await client.put(`transfers/${transferId}/category`, category)
     },
     onSettled: () => {

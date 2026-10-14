@@ -1,4 +1,4 @@
-import React, { createElement } from 'react'
+import { createElement } from 'react'
 import { screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
@@ -10,8 +10,6 @@ import { test } from '@/tests/utils/fixtures'
 // Mock RequireAuth to simulate authentication behavior
 vi.mock('@/components/RequireAuth', () => ({
   RequireAuth: ({ children, redirectTo }) => {
-    const { useKeycloak } = require('@react-keycloak/web')
-    const { useCurrentUser } = require('@/hooks/useCurrentUser')
     const { keycloak } = useKeycloak()
     const { isError, error } = useCurrentUser()
 
@@ -47,7 +45,7 @@ vi.mock('@/components/RequireAuth', () => ({
             `Redirecting to ${pathname}`
           )
         }
-      } catch (e) {
+      } catch {
         // Handle malformed JSON gracefully
         sessionStorage.removeItem('redirect')
       }
@@ -58,8 +56,8 @@ vi.mock('@/components/RequireAuth', () => ({
 }))
 
 // Mock all components to focus on routing logic
-vi.mock('@/layouts/MainLayout', () => {
-  const { Outlet } = require('react-router-dom')
+vi.mock('@/layouts/MainLayout', async () => {
+  const { Outlet } = await import('react-router-dom')
   return {
     MainLayout: () =>
       createElement(
@@ -70,8 +68,8 @@ vi.mock('@/layouts/MainLayout', () => {
   }
 })
 
-vi.mock('@/layouts/PublicLayout', () => {
-  const { Outlet } = require('react-router-dom')
+vi.mock('@/layouts/PublicLayout', async () => {
+  const { Outlet } = await import('react-router-dom')
   return {
     __esModule: true,
     default: () => (

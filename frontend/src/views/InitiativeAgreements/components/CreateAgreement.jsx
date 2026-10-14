@@ -19,7 +19,7 @@ import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { useCreateAgreement } from '@/hooks/useInitiativeAgreements'
 import ModalField from './ModalField'
 
-export const AGREEMENT_TYPES = ['Initiative Agreement', 'P3A']
+const AGREEMENT_TYPES = ['Initiative Agreement', 'P3A']
 
 // Starting an agreement from the index page. Deliberately thin: an analyst
 // opening a file has the organization and the agreement code, and little

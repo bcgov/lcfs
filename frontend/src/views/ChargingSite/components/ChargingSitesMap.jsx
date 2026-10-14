@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState } from 'react'
 import { MapContainer, useMap, Marker, Popup, TileLayer } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import { createPortal } from 'react-dom'
-import { Control, DomEvent, DomUtil } from 'leaflet'
-import L from 'leaflet'
+import L, { Control, DomEvent, DomUtil } from 'leaflet'
 import Paper from '@mui/material/Paper'
 import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
@@ -179,7 +178,7 @@ const MapBoundsHandler = ({ sites }) => {
 
 // Legend component
 const ChargingSitesLegend = ({ sites, isFullscreen }) => {
-  const { t } = useTranslation(['chargingSite'])
+  useTranslation(['chargingSite']);
   const validSites = sites.filter(
     (site) =>
       site.latitude != null &&
@@ -631,7 +630,7 @@ const ChargingSitesMap = ({
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  useMediaQuery(theme.breakpoints.down('sm'));
 
   // Ensure sites is always an array
   const sitesArray = Array.isArray(sites) ? sites : [sites]

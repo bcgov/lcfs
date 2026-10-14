@@ -13,17 +13,17 @@
  * @requires react-leaflet
  * @requires @mui/material
  */
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import { createPortal } from 'react-dom'
-import { Control, DomEvent, DomUtil } from 'leaflet'
+import L, { Control, DomEvent, DomUtil } from 'leaflet'
 import Paper from '@mui/material/Paper'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 import IconButton from '@mui/material/IconButton'
-import Dialog from '@mui/material/Dialog'
-import DialogContent from '@mui/material/DialogContent'
+import '@mui/material/Dialog'
+import '@mui/material/DialogContent'
 import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
 import Alert from '@mui/material/Alert'
@@ -32,31 +32,28 @@ import Tooltip from '@mui/material/Tooltip'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
-import Chip from '@mui/material/Chip'
+import '@mui/material/Chip'
 import LinearProgress from '@mui/material/LinearProgress'
 import Fade from '@mui/material/Fade'
-import Zoom from '@mui/material/Zoom'
+import '@mui/material/Zoom'
 import Autocomplete from '@mui/material/Autocomplete'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import ToggleButton from '@mui/material/ToggleButton'
-import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import '@mui/icons-material/OpenInNew'
 import LocationIcon from '@mui/icons-material/LocationOn'
-import EvStationIcon from '@mui/icons-material/LocationOn'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import CopyIcon from '@mui/icons-material/ContentCopy'
+import '@mui/icons-material/ContentCopy'
 import MapIcon from '@mui/icons-material/Map'
 import SearchIcon from '@mui/icons-material/Search'
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp'
-import ExpandIcon from '@mui/icons-material/KeyboardArrowDown'
-import CollapseIcon from '@mui/icons-material/KeyboardArrowUp'
 import SiteIcon from '@mui/icons-material/Business'
-import CheckIcon from '@mui/icons-material/Check'
-import PendingIcon from '@mui/icons-material/Schedule'
-import DraftIcon from '@mui/icons-material/Edit'
-import BlockIcon from '@mui/icons-material/Block'
-import FilterIcon from '@mui/icons-material/FilterList'
+import '@mui/icons-material/Check'
+import '@mui/icons-material/Schedule'
+import '@mui/icons-material/Edit'
+import '@mui/icons-material/Block'
+import '@mui/icons-material/FilterList'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom'
@@ -68,52 +65,18 @@ import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { fixLeafletIcons } from './components/utils'
-import {
-  theme,
-  STATUS_CONFIG,
-  CHARGING_LEVELS,
-  BC_CENTER,
-  DEFAULT_ZOOM,
-  MAP_STYLES
-} from './components/constants'
-import {
-  transformData,
-  transformChargingSites,
-  groupBySite,
-  buildAddressLine,
-  formatCoordinates,
-  getLevelInfo,
-  getMarkerIconForStatus,
-  getSiteUrl,
-  getEquipmentUrl
-} from './components/helpers'
-import {
-  PopupCloseButton,
-  DetailSectionDivider,
-  SiteAddressDisplay,
-  CoordinatesDisplay,
-  PopupTypeBadge,
-  StatusBadge
-} from './components/PopupComponents'
+import { theme, STATUS_CONFIG, BC_CENTER, DEFAULT_ZOOM, MAP_STYLES } from './components/constants'
+import { transformData, transformChargingSites, groupBySite, buildAddressLine, getLevelInfo, getMarkerIconForStatus, getSiteUrl, getEquipmentUrl } from './components/helpers'
+import { PopupCloseButton, DetailSectionDivider, CoordinatesDisplay, PopupTypeBadge, StatusBadge } from './components/PopupComponents'
 import { ROUTES } from '@/routes/routes'
 import 'leaflet/dist/leaflet.css'
-import React from 'react'
-import L from 'leaflet'
 
 fixLeafletIcons()
 
 /**
  * Injects global CSS styles for the map
  */
-const StyleInjector = () => {
-  useEffect(() => {
-    const styleEl = document.createElement('style')
-    styleEl.textContent = MAP_STYLES
-    document.head.appendChild(styleEl)
-    return () => styleEl.remove()
-  }, [])
-  return null
-}
+
 
 // ============================================================================
 // MAP COMPONENTS
@@ -521,7 +484,6 @@ const SitePopup = ({ siteData, isGovernmentUser }) => {
   const { t } = useTranslation(['fse'])
   const navigate = useNavigate()
   const { items = [], siteName, siteId, organization, isEmpty } = siteData
-  const primary = items[0]
 
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState(false)
@@ -567,13 +529,13 @@ const SitePopup = ({ siteData, isGovernmentUser }) => {
   const hasMore = filtered.length > LIMIT
   const addressLine = useMemo(() => buildAddressLine(siteData), [siteData])
 
-  const totalCapacity = useMemo(() => {
+  useMemo(() => {
     const total = filtered.reduce((sum, eq) => {
       const value = Number(eq.capacityKw)
       return !Number.isNaN(value) && value > 0 ? sum + value : sum
     }, 0)
     return total > 0 ? total : null
-  }, [filtered])
+  }, [filtered]);
 
   return (
     <Box
@@ -899,9 +861,9 @@ const SitePopup = ({ siteData, isGovernmentUser }) => {
                     : t('map.viewAll', { count: filtered.length })}
                 </BCTypography>
                 {expanded ? (
-                  <CollapseIcon sx={{ fontSize: 13, color: '#003366' }} />
+                  <KeyboardArrowUp sx={{ fontSize: 13, color: '#003366' }} />
                 ) : (
-                  <ExpandIcon sx={{ fontSize: 13, color: '#003366' }} />
+                  <KeyboardArrowDown sx={{ fontSize: 13, color: '#003366' }} />
                 )}
               </Stack>
             </Box>
@@ -1016,7 +978,7 @@ const EquipmentPopup = ({ equipment, isGovernmentUser }) => {
         <PopupCloseButton />
         <Box sx={{ pr: 3 }}>
           <PopupTypeBadge
-            icon={EvStationIcon}
+            icon={LocationIcon}
             labelKey="map.finalSupplyEquipment"
           />
           <Stack
@@ -1197,33 +1159,7 @@ const EquipmentPopup = ({ equipment, isGovernmentUser }) => {
 // STATE COMPONENTS
 // ============================================================================
 
-const LoadingState = () => (
-  <Paper
-    elevation={0}
-    sx={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: 450,
-      borderRadius: theme.radius.md,
-      border: `1px solid ${theme.colors.border}`,
-      backgroundColor: theme.colors.surfaceAlt
-    }}
-  >
-    <CircularProgress
-      size={40}
-      thickness={4}
-      sx={{ color: theme.colors.primary }}
-    />
-    <BCTypography
-      variant="body1"
-      sx={{ mt: 2, color: theme.colors.textSecondary }}
-    >
-      Loading FSE data...
-    </BCTypography>
-  </Paper>
-)
+
 
 const ErrorState = ({ error, onRetry }) => (
   <Alert
@@ -1353,7 +1289,9 @@ const EmptyState = () => (
  * @param {Object} props.stats - Statistics object with totalEquipment and totalSites
  * @param {React.ReactNode} props.action - Optional action buttons/content
  */
-const PageHeader = ({ stats, action = null }) => (
+const PageHeader = ({
+  action = null
+}) => (
   <Box sx={{ mb: 4 }}>
     <Box sx={{ mb: 2 }}>
       <BCTypography
@@ -1442,8 +1380,7 @@ const MAP_CONFIG = {
   MIN_LOADING_DISPLAY_TIME: 500, // Minimum time to show loading (ms)
   MAP_INVALIDATE_DELAY: 50, // Delay before invalidating map size
   MAP_INVALIDATE_AFTER_TRANSITION: 350, // Delay after transition completes
-  BOUNDS_ANIMATION_DURATION: 0.5, // Map bounds animation duration (seconds)
-  MAP_SPACING_BELOW_CONTENT: -20 // Spacing between content and map (px)
+  BOUNDS_ANIMATION_DURATION: 0.5 // Map bounds animation duration (seconds)
 }
 
 // ============================================================================
@@ -1466,7 +1403,7 @@ const MAP_CONFIG = {
  * @returns {React.ReactElement} The map component
  */
 const FSEFullMap = ({ organizationId: propOrgId }) => {
-  const { t } = useTranslation(['fse'])
+  useTranslation(['fse']);
 
   // Route params and user context
   const { complianceReportId } = useParams()
@@ -1477,13 +1414,11 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
   const [selectedOrgId, setSelectedOrgId] = useState('all')
   const [viewMode, setViewMode] = useState('sites') // 'equipment' or 'sites' - default to 'sites'
   const [isMapExpanded, setIsMapExpanded] = useState(false)
-  const mapContainerRef = React.useRef(null)
+  React.useRef(null);
   const mapInstanceRef = React.useRef(null)
   const [showLoading, setShowLoading] = useState(false)
   const loadingTimeoutRef = React.useRef(null)
-  const contentRef = React.useRef(null)
   const scrollPositionRef = React.useRef(0)
-  const [mapTopOffset, setMapTopOffset] = useState('400px')
 
   // Restore organization filter from session storage (government users only)
   useEffect(() => {
@@ -1606,7 +1541,11 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
   }, [isLoading, isRefetching])
 
   // Transform and group equipment data
-  const { locations, grouped, stats, allSites } = useMemo(() => {
+  const {
+  locations,
+  grouped,
+  stats
+} = useMemo(() => {
     const locs = transformData(data)
     const sites = transformChargingSites(chargingSitesData?.chargingSites || [])
     const grp = groupBySite(locs, sites)
@@ -1629,8 +1568,8 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
   // Generate cluster icons with size based on marker count
   const clusterIcon = useCallback((cluster) => {
     const count = cluster.getChildCount()
-    let cls = 'cluster-sm',
-      size = 32
+    let cls = 'cluster-sm';
+      let size = 32
 
     // Scale cluster size based on count
     if (count >= 50) {
@@ -1650,41 +1589,6 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
       iconSize: L.point(size, size, true)
     })
   }, [])
-
-  // Calculate dynamic map top offset based on content height
-  useEffect(() => {
-    const calculateOffset = () => {
-      if (contentRef.current) {
-        const rect = contentRef.current.getBoundingClientRect()
-        const offsetFromTop = Math.max(
-          rect.bottom + MAP_CONFIG.MAP_SPACING_BELOW_CONTENT,
-          200 // Minimum offset to prevent overlap with header
-        )
-        setMapTopOffset(`${offsetFromTop}px`)
-      }
-    }
-
-    // Calculate on mount and when window resizes
-    calculateOffset()
-
-    // Use ResizeObserver for better performance if available
-    let resizeObserver
-    if (window.ResizeObserver && contentRef.current) {
-      resizeObserver = new ResizeObserver(calculateOffset)
-      resizeObserver.observe(contentRef.current)
-    }
-
-    window.addEventListener('resize', calculateOffset)
-
-    // Recalculate after a short delay to ensure content is rendered
-    const timeoutId = setTimeout(calculateOffset, 100)
-
-    return () => {
-      window.removeEventListener('resize', calculateOffset)
-      if (resizeObserver) resizeObserver.disconnect()
-      clearTimeout(timeoutId)
-    }
-  }, [stats, isGovernmentUser, viewMode]) // Recalculate when these change
 
   // Handle map expansion with proper size invalidation
   useEffect(() => {
@@ -1915,7 +1819,7 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
           </ToggleButton>
           <ToggleButton value="equipment">
             <Stack direction="row" spacing={0.75} alignItems="center">
-              <EvStationIcon sx={{ fontSize: 18 }} />
+              <LocationIcon sx={{ fontSize: 18 }} />
               <span>FSE Coordinates</span>
             </Stack>
           </ToggleButton>
@@ -1937,7 +1841,6 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
     <>
       <style>{MAP_STYLES}</style>
       <Box
-        ref={contentRef}
         sx={{
           // On large desktop (xl), constrain height to prevent scrolling with fixed map
           maxHeight: { xs: 'none', xl: 'calc(100vh - 200px)' },
@@ -2268,7 +2171,7 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
                   </ToggleButton>
                   <ToggleButton value="equipment">
                     <Stack direction="row" spacing={0.75} alignItems="center">
-                      <EvStationIcon sx={{ fontSize: 18 }} />
+                      <LocationIcon sx={{ fontSize: 18 }} />
                       <span>FSE coordinates</span>
                     </Stack>
                   </ToggleButton>

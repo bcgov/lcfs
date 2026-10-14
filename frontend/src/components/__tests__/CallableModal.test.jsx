@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
-import { render, screen, fireEvent, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { screen, fireEvent, act } from '@testing-library/react';
+import { describe, expect, vi } from 'vitest';
 import { createRef } from 'react'
 import { BCAlert } from '@/components/BCAlert/BCAlert'
 import { FloatingAlert } from '@/components/BCAlert/FloatingAlert'

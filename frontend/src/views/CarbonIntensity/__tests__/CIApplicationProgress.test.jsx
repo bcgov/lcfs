@@ -1,13 +1,13 @@
-import React from 'react'
+import { CIApplicationProgress } from '@/views/CarbonIntensity/components/CIApplicationProgress'
+import 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, screen } from '@testing-library/react'
 
 import {
   buildCIWorkflowSteps,
   CI_APPLICATION_STEPS,
-  CIApplicationProgress,
   getCIWorkflowConnectorStyle
-} from '@/views/CarbonIntensity/components/CIApplicationProgress'
+} from '@/views/CarbonIntensity/components/ciWorkflowHelpers'
 import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({

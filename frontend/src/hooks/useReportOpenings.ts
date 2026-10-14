@@ -1,13 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes'
-import type { QueryOptions, ExtMutationOptions} from './types'
+import type { QueryOptions, ExtMutationOptions } from './types'
 
 const QUERY_KEY = ['report-openings']
 
 export const useReportOpenings = (options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
-  const { enabled = true, staleTime = 5 * 60 * 1000, gcTime = 5 * 60 * 1000, ...rest } = options
+  const {
+    enabled = true,
+    staleTime = 5 * 60 * 1000,
+    gcTime = 5 * 60 * 1000,
+    ...rest
+  } = options
 
   return useQuery({
     queryKey: QUERY_KEY,
@@ -22,13 +27,15 @@ export const useReportOpenings = (options: QueryOptions<unknown> = {}) => {
   })
 }
 
-export const useUpdateReportOpenings = (options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateReportOpenings = (
+  options: ExtMutationOptions<unknown, unknown> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   const { onSuccess, ...rest } = options
 
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       const { data } = await client.put(apiRoutes.reportOpenings, payload)
       return data
     },

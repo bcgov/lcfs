@@ -8,7 +8,7 @@ import {
 } from '@/views/Admin/AdminMenu/components/_schema'
 import { useGetUserLoginHistory } from '@/hooks/useUser'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { defaultInitialPagination } from '@/constants/schedules'
+import '@/constants/schedules'
 
 const initialPaginationOptions = {
   page: 1,
@@ -32,13 +32,6 @@ export const UserLoginHistory = () => {
   const getRowId = useCallback((params) => {
     return params.data.userLoginHistoryId.toString()
   }, [])
-
-  const handleClearFilters = () => {
-    setPaginationOptions(initialPaginationOptions)
-    if (gridRef && gridRef.current) {
-      gridRef.current.clearFilters()
-    }
-  }
 
   return (
     <BCBox>
