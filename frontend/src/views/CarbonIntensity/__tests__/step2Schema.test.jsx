@@ -4,6 +4,7 @@ import {
   apiToRow,
   buildPathwayColDefs,
   isRenewalRow,
+  normalizeTransportModeDistances,
   rowToApiPayload,
   validatePathwayRow
 } from '@/views/CarbonIntensity/components/_step2Schema'
@@ -127,6 +128,34 @@ describe('validatePathwayRow', () => {
     expect(errs).toContain('operatingDataFrom')
     expect(errs).toContain('operatingDataTo')
   })
+
+  it('accepts Adjacent transport modes because their distance defaults to zero', () => {
+    const errs = validatePathwayRow(
+      {
+        ...validRow,
+        feedstockTransportMode: [{ transportMode: 'Adjacent', distance: '' }],
+        finishedFuelTransportMode: [{ transportMode: 'Adjacent' }]
+      },
+      APPLICATION_TYPES
+    )
+
+    expect(errs).not.toContain('feedstockTransportModeDistance')
+    expect(errs).not.toContain('finishedFuelTransportModeDistance')
+  })
+})
+
+describe('normalizeTransportModeDistances', () => {
+  it('defaults Adjacent transport distance to zero', () => {
+    expect(
+      normalizeTransportModeDistances([
+        { transportMode: 'Adjacent', distance: 125 },
+        { transportMode: 'Truck', distance: 50 }
+      ])
+    ).toEqual([
+      { transportMode: 'Adjacent', distance: 0 },
+      { transportMode: 'Truck', distance: 50 }
+    ])
+  })
 })
 
 describe('rowToApiPayload', () => {
@@ -157,6 +186,21 @@ describe('rowToApiPayload', () => {
   it('passes through fuelCodeId for renewals', () => {
     const payload = rowToApiPayload({ ...validRow, fuelCodeId: 99 })
     expect(payload.fuelCodeId).toBe(99)
+  })
+
+  it('saves Adjacent transport modes with zero distance', () => {
+    const payload = rowToApiPayload({
+      ...validRow,
+      feedstockTransportMode: 'Adjacent',
+      finishedFuelTransportMode: [{ transportMode: 'Adjacent', distance: 300 }]
+    })
+
+    expect(payload.feedstockTransportMode).toEqual([
+      { transportMode: 'Adjacent', distance: 0 }
+    ])
+    expect(payload.finishedFuelTransportMode).toEqual([
+      { transportMode: 'Adjacent', distance: 0 }
+    ])
   })
 })
 
@@ -263,6 +307,31 @@ describe('buildPathwayColDefs — fuel code iteration empty state', () => {
 
   it('shows no tooltip on New rows even with an empty iteration list', () => {
     expect(fuelCodeCol([]).tooltipValueGetter(newRow)).toBeNull()
+  })
+})
+
+describe('buildPathwayColDefs — transport mode value setters', () => {
+  it('updates the grid row to zero distance when Adjacent is selected', () => {
+    const colDefs = buildPathwayColDefs({
+      optionsData: { transportModes: ['Adjacent', 'Truck'] },
+      canEdit: true
+    })
+    const feedstockTransportModeCol = colDefs.find(
+      (c) => c.field === 'feedstockTransportMode'
+    )
+    const data = {
+      feedstockTransportMode: [{ transportMode: 'Truck', distance: 100 }]
+    }
+
+    feedstockTransportModeCol.valueSetter({
+      data,
+      colDef: feedstockTransportModeCol,
+      newValue: [{ transportMode: 'Adjacent', distance: '' }]
+    })
+
+    expect(data.feedstockTransportMode).toEqual([
+      { transportMode: 'Adjacent', distance: 0 }
+    ])
   })
 })
 
