@@ -19,6 +19,9 @@ from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_ANALYST_UNASSIGNED,
     DesignatedActionHistory,
 )
+from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
+    EvidenceRequirement,
+)
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
@@ -1202,3 +1205,138 @@ async def test_actions_of_a_draft_are_hidden_from_government(
         )
     )
     assert profile.status_code == status.HTTP_404_NOT_FOUND
+
+
+# Which record a route addresses.
+_ACTION = "action"
+_REQUIREMENT = "requirement"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "route, method, target, body, roles",
+    [
+        ("get_designated_action_history", "GET", _ACTION, None, IDIR_IA_ANALYST),
+        ("get_evidence_requirements", "GET", _ACTION, None, IDIR_IA_ANALYST),
+        (
+            "create_evidence_requirement",
+            "POST",
+            _ACTION,
+            {"title": "Signed permits", "description": "Signed permits"},
+            IDIR_IA_ANALYST,
+        ),
+        (
+            "update_evidence_requirement",
+            "PUT",
+            _REQUIREMENT,
+            {"title": "Changed", "analystReview": "Looks complete."},
+            IDIR_IA_ANALYST,
+        ),
+        (
+            "deactivate_evidence_requirement",
+            "DELETE",
+            _REQUIREMENT,
+            None,
+            IDIR_IA_ANALYST,
+        ),
+        (
+            "perform_designated_action_workflow",
+            "PUT",
+            _ACTION,
+            {"action": "request_information", "comment": "Send the permits."},
+            IDIR_IA_ANALYST,
+        ),
+        (
+            "set_designated_action_recommended_credits",
+            "PUT",
+            _ACTION,
+            {"recommendedCredits": 500},
+            IDIR_IA_ANALYST,
+        ),
+        (
+            "set_designated_action_missing_information",
+            "PUT",
+            _ACTION,
+            {"missingInformation": "The signed permits."},
+            IDIR_IA_ANALYST,
+        ),
+        (
+            "update_designated_action",
+            "PUT",
+            _ACTION,
+            {"name": "Renamed"},
+            IDIR_IA_ANALYST,
+        ),
+        (
+            "assign_designated_action_analyst",
+            "PUT",
+            _ACTION,
+            {"assignedAnalystId": None},
+            IDIR_IA_MANAGER,
+        ),
+    ],
+)
+async def test_every_route_to_a_drafts_action_reads_as_missing(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    route,
+    method,
+    target,
+    body,
+    roles,
+):
+    """Not only the profile: the action's evidence, history and every edit
+    read as missing too (#5186). Reads return nothing and writes change
+    nothing."""
+    org_id, _ = await _two_org_ids(dbsession)
+    draft = await _seed_agreement(
+        dbsession,
+        org_id,
+        "IA-26HID2",
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
+    )
+    analyst = await _seed_ia_analyst(dbsession, "dreed", "Dana", "Reed")
+    action = await _seed_action(
+        dbsession,
+        draft,
+        1,
+        "Proposed work",
+        assigned_analyst_id=analyst.user_profile_id,
+    )
+    requirement = EvidenceRequirement(
+        designated_action_id=action.designated_action_id,
+        requirement_number=1,
+        title="Permits",
+        description="List of major permits",
+    )
+    dbsession.add(requirement)
+    await dbsession.flush()
+    set_mock_user(fastapi_app, roles)
+
+    url = fastapi_app.url_path_for(
+        route,
+        **(
+            {"designated_action_id": action.designated_action_id}
+            if target == _ACTION
+            else {"evidence_requirement_id": requirement.evidence_requirement_id}
+        ),
+    )
+    response = await client.request(method, url, json=body)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    await dbsession.refresh(action)
+    await dbsession.refresh(requirement)
+    assert action.name == "Proposed work"
+    assert action.recommended_credits is None
+    assert action.missing_information is None
+    assert action.assigned_analyst_id == analyst.user_profile_id
+    assert (requirement.title, requirement.is_active) == ("Permits", True)
+    requirement_ids = await dbsession.execute(
+        select(EvidenceRequirement.evidence_requirement_id).where(
+            EvidenceRequirement.designated_action_id == action.designated_action_id
+        )
+    )
+    assert requirement_ids.scalars().all() == [requirement.evidence_requirement_id]
+    assert await _action_history(dbsession, action) == []

@@ -450,11 +450,7 @@ class InitiativeAgreementServices:
         before and after, so the record shows what was altered and by
         whom.
         """
-        action = await self.repo.get_designated_action_by_id(designated_action_id)
-        if not action:
-            raise DataNotFoundException(
-                f"Designated action with id {designated_action_id} not found"
-            )
+        action = await self._get_action_or_404(designated_action_id, user)
 
         changes = {}
 
@@ -632,13 +628,7 @@ class InitiativeAgreementServices:
         self, designated_action_id: int
     ) -> DesignatedActionProfileSchema:
         """The action detail page's record (#4840)."""
-        action = await self.repo.get_designated_action_by_id(designated_action_id)
-        if not action or is_hidden_from(
-            action.initiative_agreement, self.request.user if self.request else None
-        ):
-            raise DataNotFoundException(
-                f"Designated action with id {designated_action_id} not found"
-            )
+        action = await self._get_action_or_404(designated_action_id)
         siblings = await self.repo.get_current_designated_actions(
             action.initiative_agreement_id
         )
@@ -653,13 +643,36 @@ class InitiativeAgreementServices:
             ),
         )
 
-    async def _get_action_or_404(self, designated_action_id: int):
+    async def _get_action_or_404(self, designated_action_id: int, user=None):
+        """The action, unless it is missing or its agreement is hidden from
+        the caller. Every route to an action comes through here, so a
+        draft's actions read as missing everywhere, not only on the
+        profile (#5186)."""
+        if user is None and self.request:
+            user = self.request.user
         action = await self.repo.get_designated_action_by_id(designated_action_id)
-        if not action:
+        if not action or is_hidden_from(action.initiative_agreement, user):
             raise DataNotFoundException(
                 f"Designated action with id {designated_action_id} not found"
             )
         return action
+
+    async def _get_requirement_or_404(self, evidence_requirement_id: int, user):
+        """The evidence requirement, unless it is missing or its action is
+        hidden from the caller (see _get_action_or_404)."""
+        requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
+        action = (
+            await self.repo.get_designated_action_by_id(
+                requirement.designated_action_id
+            )
+            if requirement
+            else None
+        )
+        if not action or is_hidden_from(action.initiative_agreement, user):
+            raise DataNotFoundException(
+                f"Evidence requirement with id {evidence_requirement_id} not found"
+            )
+        return requirement
 
     def _user_may(self, transition, user) -> bool:
         return any(user_has_roles(user, [role]) for role in transition.roles)
@@ -718,7 +731,7 @@ class InitiativeAgreementServices:
         No history event: this is a working value until a recommendation is
         actually made, and that event records the figure that counted.
         """
-        action = await self._get_action_or_404(designated_action_id)
+        action = await self._get_action_or_404(designated_action_id, user)
         if credits is not None:
             if credits < 0:
                 raise HTTPException(
@@ -752,7 +765,7 @@ class InitiativeAgreementServices:
         this is working text. Requesting additional information records
         what was actually sent.
         """
-        action = await self._get_action_or_404(designated_action_id)
+        action = await self._get_action_or_404(designated_action_id, user)
         action.missing_information = (text or "").strip() or None
         action.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
@@ -764,7 +777,7 @@ class InitiativeAgreementServices:
         self, designated_action_id: int, data: DesignatedActionWorkflowSchema, user
     ) -> DesignatedActionSchema:
         """Advance a designated action through its review workflow (#4898)."""
-        action = await self._get_action_or_404(designated_action_id)
+        action = await self._get_action_or_404(designated_action_id, user)
 
         transition = TRANSITIONS.get(data.action)
         if transition is None:
@@ -916,7 +929,7 @@ class InitiativeAgreementServices:
         user,
     ) -> EvidenceRequirementSchema:
         """Add an evidence requirement to an action (the wireframe's Add EOC)."""
-        await self._get_action_or_404(designated_action_id)
+        await self._get_action_or_404(designated_action_id, user)
         title = (data.title or "").strip()
         if not title:
             raise HTTPException(
@@ -957,11 +970,7 @@ class InitiativeAgreementServices:
         round's finding is not lost when information is requested: the round
         is captured with its full payload in designated_action_history.
         """
-        requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
-        if not requirement:
-            raise DataNotFoundException(
-                f"Evidence requirement with id {evidence_requirement_id} not found"
-            )
+        requirement = await self._get_requirement_or_404(evidence_requirement_id, user)
 
         # The text an analyst saves deliberately — title, description and
         # evaluation — is recorded with its before and after, the way a
@@ -1065,11 +1074,7 @@ class InitiativeAgreementServices:
     ) -> None:
         """Remove a requirement from the list without erasing it — a
         requirement that was once reviewed is part of the record."""
-        requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
-        if not requirement:
-            raise DataNotFoundException(
-                f"Evidence requirement with id {evidence_requirement_id} not found"
-            )
+        requirement = await self._get_requirement_or_404(evidence_requirement_id, user)
         requirement.is_active = False
         requirement.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
@@ -1093,11 +1098,7 @@ class InitiativeAgreementServices:
         designated_action_history — assignment is operational state, not a
         change order, so it must never append a version row (#4896).
         """
-        action = await self.repo.get_designated_action_by_id(designated_action_id)
-        if not action:
-            raise DataNotFoundException(
-                f"Designated action with id {designated_action_id} not found"
-            )
+        action = await self._get_action_or_404(designated_action_id, user)
 
         new_analyst_id = data.assigned_analyst_id
         if new_analyst_id is not None:
