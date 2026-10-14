@@ -70,7 +70,7 @@ const getColumnId = (column: Column<BCGridRow>): string =>
  * @returns {JSX.Element}
  */
 export const BCGridEditor = ({
-  gridRef = useRef<AgGridReact<BCGridRow> | null>(null),
+  gridRef: suppliedGridRef,
   alertRef,
   enablePaste = true,
   handlePaste,
@@ -84,18 +84,20 @@ export const BCGridEditor = ({
     enabled: false
   },
   showMandatoryColumns = true,
-  onAddRows,
   defaultColDef,
   columnDefs,
   ...props
 }: BCGridEditorProps) => {
-  const localRef = useRef<AgGridReact<BCGridRow> | null>(null)
-  const ref = gridRef || localRef
-  const gridContainerRef = useRef<HTMLDivElement | null>(null)
-  const pendingSavePromiseRef = useRef<Promise<unknown> | null>(null)
-  const firstEditableColumnRef = useRef<Column<BCGridRow> | null>(null)
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-  const buttonRef = useRef<HTMLButtonElement | null>(null)
+  const localRef = useRef(null)
+  const ref = suppliedGridRef || localRef
+  const gridProps = Object.fromEntries(
+    Object.entries(props).filter(([key]) => key !== 'onAddRows')
+  )
+  const gridContainerRef = useRef(null)
+  const pendingSavePromiseRef = useRef(null)
+  const firstEditableColumnRef = useRef(null)
+  const [anchorEl, setAnchorEl] = useState(null)
+  const buttonRef = useRef(null)
   const { t } = useTranslation(['common'])
   const [showRequiredIndicator, setShowRequiredIndicator] = useState(false)
   const [containerWidth, setContainerWidth] = useState<number | null>(null)
@@ -394,9 +396,7 @@ export const BCGridEditor = ({
     (params: CellEditingStoppedEvent<BCGridRow>) => {
       if (params.data?.modified && !params.data.deleted) {
         if (onCellEditingStopped) {
-          let trackedPromise: Promise<void>
-          const promise = Promise.resolve(onCellEditingStopped(params))
-          trackedPromise = promise
+          const trackedPromise = Promise.resolve(onCellEditingStopped(params))
             .catch((error) => {
               console.error('Error saving row:', error)
               throw error
@@ -594,7 +594,7 @@ export const BCGridEditor = ({
           ...defaultColDef
         }}
         columnDefs={transformedColumnDefs}
-        {...props}
+        {...gridProps}
       />
       <BCBox sx={{ height: '40px', margin: '15px 0', width: '100%' }}>
         <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />

@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, type MouseEvent } from 'react'
-import type { ComponentProps } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import FormControl from '@mui/material/FormControl'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
@@ -13,8 +12,8 @@ const legacyDatePickerProps = {
 } as unknown as ComponentProps<typeof DatePicker>
 
 export interface BCDateFloatingFilterProps {
-  model?: any
-  onModelChange: (model: any) => void
+  model?: { type?: string; filter?: string } | null
+  onModelChange: (model: { type: string; filter: string } | null) => void
   disabled?: boolean
   minDate?: string
   maxDate?: string

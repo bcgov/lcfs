@@ -28,21 +28,11 @@ vi.mock('keycloak-js', () => {
 
 // Import the module after the mocks are set up
 // eslint-disable-next-line import/first
-import {
-  getKeycloak,
-  refreshToken,
-  logout,
-  resetInactivityTimer,
-  registerActivityEvents,
-  initializeTokenRefresh,
-  keycloakInitOptions
-} from '../keycloak'
+import { getKeycloak, logout } from '../keycloak'
 
 describe('Keycloak Utils', () => {
-  let keycloak
   let mockSetTimeout
   let mockClearTimeout
-  let logoutSpy
 
   beforeEach(() => {
     // Reset mocks before each test
@@ -54,7 +44,7 @@ describe('Keycloak Utils', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     // Mock setTimeout and clearTimeout
-    mockSetTimeout = vi.fn().mockImplementation((fn, delay) => {
+    mockSetTimeout = vi.fn().mockImplementation(() => {
       return 123 // Mock timer ID
     })
     mockClearTimeout = vi.fn()
@@ -89,10 +79,10 @@ describe('Keycloak Utils', () => {
     vi.spyOn(window, 'removeEventListener').mockImplementation(() => {})
 
     // Get a reference to the mocked keycloak instance
-    keycloak = getKeycloak()
+    getKeycloak()
 
     // Create a spy on logout function
-    logoutSpy = vi.spyOn({ logout }, 'logout')
+    vi.spyOn({ logout }, 'logout')
   })
 
   afterEach(() => {

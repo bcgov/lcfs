@@ -1,31 +1,32 @@
 import type { AgGridReact } from 'ag-grid-react'
 import type {
-  ColDef,
-  GridOptions,
-  GridApi,
-  CellClickedEvent,
   CellEditingStoppedEvent,
+  CellValueChangedEvent,
+  ColDef,
+  ColumnState,
   GetRowIdParams,
-  RowDataTransaction
+  GridOptions,
+  IRowNode
 } from 'ag-grid-community'
 import type { CSSProperties, MutableRefObject, ReactNode } from 'react'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
 
-export type BCGridRow = Record<string, any>
+export type BCGridRow = Record<string, unknown>
 
 export interface BCPaginationFilter {
   field?: string
   type?: string
   filterType?: string
-  filter?: any
-  values?: any[]
+  filter?: unknown
+  values?: unknown[]
   operator?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface BCSortOrder {
   field?: string
   direction?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface BCPaginationOptions {
@@ -34,19 +35,19 @@ export interface BCPaginationOptions {
   total?: number
   sortOrders?: BCSortOrder[]
   filters?: BCPaginationFilter[]
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface BCGridQueryData<TData extends BCGridRow = BCGridRow> {
   data?: {
     pagination?: BCPaginationOptions
     total_count?: number
-    [key: string]: TData[] | BCPaginationOptions | number | undefined | any
+    [key: string]: TData[] | BCPaginationOptions | number | undefined | unknown
   }
-  error?: any
+  error?: unknown
   isError?: boolean
   isLoading?: boolean
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export type BCGridRef = MutableRefObject<AgGridReact<BCGridRow> | null>
@@ -56,8 +57,8 @@ export interface BCSaveButtonProps {
   text?: ReactNode
   confirmText?: ReactNode
   confirmLabel?: ReactNode
-  onSave?: () => void | Promise<any>
-  [key: string]: any
+  onSave?: () => void | Promise<unknown>
+  [key: string]: unknown
 }
 
 export interface BCGridBaseProps<TData extends BCGridRow = BCGridRow>
@@ -71,7 +72,7 @@ export interface BCGridBaseProps<TData extends BCGridRow = BCGridRow>
   paginationOptions?: BCPaginationOptions
   queryData?: BCGridQueryData<TData>
   suppressMovableColumns?: boolean
-  [key: string]: any
+  [key: string]: unknown
 }
 
 // Paste creates an edit context; AG Grid supplies additional event fields for
@@ -85,34 +86,24 @@ export type BCGridEditContext<TData extends BCGridRow = BCGridRow> = Pick<
 export interface BCGridEditorProps<TData extends BCGridRow = BCGridRow>
   extends GridOptions<TData> {
   addMultiRow?: boolean
-  alertRef?: MutableRefObject<any> | ((instance: any) => void) | null
+  alertRef?:
+    | MutableRefObject<FloatingAlertHandle | null>
+    | ((instance: FloatingAlertHandle | null) => void)
+    | null
   columnDefs?: ColDef<TData>[]
   defaultColDef?: ColDef<TData>
   enablePaste?: boolean
   getRowId?: (params: GetRowIdParams<TData>) => string
   gridRef?: BCGridRef
-  handlePaste?: (
-    event: ClipboardEvent,
-    grid: { api?: GridApi<TData>; columnApi?: unknown }
-  ) => void
-  onAction?: (
-    action: string,
-    params?: CellClickedEvent<TData>
-  ) =>
-    | RowDataTransaction<TData>
-    | void
-    | Promise<RowDataTransaction<TData> | void>
+  handlePaste?: (params: unknown) => void
+  onAction?: (action: string, data?: TData, node?: IRowNode<TData>) => void
   onAddRows?: (rows: TData[]) => void
-  onCellEditingStopped?: (
-    params: BCGridEditContext<TData>
-  ) => void | Promise<void>
-  onCellValueChanged?: (
-    params: import('ag-grid-community').CellValueChangedEvent<TData>
-  ) => void
+  onCellEditingStopped?: (params: CellEditingStoppedEvent<TData>) => void
+  onCellValueChanged?: (params: CellValueChangedEvent<TData>) => void
   saveButtonProps?: BCSaveButtonProps
   showAddRowsButton?: boolean
   showMandatoryColumns?: boolean
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface BCGridEditorPaginatedProps<TData extends BCGridRow = BCGridRow>
@@ -135,9 +126,12 @@ export interface BCGridEditorPaginatedProps<TData extends BCGridRow = BCGridRow>
 
 export interface BCGridViewerProps<TData extends BCGridRow = BCGridRow>
   extends BCGridBaseProps<TData> {
-  alertRef?: MutableRefObject<any> | ((instance: any) => void) | null
+  alertRef?:
+    | MutableRefObject<FloatingAlertHandle | null>
+    | ((instance: FloatingAlertHandle | null) => void)
+    | null
   columnDefs?: ColDef<TData>[]
-  columnState?: any[]
+  columnState?: ColumnState[]
   dataKey?: string
   defaultColDef?: ColDef<TData>
   enableCopyButton?: boolean
@@ -146,12 +140,12 @@ export interface BCGridViewerProps<TData extends BCGridRow = BCGridRow>
   enablePageCaching?: boolean
   enableResetButton?: boolean
   exportName?: string
-  filterToolbarConfig?: Record<string, any>
+  filterToolbarConfig?: Record<string, unknown>
   gridKey?: string
   gridRef?: BCGridRef
   loading?: boolean
   onClearFilters?: () => void
-  onColumnStateChange?: (columnState: any[]) => void
+  onColumnStateChange?: (columnState: ColumnState[]) => void
   paginationPageSizeSelector?: number[]
   suppressPagination?: boolean
 }

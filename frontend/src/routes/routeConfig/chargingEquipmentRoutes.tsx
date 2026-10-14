@@ -1,4 +1,46 @@
+import { lazy } from 'react'
+
 import { AppRouteObject } from '../types'
 
-// Reserved until charging equipment routes are defined in routes.ts.
-export const chargingEquipmentRoutes: AppRouteObject[] = []
+// Lazy load components
+lazy(() =>
+  import('@/views/ChargingEquipment').then((module) => ({
+    default: module.ChargingEquipment
+  }))
+)
+
+lazy(() =>
+  import('@/views/ChargingEquipment/AddEditChargingEquipment').then(
+    (module) => ({
+      default: module.AddEditChargingEquipment
+    })
+  )
+)
+
+// Note: These routes reference ROUTES.CHARGING_EQUIPMENT which may not exist in the current routes.ts
+// This file may need to be updated or removed if the routes are not defined
+export const chargingEquipmentRoutes: AppRouteObject[] = [
+  // Commenting out until ROUTES.CHARGING_EQUIPMENT is defined in routes.ts
+  /*
+  {
+    path: ROUTES.CHARGING_EQUIPMENT.LIST,
+    element: <ChargingEquipment />,
+    handle: { crumb: () => 'Charging Equipment' }
+  },
+  {
+    path: ROUTES.CHARGING_EQUIPMENT.NEW,
+    element: <AddEditChargingEquipment />,
+    handle: { crumb: () => 'New Equipment' }
+  },
+  {
+    path: ROUTES.CHARGING_EQUIPMENT.EDIT,
+    element: <AddEditChargingEquipment />,
+    handle: { crumb: () => 'Edit Equipment' }
+  },
+  {
+    path: ROUTES.CHARGING_EQUIPMENT.VIEW,
+    element: <AddEditChargingEquipment />,
+    handle: { crumb: () => 'View Equipment' }
+  }
+  */
+]

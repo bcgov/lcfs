@@ -2,13 +2,7 @@ import { waitFor } from '@testing-library/react'
 import { describe, beforeEach, afterEach, expect, vi } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
 import { useApiService } from '@/services/useApiService'
-import { useQueryClient } from '@tanstack/react-query'
-vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: vi.fn(() => ({
-    data: { organization: { organizationId: 1 } },
-    hasRoles: () => true
-  }))
-}))
+
 import {
   useOrganization,
   useOrganizationUser,
@@ -27,6 +21,12 @@ import {
   useUpdateCurrentOrgCreditMarket,
   useUpdateOrganizationCreditMarket
 } from '../useOrganization'
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: vi.fn(() => ({
+    data: { organization: { organizationId: 1 } },
+    hasRoles: () => true
+  }))
+}))
 
 vi.mock('@/services/useApiService')
 const qcMock = {

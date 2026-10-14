@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { currencyFormatter, numberFormatter } from '@/utils/formatters'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Paper from '@mui/material/Paper'
@@ -259,8 +259,7 @@ const CompareTable = ({
         <TableBody>
           {data?.map((row, rowIndex) => {
             const isValueColumn =
-              column_id =>
-                column_id !== 'line' && column_id !== 'description'
+              (columnId) => columnId !== 'line' && columnId !== 'description'
             const isGreyed = !!row.greyed
             return (
             <TableRow

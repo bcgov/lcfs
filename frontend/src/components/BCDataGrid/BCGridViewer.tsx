@@ -43,14 +43,7 @@ import {
   getColumnMinWidthSum,
   relaxColumnMinWidths
 } from '@/components/BCDataGrid/columnSizingUtils'
-import type {
-  BCGridRef,
-  BCPaginationFilter,
-  BCPaginationOptions,
-  BCSortOrder,
-  BCGridRow,
-  BCGridViewerProps
-} from './types'
+import type { BCGridRow, BCGridViewerProps } from './types'
 
 export type { BCGridViewerProps } from './types'
 
@@ -90,54 +83,67 @@ const isIntersectionObserverSupported = () => {
   return typeof window !== 'undefined' && 'IntersectionObserver' in window
 }
 
-export const BCGridViewer = forwardRef<
-  AgGridReact<BCGridRow>,
-  BCGridViewerProps
->(
+export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps>(
   (
     {
-      gridRef: providedGridRef,
-      alertRef,
-      loading,
-      defaultColDef,
-      columnDefs,
-      gridOptions,
-      suppressPagination,
-      gridKey,
-      getRowId,
-      onRowClicked,
-      autoSizeStrategy = {},
-
-      paginationOptions = {
-        page: 1,
-        size: 10,
-        sortOrders: [],
-        filters: []
-      },
-      onPaginationChange,
-
-      queryData,
-      dataKey = 'items',
-
-      enableExportButton = false,
-      enableCopyButton = false,
-      enableResetButton = false,
-      enablePageCaching = true,
-      paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
-      exportName = 'ExportData',
-      enableFloatingPagination = true,
-      filterToolbarConfig = {},
-      onClearFilters,
-      suppressMovableColumns = false,
-      columnState: controlledColumnState,
-      onColumnStateChange,
-      ...props
-    },
-    _ref
+  gridRef: providedGridRef,
+  alertRef,
+  loading,
+  defaultColDef,
+  columnDefs,
+  gridOptions,
+  suppressPagination,
+  gridKey,
+  getRowId,
+  onRowClicked,
+  autoSizeStrategy = {},
+  paginationOptions = {
+    page: 1,
+    size: 10,
+    sortOrders: [],
+    filters: []
+  },
+  onPaginationChange,
+  queryData,
+  dataKey = 'items',
+  enableExportButton = false,
+  enableCopyButton = false,
+  enableResetButton = false,
+  enablePageCaching = true,
+  paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
+  exportName = 'ExportData',
+  enableFloatingPagination = true,
+  filterToolbarConfig = {},
+  onClearFilters,
+  suppressMovableColumns = false,
+  columnState: controlledColumnState,
+  onColumnStateChange,
+  ...props
+}
   ) => {
     const gridRef = providedGridRef as BCGridRef
     const { data, error, isError, isLoading } = queryData || {}
     const hasInitializedFromCache = useRef(false)
+    // Keep cache restoration tied to its original enable/grid-key triggers.
+    const paginationRestoreInputsRef = useRef({
+      paginationOptions,
+      onPaginationChange
+    })
+    const previousPaginationRestoreDepsRef = useRef({
+      enablePageCaching,
+      gridKey
+    })
+    if (
+      previousPaginationRestoreDepsRef.current.enablePageCaching !==
+        enablePageCaching ||
+      previousPaginationRestoreDepsRef.current.gridKey !== gridKey
+    ) {
+      previousPaginationRestoreDepsRef.current = { enablePageCaching, gridKey }
+      paginationRestoreInputsRef.current = {
+        paginationOptions,
+        onPaginationChange
+      }
+    }
     const previousGridKey = useRef(gridKey)
     const isRestoringFromCache = useRef(false)
 
@@ -314,6 +320,25 @@ export const BCGridViewer = forwardRef<
     )
 
     // Restore pagination options from sessionStorage
+    useCallback(() => {
+      if (!enablePageCaching || !gridKey) return paginationOptions
+
+      const cachedPagination = sessionStorage.getItem(`${gridKey}-pagination`)
+      if (cachedPagination) {
+        try {
+          const parsed = JSON.parse(cachedPagination)
+          const result = {
+            ...paginationOptions,
+            ...parsed
+          }
+          return result
+        } catch (error) {
+          console.warn('Failed to parse cached pagination options:', error)
+        }
+      }
+      return paginationOptions
+    }, [gridKey, paginationOptions, enablePageCaching]);
+
     const getGridScrollInfo = useCallback(
       () => getGridScrollInfoUtil(gridContainerRef),
       [gridContainerRef]
@@ -370,6 +395,8 @@ export const BCGridViewer = forwardRef<
 
     // Initialize with cached pagination options if available
     useEffect(() => {
+      const { paginationOptions, onPaginationChange } =
+        paginationRestoreInputsRef.current
       if (enablePageCaching && gridKey && !hasInitializedFromCache.current) {
         const cachedPagination = sessionStorage.getItem(`${gridKey}-pagination`)
         if (cachedPagination) {
@@ -756,6 +783,7 @@ export const BCGridViewer = forwardRef<
       }
       persistColumnState(columnState)
     }, [
+      gridRef,
       onPaginationChange,
       paginationOptions,
       enablePageCaching,
@@ -837,7 +865,7 @@ export const BCGridViewer = forwardRef<
         api.setFilterModel(nextModel)
         setActiveFilters(convertFilterModelToArray(nextModel || {}))
       },
-      [gridRef, convertFilterModelToArray, activeFilters]
+      [gridRef, convertFilterModelToArray]
     )
 
     const defaultColDefParams = useMemo(
@@ -963,10 +991,12 @@ export const BCGridViewer = forwardRef<
         columnLabelLookup: labelLookup,
         columnPillRendererLookup: pillLookup
       }
-    }, [columnDefs, activeFilters])
+    }, [columnDefs])
 
-    const toolbarSelectFilters = filterToolbarConfig?.selectFilters || []
-    const additionalPills = filterToolbarConfig?.additionalPills || []
+    const toolbarSelectFilters = useMemo(
+      () => filterToolbarConfig?.selectFilters || [],
+      [filterToolbarConfig?.selectFilters]
+    )
 
     const gridFilterPills = useMemo(
       () =>
@@ -985,14 +1015,17 @@ export const BCGridViewer = forwardRef<
     )
 
     const combinedPills = useMemo(
-      () => [...(additionalPills || []), ...gridFilterPills],
-      [additionalPills, gridFilterPills]
+      () => [
+        ...(filterToolbarConfig?.additionalPills || []),
+        ...gridFilterPills
+      ],
+      [filterToolbarConfig?.additionalPills, gridFilterPills]
     )
 
     const hasAnyFiltersApplied = combinedPills.length > 0
     const shouldShowToolbar = useMemo(
       () => toolbarSelectFilters.length > 0 || combinedPills.length > 0,
-      [toolbarSelectFilters, combinedPills, activeFilters]
+      [toolbarSelectFilters, combinedPills]
     )
 
     const handleClearAllFilters = useCallback(() => {
@@ -1003,7 +1036,7 @@ export const BCGridViewer = forwardRef<
           | undefined
         api?.setSortModel([])
         setActiveFilters([])
-      } catch (error) {
+      } catch {
         // no-op
       }
       onClearFilters?.()
@@ -1122,8 +1155,8 @@ export const BCGridViewer = forwardRef<
                     <div
                       className="custom-horizontal-scroll"
                       ref={customScrollbarRef}
-                      style={floatingScrollStyles as CSSProperties}
-                      onScroll={(_event) => {
+                      style={{ ...floatingScrollStyles }}
+                      onScroll={() => {
                         if (syncingFromGridRef.current) return
                         if (!customScrollbarRef.current) return
 

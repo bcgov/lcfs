@@ -1,11 +1,11 @@
-interface SuppressKeyboardOptions {
-  enableKeyboardRowNavigation?: boolean
-  onRowClicked?: (params: SuppressKeyboardEventParams) => void
-}
-
 interface SuppressKeyboardEventParams {
   event: KeyboardEvent
   node?: unknown
+}
+
+interface SuppressKeyboardOptions {
+  enableKeyboardRowNavigation?: boolean
+  onRowClicked?: (params: SuppressKeyboardEventParams) => void
 }
 
 export const suppressKeyboardEvent = (

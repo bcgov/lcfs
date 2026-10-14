@@ -1,9 +1,4 @@
-import type {
-  ColDef,
-  ICellEditorParams,
-  ICellRendererParams,
-  RowClassParams
-} from 'ag-grid-community'
+import type { ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
@@ -252,10 +247,8 @@ export const allocationAgreementColDefs = (
       cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'fuel-type-others',
         queryFn: async ({
-          client
-        }: {
-          client: import('axios').AxiosInstance
-        }) => {
+  client
+}) => {
           const path = apiRoutes.getFuelTypeOthers
 
           const response = await client.get(path)

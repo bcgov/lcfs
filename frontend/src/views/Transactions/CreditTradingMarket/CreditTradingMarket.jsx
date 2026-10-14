@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react';
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import { CreditMarketTable } from './CreditMarketTable'
@@ -49,20 +49,6 @@ export const CreditTradingMarket = () => {
   const handleRefreshListings = useCallback(() => {
     tableRef.current?.refreshListings?.()
   }, [])
-
-  const handleClearFilters = useCallback(() => {
-    gridRef.current?.clearFilters?.()
-    gridRef.current?.api?.setSortModel?.([])
-    if (isGovernmentUser) {
-      setSelectedListing(null)
-    } else if (userOrgId) {
-      setSelectedListing({
-        organizationId: userOrgId,
-        organizationName: userOrgName
-      })
-    }
-    handleRefreshListings()
-  }, [handleRefreshListings, isGovernmentUser, userOrgId, userOrgName])
 
   const tableSelectedOrgId = isGovernmentUser
     ? (selectedListing?.organizationId ?? null)

@@ -1,10 +1,4 @@
-import type {
-  ColDef,
-  ICellEditorParams,
-  RowClassParams,
-  ValueGetterParams,
-  ICellRendererParams
-} from 'ag-grid-community'
+import type { ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
@@ -68,7 +62,6 @@ export const fuelExportColDefs = (
   warnings: GridWarnings,
   gridReady: boolean,
   isSupplemental: boolean,
-  _compliancePeriod: string | number
 ): ColDef[] => [
   validation,
   actions((params: ICellRendererParams) => {
@@ -173,11 +166,7 @@ export const fuelExportColDefs = (
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params: ICellEditorParams) => ({
       queryKey: 'fuel-type-others',
-      queryFn: async ({
-        client
-      }: {
-        client: import('axios').AxiosInstance
-      }) => {
+      queryFn: async ({ client }) => {
         const path = apiRoutes.getFuelTypeOthers
 
         const response = await client.get(path)
@@ -252,9 +241,9 @@ export const fuelExportColDefs = (
       return params.data.fuelCategory
     },
     editable: (params) =>
-      (optionsData?.fuelTypes
+      optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCategories.map((item) => item.fuelCategory).length ?? 0) > 1,
+        ?.fuelCategories.map((item) => item.fuelCategory).length > 1,
     tooltipValueGetter: () => 'Select the fuel category from the list'
   },
   {

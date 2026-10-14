@@ -1,7 +1,4 @@
-import type { ColDef } from 'ag-grid-community'
-import type { TFunction } from 'i18next'
-import BCBox from '@/components/BCBox'
-import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
+import type { ColDef } from '@ag-grid-community/core'
 import {
   BCDateFloatingFilter,
   BCSelectFloatingFilter
@@ -12,7 +9,7 @@ import {
 } from '@/hooks/useInitiativeAgreements'
 import { DAAssignedAnalystCell } from './components/DAAssignedAnalystCell'
 import { dateFormatter } from '@/utils/formatters'
-import { createStatusRenderer } from '@/utils/grid/cellRenderers'
+import { InitiativeAgreementStatusRenderer, LastCommentRenderer } from './components/AgreementGridRenderers'
 
 // Column definitions staged for the agreements index grid (#4833). Field
 // names follow the camelCase wire format of the initiative_agreement model;
@@ -20,76 +17,7 @@ import { createStatusRenderer } from '@/utils/grid/cellRenderers'
 
 // Status chip colours are provisional until the PO confirms the status
 // vocabulary (statuses are seed data on initiative_agreement_status).
-export const InitiativeAgreementStatusRenderer = createStatusRenderer(
-  {
-    Draft: 'info',
-    Underway: 'success',
-    Completed: 'primary',
-    Terminated: 'warning'
-  },
-  { statusField: 'lifecycleStatus.status' }
-)
-
-const COMMENT_CHIP_SX = {
-  bgcolor: '#606060',
-  color: 'common.white',
-  borderRadius: '50%',
-  width: 32,
-  height: 32,
-  minWidth: 32,
-  '& .MuiChip-label': { padding: 0 },
-  '&:hover': { bgcolor: '#505050' }
-}
-
-type InitiativeAgreementGridRow = Record<string, unknown> & {
-  lifecycleStatus?: { status?: string }
-  organization?: { name?: string }
-  contactName?: string
-  iaCode?: string
-  agreementStartDate?: string
-  agreementEndDate?: string
-  updateDate?: string
-  actionNumber?: number
-  initiativeAgreementId?: number
-  currentStatus?: { status?: string }
-  assignedAnalyst?: { userProfileId?: number }
-  lastComment?: { fullName?: string; comment?: string }
-  creditAllocation?: number | null
-}
-
-const LastCommentRenderer = ({
-  data
-}: {
-  data?: InitiativeAgreementGridRow
-}) => {
-  const last = data?.lastComment
-  if (!last?.fullName) {
-    return <BCBox component="div" sx={{ width: '100%', height: '100%' }} />
-  }
-  return (
-    <BCBox
-      component="div"
-      sx={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        py: 1
-      }}
-    >
-      <BCUserInitials
-        fullName={last.fullName}
-        tooltipText={last.comment}
-        maxLength={500}
-        variant="filled"
-        sx={COMMENT_CHIP_SX}
-      />
-    </BCBox>
-  )
-}
-
-const TEXT_FILTER_PARAMS = {
+export const TEXT_FILTER_PARAMS = {
   filterOptions: ['contains', 'startsWith', 'equals'],
   buttons: ['clear']
 }

@@ -1,3 +1,4 @@
+import '@/views/ComplianceReports'
 import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector'
 import ROUTES from '../routes'
 import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'

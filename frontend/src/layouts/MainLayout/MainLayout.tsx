@@ -67,7 +67,7 @@ export const MainLayout = () => {
 
   useEffect(() => {
     refreshToken(true)
-  }, [location.pathname])
+  }, [location.pathname, refreshToken])
 
   // Route root visitors to the public dashboard when enabled, else to login.
   const showCreditMarketLoginPage = isFeatureEnabled(

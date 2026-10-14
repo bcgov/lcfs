@@ -7,7 +7,7 @@ export { routesMapping } from './routeMapping'
 
 export const columnDefs = (
   t: (key: string) => string,
-  currentUser: Record<string, any>
+  currentUser: Record<string, unknown>
 ): ColDef[] => [
   {
     ...actions({ enableDelete: true }),

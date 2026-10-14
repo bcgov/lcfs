@@ -1,8 +1,8 @@
 import startCase from 'lodash/startCase'
 
-export const FILTER_VALUE_DISPLAY_LIMIT = 12
-
 import { ReactNode } from 'react'
+
+export const FILTER_VALUE_DISPLAY_LIMIT = 12
 
 export interface FilterToolbarPill {
   id: string

@@ -1,5 +1,11 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
-import type { ChangeEvent, ForwardedRef } from 'react'
+import {
+  useState,
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+  type ChangeEvent
+} from 'react'
 import { useDebounce } from '@/utils/debounce'
 
 export interface AsyncValidationEditorProps {
@@ -10,6 +16,7 @@ export interface AsyncValidationEditorProps {
   column?: { colId?: string }
   debounceLimit?: number
   condition: (value: string) => boolean | Promise<boolean>
+  [key: string]: unknown
 }
 
 export const AsyncValidationEditor = forwardRef<
@@ -24,23 +31,23 @@ export const AsyncValidationEditor = forwardRef<
     {
       value,
       onValueChange,
-      eventKey,
-      rowIndex,
       column,
-      ...props
-    }: Omit<AsyncValidationEditorProps, 'ref'>,
-    ref: ForwardedRef<{
-      getValue: () => string | undefined
-      afterGuiAttached: () => void
-      isCancelAfterEnd: () => boolean
-    }>
+      debounceLimit,
+      condition
+    }: AsyncValidationEditorProps,
+    ref
   ) => {
     const [inputValue, setInputValue] = useState<string | undefined>(value)
     const [valid, setValid] = useState(true)
     const [validating, setValidating] = useState(false)
     const [touched, setTouched] = useState(false)
 
-    const debouncedInputVal = useDebounce(inputValue, props.debounceLimit)
+    const debouncedInputVal = useDebounce(inputValue, debounceLimit)
+    const validationInputsRef = useRef({ inputValue, debounceLimit, condition })
+
+    useEffect(() => {
+      validationInputsRef.current = { inputValue, debounceLimit, condition }
+    }, [inputValue, debounceLimit, condition])
     // TODO: ability to show tool tip
     // TODO: ability to show error message
     // TODO: ability to perform both synchronous and asynhronous validations.
@@ -52,14 +59,18 @@ export const AsyncValidationEditor = forwardRef<
     }
 
     useEffect(() => {
-      const timeout = props.debounceLimit
+      const {
+        inputValue: currentInputValue,
+        debounceLimit: timeout,
+        condition: currentCondition
+      } = validationInputsRef.current
 
-      new Promise<boolean>((resolve, _reject) => {
-        if (inputValue === '') {
+      new Promise<boolean>((resolve) => {
+        if (currentInputValue === '') {
           resolve(false)
         } else {
           setTimeout(() => {
-            resolve(props.condition(inputValue as string))
+            resolve(currentCondition(currentInputValue))
           }, timeout)
         }
       })

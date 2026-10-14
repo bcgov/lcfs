@@ -8,25 +8,30 @@ import { useQuery } from '@tanstack/react-query'
 import match from 'autosuggest-highlight/match'
 import parse from 'autosuggest-highlight/parse'
 import { debounce } from 'lodash'
-import { useCallback, useState } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react'
+import { useMemo, useState } from 'react'
+import type { KeyboardEvent } from 'react'
+import type { GridApi } from 'ag-grid-community'
+import type { ApiServiceInstance } from '@/services/useApiService'
+
+type AsyncSuggestionOption = Record<string, unknown>
+type AsyncSuggestion = string | AsyncSuggestionOption
 
 export interface AsyncSuggestionEditorProps {
-  value?: any
-  onValueChange: (value: any) => void
+  value?: AsyncSuggestion | null
+  onValueChange: (value: unknown) => void
   enabled?: boolean
   minWords?: number
   queryKey?: string
   queryFn: (params: {
-    client: any
+    client: ApiServiceInstance
     queryKey: readonly unknown[]
-  }) => Promise<any[]>
+  }) => Promise<AsyncSuggestionOption[]>
   debounceValue?: number
-  onKeyDownCapture?: (event: ReactKeyboardEvent<HTMLDivElement>) => void
-  api?: any
+  onKeyDownCapture?: (event: KeyboardEvent) => void
+  api?: Pick<GridApi, 'stopEditing' | 'tabToPreviousCell' | 'tabToNextCell'>
   optionLabel?: string
   valueKey?: string
-  groupBy?: (option: any) => string
+  groupBy?: (option: AsyncSuggestionOption) => string
 }
 
 /**
@@ -58,7 +63,8 @@ export const AsyncSuggestionEditor = ({
   groupBy
 }: AsyncSuggestionEditorProps) => {
   const [inputValue, setInputValue] = useState('')
-  const [highlightedOption, setHighlightedOption] = useState<any | null>(null)
+  const [highlightedOption, setHighlightedOption] =
+    useState<AsyncSuggestion | null>(null)
   const apiService = useApiService()
 
   const { data: options = [], isLoading } = useQuery({
@@ -69,11 +75,8 @@ export const AsyncSuggestionEditor = ({
     refetchOnWindowFocus: false
   })
 
-  const debouncedSetInputValue = useCallback(
-    debounce(
-      (newInputValue: string) => setInputValue(newInputValue),
-      debounceValue
-    ),
+  const debouncedSetInputValue = useMemo(
+    () => debounce((newInputValue: string) => setInputValue(newInputValue), debounceValue),
     [debounceValue]
   )
 
@@ -143,7 +146,9 @@ export const AsyncSuggestionEditor = ({
         freeSolo
         id="async-search-editor"
         getOptionLabel={(option) =>
-          typeof option === 'string' ? option : option[optionLabel]
+          typeof option === 'string'
+            ? option
+            : (option as AsyncSuggestionOption)[optionLabel] as string
         }
         options={options || []}
         groupBy={groupBy}
@@ -160,7 +165,9 @@ export const AsyncSuggestionEditor = ({
         renderInput={(params) => <TextField {...params} fullWidth autoFocus />}
         renderOption={({ key, ...props }, option, { inputValue }) => {
           const label =
-            typeof option === 'string' ? option : option[optionLabel]
+            typeof option === 'string'
+              ? option
+              : (option as AsyncSuggestionOption)[optionLabel] as string
           const matches = match(label, inputValue, { insideWords: true })
           const parts = parse(label, matches)
 

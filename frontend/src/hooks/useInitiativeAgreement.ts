@@ -2,9 +2,12 @@ import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { INITIATIVE_AGREEMENT } from '@/views/Transactions/constants'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { QueryOptions , ExtMutationOptions} from './types'
+import type { QueryOptions, ExtMutationOptions } from './types'
 
-export const useInitiativeAgreement = (initiativeAgreementID: number | string | undefined | null, options: QueryOptions<unknown>) => {
+export const useInitiativeAgreement = (
+  initiativeAgreementID: number | string | undefined | null,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
 
   return useQuery({
@@ -19,12 +22,15 @@ export const useInitiativeAgreement = (initiativeAgreementID: number | string | 
   })
 }
 
-export const useCreateUpdateInitiativeAgreement = (initiativeAgreementId: number | string | undefined | null, options: ExtMutationOptions<unknown, any>) => {
+export const useCreateUpdateInitiativeAgreement = (
+  initiativeAgreementId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, unknown>
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
     ...options,
-    mutationFn: async ({ data }: any) => {
+    mutationFn: async ({ data }: Record<string, unknown>) => {
       if (initiativeAgreementId) {
         data.initiativeAgreementId = initiativeAgreementId
         return await client.put(apiRoutes.initiativeAgreements, data)
@@ -33,7 +39,9 @@ export const useCreateUpdateInitiativeAgreement = (initiativeAgreementId: number
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [ INITIATIVE_AGREEMENT, initiativeAgreementId ] })
+      queryClient.invalidateQueries({
+        queryKey: [INITIATIVE_AGREEMENT, initiativeAgreementId]
+      })
     }
   })
 }

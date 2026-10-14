@@ -67,16 +67,18 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
       enableCellTextSelection,
       getRowId,
       overlayNoRowsTemplate,
-      queryData,
-      dataKey,
-      paginationOptions,
-      onPaginationChange,
       onRowClicked,
       suppressMovableColumns = true,
       ...props
     },
     forwardedRef
   ) => {
+    const gridProps = Object.fromEntries(
+      Object.entries(props).filter(
+        ([key]) =>
+          !['queryData', 'dataKey', 'paginationOptions', 'onPaginationChange'].includes(key)
+      )
+    )
     const [searchParams] = useSearchParams()
     const highlightedId = searchParams.get('hid')
     const ref = useRef<AgGridReact<BCGridRow> | null>(null)
@@ -360,7 +362,7 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
         }}
         rowHeight={ROW_HEIGHT}
         headerHeight={40}
-        {...props}
+        {...gridProps}
         theme="legacy"
         onCellKeyDown={onCellKeyDown}
         onCellClicked={onCellClicked}

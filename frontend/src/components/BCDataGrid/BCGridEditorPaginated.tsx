@@ -129,7 +129,7 @@ const isIntersectionObserverSupported = () =>
  * @property {boolean} enableFloatingPagination - Enable floating pagination
  */
 export const BCGridEditorPaginated = ({
-  gridRef = useRef<AgGridReact<BCGridRow> | null>(null),
+  gridRef: suppliedGridRef,
   alertRef,
   enablePaste = true,
   handlePaste,
@@ -143,7 +143,6 @@ export const BCGridEditorPaginated = ({
     enabled: false
   },
   showMandatoryColumns = true,
-  onAddRows,
 
   // Pagination props
   suppressPagination = false,
@@ -169,11 +168,14 @@ export const BCGridEditorPaginated = ({
   columnDefs,
   ...props
 }: BCGridEditorPaginatedProps) => {
-  const localRef = useRef<AgGridReact<BCGridRow> | null>(null)
-  const ref = gridRef || localRef
-  const firstEditableColumnRef = useRef<Column<BCGridRow> | null>(null)
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-  const buttonRef = useRef<HTMLButtonElement | null>(null)
+  const localRef = useRef(null)
+  const ref = suppliedGridRef || localRef
+  const gridProps = Object.fromEntries(
+    Object.entries(props).filter(([key]) => key !== 'onAddRows')
+  )
+  const firstEditableColumnRef = useRef(null)
+  const [anchorEl, setAnchorEl] = useState(null)
+  const buttonRef = useRef(null)
   const { t } = useTranslation(['common'])
   const [showRequiredIndicator, setShowRequiredIndicator] = useState(false)
 
@@ -197,7 +199,10 @@ export const BCGridEditorPaginated = ({
   const previousGridKey = useRef(gridKey)
   const isRestoringFromCache = useRef(false)
 
-  const { data, isLoading } = queryData || {}
+  const {
+  data,
+  isLoading
+} = queryData || {}
   const isPaginationFloating = !isPaginationVisible && isGridVisible
 
   // Cache pagination options to sessionStorage
@@ -722,13 +727,8 @@ export const BCGridEditorPaginated = ({
           node,
           data: node.data,
           oldValue: '',
-          newValue:
-            node.data[
-              findFirstEditableColumn()
-                ? getColumnId(findFirstEditableColumn()!)
-                : ''
-            ],
-          api: gridApi
+          newValue: node.data[findFirstEditableColumn()],
+          ...gridProps
         })
       })
     },
@@ -1037,7 +1037,7 @@ export const BCGridEditorPaginated = ({
         }}
         enableCellTextSelection={true}
         columnDefs={transformedColumnDefs}
-        {...props}
+        {...gridProps}
       />
 
       {/* Pagination Controls */}
@@ -1091,8 +1091,8 @@ export const BCGridEditorPaginated = ({
                   <div
                     className="custom-horizontal-scroll"
                     ref={customScrollbarRef}
-                    style={floatingScrollStyles as CSSProperties}
-                    onScroll={(_event) => {
+                    style={{ ...floatingScrollStyles }}
+                    onScroll={() => {
                       if (syncingFromGridRef.current) return
                       if (!customScrollbarRef.current) return
 

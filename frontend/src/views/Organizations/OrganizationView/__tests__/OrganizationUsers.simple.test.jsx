@@ -60,7 +60,7 @@ vi.mock('@/hooks/useOrganizations', () => ({
 
 // Mock BCGridViewer instead of BCDataGridServer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: (props) => (
+  BCGridViewer: () => (
     <div data-test="grid" data-testid="grid">
       BCGridViewer
     </div>

@@ -36,13 +36,13 @@ export interface QueryProviderValue extends ProviderValue {
   readonly with: (config?: QueryClientConfig) => QueryProviderValue
 }
 
+export interface RouterOptions {
+  readonly initialEntries?: readonly string[]
+}
+
 export interface RouterProviderValue extends ProviderValue {
   readonly kind: 'router'
   readonly with: (options?: RouterOptions) => RouterProviderValue
-}
-
-export interface RouterOptions {
-  readonly initialEntries?: readonly string[]
 }
 
 export interface I18nProviderValue extends ProviderValue {
@@ -268,13 +268,14 @@ const buildI18nProvider = async (): Promise<I18nProviderValue> => {
 
 export const test = baseTest
   .extend('server', async ({ task }, { onCleanup }): Promise<TestServer> => {
-    void task
+    const taskName = task.name
     const [{ setupServer }, { http }, { handlers }] = await Promise.all([
       import('msw/node'),
       import('msw'),
       import('./handlers.jsx')
     ])
     const api = 'http://localhost:8000/api'
+    if (!setupServer) throw new Error(`MSW setup unavailable for ${taskName}`)
     const requestHandlers = handlers as RequestHandler[]
     const server = setupServer(...requestHandlers)
 
@@ -308,7 +309,7 @@ export const test = baseTest
   .extend(
     'query',
     async ({ task }, { onCleanup }): Promise<QueryProviderValue> => {
-      void task
+      if (!task) throw new Error('Query fixture requires an active test task')
       const { QueryClient, QueryClientProvider } = await import(
         '@tanstack/react-query'
       )
@@ -357,7 +358,7 @@ export const test = baseTest
     ))
   })
   .extend('i18n', async ({ task }, { onCleanup }) => {
-    void task
+    if (!task) throw new Error('i18n fixture requires an active test task')
     const value = await buildI18nProvider()
     onCleanup(() => value.instance.off('*'))
     return value
@@ -366,7 +367,7 @@ export const test = baseTest
     canonicalizeProviders([query, theme, localization, router, i18n])
   )
   .extend('render', async ({ task }, { onCleanup }): Promise<TestRender> => {
-    void task
+    if (!task) throw new Error('Render fixture requires an active test task')
     onCleanup(cleanup)
     return (ui, providers = [], options = {}) => {
       if (providers.length === 0) {
@@ -381,7 +382,8 @@ export const test = baseTest
   .extend(
     'renderHook',
     async ({ task }, { onCleanup }): Promise<TestRenderHook> => {
-      void task
+      if (!task)
+        throw new Error('Render hook fixture requires an active test task')
       onCleanup(cleanup)
       return (callback, providers = [], options = {}) => {
         if (providers.length === 0) {

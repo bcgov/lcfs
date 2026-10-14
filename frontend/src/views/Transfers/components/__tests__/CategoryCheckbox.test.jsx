@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react';
 import { fireEvent, screen } from '@testing-library/react'
 import { CategoryCheckbox } from '../CategoryCheckbox'
 import { test } from '@/tests/utils/fixtures'

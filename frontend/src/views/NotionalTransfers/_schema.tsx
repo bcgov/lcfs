@@ -1,9 +1,4 @@
-import type {
-  ColDef,
-  ICellEditorParams,
-  ICellRendererParams,
-  RowClassParams
-} from 'ag-grid-community'
+import type { ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
@@ -286,7 +281,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q1Quantity'
             ),
-            valueFormatter: numberCellFormatter,
+            valueFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -311,7 +306,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q2Quantity'
             ),
-            valueFormatter: numberCellFormatter,
+            valueFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -336,7 +331,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q3Quantity'
             ),
-            valueFormatter: numberCellFormatter,
+            valueFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -361,7 +356,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q4Quantity'
             ),
-            valueFormatter: numberCellFormatter,
+            valueFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -385,7 +380,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.totalQuantity'
             ),
-            valueFormatter: numberCellFormatter,
+            valueFormatter,
             cellStyle: (params) =>
               StandardCellWarningAndErrors(
                 params,

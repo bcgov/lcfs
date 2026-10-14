@@ -13,6 +13,7 @@ import { copyToClipboard } from '@/utils/clipboard'
 import type { BCGridRef } from '../../types'
 import type { ColDef } from 'ag-grid-community'
 import type { TablePaginationActionsProps } from '@mui/material/TablePagination/TablePaginationActions'
+import type { BCGridRef } from '@/components/BCDataGrid/types'
 
 // MUI forwards this prop to its styled root, although PaginationProps omits it.
 const paginationRootProps: { component: 'div' } = { component: 'div' }
@@ -23,7 +24,6 @@ export interface BCPaginationActionsProps extends TablePaginationActionsProps {
   enableExportButton?: boolean
   exportName?: string
   gridRef?: BCGridRef
-  [key: string]: any
 }
 
 export function BCPaginationActions({

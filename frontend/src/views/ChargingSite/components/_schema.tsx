@@ -1,20 +1,17 @@
-import type { CellClassParams, ColDef, GridApi } from 'ag-grid-community'
-import type { MouseEvent } from 'react'
-import type { GridErrors, GridWarnings } from '@/types/schema'
+import type { ColDef } from 'ag-grid-community'
+import type {} from '@/types/schema';
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 import { TextCellEditor } from '@/components/BCDataGrid/components/Editors/TextCellEditor'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import {
-  ChargingSiteStatusRenderer,
-  CommonArrayRenderer,
-  createStatusRenderer
-} from '@/utils/grid/cellRenderers'
+import { ChargingSiteStatusRenderer, CommonArrayRenderer } from '@/utils/grid/cellRenderers'
+import { createStatusRenderer } from '@/utils/grid/createStatusRenderer'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { dateFormatter } from '@/utils/formatters'
@@ -131,10 +128,8 @@ const addressAutocompleteQuery = async ({
 }
 
 export const chargingSiteColDefs = (
-  errors: GridErrors,
-  warnings: GridWarnings,
-  _gridReady: boolean
-): ColDef<ChargingSiteGridRow>[] => {
+  errors, warnings
+): ColDef[] => {
   return [
     validation,
     actions((params: { data: ChargingSiteGridRow }) => ({
@@ -348,32 +343,36 @@ export const chargingSiteColDefs = (
   ]
 }
 
+type ChargingEquipmentColumnOptions = {
+  enableSelection?: boolean
+  historyMode?: boolean
+  onToggleHistory?: ((registrationNumber: string | number) => void) | null
+  expandedRows?: Set<string | number>
+  showDateColumns?: boolean
+  showIntendedUsers?: boolean
+  showLocationFields?: boolean
+  showPorts?: boolean
+  showFuelMeasurement?: boolean
+  showNotes?: boolean
+  showOrganizationColumn?: boolean
+}
+
 export const chargingEquipmentColDefs = (
   t: (key: string) => string,
-  _isIDIR: boolean = false,
-  options: {
-    enableSelection?: boolean
-    historyMode?: boolean
-    onToggleHistory?: (registrationNumber?: string | number) => void
-    expandedRows?: Set<string | number>
-    showDateColumns?: boolean
-    showIntendedUsers?: boolean
-    showLocationFields?: boolean
-    showNotes?: boolean
-    showOrganizationColumn?: boolean
-  } = {}
-): ColDef<ChargingSiteGridRow>[] => {
+  ...args: [isIDIR?: boolean, options?: ChargingEquipmentColumnOptions]
+): ColDef[] => {
+  const options = args[1] || {}
   const {
-    enableSelection = false,
-    historyMode = false,
-    onToggleHistory = null,
-    expandedRows = new Set(),
-    showDateColumns = false,
-    showIntendedUsers = false,
-    showLocationFields = true,
-    showNotes = false,
-    showOrganizationColumn = false
-  } = options
+  enableSelection = false,
+  historyMode = false,
+  onToggleHistory = null,
+  expandedRows = new Set(),
+  showDateColumns = false,
+  showIntendedUsers = false,
+  showLocationFields = true,
+  showNotes = false,
+  showOrganizationColumn = false
+} = options
 
   const cols: ColDef<ChargingSiteGridRow>[] = []
 

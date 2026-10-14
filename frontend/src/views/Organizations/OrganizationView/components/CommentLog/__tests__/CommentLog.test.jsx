@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
-import React from 'react'
+import 'react';
 import { createInstance } from 'i18next'
 import { I18nextProvider } from 'react-i18next'
 import internalComment from '@/assets/locales/en/internalComment.json'

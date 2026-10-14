@@ -25,7 +25,6 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useOrganizationFuelSupply } from '@/hooks/useFuelSupply'
 import { useTranslation } from 'react-i18next'
-import { formatNumberWithCommas } from '@/utils/formatters'
 import { defaultInitialPagination } from '@/constants/schedules'
 
 import {
@@ -33,6 +32,7 @@ import {
   defaultColDef,
   gridOptions
 } from './_supplyHistorySchema'
+import { normalizeFuelTypeVolumeTrendRows } from './supplyHistoryHelpers'
 import {
   abbreviateNumber,
   formatCompactAxisNumber,
@@ -255,26 +255,6 @@ const getTopFuelTypesByVolume = (rows, limit = 8) =>
     .slice(0, limit)
     .map(([fuelType]) => fuelType)
 
-export const normalizeFuelTypeVolumeTrendRows = (rows = []) =>
-  Array.from(
-    rows
-      .reduce((acc, row) => {
-        const fuelType = row.fuelType
-        const key = `${row.reportingYear}|${fuelType}|${row.fuelCategory || ''}`
-        const existing = acc.get(key) || {
-          ...row,
-          fuelType,
-          totalVolume: 0,
-          fossilDerived: false
-        }
-        existing.totalVolume += row.totalVolume || 0
-        existing.fossilDerived = existing.fossilDerived || row.fossilDerived
-        acc.set(key, existing)
-        return acc
-      }, new Map())
-      .values()
-  )
-
 const SupplyMetricCard = ({ title, value, period, comparisons = [] }) => (
   <Card
     elevation={1}
@@ -448,7 +428,6 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   )
 
   const analytics = queryData?.data?.analytics || {}
-  const selectedYearSummary = analytics.selectedYearSummary || {}
   const fuelCategoryTrend = analytics.fuelCategoryTrend || []
 
   // Maintain a stable list of available years even after filtering
@@ -540,6 +519,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   )
 
   const dashboardMetricCards = useMemo(() => {
+    const selectedYearSummary = analytics.selectedYearSummary || {}
     const year = selectedYearSummary.reportingYear || '—'
     const priorYear = selectedYearSummary.priorYear
     const previousVolume = selectedYearSummary.priorYearVolume
@@ -643,9 +623,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     ].filter((card) => card.hasData)
   }, [
     analytics.mostRecentSubmission,
+    analytics.selectedYearSummary,
     analytics.totalReports,
     selectedYears,
-    selectedYearSummary,
     t
   ])
 

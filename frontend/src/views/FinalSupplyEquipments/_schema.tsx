@@ -14,9 +14,9 @@ import dayjs from 'dayjs'
 import {
   CommonArrayRenderer,
   MultiSelectRenderer,
-  SelectRenderer,
-  createStatusRenderer
+  SelectRenderer
 } from '@/utils/grid/cellRenderers'
+import { createStatusRenderer } from '@/utils/grid/createStatusRenderer'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters'
@@ -182,7 +182,8 @@ export const finalSupplyEquipmentColDefs = (
         }
         return false
       },
-      tooltipValueGetter: () => 'Select the organization name from the list'
+      tooltipValueGetter: () =>
+        'Select the organization name from the list'
     },
     {
       field: 'supplyFromDate',

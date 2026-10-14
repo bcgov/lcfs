@@ -26,21 +26,15 @@ export interface NumberEditorProps {
   onValueChange: (value: number) => void
   eventKey?: string
   rowIndex?: number
-  column?: any
+  column?: unknown
   min?: number
   max?: number
+  [key: string]: unknown
 }
 
 export const NumberEditor = forwardRef<unknown, NumberEditorProps>(
   (
-    {
-      value,
-      onValueChange,
-      eventKey,
-      rowIndex,
-      column,
-      ...props
-    }: Omit<NumberEditorProps, 'ref'>,
+    { value, onValueChange, ...props }: NumberEditorProps,
     ref
   ) => {
     const inputRef = useRef<HTMLInputElement | null>(null)

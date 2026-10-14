@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import React, { createRef } from 'react'
 import { BCGridEditor } from '../BCGridEditor'
@@ -19,7 +19,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  BCAlert2: React.forwardRef((props, ref) => {
+  BCAlert2: React.forwardRef(function MockAlert(props, ref) {
     React.useImperativeHandle(ref, () => ({ clearAlert: vi.fn() }))
     return <div data-test="alert-box" />
   })
@@ -89,22 +89,21 @@ const mockGridApi = {
 }
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
-  BCGridBase: React.forwardRef((props, ref) => {
-    mockBCGridBaseProps = props
+  BCGridBase: React.forwardRef(function MockGridBase(props, ref) {
     React.useImperativeHandle(ref, () => ({ api: mockGridApi, columnApi: {} }))
-
+    const { onGridReady } = props
     // Prevent setTimeout errors by calling onGridReady properly
     React.useEffect(() => {
-      if (props.onGridReady) {
+      if (onGridReady) {
         setTimeout(() => {
           // Check if component is still mounted before calling onGridReady
           if (ref.current) {
-            props.onGridReady({ api: mockGridApi, columnApi: {} })
+            onGridReady({ api: mockGridApi, columnApi: {} })
           }
         }, 0)
       }
-    }, [props.onGridReady])
-
+    }, [onGridReady, ref])
+    
     return <div data-test="bc-grid-base">Grid Base</div>
   })
 }))

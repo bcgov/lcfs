@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { screen } from '@testing-library/react';
+import { describe, expect, vi } from 'vitest';
 
 import { CommentRow } from '../CommentRow'
 

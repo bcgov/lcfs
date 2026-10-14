@@ -13,7 +13,7 @@ export interface ValidationRenderer2Props {
   data: {
     validationStatus?: 'warning' | 'error' | 'success' | 'pending' | string
     validationMsg?: string
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 

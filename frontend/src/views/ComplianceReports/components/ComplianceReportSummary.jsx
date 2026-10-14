@@ -83,7 +83,6 @@ const ComplianceReportSummary = ({
   methods,
   enableCompareMode,
   alertRef,
-  hasEligibleRenewableFuel,
   setHasEligibleRenewableFuel,
   isRenewableFuelExempted = false,
   isLowCarbonFuelExempted = false
@@ -100,7 +99,12 @@ const ComplianceReportSummary = ({
   const { hasRoles, data: currentUser } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
 
-  const { data, isLoading, isError, error, isFetching } =
+  const {
+  data,
+  isLoading,
+  isError,
+  error
+} =
     useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
     useUpdateComplianceReportSummary(reportID, {
@@ -167,7 +171,13 @@ const ComplianceReportSummary = ({
         severity: 'error'
       })
     }
-  }, [alertRef, data, error, isError])
+  }, [
+    alertRef,
+    data,
+    error,
+    isError,
+    setHasEligibleRenewableFuel
+  ])
 
   useEffect(() => {
     if (snapshotData) {
@@ -259,7 +269,7 @@ const ComplianceReportSummary = ({
           : {})
       })
     },
-    [summaryData, updateComplianceReportPenaltyStatus]
+    [alertRef, summaryData, updateComplianceReportPenaltyStatus]
   )
 
   // Computed data for non-compliance penalty summary based on override state

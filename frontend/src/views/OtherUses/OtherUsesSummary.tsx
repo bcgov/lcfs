@@ -14,7 +14,7 @@ import { defaultInitialPagination } from '@/constants/schedules'
 interface OtherUse {
   otherUsesId: number | string
   actionType?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 interface OtherUsesSummaryProps {

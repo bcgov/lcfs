@@ -1,7 +1,4 @@
-import type { ColDef, ICellRendererParams } from 'ag-grid-community'
-import type { ReactNode } from 'react'
-import BCBox from '@/components/BCBox'
-import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
+import type { ColDef } from 'ag-grid-community'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { dateFormatter } from '@/utils/formatters'
@@ -9,80 +6,8 @@ import {
   useCIApplicationStatuses,
   useGetCIApplicationAnalysts
 } from '@/hooks/useCIApplication'
-import {
-  CIApplicationStatusRenderer,
-  createStatusRenderer
-} from '@/utils/grid/cellRenderers'
+import { LastCommentRenderer, CIApplicationListStatusRenderer } from './components/CIApplicationListRenderers'
 import { CIAssignedAnalystCell } from './components/CIAssignedAnalystCell'
-
-const ANALYST_CHIP_SX = {
-  bgcolor: '#606060',
-  color: 'common.white',
-  borderRadius: '50%',
-  width: 32,
-  height: 32,
-  minWidth: 32,
-  '& .MuiChip-label': { padding: 0 },
-  '&:hover': { bgcolor: '#505050' }
-}
-
-interface CIApplicationListRow {
-  ciApplicationId?: number | string
-  status?: { status?: string }
-  facilityCity?: string | null
-  facilityProvinceState?: string | null
-  facilityCountry?: string | null
-  productionFacilityLocation?: string
-  proposedFuelCodeEffectiveDate?: string | null
-  updateDate?: string | null
-  organization?: { name?: string | null }
-  priorityScore?: number | null
-  verification1Date?: string | null
-  verification2Date?: string | null
-  verificationLevel?: string | null
-  assignedAnalyst?: { initials?: string | null }
-  lastComment?: { fullName?: string | null; comment?: string | null }
-  pathwaySupplementalEditEnabled?: boolean
-  pathway_supplemental_edit_enabled?: boolean
-}
-
-// Centered chip wrapper so analyst / last-comment pills sit visually
-// centered in their grid cell regardless of the row's natural height.
-const PillCell = ({ children }: { children: ReactNode }) => (
-  <BCBox
-    component="div"
-    sx={{
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      py: 1
-    }}
-  >
-    {children}
-  </BCBox>
-)
-
-const LastCommentRenderer = ({
-  data
-}: ICellRendererParams<CIApplicationListRow>) => {
-  const last = data?.lastComment
-  if (!last?.fullName) {
-    return <BCBox component="div" sx={{ width: '100%', height: '100%' }} />
-  }
-  return (
-    <PillCell>
-      <BCUserInitials
-        fullName={last.fullName}
-        tooltipText={last.comment ?? ''}
-        maxLength={500}
-        variant="filled"
-        sx={ANALYST_CHIP_SX}
-      />
-    </PillCell>
-  )
-}
 
 const TEXT_FILTER_PARAMS = {
   filterOptions: ['contains', 'startsWith', 'equals'],
@@ -118,33 +43,7 @@ const productionFacilityLocation = (data?: CIApplicationListRow) => {
   return cityProvince || country
 }
 
-const CI_APPLICATION_CHANGES_REQUESTED_LABEL = 'Changes requested'
-const CIApplicationChangesRequestedRenderer = createStatusRenderer(
-  { [CI_APPLICATION_CHANGES_REQUESTED_LABEL]: 'warning' },
-  { statusField: 'status.status' },
-  CI_APPLICATION_CHANGES_REQUESTED_LABEL
-)
-
-const CIApplicationListStatusRenderer = (
-  props: ICellRendererParams<CIApplicationListRow>
-) => {
-  const supplementalEditEnabled =
-    props.data?.pathwaySupplementalEditEnabled ||
-    props.data?.pathway_supplemental_edit_enabled
-
-  if (!supplementalEditEnabled) {
-    return <CIApplicationStatusRenderer {...props} />
-  }
-
-  return <CIApplicationChangesRequestedRenderer {...props} />
-}
-
-CIApplicationListStatusRenderer.filterPillRenderer =
-  CIApplicationStatusRenderer.filterPillRenderer
-
-const statusCol = (
-  t: (key: string) => string
-): ColDef<CIApplicationListRow> => ({
+const statusCol = (t) => ({
   field: 'status.status',
   headerName: t('carbonIntensity:columns.status'),
   cellRenderer: CIApplicationListStatusRenderer,
@@ -382,7 +281,7 @@ export const defaultSortModel: Array<{ field: string; direction: string }> = [
  * the Government decision panel.
  */
 export const getResumeStep = (
-  application: Record<string, any> | null | undefined
+  application: { status?: { status?: string } } | null | undefined
 ): number => {
   const status = application?.status?.status
   switch (status) {

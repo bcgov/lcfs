@@ -1,4 +1,4 @@
-import type { ColDef, ICellRendererParams } from 'ag-grid-community'
+import type { ColDef } from 'ag-grid-community'
 import {
   numberFormatter,
   phoneNumberFormatter,

@@ -1,51 +1,20 @@
-import type { ColDef, ICellRendererParams } from 'ag-grid-community'
-import {
-  CommonArrayRenderer,
-  FuelCodeStatusRenderer
-} from '@/utils/grid/cellRenderers'
+import type { ColDef } from 'ag-grid-community'
+import { FuelCodeStatusRenderer } from '@/utils/grid/cellRenderers'
 import {
   dateFormatter,
   numberFormatter,
   timezoneFormatter
 } from '@/utils/formatters'
-import BCBadge from '@/components/BCBadge'
-import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
 import {
   CO_PROCESSED_OPTIONS,
-  FUEL_CODE_STATUSES,
-  getAllFuelCodeStatuses
+  FUEL_CODE_STATUSES
 } from '@/constants/statuses'
-
-const FuelCodeStatusBadge = (props: ICellRendererParams) => {
-  const statusArr = getAllFuelCodeStatuses()
-  const statusIndex = statusArr.indexOf(props.data?.status)
-  const statusColors = ['info', 'info', 'success', 'error'] as const
-  return (
-    <BCBox sx={{ width: '100%', height: '100%' }}>
-      <BCBox mt={1} sx={{ display: 'flex', justifyContent: 'center' }}>
-        <BCBadge
-          badgeContent={statusArr[statusIndex]}
-          color={statusColors[statusIndex] ?? 'info'}
-          variant="contained"
-          size="lg"
-          sx={{
-            '& .MuiBadge-badge': {
-              minWidth: '120px',
-              fontWeight: 'regular',
-              textTransform: 'capitalize',
-              fontSize: '0.875rem',
-              padding: '0.4em 0.6em'
-            }
-          }}
-        />
-      </BCBox>
-    </BCBox>
-  )
-}
+import { FuelCodeStatusBadge, TransportModeCellRenderer } from './FuelCodeGridRenderers'
+export { formatTransportModeDistances } from './fuelCodeGridUtils'
 
 const getCoProcessedOptions = () => ({
   data: CO_PROCESSED_OPTIONS.map((value) => ({ coProcessed: value })),
@@ -54,69 +23,8 @@ const getCoProcessedOptions = () => ({
   error: null
 })
 
-const getTransportModeName = (item: unknown, relationKey: string) => {
-  if (!item) return ''
-  if (typeof item === 'string' || typeof item === 'number') {
-    return item.toString()
-  }
-  if (typeof item !== 'object') return ''
-  type Mode = { transportMode?: string; transport_mode?: string }
-  const record = item as Mode & Record<string, unknown>
-  const relation = record[relationKey] as Mode | null | undefined
-  const snakeRelationKey = relationKey.replace(
-    /[A-Z]/g,
-    (letter) => `_${letter.toLowerCase()}`
-  )
-  const snakeRelation = record[snakeRelationKey] as Mode | null | undefined
-  return (
-    record.transportMode ||
-    record.transport_mode ||
-    relation?.transportMode ||
-    relation?.transport_mode ||
-    snakeRelation?.transportMode ||
-    snakeRelation?.transport_mode ||
-    ''
-  )
-}
-
-export const formatTransportModeDistances = (
-  value: unknown,
-  relationKey: string
-) => {
-  const values: unknown[] = Array.isArray(value)
-    ? value
-    : typeof value === 'string' && value.trim()
-      ? value.split(',').map((item) => item.trim())
-      : []
-
-  return values
-    .map((item) => {
-      const mode = getTransportModeName(item, relationKey)
-      if (!mode) return null
-      const distance =
-        typeof item === 'object' && item !== null && 'distance' in item
-          ? item.distance
-          : null
-      return distance === null || distance === undefined || distance === ''
-        ? mode
-        : `${mode} (${distance} km)`
-    })
-    .filter(Boolean)
-}
-
-const TransportModeCellRenderer = (
-  props: ICellRendererParams & { relationKey: string; disableLink?: boolean }
-) => (
-  <CommonArrayRenderer
-    {...props}
-    value={formatTransportModeDistances(props.value, props.relationKey)}
-    disableLink={props.disableLink}
-  />
-)
-
 export const fuelCodeColDefs = (
-  t: (key: string) => string,
-  _status: string | null = null
+  t
 ): ColDef[] => [
   {
     field: 'status',

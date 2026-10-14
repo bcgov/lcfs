@@ -49,6 +49,24 @@ type NotificationMessage = {
   }
 }
 
+type NotificationPayload = {
+  id?: string | number
+  service?: string
+  compliancePeriod?: string | number
+  type?: string
+  toOrganizationId?: number
+  fromOrganization?: string
+}
+
+type NotificationUser = {
+  organization?: { organizationId?: number }
+  [key: string]: unknown
+}
+
+const parseNotificationPayload = (message: string): NotificationPayload => {
+  return JSON.parse(message) as NotificationPayload
+}
+
 const latestNotificationOptions = {
   page: 1,
   size: 3,
@@ -58,10 +76,10 @@ const latestNotificationOptions = {
 
 const getNotificationRoute = (
   notification: NotificationMessage,
-  currentUser?: Record<string, any>
+  currentUser?: NotificationUser
 ) => {
   try {
-    const parsed = JSON.parse(notification.message)
+    const parsed = parseNotificationPayload(notification.message)
     const { id, service, compliancePeriod } = parsed
     const serviceKey = service || notification.type
     const routeMap = routesMapping(currentUser || {})
@@ -97,10 +115,10 @@ const getNotificationSummary = (notification: NotificationMessage) => {
 
 const getNotificationOrganization = (
   notification: NotificationMessage,
-  currentUser?: Record<string, any>
+  currentUser?: NotificationUser
 ) => {
   try {
-    const parsed = JSON.parse(notification.message)
+    const parsed = parseNotificationPayload(notification.message)
     const { service, toOrganizationId, fromOrganization } = parsed
     if (
       service === 'Transfer' &&
@@ -130,7 +148,7 @@ const formatNotificationDate = (date?: string) => {
 
 const getNotificationMeta = (
   notification: NotificationMessage,
-  currentUser?: Record<string, any>
+  currentUser?: NotificationUser
 ) => {
   return [
     getNotificationOrganization(notification, currentUser),
@@ -174,7 +192,7 @@ export const UserProfileActions = () => {
     gcTime: 5 * 60 * 1000 // Keep in cache for 5 minutes
   })
 
-  const notificationsCount = (notificationsData as any)?.count || 0
+  const notificationsCount = notificationsData?.count || 0
   const latestNotifications = useGetNotificationMessages(
     latestNotificationOptions,
     {
@@ -184,8 +202,7 @@ export const UserProfileActions = () => {
     }
   )
   const markAsReadMutation = useMarkNotificationAsRead({})
-  const notificationMessages =
-    (latestNotifications?.data as any)?.notifications || []
+  const notificationMessages = latestNotifications?.data?.notifications || []
 
   useEffect(() => {
     if (!isRoleSwitcherEnabled) {
@@ -335,7 +352,7 @@ export const UserProfileActions = () => {
 
   const iconBtn = (
     <IconButton
-      component={NavLink as any}
+      component={NavLink}
       to={ROUTES.NOTIFICATIONS.LIST}
       color="inherit"
       className="small-icon"

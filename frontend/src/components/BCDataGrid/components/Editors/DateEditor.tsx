@@ -1,12 +1,15 @@
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format, isValid, parseISO } from 'date-fns'
 import { useEffect, useRef, useState } from 'react'
-import type {
-  ComponentProps,
-  KeyboardEvent as ReactKeyboardEvent,
-  MouseEvent,
-  SyntheticEvent
-} from 'react'
+import type { Column, GridApi } from 'ag-grid-community'
+
+interface DateEditorApi extends Pick<GridApi, 'stopEditing' | 'setFocusedCell'> {
+  getLastDisplayedRowIndex: () => number
+}
+
+interface DateEditorColumn extends Pick<Column, 'getColId' | 'getColDef'> {
+  colId?: string
+}
 
 export interface DateEditorProps {
   value?: string | null
@@ -14,15 +17,15 @@ export interface DateEditorProps {
   minDate?: Date | string
   maxDate?: Date | string
   rowIndex?: number
-  api?: any
-  column?: any
+  api?: DateEditorApi
+  column?: DateEditorColumn
   autoOpenLastRow?: boolean
 }
 
 const stopEditingAfterValueChange = (
-  api?: any,
+  api?: DateEditorApi,
   rowIndex?: number,
-  column?: any
+  column?: DateEditorColumn
 ) => {
   const scrollX = window.scrollX
   const scrollY = window.scrollY
