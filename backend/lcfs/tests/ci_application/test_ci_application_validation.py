@@ -7,6 +7,7 @@ import pytest
 from fastapi import HTTPException, status
 
 from lcfs.db.models.ci_application import CIApplication
+from lcfs.db.models.ci_application.CIApplicationStatus import CIApplicationStatus
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.ci_application.validation import CIApplicationValidation
@@ -102,6 +103,50 @@ async def test_validate_access_supplier_without_org_forbidden(repo):
     with pytest.raises(HTTPException) as exc:
         await v.validate_access(ci.ci_application_id)
     assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# A Draft is the applicant's until it is submitted (#5231)
+# ---------------------------------------------------------------------------
+
+
+def _application_in(status_name, organization_id=1):
+    ci = _application(organization_id=organization_id)
+    ci.ci_application_status = CIApplicationStatus(status=status_name)
+    return ci
+
+
+@pytest.mark.anyio
+async def test_validate_access_government_cannot_open_a_draft(repo):
+    repo.get_by_id.return_value = _application_in("Draft", organization_id=99)
+    v = _validation(_user([RoleEnum.GOVERNMENT], organization_id=None), repo)
+
+    with pytest.raises(HTTPException) as exc:
+        await v.validate_access(10)
+
+    # Not found rather than forbidden: government is not told it exists.
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", ["Submitted", "Recommended", "Completed"])
+async def test_validate_access_government_opens_a_submitted_application(
+    repo, status_name
+):
+    ci = _application_in(status_name, organization_id=99)
+    repo.get_by_id.return_value = ci
+    v = _validation(_user([RoleEnum.GOVERNMENT], organization_id=None), repo)
+
+    assert await v.validate_access(10) is ci
+
+
+@pytest.mark.anyio
+async def test_validate_access_the_applicant_opens_its_own_draft(repo):
+    ci = _application_in("Draft", organization_id=1)
+    repo.get_by_id.return_value = ci
+    v = _validation(_user([RoleEnum.SUPPLIER], organization_id=1), repo)
+
+    assert await v.validate_access(10) is ci
 
 
 # ---------------------------------------------------------------------------
