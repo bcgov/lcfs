@@ -1,5 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
+import type { ApiServiceInstance } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PaginationParams, QueryOptions } from './types'
 
@@ -218,9 +219,9 @@ export const useEvidenceRequirements = (
   })
 }
 
-const useEvidenceMutation = (
+const useEvidenceMutation = <TVariables,>(
   designatedActionId: number | string,
-  mutationFn: (client: unknown) => (variables: unknown) => Promise<unknown>
+  mutationFn: (client: ApiServiceInstance) => (variables: TVariables) => Promise<unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()

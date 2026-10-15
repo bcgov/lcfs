@@ -53,6 +53,7 @@ type HeatmapTooltipParams = {
 }
 
 type SunburstTooltipParams = {
+  data?: Pick<SunburstNode, 'units'>
   treePathInfo?: Array<{ name: string }>
   value?: number
 }
@@ -919,7 +920,7 @@ const FuelCodeSunburstChartCard = ({
   )
   const ariaLabel = useMemo(
     () => getFuelCodeSunburstAriaLabel(group, { complianceYear, fuelType }),
-    [complianceYear, fuelType, group, sunburstData]
+    [complianceYear, fuelType, group]
   )
   const ariaDescription = useMemo(
     () =>
@@ -1244,7 +1245,6 @@ export const ReviewCharts = ({ chartData }: ReviewChartsProps) => {
             <AccessibleChartSummary
               id={`chart-summary-${item.title.replace(/\s+/g, '-').toLowerCase()}-${item.currentLabel}-${item.comparisonLabel}`}
               title={item.title}
-              ariaLabel={getSupplementalChartAriaLabel(item)}
               rows={getSupplementalAccessibleRows(item)}
             />
             <BCResponsiveEChart

@@ -10,11 +10,12 @@ import { roles } from '@/constants/roles'
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 vi.mock('@mui/material/styles/useTheme', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual =
+    await importOriginal<typeof import('@mui/material/styles/useTheme')>()
   return {
     ...actual,
     default: vi.fn()
@@ -22,7 +23,8 @@ vi.mock('@mui/material/styles/useTheme', async (importOriginal) => {
 })
 
 vi.mock('@mui/material/useMediaQuery', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual =
+    await importOriginal<typeof import('@mui/material/useMediaQuery')>()
   return {
     ...actual,
     default: vi.fn()
@@ -46,7 +48,10 @@ const mockedUseMediaQuery = useMediaQuery as unknown as Mock
 const mockedUseTheme = useTheme as unknown as Mock
 
 describe('Navbar', () => {
-  const mockUser = {
+  const mockUser: {
+    isGovernmentUser: boolean
+    roles: Array<{ name: string }>
+  } = {
     isGovernmentUser: true,
     roles: [
       {
@@ -61,9 +66,9 @@ describe('Navbar', () => {
   test.beforeEach(() => {
     mockedUseCurrentUser.mockReturnValue({
       data: mockUser,
-      hasRoles: (role) =>
+      hasRoles: (role: string) =>
         mockUser.roles.some((userRole) => userRole.name === role),
-      hasAnyRole: (...roleNames) => {
+      hasAnyRole: (...roleNames: string[]) => {
         return roleNames.some((roleName) =>
           mockUser.roles.some((role) => role.name === roleName)
         )

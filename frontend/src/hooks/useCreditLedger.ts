@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes/apiRoutes'
-import type { QueryOptions } from './types'
+import type { AxiosRequestConfig } from 'axios'
+import type { Filter, QueryOptions, SortOrder } from './types'
 
 export const useCreditLedger = (
   {
@@ -11,7 +12,14 @@ export const useCreditLedger = (
     period,
     sortOrders = [],
     extraFilters = []
-  }: Record<string, unknown> = {},
+  }: {
+    orgId?: number | string | null
+    page?: number
+    size?: number
+    period?: number | string | null
+    sortOrders?: SortOrder[]
+    extraFilters?: Filter[]
+  } = {},
   options: QueryOptions<unknown>
 ) => {
   const api = useApiService()
@@ -82,9 +90,9 @@ export const usePeriodCreditLedger = (
   })
 }
 
-export const useDownloadCreditLedger = (apiOpts: unknown) => {
+export const useDownloadCreditLedger = (apiOpts: AxiosRequestConfig) => {
   const api = useApiService(apiOpts)
-  return ({ orgId, format = 'xlsx' }: Record<string, unknown>) =>
+  return ({ orgId, format = 'xlsx' }: { orgId: number | string; format?: string }) =>
     api.download({
       url: apiRoutes.exportCreditLedger.replace(':orgID', String(orgId ?? '')),
       method: 'get',
@@ -99,14 +107,19 @@ export const useDownloadCreditLedger = (apiOpts: unknown) => {
  * because it hits the period endpoint, which exports the same April–March
  * envelope the screen shows; the other is for the legacy all-time grid.
  */
-export const useDownloadPeriodCreditLedger = (apiOpts?: unknown) => {
+export const useDownloadPeriodCreditLedger = (apiOpts?: AxiosRequestConfig) => {
   const api = useApiService(apiOpts)
   return ({
     orgId,
     complianceYear,
     includePending = false,
     format = 'xlsx'
-  }: Record<string, unknown>) =>
+  }: {
+    orgId: number | string
+    complianceYear: number | string
+    includePending?: boolean
+    format?: string
+  }) =>
     api.download({
       url: apiRoutes.exportCreditLedgerPeriod
         .replace(':orgID', String(orgId ?? ''))

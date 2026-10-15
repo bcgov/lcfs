@@ -5,6 +5,11 @@ import { useEffect, useRef } from 'react'
 
 echarts.use([AriaComponent])
 
+/**
+ * @param {import('echarts').EChartsOption} option
+ * @param {string | undefined} ariaLabel
+ * @param {string | undefined} ariaDescription
+ */
 const getAccessibleOption = (option, ariaLabel, ariaDescription) => {
   if (!option || typeof option !== 'object') return option
 
@@ -46,6 +51,17 @@ const getAccessibleOption = (option, ariaLabel, ariaDescription) => {
   }
 }
 
+/**
+ * @param {{
+ *   option: import('echarts').EChartsOption,
+ *   height?: number | string,
+ *   ariaLabel?: string,
+ *   ariaDescription?: string,
+ *   ariaDescribedBy?: string,
+ *   tabIndex?: number,
+ *   sx?: import('@mui/system').SystemStyleObject<import('@mui/material/styles').Theme>
+ * }} props
+ */
 export const BCResponsiveEChart = ({
   option,
   height = 300,

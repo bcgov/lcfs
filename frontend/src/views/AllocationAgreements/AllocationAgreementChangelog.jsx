@@ -35,12 +35,12 @@ export const AllocationAgreementChangelog = ({ isEarlyIssuance = false }) => {
 
   const currentOrOriginalColumnDefs = useMemo(
     () => changelogCommonColDefs(false, isEarlyIssuance),
-    [isEarlyIssuance, t]
+    [isEarlyIssuance]
   )
 
   const changedColumnDefs = useMemo(
     () => changelogColDefs(true, isEarlyIssuance),
-    [isEarlyIssuance, t]
+    [isEarlyIssuance]
   )
 
   const defaultColDef = useMemo(

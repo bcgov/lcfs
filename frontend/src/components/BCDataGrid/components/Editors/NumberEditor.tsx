@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import TextField from '@mui/material/TextField'
 import { styled } from '@mui/material/styles'
+import type { ChangeEvent } from 'react'
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiInputBase-input': {
@@ -28,19 +29,18 @@ export interface NumberEditorProps {
   column?: unknown
   min?: number
   max?: number
-  [key: string]: unknown
 }
 
-export const NumberEditor = forwardRef(
+export const NumberEditor = forwardRef<unknown, NumberEditorProps>(
   (
-    { value, onValueChange, ...props }: NumberEditorProps,
+    { value, onValueChange, ...props },
     ref
   ) => {
-    const inputRef = useRef(null)
+    const inputRef = useRef<HTMLInputElement | null>(null)
 
     useEffect(() => {
       if (inputRef) {
-        inputRef.current.focus()
+        inputRef.current!.focus()
       }
     }, [])
 
@@ -58,21 +58,23 @@ export const NumberEditor = forwardRef(
       }
     })
 
-    const formatNumber = (num) => {
-      if (isNaN(num) || num === undefined || num === null) return 0
+    const formatNumber = (num: string | number | undefined) => {
+      if (num === undefined || num === null || Number.isNaN(Number(num)))
+        return 0
       return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
     }
 
-    const onInputChange = (event) => {
+    const onInputChange = (event: ChangeEvent<HTMLInputElement>) => {
       const newValue = event.target.value.replace(/,/g, '')
       if (
         newValue === '' ||
-        (isFinite(newValue) && !isNaN(parseFloat(newValue)))
+        (Number.isFinite(Number(newValue)) &&
+          !Number.isNaN(parseFloat(newValue)))
       ) {
         let numValue = parseFloat(newValue)
-        if (numValue < props.min) numValue = props.min
-        if (numValue > props.max) numValue = props.max
-        onValueChange(parseInt(numValue) || 0)
+        if (numValue < (props.min as number)) numValue = props.min as number
+        if (numValue > (props.max as number)) numValue = props.max as number
+        onValueChange(parseInt(numValue as unknown as string) || 0)
       }
     }
 

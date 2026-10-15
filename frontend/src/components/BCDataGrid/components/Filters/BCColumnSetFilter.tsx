@@ -1,4 +1,5 @@
 import { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react'
+import type { SyntheticEvent } from 'react'
 import PropTypes from 'prop-types'
 import Autocomplete from '@mui/material/Autocomplete'
 import TextField from '@mui/material/TextField'
@@ -33,8 +34,8 @@ export interface BCColumnSetFilterProps {
 export const BCColumnSetFilter = forwardRef((props: BCColumnSetFilterProps, ref) => {
   const { apiQuery, params } = props
   const apiOptionField = props.apiOptionField || 'name'
-  const [options, setOptions] = useState([])
-  const [currentValue, setCurrentValue] = useState(null)
+  const [options, setOptions] = useState<Array<{ name: string }>>([])
+  const [currentValue, setCurrentValue] = useState<string | null>(null)
   // make api call to retrieve list
   const { data: optionsData, isLoading: optionsIsLoading } = apiQuery(params)
   // Preserve the original optionsData-only effect trigger.
@@ -48,7 +49,7 @@ export const BCColumnSetFilter = forwardRef((props: BCColumnSetFilterProps, ref)
   // expose AG Grid Filter Lifecycle callbacks
   useImperativeHandle(ref, () => {
     return {
-      onParentModelChanged(parentModel) {
+      onParentModelChanged(parentModel: { filter?: unknown } | null) {
         // When the filter is empty we will receive a null value here
         if (!parentModel) {
           setCurrentValue(null)
@@ -58,8 +59,11 @@ export const BCColumnSetFilter = forwardRef((props: BCColumnSetFilterProps, ref)
       }
     }
   })
-  const onInputBoxChanged = (event, input) => {
-    if (event.target.value === '') {
+  const onInputBoxChanged = (
+    event: SyntheticEvent,
+    input: { name: string } | Array<{ name: string }> | null
+  ) => {
+    if ((event.target as HTMLInputElement).value === '') {
       // Remove the filter
       props.parentFilterInstance((instance) => {
         instance.onFloatingFilterChanged(null, null)
@@ -69,11 +73,13 @@ export const BCColumnSetFilter = forwardRef((props: BCColumnSetFilterProps, ref)
 
     props.parentFilterInstance((instance) => {
       if (!props.multiple) {
-        const val = input ? input.name : ''
+        const val = input ? (input as { name: string }).name : ''
         setCurrentValue(val)
         instance.onFloatingFilterChanged('custom', val)
       } else {
-        const filterArr = input.map((item) => item.name).join(', ')
+        const filterArr = (input as Array<{ name: string }>)
+          .map((item) => item.name)
+          .join(', ')
         setCurrentValue(filterArr)
         instance.onFloatingFilterChanged('custom', filterArr)
       }
@@ -84,7 +90,7 @@ export const BCColumnSetFilter = forwardRef((props: BCColumnSetFilterProps, ref)
     // if no data then wait for re-load
     if (!optionsData) return
     const optionsDataCopy = optionsData.map((option) => ({
-      name: option[apiOptionFieldOnDataChangeRef.current]
+      name: option[apiOptionFieldOnDataChangeRef.current] as string
     }))
 
     setOptions(optionsDataCopy)
@@ -165,7 +171,7 @@ BCColumnSetFilter.propTypes = {
   // for static data, use the following format:
   // apiQuery: () => ({ data: [ { name: 'Option 1' }, { name: 'Option 2' } ], isLoading: false, isError: false }
   apiOptionField: PropTypes.string.isRequired, // field name of the option in the data object. For above static data 'name' is the option field
-  column: PropTypes.object.isRequired, // AG Grid column object. not required to pass explicitly
+  column: PropTypes.object.isRequired as PropTypes.Validator<Column | null | undefined>, // AG Grid column object. not required to pass explicitly
   parentFilterInstance: PropTypes.func.isRequired, // AG Grid Filter Lifecycle callback. not required to pass explicitly
   multiple: PropTypes.bool, // ability to select multiple options.
   params: PropTypes.any, // any parameters that needs to be passed to apiQuery (React Query).
