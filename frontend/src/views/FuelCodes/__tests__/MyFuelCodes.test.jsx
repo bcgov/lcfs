@@ -1,8 +1,10 @@
-import React from 'react'
+import 'react'
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
 import { test } from '@/tests/utils/fixtures'
+
+import { MyFuelCodes } from '@/views/FuelCodes/MyFuelCodes.jsx'
 
 let render
 const fixtureOptions = undefined
@@ -91,8 +93,6 @@ vi.mock('@/hooks/useFuelCode', () => ({
   useFuelCodeStatuses: vi.fn(() => ({ data: [] })),
   useTransportModes: vi.fn(() => ({ data: [] }))
 }))
-
-import { MyFuelCodes } from '@/views/FuelCodes/MyFuelCodes.jsx'
 
 describe('MyFuelCodes', () => {
   beforeEach(() => {

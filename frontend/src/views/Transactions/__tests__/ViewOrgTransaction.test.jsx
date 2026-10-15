@@ -1,8 +1,14 @@
 import React from 'react'
-import { render, screen, act } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { render, screen } from '@testing-library/react';
 import { vi } from 'vitest'
+import { useParams, useLocation } from 'react-router-dom'
 import { ViewOrgTransaction } from '@/views/Transactions/ViewOrgTransaction'
+
+import { useAdminAdjustment } from '@/hooks/useAdminAdjustment'
+import { useInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
+import { OrgTransactionDetails } from '@/views/Transactions/components'
+import Loading from '@/components/Loading'
+import '@/components/BCTypography';
 
 // Mock all external dependencies
 vi.mock('react-router-dom', async () => {
@@ -51,9 +57,9 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  FloatingAlert: React.forwardRef(() => (
-    <div data-test="floating-alert">Alert</div>
-  ))
+  FloatingAlert: React.forwardRef(function FloatingAlertMock() {
+    return <div data-test="floating-alert">Alert</div>
+  })
 }))
 
 vi.mock('@/components/BCTypography', () => ({
@@ -67,14 +73,6 @@ vi.mock('@/views/Transactions/constants', () => ({
   ADMIN_ADJUSTMENT: 'ADMIN_ADJUSTMENT',
   INITIATIVE_AGREEMENT: 'INITIATIVE_AGREEMENT'
 }))
-
-// Get the mocked functions after import
-import { useParams, useLocation } from 'react-router-dom'
-import { useAdminAdjustment } from '@/hooks/useAdminAdjustment'
-import { useInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
-import { OrgTransactionDetails } from '@/views/Transactions/components'
-import Loading from '@/components/Loading'
-import BCTypography from '@/components/BCTypography'
 
 describe('ViewOrgTransaction', () => {
   const mockAlertRef = {
@@ -313,7 +311,7 @@ describe('ViewOrgTransaction', () => {
 
     it('handles path without specific transaction type indicators', () => {
       // This tests the case where transactionType remains null
-      const { container } = renderComponent('789', '/some-other-path/789')
+      renderComponent('789', '/some-other-path/789');
       
       // Should use initiative agreement as default and enabled should be false
       expect(vi.mocked(useInitiativeAgreement)).toHaveBeenCalledWith('789', 

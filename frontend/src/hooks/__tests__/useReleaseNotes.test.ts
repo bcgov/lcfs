@@ -42,7 +42,7 @@ describe('useReleaseNotes', () => {
     vi.mocked(useApiService).mockReturnValue({
       get: mockGet,
       put: mockPut
-    } as any)
+    } as unknown)
   })
 
   test('returns the auto-generated release notes unmodified when there are no overrides', async ({
@@ -151,7 +151,7 @@ describe('useUpdateReleaseNote', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ put: mockPut } as any)
+    vi.mocked(useApiService).mockReturnValue({ put: mockPut } as unknown)
   })
 
   test('PUTs to the version-specific endpoint with summary and sections', async ({

@@ -11,7 +11,7 @@ export const useCreditLedger = (
     period,
     sortOrders = [],
     extraFilters = []
-  }: any = {},
+  }: Record<string, unknown> = {},
   options: QueryOptions<unknown>
 ) => {
   const api = useApiService()
@@ -82,9 +82,9 @@ export const usePeriodCreditLedger = (
   })
 }
 
-export const useDownloadCreditLedger = (apiOpts: any) => {
+export const useDownloadCreditLedger = (apiOpts: unknown) => {
   const api = useApiService(apiOpts)
-  return ({ orgId, format = 'xlsx' }: any) =>
+  return ({ orgId, format = 'xlsx' }: Record<string, unknown>) =>
     api.download({
       url: apiRoutes.exportCreditLedger.replace(':orgID', String(orgId ?? '')),
       method: 'get',
@@ -99,14 +99,14 @@ export const useDownloadCreditLedger = (apiOpts: any) => {
  * because it hits the period endpoint, which exports the same April–March
  * envelope the screen shows; the other is for the legacy all-time grid.
  */
-export const useDownloadPeriodCreditLedger = (apiOpts?: any) => {
+export const useDownloadPeriodCreditLedger = (apiOpts?: unknown) => {
   const api = useApiService(apiOpts)
   return ({
     orgId,
     complianceYear,
     includePending = false,
     format = 'xlsx'
-  }: any) =>
+  }: Record<string, unknown>) =>
     api.download({
       url: apiRoutes.exportCreditLedgerPeriod
         .replace(':orgID', String(orgId ?? ''))

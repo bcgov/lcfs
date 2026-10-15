@@ -2,6 +2,7 @@ import { test } from '@/tests/utils/fixtures'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, vi } from 'vitest'
+import type { ComponentType } from 'react'
 import FuelCodeBulletins from '../FuelCodeBulletins'
 import { CurrentFuelCodes } from '../components/CurrentFuelCodes'
 import { ArchivedFuelCodes } from '../components/ArchivedFuelCodes'
@@ -12,8 +13,26 @@ const mockBCGridViewer = vi.fn()
 const mockHasAnyRole = vi.fn()
 let mockSearch = ''
 
+type BulletinColumnDef = {
+  field?: string
+  filter?: string
+  floatingFilterComponent?: unknown
+  floatingFilterComponentParams?: {
+    initialFilterType?: string
+    label?: string
+  }
+  filterParams?: { defaultOption?: string }
+}
+
+type BulletinGridProps = {
+  gridKey?: string
+  columnDefs?: BulletinColumnDef[]
+  onPaginationChange?: (pagination: { page: number; size: number }) => void
+  [key: string]: unknown
+}
+
 vi.mock('@/utils/withRole', () => ({
-  default: (Component: any) => Component
+  default: (Component: ComponentType) => Component
 }))
 
 vi.mock('@/hooks/useCurrentUser', () => ({
@@ -25,7 +44,9 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 }))
 
 vi.mock('react-router-dom', async () => {
-  const actual: any = await vi.importActual('react-router-dom')
+  const actual = await vi.importActual<typeof import('react-router-dom')>(
+    'react-router-dom'
+  )
   return {
     ...actual,
     useSearchParams: () => [new URLSearchParams(mockSearch), vi.fn()]
@@ -68,7 +89,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/hooks/useFuelCode', () => ({
-  useFuelCodeBulletins: (...args: any[]) => mockUseFuelCodeBulletins(...args),
+  useFuelCodeBulletins: (
+    bulletinType: 'current' | 'archived',
+    paginationOptions: unknown
+  ) => mockUseFuelCodeBulletins(bulletinType, paginationOptions),
   useDownloadFuelCodeBulletins: () => ({
     mutateAsync: mockDownloadMutate
   }),
@@ -77,7 +101,7 @@ vi.mock('@/hooks/useFuelCode', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: (props: any) => {
+  BCGridViewer: (props: BulletinGridProps) => {
     mockBCGridViewer(props)
     return (
       <div data-test={`bc-grid-viewer-${props.gridKey}`}>
@@ -218,10 +242,10 @@ describe('FuelCodeBulletins UI', () => {
 
     const gridProps = mockBCGridViewer.mock.calls[0][0]
     const effectiveDate = gridProps.columnDefs.find(
-      (col: any) => col.field === 'effectiveDate'
+      (col) => col.field === 'effectiveDate'
     )
     const expiryDate = gridProps.columnDefs.find(
-      (col: any) => col.field === 'expiryDate'
+      (col) => col.field === 'expiryDate'
     )
 
     expect(effectiveDate.filter).toBe('agDateColumnFilter')
@@ -260,7 +284,7 @@ describe('FuelCodeBulletins UI', () => {
 
     dateFields.forEach((field) => {
       const colDef = gridProps.columnDefs.find(
-        (col: any) => col.field === field
+        (col) => col.field === field
       )
       expect(colDef.filter).toBe('agDateColumnFilter')
       expect(colDef.floatingFilterComponent).toBeDefined()

@@ -1,24 +1,13 @@
 import { test } from '@/tests/utils/fixtures'
 import React from 'react'
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi
-} from 'vitest'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor
-} from '@testing-library/react'
+import { afterEach, beforeAll, beforeEach, describe, expect, vi } from 'vitest'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
+
+// Import AFTER mocks
+import { EditViewCIApplication } from '@/views/CarbonIntensity/EditViewCIApplication'
 
 // ---------------- Mocks ----------------
 
@@ -209,9 +198,6 @@ vi.mock('@/views/CarbonIntensity/components/StepStub', () => ({
   StepStub: ({ titleKey }) => <div data-test={`stub-${titleKey}`} />,
   default: ({ titleKey }) => <div data-test={`stub-${titleKey}`} />
 }))
-
-// Import AFTER mocks
-import { EditViewCIApplication } from '@/views/CarbonIntensity/EditViewCIApplication'
 
 // ---------------- Tests ----------------
 

@@ -5,8 +5,7 @@ import type { CardProps } from '@mui/material/Card'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useNavigate } from 'react-router-dom'
-import Edit from '@mui/icons-material/Edit'
-import BCButton from '@/components/BCButton'
+import { WidgetEditButton } from './WidgetEditButton'
 import type { ReactNode } from 'react'
 import type { SxProps, Theme } from '@mui/material/styles'
 
@@ -34,6 +33,7 @@ export interface BCWidgetCardProps
   title?: ReactNode
   content: ReactNode
   editButton?: EditButtonConfig | null
+  headerAction?: ReactNode
   editButtonStyles?: Record<string, unknown>
   headerSx?: Record<string, unknown>
 }
@@ -44,6 +44,7 @@ const BCWidgetCard = ({
   content,
   style,
   editButton = null,
+  headerAction = null,
   editButtonStyles = {},
   headerSx = {},
   sx,
@@ -64,21 +65,6 @@ const BCWidgetCard = ({
     border: '1px solid #8c8c8c',
     mb: 5,
     ...(style || {})
-  }
-
-  const defaultButtonStyles: SxProps<Theme> = {
-    borderColor: 'rgba(255, 255, 255 , 1)',
-    color: 'rgba(255, 255, 255 , 1)',
-    '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.8)',
-      color: 'rgba(0, 0, 0, 0.9)',
-      borderColor: 'rgba(0, 0, 0, 0.8)'
-    }
-  }
-
-  const buttonSx: SxProps<Theme> = {
-    ...defaultButtonStyles,
-    ...(editButtonStyles || {})
   }
 
   const combinedCardSx: SxProps<Theme> = Array.isArray(sx)
@@ -115,19 +101,15 @@ const BCWidgetCard = ({
             {title}
           </BCTypography>
           {editButton && (
-            <BCButton
+            <WidgetEditButton
               id={editButton.id}
-              variant="outlined"
-              size="small"
-              style={{ maxHeight: '25px', minHeight: '25px' }}
-              color="light"
               onClick={handleButtonClick}
-              startIcon={<Edit sx={{ width: '16px', height: '16px' }} />}
-              sx={buttonSx}
+              sx={editButtonStyles || {}}
             >
               {editButton.text}
-            </BCButton>
+            </WidgetEditButton>
           )}
+          {headerAction}
         </BCBox>
       </BCBox>
       <Divider

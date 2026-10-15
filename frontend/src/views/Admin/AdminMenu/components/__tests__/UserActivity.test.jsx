@@ -1,5 +1,5 @@
-import React from 'react'
-import { screen, fireEvent, act, waitFor } from '@testing-library/react'
+import 'react'
+import { screen, act } from '@testing-library/react'
 import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
 import { UserActivity } from '../UserActivity'
 import { test } from '@/tests/utils/fixtures'

@@ -1,3 +1,4 @@
+import { omitProperties } from '@/utils/omitProperties'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import { BCDateFloatingFilter } from '../BCDateFloatingFilter'
@@ -23,26 +24,34 @@ vi.mock('date-fns', () => ({
 
 // Mock @mui/material components
 vi.mock('@mui/material/FormControl', () => ({
-  default: vi.fn(({ children, fullWidth, size, role, sx, ...props }) => (
-    <div data-test="form-control" {...props}>
-      {children}
+  default: vi.fn((props) => (
+    <div
+      data-test="form-control"
+      {...omitProperties(props, ['children', 'fullWidth', 'size', 'role', 'sx'])}
+    >
+      {props.children}
     </div>
   ))
 }))
 
 vi.mock('@mui/material/IconButton', () => ({
-  default: vi.fn(
-    ({ children, onClick, onMouseDown, sx, size, edge, ...props }) => (
-      <button
-        data-test="icon-button"
-        onClick={onClick}
-        onMouseDown={onMouseDown}
-        {...props}
-      >
-        {children}
-      </button>
-    )
-  )
+  default: vi.fn((props) => (
+    <button
+      data-test="icon-button"
+      onClick={props.onClick}
+      onMouseDown={props.onMouseDown}
+      {...omitProperties(props, [
+        'children',
+        'onClick',
+        'onMouseDown',
+        'sx',
+        'size',
+        'edge'
+      ])}
+    >
+      {props.children}
+    </button>
+  ))
 }))
 
 vi.mock('@mui/material/InputAdornment', () => ({
@@ -67,21 +76,8 @@ const mockDatePickerProps = {}
 vi.mock('@mui/x-date-pickers/DatePicker', () => ({
   DatePicker: vi.fn((props) => {
     Object.assign(mockDatePickerProps, props)
-    const {
-      value,
-      onChange,
-      onOpen,
-      onClose,
-      open,
-      slotProps,
-      minDate,
-      maxDate,
-      disabled,
-      format,
-      sx,
-      id,
-      ...domProps
-    } = props
+    const { value, onChange, onOpen, onClose, open, slotProps, disabled } =
+      omitProperties(props, ['minDate', 'maxDate', 'format', 'sx', 'id'])
 
     return (
       <div data-test="date-picker">
@@ -189,7 +185,6 @@ describe('BCDateFloatingFilter', () => {
     })
 
     it('renders clear button when selectedDate exists', async () => {
-      const validDate = new Date('2023-12-25')
       mockIsValid.mockReturnValue(true)
 
       render(<BCDateFloatingFilter {...defaultProps} />)
@@ -213,8 +208,6 @@ describe('BCDateFloatingFilter', () => {
       render(<BCDateFloatingFilter {...defaultProps} />)
 
       const dateInput = screen.getByTestId('date-input')
-      const testDate = new Date('2023-12-25')
-
       await act(async () => {
         fireEvent.change(dateInput, { target: { value: '2023-12-25' } })
       })

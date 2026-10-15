@@ -41,7 +41,7 @@ export const OUTCOME_INFORMATION_REQUESTED = 'Information requested'
 
 // Requirements from before titles existed carry none; their description
 // is the heading until one is saved.
-export const requirementHeading = (requirement) =>
+const requirementHeading = (requirement) =>
   requirement.title || requirement.description
 
 // The wireframe's EOC colours (#5118): green when satisfactory, BC gold

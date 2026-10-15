@@ -23,6 +23,21 @@ export interface AddressOption {
   score?: number
 }
 
+interface GeocoderSuggestion {
+  full_address?: string
+  street_address?: string
+  city?: string
+  province?: string
+  postal_code?: string
+  latitude?: number
+  longitude?: number
+  score?: number
+}
+
+interface GeocoderAutocompleteResponse {
+  suggestions?: GeocoderSuggestion[]
+}
+
 export interface AddressAutocompleteProps {
   className?: string
   value?: string | AddressOption | null
@@ -62,55 +77,75 @@ export const AddressAutocomplete = forwardRef<
     const [isAddressSelected, setIsAddressSelected] = useState(false)
     
     const { autocompleteAddress, validateAddress } = useGeocoder()
+    const { mutateAsync: fetchAutocomplete } = autocompleteAddress
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
-
-    const fetchAddresses = async (searchValue: string) => {
-      if (!searchValue || searchValue.length < 3) {
-        setOptions([])
-        return
-      }
-
-      // Don't fetch if user is just adding postal code to selected address
-      if (
-        isAddressSelected &&
-        searchValue.includes(',') &&
-        (searchValue.endsWith(' ') ||
-          /[A-Za-z][0-9][A-Za-z]/.test(searchValue.slice(-3)))
-      ) {
-        return
-      }
-
-      try {
-        // Use the new autocomplete endpoint
-        const result = await autocompleteAddress.mutateAsync({
-          partialAddress: searchValue,
-          maxResults
-        })
-
-        if (result.suggestions) {
-          // Suggestions now come as complete AddressSchema objects
-          const addresses = result.suggestions.map((addr: any) => ({
-            fullAddress: addr.full_address,
-            streetAddress: addr.street_address || '',
-            city: addr.city || '',
-            localityName: addr.city || '',
-            province: addr.province || '',
-            postalCode: addr.postal_code || '',
-            postal_code: addr.postal_code || '',
-            latitude: addr.latitude,
-            longitude: addr.longitude,
-            score: addr.score
-          }))
-          
-          setOptions(addresses)
-        }
-      } catch (error) {
-        console.error('Error fetching addresses:', error)
-        setOptions([])
-      }
-    }
+    const fetchContextRef = useRef({
+      isAddressSelected,
+      maxResults,
+      fetchAutocomplete
+    })
 
     useEffect(() => {
+      fetchContextRef.current = {
+        isAddressSelected,
+        maxResults,
+        fetchAutocomplete
+      }
+    }, [isAddressSelected, maxResults, fetchAutocomplete])
+
+    useEffect(() => {
+      const {
+        isAddressSelected: addressWasSelected,
+        maxResults: requestMaxResults,
+        fetchAutocomplete: requestAutocomplete
+      } = fetchContextRef.current
+
+      const fetchAddresses = async (searchValue: string) => {
+        if (!searchValue || searchValue.length < 3) {
+          setOptions([])
+          return
+        }
+
+        // Don't fetch if user is just adding postal code to selected address
+        if (
+          addressWasSelected &&
+          searchValue.includes(',') &&
+          (searchValue.endsWith(' ') ||
+            /[A-Za-z][0-9][A-Za-z]/.test(searchValue.slice(-3)))
+        ) {
+          return
+        }
+
+        try {
+          // Use the new autocomplete endpoint
+          const result = (await requestAutocomplete({
+            partialAddress: searchValue,
+            maxResults: requestMaxResults
+          })) as GeocoderAutocompleteResponse
+
+          if (result.suggestions) {
+            // Suggestions now come as complete AddressSchema objects
+            const addresses = result.suggestions.map((addr) => ({
+              fullAddress: addr.full_address,
+              streetAddress: addr.street_address || '',
+              city: addr.city || '',
+              localityName: addr.city || '',
+              province: addr.province || '',
+              postalCode: addr.postal_code || '',
+              postal_code: addr.postal_code || '',
+              latitude: addr.latitude,
+              longitude: addr.longitude,
+              score: addr.score
+            }))
+
+            setOptions(addresses)
+          }
+        } catch (error) {
+          console.error('Error fetching addresses:', error)
+          setOptions([])
+        }
+      }
+
       // Clear previous timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -133,7 +168,7 @@ export const AddressAutocomplete = forwardRef<
           clearTimeout(timeoutRef.current)
         }
       }
-    }, [inputValue]) // Only depend on inputValue
+    }, [inputValue])
 
     const isLoading = autocompleteAddress.isPending || validateAddress.isPending
 

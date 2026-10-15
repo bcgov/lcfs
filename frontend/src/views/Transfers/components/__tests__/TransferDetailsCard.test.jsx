@@ -1,7 +1,9 @@
-import React from 'react'
+import 'react';
 import { render, screen } from '@testing-library/react'
 import { TransferDetailsCard } from '../TransferDetailsCard'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { calculateTotalValue, currencyFormatter, formatNumberWithCommas } from '@/utils/formatters'
 
 // Only mock absolutely necessary external dependencies
 vi.mock('@/utils/formatters', () => ({
@@ -17,7 +19,11 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, textAlign, variant, ...props }) => <div data-test="typography" style={{ textAlign }} {...props}>{children}</div>
+  default: ({
+  children,
+  textAlign,
+  ...props
+}) => { delete props.variant; return <div data-test="typography" style={{ textAlign }} {...props}>{children}</div>; }
 }))
 
 vi.mock('@/components/BCBox', () => ({
@@ -27,8 +33,6 @@ vi.mock('@/components/BCBox', () => ({
 vi.mock('@/views/Transfers/components', () => ({
   OrganizationBadge: (props) => <div data-test="organization-badge" data-org-id={props.organizationId} data-org-name={props.organizationName}>{props.organizationName}</div>
 }))
-
-import { calculateTotalValue, currencyFormatter, formatNumberWithCommas } from '@/utils/formatters'
 
 describe('TransferDetailsCard Component', () => {
   const defaultProps = {
