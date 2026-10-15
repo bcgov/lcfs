@@ -1,14 +1,14 @@
 """Add internal comment @mention notification type.
 
 Revision ID: c2d4f6a8e0b1
-Revises: b1c3e5a7d9f2
-Create Date: 2026-10-05 09:00:00.000000
+Revises: c4d6e8f0a2b5
+Create Date: 2026-10-15 09:00:00.000000
 """
 
 from alembic import op
 
 revision = "c2d4f6a8e0b1"
-down_revision = "b1c3e5a7d9f2"
+down_revision = "c4d6e8f0a2b5"
 branch_labels = None
 depends_on = None
 
