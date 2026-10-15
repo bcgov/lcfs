@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { ThemeProvider } from '@mui/material/styles'
-import { createTheme } from '@mui/material/styles'
+import { render, screen, within } from '@testing-library/react'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { BCPagination } from '../BCPagination'
 
 // Mock BCPaginationActions component
@@ -27,10 +26,10 @@ vi.mock('@mui/material/TablePagination', async (importOriginal) => {
   return {
     ...actual,
     default: ({
-      count, 
-      page, 
-      rowsPerPage, 
-      onPageChange, 
+      count,
+      page,
+      rowsPerPage,
+      onPageChange,
       onRowsPerPageChange,
       ActionsComponent,
       labelDisplayedRows,
@@ -47,7 +46,16 @@ vi.mock('@mui/material/TablePagination', async (importOriginal) => {
         {...props}
       >
         <div data-test="label-displayed-rows">
-          {labelDisplayedRows && labelDisplayedRows({ from: 1, to: 10, count: 100 })}
+          {labelDisplayedRows &&
+            labelDisplayedRows({
+              from: count === 0 ? 0 : page * rowsPerPage + 1,
+              to:
+                count === -1
+                  ? (page + 1) * rowsPerPage
+                  : Math.min(count, (page + 1) * rowsPerPage),
+              count,
+              page
+            })}
         </div>
         <div data-test="actions-component">
           {ActionsComponent && ActionsComponent({ count, page, rowsPerPage })}
@@ -169,18 +177,33 @@ describe('BCPagination', () => {
   })
 
   describe('labelDisplayedRows Function', () => {
-    it('returns correct JSX format with from/to/count values', () => {
+    it('announces the displayed range without changing its wording', () => {
       renderWithTheme(<BCPagination {...defaultProps} />)
       
       const labelElement = screen.getByTestId('label-displayed-rows')
       expect(labelElement).toBeInTheDocument()
-      
-      // The mock passes { from: 1, to: 10, count: 100 } to test the function
-      expect(labelElement.textContent).toContain('1')
-      expect(labelElement.textContent).toContain('to')
-      expect(labelElement.textContent).toContain('10')
-      expect(labelElement.textContent).toContain('of')
-      expect(labelElement.textContent).toContain('100')
+
+      const status = within(labelElement).getByRole('status')
+      expect(status).toHaveTextContent('1 to 10 of 100')
+      expect(status).toHaveAttribute('aria-live', 'polite')
+      expect(status).toHaveAttribute('aria-atomic', 'true')
+      expect(status.children).toHaveLength(0)
+    })
+
+    it('preserves the existing wording for empty results', () => {
+      renderWithTheme(<BCPagination {...defaultProps} total={0} />)
+
+      expect(screen.getByRole('status')).toHaveTextContent(
+        '0 to 0 of 0'
+      )
+    })
+
+    it('preserves the existing wording for unknown totals', () => {
+      renderWithTheme(<BCPagination {...defaultProps} total={-1} />)
+
+      expect(screen.getByRole('status')).toHaveTextContent(
+        '1 to 10 of -1'
+      )
     })
   })
 

@@ -49,6 +49,7 @@ class LCFS_Constants:
         SpreadsheetColumn("Value per unit", "float"),
         SpreadsheetColumn("Category", "text"),
         SpreadsheetColumn("Status", "text"),
+        SpreadsheetColumn("Agreement Date", "date"),
         SpreadsheetColumn("Effective Date", "date"),
         SpreadsheetColumn("Recorded", "date"),
         SpreadsheetColumn("Approved", "date"),
@@ -63,6 +64,11 @@ class LCFS_Constants:
     )
     # Fuel types introduced with the 2024 legislation; not valid in pre-2024 reports
     LEGACY_EXCLUDED_FUEL_TYPES = ["Other", "Other diesel fuel"]
+    # Pre-2024 fuel type names mapped to their current equivalents.
+    LEGACY_FUEL_TYPE_EQUIVALENTS = {
+        "Petroleum-based diesel": "Fossil-derived diesel",
+        "Petroleum-based gasoline": "Fossil-derived gasoline",
+    }
 
     @classmethod
     def get_current_compliance_year(cls) -> str:

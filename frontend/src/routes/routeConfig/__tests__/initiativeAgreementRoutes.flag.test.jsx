@@ -1,5 +1,4 @@
-import React from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { CONFIG, FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
@@ -21,7 +20,11 @@ describe('initiative agreements feature flag', () => {
   })
 
   it('renders the page when enabled', () => {
-    const Gated = withFeatureFlag(Page, FEATURE_FLAGS.INITIATIVE_AGREEMENTS, '/')
+    const Gated = withFeatureFlag(
+      Page,
+      FEATURE_FLAGS.INITIATIVE_AGREEMENTS,
+      '/'
+    )
     render(
       <MemoryRouter>
         <Gated />
@@ -34,7 +37,11 @@ describe('initiative agreements feature flag', () => {
     CONFIG.feature_flags.initiativeAgreements = false
     expect(isFeatureEnabled(FEATURE_FLAGS.INITIATIVE_AGREEMENTS)).toBe(false)
 
-    const Gated = withFeatureFlag(Page, FEATURE_FLAGS.INITIATIVE_AGREEMENTS, '/')
+    const Gated = withFeatureFlag(
+      Page,
+      FEATURE_FLAGS.INITIATIVE_AGREEMENTS,
+      '/'
+    )
     render(
       <MemoryRouter>
         <Gated />

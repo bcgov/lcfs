@@ -1,9 +1,10 @@
 import React from 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ChargingSitesList } from '../ChargingSitesList'
 import { test } from '@/tests/utils/fixtures'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 const mockNavigate = vi.fn()
 const mockUseLocation = vi.fn()
@@ -39,15 +40,16 @@ vi.mock('../components/ChargingSitesMap', () => ({
 
 // Mock grid to keep tests focused
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: React.forwardRef((props, ref) => (
-    <div
-      data-testid="bc-grid-viewer"
-      onClick={() => props.onRowClicked?.({ data: { chargingSiteId: 123 } })}
-    >
+  BCGridViewer: React.forwardRef(function BCGridViewerMock(props) {
+  return <div data-testid="bc-grid-viewer" onClick={() => props.onRowClicked?.({
+    data: {
+      chargingSiteId: 123
+    }
+  })}>
       Grid - Page: {props.paginationOptions?.page}, Size:{' '}
       {props.paginationOptions?.size}
-    </div>
-  ))
+    </div>;
+})
 }))
 
 // Mock the clear filters button
@@ -86,7 +88,6 @@ vi.mock('@/hooks/useChargingSite', () => ({
 }))
 
 vi.mock('@/hooks/useCurrentUser')
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 // Mock sessionStorage
 const mockSessionStorage = (() => {

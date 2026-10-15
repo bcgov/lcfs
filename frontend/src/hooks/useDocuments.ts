@@ -48,7 +48,7 @@ export const useDocuments = (
 export const useUploadDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -63,7 +63,7 @@ export const useUploadDocument = (
   } = options
 
   return useMutation({
-    mutationFn: async (input: any) => {
+    mutationFn: async (input: unknown) => {
       // Backwards compatible: callers can either pass a File directly
       // (legacy signature) or a { file, documentCategory } object so
       // CI applications can route uploads to a specific category bucket
@@ -95,7 +95,7 @@ export const useUploadDocument = (
         params: documentCategory
           ? { document_category: documentCategory }
           : undefined,
-        onUploadProgress: onUploadProgress
+        onUploadProgress
       })
     },
     onSuccess: (data, variables, context) => {
@@ -128,7 +128,7 @@ export const useUploadDocument = (
 export const useDeleteDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -141,7 +141,7 @@ export const useDeleteDocument = (
   } = options
 
   return useMutation({
-    mutationFn: async (documentID: any) => {
+    mutationFn: async (documentID: unknown) => {
       if (!documentID) {
         throw new Error('Document ID is required for deletion')
       }
@@ -180,13 +180,13 @@ export const useDeleteDocument = (
 export const useDownloadDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: Record<string, any> = {}
+  options: Record<string, unknown> = {}
 ) => {
   const client = useApiService()
 
   const { onSuccess, onError, ...requestOptions } = options
 
-  return async (documentID: any, customFilename: any) => {
+  return async (documentID: unknown, customFilename: unknown) => {
     try {
       if (!documentID) {
         throw new Error('Document ID is required for download')
@@ -247,13 +247,13 @@ export const useDownloadDocument = (
 export const useFetchDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: Record<string, any> = {}
+  options: Record<string, unknown> = {}
 ) => {
   const client = useApiService()
 
   const { onSuccess, onError, ...requestOptions } = options
 
-  return async (documentID: any) => {
+  return async (documentID: unknown) => {
     try {
       if (!documentID) {
         throw new Error('Document ID is required for preview')
@@ -323,7 +323,7 @@ export const useGetDocumentInfo = (
 export const useUpdateDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -337,7 +337,7 @@ export const useUpdateDocument = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ documentID, data }: any) => {
+    mutationFn: async ({ documentID, data }: Record<string, unknown>) => {
       if (!documentID) {
         throw new Error('Document ID is required for update')
       }

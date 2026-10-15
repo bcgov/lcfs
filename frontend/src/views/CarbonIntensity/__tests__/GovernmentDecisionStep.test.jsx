@@ -1,17 +1,11 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
+import 'react'
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within
-} from '@testing-library/react'
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 
 import { roles } from '@/constants/roles'
+
+import { GovernmentDecisionStep } from '@/views/CarbonIntensity/components/GovernmentDecisionStep'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
@@ -85,8 +79,6 @@ vi.mock('@/hooks/useCurrentUser', () => ({
       names.some((name) => mockUserRoles.some((r) => r.name === name))
   })
 }))
-
-import { GovernmentDecisionStep } from '@/views/CarbonIntensity/components/GovernmentDecisionStep'
 
 const baseCi = { ciApplicationId: 10, status: { status: 'Submitted' } }
 const renderAnalystDecision = (render, providers, ciApplication = baseCi) => {
@@ -1388,6 +1380,86 @@ describe('GovernmentDecisionStep', () => {
       const value = screen.getByTestId('ci-verification-summary-priority-score')
       expect(value.tagName).toBe('DD')
       expect(value.closest('dl')).not.toBeNull()
+    })
+  })
+
+  describe('return to first verification history', () => {
+    test('shows the return reason below workflow buttons while first verification is pending', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={{
+            ...baseCi,
+            verification2Date: '2026-08-19T18:45:00Z',
+            returnHistory: [
+              {
+                event: 'verification_returned_to_first_verification',
+                changedAt: '2026-08-20T18:45:00Z',
+                changedBy: 'Morgan Verifier',
+                returnReason: 'Verification 2 finding changed assumptions.'
+              }
+            ]
+          }}
+          isGovernment={true}
+        />,
+        [query, theme, localization, router]
+      )
+
+      expect(screen.getByTestId('ci-summary-return-history')).toBeVisible()
+      expect(screen.getByTestId('ci-summary-return-history-row')).toHaveAttribute(
+        'data-pending-return',
+        'true'
+      )
+      expect(
+        screen.getByText(/Verification 2 finding changed assumptions/)
+      ).toBeVisible()
+      expect(screen.getByText('Morgan Verifier')).toBeVisible()
+      expect(
+        screen
+          .getByTestId('ci-return-to-first-verification-btn')
+          .compareDocumentPosition(
+            screen.getByTestId('ci-summary-return-history')
+          ) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+    })
+
+    test('stops highlighting the return reason after first verification runs again', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      mockUserRoles = [{ name: roles.analyst }]
+      render(
+        <GovernmentDecisionStep
+          ciApplication={{
+            ...baseCi,
+            verification1Date: '2026-08-21T18:45:00Z',
+            returnHistory: [
+              {
+                event: 'verification_returned_to_first_verification',
+                changedAt: '2026-08-20T18:45:00Z',
+                changedBy: 'Morgan Verifier',
+                returnReason: 'Verification 2 finding changed assumptions.'
+              }
+            ]
+          }}
+          isGovernment={true}
+        />,
+        [query, theme, localization, router]
+      )
+
+      expect(screen.getByTestId('ci-summary-return-history-row')).toHaveAttribute(
+        'data-pending-return',
+        'false'
+      )
     })
   })
 })

@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreditLedger } from '../CreditLedger'
 import { roles } from '@/constants/roles'
 
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn()
 }))
@@ -23,8 +25,6 @@ vi.mock('../CreditLedgerPeriod', () => ({
     <div data-test="period-ledger">{organizationId}</div>
   )
 }))
-
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 const mockCurrentUser = vi.mocked(useCurrentUser)
 

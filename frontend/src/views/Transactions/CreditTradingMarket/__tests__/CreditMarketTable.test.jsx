@@ -19,7 +19,7 @@ vi.mock('react-i18next', () => ({
 
 // Mock the schema imports
 vi.mock('../_schema', () => ({
-  creditMarketColDefs: vi.fn((t) => [
+  creditMarketColDefs: vi.fn(() => [
     { headerName: 'Organization Name', field: 'organizationName' },
     { headerName: 'Credits to sell', field: 'creditsToSell' },
     { headerName: 'Role in market', field: 'roleInMarket' },
@@ -36,13 +36,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: (props) => {
     mockBCGridViewer(props)
     const {
-      queryData,
-      overlayNoRowsTemplate,
-      columnDefs,
-      readOnlyGrid,
-      getRowId,
-      onPaginationChange
-    } = props
+  queryData,
+  overlayNoRowsTemplate,
+  columnDefs,
+  getRowId,
+  onPaginationChange
+} = props
     const { data, isLoading, error } = queryData
 
     if (isLoading) return <div data-test="grid-loading">Loading...</div>
@@ -78,11 +77,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock Material-UI Box
 vi.mock('@mui/material/Box', () => ({
-  default: ({ children, component, sx, ...props }) => (
-    <div data-test="mui-box" {...props}>
+  default: ({
+  children,
+  ...props
+}) => { delete props.component; delete props.sx; return <div data-test="mui-box" {...props}>
       {children}
-    </div>
-  )
+    </div>; }
 }))
 
 // Sample test data
@@ -524,6 +524,63 @@ describe('CreditMarketTable', () => {
 
         expect(pagination.total).toBe(25)
         expect(pagination.totalPages).toBe(3) // Math.ceil(25/10) = 3
+        expect(props.queryData.data.creditMarketListings).toHaveLength(10)
+      })
+    })
+
+    test('passes only the selected page of rows to the grid', async ({
+      render
+    }) => {
+      const largeDataset = Array.from({ length: 25 }, (_, index) => ({
+        organizationId: index + 1,
+        organizationName: `Organization ${String(index + 1).padStart(2, '0')}`,
+        creditsToSell: (index + 1) * 10,
+        displayInCreditMarket: true,
+        creditMarketIsSeller: true,
+        creditMarketIsBuyer: false,
+        creditMarketContactName: `Contact ${index + 1}`,
+        creditMarketContactEmail: `contact${index + 1}@org.com`,
+        creditMarketContactPhone: `555-000${index + 1}`
+      }))
+
+      vi.mocked(useCurrentUser).mockReturnValue({ data: mockCurrentUserNoOrg })
+      vi.mocked(useCreditMarketListings).mockReturnValue({
+        data: largeDataset,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: mockRefetchListings
+      })
+
+      let capturedProps = null
+      mockBCGridViewer.mockImplementation((props) => {
+        capturedProps = props
+        return <div data-test="mock-grid">Mock Grid</div>
+      })
+
+      render(<CreditMarketTable />, [])
+
+      await waitFor(() => {
+        expect(capturedProps.queryData.data.creditMarketListings).toHaveLength(
+          10
+        )
+        expect(
+          capturedProps.queryData.data.creditMarketListings[0].organizationName
+        ).toBe('Organization 01')
+      })
+
+      await act(async () => {
+        capturedProps.onPaginationChange({ page: 2 })
+      })
+
+      await waitFor(() => {
+        expect(capturedProps.paginationOptions.page).toBe(2)
+        expect(capturedProps.queryData.data.creditMarketListings).toHaveLength(
+          10
+        )
+        expect(
+          capturedProps.queryData.data.creditMarketListings[0].organizationName
+        ).toBe('Organization 11')
       })
     })
 

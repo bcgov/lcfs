@@ -26,6 +26,8 @@ export const CommentLogFilters = ({
 }) => {
   const { t } = useTranslation(['internalComment'])
   const searchId = useId()
+  const categoryId = useId()
+  const yearId = useId()
 
   const [localSearch, setLocalSearch] = useState(filters.search)
   const debouncedSearch = useDebounce(localSearch, 300)
@@ -127,7 +129,11 @@ export const CommentLogFilters = ({
           }}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            <BCTypography variant="body2" sx={{ fontWeight: 500 }}>
+            <BCTypography
+              id={`${searchId}-label`}
+              variant="body2"
+              sx={{ fontWeight: 500 }}
+            >
               {t('internalComment:log.filters.searchLabel')}:
             </BCTypography>
             <TextField
@@ -137,7 +143,10 @@ export const CommentLogFilters = ({
               placeholder={t('internalComment:log.filters.searchPlaceholder')}
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
-              inputProps={{ maxLength: 500 }}
+              inputProps={{
+                maxLength: 500,
+                'aria-labelledby': `${searchId}-label`
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -153,10 +162,15 @@ export const CommentLogFilters = ({
           </Box>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            <BCTypography variant="body2" sx={{ fontWeight: 500 }}>
+            <BCTypography
+              id={`${categoryId}-label`}
+              variant="body2"
+              sx={{ fontWeight: 500 }}
+            >
               {t('internalComment:log.filters.categoryLabel')}:
             </BCTypography>
             <Autocomplete
+              id={categoryId}
               size="small"
               disablePortal
               options={categoryOptions}
@@ -171,15 +185,14 @@ export const CommentLogFilters = ({
                 typeof o === 'string' ? o : (o?.label ?? '')
               }
               sx={{ width: 200 }}
-              slotProps={{
-                input: {
-                  'data-test': 'comment-log-category',
-                  'aria-label': t('internalComment:log.filters.categoryLabel')
-                }
-              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
+                  inputProps={{
+                    ...params.inputProps,
+                    'data-test': 'comment-log-category',
+                    'aria-labelledby': `${categoryId}-label`
+                  }}
                   placeholder={t('internalComment:log.filters.categoryLabel')}
                   sx={{ '& .MuiOutlinedInput-root': { height: '40px' } }}
                 />
@@ -188,10 +201,15 @@ export const CommentLogFilters = ({
           </Box>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            <BCTypography variant="body2" sx={{ fontWeight: 500 }}>
+            <BCTypography
+              id={`${yearId}-label`}
+              variant="body2"
+              sx={{ fontWeight: 500 }}
+            >
               {t('internalComment:log.filters.yearLabel')}:
             </BCTypography>
             <Autocomplete
+              id={yearId}
               size="small"
               disablePortal
               options={yearOptions}
@@ -206,15 +224,14 @@ export const CommentLogFilters = ({
                 typeof o === 'string' ? o : (o?.label ?? '')
               }
               sx={{ width: 120 }}
-              slotProps={{
-                input: {
-                  'data-test': 'comment-log-year',
-                  'aria-label': t('internalComment:log.filters.yearLabel')
-                }
-              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
+                  inputProps={{
+                    ...params.inputProps,
+                    'data-test': 'comment-log-year',
+                    'aria-labelledby': `${yearId}-label`
+                  }}
                   placeholder={t('internalComment:log.filters.yearLabel')}
                   sx={{ '& .MuiOutlinedInput-root': { height: '40px' } }}
                 />

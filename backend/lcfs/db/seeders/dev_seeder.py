@@ -5,6 +5,7 @@ from sqlalchemy import text
 
 from lcfs.db.seeders.dev.user_profile_seeder import seed_user_profiles
 from lcfs.db.seeders.dev.user_role_seeder import seed_user_roles
+from lcfs.db.seeders.dev.comment_seeder import seed_comments
 from lcfs.db.seeders.dev.organization_address_seeder import seed_organization_addresses
 from lcfs.db.seeders.dev.organization_attorney_address_seeder import (
     seed_organization_attorney_addresses,
@@ -152,6 +153,7 @@ async def seed_dev(session: AsyncSession):
     # Seed transfers and transactions
     await seed_test_transfers(session)
     await seed_test_transfer_history(session)
+    await seed_comments(session)
 
     # Seed remaining
     await seed_finished_fuel_transfer_modes(session)

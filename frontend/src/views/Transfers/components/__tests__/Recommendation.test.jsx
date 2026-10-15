@@ -1,5 +1,5 @@
-import React from 'react'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import 'react';
+import { screen, fireEvent } from '@testing-library/react';
 import { Recommendation } from '../Recommendation'
 import { useForm, FormProvider } from 'react-hook-form'
 import { beforeEach, describe, expect, vi } from 'vitest'

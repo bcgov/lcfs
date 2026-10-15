@@ -1,6 +1,5 @@
 import {
   After,
-  Before,
   Given,
   When,
   Then
@@ -62,7 +61,7 @@ When('add the {string} and save as draft', (comment) => {
 
 Then(
   'I should see a draft transfer with {string} units having cost of {string} per unit sent to organization {string}.',
-  (qty, pricePerUnit, orgId) => {
+  () => {
     cy.url().should('match', /transfers\/edit\/\d+$/)
     // check for visible buttons
     cy.get('#delete-draft-btn').should('exist')

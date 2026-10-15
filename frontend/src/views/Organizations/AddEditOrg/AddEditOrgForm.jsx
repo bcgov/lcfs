@@ -1,11 +1,8 @@
 // External Modules
-import {
-  faArrowLeft,
-  faFloppyDisk,
-  faClose
-} from '@fortawesome/free-solid-svg-icons'
+// External Modules
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { yupResolver } from '@hookform/resolvers/yup'
+import '@hookform/resolvers/yup';
 import Box from '@mui/material/Box'
 import Checkbox from '@mui/material/Checkbox'
 import FormControl from '@mui/material/FormControl'
@@ -17,20 +14,22 @@ import Paper from '@mui/material/Paper'
 import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import TextField from '@mui/material/TextField'
-import CloseIcon from '@mui/icons-material/Close'
+import '@mui/icons-material/Close';
 import BCTypography from '@/components/BCTypography'
 import { useMutation } from '@tanstack/react-query'
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { createValidationSchema, schemaValidation } from './_schema'
+import { createValidationSchema } from './_schema';
+
+// Internal Modules
 
 // Internal Modules
 import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
-import { ROUTES } from '@/routes/routes'
+import '@/routes/routes';
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { AddressAutocomplete } from '@/components/BCForm/AddressAutocomplete'
@@ -47,7 +46,7 @@ import ReferenceCompareBox from './ReferenceCompareBox'
 // Component for adding a new organization
 export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   const { t } = useTranslation(['common', 'org'])
-  const navigate = useNavigate()
+  useNavigate();
   const alertRef = useRef(null)
   const location = useLocation()
   const organizationSnapshot = location.state?.organizationSnapshot
@@ -118,7 +117,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     setValue,
     trigger,
     reset,
-    control
+    control,
+    clearErrors
   } = methods
 
   // Watch the organization type selections for changes
@@ -139,7 +139,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       // Handle validation when switching organization types
       if (!newRequiresBCeID) {
         // For non-BCeID types, clear errors for fields that are now optional
-        methods.clearErrors([
+        clearErrors([
           'orgPhoneNumber',
           'orgStreetAddress',
           'orgCity',
@@ -147,7 +147,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         ])
       }
     }
-  }, [watchedOrgTypeIds, orgTypes])
+  }, [watchedOrgTypeIds, orgTypes, clearErrors])
 
   // When the analyst checks an organization type, suggest its typical roles
   // by adding them to "Roles available". Only reacts to types newly checked
@@ -419,7 +419,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         message: `Address compare mode from compliance report ${reportID}`
       })
     }
-  }, [organizationSnapshot])
+  }, [organizationSnapshot, reportID])
 
   // Syncing logic for 'sameAsServiceAddress'
   useEffect(() => {
@@ -463,7 +463,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     orgCity,
     orgPostalCodeZipCode,
     setValueAndTriggerValidation,
-    clearFields
+    clearFields,
+    watch
   ])
 
   // Conditional rendering for loading

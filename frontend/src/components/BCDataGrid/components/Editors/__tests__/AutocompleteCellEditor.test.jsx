@@ -10,23 +10,23 @@ import { AutocompleteCellEditor } from '../AutocompleteCellEditor'
 vi.mock('@mui/material/Autocomplete', () => ({
     default: vi.fn(
     ({
-      children,
-      onChange,
-      onOpen,
-      onClose,
-      onKeyDown,
-      onHighlightChange,
-      getOptionLabel,
-      renderOption,
-      renderInput,
-      renderTags,
-      isOptionEqualToValue,
-      multiple,
-      options: autocompleteOptions = [],
-      inputValue,
-      onInputChange,
-      ...props
-    }) => {
+  onChange,
+  onOpen,
+  onKeyDown,
+  onHighlightChange,
+  getOptionLabel,
+  renderOption,
+  renderInput,
+  renderTags,
+  isOptionEqualToValue,
+  multiple,
+  options: autocompleteOptions = [],
+  inputValue,
+  onInputChange,
+  ...props
+}) => {
+delete props.children; delete props.onClose;
+
       // Test getOptionLabel if provided
       if (getOptionLabel) {
         getOptionLabel('test')

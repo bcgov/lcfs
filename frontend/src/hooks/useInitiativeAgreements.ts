@@ -9,10 +9,10 @@ import type { PaginationParams, QueryOptions } from './types'
 // cutover.
 
 const QUERY_KEYS = {
-  list: (pagination: any) => ['initiative-agreements', pagination],
-  detail: (id: any) => ['initiative-agreements', 'detail', String(id)],
+  list: (pagination: unknown) => ['initiative-agreements', pagination],
+  detail: (id: unknown) => ['initiative-agreements', 'detail', String(id)],
   statuses: ['initiative-agreement-statuses'],
-  designatedActions: (agreementId: any, pagination: any) => [
+  designatedActions: (agreementId: unknown, pagination: unknown) => [
     'designated-actions',
     String(agreementId),
     pagination
@@ -220,7 +220,7 @@ export const useEvidenceRequirements = (
 
 const useEvidenceMutation = (
   designatedActionId: number | string,
-  mutationFn: (client: any) => (variables: any) => Promise<unknown>
+  mutationFn: (client: unknown) => (variables: unknown) => Promise<unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -435,6 +435,37 @@ export const useUpdateDesignatedAction = (
       queryClient.invalidateQueries({
         queryKey: ['designated-action-history', String(designatedActionId)]
       })
+    }
+  })
+}
+
+export const useUpdateAgreement = (initiativeAgreementId: number | string) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      iaCode?: string
+      agreementType?: string
+      title?: string | null
+      projectDescription?: string | null
+      projectLocation?: string | null
+      contactName?: string | null
+      contactEmail?: string | null
+      contactPhone?: string | null
+      agreementStartDate?: string | null
+      agreementEndDate?: string | null
+    }) =>
+      (
+        await client.put(
+          apiRoutes.updateAgreement.replace(
+            ':initiativeAgreementId',
+            String(initiativeAgreementId)
+          ),
+          payload
+        )
+      ).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['initiative-agreements'] })
     }
   })
 }

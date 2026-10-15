@@ -7,9 +7,6 @@ import { test } from '@/tests/utils/fixtures'
 vi.mock('@/utils/formatters', () => ({
   decimalFormatter: vi.fn((value) => `${value}.00`),
   calculateTotalValue: vi.fn((quantity, price) => quantity * price),
-  dateFormatter: vi.fn(
-    (date) => `formatted_${date?.toISOString?.()?.split('T')[0] || date}`
-  ),
   formatNumberWithCommas: vi.fn(({ value }) => `${value}_formatted`)
 }))
 
@@ -133,9 +130,7 @@ describe('TransferSummary', () => {
       ).toBeInTheDocument()
       expect(screen.getByText('Value per unit: $25.5.00')).toBeInTheDocument()
       expect(screen.getByText('Total value: $25500.00')).toBeInTheDocument()
-      expect(
-        screen.getByText('Agreement date: formatted_2024-01-15')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Agreement date: 2024-01-15')).toBeInTheDocument()
       expect(
         screen.getByText('Send transfer confirmation toTo Organization?')
       ).toBeInTheDocument()
@@ -201,7 +196,7 @@ describe('TransferSummary', () => {
       expect(screen.getByText('Total value: $25500.00')).toBeInTheDocument()
     })
 
-    test('calls dateFormatter for agreementDate', ({ render, theme }) => {
+    test('shows the agreement date that will be saved', ({ render, theme }) => {
       render(
         <TransferSummary
           transferData={mockTransferData}
@@ -210,9 +205,7 @@ describe('TransferSummary', () => {
         [theme]
       )
 
-      expect(
-        screen.getByText('Agreement date: formatted_2024-01-15')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Agreement date: 2024-01-15')).toBeInTheDocument()
     })
   })
 
@@ -321,9 +314,7 @@ describe('TransferSummary', () => {
         [theme]
       )
 
-      expect(
-        screen.getByText('Agreement date: formatted_2023-12-25')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Agreement date: 2023-12-25')).toBeInTheDocument()
     })
 
     test('renders with missing formData properties', ({ render, theme }) => {

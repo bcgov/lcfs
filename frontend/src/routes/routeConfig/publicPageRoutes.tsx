@@ -10,6 +10,19 @@ import { AppRouteObject } from '../types'
 const creditMarketPageEnabled = isFeatureEnabled(
   FEATURE_FLAGS.CREDIT_MARKET_LOGIN_PAGE
 )
+const publicMarketDataEnabled = isFeatureEnabled(FEATURE_FLAGS.PUBLIC_MARKET_DATA)
+
+const publicMarketDataRoutes: AppRouteObject[] = publicMarketDataEnabled
+  ? [
+      {
+        name: 'Credit market data',
+        key: 'public-market-data',
+        path: ROUTES.PUBLIC_MARKET_DATA,
+        element: <PublicMarketData />,
+        handle: { title: 'Credit market data', maxWidth: 'xl' }
+      }
+    ]
+  : []
 
 export const publicPageRoutes: AppRouteObject[] = [
   {
@@ -18,17 +31,11 @@ export const publicPageRoutes: AppRouteObject[] = [
     path: ROUTES.PUBLIC_DASHBOARD,
     element: <PublicDashboardRoute />,
     handle: {
-      title: 'LCFS At a Glance',
+      title: 'LCFS Program Information',
       hideBreadcrumb: creditMarketPageEnabled
     }
   },
-  {
-    name: 'Credit market data',
-    key: 'public-market-data',
-    path: ROUTES.PUBLIC_MARKET_DATA,
-    element: <PublicMarketData />,
-    handle: { title: 'Credit market data', maxWidth: 'xl' }
-  },
+  ...publicMarketDataRoutes,
   {
     name: 'Compliance unit calculator',
     key: 'credit-calculator',

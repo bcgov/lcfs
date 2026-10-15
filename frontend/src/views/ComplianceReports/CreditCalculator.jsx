@@ -29,7 +29,10 @@ import {
   FUEL_CATEGORIES,
   LEGISLATION_TRANSITION_YEAR
 } from '@/constants/common'
-import { numberFormatter } from '@/utils/formatters'
+import {
+  formatEnergyContentWithCommas,
+  numberFormatter
+} from '@/utils/formatters'
 import { copyToClipboard } from '@/utils/clipboard'
 
 const CUSTOM_CI_OPTION_VALUE = 'customCi'
@@ -181,12 +184,15 @@ export const CreditCalculator = () => {
       if (endUse) {
         uniqueEndUses.set(endUse.type, {
           value: endUse.type,
-          label: endUse.type
+          sortLabel: endUse.type,
+          label: <span>{endUse.type}</span>
         })
       }
     })
 
-    return Array.from(uniqueEndUses.values())
+    return Array.from(uniqueEndUses.values()).sort((a, b) =>
+      a.sortLabel.localeCompare(b.sortLabel)
+    )
   }, [fuelTypeOptions])
   const customCiOption = useMemo(
     () => ({
@@ -372,6 +378,12 @@ export const CreditCalculator = () => {
   ])
 
   useEffect(() => {
+    if (!endUseId) {
+      setCalculatedResults(null)
+      setValue('complianceUnits', '')
+      return
+    }
+
     const latestResults =
       activeCalculatorMode === 'complianceUnits'
         ? calculatedQuantityData?.data
@@ -380,11 +392,17 @@ export const CreditCalculator = () => {
     if (latestResults) {
       setCalculatedResults(latestResults)
     }
-  }, [activeCalculatorMode, calculatedData, calculatedQuantityData])
+  }, [
+    activeCalculatorMode,
+    calculatedData,
+    calculatedQuantityData,
+    endUseId,
+    setValue
+  ])
 
   // Keep form fields in sync with whichever calculator response is active
   useEffect(() => {
-    if (!calculatedResults) return
+    if (!endUseId || !calculatedResults) return
 
     if (
       activeCalculatorMode === 'quantity' &&
@@ -409,7 +427,7 @@ export const CreditCalculator = () => {
         shouldTouch: false
       })
     }
-  }, [activeCalculatorMode, calculatedResults, setValue])
+  }, [activeCalculatorMode, calculatedResults, endUseId, setValue])
 
   useEffect(() => {
     if (!syncingField) return
@@ -530,15 +548,19 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
         eer: 0,
         ci: 0,
         uci: 0,
-        energyContent: 0,
+        energyContent: '',
         energyDensity: 0
       },
       formulaDisplay: '0 = (0 * 0 - (0 + N/A)) * 0 / 1,000,000'
     }
 
-    if (!calculatedResults) return fallback
+    if (!endUseId || !calculatedResults) return fallback
 
     const data = calculatedResults
+    const formattedEnergyContent = formatEnergyContentWithCommas({
+      value: data.energyContent || 0,
+      fuelType
+    })
 
     return {
       credits: data.complianceUnits || 0,
@@ -547,12 +569,12 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
         eer: (data.eer || 0).toFixed(2),
         ci: `${data.rci || 0} ${CARBON_INTENSITY_UNIT}`,
         uci: data.uci ? `${data.uci} ${CARBON_INTENSITY_UNIT}` : 'N/A',
-        energyContent: `${numberFormatter(data.energyContent || 0)} MJ`,
+        energyContent: `${formattedEnergyContent} MJ`,
         energyDensity: `${data.energyDensity || 0} ${fuelTypeOptions?.data?.energyDensity?.unit?.name || ''}`
       },
-      formulaDisplay: `${(data.complianceUnits || 0).toLocaleString()} = (${data.tci || 0} * ${data.eer || 0} - (${data.rci || 0} + ${data.uci || 'N/A'})) * ${numberFormatter(data.energyContent || 0)} / 1,000,000`
+      formulaDisplay: `${(data.complianceUnits || 0).toLocaleString()} = (${data.tci || 0} * ${data.eer || 0} - (${data.rci || 0} + ${data.uci || 'N/A'})) * ${formattedEnergyContent} / 1,000,000`
     }
-  }, [calculatedResults, fuelTypeOptions])
+  }, [calculatedResults, fuelTypeOptions, endUseId, fuelType])
 
   const carbonIntensityDisplayValue = useMemo(() => {
     if (!provisionOfTheAct) return ''
@@ -673,7 +695,46 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                   />
                 </Grid>
 
-                <Grid size={{ xs: 12, md: 3 }} flex={1.6}>
+                <Grid
+                  size={{ xs: 12, md: 3 }}
+                  flex={1.6}
+                  sx={{
+                    minWidth: 0,
+                    maxWidth: '100%',
+                    '& .MuiFormControl-root': {
+                      width: '100%',
+                      minWidth: 0
+                    },
+                    '& .MuiRadioGroup-root': {
+                      flexDirection: 'column',
+                      flexWrap: 'nowrap',
+                      alignItems: 'flex-start',
+                      gap: '12px !important',
+                      width: '100%',
+                      maxWidth: '100%',
+                      maxHeight: { xs: 240, md: 360 },
+                      overflowX: 'auto',
+                      overflowY: 'auto',
+                      pr: 1,
+                      scrollbarGutter: 'stable'
+                    },
+                    '& .MuiFormControlLabel-root': {
+                      mr: 0,
+                      mb: 0,
+                      alignItems: 'flex-start',
+                      width: 'max-content',
+                      maxWidth: 'none',
+                      whiteSpace: 'nowrap'
+                    },
+                    '& .MuiRadio-root': {
+                      flexShrink: 0
+                    },
+                    '& .MuiFormControlLabel-label': {
+                      whiteSpace: 'nowrap',
+                      lineHeight: 1.35
+                    }
+                  }}
+                >
                   {isLoadingFuelOptions && <Loading />}
                   <BCFormRadio
                     label={t('report:endUse')}

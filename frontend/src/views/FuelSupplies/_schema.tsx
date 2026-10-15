@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
@@ -11,6 +10,7 @@ import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
 import {
+  formatEnergyContentWithCommas,
   formatNumberWithCommas,
   formatNumberWithDecimals
 } from '@/utils/formatters'
@@ -156,7 +156,7 @@ export const fuelSupplyColDefs = (
       cellEditor: AsyncSuggestionEditor,
       cellEditorParams: (params) => ({
         queryKey: 'fuel-type-others',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({ client }) => {
           const path = apiRoutes.getFuelTypeOthers
 
           const response = await client.get(path)
@@ -616,7 +616,7 @@ export const fuelSupplyColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
       minWidth: 200,
       cellEditor: AutocompleteCellEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         options: ['L', 'kg', 'kWh', 'm³ (15°C and 1 atm)'],
         multiple: false,
         disableCloseOnSelect: false,
@@ -713,7 +713,11 @@ export const fuelSupplyColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
-      valueFormatter: formatNumberWithCommas,
+      valueFormatter: (params) =>
+        formatEnergyContentWithCommas({
+          value: params.value,
+          fuelType: params.data?.fuelType
+        }),
       minWidth: 100,
       editable: false
     }

@@ -1,13 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor
-} from '@testing-library/react'
+import 'react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { ProposedFuelPathwaysStep } from '@/views/CarbonIntensity/components/ProposedFuelPathwaysStep'
 vi.mock('react-i18next', () => ({
@@ -17,10 +11,8 @@ vi.mock('react-i18next', () => ({
 // BCGridEditor pulls in AG Grid which is heavy and not relevant to this
 // component's contract. Stub it out so we can drive its callbacks
 // directly from the test.
-let lastGridProps = null
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: (props) => {
-    lastGridProps = props
     if (props.gridRef) {
       props.gridRef.current = {
         api: {
@@ -31,7 +23,22 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
         }
       }
     }
-    return <div data-test="grid-stub" />
+    return (
+      <div data-test="grid-stub">
+        {(props.rowData || []).map((data) => (
+          <button
+            key={data.id}
+            type="button"
+            data-test={`stub-delete-${data.pathwayId}`}
+            onClick={() =>
+              props.onAction('delete', { data, node: { rowIndex: 0 } })
+            }
+          >
+            delete
+          </button>
+        ))}
+      </div>
+    )
   }
 }))
 
@@ -66,7 +73,6 @@ const baseCi = {
 
 describe('ProposedFuelPathwaysStep', () => {
   beforeEach(() => {
-    lastGridProps = null
     vi.clearAllMocks()
   })
   afterEach(cleanup)
@@ -248,6 +254,95 @@ describe('ProposedFuelPathwaysStep', () => {
       expect(onValidationError).toHaveBeenCalledWith(
         'carbonIntensity:step2.validation.operatingDateRangeRequired'
       )
+    })
+  })
+  describe('row delete confirmation', () => {
+    const completeRow = {
+      pathwayId: 7,
+      applicationTypeId: 1,
+      fuelCodeTypeId: 1,
+      designData: false,
+      operatingDataFrom: '2025-01-01',
+      operatingDataTo: '2025-12-31',
+      fuelCodeId: null,
+      proposedCi: 5.61,
+      fuelTypeId: 1,
+      feedstock: 'Canola',
+      feedstockRegion: 'Saskatchewan',
+      feedstockTransportMode: [{ transportMode: 'Truck', distance: 100 }],
+      coproducts: null,
+      finishedFuelTransportMode: [{ transportMode: 'Rail', distance: 200 }]
+    }
+    const ciWithRow = { ...baseCi, pathways: [completeRow] }
+
+    const renderStep = (render, query, theme, localization, router) =>
+      render(
+        <ProposedFuelPathwaysStep
+          ciApplication={ciWithRow}
+          optionsData={optionsData}
+          onSave={vi.fn()}
+        />,
+        [query, theme, localization, router]
+      )
+
+    test('shows a confirmation modal instead of deleting immediately', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      renderStep(render, query, theme, localization, router)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+      fireEvent.click(screen.getByTestId('stub-delete-7'))
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(
+        screen.getByText('carbonIntensity:step2.deleteRowConfirmText')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'common:deleteBtn' })
+      ).toHaveTextContent('common:deleteBtn')
+      expect(
+        screen.getByRole('button', { name: 'common:cancelBtn' })
+      ).toHaveTextContent('common:cancelBtn')
+      // Row is still present while the modal is open
+      expect(screen.getByTestId('stub-delete-7')).toBeInTheDocument()
+    })
+
+    test('cancel closes the modal and keeps the row', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      renderStep(render, query, theme, localization, router)
+      fireEvent.click(screen.getByTestId('stub-delete-7'))
+      fireEvent.click(screen.getByRole('button', { name: 'common:cancelBtn' }))
+
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      )
+      expect(screen.getByTestId('stub-delete-7')).toBeInTheDocument()
+    })
+
+    test('confirming removes the row and closes the modal', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      renderStep(render, query, theme, localization, router)
+      fireEvent.click(screen.getByTestId('stub-delete-7'))
+      fireEvent.click(screen.getByRole('button', { name: 'common:deleteBtn' }))
+
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      )
+      expect(screen.queryByTestId('stub-delete-7')).not.toBeInTheDocument()
     })
   })
 })

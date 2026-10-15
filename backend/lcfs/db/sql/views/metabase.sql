@@ -96,6 +96,72 @@ LEFT JOIN user_profile up ON sr.assigned_analyst_id = up.user_profile_id
 ORDER BY sr.compliance_report_group_uuid, sr.version DESC;
 
 -- ==========================================
+-- Compliance Report Versions View
+-- ==========================================
+DROP VIEW IF EXISTS vw_compliance_report_versions;
+CREATE OR REPLACE VIEW vw_compliance_report_versions AS
+WITH report_versions AS (
+    SELECT
+        cr.*,
+        LAG(cr.compliance_report_id) OVER (
+            PARTITION BY cr.compliance_report_group_uuid
+            ORDER BY cr.version
+        ) AS parent_report_id,
+        MAX(cr.version) OVER (
+            PARTITION BY cr.compliance_report_group_uuid
+        ) AS max_version
+    FROM compliance_report cr
+),
+status_dates AS (
+    SELECT
+        crh.compliance_report_id,
+        MIN(crh.create_date) FILTER (
+            WHERE crs.status::text = 'Submitted'
+        ) AS submitted_date,
+        MIN(crh.create_date) FILTER (
+            WHERE crs.status::text = 'Assessed'
+        ) AS assessed_date
+    FROM compliance_report_history crh
+    JOIN compliance_report_status crs
+        ON crh.status_id = crs.compliance_report_status_id
+    GROUP BY crh.compliance_report_id
+)
+SELECT
+    rv.compliance_report_id AS report_id,
+    rv.compliance_report_group_uuid,
+    rv.organization_id,
+    o.name AS organization_name,
+    cp.description::integer AS reporting_year,
+    rv.version + 1 AS version_number, -- expose as business versions 1, 2, 3.
+    CASE
+        WHEN rv.version = 0 THEN 'Original'
+        ELSE 'Supplemental'
+    END AS report_type,
+    rv.parent_report_id,
+    sd.submitted_date,
+    sd.assessed_date,
+    crs.status::text AS status,
+    rv.supplemental_initiator::text AS supplemental_initiator,
+    rv.reporting_frequency::text AS reporting_frequency,
+    rv.nickname,
+    rv.legacy_id,
+    rv.transaction_id,
+    rv.assessment_statement,
+    rv.version = rv.max_version AS is_current_version
+FROM report_versions rv
+JOIN organization o
+    ON rv.organization_id = o.organization_id
+JOIN compliance_period cp
+    ON rv.compliance_period_id = cp.compliance_period_id
+JOIN compliance_report_status crs
+    ON rv.current_status_id = crs.compliance_report_status_id
+JOIN status_dates sd
+    ON rv.compliance_report_id = sd.compliance_report_id
+WHERE sd.submitted_date IS NOT NULL;
+
+GRANT SELECT ON vw_compliance_report_versions TO basic_lcfs_reporting_role;
+
+-- ==========================================
 -- Transfer base Analytics View
 -- ==========================================
 DROP VIEW IF EXISTS vw_transfer_base;
@@ -103,7 +169,9 @@ CREATE OR REPLACE VIEW vw_transfer_base AS
 SELECT
     transfer.transfer_id,
     transfer_status.status,
-    (coalesce(transfer.transaction_effective_date AT TIME ZONE 'UTC', transfer_history.update_date) AT TIME ZONE 'America/Vancouver')::date AS calculated_effective_date,
+    -- transaction_effective_date holds a Pacific calendar date. The history
+    -- timestamp is a timestamptz, so it is converted to Vancouver time once.
+    coalesce(transfer.transaction_effective_date::date, (transfer_history.update_date AT TIME ZONE 'America/Vancouver')::date) AS calculated_effective_date,
     from_organization.name AS from_organization,
     to_organization.name AS to_organization,
     price_per_unit,
@@ -113,7 +181,7 @@ SELECT
     (CASE
         WHEN transfer.is_a1_category IS TRUE THEN TRUE
         WHEN transfer.agreement_date IS NULL THEN FALSE
-        WHEN ABS(((coalesce(transfer.transaction_effective_date AT TIME ZONE 'UTC', transfer_history.update_date) AT TIME ZONE 'America/Vancouver')::date - transfer.agreement_date::date)::int) <= 30 THEN TRUE
+        WHEN ABS((coalesce(transfer.transaction_effective_date::date, (transfer_history.update_date AT TIME ZONE 'America/Vancouver')::date) - transfer.agreement_date::date)::int) <= 30 THEN TRUE
         ELSE FALSE
     END and transfer_category.category::text = 'A') AS is_a1_category
 FROM

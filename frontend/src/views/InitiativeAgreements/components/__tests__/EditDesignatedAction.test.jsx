@@ -11,6 +11,16 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
 
+// The global setup stubs FloatingAlert with an inert triggerAlert; expose a
+// spy so the tests can assert what the user is told.
+const mockTriggerAlert = vi.fn()
+vi.mock('@/components/BCAlert', () => ({
+  FloatingAlert: React.forwardRef((_props, ref) => {
+    React.useImperativeHandle(ref, () => ({ triggerAlert: mockTriggerAlert }))
+    return null
+  })
+}))
+
 let mockRoles = [roles.ia_analyst]
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
@@ -103,6 +113,18 @@ describe('EditDesignatedAction', () => {
     expect(mockUpdate).not.toHaveBeenCalled()
   })
 
+  test('tells the user the action was updated', ({ render, app }) => {
+    mockUpdate.mockImplementation((_payload, handlers) => handlers.onSuccess())
+    render(<EditDesignatedAction action={action} />, app)
+    open()
+    fireEvent.click(screen.getByText('initiativeAgreement:actions.save'))
+
+    expect(mockTriggerAlert).toHaveBeenCalledWith({
+      severity: 'success',
+      message: 'initiativeAgreement:actions.editSuccess'
+    })
+  })
+
   test('surfaces the reason the API refused', ({ render, app }) => {
     mockUpdate.mockImplementation((_payload, handlers) =>
       handlers.onError({
@@ -116,6 +138,7 @@ describe('EditDesignatedAction', () => {
     expect(screen.getByTestId('edit-action-error')).toHaveTextContent(
       'cannot be negative'
     )
+    expect(mockTriggerAlert).not.toHaveBeenCalled()
   })
 
   test('is absent for a director', ({ render, app }) => {

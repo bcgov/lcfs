@@ -1,5 +1,5 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
+import 'react';
 import { screen, fireEvent } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { UserImpactSummaryModal } from '../UserImpactSummaryModal'

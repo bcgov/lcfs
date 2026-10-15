@@ -9,12 +9,14 @@ import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 
 const AdminLinksCard = () => {
   const { t } = useTranslation(['dashboard'])
   const { hasRoles } = useCurrentUser()
   const isAdmin = hasRoles(roles.administrator)
   const isSystemAdmin = hasRoles(roles.system_admin)
+  const publicMarketDataEnabled = isFeatureEnabled(FEATURE_FLAGS.PUBLIC_MARKET_DATA)
 
   const getLinkDataTest = (route) => {
     const sanitizedRoute = route?.replace(/^\//, '').replace(/\//g, '-') || ''
@@ -39,6 +41,12 @@ const AdminLinksCard = () => {
         }
       )
     }
+    if (isAdmin || publicMarketDataEnabled) {
+      links.push({
+        title: 'Credit market data',
+        route: ROUTES.PUBLIC_MARKET_DATA
+      })
+    }
     // Logon screen background is a System Admin-only responsibility.
     if (isSystemAdmin) {
       links.push({
@@ -47,7 +55,7 @@ const AdminLinksCard = () => {
       })
     }
     return links
-  }, [isAdmin, isSystemAdmin, t])
+  }, [isAdmin, isSystemAdmin, publicMarketDataEnabled, t])
 
   const navigate = useNavigate()
 

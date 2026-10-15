@@ -4,20 +4,15 @@ import {
   timezoneFormatter
 } from '@/utils/formatters'
 import {
-  LinkRenderer,
   LoginStatusRenderer,
   RoleRenderer,
   StatusRenderer
 } from '@/utils/grid/cellRenderers'
-import { useRoleList } from '@/hooks/useRole'
+import '@/hooks/useRole'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { RoleSelectFloatingFilter } from './RoleSelectFloatingFilter'
-import {
-  COMPLIANCE_REPORT_STATUSES,
-  TRANSACTION_TYPES,
-  TRANSFER_STATUSES
-} from '@/constants/statuses'
+import { TRANSACTION_TYPES, TRANSFER_STATUSES } from '@/constants/statuses'
 
 export const usersColumnDefs = (t) => [
   {
@@ -215,7 +210,7 @@ export const userLoginHistoryColDefs = (t) => [
     cellRenderer: LoginStatusRenderer,
     valueGetter: (params) => params.data.isLoginSuccessful,
     filterParams: {
-      textMatcher: (filter) => {
+      textMatcher: () => {
         return true
       }
     },
